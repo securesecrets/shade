@@ -1,3 +1,22 @@
+# Shade Protocol Core Contracts
+| Contract                                            | Reference                                              | Description                                                                                                                        |
+| --------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [Placeholder]()  | [Placeholder]() | [Placeholder]                                              |
+| [Placeholder]() | [Placeholder]() | [Placeholder]                                                                                             |
+| [Placeholder]()     | [Placeholder]()  | [Placeholder]                                                        |
+| [Placeholder]()            | [Placeholder]()      | [Placeholder] |
+| [Placeholder]()        | [Placeholder]()      | [Placeholder]                                                                                  |
+|[Placeholder]()        | [Placeholder]()   | [Placeholder]                                                                 |
+| [Placeholder]()     | [Placeholder]()   |[Placeholder]                                                                           |          
+
+
+
+# Mirror Core Contracts
+
+This monorepository contains the source code for the core smart contracts implementing Mirror Protocol on the [Terra](https://terra.money) blockchain.
+
+You can find information about the architecture, usage, and function of the smart contracts on the official Mirror documentation [site](https://docs.mirror.finance/contracts/architecture).
+
 # Mirror Core Contracts
 
 This monorepository contains the source code for the core smart contracts implementing Mirror Protocol on the [Terra](https://terra.money) blockchain.
