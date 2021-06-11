@@ -1,5 +1,13 @@
 # Shade Protocol Core Contracts
-| Contract                                            | Reference                                              | Description       
+| Contract                                            | Reference                                              | Description                                                                                                                        |
+| --------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [Placeholder]()  | [Placeholder]() | [Placeholder]                                              |
+| [Placeholder]() | [Placeholder]() | [Placeholder]                                                                                             |
+| [Placeholder]()     | [Placeholder]()  | [Placeholder]                                                        |
+| [Placeholder]()            | [Placeholder]()      | [Placeholder] |
+| [Placeholder]()        | [Placeholder]()      | [Placeholder]                                                                                  |
+|[Placeholder]()        | [Placeholder]()   | [Placeholder]                                                                 |
+| [Placeholder]()     | [Placeholder]()   |[Placeholder]                                                                           |        
 
 
 # Mirror Core Contracts
