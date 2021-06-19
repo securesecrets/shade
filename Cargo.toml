@@ -1,5 +1,5 @@
 [workspace]
-members = ["packages/*", "contracts/*"]
+members = ["packages/*", "shade-contracts/*"]
 
 [profile.release.package.mirror-protocol]
 opt-level = 3
