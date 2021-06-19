@@ -15,14 +15,14 @@ use cosmwasm_std::{
 //Temporary solution
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenContract {
-    contract_addr: HumanAddr,
-    callback_code_hash: String,
+    pub contract_addr: HumanAddr,
+    pub callback_code_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenContractRaw {
-    contract_addr: CanonicalAddr,
-    callback_code_hash: String,
+    pub contract_addr: CanonicalAddr,
+    pub callback_code_hash: String,
 }
 
 impl TokenContractRaw {
