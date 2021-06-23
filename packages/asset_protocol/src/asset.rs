@@ -37,6 +37,11 @@ pub struct Asset {
     pub amount: Uint128,
 }
 
+impl fmt::Display for Asset {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.amount, self.info)
+    }
+}
 
 impl Asset {
     pub fn is_native_token(&self) -> bool {
@@ -90,6 +95,15 @@ impl Asset {
 pub enum AssetInfo {
     Token { contract: TokenContract },
     NativeToken { denom: String },
+}
+
+impl fmt::Display for AssetInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AssetInfo::NativeToken { denom } => write!(f, "{}", denom),
+            AssetInfo::Token { contract } => write!(f, "{} {}", contract.contract_addr, contract.callback_code_hash),
+        }
+    }
 }
 
 impl AssetInfo {
@@ -210,4 +224,15 @@ impl AssetInfoRaw {
             }
         }
     }
+}
+
+
+//NOTES: what is the contract addr and the liquidity token?
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PairInfo {
+    pub asset_infos: [AssetInfo; 2],
+    pub contract_addr: HumanAddr,
+    pub callback_code_hash: String,
+    pub liquidity_token: HumanAddr,
+    pub liquidity_token_callback_code_hash: String,
 }
