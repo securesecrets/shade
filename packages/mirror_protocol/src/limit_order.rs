@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{HumanAddr, Uint128};
 use cw20::Cw20ReceiveMsg;
-use terraswap::asset::Asset;
+use asset_protocol::asset::Asset;
 
 use crate::common::OrderBy;
 
