@@ -1,35 +1,33 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{CanonicalAddr, Storage};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use std::collections::HashMap;
+use cosmwasm_std::{HumanAddr, Storage, Uint128};
+use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static NATIVE_COIN_KEY: &[u8] = b"native_coin";
 pub static ASSET_KEY: &[u8] = b"assets";
+pub static ASSET_LIST_KEY: &[u8] = b"asset_list";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
-    pub owner: CanonicalAddr,
-    pub silk_contract: CanonicalAddr,
+    pub owner: HumanAddr,
+    pub silk_contract: HumanAddr,
     pub silk_contract_code_hash: String,
-    pub oracle_contract: CanonicalAddr,
+    pub oracle_contract: HumanAddr,
     pub oracle_contract_code_hash: String,
 }
 
-pub struct Native_Coin {
-    pub burned_tokens: uint128,
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct NativeCoin {
+    pub burned_tokens: Uint128,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Asset {
-    pub contract: CanonicalAddr,
+    pub contract: HumanAddr,
     pub code_hash: String,
-    pub burned_tokens: uint128,
-}
-
-pub struct Assets {
-    pub coins: HashMap<String, Asset>
+    pub burned_tokens: Uint128,
 }
 
 pub fn config<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
@@ -40,18 +38,38 @@ pub fn config_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn native_coin<S: Storage>(storage: &mut S) -> Singleton<S, Native_Coin> {
+pub fn native_coin<S: Storage>(storage: &mut S) -> Singleton<S, NativeCoin> {
 singleton(storage, NATIVE_COIN_KEY)
 }
 
-pub fn native_coin_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Native_Coin> {
+pub fn native_coin_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, NativeCoin> {
     singleton_read(storage, NATIVE_COIN_KEY)
 }
 
-pub fn assets<S: Storage>(storage: &mut S) -> Singleton<S, Assets> {
-singleton(storage, ASSET_KEY)
+pub fn asset_list<S: Storage>(storage: &mut S) -> Singleton<S, Vec<String>> {
+    singleton(storage, ASSET_LIST_KEY)
 }
 
-pub fn assets_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Assets> {
-    singleton_read(storage, ASSET_KEY)
+pub fn asset_list_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<String>> {
+    singleton_read(storage, ASSET_LIST_KEY)
 }
+
+pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Asset> {
+    bucket_read(ASSET_KEY, storage)
+}
+
+pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Asset> {
+    bucket(ASSET_KEY, storage)
+}
+
+// fn assets_try_read<S: Storage>(storage: & S, name: String) -> Option<asset> {
+//     assets_r(storage).may_load(name.as_bytes())?
+// }
+//
+// fn assets_try_save<S: Storage>(storage: &mut S, name: String, data: Asset) {
+//     assets_w(storage).save(name.as_bytes(), &data);
+// }
+//
+// fn assets_try_update<S: Storage>(storage: &mut S, name: String, data: Asset) {
+//     assets_w(storage).update(name.as_bytes(), &data);
+// }

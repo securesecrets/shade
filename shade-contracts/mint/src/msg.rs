@@ -1,13 +1,14 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{CanonicalAddr, CosmosMsg};
+use cosmwasm_std::{HumanAddr, CosmosMsg, Uint128};
+use crate::state::Asset;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
-    pub silk_contract: CanonicalAddr,
+    pub silk_contract: HumanAddr,
     pub silk_contract_code_hash: String,
-    pub oracle_contract: CanonicalAddr,
+    pub oracle_contract: HumanAddr,
     pub oracle_contract_code_hash: String,
 }
 
@@ -15,28 +16,28 @@ pub struct InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        owner: CanonicalAddr,
-        silk_contract: CanonicalAddr,
+        owner: HumanAddr,
+        silk_contract: HumanAddr,
         silk_contract_code_hash: String,
-        oracle_contract: CanonicalAddr,
+        oracle_contract: HumanAddr,
         oracle_contract_code_hash: String,
     },
     RegisterAsset {
-        contract: CanonicalAddr,
+        contract: HumanAddr,
         code_hash: String,
     },
     UpdateAsset {
-        asset: CanonicalAddr,
-        contract: CanonicalAddr,
+        asset: HumanAddr,
+        contract: HumanAddr,
         code_hash: String,
     },
     // ReceiveNative {
-    //     amount: uint128
+    //     amount: Uint128
     // },
     Receive {
-        sender: CanonicalAddr,
-        from: CanonicalAddr,
-        amount: uint128,
+        sender: HumanAddr,
+        from: HumanAddr,
+        amount: Uint128,
         msg: Option<CosmosMsg>,
     },
 }
@@ -45,22 +46,25 @@ pub enum HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     // GetCount returns the current count as a json-encoded number
-    GetMinted {},
-    GetNativeBurned {},
-    GetAssetBurned {
-        contract: CanonicalAddr,
+    // GetNativeBurned {},
+    GetSupportedAssets {},
+    GetAsset {
+        contract: String,
     },
-
-    GetCount {},
 }
 
-// We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct CountResponse {
-    pub count: i32,
+pub struct SupportedAssetsResponse {
+    pub assets: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct AssetResponse {
+    pub asset: Asset,
 }
 
 // Contract interactions
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OracleCall {
-    pub contract: CanonicalAddr,
+    pub contract: HumanAddr,
 }
