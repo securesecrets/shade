@@ -5,11 +5,30 @@
     {
       "type": "object",
       "required": [
-        "get_count"
+        "get_supported_assets"
       ],
       "properties": {
-        "get_count": {
+        "get_supported_assets": {
           "type": "object"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_asset"
+      ],
+      "properties": {
+        "get_asset": {
+          "type": "object",
+          "required": [
+            "contract"
+          ],
+          "properties": {
+            "contract": {
+              "type": "string"
+            }
+          }
         }
       }
     }
