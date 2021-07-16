@@ -112,28 +112,41 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
     let mut assets = assets_w(&mut deps.storage);
 
+    let mut messages = vec![];
+
     // Check if asset already exists
     match assets.may_load(contract_str.as_bytes())? {
         Some(_) => return Err(StdError::generic_err("Asset already exists")),
 
         None => {
-            assets.save(contract_str.as_bytes(), &Asset {
+            match assets.save(contract_str.as_bytes(), &Asset {
                 contract: contract.clone(),
                 code_hash: code_hash.clone(),
                 burned_tokens: Uint128(0),
-            })?;
-            asset_list(&mut deps.storage).update(|mut state| {
+            }) {
+                Err(err) => return Err(err),
+                _ => {}
+            };
+
+            match asset_list(&mut deps.storage).update(|mut state| {
                 state.push(contract_str);
                 Ok(state)
-            })?;
-            let _register_msg = register_receive(&deps, env, contract, code_hash)?;
+            }) {
+                Err(err) => return Err(err),
+                _ => {}
+            };
+
+            match register_receive(&deps, env, contract, code_hash) {
+                Err(err) => return Err(err),
+                Ok(register_msg) => { messages.push(register_msg); },
+            };
         }
     }
 
     //TODO: log info
 
     Ok(HandleResponse {
-        messages: vec![],
+        messages,
         log: vec![],
         data: None
     })
@@ -157,17 +170,19 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
 
     let mut assets = assets_w(&mut deps.storage);
 
+    let mut messages = vec![];
+
     // Check if asset already exists
     match assets.may_load(asset_str.as_bytes())? {
         Some(loaded_asset) => {
+            // Remove the old asset
+            assets.remove(asset_str.as_bytes());
             // Add the new asset
             assets.save(contract.to_string().as_bytes(), &Asset {
                 contract: contract.clone(),
                 code_hash: code_hash.clone(),
                 burned_tokens: loaded_asset.burned_tokens
             })?;
-            // Remove the old asset
-            assets.remove(asset_str.as_bytes());
             asset_list(&mut deps.storage).update(|mut state| {
                 for (i, asset) in state.iter().enumerate() {
                     if asset == &asset_str {
@@ -178,7 +193,8 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
                 }
                 Ok(state)
             })?;
-            let _register_msg = register_receive(&deps, env, contract, code_hash)?;
+            let register_msg = register_receive(&deps, env, contract, code_hash)?;
+            messages.push(register_msg)
         },
 
         None => return Err(StdError::NotFound { kind: asset_str, backtrace: None }),
@@ -187,7 +203,7 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
     //TODO: log info
 
     Ok(HandleResponse {
-        messages: vec![],
+        messages,
         log: vec![],
         data: None
     })
@@ -196,23 +212,18 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
 pub fn try_receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    sender: HumanAddr,
+    _sender: HumanAddr,
     from: HumanAddr,
     amount: Uint128,
     _msg: Option<CosmosMsg>
 ) -> StdResult<HandleResponse> {
-    // Check that the contract sender is the same as the message sender
-    if env.message.sender != sender {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-
     // Check that the asset is supported
     let mut assets = assets_w(&mut deps.storage);
 
     // Check if asset already exists
-    match assets.may_load(sender.to_string().as_bytes())? {
+    match assets.may_load(env.message.sender.to_string().as_bytes())? {
         Some(_) => {
-            assets.update(sender.to_string().as_bytes(), |item| {
+            assets.update(env.message.sender.to_string().as_bytes(), |item| {
                 let mut asset: Asset = item.unwrap();
 
                 asset.burned_tokens += amount;
@@ -222,22 +233,27 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
         },
 
-        None => return Err(StdError::NotFound { kind: sender.to_string(), backtrace: None }),
+        None => return Err(StdError::NotFound { kind: env.message.sender.to_string(), backtrace: None }),
     }
 
     // First get the current shade value per coin
-    let token_value:u128 = call_oracle(deps, env, sender)?.into();
+    let token_value:u128 = call_oracle(deps, env.clone(), env.message.sender.clone())?.into();
     let amount_converted:u128 = amount.into();
 
-    // Calculate shade amount to mint
+    // // Calculate shade amount to mint
     let value_to_mint = amount_converted * token_value;
+    let value_to_mint = amount;
 
-    let msg = mint_shade(deps, from, Uint128::from(value_to_mint))?;
+    let mut messages = vec![];
 
+    match mint_shade(deps, from, Uint128::from(value_to_mint)) {
+        Err(err) => { return Err(err) },
+        Ok(msg) => { messages.push(msg) }
+    };
     //TODO: log info
 
     Ok(HandleResponse {
-        messages: vec![msg],
+        messages,
         log: vec![],
         data: None,
     })
@@ -287,16 +303,16 @@ fn call_oracle<S: Storage, A: Api, Q: Querier>(
     contract: HumanAddr,
 ) -> StdResult<Uint128> {
     // Call contract
-    let block_size = 1; //update this later
-    let config = config_read(&deps.storage).load()?;
-    let mut msg = to_binary(&&OracleCall{ contract })?;
-    space_pad(&mut msg.0, block_size);
-    let _execute = WasmMsg::Execute {
-        contract_addr: config.oracle_contract,
-        callback_code_hash: config.oracle_contract_code_hash,
-        msg,
-        send: vec![]
-    };
+    // let block_size = 1; //update this later
+    // let config = config_read(&deps.storage).load()?;
+    // let mut msg = to_binary(&&OracleCall{ contract })?;
+    // space_pad(&mut msg.0, block_size);
+    // let _execute = WasmMsg::Execute {
+    //     contract_addr: config.oracle_contract,
+    //     callback_code_hash: config.oracle_contract_code_hash,
+    //     msg,
+    //     send: vec![]
+    // };
     // somehow handle execute and get a Uint128 value
     let value = Uint128(1);
     Ok(value)
@@ -533,6 +549,68 @@ mod tests {
         match res {
             Err(StdError::NotFound { .. }) => {}
             _ => panic!("Must return not found error"),
+        }
+    }
+
+    #[test]
+    fn receiving_an_asset() {
+        let mut deps = dummy_init("admin".to_string(), Default::default(),
+                                  "silk_hash".to_string(), Default::default(),
+                                  "oracle_hash".to_string());
+
+        // Add a supported asset
+        let env = mock_env("admin", &coins(1000, "earth"));
+        let dummy_contract = create_contract("some_contract".to_string());
+        let msg = HandleMsg::RegisterAsset {
+            contract: dummy_contract,
+            code_hash: "some_hash".to_string()
+        };
+        let _res = handle(&mut deps, env, msg).unwrap();
+
+        // Contract tries to send funds
+        let env = mock_env("some_contract", &coins(1000, "earth"));
+        let dummy_contract = create_contract("some_owner".to_string());
+        let msg = HandleMsg::Receive {
+            sender: dummy_contract,
+            from: Default::default(),
+            amount: Uint128(100),
+            msg: None
+        };
+        let res = handle(&mut deps, env, msg);
+        match res {
+            Err(err) => {panic!("Must not return error")}
+            _ => {},
+        }
+    }
+
+    #[test]
+    fn receiving_an_asset_from_non_supported_asset() {
+        let mut deps = dummy_init("admin".to_string(), Default::default(),
+                                  "silk_hash".to_string(), Default::default(),
+                                  "oracle_hash".to_string());
+
+        // Add a supported asset
+        let env = mock_env("admin", &coins(1000, "earth"));
+        let dummy_contract = create_contract("some_contract".to_string());
+        let msg = HandleMsg::RegisterAsset {
+            contract: dummy_contract,
+            code_hash: "some_hash".to_string()
+        };
+        let _res = handle(&mut deps, env, msg).unwrap();
+
+        // Contract tries to send funds
+        let env = mock_env("some_other_contract", &coins(1000, "earth"));
+        let dummy_contract = create_contract("some_owner".to_string());
+        let msg = HandleMsg::Receive {
+            sender: dummy_contract,
+            from: Default::default(),
+            amount: Uint128(100),
+            msg: None
+        };
+        let res = handle(&mut deps, env, msg);
+        match res {
+            Err(StdError::NotFound { .. }) => {}
+            _ => {panic!("Must return not found error")},
         }
     }
 }

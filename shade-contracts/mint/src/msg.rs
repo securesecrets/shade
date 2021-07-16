@@ -31,9 +31,6 @@ pub enum HandleMsg {
         contract: HumanAddr,
         code_hash: String,
     },
-    // ReceiveNative {
-    //     amount: Uint128
-    // },
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
@@ -45,7 +42,6 @@ pub enum HandleMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    // GetCount returns the current count as a json-encoded number
     // GetNativeBurned {},
     GetSupportedAssets {},
     GetAsset {
