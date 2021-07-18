@@ -1,9 +1,8 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, WasmMsg, Uint128};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128};
 
 use crate::msg::{HandleMsg, InitMsg, QueryMsg, OracleCall, SupportedAssetsResponse, AssetResponse};
 use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read, Config, Asset};
 use secret_toolkit::snip20::{mint_msg, register_receive_msg};
-use secret_toolkit::utils::space_pad;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -55,7 +54,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             sender,
             from,
             amount,
-            msg } => try_receive(deps, env, sender, from, amount, msg),
+            msg,
+            ..} => try_receive(deps, env, sender, from, amount, msg),
     }
 }
 
@@ -242,7 +242,6 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
     // // Calculate shade amount to mint
     let value_to_mint = amount_converted * token_value;
-    let value_to_mint = amount;
 
     let mut messages = vec![];
 
@@ -268,7 +267,7 @@ fn register_receive<S: Storage, A: Api, Q: Querier>(
     code_hash: String,
 ) -> StdResult<CosmosMsg> {
     let cosmos_msg = register_receive_msg(
-        env.contract_code_hash,
+        env.contract_code_hash.clone(),
         None,
         256,
         code_hash,
@@ -574,7 +573,8 @@ mod tests {
             sender: dummy_contract,
             from: Default::default(),
             amount: Uint128(100),
-            msg: None
+            msg: None,
+            memo: None
         };
         let res = handle(&mut deps, env, msg);
         match res {
@@ -605,7 +605,8 @@ mod tests {
             sender: dummy_contract,
             from: Default::default(),
             amount: Uint128(100),
-            msg: None
+            msg: None,
+            memo: None
         };
         let res = handle(&mut deps, env, msg);
         match res {

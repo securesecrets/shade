@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{HumanAddr, CosmosMsg, Uint128};
+use cosmwasm_std::{HumanAddr, CosmosMsg, Uint128, Binary};
 use crate::state::Asset;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -35,6 +35,7 @@ pub enum HandleMsg {
         sender: HumanAddr,
         from: HumanAddr,
         amount: Uint128,
+        memo: Option<Binary>,
         msg: Option<CosmosMsg>,
     },
 }
