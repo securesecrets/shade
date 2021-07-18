@@ -1,2 +1,2 @@
 [workspace]
-members = ["shade-contracts/*"]
+members = ["contracts/mint"]
