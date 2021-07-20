@@ -24,6 +24,7 @@ pub struct NativeCoin {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Asset {
     pub contract: HumanAddr,
     pub code_hash: String,
@@ -61,15 +62,3 @@ pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Asset> {
 pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Asset> {
     bucket(ASSET_KEY, storage)
 }
-
-// fn assets_try_read<S: Storage>(storage: & S, name: String) -> Option<asset> {
-//     assets_r(storage).may_load(name.as_bytes())?
-// }
-//
-// fn assets_try_save<S: Storage>(storage: &mut S, name: String, data: Asset) {
-//     assets_w(storage).save(name.as_bytes(), &data);
-// }
-//
-// fn assets_try_update<S: Storage>(storage: &mut S, name: String, data: Asset) {
-//     assets_w(storage).update(name.as_bytes(), &data);
-// }
