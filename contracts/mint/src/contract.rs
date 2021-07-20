@@ -1,6 +1,6 @@
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128};
 
-use crate::msg::{HandleMsg, InitMsg, QueryMsg, OracleCall, SupportedAssetsResponse, AssetResponse};
+use crate::msg::{HandleMsg, HandleAnswer, InitMsg, QueryMsg, QueryAnswer, OracleCall, ResponseStatus};
 use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read, Config, Asset};
 use secret_toolkit::snip20::{mint_msg, register_receive_msg};
 
@@ -55,18 +55,18 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             from,
             amount,
             msg,
-            ..} => try_receive(deps, env, sender, from, amount, msg),
+            ..} => try_burn(deps, env, sender, from, amount, msg),
     }
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: HumanAddr,
-    silk_contract: HumanAddr,
-    silk_contract_code_hash: String,
-    oracle_contract: HumanAddr,
-    oracle_contract_code_hash: String,
+    owner: Option<HumanAddr>,
+    silk_contract: Option<HumanAddr>,
+    silk_contract_code_hash: Option<String>,
+    oracle_contract: Option<HumanAddr>,
+    oracle_contract_code_hash: Option<String>,
 ) -> StdResult<HandleResponse> {
     let mut config = config(&mut deps.storage);
 
@@ -75,23 +75,31 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    // Resave new info
+    // Save new info
     config.update(|mut state| {
-        state.owner = owner;
-        state.silk_contract = silk_contract;
-        state.oracle_contract_code_hash = silk_contract_code_hash;
-        state.oracle_contract = oracle_contract;
-        state.oracle_contract_code_hash = oracle_contract_code_hash;
+        if let Some(owner) = owner {
+            state.owner = owner;
+        }
+        if let Some(silk_contract) = silk_contract {
+            state.silk_contract = silk_contract;
+        }
+        if let Some(silk_contract_code_hash) = silk_contract_code_hash {
+            state.oracle_contract_code_hash = silk_contract_code_hash;
+        }
+        if let Some(oracle_contract) = oracle_contract {
+            state.oracle_contract = oracle_contract;
+        }
+        if let Some(oracle_contract_code_hash) = oracle_contract_code_hash {
+            state.oracle_contract_code_hash = oracle_contract_code_hash;
+        }
         Ok(state)
     })?;
-
-    //TODO: log update information
-    //TODO: make state info optionals
 
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: None
+        data: Some( to_binary( &HandleAnswer::UpdateAsset {
+            status: ResponseStatus::Success } )? )
     })
 }
 
@@ -119,36 +127,28 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         Some(_) => return Err(StdError::generic_err("Asset already exists")),
 
         None => {
-            match assets.save(contract_str.as_bytes(), &Asset {
+            // Add the new asset
+            assets.save(contract_str.as_bytes(), &Asset {
                 contract: contract.clone(),
                 code_hash: code_hash.clone(),
                 burned_tokens: Uint128(0),
-            }) {
-                Err(err) => return Err(err),
-                _ => {}
-            };
-
-            match asset_list(&mut deps.storage).update(|mut state| {
+            })?;
+            // Add asset to list
+            asset_list(&mut deps.storage).update(|mut state| {
                 state.push(contract_str);
                 Ok(state)
-            }) {
-                Err(err) => return Err(err),
-                _ => {}
-            };
-
-            match register_receive(&deps, env, contract, code_hash) {
-                Err(err) => return Err(err),
-                Ok(register_msg) => { messages.push(register_msg); },
-            };
+            })?;
+            // Register contract in asset
+            let register_msg = register_receive(&deps, env, contract, code_hash)?;
+            messages.push(register_msg);
         }
     }
-
-    //TODO: log info
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: None
+        data: Some( to_binary( &HandleAnswer::RegisterAsset {
+            status: ResponseStatus::Success } )? )
     })
 }
 
@@ -183,6 +183,7 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
                 code_hash: code_hash.clone(),
                 burned_tokens: loaded_asset.burned_tokens
             })?;
+            // Remove old asset from list
             asset_list(&mut deps.storage).update(|mut state| {
                 for (i, asset) in state.iter().enumerate() {
                     if asset == &asset_str {
@@ -193,6 +194,7 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
                 }
                 Ok(state)
             })?;
+            // Register contract in asset
             let register_msg = register_receive(&deps, env, contract, code_hash)?;
             messages.push(register_msg)
         },
@@ -200,16 +202,15 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
         None => return Err(StdError::NotFound { kind: asset_str, backtrace: None }),
     }
 
-    //TODO: log info
-
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: None
+        data: Some( to_binary( &HandleAnswer::UpdateAsset {
+            status: ResponseStatus::Success } )? )
     })
 }
 
-pub fn try_receive<S: Storage, A: Api, Q: Querier>(
+pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     _sender: HumanAddr,
@@ -227,34 +228,32 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
                 let mut asset: Asset = item.unwrap();
 
                 asset.burned_tokens += amount;
-
                 Ok(asset)
             })?;
-
         },
 
         None => return Err(StdError::NotFound { kind: env.message.sender.to_string(), backtrace: None }),
     }
 
-    // First get the current shade value per coin
+    // First get the current value per coin
     let token_value:u128 = call_oracle(deps, env.clone(), env.message.sender.clone())?.into();
     let amount_converted:u128 = amount.into();
 
-    // // Calculate shade amount to mint
-    let value_to_mint = amount_converted * token_value;
+    // // Calculate amount to mint
+    let value_to_mint = Uint128::from(amount_converted * token_value);
 
     let mut messages = vec![];
 
-    match mint_shade(deps, from, Uint128::from(value_to_mint)) {
-        Err(err) => { return Err(err) },
-        Ok(msg) => { messages.push(msg) }
-    };
-    //TODO: log info
+    let mint_msg = mint_silk(deps, from, value_to_mint)?;
+    messages.push(mint_msg);
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: None,
+        data: Some( to_binary( &HandleAnswer::Burn {
+            status: ResponseStatus::Success,
+            mint_amount: value_to_mint
+        } )? ),
     })
 }
 
@@ -277,7 +276,7 @@ fn register_receive<S: Storage, A: Api, Q: Querier>(
     cosmos_msg
 }
 
-fn mint_shade<S: Storage, A: Api, Q: Querier>(
+fn mint_silk<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     sender: HumanAddr,
     amount: Uint128,
@@ -297,9 +296,9 @@ fn mint_shade<S: Storage, A: Api, Q: Querier>(
 }
 
 fn call_oracle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    _deps: &mut Extern<S, A, Q>,
     _env: Env,
-    contract: HumanAddr,
+    _contract: HumanAddr,
 ) -> StdResult<Uint128> {
     // Call contract
     // let block_size = 1; //update this later
@@ -327,19 +326,17 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-fn query_supported_assets<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<SupportedAssetsResponse> {
-    Ok(SupportedAssetsResponse { assets: asset_list_read(&deps.storage).load()? })
+fn query_supported_assets<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::SupportedAssets { assets: asset_list_read(&deps.storage).load()? })
 }
 
-fn query_asset<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, contract: String) -> StdResult<AssetResponse> {
+fn query_asset<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, contract: String) -> StdResult<QueryAnswer> {
     let assets = assets_r(&deps.storage);
 
     return match assets.may_load(contract.as_bytes())? {
-        Some(asset) => Ok(AssetResponse { asset }),
+        Some(asset) => Ok(QueryAnswer::Asset { asset }),
         None => Err(StdError::NotFound { kind: contract, backtrace: None }),
     };
-
-
 }
 
 #[cfg(test)]
@@ -347,7 +344,7 @@ mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier};
     use cosmwasm_std::{coins, from_binary, StdError};
-    use crate::msg::AssetResponse;
+    use crate::msg::QueryAnswer;
 
     fn create_contract(str: String) -> HumanAddr {
         let env = mock_env(str, &[]);
@@ -404,8 +401,11 @@ mod tests {
 
         // Response should be an empty array
         let res = query(&deps, QueryMsg::GetSupportedAssets {}).unwrap();
-        let value: SupportedAssetsResponse = from_binary(&res).unwrap();
-        assert_eq!(0, value.assets.len());
+        let value: QueryAnswer = from_binary(&res).unwrap();
+        match value {
+            QueryAnswer::SupportedAssets { assets } => { assert_eq!(0, assets.len()) }
+            _ => { panic!("Received wrong answer") }
+        }
     }
 
     #[test]
@@ -425,8 +425,11 @@ mod tests {
 
         // Response should be an array of size 1
         let res = query(&deps, QueryMsg::GetSupportedAssets {}).unwrap();
-        let value: SupportedAssetsResponse = from_binary(&res).unwrap();
-        assert_eq!(1, value.assets.len());
+        let value: QueryAnswer = from_binary(&res).unwrap();
+        match value {
+            QueryAnswer::SupportedAssets { assets } => { assert_eq!(1, assets.len()) }
+            _ => { panic!("Received wrong answer") }
+        }
     }
 
     #[test]
@@ -454,7 +457,7 @@ mod tests {
         match res {
             Err(StdError::GenericErr { .. }) => {}
             _ => panic!("Must return not found error"),
-        }
+        };
     }
 
     #[test]
@@ -485,7 +488,7 @@ mod tests {
         match res {
             Err(StdError::Unauthorized { .. }) => {}
             _ => panic!("Must return unauthorized error"),
-        }
+        };
     }
 
     #[test]
@@ -516,8 +519,11 @@ mod tests {
 
         // Response should be new dummy contract
         let res = query(&deps, QueryMsg::GetAsset { contract: "some_other_contract".to_string() }).unwrap();
-        let value: AssetResponse = from_binary(&res).unwrap();
-        assert_eq!("some_other_contract".to_string(), value.asset.contract.to_string());
+        let value: QueryAnswer = from_binary(&res).unwrap();
+        match value {
+            QueryAnswer::Asset { asset } => { assert_eq!("some_other_contract".to_string(), asset.contract.to_string()) }
+            _ => { panic!("Received wrong answer") }
+        };
     }
 
     #[test]
@@ -577,9 +583,8 @@ mod tests {
             memo: None
         };
         let res = handle(&mut deps, env, msg);
-        match res {
-            Err(err) => {panic!("Must not return error")}
-            _ => {},
+        if res.is_err() {
+            panic!("Must not return error");
         }
     }
 

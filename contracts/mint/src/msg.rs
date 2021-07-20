@@ -16,11 +16,11 @@ pub struct InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        owner: HumanAddr,
-        silk_contract: HumanAddr,
-        silk_contract_code_hash: String,
-        oracle_contract: HumanAddr,
-        oracle_contract_code_hash: String,
+        owner: Option<HumanAddr>,
+        silk_contract: Option<HumanAddr>,
+        silk_contract_code_hash: Option<String>,
+        oracle_contract: Option<HumanAddr>,
+        oracle_contract_code_hash: Option<String>,
     },
     RegisterAsset {
         contract: HumanAddr,
@@ -40,28 +40,40 @@ pub enum HandleMsg {
     },
 }
 
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleAnswer {
+    UpdateConfig { status: ResponseStatus},
+    RegisterAsset { status: ResponseStatus},
+    UpdateAsset { status: ResponseStatus},
+    Burn { status: ResponseStatus, mint_amount: Uint128 }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    // GetNativeBurned {},
     GetSupportedAssets {},
     GetAsset {
         contract: String,
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct SupportedAssetsResponse {
-    pub assets: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct AssetResponse {
-    pub asset: Asset,
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryAnswer {
+    SupportedAssets { assets: Vec<String>, },
+    Asset { asset: Asset }
 }
 
 // Contract interactions
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OracleCall {
     pub contract: HumanAddr,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ResponseStatus {
+    Success,
+    Failure,
 }
