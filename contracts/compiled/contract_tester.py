@@ -64,45 +64,46 @@ account = run_command(['secretcli', 'keys', 'show', '-a', 'a']).rstrip()
 # Instantiate contracts
 print("\n\nInstantiating contracts")
 msg = '{"name":"token", "symbol":"TKN","decimals":3, "prng_seed":"cGFzc3dvcmQ=", "config": {"enable_mint":true}}'
-run_command(instantiate_contract(str(snip20_id), msg, '"TEST-COIN"'))
-test_snip20_contract = json.loads(run_command(get_contract_address('2')))[0]["address"]
-print(f"Test SNIP20 contract {test_snip20_contract}")
+run_command(instantiate_contract(str(snip20_id), msg, '"sSCRT"'))
+sSCRT_contract = json.loads(run_command(get_contract_address('2')))[0]["address"]
+print(f"sSCRT contract {sSCRT_contract}")
 
 msg = '{"name":"shade", "symbol":"SHD", "decimals":3, "prng_seed":"cGFzc3dvcmQ=", "config":{"enable_mint": true}}'
-run_command(instantiate_contract(str(snip20_id), msg, '"SHADE-COIN"'))
+run_command(instantiate_contract(str(snip20_id), msg, '"Silk"'))
 shade_contract = json.loads(run_command(get_contract_address('2')))[1]["address"]
 print(f"Shade contract {shade_contract}")
 
 msg = '{"silk_contract": "' + shade_contract + '", "silk_contract_code_hash": "' + snip20_hash + \
-      '", "oracle_contract": "none", "oracle_contract_code_hash": "nano"}'
+      '", "oracle_contract": "none", "oracle_contract_code_hash": "none"}'
 run_command(instantiate_contract(str(mint_id), msg, '"SHADE-MINTER"'))
 mint_contract = json.loads(run_command(get_contract_address('1')))[0]["address"]
 print(f"Mint contract {mint_contract}")
 
 # Add allowed minters
 print("\n\nAdd allowed minters")
-print(run_command_with_output(execute_contract(test_snip20_contract, '{"set_minters": {"minters": ["' + account + '"]}}'))["output_data_as_string"])
+print(run_command_with_output(execute_contract(sSCRT_contract, '{"set_minters": {"minters": ["' + account + '"]}}'))["output_data_as_string"])
 print(run_command_with_output(execute_contract(shade_contract, '{"set_minters": {"minters": ["' + mint_contract + '"]}}'))["output_data_as_string"])
 
 # Add supported burn token
 print("\n\nAdd test as supported burn contract")
-msg = '{"register_asset" : {"contract": "' + test_snip20_contract + '", "code_hash": "' + snip20_hash + '"}}'
-print(run_command_with_output(execute_contract(mint_contract, msg))["output_log"])
+msg = '{"register_asset" : {"contract": "' + sSCRT_contract + '", "code_hash": "' + snip20_hash + '"}}'
+print(run_command_with_output(execute_contract(mint_contract, msg)))
 print(run_command(query_contract(mint_contract, '{"get_supported_assets":{}}')))
+print(run_command(query_contract(mint_contract, '{"get_asset":{' + sSCRT_contract + '}}')))
 
 # Mint to user
 msg = '{"mint": {"recipient": "' + account + '", "amount": "1000"}}'
-print(run_command_with_output(execute_contract(test_snip20_contract, msg))["output_data_as_string"])
+print(run_command_with_output(execute_contract(sSCRT_contract, msg))["output_data_as_string"])
 
 # Create viewing keys
 print("\n\nCreating SNIP20 viewing keys")
 msg = '{"create_viewing_key": {"entropy": "test"}}'
-test_key_out = run_command_with_output(execute_contract(test_snip20_contract, msg))
+test_key_out = run_command_with_output(execute_contract(sSCRT_contract, msg))
 test_key = json.loads(test_key_out["output_data_as_string"])["create_viewing_key"]["key"]
 print(f"Viewing key: {test_key}")
 
 msg = '{"balance": {"key": "' + test_key + '", "address": "' + account + '"}}'
-print(run_command(query_contract(test_snip20_contract, msg)))
+print(run_command(query_contract(sSCRT_contract, msg)))
 
 print("\n\nCreating shade viewing keys")
 msg = '{"create_viewing_key": {"entropy": "test"}}'
@@ -113,20 +114,15 @@ print(f"Viewing key: {shade_key}")
 msg = '{"balance": {"key": "' + shade_key + '", "address": "' + account + '"}}'
 print(run_command(query_contract(shade_contract, msg)))
 
-# Try send
-print("\n\nSend to random contract")
-randomAcc = run_command(['secretcli', 'keys', 'show', '-a', 'b']).rstrip()
-msg = '{"send": {"recipient": "' + randomAcc + '", "amount": "100"}}'
-print(run_command_with_output(execute_contract(test_snip20_contract, msg))["output_data_as_string"])
-msg = '{"balance": {"key": "' + test_key + '", "address": "' + account + '"}}'
-print(f"Test snip amount: {run_command(query_contract(test_snip20_contract, msg))}")
-
 print("\n\nSend to mint contract")
 msg = '{"send": {"recipient": "' + mint_contract + '", "amount": "100"}}'
-print(run_command_with_output(execute_contract(test_snip20_contract, msg)))
+print(run_command_with_output(execute_contract(sSCRT_contract, msg)))
 
 msg = '{"balance": {"key": "' + test_key + '", "address": "' + account + '"}}'
-print(f"Test snip amount: {run_command(query_contract(test_snip20_contract, msg))}")
+print(f"sSCRT amount: {run_command(query_contract(sSCRT_contract, msg))}")
 
 msg = '{"balance": {"key": "' + shade_key + '", "address": "' + account + '"}}'
-print(f"Shade amount: {run_command(query_contract(shade_contract, msg))}")
+print(f"Silk amount: {run_command(query_contract(shade_contract, msg))}")
+
+print("\n\nMint should now store the new burned amount")
+print(run_command(query_contract(mint_contract, '{"get_asset":{"contract": "' + sSCRT_contract + '"}}')))
