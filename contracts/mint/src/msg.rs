@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{HumanAddr, CosmosMsg, Uint128, Binary};
-use crate::state::Asset;
+use crate::state::{Asset, Config};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
@@ -56,13 +56,15 @@ pub enum QueryMsg {
     GetAsset {
         contract: String,
     },
+    GetConfig {},
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     SupportedAssets { assets: Vec<String>, },
-    Asset { asset: Asset }
+    Asset { asset: Asset },
+    Config { config: Config },
 }
 
 // Contract interactions

@@ -323,6 +323,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetSupportedAssets {} => to_binary(&query_supported_assets(deps)?),
         QueryMsg::GetAsset { contract } => to_binary(&query_asset(deps, contract)?),
+        QueryMsg::GetConfig {} => to_binary(&query_config(deps)?),
     }
 }
 
@@ -337,6 +338,10 @@ fn query_asset<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, contract:
         Some(asset) => Ok(QueryAnswer::Asset { asset }),
         None => Err(StdError::NotFound { kind: contract, backtrace: None }),
     };
+}
+
+fn query_config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::Config { config: config_read(&deps.storage).load()? })
 }
 
 #[cfg(test)]
@@ -378,6 +383,61 @@ mod tests {
         // we can just call .unwrap() to assert this was a success
         let res = init(&mut deps, env, msg).unwrap();
         assert_eq!(0, res.messages.len());
+    }
+
+    #[test]
+    fn config_update() {
+        let silk_contract = create_contract("silk_contract".to_string());
+        let oracle_contract = create_contract("oracle_contract".to_string());
+        let mut deps = dummy_init("admin".to_string(), silk_contract,
+                                  "silk_hash".to_string(), oracle_contract,
+                                  "oracle_hash".to_string());
+
+        // Check config is properly updated
+        let res = query(&deps, QueryMsg::GetConfig {}).unwrap();
+        let value: QueryAnswer = from_binary(&res).unwrap();
+        let silk_contract = create_contract("silk_contract".to_string());
+        let oracle_contract = create_contract("oracle_contract".to_string());
+        match value {
+            QueryAnswer::Config { config } => {
+                assert_eq!(config.silk_contract, silk_contract);
+                assert_eq!(config.silk_contract_code_hash, "silk_hash".to_string());
+                assert_eq!(config.oracle_contract, oracle_contract);
+                assert_eq!(config.oracle_contract_code_hash, "oracle_hash".to_string());
+
+            }
+            _ => { panic!("Received wrong answer") }
+        }
+
+        // Update config
+        let user_env = mock_env("admin", &coins(1000, "earth"));
+        let new_silk_contract = create_contract("new_silk_contract".to_string());
+        let new_oracle_contract = create_contract("new_oracle_contract".to_string());
+        let msg = HandleMsg::UpdateConfig {
+            owner: None,
+            silk_contract: Option::from(new_silk_contract),
+            silk_contract_code_hash: None,
+            oracle_contract: Option::from(new_oracle_contract),
+            oracle_contract_code_hash: None
+        };
+        let res = handle(&mut deps, user_env, msg);
+
+        // Check config is properly updated
+        let res = query(&deps, QueryMsg::GetConfig {}).unwrap();
+        let value: QueryAnswer = from_binary(&res).unwrap();
+        let new_silk_contract = create_contract("new_silk_contract".to_string());
+        let new_oracle_contract = create_contract("new_oracle_contract".to_string());
+        match value {
+            QueryAnswer::Config { config } => {
+                assert_eq!(config.silk_contract, new_silk_contract);
+                assert_eq!(config.silk_contract_code_hash, "silk_hash".to_string());
+                assert_eq!(config.oracle_contract, new_oracle_contract);
+                assert_eq!(config.oracle_contract_code_hash, "oracle_hash".to_string());
+
+            }
+            _ => { panic!("Received wrong answer") }
+        }
+
     }
 
     #[test]
