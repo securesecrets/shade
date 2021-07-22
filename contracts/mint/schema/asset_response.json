@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AssetResponse",
+  "type": "object",
+  "required": [
+    "asset"
+  ],
+  "properties": {
+    "asset": {
+      "$ref": "#/definitions/Asset"
+    }
+  },
+  "definitions": {
+    "Asset": {
+      "type": "object",
+      "required": [
+        "burned_tokens",
+        "code_hash",
+        "contract"
+      ],
+      "properties": {
+        "burned_tokens": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "code_hash": {
+          "type": "string"
+        },
+        "contract": {
+          "$ref": "#/definitions/HumanAddr"
+        }
+      }
+    },
+    "HumanAddr": {
+      "type": "string"
+    },
+    "Uint128": {
+      "type": "string"
+    }
+  }
+}
