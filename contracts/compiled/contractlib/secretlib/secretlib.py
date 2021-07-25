@@ -47,23 +47,22 @@ def instantiate_contract(contract, msg, label, user='a', backend='test'):
     """
 
     command = ['secretcli', 'tx', 'compute', 'instantiate', contract, msg, '--from',
-            user, '--label', label, '-y', '--keyring-backend', backend]
+               user, '--label', label, '-y', '--keyring-backend', backend]
 
     return run_command_query_hash(command)
 
 
 def list_code():
-
     command = ['secretcli', 'query', 'compute', 'list-code']
 
     return json.loads(run_command(command, 3))
 
-#secretcli tx compute execute secret1s7c6xp9wltthk5r6mmavql4xld5me3g37guhsx '{"deposit": {}}' --amount 100uscrt  --from admin --gas 10000000 -y
-def execute_contract(contract, msg, user='a', backend='test', amount=''):
-    command = ['secretcli', 'tx', 'compute', 'execute', contract, msg, '--from', user, '--gas', '10000000', '-y',
-            '--keyring-backend', backend]
 
-    if amount != '':
+def execute_contract(contract, msg, user='a', backend='test', amount=None):
+    command = ['secretcli', 'tx', 'compute', 'execute', contract, msg, '--from', user, '--gas', '10000000', '-y',
+               '--keyring-backend', backend]
+
+    if amount is not None:
         command.append("--amount")
         command.append(amount)
 
