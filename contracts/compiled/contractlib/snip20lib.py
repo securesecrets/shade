@@ -38,7 +38,6 @@ class SNIP20(Contract):
 
         return secretlib.execute_contract(self.address, msg, account, self.backend, amount)
 
-
     def mint(self, recipient, amount):
         """
         Mint an amount into the recipients wallet
@@ -75,8 +74,8 @@ class SNIP20(Contract):
             {"create_viewing_key": {"entropy": entropy}})
 
         return \
-        json.loads(secretlib.execute_contract(self.address, msg, account, self.backend)["output_data_as_string"])[
-            "create_viewing_key"]["key"]
+            json.loads(secretlib.execute_contract(self.address, msg, account, self.backend)["output_data_as_string"])[
+                "create_viewing_key"]["key"]
 
     def get_balance(self, address, password):
         """
