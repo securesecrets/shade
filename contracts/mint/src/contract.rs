@@ -1,6 +1,6 @@
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128};
 
-use crate::msg::{HandleMsg, HandleAnswer, InitMsg, QueryMsg, QueryAnswer, OracleCall, ResponseStatus};
+use crate::msg::{HandleMsg, HandleAnswer, InitMsg, QueryMsg, QueryAnswer, ResponseStatus};
 use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read, Config, Asset};
 use secret_toolkit::snip20::{mint_msg, register_receive_msg};
 
@@ -420,7 +420,7 @@ mod tests {
             oracle_contract: Option::from(new_oracle_contract),
             oracle_contract_code_hash: None
         };
-        let res = handle(&mut deps, user_env, msg);
+        let _res = handle(&mut deps, user_env, msg);
 
         // Check config is properly updated
         let res = query(&deps, QueryMsg::GetConfig {}).unwrap();
