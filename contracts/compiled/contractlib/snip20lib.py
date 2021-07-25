@@ -24,7 +24,7 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"set_minters": {"minters": accounts}})
 
-        return secretlib.execute_contract(self.address, msg, self.admin, self.backend)
+        return self.execute(msg)
 
     def deposit(self, account, amount):
         """
@@ -36,7 +36,7 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"deposit": {}})
 
-        return secretlib.execute_contract(self.address, msg, account, self.backend, amount)
+        return self.execute(msg, account, amount)
 
     def mint(self, recipient, amount):
         """
@@ -48,7 +48,7 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"mint": {"recipient": recipient, "amount": str(amount)}})
 
-        return secretlib.execute_contract(self.address, msg, self.admin, self.backend)
+        return self.execute(msg)
 
     def send(self, account, recipient, amount):
         """
@@ -61,7 +61,7 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"send": {"recipient": recipient, "amount": str(amount)}})
 
-        return secretlib.execute_contract(self.address, msg, account, self.backend)
+        return self.execute(msg, account)
 
     def set_view_key(self, account, entropy):
         """
@@ -73,9 +73,7 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"create_viewing_key": {"entropy": entropy}})
 
-        return \
-            json.loads(secretlib.execute_contract(self.address, msg, account, self.backend)["output_data_as_string"])[
-                "create_viewing_key"]["key"]
+        return json.loads(self.execute(msg, account)["output_data_as_string"])["create_viewing_key"]["key"]
 
     def get_balance(self, address, password):
         """
@@ -87,4 +85,4 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"balance": {"key": password, "address": address}})
 
-        return secretlib.query_contract(self.address, msg)["balance"]["amount"]
+        return self.query(msg)["balance"]["amount"]

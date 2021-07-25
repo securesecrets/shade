@@ -32,12 +32,11 @@ class Mint(Contract):
             raw_msg["update_config"]["silk_contract_code_hash"] = silk_contract_code_hash
         if oracle_contract is not None:
             raw_msg["update_config"]["oracle_contract"] = oracle_contract
-        if oracle_contract is not None:
-            raw_msg["update_config"]["oracle_contract"] = oracle_contract
+        if oracle_contract_code_hash is not None:
+            raw_msg["update_config"]["oracle_contract_code_hash"] = oracle_contract_code_hash
 
         msg = json.dumps(raw_msg)
-
-        return secretlib.execute_contract(self.address, msg, self.admin, self.backend)
+        return self.execute(msg)
 
     def register_asset(self, snip20):
         """
@@ -48,7 +47,7 @@ class Mint(Contract):
         msg = json.dumps(
             {"register_asset": {"contract": snip20.address, "code_hash": snip20.hash}})
 
-        return secretlib.execute_contract(self.address, msg, self.admin, self.backend)
+        return self.execute(msg)
 
     def update_asset(self, old_snip20, snip20):
         """
@@ -60,7 +59,7 @@ class Mint(Contract):
         msg = json.dumps(
             {"update_asset": {"asset": old_snip20.address, "contract": snip20.address, "code_hash": snip20.hash}})
 
-        return secretlib.execute_contract(self.address, msg, self.admin, self.backend)
+        return self.execute(msg)
 
     def get_supported_assets(self):
         """
@@ -70,7 +69,7 @@ class Mint(Contract):
         msg = json.dumps(
             {"get_supported_assets": {}})
 
-        return secretlib.query_contract(self.address, msg)
+        return self.query(msg)
 
     def get_config(self):
         """
@@ -80,7 +79,7 @@ class Mint(Contract):
         msg = json.dumps(
             {"get_config": {}})
 
-        return secretlib.query_contract(self.address, msg)
+        return self.query(msg)
 
     def get_asset(self, snip20):
         """
@@ -91,4 +90,4 @@ class Mint(Contract):
         msg = json.dumps(
             {"get_asset": {"contract": snip20.address}})
 
-        return secretlib.query_contract(self.address, msg)
+        return self.query(msg)
