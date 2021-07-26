@@ -18,8 +18,10 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 cw20 = "0.2"
-cosmwasm-std = { version = "0.10.1", default-features = false, features = ["iterator"] }
-cosmwasm-storage = { version = "0.10.1", default-features = false, features = ["iterator"] }
-terraswap = "1.1.0"
+# cosmwasm-std = { version = "0.10.1", default-features = false, features = ["iterator"] }
+# cosmwasm-storage = { version = "0.10.1", default-features = false, features = ["iterator"] }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print", default-features = false, features = ["iterator"] }
+cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print", default-features = false, features = ["iterator"] }
+asset-protocol = { version = "0.1.0", path = "../asset_protocol" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }

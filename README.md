@@ -10,7 +10,6 @@
 | [Placeholder]()     | [Placeholder]()   |[Placeholder]                                                                           |          
 
 
-
 # Mirror Core Contracts
 
 This monorepository contains the source code for the core smart contracts implementing Mirror Protocol on the [Terra](https://terra.money) blockchain.
