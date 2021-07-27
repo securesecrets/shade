@@ -2,14 +2,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{HumanAddr, CosmosMsg, Uint128, Binary};
-use crate::state::{Asset, Config};
+use crate::state::{Asset, Config, Contract};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
-    pub silk_contract: HumanAddr,
-    pub silk_contract_code_hash: String,
-    pub oracle_contract: HumanAddr,
-    pub oracle_contract_code_hash: String,
+    pub admin: Option<HumanAddr>,
+    pub silk: Contract,
+    pub oracle: Contract,
+    pub initial_assets: Option<Vec<Contract>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -17,19 +17,15 @@ pub struct InitMsg {
 pub enum HandleMsg {
     UpdateConfig {
         owner: Option<HumanAddr>,
-        silk_contract: Option<HumanAddr>,
-        silk_contract_code_hash: Option<String>,
-        oracle_contract: Option<HumanAddr>,
-        oracle_contract_code_hash: Option<String>,
+        silk: Option<Contract>,
+        oracle: Option<Contract>,
     },
     RegisterAsset {
-        contract: HumanAddr,
-        code_hash: String,
+        contract: Contract,
     },
     UpdateAsset {
         asset: HumanAddr,
-        contract: HumanAddr,
-        code_hash: String,
+        contract: Contract,
     },
     Receive {
         sender: HumanAddr,

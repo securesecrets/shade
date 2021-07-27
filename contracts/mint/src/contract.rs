@@ -1,7 +1,7 @@
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128};
 
 use crate::msg::{HandleMsg, HandleAnswer, InitMsg, QueryMsg, QueryAnswer, ResponseStatus};
-use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read, Config, Asset};
+use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read, Config, Asset, Contract};
 use secret_toolkit::snip20::{mint_msg, register_receive_msg};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -10,11 +10,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let state = Config {
-        owner: env.message.sender.clone(),
-        silk_contract: msg.silk_contract,
-        silk_contract_code_hash: msg.silk_contract_code_hash,
-        oracle_contract: msg.oracle_contract,
-        oracle_contract_code_hash: msg.oracle_contract_code_hash,
+        owner: match msg.admin {
+            None => { env.message.sender.clone() }
+            Some(admin) => { admin }
+        },
+        silk: msg.silk,
+        oracle: msg.oracle,
+        activated: true,
     };
 
     config(&mut deps.storage).save(&state)?;
@@ -22,6 +24,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let empty_assets_list: Vec<String> = Vec::new();
     asset_list(&mut deps.storage).save(&empty_assets_list)?;
 
+    if let Some(assets) = msg.initial_assets {
+        for asset in assets {
+            let _response = try_register_asset(deps, &env, asset);
+        }
+    }
     debug_print!("Contract was initialized by {}", env.message.sender);
 
     Ok(InitResponse::default())
@@ -35,21 +42,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::UpdateConfig {
             owner,
-            silk_contract,
-            silk_contract_code_hash,
-            oracle_contract,
-            oracle_contract_code_hash
-        } => try_update_config(deps, env, owner, silk_contract, silk_contract_code_hash,
-                                oracle_contract, oracle_contract_code_hash),
+            silk,
+            oracle
+        } => try_update_config(deps, env, owner, silk, oracle),
         HandleMsg::RegisterAsset {
             contract,
-            code_hash
-        } => try_register_asset(deps, env, contract, code_hash),
+        } => try_register_asset(deps, &env, contract),
         HandleMsg::UpdateAsset {
             asset,
             contract,
-            code_hash
-        } => try_update_asset(deps, env, asset, contract, code_hash),
+        } => try_update_asset(deps, env, asset, contract),
         HandleMsg::Receive {
             sender,
             from,
@@ -63,34 +65,24 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     owner: Option<HumanAddr>,
-    silk_contract: Option<HumanAddr>,
-    silk_contract_code_hash: Option<String>,
-    oracle_contract: Option<HumanAddr>,
-    oracle_contract_code_hash: Option<String>,
+    silk: Option<Contract>,
+    oracle: Option<Contract>,
 ) -> StdResult<HandleResponse> {
-    let mut config = config(&mut deps.storage);
-
-    // Check if admin
-    if env.message.sender != config.load()?.owner {
+    if !authorized(deps, &env, AllowedAccess::Admin)? {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
     // Save new info
+    let mut config = config(&mut deps.storage);
     config.update(|mut state| {
         if let Some(owner) = owner {
             state.owner = owner;
         }
-        if let Some(silk_contract) = silk_contract {
-            state.silk_contract = silk_contract;
+        if let Some(silk) = silk {
+            state.silk = silk;
         }
-        if let Some(silk_contract_code_hash) = silk_contract_code_hash {
-            state.oracle_contract_code_hash = silk_contract_code_hash;
-        }
-        if let Some(oracle_contract) = oracle_contract {
-            state.oracle_contract = oracle_contract;
-        }
-        if let Some(oracle_contract_code_hash) = oracle_contract_code_hash {
-            state.oracle_contract_code_hash = oracle_contract_code_hash;
+        if let Some(oracle) = oracle {
+            state.oracle = oracle;
         }
         Ok(state)
     })?;
@@ -105,21 +97,15 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
-    contract: HumanAddr,
-    code_hash: String,
+    env: &Env,
+    contract: Contract,
 ) -> StdResult<HandleResponse> {
-    let config = config_read(&deps.storage);
-
-    let contract_str = contract.to_string();
-
-    // Check if admin
-    if env.message.sender != config.load()?.owner {
+    if !authorized(deps, &env, AllowedAccess::Admin)? {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
+    let contract_str = contract.address.to_string();
     let mut assets = assets_w(&mut deps.storage);
-
     let mut messages = vec![];
 
     // Check if asset already exists
@@ -130,7 +116,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             // Add the new asset
             assets.save(contract_str.as_bytes(), &Asset {
                 contract: contract.clone(),
-                code_hash: code_hash.clone(),
                 burned_tokens: Uint128(0),
             })?;
             // Add asset to list
@@ -139,7 +124,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                 Ok(state)
             })?;
             // Register contract in asset
-            let register_msg = register_receive(&deps, env, contract, code_hash)?;
+            let register_msg = register_receive(&deps, env, contract.address, contract.code_hash)?;
             messages.push(register_msg);
         }
     }
@@ -156,20 +141,14 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     asset: HumanAddr,
-    contract: HumanAddr,
-    code_hash: String,
+    contract: Contract,
 ) -> StdResult<HandleResponse> {
-    let config = config_read(&deps.storage);
-
-    let asset_str = asset.to_string();
-
-    // Check if admin
-    if env.message.sender != config.load()?.owner {
+    if !authorized(deps, &env, AllowedAccess::Admin)? {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
+    let asset_str = asset.to_string();
     let mut assets = assets_w(&mut deps.storage);
-
     let mut messages = vec![];
 
     // Check if asset already exists
@@ -178,9 +157,8 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
             // Remove the old asset
             assets.remove(asset_str.as_bytes());
             // Add the new asset
-            assets.save(contract.to_string().as_bytes(), &Asset {
+            assets.save(contract.address.to_string().as_bytes(), &Asset {
                 contract: contract.clone(),
-                code_hash: code_hash.clone(),
                 burned_tokens: loaded_asset.burned_tokens
             })?;
             // Remove old asset from list
@@ -195,7 +173,7 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
                 Ok(state)
             })?;
             // Register contract in asset
-            let register_msg = register_receive(&deps, env, contract, code_hash)?;
+            let register_msg = register_receive(&deps, &env, contract.address, contract.code_hash)?;
             messages.push(register_msg)
         },
 
@@ -218,6 +196,10 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     _msg: Option<CosmosMsg>
 ) -> StdResult<HandleResponse> {
+    if !authorized(deps, &env, AllowedAccess::User)? {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+    
     // Check that the asset is supported
     let mut assets = assets_w(&mut deps.storage);
 
@@ -259,9 +241,35 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
 // Helper functions
 
+#[derive(PartialEq)]
+pub enum AllowedAccess{
+    Admin,
+    User,
+}
+
+pub fn authorized<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    env: &Env,
+    access: AllowedAccess,
+) -> StdResult<bool> {
+    let config = config_read(&deps.storage).load()?;
+    // Check if contract is still activated
+    if !config.activated {
+        return Ok(false)
+    }
+
+    if access == AllowedAccess::Admin {
+        // Check if admin
+        if env.message.sender != config.owner {
+            return Ok(false)
+        }
+    }
+    return Ok(true)
+}
+
 fn register_receive<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
-    env: Env,
+    env: &Env,
     contract: HumanAddr,
     code_hash: String,
 ) -> StdResult<CosmosMsg> {
@@ -288,8 +296,8 @@ fn mint_silk<S: Storage, A: Api, Q: Querier>(
         amount,
         None,
         256,
-        config.silk_contract_code_hash,
-        config.silk_contract,
+        config.silk.code_hash,
+        config.silk.address,
     );
 
     cosmos_msg
@@ -351,19 +359,22 @@ mod tests {
     use cosmwasm_std::{coins, from_binary, StdError};
     use crate::msg::QueryAnswer;
 
-    fn create_contract(str: String) -> HumanAddr {
-        let env = mock_env(str, &[]);
-        return env.message.sender
+    fn create_contract(address: &str, code_hash: &str) -> Contract {
+        let env = mock_env(address.to_string(), &[]);
+        return Contract{
+            address: env.message.sender,
+            code_hash: code_hash.to_string()
+        }
     }
 
-    fn dummy_init(admin: String, silk: HumanAddr, silk_hash: String, oracle: HumanAddr,
-                  oracle_hash: String) -> Extern<MockStorage, MockApi, MockQuerier> {
+    fn dummy_init(admin: String, silk: Contract, oracle: Contract) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
-            silk_contract: silk,
-            silk_contract_code_hash: silk_hash,
-            oracle_contract: oracle,
-            oracle_contract_code_hash: oracle_hash };
+            admin: None,
+            silk,
+            oracle,
+            initial_assets: None
+        };
         let env = mock_env(admin, &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();
 
@@ -374,10 +385,11 @@ mod tests {
     fn proper_initialization() {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
-            silk_contract: Default::default(),
-            silk_contract_code_hash: "".to_string(),
-            oracle_contract: Default::default(),
-            oracle_contract_code_hash: "".to_string() };
+            admin: None,
+            silk: create_contract("", ""),
+            oracle: create_contract("", ""),
+            initial_assets: None
+        };
         let env = mock_env("creator", &coins(1000, "earth"));
 
         // we can just call .unwrap() to assert this was a success
@@ -387,23 +399,19 @@ mod tests {
 
     #[test]
     fn config_update() {
-        let silk_contract = create_contract("silk_contract".to_string());
-        let oracle_contract = create_contract("oracle_contract".to_string());
-        let mut deps = dummy_init("admin".to_string(), silk_contract,
-                                  "silk_hash".to_string(), oracle_contract,
-                                  "oracle_hash".to_string());
+        let silk_contract = create_contract("silk_contract", "silk_hash");
+        let oracle_contract = create_contract("oracle_contract", "oracle_hash");
+        let mut deps = dummy_init("admin".to_string(), silk_contract, oracle_contract);
 
         // Check config is properly updated
         let res = query(&deps, QueryMsg::GetConfig {}).unwrap();
         let value: QueryAnswer = from_binary(&res).unwrap();
-        let silk_contract = create_contract("silk_contract".to_string());
-        let oracle_contract = create_contract("oracle_contract".to_string());
+        let silk_contract = create_contract("silk_contract", "silk_hash");
+        let oracle_contract = create_contract("oracle_contract", "oracle_hash");
         match value {
             QueryAnswer::Config { config } => {
-                assert_eq!(config.silk_contract, silk_contract);
-                assert_eq!(config.silk_contract_code_hash, "silk_hash".to_string());
-                assert_eq!(config.oracle_contract, oracle_contract);
-                assert_eq!(config.oracle_contract_code_hash, "oracle_hash".to_string());
+                assert_eq!(config.silk, silk_contract);
+                assert_eq!(config.oracle, oracle_contract);
 
             }
             _ => { panic!("Received wrong answer") }
@@ -411,28 +419,24 @@ mod tests {
 
         // Update config
         let user_env = mock_env("admin", &coins(1000, "earth"));
-        let new_silk_contract = create_contract("new_silk_contract".to_string());
-        let new_oracle_contract = create_contract("new_oracle_contract".to_string());
+        let new_silk_contract = create_contract("new_silk_contract", "silk_hash");
+        let new_oracle_contract = create_contract("new_oracle_contract", "oracle_hash");
         let msg = HandleMsg::UpdateConfig {
             owner: None,
-            silk_contract: Option::from(new_silk_contract),
-            silk_contract_code_hash: None,
-            oracle_contract: Option::from(new_oracle_contract),
-            oracle_contract_code_hash: None
+            silk: Option::from(new_silk_contract),
+            oracle: Option::from(new_oracle_contract),
         };
         let _res = handle(&mut deps, user_env, msg);
 
         // Check config is properly updated
         let res = query(&deps, QueryMsg::GetConfig {}).unwrap();
         let value: QueryAnswer = from_binary(&res).unwrap();
-        let new_silk_contract = create_contract("new_silk_contract".to_string());
-        let new_oracle_contract = create_contract("new_oracle_contract".to_string());
+        let new_silk_contract = create_contract("new_silk_contract", "silk_hash");
+        let new_oracle_contract = create_contract("new_oracle_contract", "oracle_hash");
         match value {
             QueryAnswer::Config { config } => {
-                assert_eq!(config.silk_contract, new_silk_contract);
-                assert_eq!(config.silk_contract_code_hash, "silk_hash".to_string());
-                assert_eq!(config.oracle_contract, new_oracle_contract);
-                assert_eq!(config.oracle_contract_code_hash, "oracle_hash".to_string());
+                assert_eq!(config.silk, new_silk_contract);
+                assert_eq!(config.oracle, new_oracle_contract);
 
             }
             _ => { panic!("Received wrong answer") }
@@ -442,16 +446,15 @@ mod tests {
 
     #[test]
     fn user_register_asset() {
-        let mut deps = dummy_init("admin".to_string(), Default::default(),
-                                  "silk_hash".to_string(), Default::default(),
-                                  "oracle_hash".to_string());
+        let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
+                                  create_contract("", ""));
 
         // User should not be allowed to add an item
         let user_env = mock_env("user", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
         let msg = HandleMsg::RegisterAsset {
             contract: dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let res = handle(&mut deps, user_env, msg);
         match res {
@@ -470,16 +473,15 @@ mod tests {
 
     #[test]
     fn admin_register_asset() {
-        let mut deps = dummy_init("admin".to_string(), Default::default(),
-                                  "silk_hash".to_string(), Default::default(),
-                                  "oracle_hash".to_string());
+        let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
+                                  create_contract("", ""));
 
         // Admin should be allowed to add an item
         let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
         let msg = HandleMsg::RegisterAsset {
             contract: dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
@@ -494,24 +496,22 @@ mod tests {
 
     #[test]
     fn duplicate_register_asset() {
-        let mut deps = dummy_init("admin".to_string(), Default::default(),
-                                  "silk_hash".to_string(), Default::default(),
-                                  "oracle_hash".to_string());
+        let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
+                                  create_contract("", ""));
 
         let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
         let msg = HandleMsg::RegisterAsset {
             contract: dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
         // Should not be allowed to add an existing asset
         let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "other_hash");
         let msg = HandleMsg::RegisterAsset {
             contract: dummy_contract,
-            code_hash: "other_hash".to_string()
         };
         let res = handle(&mut deps, env, msg);
         match res {
@@ -522,27 +522,25 @@ mod tests {
 
     #[test]
     fn user_update_asset() {
-        let mut deps = dummy_init("admin".to_string(), Default::default(),
-                                  "silk_hash".to_string(), Default::default(),
-                                  "oracle_hash".to_string());
+        let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
+                                  create_contract("", ""));
 
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
         let msg = HandleMsg::RegisterAsset {
             contract: dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
         // users should not be allowed to update assets
         let user_env = mock_env("user", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
-        let new_dummy_contract = create_contract("some_other_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
+        let new_dummy_contract = create_contract("some_other_contract", "some_hash");
         let msg = HandleMsg::UpdateAsset {
-            asset: dummy_contract,
+            asset: dummy_contract.address,
             contract: new_dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let res = handle(&mut deps, user_env, msg);
         match res {
@@ -553,27 +551,25 @@ mod tests {
 
     #[test]
     fn admin_update_asset() {
-        let mut deps = dummy_init("admin".to_string(), Default::default(),
-                                  "silk_hash".to_string(), Default::default(),
-                                  "oracle_hash".to_string());
+        let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
+                                  create_contract("", ""));
 
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
         let msg = HandleMsg::RegisterAsset {
             contract: dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
         // admins can update assets
         let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
-        let new_dummy_contract = create_contract("some_other_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
+        let new_dummy_contract = create_contract("some_other_contract", "some_hash");
         let msg = HandleMsg::UpdateAsset {
-            asset: dummy_contract,
+            asset: dummy_contract.address,
             contract: new_dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
@@ -581,34 +577,32 @@ mod tests {
         let res = query(&deps, QueryMsg::GetAsset { contract: "some_other_contract".to_string() }).unwrap();
         let value: QueryAnswer = from_binary(&res).unwrap();
         match value {
-            QueryAnswer::Asset { asset } => { assert_eq!("some_other_contract".to_string(), asset.contract.to_string()) }
+            QueryAnswer::Asset { asset } => { assert_eq!("some_other_contract".to_string(), asset.contract.address.to_string()) }
             _ => { panic!("Received wrong answer") }
         };
     }
 
     #[test]
     fn nonexisting_update_asset() {
-        let mut deps = dummy_init("admin".to_string(), Default::default(),
-                                  "silk_hash".to_string(), Default::default(),
-                                  "oracle_hash".to_string());
+        let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
+                                  create_contract("", ""));
 
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
         let msg = HandleMsg::RegisterAsset {
             contract: dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
         // Should now be able to update non existing asset
         let env = mock_env("admin", &coins(1000, "earth"));
-        let bad_dummy_contract = create_contract("some_non_existing_contract".to_string());
-        let new_dummy_contract = create_contract("some_other_contract".to_string());
+        let bad_dummy_contract = create_contract("some_non_existing_contract", "some_hash");
+        let new_dummy_contract = create_contract("some_other_contract", "some_hash");
         let msg = HandleMsg::UpdateAsset {
-            asset: bad_dummy_contract,
+            asset: bad_dummy_contract.address,
             contract: new_dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let res = handle(&mut deps, env, msg);
         match res {
@@ -619,24 +613,24 @@ mod tests {
 
     #[test]
     fn receiving_an_asset() {
-        let mut deps = dummy_init("admin".to_string(), Default::default(),
-                                  "silk_hash".to_string(), Default::default(),
-                                  "oracle_hash".to_string());
+        let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
+                                  create_contract("", ""));
 
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
         let msg = HandleMsg::RegisterAsset {
             contract: dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
         // Contract tries to send funds
         let env = mock_env("some_contract", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_owner".to_string());
+        let dummy_contract = create_contract("some_owner", "some_hash");
+
         let msg = HandleMsg::Receive {
-            sender: dummy_contract,
+            sender: dummy_contract.address,
             from: Default::default(),
             amount: Uint128(100),
             msg: None,
@@ -650,24 +644,23 @@ mod tests {
 
     #[test]
     fn receiving_an_asset_from_non_supported_asset() {
-        let mut deps = dummy_init("admin".to_string(), Default::default(),
-                                  "silk_hash".to_string(), Default::default(),
-                                  "oracle_hash".to_string());
+        let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
+                                  create_contract("", ""));
 
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract".to_string());
+        let dummy_contract = create_contract("some_contract", "some_hash");
         let msg = HandleMsg::RegisterAsset {
             contract: dummy_contract,
-            code_hash: "some_hash".to_string()
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
         // Contract tries to send funds
         let env = mock_env("some_other_contract", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_owner".to_string());
+        let dummy_contract = create_contract("some_owner", "some_hash");
         let msg = HandleMsg::Receive {
-            sender: dummy_contract,
+            sender: dummy_contract.address,
             from: Default::default(),
             amount: Uint128(100),
             msg: None,

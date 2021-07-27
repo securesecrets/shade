@@ -12,22 +12,22 @@ pub static ASSET_LIST_KEY: &[u8] = b"asset_list";
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub owner: HumanAddr,
-    pub silk_contract: HumanAddr,
-    pub silk_contract_code_hash: String,
-    pub oracle_contract: HumanAddr,
-    pub oracle_contract_code_hash: String,
+    pub silk: Contract,
+    pub oracle: Contract,
+    pub activated: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct NativeCoin {
-    pub burned_tokens: Uint128,
+#[serde(rename_all = "snake_case")]
+pub struct Contract {
+    pub address: HumanAddr,
+    pub code_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Asset {
-    pub contract: HumanAddr,
-    pub code_hash: String,
+    pub contract: Contract,
     pub burned_tokens: Uint128,
 }
 
@@ -37,14 +37,6 @@ pub fn config<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
 
 pub fn config_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
-}
-
-pub fn native_coin<S: Storage>(storage: &mut S) -> Singleton<S, NativeCoin> {
-singleton(storage, NATIVE_COIN_KEY)
-}
-
-pub fn native_coin_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, NativeCoin> {
-    singleton_read(storage, NATIVE_COIN_KEY)
 }
 
 pub fn asset_list<S: Storage>(storage: &mut S) -> Singleton<S, Vec<String>> {
