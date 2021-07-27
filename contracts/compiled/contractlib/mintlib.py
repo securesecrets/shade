@@ -8,8 +8,8 @@ class Mint(Contract):
     def __init__(self, label, silk, oracle, contract='mint.wasm.gz', admin='a', uploader='a', gas='10000000',
                  backend='test'):
         initMsg = json.dumps(
-            {"silk_contract": silk.address, "silk_contract_code_hash": silk.hash,
-             "oracle_contract": "none", "oracle_contract_code_hash": "none"})
+            {"silk": {"address": silk.address, "code_hash": silk.hash },
+             "oracle":  {"address": "none", "code_hash": "none" } })
         super().__init__(contract, initMsg, label, admin, uploader, gas, backend)
 
     def update_config(self, owner=None, silk_contract=None, silk_contract_code_hash=None,
@@ -27,13 +27,13 @@ class Mint(Contract):
         if owner is not None:
             raw_msg["update_config"]["owner"] = owner
         if silk_contract is not None:
-            raw_msg["update_config"]["silk_contract"] = silk_contract
+            raw_msg["update_config"]["silk"]["address"] = silk_contract
         if silk_contract_code_hash is not None:
-            raw_msg["update_config"]["silk_contract_code_hash"] = silk_contract_code_hash
+            raw_msg["update_config"]["silk"]["code_hash"] = silk_contract_code_hash
         if oracle_contract is not None:
-            raw_msg["update_config"]["oracle_contract"] = oracle_contract
+            raw_msg["update_config"]["oracle"]["address"] = oracle_contract
         if oracle_contract_code_hash is not None:
-            raw_msg["update_config"]["oracle_contract_code_hash"] = oracle_contract_code_hash
+            raw_msg["update_config"]["oracle"]["code_hash"] = oracle_contract_code_hash
 
         msg = json.dumps(raw_msg)
         return self.execute(msg)
@@ -45,7 +45,7 @@ class Mint(Contract):
         :return: Result
         """
         msg = json.dumps(
-            {"register_asset": {"contract": snip20.address, "code_hash": snip20.hash}})
+            {"register_asset": {"contract": {"address": snip20.address, "code_hash": snip20.hash}}})
 
         return self.execute(msg)
 
@@ -57,7 +57,8 @@ class Mint(Contract):
         :return: Result
         """
         msg = json.dumps(
-            {"update_asset": {"asset": old_snip20.address, "contract": snip20.address, "code_hash": snip20.hash}})
+            {"update_asset": {"asset": old_snip20.address, "contract": {"address": snip20.address,
+                                                                        "code_hash": snip20.hash}}})
 
         return self.execute(msg)
 
