@@ -1,6 +1,6 @@
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128};
 
-use crate::msg::{HandleMsg, HandleAnswer, InitMsg, QueryMsg, QueryAnswer, ResponseStatus};
+use crate::msg::{HandleMsg, HandleAnswer, InitMsg, QueryMsg, QueryAnswer, ResponseStatus, AssetMsg};
 use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read, Config, Asset, Contract};
 use secret_toolkit::snip20::{mint_msg, register_receive_msg};
 
@@ -26,12 +26,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     if let Some(assets) = msg.initial_assets {
         for asset in assets {
-            let _response = try_register_asset(deps, &env, asset);
+            let _response = try_register_asset(deps, &env, asset.contract, asset.burned_tokens);
         }
     }
     debug_print!("Contract was initialized by {}", env.message.sender);
 
-    Ok(InitResponse::default())
+    Ok(InitResponse {
+        messages: vec![],
+        log: vec![]
+    })
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -40,6 +43,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
+        HandleMsg::Migrate {
+            code_id,
+            code_hash,
+            label
+        } => try_migrate(deps, env, label, code_id, code_hash),
         HandleMsg::UpdateConfig {
             owner,
             silk,
@@ -47,7 +55,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => try_update_config(deps, env, owner, silk, oracle),
         HandleMsg::RegisterAsset {
             contract,
-        } => try_register_asset(deps, &env, contract),
+        } => try_register_asset(deps, &env, contract, None),
         HandleMsg::UpdateAsset {
             asset,
             contract,
@@ -59,6 +67,51 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg,
             ..} => try_burn(deps, env, sender, from, amount, msg),
     }
+}
+
+pub fn try_migrate<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    label: String,
+    code_id: u64,
+    code_hash: String,
+) -> StdResult<HandleResponse> {
+    if !authorized(deps, vec![]&env, AllowedAccess::Admin)? {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+
+    let mut config = config(&mut deps.storage);
+    config.update(|mut state| {
+        state.activated = false;
+        Ok(state)
+    })?;
+
+    let config_read = config.load()?;
+    let mut initial_assets: Vec<AssetMsg> = vec![];
+    let assets = assets_r(&deps.storage);
+
+    for asset_addr in asset_list_read(&deps.storage).load()? {
+        if let Some(item) = assets.may_load(asset_addr.as_bytes())? {
+            initial_assets.push(AssetMsg {
+                contract: item.contract,
+                burned_tokens: Some(item.burned_tokens),
+            })
+        }
+    };
+
+    let init_msg = InitMsg {
+        admin: Option::from(config_read.owner),
+        silk: config_read.silk,
+        oracle: config_read.oracle,
+        initial_assets: Some(initial_assets)
+    };
+
+    Ok(HandleResponse {
+        messages: vec![init_msg.to_cosmos_msg(1, code_id, code_hash, label)?],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::Migrate {
+            status: ResponseStatus::Success } )? )
+    })
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
@@ -99,6 +152,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: Contract,
+    burned_amount: Option<Uint128>
 ) -> StdResult<HandleResponse> {
     if !authorized(deps, &env, AllowedAccess::Admin)? {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -116,7 +170,10 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             // Add the new asset
             assets.save(contract_str.as_bytes(), &Asset {
                 contract: contract.clone(),
-                burned_tokens: Uint128(0),
+                burned_tokens: match burned_amount {
+                    None => { Uint128(0) }
+                    Some(amount) => { amount }
+                },
             })?;
             // Add asset to list
             asset_list(&mut deps.storage).update(|mut state| {

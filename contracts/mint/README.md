@@ -4,6 +4,7 @@
     * [Init](#Init)
     * [Admin](#Admin)
         * Messages
+            * [Migrate](#Migrate)
             * [UpdateConfig](#UpdateConfig)
             * [RegisterAsset](#RegisterAsset)
             * [UpdateAsset](#UpdateAsset)
@@ -30,6 +31,22 @@ The minting contract is used as a way to acquire newly minted Silk, sending a se
 ## Admin
 
 ### Messages
+### Migrate
+Migrates all the contracts state and data into a new contract
+#### Request
+| Name     | Type   | Description         | optional |
+|----------| -------|---------------------|----------|
+|label     | String | Contract label name | no       |
+|code_id   | u64    | Contract ID         | no       |
+|code_hash | String | Contract code hash  | no       |
+##### Response
+```json
+{
+  "update_config": {
+    "status": "success"
+  }
+}
+```
 
 #### UpdateConfig
 Updates the given values
