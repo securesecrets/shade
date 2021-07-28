@@ -19,7 +19,7 @@ def run_command(command, wait=6):
     return result.stdout
 
 
-def store_contract(contract, user='a', gas='10000000', backend='test'):
+def store_contract(contract, user='a', gas='10000000', backend='test', wait=15):
     """
     Store contract and return its ID
     :param contract: Contract name
@@ -30,12 +30,17 @@ def store_contract(contract, user='a', gas='10000000', backend='test'):
     """
 
     command = ['secretcli', 'tx', 'compute', 'store', contract,
-               '--from', user, '--gas', gas, '-y', '--keyring-backend', backend]
+               '--from', user, '--gas', gas, '-y']
 
-    return run_command_query_hash(command, 9)['logs'][0]['events'][0]['attributes'][3]['value']
+    if backend is not None:
+        command += ['--keyring-backend', backend]
+
+    for attribute in run_command_query_hash(command, wait)['logs'][0]['events'][0]['attributes']:
+        if attribute["key"] == "code_id":
+            return attribute['value']
 
 
-def instantiate_contract(contract, msg, label, user='a', backend='test'):
+def instantiate_contract(contract, msg, label, user='a', backend='test', wait=6):
     """
     Instantiates a contract
     :param contract: Contract name
@@ -47,9 +52,12 @@ def instantiate_contract(contract, msg, label, user='a', backend='test'):
     """
 
     command = ['secretcli', 'tx', 'compute', 'instantiate', contract, msg, '--from',
-               user, '--label', label, '-y', '--keyring-backend', backend]
+               user, '--label', label, '-y']
 
-    return run_command_query_hash(command)
+    if backend is not None:
+        command += ['--keyring-backend', backend]
+
+    return run_command_query_hash(command, wait)
 
 
 def list_code():
@@ -58,15 +66,19 @@ def list_code():
     return json.loads(run_command(command, 3))
 
 
-def execute_contract(contract, msg, user='a', backend='test', amount=None):
-    command = ['secretcli', 'tx', 'compute', 'execute', contract, msg, '--from', user, '--gas', '10000000', '-y',
-               '--keyring-backend', backend]
+def execute_contract(contract, msg, user='a', backend='test', amount=None, compute=True, wait=6):
+    command = ['secretcli', 'tx', 'compute', 'execute', contract, msg, '--from', user, '--gas', '10000000', '-y']
+
+    if backend is not None:
+        command += ['--keyring-backend', backend]
 
     if amount is not None:
         command.append("--amount")
         command.append(amount)
 
-    return run_command_compute_hash(command)
+    if compute:
+        return run_command_compute_hash(command, wait)
+    return run_command_query_hash(command, wait)
 
 
 def query_hash(hash):

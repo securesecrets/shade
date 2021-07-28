@@ -1,21 +1,16 @@
-import string
 import random
 from contractlib.secretlib import secretlib
 from contractlib.snip20lib import SNIP20
 from contractlib.mintlib import Mint
-
-
-def gen_label(length):
-    # With combination of lower and upper case
-    return ''.join(random.choice(string.ascii_letters) for i in range(length))
-
+from contractlib.utils import gen_label
 
 account_key = 'a'
-account = secretlib.run_command(['secretcli', 'keys', 'show', '-a', 'a']).rstrip()
+account = secretlib.run_command(['secretcli', 'keys', 'show', '-a', account_key]).rstrip()
 
 print("Configuring sSCRT")
 sscrt = SNIP20(gen_label(8), decimals=6, public_total_supply=True, enable_deposit=True)
 sscrt_password = sscrt.set_view_key(account_key, "password")
+sscrt.print()
 
 sscrt_mint_amount = '100000000000000'
 print(f"\tDepositing {sscrt_mint_amount} uSCRT")
@@ -57,3 +52,7 @@ for i in range(total_tests):
     burned_amount = mint.get_asset(sscrt)["asset"]["asset"]["burned_tokens"]
     print(f"\tTotal burned: {burned_amount} usSCRT")
     assert total_sent == int(burned_amount), f"Burnt {burned_amount}; expected {total_sent}"
+
+print("Testing migration")
+new_mint = mint.migrate(gen_label(8), int(mint.contract_id), mint.code_hash)
+assert mint.get_supported_assets() == new_mint.get_supported_assets(), "Contracts are not the same"
