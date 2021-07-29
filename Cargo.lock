@@ -56,8 +56,10 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f49f6183038e081170ebbbadee6678966c7d54728938a3e7de7f4e780770318f"
 dependencies = [
+ "block-padding",
+ "byte-tools",
  "byteorder",
- "serde",
+ "generic-array 0.12.3",
 ]
 
 [[package]]
@@ -73,13 +75,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "block-buffer"
-version = "0.9.0"
+name = "byte-tools"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4152116fd6e9dadb291ae18fc1ec3575ed6d84c29642d97890f4b4a3417297e4"
-dependencies = [
- "generic-array 0.14.4",
-]
+checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
 
 [[package]]
 name = "block-padding"
@@ -97,6 +96,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
 
 [[package]]
+
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -140,8 +140,11 @@ name = "cosmwasm-storage"
 version = "0.10.0"
 source = "git+https://github.com/enigmampc/SecretNetwork?tag=v1.0.4-debug-print#004c6bca6f2b7f31a6594abe4f44f2e41b1456b3"
 dependencies = [
- "cosmwasm-std",
+ "base64",
+ "schemars",
  "serde",
+ "serde-json-wasm",
+ "snafu",
 ]
 
 [[package]]
