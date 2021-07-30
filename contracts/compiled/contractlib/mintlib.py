@@ -10,7 +10,7 @@ class Mint(Contract):
                  backend='test'):
         init_msg = json.dumps(
             {"silk": {"address": silk.address, "code_hash": silk.code_hash },
-             "oracle":  {"address": "none", "code_hash": "none" } })
+             "oracle":  {"address": oracle.address, "code_hash": oracle.code_hash } })
         super().__init__(contract, init_msg, label, admin, uploader, gas, backend)
 
     def migrate(self, label, code_id, code_hash):

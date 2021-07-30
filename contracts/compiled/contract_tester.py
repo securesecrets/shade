@@ -2,6 +2,7 @@ import random
 from contractlib.secretlib import secretlib
 from contractlib.snip20lib import SNIP20
 from contractlib.mintlib import Mint
+from contractlib.oraclelib import Oracle
 from contractlib.utils import gen_label
 
 account_key = 'a'
@@ -23,8 +24,12 @@ print("Configuring silk")
 silk = SNIP20(gen_label(8), public_total_supply=True, enable_mint=True)
 silk_password = silk.set_view_key(account_key, "password")
 
+print('Configuring Oracle')
+oracle = Oracle(gen_label(8))
+print('addr', oracle.address)
+
 print("Configuring Mint contract")
-mint = Mint(gen_label(8), silk, "oracle")
+mint = Mint(gen_label(8), silk, oracle)
 # TODO: check that the initialized contract is legit
 silk.set_minters([mint.address])
 mint.register_asset(sscrt)
