@@ -76,7 +76,7 @@ pub fn try_migrate<S: Storage, A: Api, Q: Querier>(
     code_id: u64,
     code_hash: String,
 ) -> StdResult<HandleResponse> {
-    if !authorized(deps, vec![]&env, AllowedAccess::Admin)? {
+    if !authorized(deps, &env, AllowedAccess::Admin)? {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
