@@ -16,3 +16,4 @@ compile_contract() {
 }
 
 compile_contract "mint"
+compile_contract "oracle"
