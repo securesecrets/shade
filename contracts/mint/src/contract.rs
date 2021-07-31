@@ -1,15 +1,26 @@
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128};
+use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read};
+use secret_toolkit::{
+    snip20::{mint_msg, register_receive_msg, token_info_query},
+};
+use shade_protocol::{
+    mint::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, AssetMsg, MintConfig, BurnableAsset},
+    asset::{Contract},
+    msg_traits::{Init, Query},
+};
+use shade_protocol::generic_response::ResponseStatus;
 
-use crate::msg::{HandleMsg, HandleAnswer, InitMsg, QueryMsg, QueryAnswer, ResponseStatus, AssetMsg};
-use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read, Config, Asset, Contract};
-use secret_toolkit::snip20::{mint_msg, register_receive_msg};
-
+// TODO: tester that tests for contract availability
+// TODO: add remove asset
+// TODO: add spacepad padding
+// TODO: father contract must be snip20 contract owner
+// TODO: father contract must change minters when migrating
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    let state = Config {
+    let state = MintConfig {
         owner: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
@@ -168,7 +179,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
         None => {
             // Add the new asset
-            assets.save(contract_str.as_bytes(), &Asset {
+            assets.save(contract_str.as_bytes(), &BurnableAsset {
                 contract: contract.clone(),
                 burned_tokens: match burned_amount {
                     None => { Uint128(0) }
@@ -214,7 +225,7 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
             // Remove the old asset
             assets.remove(asset_str.as_bytes());
             // Add the new asset
-            assets.save(contract.address.to_string().as_bytes(), &Asset {
+            assets.save(contract.address.to_string().as_bytes(), &BurnableAsset {
                 contract: contract.clone(),
                 burned_tokens: loaded_asset.burned_tokens
             })?;
@@ -259,13 +270,14 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     
     // Check that the asset is supported
     let mut assets = assets_w(&mut deps.storage);
+    let mut callback_code_hash: String = "".to_string();
 
     // Check if asset already exists
     match assets.may_load(env.message.sender.to_string().as_bytes())? {
         Some(_) => {
             assets.update(env.message.sender.to_string().as_bytes(), |item| {
-                let mut asset: Asset = item.unwrap();
-
+                let mut asset: BurnableAsset = item.unwrap();
+                callback_code_hash = asset.contract.code_hash.clone();
                 asset.burned_tokens += amount;
                 Ok(asset)
             })?;
@@ -274,12 +286,18 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         None => return Err(StdError::NotFound { kind: env.message.sender.to_string(), backtrace: None }),
     }
 
-    // First get the current value per coin
+    // Since all of the values will have different uint to decimal places, we first convert them to float
     let token_value:u128 = call_oracle(deps, env.clone(), env.message.sender.clone())?.into();
-    let amount_converted:u128 = amount.into();
+    // Return values will always be value * 10^18
+    let converted_token_value:f64 = (token_value) as f64 / 10f64.powf(18.0);
+    let amount_received:u128 = amount.into();
+    // Coin amount will always be amount * 10^decimals
+    let amount_decimals:f64 = 10f64.powf(token_info_query(&deps.querier, 1, callback_code_hash, env.message.sender)?.decimals as f64);
+    let converted_amount:f64 = (amount_received) as f64 / &amount_decimals;
 
-    // // Calculate amount to mint
-    let value_to_mint = Uint128::from(amount_converted * token_value);
+    // Calculate amount to mint by multiplying the values and then multiplying by decimal amount again
+    let calculated_value_to_mint = ((converted_token_value * converted_amount) * amount_decimals) as u128;
+    let value_to_mint = Uint128::from(calculated_value_to_mint);
 
     let mut messages = vec![];
 
@@ -361,23 +379,18 @@ fn mint_silk<S: Storage, A: Api, Q: Querier>(
 }
 
 fn call_oracle<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    deps: &mut Extern<S, A, Q>,
     _env: Env,
     _contract: HumanAddr,
 ) -> StdResult<Uint128> {
-    // Call contract
-    // let block_size = 1; //update this later
-    // let config = config_read(&deps.storage).load()?;
-    // let mut msg = to_binary(&&OracleCall{ contract })?;
-    // space_pad(&mut msg.0, block_size);
-    // let _execute = WasmMsg::Execute {
-    //     contract_addr: config.oracle_contract,
-    //     callback_code_hash: config.oracle_contract_code_hash,
-    //     msg,
-    //     send: vec![]
-    // };
-    // somehow handle execute and get a Uint128 value
-    let value = Uint128(1);
+    let block_size = 1; //update this later
+    let config = config_read(&deps.storage).load()?;
+    let query_msg = shade_protocol::oracle::QueryMsg::GetSCRTPrice {};
+    let answer: shade_protocol::oracle::PriceResponse = query_msg.query(&deps.querier, block_size,
+                                 config.oracle.code_hash,
+                                 config.oracle.address)?;
+
+    let value = answer.price;
     Ok(value)
 }
 
@@ -414,7 +427,7 @@ mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier};
     use cosmwasm_std::{coins, from_binary, StdError};
-    use crate::msg::QueryAnswer;
+    use shade_protocol::mint::QueryAnswer;
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);
@@ -693,9 +706,18 @@ mod tests {
             msg: None,
             memo: None
         };
+
         let res = handle(&mut deps, env, msg);
-        if res.is_err() {
-            panic!("Must not return error");
+        match res {
+            Err(err) => {
+                match err {
+                    StdError::NotFound { .. } => {panic!("Not found");}
+                    StdError::Unauthorized { .. } => {panic!("Unauthorized");}
+                    _ => {//panic!("Must not return error");
+                    }
+                }
+            }
+            _ => {}
         }
     }
 

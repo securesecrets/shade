@@ -1,19 +1,7 @@
-use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage,
-};
-
-use crate::msg::{
-    InitMsg,
-    HandleMsg,
-    QueryMsg,
-    PriceResponse
-};
-
-use crate::state::{
-    config, 
-    Config,
-    //ReferenceData
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128};
+use crate::state::{config};
+use shade_protocol::{
+    oracle::{InitMsg, HandleMsg, QueryMsg, PriceResponse, OracleConfig},
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -21,14 +9,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    let state = Config {
+    let state = OracleConfig {
         owner: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
-        //count: msg.count,
-        //currentPrice: msg.current_price,
-        //owner: deps.api.canonical_address(&env.message.sender)?,
     };
 
     config(&mut deps.storage).save(&state)?;
@@ -52,40 +37,52 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetSilkPrice {} => to_binary(&query_silk_price()?),
+        QueryMsg::GetSCRTPrice {} => to_binary(&query_silk_price()?),
     }
 }
 
 fn query_silk_price<>() -> StdResult<PriceResponse> {
-    Ok(PriceResponse { price: (10f32.powf(18.0) * 2.38) as i128})
+    let price = Uint128((10f32.powf(18.0) * 1.00) as u128);
+    Ok(PriceResponse { price })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_std::{coins, from_binary, StdError};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier};
+    use cosmwasm_std::{coins, from_binary};
+
+    fn dummy_init(admin: &str) -> Extern<MockStorage, MockApi, MockQuerier> {
+        let mut deps = mock_dependencies(20, &[]);
+        let msg = InitMsg {
+            admin: None,
+        };
+        let env = mock_env(admin.to_string(), &coins(1000, "earth"));
+        let _res = init(&mut deps, env, msg).unwrap();
+
+        return deps
+    }
 
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies(20, &[]);
 
-        let msg = InitMsg { count: 17 };
+        let msg = InitMsg { admin: None };
         let env = mock_env("creator", &coins(1000, "earth"));
 
         // we can just call .unwrap() to assert this was a success
         let res = init(&mut deps, env, msg).unwrap();
         assert_eq!(0, res.messages.len());
+    }
 
-        /*
-        // it worked, let's query the state
-        let res = query(&deps, QueryMsg::GetCount {}).unwrap();
-        let value: CountResponse = from_binary(&res).unwrap();
-        assert_eq!(17, value.count);
-        */
+    #[test]
+    fn query_price() {
+        let deps = dummy_init("admin");
 
-        let res = query(&deps, QueryMsg::GetSilkPrice {}).unwrap();
+        // Query the price
+        let res = query(&deps, QueryMsg::GetSCRTPrice {}).unwrap();
         let value: PriceResponse = from_binary(&res).unwrap();
-        assert_eq!(17, value.currentPrice);
+        let expected_price = Uint128((10f32.powf(18.0) * 1.00) as u128);
+        assert_eq!(expected_price, value.price);
     }
 }
