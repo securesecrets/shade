@@ -1,4 +1,4 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128, Decimal};
 use crate::state::{config};
 use shade_protocol::{
     oracle::{InitMsg, HandleMsg, QueryMsg, PriceResponse, OracleConfig},
@@ -42,7 +42,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 }
 
 fn query_silk_price<>() -> StdResult<PriceResponse> {
-    let price = Uint128((10f32.powf(18.0) * 1.00) as u128);
+    let price:Uint128 = Uint128(10u64.pow(18) as u128);
     Ok(PriceResponse { price })
 }
 
@@ -82,7 +82,7 @@ mod tests {
         // Query the price
         let res = query(&deps, QueryMsg::GetScrtPrice {}).unwrap();
         let value: PriceResponse = from_binary(&res).unwrap();
-        let expected_price = Uint128((10f32.powf(18.0) * 1.00) as u128);
+        let expected_price = Uint128(10u64.pow(18) as u128);
         assert_eq!(expected_price, value.price);
     }
 }

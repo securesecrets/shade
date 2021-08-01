@@ -192,7 +192,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                 Ok(state)
             })?;
             // Register contract in asset
-            let register_msg = register_receive(&deps, env, contract.address, contract.code_hash)?;
+            let register_msg = register_receive(env, contract.address, contract.code_hash)?;
             messages.push(register_msg);
         }
     }
@@ -241,7 +241,7 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
                 Ok(state)
             })?;
             // Register contract in asset
-            let register_msg = register_receive(&deps, &env, contract.address, contract.code_hash)?;
+            let register_msg = register_receive(&env, contract.address, contract.code_hash)?;
             messages.push(register_msg)
         },
 
@@ -294,16 +294,19 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     // TODO: make this a function that way it can be tested
 
     // Returned value is x * 10**18
-    let token_value = Uint128(call_oracle(deps, env.clone(), env.message.sender.clone())?.into());
+    let token_value = Uint128(call_oracle(deps)?.into());
 
     // Load the decimal information for both coins
     let config = config_read(&deps.storage).load()?;
-    let send_decimals = token_info_query(&deps.querier, 1, callback_code_hash, env.message.sender)?.decimals as u32;
-    let silk_decimals = token_info_query(&deps.querier, 1, config.silk.code_hash, config.silk.address)?.decimals as u32;
+    let send_decimals = token_info_query(&deps.querier, 1, callback_code_hash,
+                                         env.message.sender)?.decimals as u32;
+    let silk_decimals = token_info_query(&deps.querier, 1,
+                                         config.silk.code_hash,
+                                         config.silk.address)?.decimals as u32;
 
     // ( ( token_value * 10**18 ) * ( amount * 10**send_decimals ) ) / ( 10**(18 - ( send_decimals - silk-decimals ) ) )
     // This will calculate the total mind value
-    let value_to_mint = token_value.multiply_ratio(amount, 10u64.pow(18 + (send_decimals - silk_decimals)) as u128);
+    let value_to_mint = calculate_mint(token_value, amount, send_decimals, silk_decimals);
     let mut messages = vec![];
 
     let mint_msg = mint_silk(deps, from, value_to_mint)?;
@@ -327,7 +330,7 @@ pub enum AllowedAccess{
     User,
 }
 
-pub fn authorized<S: Storage, A: Api, Q: Querier>(
+fn authorized<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     env: &Env,
     access: AllowedAccess,
@@ -347,8 +350,12 @@ pub fn authorized<S: Storage, A: Api, Q: Querier>(
     return Ok(true)
 }
 
-fn register_receive<S: Storage, A: Api, Q: Querier>(
-    _deps: &Extern<S, A, Q>,
+fn calculate_mint(x: Uint128, y: Uint128, a: u32, b: u32) -> Uint128 {
+    // ( ( x * 10**18 ) * ( y * 10**a ) ) / ( 10**(18 - ( a - b ) ) )
+    x.multiply_ratio(y, 10u64.pow(18 + (a - b)) as u128)
+}
+
+fn register_receive (
     env: &Env,
     contract: HumanAddr,
     code_hash: String,
@@ -385,8 +392,6 @@ fn mint_silk<S: Storage, A: Api, Q: Querier>(
 
 fn call_oracle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    _env: Env,
-    _contract: HumanAddr,
 ) -> StdResult<Uint128> {
     let block_size = 1; //update this later
     let config = config_read(&deps.storage).load()?;
