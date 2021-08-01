@@ -9,8 +9,8 @@ class Mint(Contract):
     def __init__(self, label, silk, oracle, contract='mint.wasm.gz', admin='a', uploader='a', gas='10000000',
                  backend='test'):
         init_msg = json.dumps(
-            {"silk": {"address": silk.address, "code_hash": silk.code_hash },
-             "oracle":  {"address": oracle.address, "code_hash": oracle.code_hash } })
+            {"silk": {"address": silk.address, "code_hash": silk.code_hash},
+             "oracle": {"address": oracle.address, "code_hash": oracle.code_hash}})
         super().__init__(contract, init_msg, label, admin, uploader, gas, backend)
 
     def migrate(self, label, code_id, code_hash):
@@ -21,7 +21,7 @@ class Mint(Contract):
         :param code_hash: Code hash
         :return: new Mint
         """
-        msg = json.dumps (
+        msg = json.dumps(
             {"migrate": {"label": label, "code_id": code_id, "code_hash": code_hash}})
 
         new_mint = copy.deepcopy(self)
