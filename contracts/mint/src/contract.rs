@@ -286,19 +286,24 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         None => return Err(StdError::NotFound { kind: env.message.sender.to_string(), backtrace: None }),
     }
 
-    // Since all of the values will have different uint to decimal places, we first convert them to float
-    let token_value:u128 = call_oracle(deps, env.clone(), env.message.sender.clone())?.into();
-    // Return values will always be value * 10^18
-    let converted_token_value:f64 = (token_value) as f64 / 10f64.powf(18.0);
-    let amount_received:u128 = amount.into();
-    // Coin amount will always be amount * 10^decimals
-    let amount_decimals:f64 = 10f64.powf(token_info_query(&deps.querier, 1, callback_code_hash, env.message.sender)?.decimals as f64);
-    let converted_amount:f64 = (amount_received) as f64 / &amount_decimals;
+    // 1.6 = 1_600_000_000_000_000_000
+    // 1.6 SCRT = 1_600_000 uSCRT = 1_600_000_000_000_000_000
+    // 1.6 * 1.6 = 2.56
+    // 2_560_000_000_000_000_000_00
 
-    // Calculate amount to mint by multiplying the values and then multiplying by decimal amount again
-    let calculated_value_to_mint = ((converted_token_value * converted_amount) * amount_decimals) as u128;
-    let value_to_mint = Uint128::from(calculated_value_to_mint);
+    // TODO: make this a function that way it can be tested
 
+    // Returned value is x * 10**18
+    let token_value = Uint128(call_oracle(deps, env.clone(), env.message.sender.clone())?.into());
+
+    // Load the decimal information for both coins
+    let config = config_read(&deps.storage).load()?;
+    let send_decimals = token_info_query(&deps.querier, 1, callback_code_hash, env.message.sender)?.decimals as u32;
+    let silk_decimals = token_info_query(&deps.querier, 1, config.silk.code_hash, config.silk.address)?.decimals as u32;
+
+    // ( ( token_value * 10**18 ) * ( amount * 10**send_decimals ) ) / ( 10**(18 - ( send_decimals - silk-decimals ) ) )
+    // This will calculate the total mind value
+    let value_to_mint = token_value.multiply_ratio(amount, 10u64.pow(18 + (send_decimals - silk_decimals)) as u128);
     let mut messages = vec![];
 
     let mint_msg = mint_silk(deps, from, value_to_mint)?;
