@@ -385,7 +385,7 @@ fn call_oracle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Uint128> {
     let block_size = 1; //update this later
     let config = config_read(&deps.storage).load()?;
-    let query_msg = shade_protocol::oracle::QueryMsg::GetSCRTPrice {};
+    let query_msg = shade_protocol::oracle::QueryMsg::GetScrtPrice {};
     let answer: shade_protocol::oracle::PriceResponse = query_msg.query(&deps.querier, block_size,
                                  config.oracle.code_hash,
                                  config.oracle.address)?;

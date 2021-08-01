@@ -25,7 +25,7 @@ impl Handle<'_> for HandleMsg{}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetSCRTPrice {}
+    GetScrtPrice {}
 }
 
 impl Query for QueryMsg {}

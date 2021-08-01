@@ -37,7 +37,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetSCRTPrice {} => to_binary(&query_silk_price()?),
+        QueryMsg::GetScrtPrice {} => to_binary(&query_silk_price()?),
     }
 }
 
@@ -80,7 +80,7 @@ mod tests {
         let deps = dummy_init("admin");
 
         // Query the price
-        let res = query(&deps, QueryMsg::GetSCRTPrice {}).unwrap();
+        let res = query(&deps, QueryMsg::GetScrtPrice {}).unwrap();
         let value: PriceResponse = from_binary(&res).unwrap();
         let expected_price = Uint128((10f32.powf(18.0) * 1.00) as u128);
         assert_eq!(expected_price, value.price);
