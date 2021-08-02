@@ -1,9 +1,24 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use cosmwasm_std::{HumanAddr, Uint128, Binary, CosmosMsg};
+use crate::asset::Contract;
+use crate::generic_response::ResponseStatus;
+use crate::msg_traits::{Init, Handle, Query};
 
-use cosmwasm_std::{HumanAddr, CosmosMsg, Uint128, Binary, WasmMsg, to_binary, StdResult};
-use crate::state::{Asset, Config, Contract};
-use secret_toolkit::utils::space_pad;
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MintConfig {
+    pub owner: HumanAddr,
+    pub silk: Contract,
+    pub oracle: Contract,
+    pub activated: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct BurnableAsset {
+    pub contract: Contract,
+    pub burned_tokens: Uint128,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
@@ -13,30 +28,7 @@ pub struct InitMsg {
     pub initial_assets: Option<Vec<AssetMsg>>,
 }
 
-impl InitMsg {
-    pub fn to_cosmos_msg(
-        &self,
-        mut block_size: usize,
-        code_id: u64,
-        callback_code_hash: String,
-        label: String,
-    ) -> StdResult<CosmosMsg> {
-        // can not have block size of 0
-        if block_size == 0 {
-            block_size = 1;
-        }
-        let mut msg = to_binary(self)?;
-        space_pad(&mut msg.0, block_size);
-        let execute = WasmMsg::Instantiate {
-            code_id,
-            callback_code_hash,
-            msg,
-            send: vec![],
-            label
-        };
-        Ok(execute.into())
-    }
-}
+impl Init<'_> for InitMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -67,6 +59,8 @@ pub enum HandleMsg {
     },
 }
 
+impl Handle<'_> for HandleMsg{}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
@@ -88,12 +82,14 @@ pub enum QueryMsg {
     GetConfig {},
 }
 
+impl Query for QueryMsg {}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     SupportedAssets { assets: Vec<String>, },
-    Asset { asset: Asset },
-    Config { config: Config },
+    Asset { asset: BurnableAsset },
+    Config { config: MintConfig },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -101,17 +97,4 @@ pub enum QueryAnswer {
 pub struct AssetMsg {
     pub contract: Contract,
     pub burned_tokens: Option<Uint128>,
-}
-
-// Contract interactions
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct OracleCall {
-    pub contract: HumanAddr,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ResponseStatus {
-    Success,
-    Failure,
 }

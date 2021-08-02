@@ -1,8 +1,16 @@
 from .secretlib import secretlib
 
 
+class PreInstantiatedContract:
+    def __init__(self, contract_id, address, code_hash):
+        self.contract_id = contract_id
+        self.address = address
+        self.code_hash = code_hash
+
+
 class Contract:
-    def __init__(self, contract, initMsg, label, admin='a', uploader='a', gas='10000000', backend='test', wait=6):
+    def __init__(self, contract, initMsg, label, admin='a', uploader='a', gas='10000000', backend='test', wait=6,
+                 instantiated_contract=None):
         self.label = label
         self.admin = admin
         self.uploader = uploader
@@ -10,14 +18,20 @@ class Contract:
         self.backend = backend
         self.wait = wait
 
-        self.contract_id = secretlib.store_contract(contract, uploader, gas, backend)
-        initResponse = secretlib.instantiate_contract(str(self.contract_id), initMsg, label, admin, backend)
-        contracts = secretlib.list_code()
-        self.code_hash = contracts[int(self.contract_id) - 1]["data_hash"]
-        for attribute in initResponse["logs"][0]["events"][0]["attributes"]:
-            if attribute["key"] == "contract_address":
-                self.address = attribute["value"]
-                break
+        if instantiated_contract is None:
+            self.contract_id = secretlib.store_contract(contract, uploader, gas, backend)
+            initResponse = secretlib.instantiate_contract(str(self.contract_id), initMsg, label, admin, backend)
+            contracts = secretlib.list_code()
+            self.code_hash = contracts[int(self.contract_id) - 1]["data_hash"]
+            for attribute in initResponse["logs"][0]["events"][0]["attributes"]:
+                if attribute["key"] == "contract_address":
+                    self.address = attribute["value"]
+                    break
+
+        else:
+            self.contract_id = instantiated_contract.contract_id
+            self.code_hash = instantiated_contract.code_hash
+            self.address = instantiated_contract.address
 
     def execute(self, msg, sender=None, amount=None, compute=True):
         """
