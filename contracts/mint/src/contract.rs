@@ -351,8 +351,11 @@ fn authorized<S: Storage, A: Api, Q: Querier>(
 }
 
 fn calculate_mint(x: Uint128, y: Uint128, a: u32, b: u32) -> Uint128 {
-    // ( ( x * 10**18 ) * ( y * 10**a ) ) / ( 10**(18 - ( a - b ) ) )
-    x.multiply_ratio(y, 10u64.pow(18 + (a - b)) as u128)
+    // x = value * 10**18
+    // y = value * 10**a
+    // ( x * y ) / ( 10**(18 - ( a - b ) ) )
+    let exponent = (18 as i32 + a as i32 - b as i32) as u32;
+    x.multiply_ratio(y, 10u128.pow(exponent))
 }
 
 fn register_receive (
@@ -760,5 +763,27 @@ mod tests {
             Err(StdError::NotFound { .. }) => {}
             _ => {panic!("Must return not found error")},
         }
+    }
+
+    #[test]
+    fn mint_algorithm_simple() {
+        // In this example the "sent" value is 1 with 6 decimal places
+        // The mint value will be 1 with 3 decimal places
+        let price = Uint128(1_000_000_000_000_000_000);
+        let sent_value = Uint128(1_000_000);
+        let expected_value = Uint128(1_000);
+        let value = calculate_mint(price, sent_value, 6, 3);
+
+        assert_eq!(value, expected_value);
+    }
+
+    #[test]
+    fn mint_algorithm_complex() {
+        // In this example the "sent" value is 1.8 with 6 decimal places
+        // The mint value will be 3.6 with 12 decimal places
+        let price = Uint128(2_000_000_000_000_000_000);
+        let sent_value = Uint128(1_800_000);
+        let expected_value = Uint128(3_600_000_000_000);
+        let value = calculate_mint(price, sent_value, 6, 12);
     }
 }
