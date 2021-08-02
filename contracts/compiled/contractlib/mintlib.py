@@ -7,11 +7,12 @@ import json
 
 class Mint(Contract):
     def __init__(self, label, silk, oracle, contract='mint.wasm.gz', admin='a', uploader='a', gas='10000000',
-                 backend='test'):
+                 backend='test', instantiated_contract=None):
         init_msg = json.dumps(
             {"silk": {"address": silk.address, "code_hash": silk.code_hash},
              "oracle": {"address": oracle.address, "code_hash": oracle.code_hash}})
-        super().__init__(contract, init_msg, label, admin, uploader, gas, backend)
+        super().__init__(contract, init_msg, label, admin, uploader, gas, backend,
+                         instantiated_contract=instantiated_contract)
 
     def migrate(self, label, code_id, code_hash):
         """
@@ -45,11 +46,17 @@ class Mint(Contract):
         if owner is not None:
             raw_msg["update_config"]["owner"] = owner
         if silk is not None:
-            raw_msg["update_config"]["silk"]["address"] = silk.address
-            raw_msg["update_config"]["silk"]["code_hash"] = silk.code_hash
+            contract = {
+                "address": silk.address,
+                "code_hash": silk.code_hash
+            }
+            raw_msg["update_config"]["silk"] = contract
         if oracle is not None:
-            raw_msg["update_config"]["oracle"]["address"] = oracle.address
-            raw_msg["update_config"]["oracle"]["code_hash"] = oracle.code_hash
+            contract = {
+                "address": oracle.address,
+                "code_hash": oracle.code_hash
+            }
+            raw_msg["update_config"]["oracle"] = contract
 
         msg = json.dumps(raw_msg)
         return self.execute(msg)

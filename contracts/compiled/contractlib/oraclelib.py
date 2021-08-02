@@ -6,9 +6,11 @@ import json
 
 
 class Oracle(Contract):
-    def __init__(self, label, contract='oracle.wasm.gz', admin='a', uploader='a', gas='10000000', backend='test'):
+    def __init__(self, label, contract='oracle.wasm.gz', admin='a', uploader='a', gas='10000000', backend='test',
+                 instantiated_contract=None):
         init_msg = json.dumps({})
-        super().__init__(contract, init_msg, label, admin, uploader, gas, backend)
+        super().__init__(contract, init_msg, label, admin, uploader, gas, backend,
+                         instantiated_contract=instantiated_contract)
 
     def get_silk_price(self):
         """
