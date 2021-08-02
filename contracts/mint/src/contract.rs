@@ -785,5 +785,7 @@ mod tests {
         let sent_value = Uint128(1_800_000);
         let expected_value = Uint128(3_600_000_000_000);
         let value = calculate_mint(price, sent_value, 6, 12);
+
+        assert_eq!(value, expected_value);
     }
 }
