@@ -1,6 +1,11 @@
+<<<<<<< Updated upstream
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128};
+use crate::state::{config};
+=======
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, StdError, Storage, Uint128, WasmQuery};
 use crate::state::{config, config_read};//, price_read};
 use crate::struct_types::{ReferenceData};
+>>>>>>> Stashed changes
 use shade_protocol::{
     oracle::{InitMsg, HandleMsg, QueryMsg, QueryAnswer, OracleConfig, PriceResponse},
     asset::{Contract},
