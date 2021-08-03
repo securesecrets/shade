@@ -7,31 +7,7 @@
 | [Placeholder]()            | [Placeholder]()      | [Placeholder] |
 | [Placeholder]()        | [Placeholder]()      | [Placeholder]                                                                                  |
 |[Placeholder]()        | [Placeholder]()   | [Placeholder]                                                                 |
-| [Placeholder]()     | [Placeholder]()   |[Placeholder]                                                                           |          
-
-
-
-# Mirror Core Contracts
-
-This monorepository contains the source code for the core smart contracts implementing Mirror Protocol on the [Terra](https://terra.money) blockchain.
-
-You can find information about the architecture, usage, and function of the smart contracts on the official Mirror documentation [site](https://docs.mirror.finance/contracts/architecture).
-
-### Dependencies
-
-Mirror depends on [Terraswap](https://terraswap.io) and uses its [implementation](https://github.com/terraswap/terraswap) of the CW20 token specification.
-
-## Contracts
-
-| Contract                                            | Reference                                              | Description                                                                                                                        |
-| --------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| [`mirror_collector`](./contracts/mirror_collector)  | [doc](https://docs.mirror.finance/contracts/collector) | Gathers protocol fees incurred from CDP withdrawals and liquidations and sends to Gov                                              |
-| [`mirror_community`](../contracts/mirror_community) | [doc](https://docs.mirror.finance/contracts/community) | Manages the commuinty pool fund                                                                                                    |
-| [`mirror_factory`](./contracts/mirror_factory)      | [doc](https://docs.mirror.finance/contracts/factory)   | Central directory that organizes the various component contracts of Mirror                                                         |
-| [`mirror_gov`](./contracts/mirror_gov)              | [doc](https://docs.mirror.finance/contracts/gov)       | Allows other Mirror contracts to be controlled by decentralized governance, distributes MIR received from Collector to MIR stakers |
-| [`mirror_mint`](./contracts/mirror_mint)            | [doc](https://docs.mirror.finance/contracts/mint)      | Handles CDP creation, management and liquidation                                                                                   |
-| [`mirror_oracle`](./contracts/mirror_oracle)        | [doc](https://docs.mirror.finance/contracts/oracle)    | Provides interface for oracle feeders to post prices for mAssets                                                                   |
-| [`mirror_staking`](./contracts/mirror_staking)      | [doc](https://docs.mirror.finance/contracts/staking)   | Distributes MIR rewards from block reward to LP stakers                                                                            |
+| [Placeholder]()     | [Placeholder]()   |[Placeholder]                                                                           |                                                                                    |
 
 ## Development
 
@@ -84,11 +60,3 @@ docker run --rm -v "$(pwd)":/code \
 ```
 
 This performs several optimizations which can significantly reduce the final size of the contract binaries, which will be available inside the `artifacts/` directory.
-
-## License
-
-Copyright 2020 Mirror Protocol
-
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-
-See the License for the specific language governing permissions and limitations under the License.
