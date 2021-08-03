@@ -1,10 +1,8 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, StdError, Storage, Uint128, WasmQuery};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, StdError, Storage};
 use crate::state::{config, config_read};//, price_read};
-use crate::struct_types::{ReferenceData};
 use shade_protocol::{
-    oracle::{InitMsg, HandleMsg, QueryMsg, QueryAnswer, OracleConfig, PriceResponse},
-    asset::{Contract},
-    msg_traits::{Init, Query},
+    oracle::{InitMsg, HandleMsg, QueryMsg, QueryAnswer, OracleConfig, ReferenceData},
+    msg_traits::{Query},
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -101,7 +99,8 @@ fn query_reference_data<S: Storage, A: Api, Q: Querier>(
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier};
-    use cosmwasm_std::{coins, from_binary};
+    use cosmwasm_std::coins;
+    use shade_protocol::asset::Contract;
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);

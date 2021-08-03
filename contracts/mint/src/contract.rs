@@ -399,12 +399,10 @@ fn call_oracle<S: Storage, A: Api, Q: Querier>(
     let block_size = 1; //update this later
     let config = config_read(&deps.storage).load()?;
     let query_msg = shade_protocol::oracle::QueryMsg::GetScrtPrice {};
-    let answer: shade_protocol::oracle::PriceResponse = query_msg.query(&deps.querier, block_size,
+    let answer: shade_protocol::oracle::ReferenceData = query_msg.query(&deps.querier, block_size,
                                  config.oracle.code_hash,
                                  config.oracle.address)?;
-
-    let value = answer.price;
-    Ok(value)
+    Ok(answer.rate)
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(

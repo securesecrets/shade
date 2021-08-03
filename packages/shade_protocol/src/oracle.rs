@@ -57,6 +57,13 @@ pub struct PriceResponse {
     pub price: Uint128,
 }
 
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+pub struct ReferenceData {
+    pub rate: Uint128,
+    pub last_updated_base: u64,
+    pub last_updated_quote: u64,
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
