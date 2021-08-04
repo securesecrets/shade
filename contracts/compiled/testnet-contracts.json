@@ -1,27 +1,27 @@
 {
-  "mint": {
-    "label": "mint",
-    "contract_id": 30092,
-    "address": "secret1g9rfxe43my6w9h76422er5ckgp9cp9smgtqnx8",
-    "code_hash": "20D0B41DFB650E0773F9B8DB9516C651B8D3275ED66C3D6077C8102A1D6AD73E",
-    "checksum": "b217f26eae6d450570ee295b0d604663"
-  },
-  "oracle": {
-    "label": "oracle",
-    "contract_id": 30090,
-    "address": "secret12pfmer5e35ekup9r4cvdm6zzql7fwudzsnc7m7",
-    "code_hash": "10912DA31D27B8B6AAB3AED4A9B9A2F0BAB120C87156FCDDA3CC9F7DD0DAD8B7",
-    "checksum": "31c3ff776e85627bf77c00787a94a68b"
-  },
-  "silk": {
-    "label": "silk",
-    "contract_id": 30067,
-    "address": "secret1zccl8tccrhwru2mfwzmxqz6lvmp08y9359jurx",
-    "code_hash": "35F5DB2BC5CD56815D10C7A567D6827BECCB8EAF45BC3FA016930C4A8209EA69"
-  },
-  "sscrt": {
-    "label": "sSCRT",
-    "address": "secret1s7c6xp9wltthk5r6mmavql4xld5me3g37guhsx",
-    "code_hash": "CD400FB73F5C99EDBC6AAB22C2593332B8C9F2EA806BF9B42E3A523F3AD06F62"
-  }
+    "mint": {
+        "label": "mint",
+        "contract_id": 30092,
+        "address": "secret1g9rfxe43my6w9h76422er5ckgp9cp9smgtqnx8",
+        "code_hash": "20D0B41DFB650E0773F9B8DB9516C651B8D3275ED66C3D6077C8102A1D6AD73E",
+        "checksum": "b217f26eae6d450570ee295b0d604663"
+    },
+    "oracle": {
+        "label": "oracle",
+        "contract_id": 30090,
+        "address": "secret12pfmer5e35ekup9r4cvdm6zzql7fwudzsnc7m7",
+        "code_hash": "10912DA31D27B8B6AAB3AED4A9B9A2F0BAB120C87156FCDDA3CC9F7DD0DAD8B7",
+        "checksum": "31c3ff776e85627bf77c00787a94a68b"
+    },
+    "silk": {
+        "label": "silk",
+        "contract_id": 30067,
+        "address": "secret1zccl8tccrhwru2mfwzmxqz6lvmp08y9359jurx",
+        "code_hash": "35F5DB2BC5CD56815D10C7A567D6827BECCB8EAF45BC3FA016930C4A8209EA69"
+    },
+    "sscrt": {
+        "label": "sSCRT",
+        "address": "secret1s7c6xp9wltthk5r6mmavql4xld5me3g37guhsx",
+        "code_hash": "CD400FB73F5C99EDBC6AAB22C2593332B8C9F2EA806BF9B42E3A523F3AD06F62"
+    }
 }

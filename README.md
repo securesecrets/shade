@@ -64,4 +64,4 @@ bash ./compile-contracts.sh
 
 ### Testing
 
-You can optionally run extended tests inside a private testnet using the [contract tester](./contracts/compiled/contract_tester.py)
+You can optionally run extended tests inside a private testnet using the [contract tester](contracts/compiled/tester.py)
