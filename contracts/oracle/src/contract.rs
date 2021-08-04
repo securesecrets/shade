@@ -87,7 +87,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetReferenceData { base_symbol, quote_symbol } => 
             to_binary(&query_reference_data(deps, base_symbol, quote_symbol)?),
         QueryMsg::GetPrice{ symbol } => 
-            to_binary(&query_reference_data(deps, symbol, "USDT".to_string())?),
+            to_binary(&query_reference_data(deps, symbol, "USD".to_string())?),
     }
 }
 
@@ -118,8 +118,7 @@ fn query_reference_data<S: Storage, A: Api, Q: Querier>(
         quote_symbol
     }.query(
         &deps.querier,
-        //block_size
-        1,
+        1, //block_size
         config_read.band.code_hash,
         config_read.band.address)?;
     debug_print!("SCRT/USD {}", reference_data.rate);
