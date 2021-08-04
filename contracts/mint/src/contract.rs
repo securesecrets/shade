@@ -154,7 +154,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateAsset {
+        data: Some( to_binary( &HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success } )? )
     })
 }
