@@ -5,6 +5,10 @@ use secret_toolkit::{
 };
 use shade_protocol::{
     mint::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, AssetMsg, MintConfig, BurnableAsset},
+    oracle::{
+        ReferenceData,
+        QueryMsg::GetPrice,
+    },
     asset::{Contract},
     msg_traits::{Init, Query},
 };
@@ -398,8 +402,8 @@ fn call_oracle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Uint128> {
     let block_size = 1; //update this later
     let config = config_read(&deps.storage).load()?;
-    let query_msg = shade_protocol::oracle::QueryMsg::GetScrtPrice {};
-    let answer: shade_protocol::oracle::ReferenceData = query_msg.query(&deps.querier, block_size,
+    let query_msg = GetPrice { symbol: "SCRT".to_string()};
+    let answer: ReferenceData = query_msg.query(&deps.querier, block_size,
                                  config.oracle.code_hash,
                                  config.oracle.address)?;
     Ok(answer.rate)

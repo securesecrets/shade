@@ -84,8 +84,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query_config(deps)?),
-        QueryMsg::GetScrtPrice {} => 
-            to_binary(&query_reference_data(deps, "SCRT".to_string(), "USDT".to_string())?),
         QueryMsg::GetReferenceData { base_symbol, quote_symbol } => 
             to_binary(&query_reference_data(deps, base_symbol, quote_symbol)?),
         QueryMsg::GetPrice{ symbol } => 
