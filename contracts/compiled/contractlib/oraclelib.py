@@ -17,20 +17,28 @@ class Oracle(Contract):
         super().__init__(contract, init_msg, label, admin, uploader, gas, backend,
                          instantiated_contract=instantiated_contract)
 
+    def get_price(self, coin):
+        """
+        Get current coin price
+        :param coin: Coin ticker
+        :return:
+        """
+        msg = json.dumps({'get_price': {'symbol': coin}})
+
+        return self.query(msg)
+
     def get_shade_price(self):
         """
         Get current shade price
         :return:
         """
-        msg = json.dumps({'get_price': {'symbol': 'SHD'}})
 
-        return self.query(msg)
+        return self.get_price('SHD')
 
     def get_scrt_price(self):
         """
         Get current scrt price
         :return:
         """
-        msg = json.dumps({'get_price': {'symbol': 'SCRT'}})
 
-        return self.query(msg)
+        return self.get_price('SCRT')
