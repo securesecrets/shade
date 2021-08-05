@@ -11,13 +11,14 @@ use crate::{
 pub struct OracleConfig {
     pub owner: HumanAddr,
     // Band protocol contract address
-    pub band: Contract,
+    // If no band oracle is defined it will default to giving a generic address
+    pub band: Option<Contract>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
-    pub band: Contract,
+    pub band: Option<Contract>,
 }
 
 impl Init<'_> for InitMsg {}

@@ -64,9 +64,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         if let Some(owner) = owner {
             state.owner = owner;
         }
-        if let Some(band) = band {
-            state.band = band;
-        }
+        state.band = band;
+
         Ok(state)
     })?;
 
@@ -107,22 +106,32 @@ fn query_reference_data<S: Storage, A: Api, Q: Querier>(
         return Ok(ReferenceData {
             //11.47 * 10^18
             rate: Uint128(1147 * 10u128.pow(16)),
-            last_updated_base: 0u64,
-            last_updated_quote: 0u64
+            last_updated_base: 0,
+            last_updated_quote: 0
         });
     }
 
     let config_read = config_read(&deps.storage).load()?;
-    let reference_data: ReferenceData = QueryMsg::GetReferenceData {
-        base_symbol,
-        quote_symbol
-    }.query(
-        &deps.querier,
-        1, //block_size
-        config_read.band.code_hash,
-        config_read.band.address)?;
-    debug_print!("SCRT/USD {}", reference_data.rate);
-    Ok(reference_data)
+
+    // If band oracle is not defined it will return a default value
+    if let Some(band) = config_read.band {
+        let reference_data: ReferenceData = QueryMsg::GetReferenceData {
+            base_symbol,
+            quote_symbol
+        }.query(
+            &deps.querier,
+            1, //block_size
+            band.code_hash,
+            band.address)?;
+        debug_print!("SCRT/USD {}", reference_data.rate);
+        Ok(reference_data)
+    } else {
+        Ok(ReferenceData {
+            rate: Uint128(10u128.pow(18) as u128),
+            last_updated_base: 0,
+            last_updated_quote: 0
+        })
+    }
 }
 
 // Helper functions
@@ -168,7 +177,7 @@ mod tests {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
             admin: None,
-            band: create_contract("", ""),
+            band: None,
         };
         let env = mock_env(admin.to_string(), &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();
@@ -182,7 +191,7 @@ mod tests {
 
         let msg = InitMsg {
             admin: None,
-            band: create_contract("", ""),
+            band: None,
         };
         let env = mock_env("creator", &coins(1000, "earth"));
 
