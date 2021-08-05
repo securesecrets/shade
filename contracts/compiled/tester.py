@@ -10,7 +10,7 @@ from contractlib.oraclelib import Oracle
 from contractlib.utils import gen_label
 
 parser = argparse.ArgumentParser(description='Automated smart contract tester')
-parser.add_argument("--testnet", choices=["private", "public"], default="private", type=str, required=True,
+parser.add_argument("--testnet", choices=["private", "public"], default="private", type=str, required=False,
                     help="Specify which deploy scenario to run")
 
 args=parser.parse_args()
@@ -36,7 +36,7 @@ if args.testnet == "private":
 
     print('Configuring Oracle')
     oracle = Oracle(gen_label(8))
-    price = int(oracle.get_silk_price()["price"])
+    price = int(oracle.get_scrt_price()["rate"])
     print(price / (10**18))
 
     print("Configuring Mint contract")
