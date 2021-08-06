@@ -52,16 +52,22 @@ class SNIP20(Contract):
 
         return self.execute(msg)
 
-    def send(self, account, recipient, amount):
+    def send(self, account, recipient, amount, message=None):
         """
         Send amount from an account to a recipient
         :param account: User to generate the key for
         :param recipient: Address to be minted in
         :param amount: Amount to mint
+        :param message: Base64 encoded message
         :return: Response
         """
-        msg = json.dumps(
-            {"send": {"recipient": recipient, "amount": str(amount)}})
+
+        raw_msg = {"send": {"recipient": recipient, "amount": str(amount)}}
+
+        if message is not None:
+            raw_msg["send"]["msg"] = message
+
+        msg = json.dumps(raw_msg)
 
         return self.execute(msg, account)
 
