@@ -163,6 +163,11 @@ Get specific information on a supported asset.
 #### Receive
 To mint the user must use a supported asset's send function and send the amount over to the contract's address. The contract will take care of the rest.
 
+In the msg field of a snip20 send command you must send a base64 encoded json like this one
+```json
+{"minimum_expected_amount": "Uint128", "mint_type": { "mint_silk": { } } }
+```
+
 ## Contract
 Type used in many of the admin commands
 ```json
