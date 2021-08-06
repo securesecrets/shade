@@ -7,12 +7,12 @@ import json
 
 class Mint(Contract):
     def __init__(self, label, silk, oracle, contract='mint.wasm.gz', admin='a', uploader='a', gas='10000000',
-                 backend='test', instantiated_contract=None):
+                 backend='test', instantiated_contract=None, code_id=None):
         init_msg = json.dumps(
             {"silk": {"address": silk.address, "code_hash": silk.code_hash},
              "oracle": {"address": oracle.address, "code_hash": oracle.code_hash}})
         super().__init__(contract, init_msg, label, admin, uploader, gas, backend,
-                         instantiated_contract=instantiated_contract)
+                         instantiated_contract=instantiated_contract, code_id=code_id)
 
     def migrate(self, label, code_id, code_hash):
         """

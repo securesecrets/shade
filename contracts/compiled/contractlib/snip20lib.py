@@ -7,7 +7,7 @@ class SNIP20(Contract):
     def __init__(self, label, name="token", symbol="TKN", decimals=3, seed="cGFzc3dvcmQ=", public_total_supply=False,
                  enable_deposit=False, enable_redeem=False, enable_mint=False, enable_burn=False,
                  contract='snip20.wasm.gz', admin='a', uploader='a', gas='10000000', backend='test',
-                 instantiated_contract=None):
+                 instantiated_contract=None, code_id=None):
         self.view_key = ""
         initMsg = json.dumps(
             {"name": name, "symbol": symbol, "decimals": decimals, "prng_seed": seed, "config": {
@@ -15,7 +15,7 @@ class SNIP20(Contract):
                 "enable_redeem": enable_redeem, "enable_mint": enable_mint, "enable_burn": enable_burn
             }})
         super().__init__(contract, initMsg, label, admin, uploader, gas, backend,
-                         instantiated_contract=instantiated_contract)
+                         instantiated_contract=instantiated_contract, code_id=code_id)
 
     def set_minters(self, accounts):
         """
