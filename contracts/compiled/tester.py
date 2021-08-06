@@ -1,5 +1,6 @@
 import copy
 import json
+import base64
 import random
 import argparse
 from contractlib.contractlib import PreInstantiatedContract
@@ -59,7 +60,13 @@ if args.testnet == "private":
         total_sent += send_amount
 
         print(f"\tSending {send_amount} usSCRT")
-        sscrt.send(account_key, mint.address, send_amount)
+        # {"snip_msg_hook": {
+        #     "minimum_expected_amount": "1",
+        #     "mint_type": {"mint_silk": {}}}}
+        mint_option = "eyJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxIiwgIm1pbnRfdHlwZSI6IHsibWludF9zaWxrIjoge319fQ=="
+        # This one will fail because mint will never exceed its expected amount
+        #mint_option = "eyJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxNTkzNzA1MTUzMzg1NjAwMDAiLCAibWludF90eXBlIjogeyJtaW50X3NpbGsiOiB7fX19"
+        print(sscrt.send(account_key, mint.address, send_amount, mint_option))
         silk_minted = silk.get_balance(account, silk_password)
         #assert total_sent == int(silk_minted), f"Total minted {silk_minted}; expected {total_sent}"
 
