@@ -1,4 +1,4 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary, Empty};
 use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read};
 use secret_toolkit::{
     snip20::{mint_msg, register_receive_msg, token_info_query},
@@ -13,8 +13,8 @@ use shade_protocol::{
     msg_traits::{Init, Query},
 };
 use shade_protocol::generic_response::ResponseStatus;
+use shade_protocol::mint::{SnipMsgHook, MintType};
 
-// TODO: tester that tests for contract availability
 // TODO: add remove asset
 // TODO: add spacepad padding
 // TODO: father contract must be snip20 contract owner
@@ -266,62 +266,41 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     _sender: HumanAddr,
     from: HumanAddr,
     amount: Uint128,
-    _msg: Option<CosmosMsg>
+    msg: Option<Binary>
 ) -> StdResult<HandleResponse> {
     if !authorized(deps, &env, AllowedAccess::User)? {
         return Err(StdError::Unauthorized { backtrace: None });
     }
-    
-    // Check that the asset is supported
-    let mut assets = assets_w(&mut deps.storage);
-    let mut callback_code_hash: String = "".to_string();
-
-    // Check if asset already exists
-    match assets.may_load(env.message.sender.to_string().as_bytes())? {
-        Some(_) => {
-            assets.update(env.message.sender.to_string().as_bytes(), |item| {
-                let mut asset: BurnableAsset = item.unwrap();
-                callback_code_hash = asset.contract.code_hash.clone();
-                asset.burned_tokens += amount;
-                Ok(asset)
-            })?;
-        },
-
-        None => return Err(StdError::NotFound { kind: env.message.sender.to_string(), backtrace: None }),
-    }
-
-    // 1.6 = 1_600_000_000_000_000_000
-    // 1.6 SCRT = 1_600_000 uSCRT = 1_600_000_000_000_000_000
-    // 1.6 * 1.6 = 2.56
-    // 2_560_000_000_000_000_000_00
-
-    // TODO: make this a function that way it can be tested
-
-    // Returned value is x * 10**18
-    let token_value = Uint128(call_oracle(deps)?.into());
-
-    // Load the decimal information for both coins
-    let config = config_read(&deps.storage).load()?;
-    let send_decimals = token_info_query(&deps.querier, 1, callback_code_hash,
-                                         env.message.sender)?.decimals as u32;
-    let silk_decimals = token_info_query(&deps.querier, 1,
-                                         config.silk.code_hash,
-                                         config.silk.address)?.decimals as u32;
-
-    // ( ( token_value * 10**18 ) * ( amount * 10**send_decimals ) ) / ( 10**(18 - ( send_decimals - silk-decimals ) ) )
-    // This will calculate the total mind value
-    let value_to_mint = calculate_mint(token_value, amount, send_decimals, silk_decimals);
     let mut messages = vec![];
 
-    let mint_msg = mint_silk(deps, from, value_to_mint)?;
-    messages.push(mint_msg);
+    // Get mint command
+    let amount_to_mint: Uint128;
+    if let Some(msg) = msg {
+        let mint_msg: SnipMsgHook = from_binary(&msg)?;
+        match mint_msg.mint_type {
+            MintType::MintSilk {} => {
+                match mint_silk_with_asset(deps, &env, from, amount, mint_msg.minimum_expected_amount) {
+                    Ok(tuple) => {
+                        let (cosmos_msg, amount_returned) = tuple;
+                        messages.push(cosmos_msg);
+                        amount_to_mint = amount_returned;
+                    }
+                    Err(err) => { return Err(err) }
+                }
+            }
+        }
+    } else {
+        return Err(StdError::generic_err("data cannot be empty"))
+    }
+
+
 
     Ok(HandleResponse {
         messages,
         log: vec![],
         data: Some( to_binary( &HandleAnswer::Burn {
             status: ResponseStatus::Success,
-            mint_amount: value_to_mint
+            mint_amount: amount_to_mint
         } )? ),
     })
 }
@@ -378,31 +357,64 @@ fn register_receive (
     cosmos_msg
 }
 
-fn mint_silk<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+fn  mint_silk_with_asset<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
     sender: HumanAddr,
     amount: Uint128,
-) -> StdResult<CosmosMsg> {
+    minimum_expected_amount: Uint128,
+) -> StdResult<(CosmosMsg, Uint128)> {
+
+    // Check that the asset is supported
+    let assets = assets_r(&deps.storage);
+    let asset_contract: Contract;
+    match assets.may_load(env.message.sender.to_string().as_bytes())? {
+        Some(asset) => { asset_contract = asset.contract; },
+        None => return Err(StdError::NotFound { kind: env.message.sender.to_string(), backtrace: None }),
+    }
+
+    // Returned value is x * 10**18
+    let token_value = call_oracle(&deps, "SCRT".to_string())?;
+
+    // Load the decimal information for both coins
     let config = config_read(&deps.storage).load()?;
+    let send_decimals = token_info_query(&deps.querier, 1, asset_contract.code_hash,
+                                         asset_contract.address)?.decimals as u32;
+    let silk_decimals = token_info_query(&deps.querier, 1,
+                                         config.silk.code_hash.clone(),
+                                         config.silk.address.clone())?.decimals as u32;
 
-    let cosmos_msg = mint_msg(
-        sender,
-        amount,
-        None,
-        256,
-        config.silk.code_hash,
-        config.silk.address,
-    );
+    // ( ( token_value * 10**18 ) * ( amount * 10**send_decimals ) ) / ( 10**(18 - ( send_decimals - silk-decimals ) ) )
+    // This will calculate the total mind value
+    let amount_to_mint = calculate_mint(token_value, amount, send_decimals, silk_decimals);
 
-    cosmos_msg
+    // If minimum amount is greater then ignore the process
+    if minimum_expected_amount > amount_to_mint {
+        return Err(StdError::generic_err("did not exceed expected amount"))
+    }
+
+    let mint_msg = mint_msg(sender, amount_to_mint, None,
+                            256, config.silk.code_hash,
+                            config.silk.address)?;
+
+    // Set burned amount
+    let mut mut_assets = assets_w(&mut deps.storage);
+    mut_assets.update(env.message.sender.to_string().as_bytes(), |item| {
+        let mut asset: BurnableAsset = item.unwrap();
+        asset.burned_tokens += amount;
+        Ok(asset)
+    })?;
+
+    Ok((mint_msg, amount_to_mint))
 }
 
 fn call_oracle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: &Extern<S, A, Q>,
+    symbol: String,
 ) -> StdResult<Uint128> {
     let block_size = 1; //update this later
     let config = config_read(&deps.storage).load()?;
-    let query_msg = GetPrice { symbol: "SCRT".to_string()};
+    let query_msg = GetPrice { symbol };
     let answer: ReferenceData = query_msg.query(&deps.querier, block_size,
                                  config.oracle.code_hash,
                                  config.oracle.address)?;
@@ -728,8 +740,7 @@ mod tests {
                 match err {
                     StdError::NotFound { .. } => {panic!("Not found");}
                     StdError::Unauthorized { .. } => {panic!("Unauthorized");}
-                    _ => {//panic!("Must not return error");
-                    }
+                    _ => {}
                 }
             }
             _ => {}
@@ -757,7 +768,10 @@ mod tests {
             sender: dummy_contract.address,
             from: Default::default(),
             amount: Uint128(100),
-            msg: None,
+            msg: Option::from(to_binary(&SnipMsgHook {
+                minimum_expected_amount: Uint128(1),
+                mint_type: MintType::MintSilk {}
+            }).unwrap()),
             memo: None
         };
         let res = handle(&mut deps, env, msg);

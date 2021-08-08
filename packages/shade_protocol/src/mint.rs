@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Binary, CosmosMsg};
+use cosmwasm_std::{HumanAddr, Uint128, Binary};
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
 use crate::msg_traits::{Init, Handle, Query};
@@ -55,8 +55,21 @@ pub enum HandleMsg {
         from: HumanAddr,
         amount: Uint128,
         memo: Option<Binary>,
-        msg: Option<CosmosMsg>,
+        msg: Option<Binary>,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct SnipMsgHook {
+    pub minimum_expected_amount: Uint128,
+    pub mint_type: MintType,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum MintType {
+    MintSilk {}
 }
 
 impl Handle<'_> for HandleMsg{}

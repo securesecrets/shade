@@ -19,6 +19,12 @@
         "address": "secret1zccl8tccrhwru2mfwzmxqz6lvmp08y9359jurx",
         "code_hash": "35F5DB2BC5CD56815D10C7A567D6827BECCB8EAF45BC3FA016930C4A8209EA69"
     },
+    "shade": {
+        "label": "shade",
+        "contract_id": 30067,
+        "address": "",
+        "code_hash": ""
+    },
     "sscrt": {
         "label": "sSCRT",
         "address": "secret1s7c6xp9wltthk5r6mmavql4xld5me3g37guhsx",

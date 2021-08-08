@@ -7,7 +7,7 @@ import json
 
 class Oracle(Contract):
     def __init__(self, label, contract='oracle.wasm.gz', admin='a', uploader='a', gas='10000000', backend='test',
-                 instantiated_contract=None):
+                 instantiated_contract=None, code_id=None):
 
         if backend == 'test':
             init_msg = json.dumps({})
@@ -20,7 +20,7 @@ class Oracle(Contract):
             })
 
         super().__init__(contract, init_msg, label, admin, uploader, gas, backend,
-                         instantiated_contract=instantiated_contract)
+                         instantiated_contract=instantiated_contract, code_id=code_id)
 
     def get_price(self, coin):
         """
