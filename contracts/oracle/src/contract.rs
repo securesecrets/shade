@@ -154,8 +154,7 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier};
     use cosmwasm_std::{coins, from_binary};
     use shade_protocol::asset::Contract;
-    use serde::de::DeserializeOwned;
-    use mockall::{automock, mock, predicate::*};
+    use mockall::{automock, predicate::*};
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);
@@ -195,10 +194,10 @@ mod tests {
     #[cfg_attr(test, automock)]
     trait Query{
         fn query(&self,
-        querier: &QueryMsg,
-        mut block_size: usize,
-        callback_code_hash: String,
-        contract_addr: HumanAddr,
+            _querier: &QueryMsg,
+            _block_size: usize,
+            _callback_code_hash: String,
+            _contract_addr: HumanAddr,
         ) -> StdResult<ReferenceData> {
             Ok(ReferenceData {
                 //11.47 * 10^18
@@ -213,18 +212,11 @@ mod tests {
     fn price_query() {
         let mut deps = dummy_init(&"admin".to_string(),
                                   create_contract("", ""));
-        let dummy_contract = create_contract("some_owner", "some_hash");
-        //let env = mock_env("some_other_contract", &coins(1000, "earth"));
         let msg = QueryMsg::GetPrice{
             symbol: "SHD".to_string(),
         };
         let res = query(&mut deps, msg).unwrap();
         let value: ReferenceData = from_binary(&res).unwrap();
-        match value {
-            ReferenceData { rate, .. } => { 
-                assert_eq!(rate, Uint128(1147 * 10u128.pow(16)))
-            }
-            _ => {panic!("Wrong Answer")},
-        }
+        assert_eq!(value.rate, Uint128(1147 * 10u128.pow(16)))
     }
 }
