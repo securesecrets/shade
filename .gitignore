@@ -20,5 +20,3 @@ contracts/hackatom/hash.txt
 
 *.pyc
 __pycache__/
-.cargo/
-.circleci/
