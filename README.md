@@ -2,6 +2,7 @@
 | Contract                    | Reference                         | Description                           |
 | --------------------------- | --------------------------------- | ------------------------------------- |
 | [`mint`](./contracts/mint)  | [doc](./contracts/mint/README.md) | Handles asset burning and silk minting|
+| [`oracle`](./contracts/oracle)  | [doc](./contracts/oracle/README.md) | Handles asset price queries |
 
 ## Development
 
