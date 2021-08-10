@@ -30,6 +30,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             Some(admin) => { admin }
         },
         silk: msg.silk,
+        shade: msg.shade,
         oracle: msg.oracle,
         activated: true,
     };
@@ -66,8 +67,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::UpdateConfig {
             owner,
             silk,
+            shade,
             oracle
-        } => try_update_config(deps, env, owner, silk, oracle),
+        } => try_update_config(deps, env, owner, silk, shade, oracle),
         HandleMsg::RegisterAsset {
             contract,
         } => try_register_asset(deps, &env, contract, None),
@@ -117,6 +119,7 @@ pub fn try_migrate<S: Storage, A: Api, Q: Querier>(
     let init_msg = InitMsg {
         admin: Option::from(config_read.owner),
         silk: config_read.silk,
+        shade: config_read.shade,
         oracle: config_read.oracle,
         initial_assets: Some(initial_assets)
     };
@@ -134,6 +137,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     owner: Option<HumanAddr>,
     silk: Option<Contract>,
+    shade: Option<Contract>,
     oracle: Option<Contract>,
 ) -> StdResult<HandleResponse> {
     if !authorized(deps, &env, AllowedAccess::Admin)? {
@@ -148,6 +152,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
         if let Some(silk) = silk {
             state.silk = silk;
+        }
+        if let Some(shade) = shade {
+            state.shade = shade;
         }
         if let Some(oracle) = oracle {
             state.oracle = oracle;
@@ -275,25 +282,26 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     // Get mint command
     let amount_to_mint: Uint128;
+    let mint_response: StdResult<(CosmosMsg, Uint128)>;
     if let Some(msg) = msg {
         let mint_msg: SnipMsgHook = from_binary(&msg)?;
-        match mint_msg.mint_type {
-            MintType::MintSilk {} => {
-                match mint_silk_with_asset(deps, &env, from, amount, mint_msg.minimum_expected_amount) {
-                    Ok(tuple) => {
-                        let (cosmos_msg, amount_returned) = tuple;
-                        messages.push(cosmos_msg);
-                        amount_to_mint = amount_returned;
-                    }
-                    Err(err) => { return Err(err) }
-                }
-            }
+        mint_response = match mint_msg.mint_type {
+            MintType::MintSilk {} => mint_with_asset(deps, &env, TargetCoin::Silk, from, amount, mint_msg.minimum_expected_amount),
+            MintType::MintShade {} => mint_with_asset(deps, &env, TargetCoin::Shade, from, amount, mint_msg.minimum_expected_amount)
         }
     } else {
         return Err(StdError::generic_err("data cannot be empty"))
     }
 
-
+    // Handle response
+    match mint_response {
+        Ok(tuple) => {
+            let (cosmos_msg, amount_returned) = tuple;
+            messages.push(cosmos_msg);
+            amount_to_mint = amount_returned;
+        }
+        Err(err) => { return Err(err) }
+    }
 
     Ok(HandleResponse {
         messages,
@@ -357,9 +365,15 @@ fn register_receive (
     cosmos_msg
 }
 
-fn  mint_silk_with_asset<S: Storage, A: Api, Q: Querier>(
+enum TargetCoin {
+    Silk,
+    Shade,
+}
+
+fn mint_with_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
+    target: TargetCoin,
     sender: HumanAddr,
     amount: Uint128,
     minimum_expected_amount: Uint128,
@@ -374,19 +388,29 @@ fn  mint_silk_with_asset<S: Storage, A: Api, Q: Querier>(
     }
 
     // Returned value is x * 10**18
-    let token_value = call_oracle(&deps, "SCRT".to_string())?;
+    let token_value = match target {
+        TargetCoin::Silk => call_oracle(&deps, "SCRT".to_string())?,
+        TargetCoin::Shade => call_oracle(&deps, "SCRT".to_string())?
+    };
+
+    // Get the target coin information
+    let config = config_read(&deps.storage).load()?;
+
+    let target_coin = match target {
+        TargetCoin::Silk => config.silk,
+        TargetCoin::Shade => config.shade
+    };
 
     // Load the decimal information for both coins
-    let config = config_read(&deps.storage).load()?;
     let send_decimals = token_info_query(&deps.querier, 1, asset_contract.code_hash,
                                          asset_contract.address)?.decimals as u32;
-    let silk_decimals = token_info_query(&deps.querier, 1,
-                                         config.silk.code_hash.clone(),
-                                         config.silk.address.clone())?.decimals as u32;
+    let target_decimals = token_info_query(&deps.querier, 1,
+                                           target_coin.code_hash.clone(),
+                                           target_coin.address.clone())?.decimals as u32;
 
     // ( ( token_value * 10**18 ) * ( amount * 10**send_decimals ) ) / ( 10**(18 - ( send_decimals - silk-decimals ) ) )
     // This will calculate the total mind value
-    let amount_to_mint = calculate_mint(token_value, amount, send_decimals, silk_decimals);
+    let amount_to_mint = calculate_mint(token_value, amount, send_decimals, target_decimals);
 
     // If minimum amount is greater then ignore the process
     if minimum_expected_amount > amount_to_mint {
@@ -394,8 +418,8 @@ fn  mint_silk_with_asset<S: Storage, A: Api, Q: Querier>(
     }
 
     let mint_msg = mint_msg(sender, amount_to_mint, None,
-                            256, config.silk.code_hash,
-                            config.silk.address)?;
+                            256, target_coin.code_hash,
+                            target_coin.address)?;
 
     // Set burned amount
     let mut mut_assets = assets_w(&mut deps.storage);
@@ -464,11 +488,12 @@ mod tests {
         }
     }
 
-    fn dummy_init(admin: String, silk: Contract, oracle: Contract) -> Extern<MockStorage, MockApi, MockQuerier> {
+    fn dummy_init(admin: String, silk: Contract, shade: Contract, oracle: Contract) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
             admin: None,
             silk,
+            shade,
             oracle,
             initial_assets: None
         };
@@ -484,6 +509,7 @@ mod tests {
         let msg = InitMsg {
             admin: None,
             silk: create_contract("", ""),
+            shade: create_contract("", ""),
             oracle: create_contract("", ""),
             initial_assets: None
         };
@@ -497,8 +523,9 @@ mod tests {
     #[test]
     fn config_update() {
         let silk_contract = create_contract("silk_contract", "silk_hash");
+        let shade_contract = create_contract("shade_contract", "shade_hash");
         let oracle_contract = create_contract("oracle_contract", "oracle_hash");
-        let mut deps = dummy_init("admin".to_string(), silk_contract, oracle_contract);
+        let mut deps = dummy_init("admin".to_string(), silk_contract, shade_contract, oracle_contract);
 
         // Check config is properly updated
         let res = query(&deps, QueryMsg::GetConfig {}).unwrap();
@@ -521,6 +548,7 @@ mod tests {
         let msg = HandleMsg::UpdateConfig {
             owner: None,
             silk: Option::from(new_silk_contract),
+            shade: None,
             oracle: Option::from(new_oracle_contract),
         };
         let _res = handle(&mut deps, user_env, msg);
@@ -544,6 +572,7 @@ mod tests {
     #[test]
     fn user_register_asset() {
         let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
                                   create_contract("", ""),
                                   create_contract("", ""));
 
@@ -572,6 +601,7 @@ mod tests {
     fn admin_register_asset() {
         let mut deps = dummy_init("admin".to_string(),
                                   create_contract("", ""),
+                                  create_contract("", ""),
                                   create_contract("", ""));
 
         // Admin should be allowed to add an item
@@ -594,6 +624,7 @@ mod tests {
     #[test]
     fn duplicate_register_asset() {
         let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
                                   create_contract("", ""),
                                   create_contract("", ""));
 
@@ -620,6 +651,7 @@ mod tests {
     #[test]
     fn user_update_asset() {
         let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
                                   create_contract("", ""),
                                   create_contract("", ""));
 
@@ -649,6 +681,7 @@ mod tests {
     #[test]
     fn admin_update_asset() {
         let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
                                   create_contract("", ""),
                                   create_contract("", ""));
 
@@ -683,6 +716,7 @@ mod tests {
     fn nonexisting_update_asset() {
         let mut deps = dummy_init("admin".to_string(),
                                   create_contract("", ""),
+                                  create_contract("", ""),
                                   create_contract("", ""));
 
         // Add a supported asset
@@ -711,6 +745,7 @@ mod tests {
     #[test]
     fn receiving_an_asset() {
         let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
                                   create_contract("", ""),
                                   create_contract("", ""));
 
@@ -750,6 +785,7 @@ mod tests {
     #[test]
     fn receiving_an_asset_from_non_supported_asset() {
         let mut deps = dummy_init("admin".to_string(),
+                                  create_contract("", ""),
                                   create_contract("", ""),
                                   create_contract("", ""));
 
