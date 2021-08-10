@@ -1,7 +1,7 @@
 [workspace]
 members = [
+  "packages/shade_protocol",
   "contracts/mint",
   "contracts/oracle", 
-  "packages/shade_protocol",
-  "contracts/mock-band",
+  "contracts/mock_band",
 ]
