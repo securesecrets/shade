@@ -1,9 +1,10 @@
-import subprocess
+from subprocess import Popen, PIPE
 import json
 import time
 
 # Presetup some commands
 query_list_code = ['secretcli', 'query', 'compute', 'list-code']
+MAX_RETRY = 10
 
 
 def run_command(command, wait=6):
@@ -14,10 +15,10 @@ def run_command(command, wait=6):
     :return: Output string
     """
 
-    result = subprocess.run(command, stdout=subprocess.PIPE, text=True)
-    time.sleep(wait)
-    return result.stdout
-
+    p = Popen(command, stdout=PIPE, stderr=PIPE, text=True)
+    output, err = p.communicate()
+    status = p.wait()
+    return output
 
 def store_contract(contract, user='a', gas='10000000', backend='test', wait=15):
     """
@@ -35,9 +36,13 @@ def store_contract(contract, user='a', gas='10000000', backend='test', wait=15):
     if backend is not None:
         command += ['--keyring-backend', backend]
 
-    for attribute in run_command_query_hash(command, wait)['logs'][0]['events'][0]['attributes']:
-        if attribute["key"] == "code_id":
-            return attribute['value']
+    output = run_command_query_hash(command, wait)
+    if 'logs' not in output:
+        return str(output)
+    else:
+        for attribute in output['logs'][0]['events'][0]['attributes']:
+            if attribute["key"] == "code_id":
+                return attribute['value']
 
 
 def instantiate_contract(contract, msg, label, user='a', backend='test', wait=6):
@@ -98,10 +103,23 @@ def query_contract(contract, msg):
 def run_command_compute_hash(command, wait=6):
     out = run_command(command, wait)
     txhash = json.loads(out)["txhash"]
-    return json.loads(compute_hash(txhash))
+    for _ in range(MAX_TRIES):
+        try:
+            out = json.loads(compute_hash(txhash))
+            return out
+        except:
+            time.sleep(1)
+    print(' '.join(command), f'exceeded max tries ({MAX_TRIES})')
 
 
 def run_command_query_hash(command, wait=6):
     out = run_command(command, wait)
     txhash = json.loads(out)["txhash"]
-    return json.loads(query_hash(txhash))
+
+    for _ in range(MAX_TRIES):
+        try:
+            out = json.loads(query_hash(txhash))
+            return out
+        except:
+            time.sleep(1)
+    print(' '.join(command), f'exceeded max tries ({MAX_TRIES})')
