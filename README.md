@@ -8,7 +8,7 @@
 ## Development Environment
 Instlal docker for local envirnment
 
-Source from [testner](https://build.scrt.network/dev/quickstart.html#setup-the-local-developer-testnet)
+Source from [testnet](https://build.scrt.network/dev/quickstart.html#setup-the-local-developer-testnet)
 
 ```
 docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1337:1337 -v $(pwd):/root/code --name secretdev enigmampc/secret-network-sw-dev
