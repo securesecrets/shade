@@ -6,10 +6,11 @@ import json
 
 
 class Mint(Contract):
-    def __init__(self, label, silk, oracle, contract='mint.wasm.gz', admin='a', uploader='a', gas='10000000',
+    def __init__(self, label, silk, shade, oracle, contract='mint.wasm.gz', admin='a', uploader='a', gas='10000000',
                  backend='test', instantiated_contract=None, code_id=None):
         init_msg = json.dumps(
             {"silk": {"address": silk.address, "code_hash": silk.code_hash},
+             "shade": {"address": shade.address, "code_hash": shade.code_hash},
              "oracle": {"address": oracle.address, "code_hash": oracle.code_hash}})
         super().__init__(contract, init_msg, label, admin, uploader, gas, backend,
                          instantiated_contract=instantiated_contract, code_id=code_id)
@@ -34,7 +35,7 @@ class Mint(Contract):
         new_mint.code_hash = code_hash
         return new_mint
 
-    def update_config(self, owner=None, silk=None, oracle=None):
+    def update_config(self, owner=None, silk=None, shade=None, oracle=None):
         """
         Updates the minting contract's config
         :param owner: New admin
@@ -51,6 +52,12 @@ class Mint(Contract):
                 "code_hash": silk.code_hash
             }
             raw_msg["update_config"]["silk"] = contract
+        if shade is not None:
+            contract = {
+                "address": shade.address,
+                "code_hash": shade.code_hash
+            }
+            raw_msg["update_config"]["shade"] = contract
         if oracle is not None:
             contract = {
                 "address": oracle.address,
