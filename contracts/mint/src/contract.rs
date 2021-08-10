@@ -364,7 +364,7 @@ fn calculate_mint(in_price: Uint128, target_price: Uint128, in_amount: Uint128, 
 
     // To avoid a mess of different types doing math
     if difference < 0 {
-        in_total.multiply_ratio(1 as u128, 10u128.pow(u32::try_from(difference.abs()).unwrap()))
+        in_total.multiply_ratio(1u128, 10u128.pow(u32::try_from(difference.abs()).unwrap()))
     }
     else if difference > 0 {
         Uint128(in_total.u128() * 10u128.pow(u32::try_from(difference).unwrap()))
