@@ -177,7 +177,7 @@ if args.testnet == "public":
             contracts_config["oracle"]["address"] = oracle.address
             contracts_config["oracle"]["code_hash"] = oracle.code_hash
 
-    print(oracle.get_silk_price())
+    print(oracle.get_scrt_price())
     oracle.print()
 
     print("Configuring Mint")
