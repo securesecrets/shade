@@ -2,7 +2,7 @@ from .secretlib import secretlib
 
 
 class PreInstantiatedContract:
-    def __init__(self, contract_id, address, code_hash):
+    def __init__(self, address, code_hash):
         self.address = address
         self.code_hash = code_hash
 

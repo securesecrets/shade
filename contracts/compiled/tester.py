@@ -110,10 +110,11 @@ if args.testnet == "public":
     with open("testnet-contracts.json", "r") as json_file:
         contracts_config = json.load(json_file)
 
-    print("Configuring silk")
+    print("Configuring Silk")
     silk_updated = False
     if contracts_config["silk"]["address"] == "":
-        contracts_config["silk"]["label"] = f"oracle-{gen_label(8)}"
+        print("Instantiating Silk")
+        contracts_config["silk"]["label"] = f"silk-{gen_label(8)}"
         silk_instantiated_contract = None
         silk_updated = True
     else:
@@ -133,7 +134,8 @@ if args.testnet == "public":
     print("Configuring shade")
     shade_updated = False
     if contracts_config["shade"]["address"] == "":
-        contracts_config["shade"]["label"] = f"oracle-{gen_label(8)}"
+        print("Instantiating Shade")
+        contracts_config["shade"]["label"] = f"shade-{gen_label(8)}"
         shade_instantiated_contract = None
         shade_updated = True
     else:
@@ -160,19 +162,20 @@ if args.testnet == "public":
 
     print("Configuring Oracle")
     oracle_updated = False
+    band_contract = PreInstantiatedContract("secret1p0jtg47hhwuwgp4cjpc46m7qq6vyjhdsvy2nph", "77c854ea110315d5103a42b88d3e7b296ca245d8b095e668c69997b265a75ac5")
     with open("checksum/oracle.txt", 'r') as oracle_checksum:
         if oracle_checksum.readline().strip() == contracts_config["oracle"]["checksum"].strip():
             oracle_instantiated_contract = PreInstantiatedContract(
                 address=contracts_config["oracle"]["address"],
                 code_hash=contracts_config["oracle"]["code_hash"])
-            oracle = Oracle(contracts_config["oracle"]["label"], admin=account, uploader=account, backend=None,
+            oracle = Oracle(contracts_config["oracle"]["label"], band_contract, admin=account, uploader=account, backend=None,
                             instantiated_contract=oracle_instantiated_contract,
                             code_id=contracts_config["oracle"]["contract_id"])
         else:
             print("Instantiating Oracle")
             oracle_updated = True
             contracts_config["oracle"]["label"] = f"oracle-{gen_label(8)}"
-            oracle = Oracle(contracts_config["oracle"]["label"], admin=account, uploader=account, backend=None)
+            oracle = Oracle(contracts_config["oracle"]["label"], band_contract, admin=account, uploader=account, backend=None)
             contracts_config["oracle"]["contract_id"] = oracle.contract_id
             contracts_config["oracle"]["address"] = oracle.address
             contracts_config["oracle"]["code_hash"] = oracle.code_hash
@@ -206,7 +209,6 @@ if args.testnet == "public":
         mint.update_config(silk=silk, oracle=oracle)
 
     if silk_updated or mint_updated:
-        # TODO: reset minters if mint updated
         silk.set_minters([mint.address])
 
     if mint_updated:
