@@ -1,4 +1,4 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary, Empty};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary};
 use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read};
 use secret_toolkit::{
     snip20::{mint_msg, register_receive_msg, token_info_query},
@@ -14,6 +14,7 @@ use shade_protocol::{
 };
 use shade_protocol::generic_response::ResponseStatus;
 use shade_protocol::mint::{SnipMsgHook, MintType};
+use std::convert::TryFrom;
 
 // TODO: add remove asset
 // TODO: add spacepad padding
@@ -341,12 +342,36 @@ fn authorized<S: Storage, A: Api, Q: Querier>(
     return Ok(true)
 }
 
-fn calculate_mint(x: Uint128, y: Uint128, a: u32, b: u32) -> Uint128 {
-    // x = value * 10**18
-    // y = value * 10**a
-    // ( x * y ) / ( 10**(18 - ( a - b ) ) )
-    let exponent = (18 as i32 + a as i32 - b as i32) as u32;
-    x.multiply_ratio(y, 10u128.pow(exponent))
+fn calculate_mint(in_price: Uint128, target_price: Uint128, in_amount: Uint128, in_decimals: u32, target_decimals: u32) -> Uint128 {
+    // Math must only be made in integers
+    // in_decimals  = x
+    // target_decimals = y
+    // in_price     = p1 * 10^18
+    // target_price = p2 * 10^18
+    // in_amount    = a1 * 10^x
+    // return       = a2 * 10^y
+
+    // (a1 * 10^x) * (p1 * 10^18) = (a2 * 10^y) * (p2 * 10^18)
+
+    //                (p1 * 10^18)
+    // (a1 * 10^x) * --------------  = (a2 * 10^y)
+    //                (p2 * 10^18)
+
+    let in_total = in_amount.multiply_ratio(in_price, target_price);
+
+    // in_total * 10^(y - x) = (a2 * 10^y)
+    let difference: i32 = target_decimals as i32 - in_decimals as i32;
+
+    // To avoid a mess of different types doing math
+    if difference < 0 {
+        in_total.multiply_ratio(1 as u128, 10u128.pow(u32::try_from(difference.abs()).unwrap()))
+    }
+    else if difference > 0 {
+        Uint128(in_total.u128() * 10u128.pow(u32::try_from(difference).unwrap()))
+    }
+    else {
+        in_total
+    }
 }
 
 fn register_receive (
@@ -387,10 +412,10 @@ fn mint_with_asset<S: Storage, A: Api, Q: Querier>(
         None => return Err(StdError::NotFound { kind: env.message.sender.to_string(), backtrace: None }),
     }
 
-    // Returned value is x * 10**18
-    let token_value = match target {
-        TargetCoin::Silk => call_oracle(&deps, "SCRT".to_string())?,
-        TargetCoin::Shade => call_oracle(&deps, "SCRT".to_string())?
+    // Query the coin values
+    let (in_price, target_price) = match target {
+        TargetCoin::Silk => (call_oracle(&deps, "SCRT".to_string())?, Uint128(10u128.pow(18))),
+        TargetCoin::Shade => (call_oracle(&deps, "SCRT".to_string())?, call_oracle(&deps, "SHD".to_string())?)
     };
 
     // Get the target coin information
@@ -402,15 +427,14 @@ fn mint_with_asset<S: Storage, A: Api, Q: Querier>(
     };
 
     // Load the decimal information for both coins
-    let send_decimals = token_info_query(&deps.querier, 1, asset_contract.code_hash,
-                                         asset_contract.address)?.decimals as u32;
+    let in_decimals = token_info_query(&deps.querier, 1, asset_contract.code_hash,
+                                       asset_contract.address)?.decimals as u32;
     let target_decimals = token_info_query(&deps.querier, 1,
                                            target_coin.code_hash.clone(),
                                            target_coin.address.clone())?.decimals as u32;
 
-    // ( ( token_value * 10**18 ) * ( amount * 10**send_decimals ) ) / ( 10**(18 - ( send_decimals - silk-decimals ) ) )
     // This will calculate the total mind value
-    let amount_to_mint = calculate_mint(token_value, amount, send_decimals, target_decimals);
+    let amount_to_mint = calculate_mint(in_price, target_price, amount, in_decimals, target_decimals);
 
     // If minimum amount is greater then ignore the process
     if minimum_expected_amount > amount_to_mint {
@@ -822,21 +846,35 @@ mod tests {
         // In this example the "sent" value is 1 with 6 decimal places
         // The mint value will be 1 with 3 decimal places
         let price = Uint128(1_000_000_000_000_000_000);
-        let sent_value = Uint128(1_000_000);
+        let in_amount = Uint128(1_000_000);
         let expected_value = Uint128(1_000);
-        let value = calculate_mint(price, sent_value, 6, 3);
+        let value = calculate_mint(price, price, in_amount, 6, 3);
 
         assert_eq!(value, expected_value);
     }
 
     #[test]
-    fn mint_algorithm_complex() {
+    fn mint_algorithm_complex_1() {
         // In this example the "sent" value is 1.8 with 6 decimal places
         // The mint value will be 3.6 with 12 decimal places
-        let price = Uint128(2_000_000_000_000_000_000);
-        let sent_value = Uint128(1_800_000);
+        let in_price = Uint128(2_000_000_000_000_000_000);
+        let target_price = Uint128(1_000_000_000_000_000_000);
+        let in_amount = Uint128(1_800_000);
         let expected_value = Uint128(3_600_000_000_000);
-        let value = calculate_mint(price, sent_value, 6, 12);
+        let value = calculate_mint(in_price, target_price, in_amount, 6, 12);
+
+        assert_eq!(value, expected_value);
+    }
+
+    #[test]
+    fn mint_algorithm_complex_2() {
+        // In amount is 50.000 valued at 20
+        // target price is 100$ with 6 decimals
+        let in_price = Uint128(20_000_000_000_000_000_000);
+        let target_price = Uint128(100_000_000_000_000_000_000);
+        let in_amount = Uint128(50_000);
+        let expected_value = Uint128(10_000_000);
+        let value = calculate_mint(in_price, target_price, in_amount, 3, 6);
 
         assert_eq!(value, expected_value);
     }
