@@ -47,7 +47,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetReferenceData { base_symbol: _, quote_symbol: _ } => 
             to_binary(&ReferenceData {
               // data from ETH
-              rate: Uint128(3_050_262_500_000_000_000_000),
+              rate: Uint128(1_000_000_000_000_000_000),
               last_updated_base: 1628544285u64,
               last_updated_quote: 3377610u64
             }),
