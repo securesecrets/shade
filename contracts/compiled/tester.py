@@ -31,11 +31,11 @@ if args.testnet == "private":
     print(f"\tReceived {sscrt_minted} usSCRT")
     assert sscrt_mint_amount == sscrt_minted, f"Minted {sscrt_minted}; expected {sscrt_mint_amount}"
 
-    print("Configuring silk")
+    print("Configuring Silk")
     silk = SNIP20(gen_label(8), decimals=6, public_total_supply=True, enable_mint=True, enable_burn=True)
     silk_password = silk.set_view_key(account_key, "password")
 
-    print("Configuring shade")
+    print("Configuring Shade")
     shade = SNIP20(gen_label(8), decimals=6, public_total_supply=True, enable_mint=True, enable_burn=True)
     shade_password = shade.set_view_key(account_key, "password")
 
@@ -45,7 +45,7 @@ if args.testnet == "private":
     print(price / (10 ** 18))
 
     print("Configuring Mint contract")
-    mint = Mint(gen_label(8), silk, oracle)
+    mint = Mint(gen_label(8), silk, shade, oracle)
     silk.set_minters([mint.address])
     shade.set_minters([mint.address])
     mint.register_asset(sscrt)
@@ -61,21 +61,35 @@ if args.testnet == "private":
     total_sent = 0
 
     for i in range(total_tests):
-        send_amount = random.randint(minimum_amount, int(total_amount / total_tests) - 1)
+        send_amount = random.randint(minimum_amount, int(total_amount / total_tests / 2) - 1)
         total_sent += send_amount
 
         print(f"\tSending {send_amount} usSCRT")
-        # {"snip_msg_hook": {
-        #     "minimum_expected_amount": "1",
-        #     "mint_type": {"mint_silk": {}}}}
-        mint_option = "eyJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxIiwgIm1pbnRfdHlwZSI6IHsibWludF9zaWxrIjoge319fQ=="
+        # {
+       #  "minimum_expected_amount": "1",
+       #  "mint_type": {"mint_silk": {}}}
+        mint_silk = "eyJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxIiwgIm1pbnRfdHlwZSI6IHsibWludF9zaWxrIjoge319fQ=="
         # This one will fail because mint will never exceed its expected amount
         # mint_option = "eyJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxNTkzNzA1MTUzMzg1NjAwMDAiLCAibWludF90eXBlIjogeyJtaW50X3NpbGsiOiB7fX19"
-        print(sscrt.send(account_key, mint.address, send_amount, mint_option))
+        # {
+        #  "minimum_expected_amount": "1",
+        #  "mint_type": {"mint_shade": {}}}
+        mint_shade = "eyJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxIiwibWludF90eXBlIjogeyJtaW50X3NoYWRlIjoge319fQ=="
+
+        mint_silk_response = sscrt.send(account_key, mint.address, send_amount, mint_silk)
+        if mint_silk_response["plaintext_error"] != "":
+            print(f"Silk mint error: {mint_silk_response['plaintext_error']}")
+
+        mint_shade_response = sscrt.send(account_key, mint.address, send_amount, mint_shade)
+        if mint_shade_response["plaintext_error"] != "":
+            print(f"Shade mint error: {mint_shade_response['plaintext_error']}")
+
         silk_minted = silk.get_balance(account, silk_password)
+        shade_minted = shade.get_balance(account, shade_password)
         # assert total_sent == int(silk_minted), f"Total minted {silk_minted}; expected {total_sent}"
 
         print(f"\tSilk balance: {silk_minted} uSILK")
+        print(f"\tShade balance: {shade_minted} uSHD")
         burned_amount = mint.get_asset(sscrt)["asset"]["asset"]["burned_tokens"]
         print(f"\tTotal burned: {burned_amount} usSCRT\n")
         # assert total_sent == int(burned_amount), f"Burnt {burned_amount}; expected {total_sent}"
@@ -167,7 +181,7 @@ if args.testnet == "public":
         mint_instantiated_contract = PreInstantiatedContract(
             address=contracts_config["mint"]["address"],
             code_hash=contracts_config["mint"]["code_hash"])
-        mint = Mint(contracts_config["mint"]["label"], silk, oracle, admin=account, uploader=account, backend=None,
+        mint = Mint(contracts_config["mint"]["label"], silk, shade, oracle, admin=account, uploader=account, backend=None,
                     instantiated_contract=mint_instantiated_contract, code_id=contracts_config["mint"]["contract_id"])
 
         if mint_checksum.readline().strip() != contracts_config["mint"]["checksum"].strip():
@@ -175,7 +189,7 @@ if args.testnet == "public":
             mint_updated = True
             label = f"mint-{gen_label(8)}"
             # TODO: upload and get codehash + id of the contract without instantiating to call the mint.migrate
-            new_mint = Mint(label, silk, oracle, admin=account, uploader=account, backend=None)
+            new_mint = Mint(label, silk, shade, oracle, admin=account, uploader=account, backend=None)
             # mint.migrate()
             mint = copy.deepcopy(new_mint)
             contracts_config["mint"]["label"] = label
