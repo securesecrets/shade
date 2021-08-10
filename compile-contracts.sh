@@ -22,3 +22,4 @@ rm -r ${checksum_dir}
 mkdir ${checksum_dir}
 compile_contract "mint"
 compile_contract "oracle"
+compile_contract "mock_band"

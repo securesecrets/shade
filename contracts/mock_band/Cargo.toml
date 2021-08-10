@@ -1,5 +1,5 @@
 [package]
-name = "mock-band"
+name = "mock_band"
 version = "0.1.0"
 authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
 edition = "2018"
