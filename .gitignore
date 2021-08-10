@@ -19,3 +19,4 @@ contracts/hackatom/hash.txt
 .cargo-ok
 
 *.pyc
+__pycache__/

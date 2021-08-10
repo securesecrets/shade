@@ -1,9 +1,11 @@
+#!/usr/bin/env python3 
 import copy
 import json
 import base64
 import random
 import argparse
 from contractlib.contractlib import PreInstantiatedContract
+from contractlib.contractlib import Contract
 from contractlib.secretlib import secretlib
 from contractlib.snip20lib import SNIP20
 from contractlib.mintlib import Mint
@@ -39,8 +41,11 @@ if args.testnet == "private":
     shade = SNIP20(gen_label(8), decimals=6, public_total_supply=True, enable_mint=True, enable_burn=True)
     shade_password = shade.set_view_key(account_key, "password")
 
+    print('Mocking Band')
+    band = Contract('mock_band.wasm.gz', '{}', gen_label(8))
+
     print('Configuring Oracle')
-    oracle = Oracle(gen_label(8))
+    oracle = Oracle(gen_label(8), band)
     price = int(oracle.get_scrt_price()["rate"])
     print(price / (10 ** 18))
 
