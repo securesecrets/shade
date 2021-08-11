@@ -9,6 +9,7 @@ use crate::msg_traits::{Init, Handle, Query};
 pub struct MintConfig {
     pub owner: HumanAddr,
     pub silk: Contract,
+    pub shade: Contract,
     pub oracle: Contract,
     pub activated: bool,
 }
@@ -24,6 +25,7 @@ pub struct BurnableAsset {
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub silk: Contract,
+    pub shade: Contract,
     pub oracle: Contract,
     pub initial_assets: Option<Vec<AssetMsg>>,
 }
@@ -41,6 +43,7 @@ pub enum HandleMsg {
     UpdateConfig {
         owner: Option<HumanAddr>,
         silk: Option<Contract>,
+        shade: Option<Contract>,
         oracle: Option<Contract>,
     },
     RegisterAsset {
@@ -69,7 +72,8 @@ pub struct SnipMsgHook {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum MintType {
-    MintSilk {}
+    MintSilk {},
+    MintShade {}
 }
 
 impl Handle<'_> for HandleMsg{}

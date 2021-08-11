@@ -1,16 +1,16 @@
 {
     "mint": {
-        "label": "mint",
-        "contract_id": 30092,
-        "address": "secret1g9rfxe43my6w9h76422er5ckgp9cp9smgtqnx8",
-        "code_hash": "20D0B41DFB650E0773F9B8DB9516C651B8D3275ED66C3D6077C8102A1D6AD73E",
+        "label": "mint-jAOjWiAY",
+        "contract_id": "30158",
+        "address": "secret1r2fl5rw39qlevvxf8p9lyk6e2scvg5qrwcn0ss",
+        "code_hash": "3ADD3511612AFB22C664422450F08D912FBC9D7BDD4B26681E6D7C939827DC48",
         "checksum": "b217f26eae6d450570ee295b0d604663"
     },
     "oracle": {
-        "label": "oracle",
-        "contract_id": 30090,
-        "address": "secret12pfmer5e35ekup9r4cvdm6zzql7fwudzsnc7m7",
-        "code_hash": "10912DA31D27B8B6AAB3AED4A9B9A2F0BAB120C87156FCDDA3CC9F7DD0DAD8B7",
+        "label": "oracle-OBIoWzXH",
+        "contract_id": "30157",
+        "address": "secret1hdwj0hyaukxyhd6msehpxndsgg9xujz9wh7ml0",
+        "code_hash": "F280D855FEF99EE9D6594086C897EB9AD76469C898FBC945A673C38405C975F4",
         "checksum": "31c3ff776e85627bf77c00787a94a68b"
     },
     "silk": {
@@ -20,10 +20,10 @@
         "code_hash": "35F5DB2BC5CD56815D10C7A567D6827BECCB8EAF45BC3FA016930C4A8209EA69"
     },
     "shade": {
-        "label": "shade",
+        "label": "shade-kDFYsowA",
         "contract_id": 30067,
-        "address": "",
-        "code_hash": ""
+        "address": "secret19wpwzyd7km3q4qkc4x80zz7fk5e3arxpmgwqs6",
+        "code_hash": "35F5DB2BC5CD56815D10C7A567D6827BECCB8EAF45BC3FA016930C4A8209EA69"
     },
     "sscrt": {
         "label": "sSCRT",

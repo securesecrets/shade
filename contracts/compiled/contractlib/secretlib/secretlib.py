@@ -4,7 +4,7 @@ import time
 
 # Presetup some commands
 query_list_code = ['secretcli', 'query', 'compute', 'list-code']
-MAX_RETRY = 10
+MAX_TRIES = 10
 
 
 def run_command(command, wait=6):
