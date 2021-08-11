@@ -165,10 +165,10 @@ To mint the user must use a supported asset's send function and send the amount 
 
 In the msg field of a snip20 send command you must send a base64 encoded json like this one
 ```json
-{"minimum_expected_amount": "Uint128", "mint_type": { "mint_silk": { } } }
+{"minimum_expected_amount": "Uint128", "mint_type": { "coin_to_silk": { } } }
 ```
 
-The currently supported mint types are ```mint_silk``` and ```mint_shade```
+The currently supported mint types are ```coin_to_silk``` , ```coin_to_shade```, ```convert_to_silk``` and ```convert_to_shade```
 
 ## Contract
 Type used in many of the admin commands
