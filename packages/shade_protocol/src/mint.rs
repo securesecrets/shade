@@ -72,8 +72,11 @@ pub struct SnipMsgHook {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum MintType {
-    MintSilk {},
-    MintShade {}
+    CoinToSilk {},
+    CoinToShade {},
+    ConvertToShade {},
+    ConvertToSilk {},
+
 }
 
 impl Handle<'_> for HandleMsg{}
