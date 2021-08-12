@@ -76,7 +76,6 @@ pub enum MintType {
     CoinToShade {},
     ConvertToShade {},
     ConvertToSilk {},
-
 }
 
 impl Handle<'_> for HandleMsg{}
