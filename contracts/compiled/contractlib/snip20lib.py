@@ -94,3 +94,12 @@ class SNIP20(Contract):
             {"balance": {"key": password, "address": address}})
 
         return self.query(msg)["balance"]["amount"]
+
+    def get_token_info(self):
+        """
+        Gets token info
+        :return: Response
+        """
+        msg = json.dumps({"token_info": {}})
+
+        return self.query(msg)
