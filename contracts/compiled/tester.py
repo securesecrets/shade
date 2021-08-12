@@ -61,7 +61,7 @@ if args.testnet == "private":
 
     total_amount = int(sscrt_mint_amount)
     minimum_amount = 1000
-    total_tests = 5
+    total_tests = 1
 
     total_sent = 0
 
@@ -70,50 +70,57 @@ if args.testnet == "private":
         total_sent += send_amount
 
         print(f"\tSending {send_amount} usSCRT")
+
         # {"minimum_expected_amount": "1", "mint_type": {"coin_to_silk": {}}}
         mint_silk = "eyJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxIiwgIm1pbnRfdHlwZSI6IHsiY29pbl90b19zaWxrIjoge319fQ=="
+        mint_silk_response = sscrt.send(account_key, mint.address, send_amount, mint_silk)
+        if mint_silk_response["output_error"] != {}:
+            print(f"Silk mint error: {mint_silk_response['output_error']}")
+        silk_minted = silk.get_balance(account, silk_password)
+        print(f"\tSilk balance: {silk_minted} uSILK")
+
         # { "minimum_expected_amount": "1", "mint_type": {"coin_to_shade": {}}}
         mint_shade = "eyAibWluaW11bV9leHBlY3RlZF9hbW91bnQiOiAiMSIsICJtaW50X3R5cGUiOiB7ImNvaW5fdG9fc2hhZGUiOiB7fX19"
-
-        mint_silk_response = sscrt.send(account_key, mint.address, send_amount, mint_silk)
-        if mint_silk_response["plaintext_error"] != "":
-            print(f"Silk mint error: {mint_silk_response['plaintext_error']}")
-
         mint_shade_response = sscrt.send(account_key, mint.address, send_amount, mint_shade)
-        if mint_shade_response["plaintext_error"] != "":
-            print(f"Shade mint error: {mint_shade_response['plaintext_error']}")
-
-        silk_minted = silk.get_balance(account, silk_password)
+        if mint_shade_response["output_error"] != {}:
+            print(f"Shade mint error: {mint_shade_response['output_error']}")
         shade_minted = shade.get_balance(account, shade_password)
-        # assert total_sent == int(silk_minted), f"Total minted {silk_minted}; expected {total_sent}"
-
-        print(f"\tSilk balance: {silk_minted} uSILK")
         print(f"\tShade balance: {shade_minted} uSHD")
+
         burned_amount = mint.get_asset(sscrt)["asset"]["asset"]["burned_tokens"]
         print(f"\tTotal burned: {burned_amount} usSCRT\n")
-        # assert total_sent == int(burned_amount), f"Burnt {burned_amount}; expected {total_sent}"
 
     send_amount = 1_000_000_000
     print(f"Converting {send_amount} uSilk into Shade")
-    silk_before_send = silk.get_balance(account, silk_password)
-    shade_before_send = shade.get_balance(account, shade_password)
+    user_silk_before = silk.get_balance(account, silk_password)
+    user_shade_before = shade.get_balance(account, shade_password)
+    silk_supply_before = silk.get_token_info()["token_info"]["total_supply"]
+    shade_supply_before = shade.get_token_info()["token_info"]["total_supply"]
     # { "minimum_expected_amount": "1", "mint_type": {"convert_to_shade": {}}}
-    msg = "eyAibWluaW11bV9leHBlY3RlZF9hbW91bnQiOiAiMSIsICJtaW50X3R5cGUiOiB7ImNvbnZlcnRfdG9fc2hhZGUiOiB7fX19"
-    print(silk.send(account_key, mint.address, send_amount, msg))
-    silk_after_send = silk.get_balance(account, silk_password)
-    shade_after_send = shade.get_balance(account, shade_password)
-    print(f"Burned {int(silk_before_send) - int(silk_after_send)} uSilk and minted {int(shade_after_send) - int(shade_before_send)} uSHD")
+    msg = "eyAKICAgICJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxIiwgCiAgICAibWludF90eXBlIjogewogICAgICAgICAgICAgICAgICAgICJjb252ZXJ0X3RvX3NoYWRlIjoge30KICAgICAgICAgICAgICAgICB9Cn0="
+    silk.send(account_key, mint.address, send_amount, msg)
+    user_silk_after = silk.get_balance(account, silk_password)
+    user_shade_after = shade.get_balance(account, shade_password)
+    silk_supply_after = silk.get_token_info()["token_info"]["total_supply"]
+    shade_supply_after = shade.get_token_info()["token_info"]["total_supply"]
+    print(f"Sent {int(user_silk_before) - int(user_silk_after)} uSilk and received {int(user_shade_after) - int(user_shade_before)} uSHD")
+    print(f"Burned {int(silk_supply_before) - int(silk_supply_after)} uSilk and minted {int(shade_supply_after) - int(shade_supply_before)} uSHD")
 
     send_amount = 10_000_000
     print(f"Converting {send_amount} uSHD into Silk")
-    silk_before_send = silk.get_balance(account, silk_password)
-    shade_before_send = shade.get_balance(account, shade_password)
+    user_silk_before = silk.get_balance(account, silk_password)
+    user_shade_before = shade.get_balance(account, shade_password)
+    silk_supply_before = silk.get_token_info()["token_info"]["total_supply"]
+    shade_supply_before = shade.get_token_info()["token_info"]["total_supply"]
     # { "minimum_expected_amount": "1", "mint_type": {"convert_to_silk": {}}}
     msg = "eyAibWluaW11bV9leHBlY3RlZF9hbW91bnQiOiAiMSIsICJtaW50X3R5cGUiOiB7ImNvbnZlcnRfdG9fc2lsayI6IHt9fX0="
-    print(shade.send(account_key, mint.address, send_amount, msg))
-    silk_after_send = silk.get_balance(account, silk_password)
-    shade_after_send = shade.get_balance(account, shade_password)
-    print(f"Burned {int(shade_before_send) - int(shade_after_send)} uSHD and minted {int(silk_after_send) - int(silk_before_send)} uSilk")
+    shade.send(account_key, mint.address, send_amount, msg)
+    user_silk_after = silk.get_balance(account, silk_password)
+    user_shade_after = shade.get_balance(account, shade_password)
+    silk_supply_after = silk.get_token_info()["token_info"]["total_supply"]
+    shade_supply_after = shade.get_token_info()["token_info"]["total_supply"]
+    print(f"Sent {int(user_shade_before) - int(user_shade_after)} uSHD and received {int(user_silk_after) - int(user_silk_before)} uSilk")
+    print(f"Burned {int(shade_supply_before) - int(shade_supply_after)} uSHD and minted {int(silk_supply_after) - int(silk_supply_before)} uSilk")
 
     print("Testing migration")
     new_mint = mint.migrate(gen_label(8), int(mint.contract_id), mint.code_hash)
