@@ -1,25 +1,22 @@
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary};
 use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read};
 use secret_toolkit::{
-    snip20::{mint_msg, register_receive_msg, token_info_query},
+    snip20::{mint_msg, burn_msg, register_receive_msg, token_info_query},
 };
 use shade_protocol::{
-    mint::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, AssetMsg, MintConfig, BurnableAsset},
+    mint::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, AssetMsg, MintConfig, BurnableAsset, SnipMsgHook, MintType},
     oracle::{
         ReferenceData,
         QueryMsg::GetPrice,
     },
     asset::{Contract},
     msg_traits::{Init, Query},
+    generic_response::ResponseStatus,
 };
-use shade_protocol::generic_response::ResponseStatus;
-use shade_protocol::mint::{SnipMsgHook, MintType};
 use std::convert::TryFrom;
 
 // TODO: add remove asset
 // TODO: add spacepad padding
-// TODO: father contract must be snip20 contract owner
-// TODO: father contract must change minters when migrating
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -37,6 +34,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     };
 
     config(&mut deps.storage).save(&state)?;
+    let mut messages = vec![];
+
+    messages.push(register_receive(&env, state.silk)?);
+    messages.push(register_receive(&env, state.shade)?);
 
     let empty_assets_list: Vec<String> = Vec::new();
     asset_list(&mut deps.storage).save(&empty_assets_list)?;
@@ -49,7 +50,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     debug_print!("Contract was initialized by {}", env.message.sender);
 
     Ok(InitResponse {
-        messages: vec![],
+        messages,
         log: vec![]
     })
 }
@@ -98,16 +99,17 @@ pub fn try_migrate<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
+    // Disable contract
     let mut config = config(&mut deps.storage);
     config.update(|mut state| {
         state.activated = false;
         Ok(state)
     })?;
 
-    let config_read = config.load()?;
+    // Move all registered assets
     let mut initial_assets: Vec<AssetMsg> = vec![];
+    let config_read = config.load()?;
     let assets = assets_r(&deps.storage);
-
     for asset_addr in asset_list_read(&deps.storage).load()? {
         if let Some(item) = assets.may_load(asset_addr.as_bytes())? {
             initial_assets.push(AssetMsg {
@@ -117,6 +119,7 @@ pub fn try_migrate<S: Storage, A: Api, Q: Querier>(
         }
     };
 
+    // Move config
     let init_msg = InitMsg {
         admin: Option::from(config_read.owner),
         silk: config_read.silk,
@@ -132,6 +135,8 @@ pub fn try_migrate<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success } )? )
     })
 }
+
+// TODO: replace update/register and make one function
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -204,7 +209,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                 Ok(state)
             })?;
             // Register contract in asset
-            let register_msg = register_receive(env, contract.address, contract.code_hash)?;
+            let register_msg = register_receive(env, contract)?;
             messages.push(register_msg);
         }
     }
@@ -253,7 +258,7 @@ pub fn try_update_asset<S: Storage, A: Api, Q: Querier>(
                 Ok(state)
             })?;
             // Register contract in asset
-            let register_msg = register_receive(&env, contract.address, contract.code_hash)?;
+            let register_msg = register_receive(&env, contract)?;
             messages.push(register_msg)
         },
 
@@ -283,25 +288,21 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     // Get mint command
     let amount_to_mint: Uint128;
-    let mint_response: StdResult<(CosmosMsg, Uint128)>;
     if let Some(msg) = msg {
         let mint_msg: SnipMsgHook = from_binary(&msg)?;
-        mint_response = match mint_msg.mint_type {
-            MintType::MintSilk {} => mint_with_asset(deps, &env, TargetCoin::Silk, from, amount, mint_msg.minimum_expected_amount),
-            MintType::MintShade {} => mint_with_asset(deps, &env, TargetCoin::Shade, from, amount, mint_msg.minimum_expected_amount)
-        }
+        amount_to_mint = match mint_msg.mint_type {
+            MintType::CoinToSilk {} => mint_with_asset(deps, &env, TargetCoin::Silk, from, amount, &mut messages),
+            MintType::CoinToShade {} => mint_with_asset(deps, &env, TargetCoin::Shade, from, amount, &mut messages),
+            MintType::ConvertToSilk {} => conversion_mint(deps, &env, TargetCoin::Silk, from, amount, &mut messages),
+            MintType::ConvertToShade {} => conversion_mint(deps, &env, TargetCoin::Shade, from, amount, &mut messages)
+        }?
     } else {
         return Err(StdError::generic_err("data cannot be empty"))
     }
 
-    // Handle response
-    match mint_response {
-        Ok(tuple) => {
-            let (cosmos_msg, amount_returned) = tuple;
-            messages.push(cosmos_msg);
-            amount_to_mint = amount_returned;
-        }
-        Err(err) => { return Err(err) }
+    // If minimum amount is greater then ignore the process
+    if mint_msg.minimum_expected_amount > amount_to_mint {
+        return Err(StdError::generic_err("did not exceed expected amount"))
     }
 
     Ok(HandleResponse {
@@ -342,6 +343,21 @@ fn authorized<S: Storage, A: Api, Q: Querier>(
     return Ok(true)
 }
 
+fn register_receive (
+    env: &Env,
+    contract: Contract
+) -> StdResult<CosmosMsg> {
+    let cosmos_msg = register_receive_msg(
+        env.contract_code_hash.clone(),
+        None,
+        256,
+        contract.code_hash,
+        contract.address,
+    );
+
+    cosmos_msg
+}
+
 fn calculate_mint(in_price: Uint128, target_price: Uint128, in_amount: Uint128, in_decimals: u32, target_decimals: u32) -> Uint128 {
     // Math must only be made in integers
     // in_decimals  = x
@@ -374,25 +390,57 @@ fn calculate_mint(in_price: Uint128, target_price: Uint128, in_amount: Uint128, 
     }
 }
 
-fn register_receive (
-    env: &Env,
-    contract: HumanAddr,
-    code_hash: String,
-) -> StdResult<CosmosMsg> {
-    let cosmos_msg = register_receive_msg(
-        env.contract_code_hash.clone(),
-        None,
-        256,
-        code_hash,
-        contract,
-    );
-
-    cosmos_msg
-}
-
 enum TargetCoin {
     Silk,
     Shade,
+}
+
+fn conversion_mint<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    target: TargetCoin,
+    sender: HumanAddr,
+    amount: Uint128,
+    messages: &mut Vec<CosmosMsg>
+) -> StdResult<Uint128> {
+
+    let config = config_read(&deps.storage).load()?;
+
+    // Set which is getting burned and which minted
+    let (in_asset, target_asset, in_price, target_price) = match target {
+        TargetCoin::Silk => (config.shade, config.silk,
+                             call_oracle(&deps, "SHD".to_string())?,
+                             // TODO: when silk has a valid oracle query that price
+                             Uint128(10u128.pow(18))),
+        TargetCoin::Shade => (config.silk, config.shade,
+                              // TODO: when silk has a valid oracle query that price
+                              Uint128(10u128.pow(18)),
+                              call_oracle(&deps, "SHD".to_string())?)
+    };
+
+    // Check that the sender is the registered burn target
+    if env.message.sender != in_asset.address {
+        return Err(StdError::generic_err("Sender must be Silk/Shade"));
+    }
+
+    // Load the decimal information for both coins
+    let in_decimals = token_info_query(&deps.querier, 1, in_asset.code_hash.clone(),
+                                       in_asset.address.clone())?.decimals as u32;
+    let target_decimals = token_info_query(&deps.querier, 1,
+                                           target_asset.code_hash.clone(),
+                                           target_asset.address.clone())?.decimals as u32;
+
+    // This will calculate the total mind value
+    let amount_to_mint = calculate_mint(in_price, target_price, amount, in_decimals, target_decimals);
+
+    messages.push(burn_msg(amount, None, 256,
+                           in_asset.code_hash, in_asset.address)?);
+
+    messages.push(mint_msg(sender, amount_to_mint, None,
+                           256, target_asset.code_hash,
+                           target_asset.address)?);
+
+    Ok(amount_to_mint)
 }
 
 fn mint_with_asset<S: Storage, A: Api, Q: Querier>(
@@ -401,8 +449,8 @@ fn mint_with_asset<S: Storage, A: Api, Q: Querier>(
     target: TargetCoin,
     sender: HumanAddr,
     amount: Uint128,
-    minimum_expected_amount: Uint128,
-) -> StdResult<(CosmosMsg, Uint128)> {
+    messages: &mut Vec<CosmosMsg>
+) -> StdResult<Uint128> {
 
     // Check that the asset is supported
     let assets = assets_r(&deps.storage);
@@ -436,14 +484,9 @@ fn mint_with_asset<S: Storage, A: Api, Q: Querier>(
     // This will calculate the total mind value
     let amount_to_mint = calculate_mint(in_price, target_price, amount, in_decimals, target_decimals);
 
-    // If minimum amount is greater then ignore the process
-    if minimum_expected_amount > amount_to_mint {
-        return Err(StdError::generic_err("did not exceed expected amount"))
-    }
-
-    let mint_msg = mint_msg(sender, amount_to_mint, None,
-                            256, target_coin.code_hash,
-                            target_coin.address)?;
+    messages.push(mint_msg(sender, amount_to_mint, None,
+                           256, target_coin.code_hash,
+                           target_coin.address)?);
 
     // Set burned amount
     let mut mut_assets = assets_w(&mut deps.storage);
@@ -453,7 +496,7 @@ fn mint_with_asset<S: Storage, A: Api, Q: Querier>(
         Ok(asset)
     })?;
 
-    Ok((mint_msg, amount_to_mint))
+    Ok(amount_to_mint)
 }
 
 fn call_oracle<S: Storage, A: Api, Q: Querier>(
@@ -541,7 +584,8 @@ mod tests {
 
         // we can just call .unwrap() to assert this was a success
         let res = init(&mut deps, env, msg).unwrap();
-        assert_eq!(0, res.messages.len());
+        // We should receive two registered messages
+        assert_eq!(2, res.messages.len());
     }
 
     #[test]
@@ -830,7 +874,7 @@ mod tests {
             amount: Uint128(100),
             msg: Option::from(to_binary(&SnipMsgHook {
                 minimum_expected_amount: Uint128(1),
-                mint_type: MintType::MintSilk {}
+                mint_type: MintType::CoinToSilk {}
             }).unwrap()),
             memo: None
         };

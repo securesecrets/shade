@@ -8,14 +8,13 @@ class PreInstantiatedContract:
 
 
 class Contract:
-    def __init__(self, contract, initMsg, label, admin='a', uploader='a', gas='10000000', backend='test', wait=6,
+    def __init__(self, contract, initMsg, label, admin='a', uploader='a', gas='10000000', backend='test',
                  instantiated_contract=None, code_id=None):
         self.label = label
         self.admin = admin
         self.uploader = uploader
         self.gas = gas
         self.backend = backend
-        self.wait = wait
 
         if instantiated_contract is None:
             if code_id is None:
