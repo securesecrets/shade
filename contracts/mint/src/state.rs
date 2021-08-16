@@ -1,7 +1,7 @@
 use cosmwasm_std::{Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
 use shade_protocol::{
-    mint::{MintConfig, BurnableAsset},
+    mint::{MintConfig, SupportedAsset},
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";
@@ -25,10 +25,10 @@ pub fn asset_list_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Stri
     singleton_read(storage, ASSET_LIST_KEY)
 }
 
-pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, BurnableAsset> {
+pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, SupportedAsset> {
     bucket_read(ASSET_KEY, storage)
 }
 
-pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, BurnableAsset> {
+pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, SupportedAsset> {
     bucket(ASSET_KEY, storage)
 }

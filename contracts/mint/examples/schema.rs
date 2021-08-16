@@ -4,7 +4,7 @@ use std::fs::create_dir_all;
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
 use mint::msg::{SupportedAssetsResponse, AssetResponse, HandleMsg, InitMsg, QueryMsg};
-use mint::state::{MintConfig, BurnableAsset};
+use mint::state::{MintConfig, SupportedAsset};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -16,7 +16,7 @@ fn main() {
     export_schema(&schema_for!(HandleMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(MintConfig), &out_dir);
-    export_schema(&schema_for!(BurnableAsset), &out_dir);
+    export_schema(&schema_for!(SupportedAsset), &out_dir);
     export_schema(&schema_for!(SupportedAssetsResponse), &out_dir);
     export_schema(&schema_for!(AssetResponse), &out_dir);
 }
