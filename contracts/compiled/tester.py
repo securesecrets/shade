@@ -10,7 +10,40 @@ from contractlib.secretlib import secretlib
 from contractlib.snip20lib import SNIP20
 from contractlib.mintlib import Mint
 from contractlib.oraclelib import Oracle
-from contractlib.utils import gen_label
+from contractlib.utils import gen_label, to_base64
+
+
+def test_send(burn_asset, burn_asset_password, mint_asset, mint_asset_password, mint, slipage, amount, account, account_key):
+    # Save token symbol
+    burn_asset_symbol = burn_asset.get_token_info()["token_info"]["symbol"]
+    mint_asset_symbol = mint_asset.get_token_info()["token_info"]["symbol"]
+
+    # Get all the token amounts before sending
+    user_burn_asset_before = burn_asset.get_balance(account, burn_asset_password)
+    user_mint_asset_before = mint_asset.get_balance(account, mint_asset_password)
+    burn_asset_supply_before = burn_asset.get_token_info()["token_info"]["total_supply"]
+    queried_burn_asset_supply_before = mint.get_asset(burn_asset)["asset"]["asset"]["total_burned"]
+    mint_asset_supply_before = mint_asset.get_token_info()["token_info"]["total_supply"]
+
+    # Get all the token amounts after sending
+    msg = to_base64({"minimum_expected_amount": str(slipage), "to_mint": mint_asset.address})
+    send_response = burn_asset.send(account_key, mint.address, amount, msg)
+
+    if send_response["output_error"] != {}:
+        print(f"Mint error: {send_response['output_error']}")
+
+    user_burn_asset_after = burn_asset.get_balance(account, burn_asset_password)
+    user_mint_asset_after = mint_asset.get_balance(account, mint_asset_password)
+    burn_asset_supply_after = burn_asset.get_token_info()["token_info"]["total_supply"]
+    queried_burn_asset_supply_after = mint.get_asset(burn_asset)["asset"]["asset"]["total_burned"]
+    mint_asset_supply_after = mint_asset.get_token_info()["token_info"]["total_supply"]
+    print(f"Sending:    {amount} u{burn_asset_symbol} to receive u{mint_asset_symbol}\n"
+          f"Sent:       {int(user_burn_asset_before) - int(user_burn_asset_after)} u{burn_asset_symbol}\n"
+          f"Burned      {int(burn_asset_supply_before) - int(burn_asset_supply_after)} u{burn_asset_symbol}\n"
+          f"Burn Query: {int(queried_burn_asset_supply_after) - int(queried_burn_asset_supply_before)} u{burn_asset_symbol}\n"
+          f"Received:   {int(user_mint_asset_after) - int(user_mint_asset_before)} u{mint_asset_symbol}\n"
+          f"Mint:       {int(mint_asset_supply_after) - int(mint_asset_supply_before)} u{mint_asset_symbol}\n")
+
 
 parser = argparse.ArgumentParser(description='Automated smart contract tester')
 parser.add_argument("--testnet", choices=["private", "public"], default="private", type=str, required=False,
@@ -23,7 +56,8 @@ if args.testnet == "private":
     account = secretlib.run_command(['secretcli', 'keys', 'show', '-a', account_key]).rstrip()
 
     print("Configuring sSCRT")
-    sscrt = SNIP20(gen_label(8), decimals=6, public_total_supply=True, enable_deposit=True)
+    sscrt = SNIP20(gen_label(8), name="sSCRT", symbol="SSCRT", decimals=6, public_total_supply=True,
+                   enable_deposit=True)
     sscrt_password = sscrt.set_view_key(account_key, "password")
 
     sscrt_mint_amount = '100000000000000'
@@ -34,11 +68,13 @@ if args.testnet == "private":
     assert sscrt_mint_amount == sscrt_minted, f"Minted {sscrt_minted}; expected {sscrt_mint_amount}"
 
     print("Configuring Silk")
-    silk = SNIP20(gen_label(8), decimals=6, public_total_supply=True, enable_mint=True, enable_burn=True)
+    silk = SNIP20(gen_label(8), name="Silk", symbol="SILK", decimals=6, public_total_supply=True, enable_mint=True,
+                  enable_burn=True)
     silk_password = silk.set_view_key(account_key, "password")
 
     print("Configuring Shade")
-    shade = SNIP20(gen_label(8), decimals=6, public_total_supply=True, enable_mint=True, enable_burn=True)
+    shade = SNIP20(gen_label(8), name="Shade", symbol="SHD", decimals=6, public_total_supply=True, enable_mint=True,
+                   enable_burn=True)
     shade_password = shade.set_view_key(account_key, "password")
 
     print('Mocking Band')
@@ -50,12 +86,14 @@ if args.testnet == "private":
     print(price / (10 ** 18))
 
     print("Configuring Mint contract")
-    mint = Mint(gen_label(8), silk, shade, oracle)
+    mint = Mint(gen_label(8), oracle)
+    mint.register_asset(silk, burnable=True)
     silk.set_minters([mint.address])
+    mint.register_asset(shade, burnable=True)
     shade.set_minters([mint.address])
-    mint.register_asset(sscrt)
-    assets = mint.get_supported_assets()['supported_assets']['assets'][0]
-    assert sscrt.address == assets, f"Got {assets}; expected {sscrt.address}"
+    mint.register_asset(sscrt, name="SCRT")
+    assets = mint.get_supported_assets()['supported_assets']['assets']
+    assert 3 == len(assets), f"Got {len(assets)}; expected {3}"
 
     print("Sending to mint contract")
 
@@ -69,58 +107,14 @@ if args.testnet == "private":
         send_amount = random.randint(minimum_amount, int(total_amount / total_tests / 2) - 1)
         total_sent += send_amount
 
-        print(f"\tSending {send_amount} usSCRT")
-
-        # {"minimum_expected_amount": "1", "mint_type": {"coin_to_silk": {}}}
-        mint_silk = "eyJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxIiwgIm1pbnRfdHlwZSI6IHsiY29pbl90b19zaWxrIjoge319fQ=="
-        mint_silk_response = sscrt.send(account_key, mint.address, send_amount, mint_silk)
-        if mint_silk_response["output_error"] != {}:
-            print(f"Silk mint error: {mint_silk_response['output_error']}")
-        silk_minted = silk.get_balance(account, silk_password)
-        print(f"\tSilk balance: {silk_minted} uSILK")
-
-        # { "minimum_expected_amount": "1", "mint_type": {"coin_to_shade": {}}}
-        mint_shade = "eyAibWluaW11bV9leHBlY3RlZF9hbW91bnQiOiAiMSIsICJtaW50X3R5cGUiOiB7ImNvaW5fdG9fc2hhZGUiOiB7fX19"
-        mint_shade_response = sscrt.send(account_key, mint.address, send_amount, mint_shade)
-        if mint_shade_response["output_error"] != {}:
-            print(f"Shade mint error: {mint_shade_response['output_error']}")
-        shade_minted = shade.get_balance(account, shade_password)
-        print(f"\tShade balance: {shade_minted} uSHD")
-
-        burned_amount = mint.get_asset(sscrt)["asset"]["asset"]["burned_tokens"]
-        print(f"\tTotal burned: {burned_amount} usSCRT\n")
+        test_send(sscrt, sscrt_password, silk, silk_password, mint, 1, send_amount, account, account_key)
+        test_send(sscrt, sscrt_password, shade, shade_password, mint, 1, send_amount, account, account_key)
 
     send_amount = 1_000_000_000
-    print(f"Converting {send_amount} uSilk into Shade")
-    user_silk_before = silk.get_balance(account, silk_password)
-    user_shade_before = shade.get_balance(account, shade_password)
-    silk_supply_before = silk.get_token_info()["token_info"]["total_supply"]
-    shade_supply_before = shade.get_token_info()["token_info"]["total_supply"]
-    # { "minimum_expected_amount": "1", "mint_type": {"convert_to_shade": {}}}
-    msg = "eyAKICAgICJtaW5pbXVtX2V4cGVjdGVkX2Ftb3VudCI6ICIxIiwgCiAgICAibWludF90eXBlIjogewogICAgICAgICAgICAgICAgICAgICJjb252ZXJ0X3RvX3NoYWRlIjoge30KICAgICAgICAgICAgICAgICB9Cn0="
-    silk.send(account_key, mint.address, send_amount, msg)
-    user_silk_after = silk.get_balance(account, silk_password)
-    user_shade_after = shade.get_balance(account, shade_password)
-    silk_supply_after = silk.get_token_info()["token_info"]["total_supply"]
-    shade_supply_after = shade.get_token_info()["token_info"]["total_supply"]
-    print(f"Sent {int(user_silk_before) - int(user_silk_after)} uSilk and received {int(user_shade_after) - int(user_shade_before)} uSHD")
-    print(f"Burned {int(silk_supply_before) - int(silk_supply_after)} uSilk and minted {int(shade_supply_after) - int(shade_supply_before)} uSHD")
+    test_send(silk, silk_password, shade, shade_password, mint, 1, send_amount, account, account_key)
 
     send_amount = 10_000_000
-    print(f"Converting {send_amount} uSHD into Silk")
-    user_silk_before = silk.get_balance(account, silk_password)
-    user_shade_before = shade.get_balance(account, shade_password)
-    silk_supply_before = silk.get_token_info()["token_info"]["total_supply"]
-    shade_supply_before = shade.get_token_info()["token_info"]["total_supply"]
-    # { "minimum_expected_amount": "1", "mint_type": {"convert_to_silk": {}}}
-    msg = "eyAibWluaW11bV9leHBlY3RlZF9hbW91bnQiOiAiMSIsICJtaW50X3R5cGUiOiB7ImNvbnZlcnRfdG9fc2lsayI6IHt9fX0="
-    shade.send(account_key, mint.address, send_amount, msg)
-    user_silk_after = silk.get_balance(account, silk_password)
-    user_shade_after = shade.get_balance(account, shade_password)
-    silk_supply_after = silk.get_token_info()["token_info"]["total_supply"]
-    shade_supply_after = shade.get_token_info()["token_info"]["total_supply"]
-    print(f"Sent {int(user_shade_before) - int(user_shade_after)} uSHD and received {int(user_silk_after) - int(user_silk_before)} uSilk")
-    print(f"Burned {int(shade_supply_before) - int(shade_supply_after)} uSHD and minted {int(silk_supply_after) - int(silk_supply_before)} uSilk")
+    test_send(shade, shade_password, silk, silk_password, mint, 1, send_amount, account, account_key)
 
     print("Testing migration")
     new_mint = mint.migrate(gen_label(8), int(mint.contract_id), mint.code_hash)
@@ -167,8 +161,8 @@ if args.testnet == "public":
             code_hash=contracts_config["shade"]["code_hash"])
 
     shade = SNIP20(contracts_config["shade"]["label"], "shade", "SHD", decimals=6, public_total_supply=True,
-                  enable_mint=True, enable_burn=True, admin=account, uploader=account, backend=None,
-                  instantiated_contract=shade_instantiated_contract, code_id=contracts_config["shade"]["contract_id"])
+                   enable_mint=True, enable_burn=True, admin=account, uploader=account, backend=None,
+                   instantiated_contract=shade_instantiated_contract, code_id=contracts_config["shade"]["contract_id"])
 
     contracts_config["shade"]["address"] = shade.address
     contracts_config["shade"]["code_hash"] = shade.code_hash
@@ -185,20 +179,23 @@ if args.testnet == "public":
 
     print("Configuring Oracle")
     oracle_updated = False
-    band_contract = PreInstantiatedContract("secret1p0jtg47hhwuwgp4cjpc46m7qq6vyjhdsvy2nph", "77c854ea110315d5103a42b88d3e7b296ca245d8b095e668c69997b265a75ac5")
+    band_contract = PreInstantiatedContract("secret1p0jtg47hhwuwgp4cjpc46m7qq6vyjhdsvy2nph",
+                                            "77c854ea110315d5103a42b88d3e7b296ca245d8b095e668c69997b265a75ac5")
     with open("checksum/oracle.txt", 'r') as oracle_checksum:
         if oracle_checksum.readline().strip() == contracts_config["oracle"]["checksum"].strip():
             oracle_instantiated_contract = PreInstantiatedContract(
                 address=contracts_config["oracle"]["address"],
                 code_hash=contracts_config["oracle"]["code_hash"])
-            oracle = Oracle(contracts_config["oracle"]["label"], band_contract, admin=account, uploader=account, backend=None,
+            oracle = Oracle(contracts_config["oracle"]["label"], band_contract, admin=account, uploader=account,
+                            backend=None,
                             instantiated_contract=oracle_instantiated_contract,
                             code_id=contracts_config["oracle"]["contract_id"])
         else:
             print("Instantiating Oracle")
             oracle_updated = True
             contracts_config["oracle"]["label"] = f"oracle-{gen_label(8)}"
-            oracle = Oracle(contracts_config["oracle"]["label"], band_contract, admin=account, uploader=account, backend=None)
+            oracle = Oracle(contracts_config["oracle"]["label"], band_contract, admin=account, uploader=account,
+                            backend=None)
             contracts_config["oracle"]["contract_id"] = oracle.contract_id
             contracts_config["oracle"]["address"] = oracle.address
             contracts_config["oracle"]["code_hash"] = oracle.code_hash
@@ -212,7 +209,8 @@ if args.testnet == "public":
         mint_instantiated_contract = PreInstantiatedContract(
             address=contracts_config["mint"]["address"],
             code_hash=contracts_config["mint"]["code_hash"])
-        mint = Mint(contracts_config["mint"]["label"], silk, shade, oracle, admin=account, uploader=account, backend=None,
+        mint = Mint(contracts_config["mint"]["label"], silk, shade, oracle, admin=account, uploader=account,
+                    backend=None,
                     instantiated_contract=mint_instantiated_contract, code_id=contracts_config["mint"]["contract_id"])
 
         if mint_checksum.readline().strip() != contracts_config["mint"]["checksum"].strip():

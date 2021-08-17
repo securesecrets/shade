@@ -8,26 +8,24 @@ use crate::msg_traits::{Init, Handle, Query};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MintConfig {
     pub owner: HumanAddr,
-    pub silk: Contract,
-    pub shade: Contract,
     pub oracle: Contract,
     pub activated: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct BurnableAsset {
+pub struct SupportedAsset {
+    pub name: String,
     pub contract: Contract,
-    pub burned_tokens: Uint128,
+    pub burnable: bool,
+    pub total_burned: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
-    pub silk: Contract,
-    pub shade: Contract,
     pub oracle: Contract,
-    pub initial_assets: Option<Vec<AssetMsg>>,
+    pub initial_assets: Option<Vec<SupportedAsset>>,
 }
 
 impl Init<'_> for InitMsg {}
@@ -42,16 +40,13 @@ pub enum HandleMsg {
     },
     UpdateConfig {
         owner: Option<HumanAddr>,
-        silk: Option<Contract>,
-        shade: Option<Contract>,
         oracle: Option<Contract>,
     },
     RegisterAsset {
+        name: Option<String>,
         contract: Contract,
-    },
-    UpdateAsset {
-        asset: HumanAddr,
-        contract: Contract,
+        burnable: Option<bool>,
+        total_burned: Option<Uint128>,
     },
     Receive {
         sender: HumanAddr,
@@ -62,23 +57,14 @@ pub enum HandleMsg {
     },
 }
 
+impl Handle<'_> for HandleMsg{}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct SnipMsgHook {
     pub minimum_expected_amount: Uint128,
-    pub mint_type: MintType,
+    pub to_mint: HumanAddr,
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum MintType {
-    CoinToSilk {},
-    CoinToShade {},
-    ConvertToShade {},
-    ConvertToSilk {},
-}
-
-impl Handle<'_> for HandleMsg{}
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -87,7 +73,6 @@ pub enum HandleAnswer {
     Migrate { status: ResponseStatus },
     UpdateConfig { status: ResponseStatus},
     RegisterAsset { status: ResponseStatus},
-    UpdateAsset { status: ResponseStatus},
     Burn { status: ResponseStatus, mint_amount: Uint128 }
 }
 
@@ -107,13 +92,6 @@ impl Query for QueryMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     SupportedAssets { assets: Vec<String>, },
-    Asset { asset: BurnableAsset },
+    Asset { asset: SupportedAsset },
     Config { config: MintConfig },
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct AssetMsg {
-    pub contract: Contract,
-    pub burned_tokens: Option<Uint128>,
 }
