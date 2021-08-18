@@ -6,9 +6,10 @@ import json
 
 
 class PreInstantiatedContract:
-    def __init__(self, address, code_hash):
+    def __init__(self, address, code_hash, code_id):
         self.address = address
         self.code_hash = code_hash
+        self.code_id = code_id
 
 
 class Contract:
@@ -19,12 +20,15 @@ class Contract:
         self.uploader = uploader
         self.backend = backend
 
-        if code_id is None:
-           self.code_id = secretlib.store_contract(contract, uploader, backend)
-        else:
+        if code_id:
             self.code_id = code_id
+        else:
+            self.code_id = secretlib.store_contract(contract, uploader, backend)
 
-        initResponse = secretlib.instantiate_contract(str(self.code_id), initMsg, label, admin, backend)
+        if instantiated_contract:
+            self.code_id = instantiated_contract.code_id
+        else:
+            initResponse = secretlib.instantiate_contract(str(self.code_id), initMsg, label, admin, backend)
         contracts = secretlib.list_code()
         self.code_hash = contracts[int(self.code_id) - 1]["data_hash"]
         #print(json.dumps(initResponse, indent=2))

@@ -125,7 +125,7 @@ def run_command_compute_hash(command):
             # querying hash once the hash is computed so we can check gas usage
             tx_data = json.loads(query_hash(txhash))
             #print(json.dumps(tx_data))
-            print('gas:', tx_data['gas_used'], '/', tx_data['gas_wanted'])
+            print('gas:', tx_data['gas_used'], '\t/', tx_data['gas_wanted'])
             GAS_METRICS.append({
                 'want': tx_data['gas_wanted'], 
                 'used': tx_data['gas_used'], 
@@ -150,7 +150,7 @@ def run_command_query_hash(command):
             # TODO: Read the gas used and store somewhere for metrics
             out = query_hash(txhash)
             out = json.loads(out)
-            print('gas:', out['gas_used'], '/', out['gas_wanted'])
+            print('gas:', out['gas_used'], '\t/', out['gas_wanted'])
             GAS_METRICS.append({
                 'want': out['gas_wanted'], 
                 'used': out['gas_used'], 
