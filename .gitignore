@@ -20,3 +20,5 @@ contracts/hackatom/hash.txt
 
 *.pyc
 __pycache__/
+compiled
+logs

@@ -2,6 +2,9 @@
 members = [
   "packages/shade_protocol",
   "contracts/mint",
+  "contracts/micro_mint",
+  "contracts/snip20",
+  "contracts/treasury",
   "contracts/oracle", 
   "contracts/mock_band",
 ]

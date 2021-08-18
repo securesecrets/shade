@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use shade_protocol::oracle::ReferenceData;
+use shade_protocol::band::ReferenceData;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg { }
@@ -46,7 +46,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetReferenceData { base_symbol: _, quote_symbol: _ } => 
             to_binary(&ReferenceData {
-              // data from ETH
               rate: Uint128(1_000_000_000_000_000_000),
               last_updated_base: 1628544285u64,
               last_updated_quote: 3377610u64
