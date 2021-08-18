@@ -7,11 +7,11 @@ import json
 
 class Mint(Contract):
     def __init__(self, label, oracle, contract='mint.wasm.gz', admin='a', uploader='a', gas='10000000',
-                 backend='test', instantiated_contract=None, code_id=None):
+                 backend='test', instantiated_contract=None, code_id=None, debug=False):
         init_msg = json.dumps(
             {"oracle": {"address": oracle.address, "code_hash": oracle.code_hash}})
         super().__init__(contract, init_msg, label, admin, uploader, gas, backend,
-                         instantiated_contract=instantiated_contract, code_id=code_id)
+                         instantiated_contract=instantiated_contract, code_id=code_id, debug=debug)
 
     def migrate(self, label, code_id, code_hash):
         """
@@ -25,10 +25,14 @@ class Mint(Contract):
             {"migrate": {"label": label, "code_id": code_id, "code_hash": code_hash}})
 
         new_mint = copy.deepcopy(self)
-        for attribute in self.execute(msg, compute=False)["logs"][0]["events"][0]["attributes"]:
+        out = self.execute(msg, title="migrate", desc="Migrate contract information into a new contract",
+                           return_log=True)
+        for attribute in out[1]["logs"][0]["events"][0]["attributes"]:
             if attribute["key"] == "contract_address":
                 new_mint.address = attribute["value"]
                 break
+        new_mint.label = label
+        new_mint.try_reset_logs()
         new_mint.contract_id = code_id
         new_mint.code_hash = code_hash
         return new_mint
@@ -52,7 +56,7 @@ class Mint(Contract):
             raw_msg["update_config"]["oracle"] = contract
 
         msg = json.dumps(raw_msg)
-        return self.execute(msg)
+        return self.execute(msg, title="update_config", desc="Updates the config")
 
     def register_asset(self, snip20, name=None, burnable=None, total_burned=None):
         """
@@ -72,7 +76,7 @@ class Mint(Contract):
             raw_msg["register_asset"]["total_burned"] = total_burned
         msg = json.dumps(raw_msg)
 
-        return self.execute(msg)
+        return self.execute(msg, title="register_asset", desc="Registers a new asset")
 
     def get_supported_assets(self):
         """

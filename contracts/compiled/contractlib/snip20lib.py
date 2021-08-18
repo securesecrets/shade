@@ -7,7 +7,7 @@ class SNIP20(Contract):
     def __init__(self, label, name="token", symbol="TKN", decimals=3, seed="cGFzc3dvcmQ=", public_total_supply=False,
                  enable_deposit=False, enable_redeem=False, enable_mint=False, enable_burn=False,
                  contract='snip20.wasm.gz', admin='a', uploader='a', gas='10000000', backend='test',
-                 instantiated_contract=None, code_id=None):
+                 instantiated_contract=None, code_id=None, debug=False):
         self.view_key = ""
         initMsg = json.dumps(
             {"name": name, "symbol": symbol, "decimals": decimals, "prng_seed": seed, "config": {
@@ -15,7 +15,7 @@ class SNIP20(Contract):
                 "enable_redeem": enable_redeem, "enable_mint": enable_mint, "enable_burn": enable_burn
             }})
         super().__init__(contract, initMsg, label, admin, uploader, gas, backend,
-                         instantiated_contract=instantiated_contract, code_id=code_id)
+                         instantiated_contract=instantiated_contract, code_id=code_id, debug=debug)
 
     def set_minters(self, accounts):
         """
@@ -26,7 +26,7 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"set_minters": {"minters": accounts}})
 
-        return self.execute(msg)
+        return self.execute(msg, title="set_minters", desc="Resets the minters with given array")
 
     def deposit(self, account, amount):
         """
@@ -38,7 +38,7 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"deposit": {}})
 
-        return self.execute(msg, account, amount)
+        return self.execute(msg, account, amount, title="deposit", desc="Receives a chain token in exchange for snip20")
 
     def mint(self, recipient, amount):
         """
@@ -50,7 +50,7 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"mint": {"recipient": recipient, "amount": str(amount)}})
 
-        return self.execute(msg)
+        return self.execute(msg, title="mint", desc="Mints a specified amount into an address")
 
     def send(self, account, recipient, amount, message=None):
         """
@@ -69,7 +69,7 @@ class SNIP20(Contract):
 
         msg = json.dumps(raw_msg)
 
-        return self.execute(msg, account)
+        return self.execute(msg, account, title="send", desc="Sends a specified amount into an address")
 
     def set_view_key(self, account, entropy):
         """
@@ -81,7 +81,9 @@ class SNIP20(Contract):
         msg = json.dumps(
             {"create_viewing_key": {"entropy": entropy}})
 
-        return json.loads(self.execute(msg, account)["output_data_as_string"])["create_viewing_key"]["key"]
+        out = self.execute(msg, account, title="set_view_key",
+                           desc="Sets a viewing key to allow users to query their balances")
+        return json.loads(out["output_data_as_string"])["create_viewing_key"]["key"]
 
     def get_balance(self, address, password):
         """

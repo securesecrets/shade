@@ -20,6 +20,7 @@ def run_command(command):
     status = p.wait()
     return output
 
+
 def store_contract(contract, user='a', gas='10000000', backend='test'):
     """
     Store contract and return its ID
@@ -36,13 +37,7 @@ def store_contract(contract, user='a', gas='10000000', backend='test'):
     if backend is not None:
         command += ['--keyring-backend', backend]
 
-    output = run_command_query_hash(command)
-    if 'logs' not in output:
-        return str(output)
-    else:
-        for attribute in output['logs'][0]['events'][0]['attributes']:
-            if attribute["key"] == "code_id":
-                return attribute['value']
+    return run_command_query_hash(command)
 
 
 def instantiate_contract(contract, msg, label, user='a', backend='test'):
@@ -71,7 +66,7 @@ def list_code():
     return json.loads(run_command(command))
 
 
-def execute_contract(contract, msg, user='a', backend='test', amount=None, compute=True):
+def execute_contract(contract, msg, user='a', backend='test', amount=None):
     command = ['secretcli', 'tx', 'compute', 'execute', contract, msg, '--from', user, '--gas', '10000000', '-y']
 
     if backend is not None:
@@ -81,17 +76,15 @@ def execute_contract(contract, msg, user='a', backend='test', amount=None, compu
         command.append("--amount")
         command.append(amount)
 
-    if compute:
-        return run_command_compute_hash(command)
-    return run_command_query_hash(command)
+    return run_command_query_compute_hash(command)
 
 
-def query_hash(hash):
-    return run_command(['secretcli', 'q', 'tx', hash])
+def query_hash(txhash):
+    return run_command(['secretcli', 'q', 'tx', txhash])
 
 
-def compute_hash(hash):
-    return run_command(['secretcli', 'q', 'compute', 'tx', hash])
+def compute_hash(txhash):
+    return run_command(['secretcli', 'q', 'compute', 'tx', txhash])
 
 
 def query_contract(contract, msg):
@@ -103,6 +96,7 @@ def query_contract(contract, msg):
 def run_command_compute_hash(command):
     out = run_command(command)
     txhash = json.loads(out)["txhash"]
+
     for _ in range(MAX_TRIES):
         try:
             out = json.loads(compute_hash(txhash))
@@ -120,6 +114,20 @@ def run_command_query_hash(command):
         try:
             out = json.loads(query_hash(txhash))
             return out
+        except:
+            time.sleep(1)
+    print(' '.join(command), f'exceeded max tries ({MAX_TRIES})')
+
+
+def run_command_query_compute_hash(command):
+    out = run_command(command)
+    txhash = json.loads(out)["txhash"]
+
+    for _ in range(MAX_TRIES):
+        try:
+            compute = json.loads(compute_hash(txhash))
+            query = json.loads(query_hash(txhash))
+            return [compute, query]
         except:
             time.sleep(1)
     print(' '.join(command), f'exceeded max tries ({MAX_TRIES})')

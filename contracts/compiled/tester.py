@@ -1,7 +1,6 @@
 #!/usr/bin/env python3 
 import copy
 import json
-import base64
 import random
 import argparse
 from contractlib.contractlib import PreInstantiatedContract
@@ -56,8 +55,8 @@ if args.testnet == "private":
     account = secretlib.run_command(['secretcli', 'keys', 'show', '-a', account_key]).rstrip()
 
     print("Configuring sSCRT")
-    sscrt = SNIP20(gen_label(8), name="sSCRT", symbol="SSCRT", decimals=6, public_total_supply=True,
-                   enable_deposit=True)
+    sscrt = SNIP20(f"sSCRT-{gen_label(8)}", name="sSCRT", symbol="SSCRT", decimals=6, public_total_supply=True,
+                   enable_deposit=True, debug=True)
     sscrt_password = sscrt.set_view_key(account_key, "password")
 
     sscrt_mint_amount = '100000000000000'
@@ -68,13 +67,13 @@ if args.testnet == "private":
     assert sscrt_mint_amount == sscrt_minted, f"Minted {sscrt_minted}; expected {sscrt_mint_amount}"
 
     print("Configuring Silk")
-    silk = SNIP20(gen_label(8), name="Silk", symbol="SILK", decimals=6, public_total_supply=True, enable_mint=True,
-                  enable_burn=True)
+    silk = SNIP20(f"Silk-{gen_label(8)}", name="Silk", symbol="SILK", decimals=6, public_total_supply=True,
+                  enable_mint=True, enable_burn=True, debug=True)
     silk_password = silk.set_view_key(account_key, "password")
 
     print("Configuring Shade")
-    shade = SNIP20(gen_label(8), name="Shade", symbol="SHD", decimals=6, public_total_supply=True, enable_mint=True,
-                   enable_burn=True)
+    shade = SNIP20(f"Shade-{gen_label(8)}", name="Shade", symbol="SHD", decimals=6, public_total_supply=True,
+                   enable_mint=True, enable_burn=True, debug=True)
     shade_password = shade.set_view_key(account_key, "password")
 
     print('Mocking Band')
@@ -86,7 +85,7 @@ if args.testnet == "private":
     print(price / (10 ** 18))
 
     print("Configuring Mint contract")
-    mint = Mint(gen_label(8), oracle)
+    mint = Mint(f"Mint-{gen_label(8)}", oracle, debug=True)
     mint.register_asset(silk, burnable=True)
     silk.set_minters([mint.address])
     mint.register_asset(shade, burnable=True)
@@ -99,7 +98,7 @@ if args.testnet == "private":
 
     total_amount = int(sscrt_mint_amount)
     minimum_amount = 1000
-    total_tests = 1
+    total_tests = 5
 
     total_sent = 0
 
@@ -119,6 +118,12 @@ if args.testnet == "private":
     print("Testing migration")
     new_mint = mint.migrate(gen_label(8), int(mint.contract_id), mint.code_hash)
     assert mint.get_supported_assets() == new_mint.get_supported_assets(), "Contracts are not the same"
+
+    print("Dump logs")
+    sscrt.save_log()
+    silk.save_log()
+    shade.save_log()
+    mint.save_log()
 
 if args.testnet == "public":
     account_key = 'admin'
