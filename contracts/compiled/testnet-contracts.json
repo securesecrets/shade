@@ -1,0 +1,33 @@
+{
+    "mint": {
+        "label": "mint-myXFfmGc",
+        "contract_id": "30215",
+        "address": "secret1kayf30aj8797jeygwd69qe0zaqj58wskxet4h2",
+        "code_hash": "B5CFBBBDB167D3EF9359DD31DEC02369981239CBB8632FE6929B858896362C8D",
+        "checksum": "b217f26eae6d450570ee295b0d604663"
+    },
+    "oracle": {
+        "label": "oracle-bBwSOgHV",
+        "contract_id": "30214",
+        "address": "secret13zdwq0as65v0wtqtu3rl9c6ypymlw4ltmgf2la",
+        "code_hash": "F280D855FEF99EE9D6594086C897EB9AD76469C898FBC945A673C38405C975F4",
+        "checksum": "31c3ff776e85627bf77c00787a94a68b"
+    },
+    "silk": {
+        "label": "silk",
+        "contract_id": 30067,
+        "address": "secret1zccl8tccrhwru2mfwzmxqz6lvmp08y9359jurx",
+        "code_hash": "35F5DB2BC5CD56815D10C7A567D6827BECCB8EAF45BC3FA016930C4A8209EA69"
+    },
+    "shade": {
+        "label": "shade-kDFYsowA",
+        "contract_id": 30067,
+        "address": "secret19wpwzyd7km3q4qkc4x80zz7fk5e3arxpmgwqs6",
+        "code_hash": "35F5DB2BC5CD56815D10C7A567D6827BECCB8EAF45BC3FA016930C4A8209EA69"
+    },
+    "sscrt": {
+        "label": "sSCRT",
+        "address": "secret1s7c6xp9wltthk5r6mmavql4xld5me3g37guhsx",
+        "code_hash": "CD400FB73F5C99EDBC6AAB22C2593332B8C9F2EA806BF9B42E3A523F3AD06F62"
+    }
+}

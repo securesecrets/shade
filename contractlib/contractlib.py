@@ -1,0 +1,67 @@
+from .secretlib import secretlib
+
+
+
+import json
+
+
+class PreInstantiatedContract:
+    def __init__(self, address, code_hash):
+        self.address = address
+        self.code_hash = code_hash
+
+
+class Contract:
+    def __init__(self, contract, initMsg, label, admin='a', uploader='a', backend='test',
+                 instantiated_contract=None, code_id=None):
+        self.label = label
+        self.admin = admin
+        self.uploader = uploader
+        self.backend = backend
+
+        if code_id is None:
+           self.code_id = secretlib.store_contract(contract, uploader, backend)
+        else:
+            self.code_id = code_id
+
+        initResponse = secretlib.instantiate_contract(str(self.code_id), initMsg, label, admin, backend)
+        contracts = secretlib.list_code()
+        self.code_hash = contracts[int(self.code_id) - 1]["data_hash"]
+        #print(json.dumps(initResponse, indent=2))
+        try:
+            for attribute in initResponse["logs"][0]["events"][0]["attributes"]:
+                if attribute["key"] == "contract_address":
+                    self.address = attribute["value"]
+                    break
+        except Exception as e:
+            #print(initResponse)
+            raise e
+                
+    def execute(self, msg, sender=None, amount=None, compute=True):
+        """
+        Execute said msg
+        :param msg: Execute msg
+        :param sender: Who will be sending the message, defaults to contract admin
+        :param amount: Optional string amount to send along with transaction
+        :return: Result
+        """
+        signer = sender if sender is not None else self.admin
+        return secretlib.execute_contract(self.address, msg, signer, self.backend, amount, compute)
+
+    def query(self, msg):
+        """
+        Query said msg
+        :param msg: Query msg
+        :return: Query
+        """
+        return secretlib.query_contract(self.address, msg)
+
+    def print(self):
+        """
+        Prints the contract info
+        :return:
+        """
+        print(f"Label:   {self.label}\n"
+              f"Address: {self.address}\n"
+              f"Id:      {self.code_id}\n"
+              f"Hash:    {self.code_hash}")
