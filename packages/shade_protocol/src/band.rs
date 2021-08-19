@@ -1,4 +1,4 @@
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{Uint128};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use crate::msg_traits::Query;

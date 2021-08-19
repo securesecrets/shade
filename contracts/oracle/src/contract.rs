@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, 
     Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, StdError, Storage, Uint128,
+    Querier, StdResult, Storage, Uint128,
 };
 use shade_protocol::{
     oracle::{
@@ -12,8 +12,8 @@ use shade_protocol::{
 };
 use crate::{
     state::{
-        config_w, config_r,
-        hard_coded_r, hard_coded_w,
+        config_w,
+        hard_coded_w,
     },
     query, handle,
 };

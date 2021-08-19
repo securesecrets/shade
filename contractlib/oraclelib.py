@@ -28,3 +28,9 @@ class Oracle(Contract):
         msg = json.dumps({'get_price': {'symbol': symbol}})
 
         return self.query(msg)
+
+    def get_prices(self, symbols):
+
+        msg = json.dumps({'get_prices': {'symbols': symbols}})
+
+        return self.query(msg)
