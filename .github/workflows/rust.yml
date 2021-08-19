@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      name: Checkout Repository
     - uses: actions/checkout@v2
-    - name: Build
+      with:
+        submodules: recursive
+
+    - name: make
       run: make
