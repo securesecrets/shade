@@ -17,5 +17,5 @@ jobs:
       with:
         submodules: recursive
 
-    - name: make
+    - name: Build
       run: make
