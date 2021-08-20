@@ -68,23 +68,4 @@ mod tests {
 
     }
 
-    /*
-    #[test]
-    fn prices_query() {
-        let deps = dummy_init(&"admin".to_string(),
-                                  create_contract("secretaddress", ""));
-        debug_print!("TESTGET PRICES");
-        let msg = QueryMsg::GetPrices{
-            symbols: [
-                "SHD".to_string(), 
-                "SILK".to_string(),
-            ].to_vec()
-        };
-        let res = query(&deps, msg).unwrap();
-
-        let values: Vec<ReferenceData> = from_binary(&res).unwrap();
-        assert_eq!(values[0].rate, Uint128(1147 * 10u128.pow(16)));
-        assert_eq!(values[1].rate, Uint128(1 * 10u128.pow(18)));
-    }
-    */
 }
