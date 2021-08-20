@@ -365,7 +365,6 @@ pub mod tests {
             _ => {panic!("Must return not found error")},
         }
     }
-
     */
 
     #[test]
