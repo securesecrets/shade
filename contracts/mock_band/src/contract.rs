@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use shade_protocol::oracle::ReferenceData;
+use shade_protocol::band::ReferenceData;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg { }
@@ -38,6 +38,10 @@ pub enum QueryMsg {
         base_symbol: String,
         quote_symbol: String,
     },
+    GetReferenceDataBulk{
+        base_symbols: Vec<String>,
+        quote_symbols: Vec<String>,
+    },
 }
 pub fn query<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
@@ -46,10 +50,25 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetReferenceData { base_symbol: _, quote_symbol: _ } => 
             to_binary(&ReferenceData {
-              // data from ETH
               rate: Uint128(1_000_000_000_000_000_000),
               last_updated_base: 1628544285u64,
               last_updated_quote: 3377610u64
             }),
+        QueryMsg::GetReferenceDataBulk {
+            base_symbols,
+            quote_symbols: _
+        } => {
+            let mut results = Vec::new();
+            let data = ReferenceData {
+                  rate: Uint128(1_000_000_000_000_000_000),
+                  last_updated_base: 1628544285u64,
+                  last_updated_quote: 3377610u64
+            };
+
+            for _ in base_symbols {
+                results.push(data.clone());
+            }
+            to_binary(&results)
+        },
     }
 }

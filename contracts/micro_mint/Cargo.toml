@@ -1,15 +1,21 @@
 [package]
-name = "shade-protocol"
+name = "micro_mint"
 version = "0.1.0"
 authors = [
-  "Guy Garcia <guysebastiangarcia@gmail.com>",
-  "Jackson Swenson <jacksonswenson22@gmail.com>"
+  "Jackson Swenson <jacksonswenson22@gmail.com>",
 ]
 edition = "2018"
 
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [lib]
 crate-type = ["cdylib", "rlib"]
-
 
 [profile.release]
 opt-level = 3
@@ -34,7 +40,9 @@ cosmwasm-schema = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v
 cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
 cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
 secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit", branch = "debug-print"}
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
-
+mockall = "0.10.2"
+mockall_double = "0.2.0"
