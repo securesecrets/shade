@@ -6,5 +6,4 @@ pub mod treasury;
 pub mod generic_response;
 pub mod msg_traits;
 pub mod band;
-pub mod secret_swap;
 pub mod snip20;
