@@ -1,7 +1,5 @@
-/*
 #[cfg(test)]
 pub mod tests {
-    use super::*;
     use cosmwasm_std::{
         testing::{
             mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier
@@ -10,7 +8,7 @@ pub mod tests {
         Extern,
     };
     use shade_protocol::{
-        mint::{
+        micro_mint::{
             QueryAnswer, InitMsg, HandleMsg,
             QueryMsg,
         },
@@ -20,20 +18,17 @@ pub mod tests {
 
     use crate::{
         contract::{
-            init, handle, query, try_burn,
+            init, handle, query,
         },
-        handle_msg::{
+        handle::{
+            calculate_commission,
             calculate_mint,
+            try_burn,
         }, 
-        query::{
-        },
-        state::{
-        },
     };
 
     mod mock_secret_toolkit {
 
-        pub mod snip20 {
 
             use cosmwasm_std::{Querier, HumanAddr, StdResult, Uint128};
             use secret_toolkit::snip20::TokenInfo;
@@ -51,13 +46,11 @@ pub mod tests {
                     total_supply: Option::from(Uint128(150)),
                 })
             }
-        }
 
     }
 
     #[double]
-    use mock_secret_toolkit::snip20::token_info_query;
-
+    use mock_secret_toolkit::token_info_query;
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);
@@ -67,13 +60,15 @@ pub mod tests {
         }
     }
 
-    fn dummy_init(admin: String, native_asset: Contract,  oracle: Contract) -> Extern<MockStorage, MockApi, MockQuerier> {
+    fn dummy_init(admin: String, native_asset: Contract,  oracle: Contract, peg: Option<String>, treasury: Option<Contract>, commission: Option<Uint128>) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
             admin: None,
             native_asset,
             oracle,
-            initial_assets: None
+            peg,
+            treasury,
+            commission,
         };
         let env = mock_env(admin, &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();
@@ -82,13 +77,17 @@ pub mod tests {
     }
 
     #[test]
+    /*
     fn proper_initialization() {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
             admin: None,
             native_asset: create_contract("", ""),
             oracle: create_contract("", ""),
-            initial_assets: None
+            peg: Option::from("TKN".to_string()),
+            treasury: Option::from(create_contract("", "")),
+            // 1%
+            commission: Option::from(Uint128(100)),
         };
         let env = mock_env("creator", &coins(1000, "earth"));
 
@@ -96,54 +95,59 @@ pub mod tests {
         let res = init(&mut deps, env, msg).unwrap();
         assert_eq!(0, res.messages.len());
     }
+    */
 
+    /*
     #[test]
     fn config_update() {
-        let mint_contract = create_contract("silk_contract", "silk_hash");
-        let oracle_contract = create_contract("oracle_contract", "oracle_hash");
-        let mut deps = dummy_init("admin".to_string(), mint_contract, oracle_contract);
+        let native_asset = create_contract("snip20", "hash");
+        let oracle = create_contract("oracle", "hash");
+        let treasury = create_contract("treasury", "hash");
+        let commission = Uint128(100);
 
-        // Check config is properly updated
-        let res = query(&deps, QueryMsg::GetConfig {}).unwrap();
-        let value: QueryAnswer = from_binary(&res).unwrap();
-        let mint_contract = create_contract("silk_contract", "silk_hash");
-        let oracle_contract = create_contract("oracle_contract", "oracle_hash");
-        match value {
-            QueryAnswer::Config { config } => {
-                assert_eq!(config.native_asset, mint_contract);
-                assert_eq!(config.oracle, oracle_contract);
+        let admin_env = mock_env("admin", &coins(1000, "earth"));
+        let mut deps = dummy_init("admin".to_string(),
+                                  native_asset,
+                                  oracle,
+                                  None,
+                                  Option::from(treasury),
+                                  Option::from(commission));
 
-            }
-            _ => { panic!("Received wrong answer") }
-        }
+        // new config vars
+        let new_oracle = Option::from(create_contract("new_oracle", "hash"));
+        let new_treasury = Option::from(create_contract("new_treasury", "hash"));
+        let new_commission = Option::from(Uint128(200));
 
         // Update config
-        let user_env = mock_env("admin", &coins(1000, "earth"));
-        let new_mint_contract = create_contract("new_silk_contract", "silk_hash");
-        let new_oracle_contract = create_contract("new_oracle_contract", "oracle_hash");
-        let msg = HandleMsg::UpdateConfig {
+        let update_msg = HandleMsg::UpdateConfig {
             owner: None,
-            native_asset: Option::from(new_mint_contract),
-            oracle: Option::from(new_oracle_contract),
+            oracle: new_oracle.clone(),
+            treasury: new_treasury.clone(),
+            // 2%
+            commission: new_commission.clone(),
         };
-        let _res = handle(&mut deps, user_env, msg);
+        let update_res = handle(&mut deps, admin_env, update_msg);
 
+        let config_res = query(&deps, QueryMsg::GetConfig {}).unwrap();
+        let value: QueryAnswer = from_binary(&config_res).unwrap();
         match value {
             QueryAnswer::Config { config } => {
-                assert_eq!(config.native_asset, new_mint_contract);
-                assert_eq!(config.oracle, new_oracle_contract);
-
+                assert_eq!(config.oracle, new_oracle.unwrap());
+                assert_eq!(config.treasury, new_treasury);
+                assert_eq!(config.commission, new_commission);
             }
             _ => { panic!("Received wrong answer") }
         }
-
     }
+    */
 
+    /*
     #[test]
     fn user_register_asset() {
         let mut deps = dummy_init("admin".to_string(),
                                   create_contract("", ""),
-                                  create_contract("", ""));
+                                  create_contract("", ""),
+                                  None, None, None);
 
         // User should not be allowed to add an item
         let user_env = mock_env("user", &coins(1000, "earth"));
@@ -170,7 +174,10 @@ pub mod tests {
     fn admin_register_asset() {
         let mut deps = dummy_init("admin".to_string(),
                                   create_contract("", ""),
-                                  create_contract("", ""));
+                                  create_contract("", ""),
+                                  None,
+                                  None, 
+                                  None);
 
         // Admin should be allowed to add an item
         let env = mock_env("admin", &coins(1000, "earth"));
@@ -193,7 +200,10 @@ pub mod tests {
     fn duplicate_register_asset() {
         let mut deps = dummy_init("admin".to_string(),
                                   create_contract("", ""),
-                                  create_contract("", ""));
+                                  create_contract("", ""),
+                                  None,
+                                  None,
+                                  None);
 
         let env = mock_env("admin", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
@@ -215,6 +225,7 @@ pub mod tests {
         };
     }
 
+    /*
     #[test]
     fn user_update_asset() {
         let mut deps = dummy_init("admin".to_string(),
@@ -243,7 +254,9 @@ pub mod tests {
             _ => panic!("Must return unauthorized error"),
         };
     }
+    */
 
+    /*
     #[test]
     fn admin_update_asset() {
         let mut deps = dummy_init("admin".to_string(),
@@ -272,45 +285,18 @@ pub mod tests {
         let res = query(&deps, QueryMsg::GetAsset { contract: "some_other_contract".to_string() }).unwrap();
         let value: QueryAnswer = from_binary(&res).unwrap();
         match value {
-            QueryAnswer::Asset { asset } => { assert_eq!("some_other_contract".to_string(), asset.contract.address.to_string()) }
+            QueryAnswer::Asset { asset, burned } => { assert_eq!("some_other_contract".to_string(), asset.contract.address.to_string()) }
             _ => { panic!("Received wrong answer") }
         };
     }
-
-    #[test]
-    fn nonexisting_update_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""),
-                                  create_contract("", ""));
-
-        // Add a supported asset
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
-            contract: dummy_contract,
-        };
-        let _res = handle(&mut deps, env, msg).unwrap();
-
-        // Should now be able to update non existing asset
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let bad_dummy_contract = create_contract("some_non_existing_contract", "some_hash");
-        let new_dummy_contract = create_contract("some_other_contract", "some_hash");
-        let msg = HandleMsg::UpdateAsset {
-            asset: bad_dummy_contract.address,
-            contract: new_dummy_contract,
-        };
-        let res = handle(&mut deps, env, msg);
-        match res {
-            Err(StdError::NotFound { .. }) => {}
-            _ => panic!("Must return not found error"),
-        }
-    }
+    */
 
     #[test]
     fn receiving_an_asset() {
         let mut deps = dummy_init("admin".to_string(),
                                   create_contract("", ""),
-                                  create_contract("", ""));
+                                  create_contract("", ""),
+                                  None, None, None);
 
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
@@ -349,7 +335,11 @@ pub mod tests {
     fn receiving_an_asset_from_non_supported_asset() {
         let mut deps = dummy_init("admin".to_string(),
                                   create_contract("", ""),
-                                  create_contract("", ""));
+                                  create_contract("", ""),
+                                  None,
+                                  None,
+                                  None,
+                                  );
 
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
@@ -376,6 +366,17 @@ pub mod tests {
         }
     }
 
+    */
+
+    #[test]
+    fn commission_calc() {
+        let amount = Uint128(1_000_000_000_000_000_000);
+        //10%
+        let commission = Uint128(1000);
+        let expected = Uint128(100_000_000_000_000_000);
+        let value = calculate_commission(amount, commission);
+        assert_eq!(value, expected);
+    }
     #[test]
     fn mint_algorithm_simple() {
         // In this example the "sent" value is 1 with 6 decimal places
@@ -414,4 +415,3 @@ pub mod tests {
         assert_eq!(value, expected_value);
     }
 }
-*/

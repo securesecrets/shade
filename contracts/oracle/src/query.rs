@@ -41,43 +41,6 @@ pub fn get_price<S: Storage, A: Api, Q: Querier>(
     Ok(reference_data(deps, symbol, "USD".to_string())?)
 }
 
-pub fn get_prices<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    symbols: Vec<String>,
-) -> StdResult<Vec<ReferenceData>> {
-    debug_print!("GET PRICES");
-
-    let mut query_symbols: Vec<String> = Vec::new();
-    let mut query_bases: Vec<String> = Vec::new();
-    let mut results: Vec<ReferenceData> = Vec::new();
-    debug_print!("START");
-
-    //TODO: This data will be un-ordered relative to input, :it should be ordered
-    for symbol in symbols {
-        match hard_coded_r(&deps.storage).may_load(&symbol.as_bytes())? {
-            Some(reference_data) => {
-                debug_print!("HARD CODED");
-                results.push(reference_data);
-            }
-            None => {
-                debug_print!("HERE");
-                query_bases.push("USD".to_string());
-                if symbol == "SSCRT" {
-                    query_symbols.push("SCRT".to_string());
-                }
-                else {
-                    query_symbols.push(symbol);
-                }
-            }
-        }
-    }
-    if query_symbols.len() > 0 {
-        results.append(&mut reference_data_bulk(&deps, query_symbols, query_bases)?)
-    }
-
-    Ok(results)
-}
-
 // BAND interactions
 pub fn reference_data<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,

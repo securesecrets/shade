@@ -17,7 +17,7 @@ use secret_toolkit::{
 
 use shade_protocol::{
     micro_mint::{
-        InitMsg, HandleAnswer, 
+        HandleAnswer, 
         MintConfig, 
     },
     snip20::Snip20Asset,
@@ -26,7 +26,7 @@ use shade_protocol::{
     },
     band::ReferenceData,
     asset::Contract,
-    msg_traits::{Init, Query},
+    msg_traits::{Query},
     generic_response::ResponseStatus,
 };
 
@@ -35,8 +35,8 @@ use crate::state::{
     native_asset_r,
     asset_peg_r,
     assets_w, assets_r, 
-    asset_list, asset_list_read,
-    burn_count_r, burn_count_w,
+    asset_list,
+    burn_count_w,
 };
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(

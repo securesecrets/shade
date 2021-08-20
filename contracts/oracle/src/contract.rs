@@ -70,6 +70,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::GetPrice { symbol } => to_binary(&query::get_price(deps, symbol)?),
-        QueryMsg::GetPrices { symbols } => to_binary(&query::get_prices(deps, symbols)?),
+        //QueryMsg::GetPrices { symbols } => to_binary(&query::get_prices(deps, symbols)?),
     }
 }

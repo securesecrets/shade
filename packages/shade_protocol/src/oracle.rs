@@ -48,7 +48,7 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetPrice { symbol: String },
-    GetPrices { symbols: Vec<String>},
+    //GetPrices { symbols: Vec<String>},
     GetConfig {},
 }
 

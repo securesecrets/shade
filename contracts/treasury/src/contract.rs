@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary,
     Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, StdError, Storage, 
+    Querier, StdResult, Storage, 
 };
 
 use shade_protocol::{
@@ -15,7 +15,7 @@ use shade_protocol::{
 use crate::{
     state::{
         viewing_key_w,
-        config_w, config_r,
+        config_w,
         self_address_w,
     },
     handle, query,
