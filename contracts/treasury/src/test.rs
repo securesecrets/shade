@@ -4,6 +4,7 @@ pub mod tests {
         testing::{
             mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier
         },
+        HumanAddr,
         coins, from_binary, StdError, Uint128,
         Extern,
     };
@@ -14,17 +15,11 @@ pub mod tests {
         },
         asset::Contract,
     };
-    use mockall_double::double;
 
     use crate::{
         contract::{
             init, handle, query,
         },
-        handle::{
-            calculate_commission,
-            calculate_mint,
-            try_burn,
-        }, 
     };
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
@@ -38,7 +33,7 @@ pub mod tests {
     fn dummy_init(admin: String, viewing_key: String) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
-            Option::from(admin),
+            admin: Option::from(HumanAddr(admin.clone())),
             viewing_key,
         };
         let env = mock_env(admin, &coins(1000, "earth"));
