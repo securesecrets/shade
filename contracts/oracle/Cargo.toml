@@ -48,4 +48,3 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 
 mockall = "0.10.2"
-double = "0.2.4"

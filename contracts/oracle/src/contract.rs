@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, 
     Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, Storage, Uint128,
+    Querier, StdResult, StdError, Storage, Uint128,
 };
 use shade_protocol::{
     oracle::{
@@ -12,8 +12,8 @@ use shade_protocol::{
 };
 use crate::{
     state::{
-        config_w,
-        hard_coded_w,
+        config_w, config_r,
+        hard_coded_r, hard_coded_w,
     },
     query, handle,
 };
@@ -55,6 +55,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
+
     match msg {
         HandleMsg::UpdateConfig {
             owner,
@@ -70,6 +71,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::GetPrice { symbol } => to_binary(&query::get_price(deps, symbol)?),
-        //QueryMsg::GetPrices { symbols } => to_binary(&query::get_prices(deps, symbols)?),
+        QueryMsg::GetPrices { symbols } => to_binary(&query::get_prices(deps, symbols)?),
     }
 }

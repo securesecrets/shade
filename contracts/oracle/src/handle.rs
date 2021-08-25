@@ -10,11 +10,22 @@ use shade_protocol::{
     },
     asset::Contract,
     generic_response::ResponseStatus,
+    snip20::Snip20Asset,
 };
 use crate::state::{
     config_w, config_r,
+    sswap_assets_w,
 };
 
+/*
+pub fn register_sswap_asset<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    contract: Contract
+) -> StdResult<Vec<Snip20Asset>> {
+    Ok(Vec::new())
+}
+*/
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
