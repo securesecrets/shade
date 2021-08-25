@@ -1,0 +1,38 @@
+name: Rust
+
+on: [push]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  find_contracts: # Job that list subdirectories
+    runs-on: ubuntu-latest
+    outputs:
+      dir: ${{ steps.set-dirs.outputs.dir }}
+    steps:
+      - uses: actions/checkout@v2
+      - id: set-dirs
+        run: echo "::set-output name=dir::$(find ./contracts/ -name Cargo.toml | jq -R -s -c 'split("\n")[:-1]')"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [find_contracts] # Depends on previous job
+    strategy:
+      matrix:
+        dir: ${{fromJson(needs.find_contracts.outputs.dir)}} # List matrix strategy from directories dynamically
+    steps:
+
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - uses: actions-rs/cargo@v1.0.1
+        with:
+          command: build
+          args: --release --target wasm32-unknown-unknown --manifest-path=${{matrix.dir}}

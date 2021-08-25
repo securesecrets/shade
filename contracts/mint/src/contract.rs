@@ -6,9 +6,9 @@ use secret_toolkit::{
 use shade_protocol::{
     mint::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, MintConfig, SupportedAsset, SnipMsgHook},
     oracle::{
-        ReferenceData,
         QueryMsg::GetPrice,
     },
+    band::ReferenceData,
     asset::{Contract},
     msg_traits::{Init, Query},
     generic_response::ResponseStatus,
