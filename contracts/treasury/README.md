@@ -18,9 +18,7 @@ The treasury contract holds network funds from things such as mint commission an
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|silk      | Contract |  Silk contract                                                                                                    |  no      |
-|oracle    | Contract |  Oracle contract                                                                                                  |  no      |
+|owner     | string   |  contract owner/admin; a valid bech32 address; Controls funds
 
 ## Admin
 
