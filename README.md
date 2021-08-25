@@ -2,13 +2,14 @@
 | Contract                    | Reference                         | Description                           |
 | --------------------------- | --------------------------------- | ------------------------------------- |
 | [`mint`](./contracts/mint)  | [doc](./contracts/mint/README.md) | Handles asset burning and silk minting|
+| [`oracle`](./contracts/oracle)  | [doc](./contracts/oracle/README.md) | Handles asset price queries |
 
 ## Development
 
 ## Development Environment
 Instlal docker for local envirnment
 
-Source from [testner](https://build.scrt.network/dev/quickstart.html#setup-the-local-developer-testnet)
+Source from [testnet](https://build.scrt.network/dev/quickstart.html#setup-the-local-developer-testnet)
 
 ```
 docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1337:1337 -v $(pwd):/root/code --name secretdev enigmampc/secret-network-sw-dev
@@ -64,4 +65,7 @@ bash ./compile-contracts.sh
 
 ### Testing
 
-You can optionally run extended tests inside a private testnet using the [contract tester](./contracts/compiled/contract_tester.py)
+You can optionally run extended tests using the [tester](contracts/compiled/tester.py)
+
+To run a test deployment on a public testnet you can run ```tester.py --testnet public```.
+For the private testnet you can run ```tester.py --testnet private```.

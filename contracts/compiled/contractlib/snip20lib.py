@@ -7,7 +7,7 @@ class SNIP20(Contract):
     def __init__(self, label, name="token", symbol="TKN", decimals=3, seed="cGFzc3dvcmQ=", public_total_supply=False,
                  enable_deposit=False, enable_redeem=False, enable_mint=False, enable_burn=False,
                  contract='snip20.wasm.gz', admin='a', uploader='a', gas='10000000', backend='test',
-                 instantiated_contract=None):
+                 instantiated_contract=None, code_id=None):
         self.view_key = ""
         initMsg = json.dumps(
             {"name": name, "symbol": symbol, "decimals": decimals, "prng_seed": seed, "config": {
@@ -15,7 +15,7 @@ class SNIP20(Contract):
                 "enable_redeem": enable_redeem, "enable_mint": enable_mint, "enable_burn": enable_burn
             }})
         super().__init__(contract, initMsg, label, admin, uploader, gas, backend,
-                         instantiated_contract=instantiated_contract)
+                         instantiated_contract=instantiated_contract, code_id=code_id)
 
     def set_minters(self, accounts):
         """
@@ -52,16 +52,22 @@ class SNIP20(Contract):
 
         return self.execute(msg)
 
-    def send(self, account, recipient, amount):
+    def send(self, account, recipient, amount, message=None):
         """
         Send amount from an account to a recipient
         :param account: User to generate the key for
         :param recipient: Address to be minted in
         :param amount: Amount to mint
+        :param message: Base64 encoded message
         :return: Response
         """
-        msg = json.dumps(
-            {"send": {"recipient": recipient, "amount": str(amount)}})
+
+        raw_msg = {"send": {"recipient": recipient, "amount": str(amount)}}
+
+        if message is not None:
+            raw_msg["send"]["msg"] = message
+
+        msg = json.dumps(raw_msg)
 
         return self.execute(msg, account)
 
@@ -88,3 +94,12 @@ class SNIP20(Contract):
             {"balance": {"key": password, "address": address}})
 
         return self.query(msg)["balance"]["amount"]
+
+    def get_token_info(self):
+        """
+        Gets token info
+        :return: Response
+        """
+        msg = json.dumps({"token_info": {}})
+
+        return self.query(msg)

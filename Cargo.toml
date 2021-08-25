@@ -1,2 +1,7 @@
 [workspace]
-members = ["contracts/mint","contracts/oracle", "packages/shade_protocol"]
+members = [
+  "packages/shade_protocol",
+  "contracts/mint",
+  "contracts/oracle", 
+  "contracts/mock_band",
+]

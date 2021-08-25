@@ -7,7 +7,6 @@
             * [Migrate](#Migrate)
             * [UpdateConfig](#UpdateConfig)
             * [RegisterAsset](#RegisterAsset)
-            * [UpdateAsset](#UpdateAsset)
         * Queries
             * [GetConfig](#GetConfig)
             * [SupportedAssets](#SupportedAssets)
@@ -22,11 +21,11 @@ The minting contract is used as a way to acquire newly minted Silk, sending a se
 
 ## Init
 ##### Request
-|Name      |Type      |Description                                                                                                        | optional |
-|----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|silk      | Contract |  Silk contract                                                                                                    |  no      |
-|oracle    | Contract |  Oracle contract                                                                                                  |  no      |
+|Name           |Type                     |Description                                                                                                        | optional |
+|---------------|-------------------------|-------------------------------------------------------------------------------------------------------------------|----------|
+|owner          | string                  |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
+|oracle         | Contract                |  Oracle contract                                                                                                  |  no      |
+|initial_assets | array of SupportedAsset |  Usually used for first migration, its good for transfering its state to another contract                         |  yes
 
 ## Admin
 
@@ -54,8 +53,7 @@ Updates the given values
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
 |owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|silk      | Contract |  Silk contract                                                                                                    |  no      |
-|oracle    | Contract |  Oracle contract                                                                                                  |  no      |
+|oracle    | Contract |  Oracle contract                                                                                                  |  yes     |
 ##### Response
 ```json
 {
@@ -70,31 +68,16 @@ Registers a supported asset. The asset must be SNIP-20 compliant since [Register
 
 Note: Will return an error if there's an asset with that address already registered.
 ##### Request
-|Name        |Type    |Description                                                                                                            | optional |
-|------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
-|contract    | Contract |  Type explained [here](#Contract)                                                                                     |  no      |
+|Name        |Type      |Description                                                                                  | optional |
+|------------|----------|---------------------------------------------------------------------------------------------|----------|
+|name        | String   |  Ticker replacement, can be left empty and it will use the given snip20's ticker            |  yes     |
+|contract    | Contract |  Type explained [here](#Contract)                                                           |  no      |
+|burnable    | Boolean  |  If true, when sending the asset, the contract will try to burn                             |  yes     |
+|total_burned| Uint128  | Used when migrating | Defaults to 0                                                         |  yes     |
 ##### Response
 ```json
 {
   "register_asset": {
-    "status": "success"
-  }
-}
-```
-
-#### UpdateAsset
-Updates a supported asset. The asset must be SNIP-20 compliant since [RegisterReceive](https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md#RegisterReceive) is called.
-
-Note: Will return an error if no asset exists already with that address.
-##### Request
-|Name        |Type      |Description                                                                                                            | optional |
-|------------|----------|-----------------------------------------------------------------------------------------------------------------------|----------|
-|asset       | string   |  Asset to update; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well           |  no      |
-|contract    | Contract |  Type explained [here](#Contract)                                                                                     |  no      |
-##### Response
-```json
-{
-  "update_asset": {
     "status": "success"
   }
 }
@@ -162,6 +145,11 @@ Get specific information on a supported asset.
 
 #### Receive
 To mint the user must use a supported asset's send function and send the amount over to the contract's address. The contract will take care of the rest.
+
+In the msg field of a snip20 send command you must send a base64 encoded json like this one
+```json
+{"minimum_expected_amount": "Uint128", "to_mint": "Contract_Addr" }
+```
 
 ## Contract
 Type used in many of the admin commands

@@ -17,3 +17,6 @@ contracts/hackatom/hash.txt
 
 # Auto-gen
 .cargo-ok
+
+*.pyc
+__pycache__/
