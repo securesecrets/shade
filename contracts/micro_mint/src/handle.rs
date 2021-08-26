@@ -1,12 +1,6 @@
 use std::convert::TryFrom;
 
-use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary,
-    Env, Extern, HandleResponse,
-    Querier, StdError, StdResult, Storage, 
-    CosmosMsg, HumanAddr, 
-    Uint128,
-};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary};
 use secret_toolkit::{
     snip20::{
         token_info_query, 
@@ -20,6 +14,7 @@ use shade_protocol::{
         HandleAnswer, 
         MintConfig, 
     },
+    mint::SnipMsgHook,
     snip20::Snip20Asset,
     oracle::{
         QueryMsg::GetPrice,
@@ -42,37 +37,46 @@ use crate::state::{
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    sender: HumanAddr,
-    _from: HumanAddr,
+    _sender: HumanAddr,
+    from: HumanAddr,
     burn_amount: Uint128,
-    _msg: Option<Binary>,
+    msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
 
     let mut messages = vec![];
-    let mut burn_asset: Snip20Asset;
 
-    /* make sure its registered */
-    match assets_r(&deps.storage).may_load(env.message.sender.to_string().as_bytes())? {
-        Some(asset) => { 
-            debug_print!("Found Burn Asset: {} {}", 
-                         &asset.token_info.symbol, 
+    // Prevent sender to be native asset
+    if native_asset_r(&deps.storage).load()?.contract.address == env.message.sender {
+        return Err(StdError::generic_err("Sender cannot be the same as the native asset."))
+    }
+
+    // Check that sender is a supported snip20 asset
+    let assets = assets_r(&deps.storage);
+    let mut burn_asset = match assets.may_load(env.message.sender.to_string().as_bytes())? {
+        Some(asset) => {
+            debug_print!("Found Burn Asset: {} {}",
+                         &asset.token_info.symbol,
                          env.message.sender.to_string());
-            burn_asset = asset; 
+            asset
         },
         None => return Err(StdError::NotFound {
             kind: env.message.sender.to_string(),
             backtrace: None
         }),
-    }
-    //TODO: Make sure they arent the same asset, also block registering native asset
-    //TODO: Also disallow registering the native asset
+    };
+
+    // Setup msgs
+    let msgs: SnipMsgHook = match msg {
+        Some(x) => from_binary(&x)?,
+        None => return Err(StdError::generic_err("data cannot be empty")),
+    };
 
     let config = config_r(&deps.storage).load()?;
-    // Make sure both are set to do treasury things
-    if let (Some(treasury), Some(commission)) = (config.treasury, config.commission) {
 
+    let mut commission_amount = Uint128(0);
+    if let (Some(treasury), Some(commission)) = (config.treasury, config.commission) {
         let commission_amount: Uint128 = calculate_commission(burn_amount, commission);
-        let burn_remaining: Uint128 = (burn_amount - commission_amount)?;
+
         // Commission to treasury
         messages.push(send_msg(treasury.address,
                                commission_amount,
@@ -81,42 +85,28 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                                1,
                                burn_asset.contract.code_hash.clone(),
                                burn_asset.contract.address.clone())?);
-
-        // Burn remaining
-        messages.push(burn_msg(burn_remaining, 
-                                None,
-                                256,
-                                burn_asset.contract.code_hash.clone(),
-                                burn_asset.contract.address.clone())?);
-        // Update burned amount
-        burn_count_w(&mut deps.storage).update(
-            burn_asset.contract.address.to_string().as_bytes(), 
-            |burned| {
-                match burned {
-                    Some(burned) => { Ok(burned + burn_remaining) }
-                    None => { Ok(burn_remaining) }
-                }
-            })?;
-
     }
-    else {
-        // Burn all (no treasury/commission) setup
-        messages.push(burn_msg(burn_amount,
-                                None,
-                                256,
-                                burn_asset.contract.code_hash.clone(),
-                                burn_asset.contract.address.clone())?);
-        burn_count_w(&mut deps.storage).update(
-            burn_asset.contract.address.to_string().as_bytes(), 
-            |burned| { 
-                match burned {
-                    Some(burned) => { Ok(burned + burn_amount) }
-                    None => { Ok(burn_amount) }
-                }
-            })?;
 
-    }
-    assets_w(&mut deps.storage).save(burn_asset.contract.address.to_string().as_bytes(), &mut burn_asset)?;
+    let mut burn_remaining = (burn_amount - commission_amount)?;
+
+    // Burn
+    messages.push(burn_msg(burn_remaining,
+                           None,
+                           256,
+                           burn_asset.contract.code_hash.clone(),
+                           burn_asset.contract.address.clone())?);
+
+    // Update burned amount
+    burn_count_w(&mut deps.storage).update(
+        burn_asset.contract.address.to_string().as_bytes(),
+        |burned| {
+            match burned {
+                Some(burned) => { Ok(burned + burn_remaining) }
+                None => { Ok(burn_remaining) }
+            }
+        })?;
+
+    //assets_w(&mut deps.storage).save(burn_asset.contract.address.to_string().as_bytes(), &mut burn_asset)?;
 
     let mint_asset = native_asset_r(&deps.storage).load()?;
 
@@ -126,7 +116,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     debug_print!("Minting: {} {}", amount_to_mint, &mint_asset.token_info.symbol);
 
-    messages.push(mint_msg(sender,
+    messages.push(mint_msg(from,
                            amount_to_mint,
                            None,
                            256,
@@ -135,7 +125,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
 
     Ok(HandleResponse {
-        messages: messages,
+        messages,
         log: vec![],
         data: Some( to_binary( &HandleAnswer::Burn {
             status: ResponseStatus::Success,
