@@ -66,6 +66,12 @@ pub struct SnipMsgHook {
     pub to_mint: HumanAddr,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct MintMsgHook {
+    pub minimum_expected_amount: Uint128,
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
