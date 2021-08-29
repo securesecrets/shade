@@ -48,6 +48,7 @@ pub enum HandleMsg {
     },
     RegisterAsset {
         contract: Contract,
+        burnable: bool,
     },
     Receive {
         sender: HumanAddr,
@@ -57,17 +58,6 @@ pub enum HandleMsg {
         msg: Option<Binary>,
     },
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum MintType {
-    CoinToSilk {},
-    CoinToShade {},
-    ConvertToShade {},
-    ConvertToSilk {},
-}
-
-impl Handle<'_> for HandleMsg{}
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
