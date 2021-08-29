@@ -8,4 +8,5 @@ use secret_toolkit::snip20::TokenInfo;
 pub struct Snip20Asset {
     pub contract: Contract,
     pub token_info: TokenInfo,
+    pub burnable: Option<bool>,
 }

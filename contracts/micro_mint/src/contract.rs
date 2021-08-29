@@ -59,6 +59,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     native_asset_w(&mut deps.storage).save(&Snip20Asset {
         contract: msg.native_asset.clone(),
         token_info,
+        burnable: None
     })?;
 
     let empty_assets_list: Vec<String> = Vec::new();
@@ -85,8 +86,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             commission,
         } => handle::try_update_config(deps, env, owner, oracle, treasury, commission),
         HandleMsg::RegisterAsset {
-            contract,
-        } => handle::try_register_asset(deps, &env, &contract),
+            contract, burnable
+        } => handle::try_register_asset(deps, &env, &contract, burnable),
         HandleMsg::Receive {
             sender,
             from,

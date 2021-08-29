@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary, Empty};
 use secret_toolkit::{
     snip20::{
         token_info_query, 
@@ -39,7 +39,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     env: Env,
     _sender: HumanAddr,
     from: HumanAddr,
-    burn_amount: Uint128,
+    amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
 
@@ -52,7 +52,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     // Check that sender is a supported snip20 asset
     let assets = assets_r(&deps.storage);
-    let mut burn_asset = match assets.may_load(env.message.sender.to_string().as_bytes())? {
+    let burn_asset = match assets.may_load(env.message.sender.to_string().as_bytes())? {
         Some(asset) => {
             debug_print!("Found Burn Asset: {} {}",
                          &asset.token_info.symbol,
@@ -73,9 +73,9 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    let mut commission_amount = Uint128(0);
+    let mut burn_amount = amount;
     if let (Some(treasury), Some(commission)) = (config.treasury, config.commission) {
-        let commission_amount: Uint128 = calculate_commission(burn_amount, commission);
+        let commission_amount = calculate_commission(amount, commission);
 
         // Commission to treasury
         messages.push(send_msg(treasury.address,
@@ -85,34 +85,38 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                                1,
                                burn_asset.contract.code_hash.clone(),
                                burn_asset.contract.address.clone())?);
+
+        burn_amount = (amount - commission_amount)?;
     }
 
-    let mut burn_remaining = (burn_amount - commission_amount)?;
-
-    // Burn
-    messages.push(burn_msg(burn_remaining,
-                           None,
-                           256,
-                           burn_asset.contract.code_hash.clone(),
-                           burn_asset.contract.address.clone())?);
+    // Try to burn
+    if burn_asset.burnable.unwrap() {
+        messages.push(burn_msg(burn_amount,
+                               None,
+                               256,
+                               burn_asset.contract.code_hash.clone(),
+                               burn_asset.contract.address.clone())?);
+    }
 
     // Update burned amount
     burn_count_w(&mut deps.storage).update(
         burn_asset.contract.address.to_string().as_bytes(),
         |burned| {
             match burned {
-                Some(burned) => { Ok(burned + burn_remaining) }
-                None => { Ok(burn_remaining) }
+                Some(burned) => { Ok(burned + burn_amount) }
+                None => { Ok(burn_amount) }
             }
         })?;
-
-    //assets_w(&mut deps.storage).save(burn_asset.contract.address.to_string().as_bytes(), &mut burn_asset)?;
 
     let mint_asset = native_asset_r(&deps.storage).load()?;
 
     // This will calculate the total mint value
     // Amount minted does not consider commission
-    let amount_to_mint: Uint128 = mint_amount(&deps, burn_amount, &burn_asset, &mint_asset)?;
+    let amount_to_mint: Uint128 = mint_amount(&deps, amount, &burn_asset, &mint_asset)?;
+
+    if amount_to_mint < msgs.minimum_expected_amount {
+        return Err(StdError::generic_err("Mint amount is less than the minimum expected."))
+    }
 
     debug_print!("Minting: {} {}", amount_to_mint, &mint_asset.token_info.symbol);
 
@@ -122,7 +126,6 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                            256,
                            mint_asset.contract.code_hash.clone(),
                            mint_asset.contract.address.clone())?);
-
 
     Ok(HandleResponse {
         messages,
@@ -179,6 +182,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
+    burnable: bool,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -187,36 +191,32 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    let contract_str = contract.address.to_string();
     let mut assets = assets_w(&mut deps.storage);
+    let contract_str = contract.address.to_string();
+
+    // Add the new asset
+    let asset_info = token_info_query(&deps.querier, 1,
+                                      contract.code_hash.clone(),
+                                      contract.address.clone())?;
+
+    debug_print!("Registering {}", asset_info.symbol);
+    assets.save(&contract_str.as_bytes(), &Snip20Asset {
+        contract: contract.clone(),
+        token_info: asset_info,
+        burnable: Some(burnable),
+    })?;
+
+    burn_count_w(&mut deps.storage).save(&contract_str.as_bytes(), &Uint128(0))?;
+
+    // Add the asset to list
+    asset_list(&mut deps.storage).update(|mut state| {
+        state.push(contract_str);
+        Ok(state)
+    })?;
+
+    // Register contract in asset
     let mut messages = vec![];
-
-    // Check if asset already exists
-    match assets.may_load(contract_str.as_bytes())? {
-        Some(_) => return Err(StdError::generic_err("Asset already exists")),
-
-        None => {
-            // Add the new asset
-            let asset_info = token_info_query(&deps.querier, 1,
-                                              contract.code_hash.clone(),
-                                              contract.address.clone())?;
-
-            debug_print!("Registering {}", asset_info.symbol);
-            assets.save(&contract_str.as_bytes(), &Snip20Asset {
-                contract: contract.clone(),
-                token_info: asset_info,
-            })?;
-            // Add asset to list
-            asset_list(&mut deps.storage).update(|mut state| {
-                state.push(contract_str.clone());
-                Ok(state)
-            })?;
-            burn_count_w(&mut deps.storage).save(&contract_str.as_bytes(), &Uint128(0))?;
-
-            // Register contract in asset
-            messages.push(register_receive(&env, &contract)?);
-        }
-    }
+    messages.push(register_receive(env, contract)?);
 
     Ok(HandleResponse {
         messages,
