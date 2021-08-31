@@ -85,15 +85,14 @@ class MicroMint(Contract):
         msg = json.dumps(raw_msg)
         return self.execute(msg)
 
-    def register_asset(self, snip20, burnable):
+    def register_asset(self, snip20):
         """
         Registers a SNIP20 asset
         :param snip20: SNIP20 object to add
         :return: Result
         """
         msg = json.dumps(
-            {"register_asset": {"contract": {"address": snip20.address, "code_hash": snip20.code_hash},
-                                "burnable": burnable}})
+            {"register_asset": {"contract": {"address": snip20.address, "code_hash": snip20.code_hash}}})
 
         return self.execute(msg)
 
