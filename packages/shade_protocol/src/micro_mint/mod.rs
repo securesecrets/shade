@@ -1,13 +1,11 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::{HumanAddr, Uint128, Binary};
+use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
 use crate::{
     snip20::Snip20Asset,
     asset::Contract,
     generic_response::ResponseStatus,
-    msg_traits::{
-        Init, Handle, Query
-    },
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -35,7 +33,9 @@ pub struct InitMsg {
     pub commission: Option<Uint128>,
 }
 
-impl Init<'_> for InitMsg {}
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -48,7 +48,6 @@ pub enum HandleMsg {
     },
     RegisterAsset {
         contract: Contract,
-        burnable: bool,
     },
     Receive {
         sender: HumanAddr,
@@ -57,6 +56,10 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
+}
+
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -78,7 +81,9 @@ pub enum QueryMsg {
     GetConfig {},
 }
 
-impl Query for QueryMsg {}
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]

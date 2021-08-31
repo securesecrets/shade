@@ -1,7 +1,7 @@
 use cosmwasm_std::{Uint128};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use crate::msg_traits::Query;
+use secret_toolkit::utils::Query;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -17,7 +17,9 @@ pub enum BandQuery {
     },
 }
 
-impl Query for BandQuery {}
+impl Query for BandQuery {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
 pub struct ReferenceData {

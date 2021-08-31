@@ -1,5 +1,4 @@
 use std::convert::TryFrom;
-
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary, Empty};
 use secret_toolkit::{
     snip20::{
@@ -8,7 +7,7 @@ use secret_toolkit::{
         register_receive_msg, 
     },
 };
-
+use secret_toolkit::utils::Query;
 use shade_protocol::{
     micro_mint::{
         HandleAnswer, 
@@ -21,18 +20,18 @@ use shade_protocol::{
     },
     band::ReferenceData,
     asset::Contract,
-    msg_traits::{Query},
     generic_response::ResponseStatus,
 };
 
 use crate::state::{
-    config_w, config_r, 
+    config_w, config_r,
     native_asset_r,
     asset_peg_r,
-    assets_w, assets_r, 
+    assets_w, assets_r,
     asset_list,
-    burn_count_w,
+    total_burned_w,
 };
+use shade_protocol::snip20::token_config_query;
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -43,7 +42,11 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
 
-    let mut messages = vec![];
+    let config = config_r(&deps.storage).load()?;
+    // Check if contract enabled
+    if !config.activated {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
 
     // Prevent sender to be native asset
     if native_asset_r(&deps.storage).load()?.contract.address == env.message.sender {
@@ -66,12 +69,11 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     };
 
     // Setup msgs
+    let mut messages = vec![];
     let msgs: SnipMsgHook = match msg {
         Some(x) => from_binary(&x)?,
         None => return Err(StdError::generic_err("data cannot be empty")),
     };
-
-    let config = config_r(&deps.storage).load()?;
 
     let mut burn_amount = amount;
     if let (Some(treasury), Some(commission)) = (config.treasury, config.commission) {
@@ -90,7 +92,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     }
 
     // Try to burn
-    if burn_asset.burnable.unwrap() {
+    if burn_asset.token_config.burn_enabled {
         messages.push(burn_msg(burn_amount,
                                None,
                                256,
@@ -99,7 +101,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     }
 
     // Update burned amount
-    burn_count_w(&mut deps.storage).update(
+    total_burned_w(&mut deps.storage).update(
         burn_asset.contract.address.to_string().as_bytes(),
         |burned| {
             match burned {
@@ -151,6 +153,10 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     if env.message.sender != config.owner {
         return Err(StdError::Unauthorized { backtrace: None });
     }
+    // Check if contract enabled
+    if !config.activated {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
 
     // Save new info
     let mut config = config_w(&mut deps.storage);
@@ -182,12 +188,15 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
-    burnable: bool,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
     // Check if admin
     if env.message.sender != config.owner {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+    // Check if contract enabled
+    if !config.activated {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -199,14 +208,17 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                                       contract.code_hash.clone(),
                                       contract.address.clone())?;
 
+    let asset_config = token_config_query(&deps.querier,
+                                          contract.clone())?;
+
     debug_print!("Registering {}", asset_info.symbol);
     assets.save(&contract_str.as_bytes(), &Snip20Asset {
         contract: contract.clone(),
         token_info: asset_info,
-        burnable: Some(burnable),
+        token_config: asset_config,
     })?;
 
-    burn_count_w(&mut deps.storage).save(&contract_str.as_bytes(), &Uint128(0))?;
+    total_burned_w(&mut deps.storage).save(&contract_str.as_bytes(), &Uint128(0))?;
 
     // Add the asset to list
     asset_list(&mut deps.storage).update(|mut state| {
@@ -322,7 +334,7 @@ fn oracle<S: Storage, A: Api, Q: Querier>(
     let config: MintConfig = config_r(&deps.storage).load()?;
     let answer: ReferenceData = GetPrice { 
         symbol: symbol.to_string() 
-    }.query(&deps.querier, 1,
+    }.query(&deps.querier,
              config.oracle.code_hash,
              config.oracle.address)?;
     Ok(answer.rate)
