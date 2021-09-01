@@ -38,7 +38,7 @@ class Contract:
                     self.address = attribute["value"]
                     break
         except Exception as e:
-            #print(initResponse)
+            print(initResponse)
             raise e
                 
     def execute(self, msg, sender=None, amount=None, compute=True):

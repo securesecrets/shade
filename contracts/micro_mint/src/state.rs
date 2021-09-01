@@ -52,10 +52,10 @@ pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
     bucket(ASSET_KEY, storage)
 }
 
-pub fn burn_count_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Uint128> {
+pub fn total_burned_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Uint128> {
     bucket_read(BURN_COUNT_KEY, storage)
 }
 
-pub fn burn_count_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
+pub fn total_burned_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
     bucket(BURN_COUNT_KEY, storage)
 }

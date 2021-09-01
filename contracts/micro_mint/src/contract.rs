@@ -24,6 +24,7 @@ use crate::{
     },
     handle, query,
 };
+use shade_protocol::snip20::token_config_query;
 
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -49,6 +50,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                         msg.native_asset.code_hash.clone(),
                         msg.native_asset.address.clone())?;
 
+    let token_config = token_config_query(&deps.querier,
+                                          msg.native_asset.clone())?;
+
     let peg = match msg.peg {
         Some(p) => { p }
         None => { token_info.symbol.clone() }
@@ -58,7 +62,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     debug_print!("Setting native asset");
     native_asset_w(&mut deps.storage).save(&Snip20Asset {
         contract: msg.native_asset.clone(),
-        token_info: token_info,
+        token_info,
+        token_config,
     })?;
 
     let empty_assets_list: Vec<String> = Vec::new();
@@ -85,7 +90,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             commission,
         } => handle::try_update_config(deps, env, owner, oracle, treasury, commission),
         HandleMsg::RegisterAsset {
-            contract,
+            contract
         } => handle::try_register_asset(deps, &env, &contract),
         HandleMsg::Receive {
             sender,

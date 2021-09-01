@@ -1,7 +1,6 @@
 #!/usr/bin/env python3 
 import copy
 import json
-import base64
 import random
 import argparse
 from contractlib.contractlib import PreInstantiatedContract
@@ -9,6 +8,7 @@ from contractlib.contractlib import Contract
 from contractlib.secretlib import secretlib
 from contractlib.snip20lib import SNIP20
 from contractlib.mintlib import Mint
+from contractlib.micro_mintlib import MicroMint
 from contractlib.oraclelib import Oracle
 from contractlib.utils import gen_label, to_base64
 
@@ -22,7 +22,7 @@ def test_send(burn_asset, burn_asset_password, mint_asset, mint_asset_password, 
     user_burn_asset_before = burn_asset.get_balance(account, burn_asset_password)
     user_mint_asset_before = mint_asset.get_balance(account, mint_asset_password)
     burn_asset_supply_before = burn_asset.get_token_info()["token_info"]["total_supply"]
-    queried_burn_asset_supply_before = mint.get_asset(burn_asset)["asset"]["asset"]["total_burned"]
+    queried_burn_asset_supply_before = mint.get_asset(burn_asset)["asset"]["burned"]
     mint_asset_supply_before = mint_asset.get_token_info()["token_info"]["total_supply"]
 
     # Get all the token amounts after sending
@@ -35,7 +35,7 @@ def test_send(burn_asset, burn_asset_password, mint_asset, mint_asset_password, 
     user_burn_asset_after = burn_asset.get_balance(account, burn_asset_password)
     user_mint_asset_after = mint_asset.get_balance(account, mint_asset_password)
     burn_asset_supply_after = burn_asset.get_token_info()["token_info"]["total_supply"]
-    queried_burn_asset_supply_after = mint.get_asset(burn_asset)["asset"]["asset"]["total_burned"]
+    queried_burn_asset_supply_after = mint.get_asset(burn_asset)["asset"]["burned"]
     mint_asset_supply_after = mint_asset.get_token_info()["token_info"]["total_supply"]
     print(f"Sending:    {amount} u{burn_asset_symbol} to receive u{mint_asset_symbol}\n"
           f"Sent:       {int(user_burn_asset_before) - int(user_burn_asset_after)} u{burn_asset_symbol}\n"
@@ -89,12 +89,25 @@ if args.testnet == "private":
     print("Configuring Mint contract")
     mint = Mint(gen_label(8), oracle=oracle)
     mint.register_asset(silk, burnable=True)
-    silk.set_minters([mint.address])
     mint.register_asset(shade, burnable=True)
-    shade.set_minters([mint.address])
     mint.register_asset(sscrt, name="SCRT")
     assets = mint.get_supported_assets()['supported_assets']['assets']
     assert 3 == len(assets), f"Got {len(assets)}; expected {3}"
+
+    print("Configuring Silk-Mint Contract")
+    silk_mint = MicroMint(gen_label(8), native_asset=silk, oracle=oracle)
+    silk_mint.register_asset(sscrt)
+    silk_mint.register_asset(shade)
+    print(mint.get_asset(shade))
+
+    print("Configuring Shade-Mint Contract")
+    shade_mint = MicroMint(gen_label(8), native_asset=shade, oracle=oracle)
+    shade_mint.register_asset(sscrt)
+    shade_mint.register_asset(silk)
+
+    print("Setting minters")
+    silk.set_minters([mint.address, silk_mint.address])
+    shade.set_minters([mint.address, shade_mint.address])
 
     print("Sending to mint contract")
 
@@ -108,14 +121,14 @@ if args.testnet == "private":
         send_amount = random.randint(minimum_amount, int(total_amount / total_tests / 2) - 1)
         total_sent += send_amount
 
-        test_send(sscrt, password, silk, password, mint, 1, send_amount, account, account_key)
-        test_send(sscrt, password, shade, password, mint, 1, send_amount, account, account_key)
+        test_send(sscrt, password, silk, password, silk_mint, 1, send_amount, account, account_key)
+        test_send(sscrt, password, shade, password, shade_mint, 1, send_amount, account, account_key)
 
     send_amount = 1_000_000_000
-    test_send(silk, password, shade, password, mint, 1, send_amount, account, account_key)
+    test_send(silk, password, shade, password, shade_mint, 1, send_amount, account, account_key)
 
     send_amount = 10_000_000
-    test_send(shade, password, silk, password, mint, 1, send_amount, account, account_key)
+    test_send(shade, password, silk, password, silk_mint, 1, send_amount, account, account_key)
 
     print("Testing migration")
     new_mint = mint.migrate(gen_label(8), int(mint.code_id), mint.code_hash)

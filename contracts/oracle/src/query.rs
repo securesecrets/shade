@@ -4,16 +4,11 @@ use cosmwasm_std::{
     Extern,
     Querier, StdResult, Storage,
 };
+use secret_toolkit::utils::Query;
 use shade_protocol::{
-    oracle::{
-        QueryAnswer, 
-    },
-    band::{ 
-        BandQuery, ReferenceData,
-    },
-    msg_traits::Query,
+    oracle::{QueryAnswer},
+    band::{BandQuery, ReferenceData},
 };
-
 use crate::state::{
     config_r,
     hard_coded_r,
@@ -55,7 +50,6 @@ pub fn reference_data<S: Storage, A: Api, Q: Querier>(
             quote_symbol,
     }.query(
         &deps.querier,
-        1,
         config_r.band.code_hash,
         config_r.band.address,
     )?)
@@ -74,7 +68,6 @@ pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(
         quote_symbols,
     }.query(
         &deps.querier,
-        1,
         config_r.band.code_hash,
         config_r.band.address,
     )?)
