@@ -5,8 +5,10 @@ use cosmwasm_std::{
     HumanAddr,
 };
 use secret_toolkit::{
+    utils::Query,
     snip20::{
         token_info_query, 
+        token_config_query,
     },
 };
 use shade_protocol::{
@@ -17,7 +19,6 @@ use shade_protocol::{
     asset::Contract,
     generic_response::ResponseStatus,
     snip20::Snip20Asset,
-    msg_traits::Query,
     secretswap::{
         PairQuery,
         PairResponse,
@@ -42,7 +43,6 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
     //Query for snip20's in the pair
     let response: PairResponse = PairQuery::Pair {}.query(
         &deps.querier,
-        1,
         pair.code_hash.clone(),
         pair.address.clone(),
     )?;
@@ -63,15 +63,19 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::NotFound { kind: "Not an SSCRT Pair".to_string(), backtrace: None });
     }
 
-    let info = token_info_query(&deps.querier, 1,
+    let token_info = token_info_query(&deps.querier, 1,
+                      token_contract.code_hash.clone(),
+                      token_contract.address.clone())?;
+    let token_config = token_config_query(&deps.querier, 1,
                       token_contract.code_hash.clone(),
                       token_contract.address.clone())?;
 
-    sswap_pairs_w(&mut deps.storage).save(info.symbol.as_bytes(), &SswapPair {
+    sswap_pairs_w(&mut deps.storage).save(token_info.symbol.as_bytes(), &SswapPair {
         pair,
         asset: Snip20Asset {
             contract: token_contract,
-            token_info: info.clone(),
+            token_info,
+            token_config,
         }
     })?;
 

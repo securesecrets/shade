@@ -1,8 +1,8 @@
 use cosmwasm_std::{HumanAddr, Uint128};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use secret_toolkit::utils::Query;
 use crate::{
-    msg_traits::Query,
     asset::Contract,
 };
 
@@ -44,7 +44,9 @@ pub enum PairQuery{
     //ReverseSimulation {},
 }
 
-impl Query for PairQuery {}
+impl Query for PairQuery {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

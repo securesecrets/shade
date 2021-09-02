@@ -22,7 +22,6 @@ use shade_protocol::{
         AssetInfo,
         Token,
     },
-    msg_traits::Query,
 
 };
 use crate::state::{
@@ -118,7 +117,6 @@ pub fn sswap_simulate<S: Storage, A: Api, Q: Querier>(
         }
     }.query(
         &deps.querier,
-        1,
         sswap_pair.pair.code_hash,
         sswap_pair.pair.address,
     )?;
