@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use crate::asset::Contract;
 use secret_toolkit::{snip20::TokenInfo,
                     utils::Query};
-use cosmwasm_std::{StdResult, Querier};
+use cosmwasm_std::{StdResult, Querier, HumanAddr, Uint128, Binary};
+use secret_toolkit::utils::InitCallback;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -23,6 +24,7 @@ pub struct TokenConfig {
     pub burn_enabled: bool,
 }
 
+// Temporary values while secret_toolkit updates
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Snip20Query {
@@ -46,4 +48,36 @@ pub fn token_config_query<Q: Querier>(
                                                                contract.code_hash,
                                                                contract.address)?;
     Ok(answer.token_config)
+}
+
+// Snip20 initializer
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct InitialBalance {
+    pub address: HumanAddr,
+    pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct InitMsg {
+    pub name: String,
+    pub admin: Option<HumanAddr>,
+    pub symbol: String,
+    pub decimals: u8,
+    pub initial_balances: Option<Vec<InitialBalance>>,
+    pub prng_seed: Binary,
+    pub config: Option<InitConfig>,
+}
+
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone, Default, PartialEq, Debug)]
+#[serde(rename_all = "snake_case")]
+pub struct InitConfig {
+    pub public_total_supply: Option<bool>,
+    pub enable_deposit: Option<bool>,
+    pub enable_redeem: Option<bool>,
+    pub enable_mint: Option<bool>,
+    pub enable_burn: Option<bool>,
 }
