@@ -7,3 +7,4 @@ pub mod generic_response;
 pub mod msg_traits;
 pub mod band;
 pub mod snip20;
+pub mod secretswap;

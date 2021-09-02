@@ -1,7 +1,10 @@
 use cosmwasm_std::{HumanAddr, Uint128};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use crate::msg_traits::Query;
+use crate::{
+    msg_traits::Query,
+    asset::Contract,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -19,7 +22,7 @@ pub struct AssetInfo {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct OfferAsset {
+pub struct Asset {
     pub amount: Uint128,
     pub info: AssetInfo,
 }
@@ -27,16 +30,21 @@ pub struct OfferAsset {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Simulation {
-    pub offer_asset: OfferAsset,
+    pub offer_asset: Asset,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum SecretSwapQuery {
+pub enum PairQuery{
+    Pair {},
+    Pool {},
     Simulation {
-        simulation: Simulation,
+        offer_asset: Asset,
     },
+    //ReverseSimulation {},
 }
+
+impl Query for PairQuery {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -46,4 +54,21 @@ pub struct SimulationResponse {
     pub commission_amount: Uint128,
 }
 
-impl Query for SecretSwapQuery {}
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct PairResponse {
+    pub asset_infos: Vec<AssetInfo>,
+    pub contract_addr: HumanAddr,
+    pub liquidity_token: HumanAddr,
+    pub token_code_hash: String,
+    pub asset0_volume: Uint128,
+    pub asset1_volume: Uint128,
+    pub factory: Contract,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct PoolResponse {
+    pub assets: Vec<Asset>,
+    pub total_share: Uint128,
+}

@@ -4,28 +4,85 @@ use cosmwasm_std::{
     Querier, StdResult, StdError, Storage,
     HumanAddr,
 };
+use secret_toolkit::{
+    snip20::{
+        token_info_query, 
+    },
+};
 use shade_protocol::{
     oracle::{
         HandleAnswer,
+        SswapPair
     },
     asset::Contract,
     generic_response::ResponseStatus,
     snip20::Snip20Asset,
+    msg_traits::Query,
+    secretswap::{
+        PairQuery,
+        PairResponse,
+    }
 };
 use crate::state::{
     config_w, config_r,
-    sswap_assets_w,
+    sswap_pairs_w,
 };
 
-/*
-pub fn register_sswap_asset<S: Storage, A: Api, Q: Querier>(
+pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    contract: Contract
-) -> StdResult<Vec<Snip20Asset>> {
-    Ok(Vec::new())
+    pair: Contract,
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+    if env.message.sender != config.owner {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+
+    //Query for snip20's in the pair
+    let response: PairResponse = PairQuery::Pair {}.query(
+        &deps.querier,
+        1,
+        pair.code_hash.clone(),
+        pair.address.clone(),
+    )?;
+
+    let mut token_contract = Contract {
+        address: response.asset_infos[0].token.contract_addr.clone(),
+        code_hash: response.asset_infos[0].token.token_code_hash.clone(),
+    };
+    // if thats sscrt, switch it
+    if token_contract.address == config.sscrt.address {
+        token_contract = Contract {
+            address: response.asset_infos[1].token.contract_addr.clone(),
+            code_hash: response.asset_infos[1].token.token_code_hash.clone(),
+        }
+    }
+    // if neither is sscrt
+    else if response.asset_infos[1].token.contract_addr != config.sscrt.address {
+        return Err(StdError::NotFound { kind: "Not an SSCRT Pair".to_string(), backtrace: None });
+    }
+
+    let info = token_info_query(&deps.querier, 1,
+                      token_contract.code_hash.clone(),
+                      token_contract.address.clone())?;
+
+    sswap_pairs_w(&mut deps.storage).save(info.symbol.as_bytes(), &SswapPair {
+        pair,
+        asset: Snip20Asset {
+            contract: token_contract,
+            token_info: info.clone(),
+        }
+    })?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::RegisterSswapPair {
+            status: ResponseStatus::Success } )? )
+    })
+
 }
-*/
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

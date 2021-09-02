@@ -29,9 +29,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             Some(admin) => { admin }
         },
         band: msg.band,
+        sscrt: msg.sscrt,
     };
 
     config_w(&mut deps.storage).save(&state)?;
+
+    /* Hard-coded prices
+     *  SHD = $11.47 TODO: Price feed from sswap
+     *  SILK = $1.00
+     */
     hard_coded_w(&mut deps.storage).save("SHD".as_bytes(), &ReferenceData {
                 //11.47 * 10^18
                 rate: Uint128(1147 * 10u128.pow(16)),
@@ -61,6 +67,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             owner,
             band,
         } => handle::try_update_config(deps, env, owner, band),
+        HandleMsg::RegisterSswapPair {
+            pair,
+        } => handle::register_sswap_pair(deps, env, pair),
     }
 }
 
@@ -71,6 +80,5 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::GetPrice { symbol } => to_binary(&query::get_price(deps, symbol)?),
-        QueryMsg::GetPrices { symbols } => to_binary(&query::get_prices(deps, symbols)?),
     }
 }

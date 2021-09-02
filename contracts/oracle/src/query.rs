@@ -2,19 +2,22 @@ use cosmwasm_std::{
     Api,
     Extern,
     Querier, StdResult, Storage,
+    Uint128,
+    Env,
+    StdError,
 };
 use shade_protocol::{
     oracle::{
-        QueryMsg, QueryAnswer, 
+        QueryMsg, QueryAnswer, SswapPair
     },
     band::{ 
         BandQuery, ReferenceData,
     },
-    secret_swap::{
-        SecretSwapQuery,
+    secretswap::{
+        PairQuery,
         SimulationResponse,
         Simulation,
-        OfferAsset,
+        Asset,
         AssetInfo,
         Token,
     },
@@ -24,8 +27,9 @@ use shade_protocol::{
 use crate::state::{
     config_r,
     hard_coded_r,
-    sswap_assets_r,
+    sswap_pairs_r,
 };
+use std::convert::TryFrom;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config { config: config_r(&deps.storage).load()? })
@@ -35,52 +39,94 @@ pub fn get_price<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbol: String,
 ) -> StdResult<ReferenceData> {
-    match hard_coded_r(&deps.storage).may_load(&symbol.as_bytes())? {
-        Some(reference_data) => {
-            return Ok(reference_data);
-        }
-        None => {}
-    }
 
     if symbol == "SSCRT" {
-        return Ok(reference_data(deps, "SCRT".to_string(), "USD".to_string())?)
+        return reference_data(deps, "SCRT".to_string(), "USD".to_string());
     }
 
-    Ok(reference_data(deps, symbol, "USD".to_string())?)
+    if let Some(reference_data) = hard_coded_r(&deps.storage).may_load(&symbol.as_bytes())? {
+        return Ok(reference_data);
+    }
+
+    // symbol registered sswap pair
+    if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+
+        let trade_price = sswap_simulate(&deps, sswap_pair)?;
+
+        let scrt_result = reference_data(deps, "SCRT".to_string(), "USD".to_string())?;
+
+        //return Err(StdError::NotFound { kind: translate_price(scrt_result.rate, trade_price).to_string(), backtrace: None });
+
+        return Ok(ReferenceData {
+            // SCRT-USD / SCRT-symbol
+            rate: translate_price(scrt_result.rate, trade_price),
+            last_updated_base: 0,
+            last_updated_quote: 0
+        });
+    }
+
+    // symbol/USD price from BAND
+    reference_data(deps, symbol, "USD".to_string())
 }
 
-pub fn get_prices<S: Storage, A: Api, Q: Querier>(
+/* Translate price from symbol/sSCRT -> symbol/USD
+ *
+ * scrt_price: SCRT/USD price from BAND
+ * trade_price: SCRT/token trade amount from 1 sSCRT (normalized to price * 10^18)
+ * return: token/USD price
+ */
+pub fn translate_price(
+    scrt_price: Uint128, 
+    trade_price: Uint128
+) -> Uint128 {
+
+    scrt_price.multiply_ratio(10u128.pow(18), trade_price)
+}
+
+/* Normalize the price from snip20 amount with decimals to BAND rate
+ * amount: unsigned quantity received in trade for 1sSCRT
+ * decimals: number of decimals for received snip20
+ */
+pub fn normalize_price(
+    amount: Uint128, 
+    decimals: u8
+) -> Uint128 {
+
+    (amount.u128() * 10u128.pow(18u32 - u32::try_from(decimals).unwrap())).into()
+}
+
+// Secret Swap interactions
+
+pub fn sswap_simulate<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    symbols: Vec<String>,
-) -> StdResult<Vec<ReferenceData>> {
+    sswap_pair: SswapPair,
+) -> StdResult<Uint128> {
 
-    let mut query_symbols: Vec<String> = Vec::new();
-    let mut query_bases: Vec<String> = Vec::new();
-    let mut results: Vec<ReferenceData> = Vec::new();
+    let config = config_r(&deps.storage).load()?;
 
-    //TODO: This data will be un-ordered relative to input, :it should be ordered
-    for symbol in symbols {
-        match hard_coded_r(&deps.storage).may_load(&symbol.as_bytes())? {
-            Some(reference_data) => {
-                results.push(reference_data);
-            }
-            None => { 
-                query_bases.push("USD".to_string());
-                if symbol == "SSCRT" {
-                    query_symbols.push("SCRT".to_string());
-                }
-                else {
-                    query_symbols.push(symbol);
+    let response: SimulationResponse = PairQuery::Simulation {
+        offer_asset: Asset {
+            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
+            info: AssetInfo {
+                token: Token {
+                    contract_addr: config.sscrt.address,
+                    token_code_hash: config.sscrt.code_hash,
+                    viewing_key: "SecretSwap".to_string(),
                 }
             }
         }
-    }
-    results.append(&mut reference_data_bulk(&deps, query_symbols, query_bases)?);
+    }.query(
+        &deps.querier,
+        1,
+        sswap_pair.pair.code_hash,
+        sswap_pair.pair.address,
+    )?;
 
-    Ok(results)
+    return Ok(normalize_price(response.return_amount, sswap_pair.asset.token_info.decimals));
 }
 
 // BAND interactions
+
 pub fn reference_data<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     base_symbol: String,
@@ -118,31 +164,3 @@ pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(
         config_r.band.address,
     )?)
 }
-
-// Secret Swap price in */SCRT
-/*
-pub fn secret_swap_price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    symbol: String,
-)-> StdResult<SimulationResponse>
-{
-    //TODO: 
-    assets_r
-    Ok(Simulation {
-        offer_asset: OfferAsset {
-            amount: 1,
-            info: AssetInfo {
-                token: Token {
-                    "addr".to_string(),
-                    "efbaf03ba2f8b21c231874fd8f9f1c69203f585cae481691812d8289916eff7a".to_string(),
-                    "SecretSwap".to_string(),
-                }
-            }
-        }
-    }.query(
-        &deps.querier,
-        1,
-
-    )?)
-}
-*/
