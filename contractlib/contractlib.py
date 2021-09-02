@@ -27,19 +27,24 @@ class Contract:
 
         if instantiated_contract:
             self.code_id = instantiated_contract.code_id
+            self.address = instantiated_contract.address
+            self.code_hash = instantiated_contract.code_hash
         else:
             initResponse = secretlib.instantiate_contract(str(self.code_id), initMsg, label, admin, backend)
-        contracts = secretlib.list_code()
-        self.code_hash = contracts[int(self.code_id) - 1]["data_hash"]
-        #print(json.dumps(initResponse, indent=2))
-        try:
-            for attribute in initResponse["logs"][0]["events"][0]["attributes"]:
-                if attribute["key"] == "contract_address":
-                    self.address = attribute["value"]
+            contracts = secretlib.list_code()
+            for contract in contracts:
+                if str(contract['id']) == str(self.code_id):
+                    self.code_hash = contract["data_hash"]
                     break
-        except Exception as e:
-            print(initResponse)
-            raise e
+            #print(json.dumps(initResponse, indent=2))
+            try:
+                for attribute in initResponse["logs"][0]["events"][0]["attributes"]:
+                    if attribute["key"] == "contract_address":
+                        self.address = attribute["value"]
+                        break
+            except Exception as e:
+                print(initResponse)
+                raise e
                 
     def execute(self, msg, sender=None, amount=None, compute=True):
         """

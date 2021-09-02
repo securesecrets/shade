@@ -11,6 +11,7 @@ from contractlib.mintlib import Mint
 from contractlib.micro_mintlib import MicroMint
 from contractlib.oraclelib import Oracle
 from contractlib.utils import gen_label, to_base64
+from contractlib.initializerlib import  Initializer
 
 
 def test_send(burn_asset, burn_asset_password, mint_asset, mint_asset_password, mint, slipage, amount, account, account_key):
@@ -68,14 +69,42 @@ if args.testnet == "private":
     print(f"\tReceived {sscrt_minted} usSCRT")
     assert sscrt_mint_amount == sscrt_minted, f"Minted {sscrt_minted}; expected {sscrt_mint_amount}"
 
+    print("Configuring Initializer")
+    # Get the snip20 contract
+    snip20_id = secretlib.store_contract('snip20.wasm.gz', 'a', 'test')
+    for contract in secretlib.list_code():
+        if str(contract['id']) == snip20_id:
+            snip20_code_hash = contract['data_hash']
+            break
+    initializer = Initializer(gen_label(8), snip20_id, snip20_code_hash,
+                              gen_label(8), "cGFzc3dvcmQ=", [{"address": account, "amount": "1000"}],
+                              gen_label(8), "cGFzc3dvcmQ=", [{"address": account, "amount": "1000"}])
+
+    for contract in secretlib.list_contract_by_code(snip20_id):
+        instantiated_contract = PreInstantiatedContract(
+            address=contract["address"],
+            code_hash=snip20_code_hash,
+            code_id=snip20_id)
+
+        snip20_contract = SNIP20(contract["label"], "generic", "NA", decimals=6, public_total_supply=True,
+                                 enable_mint=True, enable_burn=True,
+                                 instantiated_contract=instantiated_contract, code_id=snip20_id)
+
+        info = snip20_contract.get_token_info()
+        if info['token_info']['name'] == 'Silk':
+            silk = SNIP20(contract["label"], name="Silk", symbol="SILK", decimals=6, public_total_supply=True,
+                          enable_mint=True, enable_burn=True, instantiated_contract=instantiated_contract,
+                          code_id=snip20_id)
+
+        elif info['token_info']['name'] == 'Shade':
+            shade = SNIP20(contract["label"], name="Shade", symbol="SHD", decimals=6, public_total_supply=True,
+                           enable_mint=True, enable_burn=True, instantiated_contract=instantiated_contract,
+                           code_id=snip20_id)
+
     print("Configuring Silk")
-    silk = SNIP20(gen_label(8), name="Silk", symbol="SILK", decimals=6, public_total_supply=True, enable_mint=True,
-                  enable_burn=True)
     silk.set_view_key(account_key, password)
 
     print("Configuring Shade")
-    shade = SNIP20(gen_label(8), name="Shade", symbol="SHD", decimals=6, public_total_supply=True, enable_mint=True,
-                   enable_burn=True)
     shade.set_view_key(account_key, password)
 
     print('Mocking Band')
