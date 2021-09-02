@@ -2,7 +2,7 @@ contracts_dir=contracts
 compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
-CONTRACTS = mint snip20 treasury micro_mint oracle mock_band
+CONTRACTS = mint snip20 treasury micro_mint oracle mock_band initializer
 
 COMPILED = ${CONTRACTS:=.wasm.gz}
 

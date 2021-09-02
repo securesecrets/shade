@@ -6,3 +6,4 @@ pub mod treasury;
 pub mod generic_response;
 pub mod band;
 pub mod snip20;
+pub mod initializer;
