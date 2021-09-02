@@ -1,6 +1,6 @@
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, HumanAddr};
 use crate::state::{config_w};
-use shade_protocol::initializer::{InitMsg, InitializerConfig, HandleMsg, QueryMsg};
+use shade_protocol::initializer::{InitMsg, InitializerConfig, HandleMsg, QueryMsg, Snip20InitHistory};
 use secret_toolkit::utils::InitCallback;
 use crate::query::query_contracts;
 
@@ -33,11 +33,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         }),
         symbol: "SILK".to_string(),
         decimals: 6,
-        initial_balances: msg.silk.initial_balances,
+        initial_balances: msg.silk.initial_balances.clone(),
         prng_seed: msg.silk.prng_seed,
         config: coin_config.clone()
     };
-    state.contracts.push(msg.silk.label.clone());
+    state.contracts.push(Snip20InitHistory {
+        label: msg.silk.label.clone(),
+        balances: msg.silk.initial_balances.clone(),
+    });
     messages.push(silk_init_msg.to_cosmos_msg(msg.silk.label.clone(),
                                                     msg.snip20_id,
                                                     msg.snip20_code_hash.clone(),
@@ -53,11 +56,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         }),
         symbol: "SHD".to_string(),
         decimals: 6,
-        initial_balances: msg.shade.initial_balances,
+        initial_balances: msg.shade.initial_balances.clone(),
         prng_seed: msg.shade.prng_seed,
         config: coin_config.clone()
     };
-    state.contracts.push(msg.shade.label.clone());
+    state.contracts.push(Snip20InitHistory{
+        label: msg.shade.label.clone(),
+        balances: msg.shade.initial_balances.clone()
+    });
     messages.push(shade_init_msg.to_cosmos_msg(msg.shade.label.clone(),
                                                     msg.snip20_id,
                                                     msg.snip20_code_hash.clone(),

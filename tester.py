@@ -80,6 +80,8 @@ if args.testnet == "private":
                               gen_label(8), "cGFzc3dvcmQ=", [{"address": account, "amount": "1000"}],
                               gen_label(8), "cGFzc3dvcmQ=", [{"address": account, "amount": "1000"}])
 
+    print(initializer.get_contracts())
+
     for contract in secretlib.list_contract_by_code(snip20_id):
         instantiated_contract = PreInstantiatedContract(
             address=contract["address"],

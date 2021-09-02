@@ -26,3 +26,10 @@ class Initializer(Contract):
 
         super().__init__(contract, init_msg, label, admin, uploader, backend,
                          instantiated_contract=instantiated_contract, code_id=code_id)
+
+    def get_contracts(self):
+        msg = json.dumps({
+            "contracts": {}
+        })
+
+        return self.query(msg)

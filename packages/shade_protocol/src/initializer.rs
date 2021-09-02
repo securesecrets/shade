@@ -5,7 +5,13 @@ use cosmwasm_std::{HumanAddr, Binary};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitializerConfig {
-    pub contracts: Vec<String>,
+    pub contracts: Vec<Snip20InitHistory>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Snip20InitHistory {
+    pub label: String,
+    pub balances: Option<Vec<InitialBalance>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -38,5 +44,5 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ContractsAnswer {
-    pub contracts: Vec<String>,
+    pub contracts: Vec<Snip20InitHistory>,
 }
