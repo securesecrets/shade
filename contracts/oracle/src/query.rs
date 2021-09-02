@@ -6,6 +6,7 @@ use cosmwasm_std::{
     Env,
     StdError,
 };
+use secret_toolkit::utils::Query;
 use shade_protocol::{
     oracle::{
         QueryMsg, QueryAnswer, SswapPair
@@ -22,8 +23,8 @@ use shade_protocol::{
         Token,
     },
     msg_traits::Query,
-};
 
+};
 use crate::state::{
     config_r,
     hard_coded_r,
@@ -140,7 +141,6 @@ pub fn reference_data<S: Storage, A: Api, Q: Querier>(
             quote_symbol,
     }.query(
         &deps.querier,
-        1,
         config_r.band.code_hash,
         config_r.band.address,
     )?)
@@ -159,7 +159,6 @@ pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(
             quote_symbols,
     }.query(
         &deps.querier,
-        1,
         config_r.band.code_hash,
         config_r.band.address,
     )?)

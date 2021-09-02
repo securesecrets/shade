@@ -38,25 +38,25 @@ class MicroMint(Contract):
         super().__init__(contract, init_msg, label, admin, uploader, backend,
                          instantiated_contract=instantiated_contract, code_id=code_id)
 
-    def migrate(self, label, code_id, code_hash):
-        """
-        Instantiate another mint contract and migrate this contracts info into that one
-        :param label: Label name of the contract
-        :param code_id: Code id of the contract
-        :param code_hash: Code hash
-        :return: new Mint
-        """
-        msg = json.dumps(
-            {"migrate": {"label": label, "code_id": code_id, "code_hash": code_hash}})
-
-        new_mint = copy.deepcopy(self)
-        for attribute in self.execute(msg, compute=False)["logs"][0]["events"][0]["attributes"]:
-            if attribute["key"] == "contract_address":
-                new_mint.address = attribute["value"]
-                break
-        new_mint.contract_id = code_id
-        new_mint.code_hash = code_hash
-        return new_mint
+    # def migrate(self, label, code_id, code_hash):
+    #     """
+    #     Instantiate another mint contract and migrate this contracts info into that one
+    #     :param label: Label name of the contract
+    #     :param code_id: Code id of the contract
+    #     :param code_hash: Code hash
+    #     :return: new Mint
+    #     """
+    #     msg = json.dumps(
+    #         {"migrate": {"label": label, "code_id": code_id, "code_hash": code_hash}})
+    #
+    #     new_mint = copy.deepcopy(self)
+    #     for attribute in self.execute(msg, compute=False)["logs"][0]["events"][0]["attributes"]:
+    #         if attribute["key"] == "contract_address":
+    #             new_mint.address = attribute["value"]
+    #             break
+    #     new_mint.contract_id = code_id
+    #     new_mint.code_hash = code_hash
+    #     return new_mint
 
     def update_config(self, owner=None, native_asset=None, oracle=None):
         """
@@ -93,19 +93,6 @@ class MicroMint(Contract):
         """
         msg = json.dumps(
             {"register_asset": {"contract": {"address": snip20.address, "code_hash": snip20.code_hash}}})
-
-        return self.execute(msg)
-
-    def update_asset(self, old_snip20, snip20):
-        """
-        Updates a SNIP20 asset's info
-        :param old_snip20: The registered snip20
-        :param snip20: New snip20 to replace with
-        :return: Result
-        """
-        msg = json.dumps(
-            {"update_asset": {"asset": old_snip20.address, "contract": {"address": snip20.address,
-                                                                        "code_hash": snip20.code_hash}}})
 
         return self.execute(msg)
 
