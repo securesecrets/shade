@@ -63,7 +63,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     native_asset_w(&mut deps.storage).save(&Snip20Asset {
         contract: msg.native_asset.clone(),
         token_info,
-        token_config,
+        token_config: Option::from(token_config),
     })?;
 
     let empty_assets_list: Vec<String> = Vec::new();

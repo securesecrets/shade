@@ -91,13 +91,21 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         burn_amount = (amount - commission_amount)?;
     }
 
+    //TODO: if token_config is None, or cant burn, need to trash
+
     // Try to burn
-    if burn_asset.token_config.burn_enabled {
-        messages.push(burn_msg(burn_amount,
-                               None,
-                               256,
-                               burn_asset.contract.code_hash.clone(),
-                               burn_asset.contract.address.clone())?);
+    match burn_asset.token_config {
+        Some(ref conf) => {
+            if conf.burn_enabled {
+                messages.push(burn_msg(burn_amount,
+                                       None,
+                                       256,
+                                       burn_asset.contract.code_hash.clone(),
+                                       burn_asset.contract.address.clone())?);
+            }
+        }
+        None => {
+        }
     }
 
     // Update burned amount
@@ -208,14 +216,13 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                                       contract.code_hash.clone(),
                                       contract.address.clone())?;
 
-    let asset_config = token_config_query(&deps.querier,
-                                          contract.clone())?;
+    let asset_config = token_config_query(&deps.querier, contract.clone())?;
 
     debug_print!("Registering {}", asset_info.symbol);
     assets.save(&contract_str.as_bytes(), &Snip20Asset {
         contract: contract.clone(),
         token_info: asset_info,
-        token_config: asset_config,
+        token_config: Option::from(asset_config),
     })?;
 
     total_burned_w(&mut deps.storage).save(&contract_str.as_bytes(), &Uint128(0))?;
