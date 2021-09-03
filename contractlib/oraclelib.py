@@ -6,13 +6,17 @@ import json
 
 
 class Oracle(Contract):
-    def __init__(self, label, band_contract, contract='oracle.wasm.gz', admin='a', uploader='a', backend='test',
+    def __init__(self, label, band_contract, sscrt, contract='oracle.wasm.gz', admin='a', uploader='a', backend='test',
                  instantiated_contract=None, code_id=None):
 
         init_msg = json.dumps({
             'band': {
                 'address': band_contract.address,
                 'code_hash': band_contract.code_hash,
+            },
+            'sscrt': {
+                'address': sscrt.address,
+                'code_hash': sscrt.code_hash,
             }
         })
 
@@ -34,3 +38,17 @@ class Oracle(Contract):
         msg = json.dumps({'get_prices': {'symbols': symbols}})
 
         return self.query(msg)
+
+    def register_sswap_pair(self, pair):
+
+        msg = json.dumps({
+            'register_sswap_pair': {
+                'pair': { 
+                    'address': pair.address,
+                    'code_hash': pair.code_hash,
+                }
+            }
+        })
+
+        return self.execute(msg)
+

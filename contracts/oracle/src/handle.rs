@@ -20,6 +20,7 @@ use shade_protocol::{
     snip20::{
         Snip20Asset,
         token_config_query,
+        TokenConfig,
     },
     secretswap::{
         PairQuery,
@@ -68,7 +69,11 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
     let token_info = token_info_query(&deps.querier, 1,
                       token_contract.code_hash.clone(),
                       token_contract.address.clone())?;
-    let token_config = token_config_query(&deps.querier, token_contract.clone())?;
+
+    let token_config: Option<TokenConfig> = match token_config_query(&deps.querier, token_contract.clone()) {
+        Ok(c) => { Option::from(c) }
+        Err(c) => { None }
+    };
 
     sswap_pairs_w(&mut deps.storage).save(token_info.symbol.as_bytes(), &SswapPair {
         pair,

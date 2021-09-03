@@ -80,9 +80,6 @@ def sswap_price(snip20, sscrt_pair):
     return_amount = int(results['return_amount'])
     return normalize(return_amount, info['decimals']), info['symbol']
 
-print('sim')
-print(sswap_price(seth_snip, seth_pair.address))
-
 oracle = Oracle(gen_label(8), band, sscrt, admin='drpresident', uploader='drpresident', backend=None)
 print(oracle.address)
 print(oracle.code_hash)
@@ -95,17 +92,9 @@ oracle = Oracle('', band, sscrt, instantiated_contract=pre_oracle)
 '''
 
 print('Registering SETH')
-oracle.register_sswap_pair(seth_pair)
+print(oracle.register_sswap_pair(seth_pair))
 print(oracle.get_price('SETH')['rate'], 'SETH')
 
-oracle.register_sswap_pair(socean_pair)
+print('Registering SOCEAN')
+print(oracle.register_sswap_pair(socean_pair))
 print(oracle.get_price('SOCEAN')['rate'], 'SOCEAN')
-
-
-'''
-print('Secret Swap prices in sSCRT')
-print(sswap_price(ocean_snip, ocean_pair))
-print(sswap_price(seth_snip, seth_pair))
-print(sswap_price(tsusdt_snip, tsusdt_pair))
-print(sswap_price(silk_snip, silk_pair))
-'''
