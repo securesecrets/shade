@@ -8,7 +8,6 @@ use secret_toolkit::{
     utils::Query,
     snip20::{
         token_info_query, 
-        token_config_query,
     },
 };
 use shade_protocol::{
@@ -18,7 +17,10 @@ use shade_protocol::{
     },
     asset::Contract,
     generic_response::ResponseStatus,
-    snip20::Snip20Asset,
+    snip20::{
+        Snip20Asset,
+        token_config_query,
+    },
     secretswap::{
         PairQuery,
         PairResponse,
@@ -66,15 +68,13 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
     let token_info = token_info_query(&deps.querier, 1,
                       token_contract.code_hash.clone(),
                       token_contract.address.clone())?;
-    let token_config = token_config_query(&deps.querier, 1,
-                      token_contract.code_hash.clone(),
-                      token_contract.address.clone())?;
+    let token_config = token_config_query(&deps.querier, token_contract.clone())?;
 
     sswap_pairs_w(&mut deps.storage).save(token_info.symbol.as_bytes(), &SswapPair {
         pair,
         asset: Snip20Asset {
             contract: token_contract,
-            token_info,
+            token_info: token_info.clone(),
             token_config,
         }
     })?;
