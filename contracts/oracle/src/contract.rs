@@ -34,16 +34,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&state)?;
 
-    /* Hard-coded prices
-     *  SHD = $11.47 TODO: Price feed from sswap
-     *  SILK = $1.00
+    /* Hard-coded SILK = $1.00
      */
-    hard_coded_w(&mut deps.storage).save("SHD".as_bytes(), &ReferenceData {
-                //11.47 * 10^18
-                rate: Uint128(1147 * 10u128.pow(16)),
-                last_updated_base: 0,
-                last_updated_quote: 0
-            })?;
     hard_coded_w(&mut deps.storage).save("SILK".as_bytes(), &ReferenceData {
                 //1$
                 rate: Uint128(1 * 10u128.pow(18)),
