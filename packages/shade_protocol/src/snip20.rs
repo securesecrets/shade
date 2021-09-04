@@ -3,14 +3,14 @@ use serde::{Deserialize, Serialize};
 use crate::asset::Contract;
 use secret_toolkit::{snip20::TokenInfo,
                     utils::Query};
-use cosmwasm_std::{StdResult, Querier};
+use cosmwasm_std::{StdResult, StdError, Querier};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Snip20Asset {
     pub contract: Contract,
     pub token_info: TokenInfo,
-    pub token_config: TokenConfig,
+    pub token_config: Option<TokenConfig>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

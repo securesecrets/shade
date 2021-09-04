@@ -1,71 +1,58 @@
 #[cfg(test)]
 mod tests {
+    use crate::query;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier};
-    use cosmwasm_std::{debug_print, coins, from_binary, Uint128, StdResult, HumanAddr, Extern};
-    use shade_protocol::{
-        oracle::{InitMsg, QueryMsg},
-        band::ReferenceData,
-        asset::Contract,
-    };
-    use crate::contract::{init, query};
+    use cosmwasm_std::{coins, from_binary, Uint128};
+    use shade_protocol::asset::Contract;
 
-    fn create_contract(address: &str, code_hash: &str) -> Contract {
-        let env = mock_env(address.to_string(), &[]);
-        return Contract{
-            address: env.message.sender,
-            code_hash: code_hash.to_string()
+    macro_rules! normalize_price_tests {
+    ($($name:ident: $value:expr,)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let (amount, decimals, expected) = $value;
+                assert_eq!(query::normalize_price(amount, decimals), expected)
+            }
+        )*
         }
     }
 
-    fn dummy_init(admin: &str, band: Contract) -> Extern<MockStorage, MockApi, MockQuerier> {
-        let mut deps = mock_dependencies(20, &[]);
-        let msg = InitMsg {
-            admin: None,
-            band: band,
-        };
-        let env = mock_env(admin.to_string(), &coins(1000, "earth"));
-        let _res = init(&mut deps, env, msg).unwrap();
-
-        return deps
+    normalize_price_tests! {
+        normalize_0: (
+            Uint128(1413500852332497), 
+            18u8, 
+            Uint128(1413500852332497)
+        ),
     }
 
-    #[test]
-    fn proper_initialization() {
-        let mut deps = mock_dependencies(20, &[]);
-
-        let msg = InitMsg {
-            admin: None,
-            band: create_contract("", ""),
-        };
-        let env = mock_env("creator", &coins(1000, "earth"));
-
-        // we can just call .unwrap() to assert this was a success
-        let res = init(&mut deps, env, msg).unwrap();
-        assert_eq!(0, res.messages.len());
+    macro_rules! translate_price_tests {
+    ($($name:ident: $value:expr,)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let (scrt_price, trade_price, expected) = $value;
+                assert_eq!(query::translate_price(scrt_price, trade_price), expected)
+            }
+        )*
+        }
     }
 
-    #[test]
-    fn price_query() {
-        let deps = dummy_init(&"admin".to_string(),
-                                  create_contract("", ""));
-        
-        // Check SHD/SILK hard-coded prices
-        let shd_msg = QueryMsg::GetPrice{
-            symbol: "SHD".to_string(),
-        };
-        let shd_res = query(&deps, shd_msg).unwrap();
-
-        let shd_value: ReferenceData = from_binary(&shd_res).unwrap();
-        assert_eq!(shd_value.rate, Uint128(1147 * 10u128.pow(16)));
-
-        let silk_msg = QueryMsg::GetPrice{
-            symbol: "SILK".to_string(),
-        };
-        let silk_res = query(&deps, silk_msg).unwrap();
-
-        let silk_value: ReferenceData = from_binary(&silk_res).unwrap();
-        assert_eq!(silk_value.rate, Uint128(1 * 10u128.pow(18)));
-
+    translate_price_tests! {
+        translate_0: (
+            //SCRT/USD price
+            Uint128(    1_622_110_000_000_000_000), 
+            // 1 sSCRT -> sETH
+            Uint128(        1_413_500_852_332_497),
+            // sETH/USD price
+            Uint128(1_147_583_319_333_175_746_166),
+        ),
+        translate_1: (
+            //SCRT/USD price
+            Uint128(    1_622_110_000_000_000_000), 
+            // SCRT/ETH
+            Uint128(          425_600_000_000_000),
+            // sETH/USD price
+            Uint128(3_811_348_684_210_526_315_789),
+        ),
     }
-
 }
