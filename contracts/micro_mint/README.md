@@ -7,8 +7,8 @@
             * [Migrate](#Migrate)
             * [UpdateConfig](#UpdateConfig)
             * [RegisterAsset](#RegisterAsset)
-            * [UpdateAsset](#UpdateAsset)
         * Queries
+            * [GetNativeAsset](#GetNativeAsset)
             * [GetConfig](#GetConfig)
             * [SupportedAssets](#SupportedAssets)
             * [GetAsset](#getAsset)
@@ -16,17 +16,19 @@
         * Messages
             * [Receive](#Receive)
 # Introduction
-The minting contract is used as a way to acquire newly minted Silk, sending a set amount from any supported contract will result in receiving x amount of silk.
+Contract responsible to mint a paired snip20 asset
 
 # Sections
 
 ## Init
 ##### Request
-|Name      |Type      |Description                                                                                                        | optional |
-|----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|silk      | Contract |  Silk contract                                                                                                    |  no      |
-|oracle    | Contract |  Oracle contract                                                                                                  |  no      |
+|Name         |Type      |Description                                                                                                        | optional |
+|-------------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
+|admin        | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
+|native_asset | Contract |  Asset to mint                                                                                                    |  no      |
+|peg          | String   |  Symbol to peg to when querying oracle (defaults to native_asset symbol)                                          |  yes     |
+|treasury     | Contract |  Treasury contract                                                                                                |  yes     |
+|oracle       | Contract |  Oracle contract                                                                                                  |  no      |
 
 ## Admin
 
@@ -54,8 +56,8 @@ Updates the given values
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
 |owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|silk      | Contract |  Silk contract                                                                                                    |  no      |
-|oracle    | Contract |  Oracle contract                                                                                                  |  no      |
+|treasury  | Contract |  Treasury contract                                                                                                |  yes     |
+|oracle    | Contract |  Oracle contract                                                                                                  |  yes     |
 ##### Response
 ```json
 {
@@ -82,25 +84,19 @@ Note: Will return an error if there's an asset with that address already registe
 }
 ```
 
-#### UpdateAsset
-Updates a supported asset. The asset must be SNIP-20 compliant since [RegisterReceive](https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md#RegisterReceive) is called.
+### Queries
 
-Note: Will return an error if no asset exists already with that address.
-##### Request
-|Name        |Type      |Description                                                                                                            | optional |
-|------------|----------|-----------------------------------------------------------------------------------------------------------------------|----------|
-|asset       | string   |  Asset to update; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well           |  no      |
-|contract    | Contract |  Type explained [here](#Contract)                                                                                     |  no      |
-##### Response
+#### GetNativeAsset
+Gets the contract's minted asset
+#### Response
 ```json
 {
-  "update_asset": {
-    "status": "success"
+  "native_asset": {
+    "asset": "Snip20Asset Object",
+    "peg": "Pegged symbol"
   }
 }
 ```
-
-### Queries
 
 #### GetConfig
 Gets the contract's configuration variables
@@ -110,14 +106,14 @@ Gets the contract's configuration variables
   "config": {
     "config": {
       "owner": "Owner address",
-      "silk": {
-        "address": "Asset contract address",
-        "code_hash": "Asset callback code hash"
-        },
       "oracle": {
         "address": "Asset contract address",
         "code_hash": "Asset callback code hash"
         },
+      "treasury": {
+        "address": "Asset contract address",
+        "code_hash": "Asset callback code hash"
+      },
       "activated": "Boolean of contract's actviation status"
     }
   }
@@ -146,11 +142,12 @@ Get specific information on a supported asset.
 {
   "asset": {
     "asset": {
-      "contract": {
-        "address": "Asset contract address",
-        "code_hash": "Asset callback code hash"
+      "Snip20Asset": {
+        "contract": "Asset contract",
+        "token_info": "Token info as per Snip20",
+        "token_config": "Optional information about the config if the Snip20 supports it"
       },
-      "burned_tokens": "Total burned on this contract"
+      "burned": "Total burned on this contract"
     }
   }
 }
