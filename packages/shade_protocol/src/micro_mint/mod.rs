@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MintConfig {
+pub struct Config {
     pub owner: HumanAddr,
     pub oracle: Contract,
     // Both treasury & Commission must be set to function
@@ -74,6 +74,7 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    GetNativeAsset {},
     GetSupportedAssets {},
     GetAsset {
         contract: String,
@@ -88,8 +89,9 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
+    NativeAsset { asset: Snip20Asset, peg: String },
     SupportedAssets { assets: Vec<String>, },
     Asset { asset: Snip20Asset, burned: Uint128},
-    Config { config: MintConfig },
+    Config { config: Config },
 }
 

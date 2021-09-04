@@ -10,8 +10,8 @@ use secret_toolkit::{
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     micro_mint::{
-        HandleAnswer, 
-        MintConfig, 
+        HandleAnswer,
+        Config,
     },
     mint::SnipMsgHook,
     snip20::Snip20Asset,
@@ -28,7 +28,7 @@ use crate::state::{
     native_asset_r,
     asset_peg_r,
     assets_w, assets_r,
-    asset_list,
+    asset_list_w,
     total_burned_w,
 };
 use shade_protocol::snip20::token_config_query;
@@ -221,7 +221,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     total_burned_w(&mut deps.storage).save(&contract_str.as_bytes(), &Uint128(0))?;
 
     // Add the asset to list
-    asset_list(&mut deps.storage).update(|mut state| {
+    asset_list_w(&mut deps.storage).update(|mut state| {
         state.push(contract_str);
         Ok(state)
     })?;
@@ -331,7 +331,7 @@ fn oracle<S: Storage, A: Api, Q: Querier>(
     symbol: &String,
 ) -> StdResult<Uint128> {
 
-    let config: MintConfig = config_r(&deps.storage).load()?;
+    let config: Config = config_r(&deps.storage).load()?;
     let answer: ReferenceData = GetPrice { 
         symbol: symbol.to_string() 
     }.query(&deps.querier,

@@ -8,7 +8,7 @@ use secret_toolkit::snip20::token_info_query;
 use shade_protocol::{
     micro_mint::{
         InitMsg, HandleMsg,
-        QueryMsg, MintConfig, 
+        QueryMsg, Config,
     },
     snip20::{
         Snip20Asset,
@@ -17,10 +17,10 @@ use shade_protocol::{
 
 use crate::{
     state::{
-        config_w, 
-        native_asset_w, 
+        config_w,
+        native_asset_w,
         asset_peg_w,
-        asset_list,
+        asset_list_w,
     },
     handle, query,
 };
@@ -33,7 +33,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
 
-    let state = MintConfig {
+    let state = Config {
         owner: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
@@ -67,7 +67,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     })?;
 
     let empty_assets_list: Vec<String> = Vec::new();
-    asset_list(&mut deps.storage).save(&empty_assets_list)?;
+    asset_list_w(&mut deps.storage).save(&empty_assets_list)?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -106,6 +106,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
+        QueryMsg::GetNativeAsset {} => to_binary(&query::native_asset(deps)?),
         QueryMsg::GetSupportedAssets {} => to_binary(&query::supported_assets(deps)?),
         QueryMsg::GetAsset { contract } => to_binary(&query::asset(deps, contract)?),
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
