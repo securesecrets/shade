@@ -1,7 +1,7 @@
 use cosmwasm_std::{Storage, Uint128};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
 use shade_protocol::{
-    micro_mint::MintConfig, 
+    micro_mint::{Config, SupportedAsset},
     snip20::Snip20Asset,
 };
 
@@ -12,11 +12,11 @@ pub static ASSET_KEY: &[u8] = b"assets";
 pub static ASSET_LIST_KEY: &[u8] = b"asset_list";
 pub static BURN_COUNT_KEY: &[u8] = b"burn_count";
 
-pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, MintConfig> {
+pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, MintConfig> {
+pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
@@ -36,19 +36,19 @@ pub fn asset_peg_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
     singleton_read(storage, ASSET_PEG)
 }
 
-pub fn asset_list<S: Storage>(storage: &mut S) -> Singleton<S, Vec<String>> {
+pub fn asset_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<String>> {
     singleton(storage, ASSET_LIST_KEY)
 }
 
-pub fn asset_list_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<String>> {
+pub fn asset_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<String>> {
     singleton_read(storage, ASSET_LIST_KEY)
 }
 
-pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Snip20Asset> {
+pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, SupportedAsset> {
     bucket_read(ASSET_KEY, storage)
 }
 
-pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
+pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, SupportedAsset> {
     bucket(ASSET_KEY, storage)
 }
 

@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use crate::asset::Contract;
 use secret_toolkit::{snip20::TokenInfo,
                     utils::Query};
-use cosmwasm_std::{StdResult, Querier, HumanAddr, Uint128, Binary};
+
+use cosmwasm_std::{StdResult, StdError, Querier, HumanAddr, Uint128, Binary};
 use secret_toolkit::utils::InitCallback;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -11,7 +12,7 @@ use secret_toolkit::utils::InitCallback;
 pub struct Snip20Asset {
     pub contract: Contract,
     pub token_info: TokenInfo,
-    pub token_config: TokenConfig,
+    pub token_config: Option<TokenConfig>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

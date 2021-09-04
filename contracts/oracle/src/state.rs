@@ -8,14 +8,14 @@ use cosmwasm_storage::{
     Bucket, ReadonlyBucket
 };
 use shade_protocol::{
-    oracle::OracleConfig,
+    oracle::{ OracleConfig, SswapPair },
     band::ReferenceData,
-    snip20::Snip20Asset,
+    asset::Contract,
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static HARD_CODED: &[u8] = b"hard_coded";
-pub static SSWAP_ASSETS: &[u8] = b"sswap_assets";
+pub static SSWAP_PAIRS: &[u8] = b"sswap_pairs";
 
 
 pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, OracleConfig> {
@@ -34,9 +34,10 @@ pub fn hard_coded_w<S: Storage>(storage: &mut S) -> Bucket<S, ReferenceData> {
     bucket(HARD_CODED, storage)
 }
 
-pub fn sswap_assets_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Snip20Asset> {
-    bucket_read(SSWAP_ASSETS, storage)
+pub fn sswap_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, SswapPair> {
+    bucket_read(SSWAP_PAIRS, storage)
 }
-pub fn sswap_assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
-    bucket(SSWAP_ASSETS, storage)
+
+pub fn sswap_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, SswapPair> {
+    bucket(SSWAP_PAIRS, storage)
 }

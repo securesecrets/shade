@@ -3,8 +3,10 @@ use cosmwasm_std::{
 };
 use crate::state::{
     config_r,
+    native_asset_r,
+    asset_peg_r,
     assets_r,
-    asset_list_read,
+    asset_list_r,
     total_burned_r,
 };
 use shade_protocol::{
@@ -13,8 +15,13 @@ use shade_protocol::{
     },
 };
 
+pub fn native_asset<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::NativeAsset { asset: native_asset_r(&deps.storage).load()?,
+        peg: asset_peg_r(&deps.storage).load()? })
+}
+
 pub fn supported_assets<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::SupportedAssets { assets: asset_list_read(&deps.storage).load()? })
+    Ok(QueryAnswer::SupportedAssets { assets: asset_list_r(&deps.storage).load()? })
 }
 
 pub fn asset<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, contract: String) -> StdResult<QueryAnswer> {

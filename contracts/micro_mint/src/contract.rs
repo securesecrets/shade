@@ -8,24 +8,23 @@ use secret_toolkit::snip20::token_info_query;
 use shade_protocol::{
     micro_mint::{
         InitMsg, HandleMsg,
-        QueryMsg, MintConfig, 
+        QueryMsg, Config,
     },
     snip20::{
         Snip20Asset,
+        token_config_query,
     },
 };
 
 use crate::{
     state::{
-        config_w, 
-        native_asset_w, 
+        config_w,
+        native_asset_w,
         asset_peg_w,
-        asset_list,
+        asset_list_w,
     },
     handle, query,
 };
-use shade_protocol::snip20::token_config_query;
-
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -33,14 +32,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
 
-    let state = MintConfig {
+    let state = Config {
         owner: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
         oracle: msg.oracle,
         treasury: msg.treasury,
-        commission: msg.commission,
         activated: true,
     };
 
@@ -63,11 +61,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     native_asset_w(&mut deps.storage).save(&Snip20Asset {
         contract: msg.native_asset.clone(),
         token_info,
-        token_config,
+        token_config: Option::from(token_config),
     })?;
 
     let empty_assets_list: Vec<String> = Vec::new();
-    asset_list(&mut deps.storage).save(&empty_assets_list)?;
+    asset_list_w(&mut deps.storage).save(&empty_assets_list)?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -87,11 +85,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             owner,
             oracle,
             treasury,
-            commission,
-        } => handle::try_update_config(deps, env, owner, oracle, treasury, commission),
+        } => handle::try_update_config(deps, env, owner, oracle, treasury),
         HandleMsg::RegisterAsset {
-            contract
-        } => handle::try_register_asset(deps, &env, &contract),
+            contract,
+            commission,
+        } => handle::try_register_asset(deps, &env, &contract, commission),
         HandleMsg::Receive {
             sender,
             from,
@@ -106,6 +104,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
+        QueryMsg::GetNativeAsset {} => to_binary(&query::native_asset(deps)?),
         QueryMsg::GetSupportedAssets {} => to_binary(&query::supported_assets(deps)?),
         QueryMsg::GetAsset { contract } => to_binary(&query::asset(deps, contract)?),
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
