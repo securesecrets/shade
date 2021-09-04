@@ -14,11 +14,16 @@ pub struct Config {
     pub oracle: Contract,
     // Both treasury & Commission must be set to function
     pub treasury: Option<Contract>,
-    // Commission percentage * 100 e.g. 5 == .05 == 5%
-    pub commission: Option<Uint128>,
     pub activated: bool,
 }
 
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct SupportedAsset {
+    pub asset: Snip20Asset,
+    // Commission percentage * 100 e.g. 5 == .05 == 5%
+    pub commission: Uint128,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
@@ -29,8 +34,6 @@ pub struct InitMsg {
     pub peg: Option<String>,
     // Both treasury & commission must be set to function
     pub treasury: Option<Contract>,
-    // Commission * 100 e.g. 5 == .05 == 5%
-    pub commission: Option<Uint128>,
 }
 
 impl InitCallback for InitMsg {
@@ -44,10 +47,11 @@ pub enum HandleMsg {
         owner: Option<HumanAddr>,
         oracle: Option<Contract>,
         treasury: Option<Contract>,
-        commission: Option<Uint128>,
     },
     RegisterAsset {
         contract: Contract,
+        // Commission * 100 e.g. 5 == .05 == 5%
+        commission: Option<Uint128>,
     },
     Receive {
         sender: HumanAddr,
@@ -91,7 +95,7 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     NativeAsset { asset: Snip20Asset, peg: String },
     SupportedAssets { assets: Vec<String>, },
-    Asset { asset: Snip20Asset, burned: Uint128},
+    Asset { asset: SupportedAsset, burned: Uint128},
     Config { config: Config },
 }
 

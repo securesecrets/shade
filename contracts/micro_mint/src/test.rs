@@ -68,7 +68,6 @@ pub mod tests {
             oracle,
             peg,
             treasury,
-            commission,
         };
         let env = mock_env(admin, &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();

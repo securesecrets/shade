@@ -12,6 +12,7 @@ use shade_protocol::{
     },
     snip20::{
         Snip20Asset,
+        token_config_query,
     },
 };
 
@@ -24,8 +25,6 @@ use crate::{
     },
     handle, query,
 };
-use shade_protocol::snip20::token_config_query;
-
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -40,7 +39,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         },
         oracle: msg.oracle,
         treasury: msg.treasury,
-        commission: msg.commission,
         activated: true,
     };
 
@@ -87,11 +85,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             owner,
             oracle,
             treasury,
-            commission,
-        } => handle::try_update_config(deps, env, owner, oracle, treasury, commission),
+        } => handle::try_update_config(deps, env, owner, oracle, treasury),
         HandleMsg::RegisterAsset {
-            contract
-        } => handle::try_register_asset(deps, &env, &contract),
+            contract,
+            commission,
+        } => handle::try_register_asset(deps, &env, &contract, commission),
         HandleMsg::Receive {
             sender,
             from,

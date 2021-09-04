@@ -12,9 +12,10 @@ use shade_protocol::{
     micro_mint::{
         HandleAnswer,
         Config,
+        SupportedAsset,
     },
     mint::SnipMsgHook,
-    snip20::Snip20Asset,
+    snip20::{Snip20Asset, token_config_query},
     oracle::{
         QueryMsg::GetPrice,
     },
@@ -31,7 +32,6 @@ use crate::state::{
     asset_list_w,
     total_burned_w,
 };
-use shade_protocol::snip20::token_config_query;
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -56,11 +56,11 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     // Check that sender is a supported snip20 asset
     let assets = assets_r(&deps.storage);
     let burn_asset = match assets.may_load(env.message.sender.to_string().as_bytes())? {
-        Some(asset) => {
+        Some(supported_asset) => {
             debug_print!("Found Burn Asset: {} {}",
-                         &asset.token_info.symbol,
+                         &supported_asset.asset.token_info.symbol,
                          env.message.sender.to_string());
-            asset
+            supported_asset
         },
         None => return Err(StdError::NotFound {
             kind: env.message.sender.to_string(),
@@ -76,33 +76,36 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     };
 
     let mut burn_amount = amount;
-    if let (Some(treasury), Some(commission)) = (config.treasury, config.commission) {
-        let commission_amount = calculate_commission(amount, commission);
+    if let Some(treasury) = config.treasury {
+        // Ignore commission if the set commission is 0
+        if burn_asset.commission != Uint128(0) {
+            let commission_amount = calculate_commission(amount, burn_asset.commission);
 
-        // Commission to treasury
-        messages.push(send_msg(treasury.address,
-                               commission_amount,
-                               None,
-                               None,
-                               1,
-                               burn_asset.contract.code_hash.clone(),
-                               burn_asset.contract.address.clone())?);
+            // Commission to treasury
+            messages.push(send_msg(treasury.address,
+                                   commission_amount,
+                                   None,
+                                   None,
+                                   1,
+                                   burn_asset.asset.contract.code_hash.clone(),
+                                   burn_asset.asset.contract.address.clone())?);
 
-        burn_amount = (amount - commission_amount)?;
+            burn_amount = (amount - commission_amount)?;
+        }
     }
 
     // Try to burn
-    if burn_asset.token_config.burn_enabled {
+    if burn_asset.asset.token_config.burn_enabled {
         messages.push(burn_msg(burn_amount,
                                None,
                                256,
-                               burn_asset.contract.code_hash.clone(),
-                               burn_asset.contract.address.clone())?);
+                               burn_asset.asset.contract.code_hash.clone(),
+                               burn_asset.asset.contract.address.clone())?);
     }
 
     // Update burned amount
     total_burned_w(&mut deps.storage).update(
-        burn_asset.contract.address.to_string().as_bytes(),
+        burn_asset.asset.contract.address.to_string().as_bytes(),
         |burned| {
             match burned {
                 Some(burned) => { Ok(burned + burn_amount) }
@@ -145,7 +148,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     owner: Option<HumanAddr>,
     oracle: Option<Contract>,
     treasury: Option<Contract>,
-    commission: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -170,9 +172,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         if let Some(treasury) = treasury {
             state.treasury = Some(treasury);
         }
-        if let Some(commission) = commission {
-            state.commission = Some(commission);
-        }
         Ok(state)
     })?;
 
@@ -188,6 +187,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
+    commission: Option<Uint128>
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -212,10 +212,17 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                                           contract.clone())?;
 
     debug_print!("Registering {}", asset_info.symbol);
-    assets.save(&contract_str.as_bytes(), &Snip20Asset {
-        contract: contract.clone(),
-        token_info: asset_info,
-        token_config: asset_config,
+    assets.save(&contract_str.as_bytes(), &SupportedAsset {
+        asset: Snip20Asset {
+            contract: contract.clone(),
+            token_info: asset_info,
+            token_config: asset_config,
+        },
+        // If commission is not set then default to 0
+        commission: match commission {
+            None => Uint128(0),
+            Some(value) => value
+        }
     })?;
 
     total_burned_w(&mut deps.storage).save(&contract_str.as_bytes(), &Uint128(0))?;
@@ -260,23 +267,23 @@ pub fn register_receive (
 pub fn mint_amount<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     burn_amount: Uint128,
-    burn_asset: &Snip20Asset, 
+    burn_asset: &SupportedAsset,
     mint_asset: &Snip20Asset, 
 ) -> StdResult<Uint128> {
 
 
     debug_print!("Burning {} {} for {}", 
                  burn_amount, 
-                 burn_asset.token_info.symbol, 
+                 burn_asset.asset.token_info.symbol,
                  mint_asset.token_info.symbol);
 
-    let burn_price = oracle(&deps, &burn_asset.token_info.symbol)?;
+    let burn_price = oracle(&deps, &burn_asset.asset.token_info.symbol)?;
     debug_print!("Burn Price: {}", burn_price);
 
     let mint_price = oracle(&deps, &asset_peg_r(&deps.storage).load()?)?;
     debug_print!("Mint Price: {}", mint_price);
 
-    Ok(calculate_mint(burn_price, burn_amount, burn_asset.token_info.decimals,
+    Ok(calculate_mint(burn_price, burn_amount, burn_asset.asset.token_info.decimals,
                    mint_price, mint_asset.token_info.decimals))
 }
 
