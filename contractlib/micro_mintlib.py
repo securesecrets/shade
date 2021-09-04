@@ -7,7 +7,7 @@ import json
 
 class MicroMint(Contract):
     def __init__(self, label, native_asset, oracle, treasury=None, 
-                commission=None, asset_peg=None,
+                asset_peg=None,
                 contract='micro_mint.wasm.gz', 
                 admin='a', uploader='a',
                 backend='test', instantiated_contract=None, code_id=None):
@@ -26,8 +26,6 @@ class MicroMint(Contract):
                 'address': treasury.address,
                 'code_hash': treasury.code_hash,
             }
-        if commission:
-            init_msg['commission'] = str(commission)
 
         if asset_peg:
             init_msg['peg'] = asset_peg
@@ -85,16 +83,19 @@ class MicroMint(Contract):
         msg = json.dumps(raw_msg)
         return self.execute(msg)
 
-    def register_asset(self, snip20):
+    def register_asset(self, snip20, commission=None):
         """
         Registers a SNIP20 asset
         :param snip20: SNIP20 object to add
+        :param commission: Comission for the SNIP20
         :return: Result
         """
-        msg = json.dumps(
-            {"register_asset": {"contract": {"address": snip20.address, "code_hash": snip20.code_hash}}})
+        msg = {"register_asset": {"contract": {"address": snip20.address, "code_hash": snip20.code_hash}}}
 
-        return self.execute(msg)
+        if commission:
+            msg['register_asset']['commission'] = str(commission)
+
+        return self.execute(json.dumps(msg))
 
     def get_supported_assets(self):
         """

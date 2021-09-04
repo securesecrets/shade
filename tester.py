@@ -96,14 +96,14 @@ if args.testnet == "private":
 
     print("Configuring Silk-Mint Contract")
     silk_mint = MicroMint(gen_label(8), native_asset=silk, oracle=oracle)
-    silk_mint.register_asset(sscrt)
-    silk_mint.register_asset(shade)
+    silk_mint.register_asset(sscrt, "1000")
+    silk_mint.register_asset(shade, "1000")
     print(mint.get_asset(shade))
 
     print("Configuring Shade-Mint Contract")
     shade_mint = MicroMint(gen_label(8), native_asset=shade, oracle=oracle)
-    shade_mint.register_asset(sscrt)
-    shade_mint.register_asset(silk)
+    shade_mint.register_asset(sscrt, "1000")
+    shade_mint.register_asset(silk, "1000")
 
     print("Setting minters")
     silk.set_minters([mint.address, silk_mint.address])
