@@ -4,7 +4,7 @@ pub mod handle;
 pub mod query;
 
 #[cfg(test)]
-pub mod test;
+mod test;
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {

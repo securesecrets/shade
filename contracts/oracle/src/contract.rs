@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, 
     Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, Storage, Uint128,
+    Querier, StdResult, StdError, Storage, Uint128,
 };
 use shade_protocol::{
     oracle::{
@@ -12,8 +12,8 @@ use shade_protocol::{
 };
 use crate::{
     state::{
-        config_w,
-        hard_coded_w,
+        config_w, config_r,
+        hard_coded_r, hard_coded_w,
     },
     query, handle,
 };
@@ -29,15 +29,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             Some(admin) => { admin }
         },
         band: msg.band,
+        sscrt: msg.sscrt,
     };
 
     config_w(&mut deps.storage).save(&state)?;
-    hard_coded_w(&mut deps.storage).save("SHD".as_bytes(), &ReferenceData {
-                //11.47 * 10^18
-                rate: Uint128(1147 * 10u128.pow(16)),
-                last_updated_base: 0,
-                last_updated_quote: 0
-            })?;
+
+    /* Hard-coded SILK = $1.00
+     */
     hard_coded_w(&mut deps.storage).save("SILK".as_bytes(), &ReferenceData {
                 //1$
                 rate: Uint128(1 * 10u128.pow(18)),
@@ -55,11 +53,15 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
+
     match msg {
         HandleMsg::UpdateConfig {
             owner,
             band,
         } => handle::try_update_config(deps, env, owner, band),
+        HandleMsg::RegisterSswapPair {
+            pair,
+        } => handle::register_sswap_pair(deps, env, pair),
     }
 }
 
@@ -70,6 +72,5 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::GetPrice { symbol } => to_binary(&query::get_price(deps, symbol)?),
-        //QueryMsg::GetPrices { symbols } => to_binary(&query::get_prices(deps, symbols)?),
     }
 }
