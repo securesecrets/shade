@@ -15,7 +15,7 @@ use shade_protocol::{
         SupportedAsset,
     },
     mint::SnipMsgHook,
-    snip20::{Snip20Asset, token_config_query},
+    snip20::{Snip20Asset, token_config_query, TokenConfig},
     oracle::{
         QueryMsg::GetPrice,
     },
@@ -97,14 +97,14 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     //TODO: if token_config is None, or cant burn, need to trash
 
     // Try to burn
-    match burn_asset.token_config {
+    match burn_asset.asset.token_config {
         Some(ref conf) => {
             if conf.burn_enabled {
                 messages.push(burn_msg(burn_amount,
                                        None,
                                        256,
-                                       burn_asset.contract.code_hash.clone(),
-                                       burn_asset.contract.address.clone())?);
+                                       burn_asset.asset.contract.code_hash.clone(),
+                                       burn_asset.asset.contract.address.clone())?);
             }
         }
         None => {
@@ -216,14 +216,17 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                                       contract.code_hash.clone(),
                                       contract.address.clone())?;
 
-    let asset_config =  match token_config_query(&deps.querier, contract.clone())?;
+    let asset_config: Option<TokenConfig> = match token_config_query(&deps.querier, contract.clone()) {
+        Ok(c) => { Option::from(c) }
+        Err(_) => { None }
+    };
 
     debug_print!("Registering {}", asset_info.symbol);
     assets.save(&contract_str.as_bytes(), &SupportedAsset {
         asset: Snip20Asset {
             contract: contract.clone(),
             token_info: asset_info,
-            token_config: Option::from(asset_config),
+            token_config: asset_config,
         },
         // If commission is not set then default to 0
         commission: match commission {
