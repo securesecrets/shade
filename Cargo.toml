@@ -1,11 +1,13 @@
 [workspace]
 members = [
   "packages/shade_protocol",
+  "packages/network_tester",
+  "packages/secretcli",
   "contracts/initializer",
   "contracts/mint",
   "contracts/micro_mint",
   "contracts/treasury",
   "contracts/oracle",
-  "contracts/snip20",
+  "contracts/snip20_reference_impl",
   "contracts/mock_band",
 ]
