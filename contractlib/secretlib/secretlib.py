@@ -25,6 +25,7 @@ def run_command(command):
         return err
     return output
 
+
 def store_contract(contract, user='a', backend='test'):
     """
     Store contract and return its ID
@@ -42,7 +43,7 @@ def store_contract(contract, user='a', backend='test'):
         command += ['--keyring-backend', backend]
 
     output = run_command_query_hash(command)
-    try: 
+    try:
         for attribute in output['logs'][0]['events'][0]['attributes']:
             if attribute["key"] == "code_id":
                 return attribute['value']
@@ -63,7 +64,7 @@ def instantiate_contract(contract, msg, label, user='a', backend='test'):
     """
 
     command = ['secretcli', 'tx', 'compute', 'instantiate', contract, msg, '--from',
-               user, '--label', label, '-y']
+               user, '--label', label, '-y', '--gas', '500000']
 
     if backend is not None:
         command += ['--keyring-backend', backend]
@@ -73,6 +74,12 @@ def instantiate_contract(contract, msg, label, user='a', backend='test'):
 
 def list_code():
     command = ['secretcli', 'query', 'compute', 'list-code']
+
+    return json.loads(run_command(command))
+
+
+def list_contract_by_code(code):
+    command = ['secretcli', 'query', 'compute', 'list-contract-by-code', code]
 
     return json.loads(run_command(command))
 
@@ -99,6 +106,7 @@ def query_hash(hash):
 def compute_hash(hash):
     return run_command(['secretcli', 'q', 'compute', 'tx', hash])
 
+
 def query_contract(contract, msg):
     command = ['secretcli', 'query', 'compute', 'query', contract, msg]
     out = run_command(command)
@@ -108,27 +116,28 @@ def query_contract(contract, msg):
         print(out)
         raise e
 
+
 def run_command_compute_hash(command):
     out = run_command(command)
 
     try:
         txhash = json.loads(out)["txhash"]
     except Exception as e:
-        #print(out)
+        # print(out)
         raise e
 
     for _ in range(MAX_TRIES):
         try:
             out = compute_hash(txhash)
             out = json.loads(out)
-            #print(out)
+            # print(out)
             # querying hash once the hash is computed so we can check gas usage
             tx_data = json.loads(query_hash(txhash))
-            #print(json.dumps(tx_data))
+            # print(json.dumps(tx_data))
             print('gas:', tx_data['gas_used'], '\t/', tx_data['gas_wanted'])
             GAS_METRICS.append({
-                'want': tx_data['gas_wanted'], 
-                'used': tx_data['gas_used'], 
+                'want': tx_data['gas_wanted'],
+                'used': tx_data['gas_used'],
                 'cmd': ' '.join(command)
             })
             return out
@@ -136,6 +145,7 @@ def run_command_compute_hash(command):
             time.sleep(1)
     print(out)
     print(' '.join(command), f'exceeded max tries ({MAX_TRIES})')
+
 
 def run_command_query_hash(command):
     out = run_command(command)
@@ -152,8 +162,8 @@ def run_command_query_hash(command):
             out = json.loads(out)
             print('gas:', out['gas_used'], '\t/', out['gas_wanted'])
             GAS_METRICS.append({
-                'want': out['gas_wanted'], 
-                'used': out['gas_used'], 
+                'want': out['gas_wanted'],
+                'used': out['gas_used'],
                 'cmd': ' '.join(command)
             })
             return out
