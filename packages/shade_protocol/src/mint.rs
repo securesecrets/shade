@@ -4,6 +4,7 @@ use cosmwasm_std::{HumanAddr, Uint128, Binary};
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
+use secretcli::secretcli::TestQuery;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MintConfig {
@@ -98,6 +99,10 @@ pub enum QueryMsg {
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
+}
+
+impl TestQuery<QueryAnswer> for QueryMsg {
+
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
