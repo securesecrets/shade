@@ -4,7 +4,7 @@ use cosmwasm_std::{HumanAddr, Uint128, Binary};
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
-use secretcli::secretcli::TestQuery;
+use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MintConfig {
@@ -32,6 +32,8 @@ pub struct InitMsg {
 impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
+
+impl TestInit for InitMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -63,6 +65,8 @@ pub enum HandleMsg {
 impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
+
+impl TestHandle<HandleAnswer> for HandleMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -101,9 +105,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-impl TestQuery<QueryAnswer> for QueryMsg {
-
-}
+impl TestQuery<QueryAnswer> for QueryMsg {}
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
