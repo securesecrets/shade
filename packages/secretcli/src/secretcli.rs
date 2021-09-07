@@ -1,6 +1,6 @@
 use std::process::{Command};
 use serde_json::{Value, Result};
-use crate::cli_types::{TxResponse, NetContract};
+use crate::cli_types::{TxResponse, NetContract, TxCompute};
 
 fn vec_str_to_vec_string (str_in: Vec<&str>) -> Vec<String> {
     let mut str_out: Vec<String> = vec![];
@@ -75,10 +75,11 @@ pub fn query_hash(hash: String) -> Result<Value> {
 ///
 /// Computes the hash information
 ///
-pub fn compute_hash(hash: String) -> Result<Value> {
+pub fn compute_hash(hash: String) -> Result<TxCompute> {
     let command = vec!["q", "compute", "tx", &hash];
 
-    secretcli_run(vec_str_to_vec_string(command))
+    serde_json::from_value(secretcli_run(
+        vec_str_to_vec_string(command))?)
 }
 
 ///
@@ -112,7 +113,7 @@ pub fn instantiate_contract<Init: serde::Serialize>
 (contract: NetContract, msg: Init, label: String, sender: String,
  gas: Option<String>, backend: Option<String>) -> Result<TxResponse> {
     let mut command = vec_str_to_vec_string(
-        vec!["secretcli", "tx", "compute", "instantiate", &contract.id,
+        vec!["tx", "compute", "instantiate", &contract.id,
              &serde_json::to_string(&msg)?, "--from", &sender, "--label", &label, "--gas"]);
 
     command.push(match gas {None => "10000000".to_string(), Some(gas) => gas});
@@ -165,7 +166,7 @@ pub fn execute_contract<Handle: serde::Serialize>
 (contract: NetContract, msg: Handle, sender: String, gas: Option<String>,
  backend: Option<String>, amount: Option<String>) -> Result<TxResponse> {
     let mut command = vec_str_to_vec_string(
-        vec!["secretcli", "tx", "compute", "execute", &contract.address,
+        vec!["tx", "compute", "execute", &contract.address,
              &serde_json::to_string(&msg)?, "--from", &sender, "--gas"]);
 
     command.push(match gas {None => "800000".to_string(), Some(gas) => gas});
@@ -196,13 +197,13 @@ pub fn execute_contract<Handle: serde::Serialize>
 /// * 'backend' - Keyring backend defaults to none
 /// * 'amount' - Included L1 tokens to send, defaults to none
 ///
-pub trait TestHandle<Response: serde::de::DeserializeOwned>: serde::Serialize {
+pub trait TestHandle: serde::Serialize {
     fn t_handle(&self, contract: NetContract, sender: String, gas: Option<String>,
-                backend: Option<String>, amount: Option<String>) -> Result<Response> {
+                backend: Option<String>, amount: Option<String>) -> Result<TxCompute> {
         let tx = execute_contract(contract, self, sender, gas,
                                   backend, amount)?;
 
-        let response: Result<Response> = serde_json::from_value(compute_hash(tx.txhash)?);
+        let response: Result<TxCompute> = compute_hash(tx.txhash);
         response
     }
 }

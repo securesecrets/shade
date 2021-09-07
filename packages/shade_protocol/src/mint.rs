@@ -66,7 +66,7 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-impl TestHandle<HandleAnswer> for HandleMsg {}
+impl TestHandle for HandleMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
