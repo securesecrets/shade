@@ -8,6 +8,6 @@ members = [
   "contracts/micro_mint",
   "contracts/treasury",
   "contracts/oracle",
-  "contracts/snip20_reference_impl",
+  "contracts/snip20",
   "contracts/mock_band",
 ]

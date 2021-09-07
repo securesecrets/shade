@@ -2,19 +2,24 @@ contracts_dir=contracts
 compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
-CONTRACTS = mint snip20 treasury micro_mint oracle mock_band initializer
+define prepare_wasm =
+(cd $(contracts_dir)/$(1); cargo unit-test)
+(cd ${contracts_dir}; cargo build --release --target wasm32-unknown-unknown --locked)
+wasm-opt -Oz ./target/wasm32-unknown-unknown/release/$(2).wasm -o ./$(1).wasm
+echo $(md5sum $(1).wasm | cut -f 1 -d " ") >> ${checksum_dir}/$(1).txt
+cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
+rm ./$(1).wasm
+endef
+
+CONTRACTS = mint treasury micro_mint oracle mock_band initializer
 
 COMPILED = ${CONTRACTS:=.wasm.gz}
 
-all: setup $(CONTRACTS)
+all: setup $(CONTRACTS); $(call prepare_wasm,snip20,snip20_reference_impl)
 
 $(CONTRACTS):
-	(cd $(contracts_dir)/$@; cargo unit-test)
-	(cd ${contracts_dir}; cargo build --release --target wasm32-unknown-unknown --locked)
-	wasm-opt -Oz ./target/wasm32-unknown-unknown/release/$@.wasm -o ./$@.wasm
-	echo $(md5sum $@.wasm | cut -f 1 -d " ") >> ${checksum_dir}/$@.txt
-	cat ./$@.wasm | gzip -n -9 > ${compiled_dir}/$@.wasm.gz
-	rm ./$@.wasm
+	$(call prepare_wasm,$@,$@)
+
 
 setup: $(compiled_dir) $(checksum_dir)
 
