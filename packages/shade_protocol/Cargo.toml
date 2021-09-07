@@ -1,11 +1,15 @@
 [package]
 name = "shade-protocol"
 version = "0.1.0"
-authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
+authors = [
+  "Guy Garcia <guysebastiangarcia@gmail.com>",
+  "Jackson Swenson <jacksonswenson22@gmail.com>"
+]
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
 
 [profile.release]
 opt-level = 3
@@ -33,3 +37,4 @@ secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit", branch =
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
+

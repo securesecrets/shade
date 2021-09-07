@@ -1,31 +1,43 @@
-use cosmwasm_std::{Storage};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, PrefixedStorage, ReadonlyPrefixedStorage};
-use shade_protocol::oracle::OracleConfig;
+use cosmwasm_std::{
+    Storage
+};
+use cosmwasm_storage::{
+    singleton, singleton_read, 
+    Singleton, ReadonlySingleton,
+    bucket, bucket_read,
+    Bucket, ReadonlyBucket
+};
+use shade_protocol::{
+    oracle::{ OracleConfig, SswapPair },
+    band::ReferenceData,
+    asset::Contract,
+};
 
 pub static CONFIG_KEY: &[u8] = b"config";
-pub static PRICE_KEY: &[u8] = b"price";
+pub static HARD_CODED: &[u8] = b"hard_coded";
+pub static SSWAP_PAIRS: &[u8] = b"sswap_pairs";
 
-/*
-pub struct ReferenceData {
-    pub rate: uint256,
-    pub last_updated_base: uint256,
-    pub last_updated_quote: uint256,
-}
-*/
 
-pub fn config<S: Storage>(storage: &mut S) -> Singleton<S, OracleConfig> {
-    singleton(storage, CONFIG_KEY)
-}
-
-pub fn config_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, OracleConfig> {
+pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, OracleConfig> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-// price
-pub fn price<S: Storage>(storage: &mut S) -> PrefixedStorage<S> {
-    PrefixedStorage::new(PRICE_KEY, storage)
+pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, OracleConfig> {
+    singleton(storage, CONFIG_KEY)
 }
 
-pub fn price_read<S: Storage>(storage: &S) -> ReadonlyPrefixedStorage<S> {
-    ReadonlyPrefixedStorage::new(PRICE_KEY, storage)
+pub fn hard_coded_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, ReferenceData> {
+    bucket_read(HARD_CODED, storage)
+}
+
+pub fn hard_coded_w<S: Storage>(storage: &mut S) -> Bucket<S, ReferenceData> {
+    bucket(HARD_CODED, storage)
+}
+
+pub fn sswap_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, SswapPair> {
+    bucket_read(SSWAP_PAIRS, storage)
+}
+
+pub fn sswap_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, SswapPair> {
+    bucket(SSWAP_PAIRS, storage)
 }

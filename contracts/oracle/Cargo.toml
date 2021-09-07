@@ -1,7 +1,10 @@
 [package]
 name = "oracle"
 version = "0.1.0"
-authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
+authors = [
+  "Guy Garcia <guysebastiangarcia@gmail.com>",
+  "Jackson Swenson <jacksonswenson22@gmail.com>",
+]
 edition = "2018"
 
 exclude = [

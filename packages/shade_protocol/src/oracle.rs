@@ -1,41 +1,61 @@
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{HumanAddr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
 use crate::{
-    msg_traits::{Init, Handle, Query},
     asset::Contract,
     generic_response::ResponseStatus,
+    snip20::Snip20Asset,
 };
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct SswapPair {
+    // secretswap_pair contract
+    pub pair: Contract,
+    // non-sscrt asset, other asset on pair should be sscrt
+    pub asset: Snip20Asset,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OracleConfig {
     pub owner: HumanAddr,
     pub band: Contract,
+    pub sscrt: Contract,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub band: Contract,
+    pub sscrt: Contract,
 }
 
-impl Init<'_> for InitMsg {}
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
         owner: Option<HumanAddr>,
-        band: Contract,
+        band: Option<Contract>,
+    },
+    // Register Secret Swap Pair (should be */SCRT)
+    RegisterSswapPair {
+        pair: Contract,
     },
 }
 
-impl Handle<'_> for HandleMsg{}
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus},
+    RegisterSswapPair { status: ResponseStatus},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -43,19 +63,10 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     GetPrice { symbol: String },
     GetConfig {},
-    GetReferenceData {
-        base_symbol: String,
-        quote_symbol: String,
-    },
 }
 
-impl Query for QueryMsg {}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
-pub struct ReferenceData {
-    pub rate: Uint128,
-    pub last_updated_base: u64,
-    pub last_updated_quote: u64,
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -63,3 +74,5 @@ pub struct ReferenceData {
 pub enum QueryAnswer {
     Config { config: OracleConfig },
 }
+
+

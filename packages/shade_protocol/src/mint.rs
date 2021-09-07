@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{HumanAddr, Uint128, Binary};
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
-use crate::msg_traits::{Init, Handle, Query};
+use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MintConfig {
@@ -28,7 +28,9 @@ pub struct InitMsg {
     pub initial_assets: Option<Vec<SupportedAsset>>,
 }
 
-impl Init<'_> for InitMsg {}
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -57,13 +59,21 @@ pub enum HandleMsg {
     },
 }
 
-impl Handle<'_> for HandleMsg{}
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct SnipMsgHook {
     pub minimum_expected_amount: Uint128,
     pub to_mint: HumanAddr,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct MintMsgHook {
+    pub minimum_expected_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -86,7 +96,9 @@ pub enum QueryMsg {
     GetConfig {},
 }
 
-impl Query for QueryMsg {}
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]

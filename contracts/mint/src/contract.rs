@@ -2,15 +2,15 @@ use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleRespo
 use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read};
 use secret_toolkit::{
     snip20::{mint_msg, burn_msg, register_receive_msg, token_info_query, minters_query},
+    utils::{InitCallback, Query}
 };
 use shade_protocol::{
     mint::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, MintConfig, SupportedAsset, SnipMsgHook},
     oracle::{
-        ReferenceData,
         QueryMsg::GetPrice,
     },
+    band::ReferenceData,
     asset::{Contract},
-    msg_traits::{Init, Query},
     generic_response::ResponseStatus,
 };
 use std::convert::TryFrom;
@@ -116,7 +116,7 @@ pub fn try_migrate<S: Storage, A: Api, Q: Querier>(
     };
 
     Ok(HandleResponse {
-        messages: vec![init_msg.to_cosmos_msg(1, code_id, code_hash, label)?],
+        messages: vec![init_msg.to_cosmos_msg(label, code_id, code_hash, None)?],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::Migrate {
             status: ResponseStatus::Success } )? )
@@ -389,7 +389,7 @@ fn call_oracle<S: Storage, A: Api, Q: Querier>(
     let block_size = 1; //update this later
     let config = config_read(&deps.storage).load()?;
     let query_msg = GetPrice { symbol };
-    let answer: ReferenceData = query_msg.query(&deps.querier, block_size,
+    let answer: ReferenceData = query_msg.query(&deps.querier,
                                  config.oracle.code_hash,
                                  config.oracle.address)?;
     Ok(answer.rate)
