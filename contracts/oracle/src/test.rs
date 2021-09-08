@@ -31,7 +31,7 @@ mod tests {
             // price * 10^18
             Uint128(1_000_000_000_000_000_000)
         ),
-        normalize_1: (
+        normalize_2: (
             // amount of TKN received for 1 sSCRT
             Uint128(1_000_000),
             // TKN 6 decimals
