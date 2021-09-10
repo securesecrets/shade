@@ -1,7 +1,17 @@
 use cosmwasm_std::{Uint128};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use secret_toolkit::utils::Query;
+use secret_toolkit::utils::{Query, InitCallback};
+use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct InitMsg { }
+
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+impl TestInit for InitMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
