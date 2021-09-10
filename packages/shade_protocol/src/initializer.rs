@@ -44,11 +44,10 @@ pub enum QueryMsg {
     Contracts {},
 }
 
-// TODO: Implement enum for these answers
-//impl TestQuery<QueryAnswer> for QueryMsg {}
+impl TestQuery<QueryAnswer> for QueryMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct ContractsAnswer {
-    pub contracts: Vec<Snip20InitHistory>,
+pub enum QueryAnswer {
+    ContractsAnswer { contracts: Vec<Snip20InitHistory> }
 }
