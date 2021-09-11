@@ -113,13 +113,30 @@ pub fn list_contracts_by_code(code: String) -> Result<Vec<ListContractCode>> {
 }
 
 pub fn account_address(acc: &str) -> Result<String> {
-    let command = vec!["keys", "show", "-a", acc];
+    let command = vec_str_to_vec_string(vec!["keys", "show", "-a", acc]);
 
-    let thing = secretcli_run(vec_str_to_vec_string(command))?;
+    let retry = 20;
+    let mut cli = Command::new("secretcli".to_string());
+    if command.len() > 0 {
+        cli.args(command.clone());
+    }
 
-    println!("{}", thing);
+    let mut result = cli.output().expect("Unexpected error");
 
-    Ok(thing.to_string())
+    // We wait cause sometimes the query/action takes a while
+    for _ in 0..retry {
+        if result.stderr.len() > 0 {
+            thread::sleep(time::Duration::from_secs(1));
+        }
+        else {
+            break
+        }
+        result = cli.output().expect("Unexpected error");
+    }
+
+    let out = result.stdout;
+
+    Ok(String::from_utf8_lossy(&out).parse().unwrap())
 }
 
 ///
