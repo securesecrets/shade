@@ -68,6 +68,8 @@ pub mod tests {
             oracle,
             peg,
             treasury,
+            epoch_frequency: None,
+            epoch_mint_limit: None
         };
         let env = mock_env(admin, &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();
