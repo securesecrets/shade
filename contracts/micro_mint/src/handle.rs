@@ -24,14 +24,7 @@ use shade_protocol::{
     generic_response::ResponseStatus,
 };
 
-use crate::state::{
-    config_w, config_r,
-    native_asset_r,
-    asset_peg_r,
-    assets_w, assets_r,
-    asset_list_w,
-    total_burned_w,
-};
+use crate::state::{config_w, config_r, native_asset_r, asset_peg_r, assets_w, assets_r, asset_list_w, total_burned_w, limit_w, limit_r};
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -124,11 +117,34 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let mint_asset = native_asset_r(&deps.storage).load()?;
 
     // This will calculate the total mint value
-    // Amount minted does not consider commission
     let amount_to_mint: Uint128 = mint_amount(&deps, amount, &burn_asset, &mint_asset)?;
 
+    // Check against slippage amount
     if amount_to_mint < msgs.minimum_expected_amount {
         return Err(StdError::generic_err("Mint amount is less than the minimum expected."))
+    }
+
+    // Check against mint cap
+    let mut limit_storage = limit_w(&mut deps.storage);
+    let mut limit = limit_storage.load()?;
+
+    // When frequency is 0 it means that mint limits are disabled
+    if limit.frequency != 0 {
+        // Reset total and next epoch
+        if limit.next_epoch <= env.block.time {
+            limit.next_epoch = env.block.time + limit.frequency;
+            limit.total_minted = Uint128(0);
+        }
+
+        let new_total = limit.total_minted + amount_to_mint;
+
+        if new_total > limit.mint_capacity {
+            return Err(StdError::generic_err("Amount to be minted exceeds mint capacity"))
+        }
+
+        limit.mint_capacity = new_total;
+
+        limit_storage.save(&limit);
     }
 
     debug_print!("Minting: {} {}", amount_to_mint, &mint_asset.token_info.symbol);
@@ -187,6 +203,51 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::UpdateConfig {
+            status: ResponseStatus::Success } )? )
+    })
+}
+
+pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    epoch_frequency: Option<Uint128>,
+    epoch_limit: Option<Uint128>,
+) -> StdResult<HandleResponse> {
+    let config = config_r(&deps.storage).load()?;
+    // Check if admin
+    if env.message.sender != config.owner {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+    // Check if contract enabled
+    if !config.activated {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+
+    // Reset limit and set new limits
+    let mut limit = limit_w(&mut deps.storage);
+    limit.update(|mut state| {
+        if let Some(frequency) = epoch_frequency {
+            state.frequency = frequency.u128() as u64;
+        }
+        if let Some(limit) = epoch_limit {
+            state.mint_capacity = limit
+        }
+        // Reset total minted
+        state.total_minted = Uint128(0);
+
+        // Reset next epoch
+        if state.frequency == 0 {
+            state.next_epoch = 0;
+        } else {
+            state.next_epoch = env.block.time + state.frequency;
+        }
+        Ok(state)
+    })?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::UpdateMintLimit {
             status: ResponseStatus::Success } )? )
     })
 }

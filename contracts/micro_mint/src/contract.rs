@@ -1,8 +1,4 @@
-use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary,
-    Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, Storage, 
-};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128};
 use secret_toolkit::snip20::token_info_query;
 
 use shade_protocol::{
@@ -25,6 +21,8 @@ use crate::{
     },
     handle, query,
 };
+use shade_protocol::micro_mint::MintLimit;
+use crate::state::limit_w;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -41,6 +39,24 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         treasury: msg.treasury,
         activated: true,
     };
+
+    // Set the minting limit
+    let limit = MintLimit {
+        frequency: match msg.epoch_frequency {
+            None => 0,
+            Some(frequency) => frequency.u128() as u64,
+        },
+        mint_capacity: match msg.epoch_mint_limit {
+            None => Uint128(0),
+            Some(capacity) => capacity
+        },
+        total_minted: Uint128(0),
+        next_epoch: match msg.epoch_frequency {
+            None => 0,
+            Some(frequency) => env.block.time + frequency.u128() as u64,
+        },
+    };
+    limit_w(&mut deps.storage).save(&limit)?;
 
     config_w(&mut deps.storage).save(&state)?;
     let token_info = token_info_query(
@@ -86,6 +102,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             oracle,
             treasury,
         } => handle::try_update_config(deps, env, owner, oracle, treasury),
+        HandleMsg::UpdateMintLimit {
+            epoch_frequency,
+            epoch_limit,
+        } => handle::try_update_limit(deps, env, epoch_frequency, epoch_limit),
         HandleMsg::RegisterAsset {
             contract,
             commission,
@@ -108,5 +128,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetSupportedAssets {} => to_binary(&query::supported_assets(deps)?),
         QueryMsg::GetAsset { contract } => to_binary(&query::asset(deps, contract)?),
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
+        QueryMsg::GetMintLimit {} => to_binary(&query::limit(deps)?),
     }
 }
