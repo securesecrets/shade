@@ -71,6 +71,7 @@ pub struct ListContractCode {
     pub address: String
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct NetContract {
     pub label: String,
     pub id: String,
