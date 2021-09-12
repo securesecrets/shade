@@ -1,17 +1,19 @@
+
 # Mint Contract
 * [Introduction](#Introduction)
 * [Sections](#Sections)
     * [Init](#Init)
     * [Admin](#Admin)
         * Messages
-            * [Migrate](#Migrate)
             * [UpdateConfig](#UpdateConfig)
+            * [UpdateMintLimit](#UpdateMintLimit)
             * [RegisterAsset](#RegisterAsset)
         * Queries
             * [GetNativeAsset](#GetNativeAsset)
             * [GetConfig](#GetConfig)
-            * [SupportedAssets](#SupportedAssets)
-            * [GetAsset](#getAsset)
+            * [MintLimit](#GetMintLimit)
+            * [SupportedAssets](#GetSupportedAssets)
+            * [GetAsset](#GetAsset)
     * [User](#User)
         * Messages
             * [Receive](#Receive)
@@ -22,34 +24,18 @@ Contract responsible to mint a paired snip20 asset
 
 ## Init
 ##### Request
-|Name         |Type      |Description                                                                                                        | optional |
-|-------------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|admin        | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|native_asset | Contract |  Asset to mint                                                                                                    |  no      |
-|peg          | String   |  Symbol to peg to when querying oracle (defaults to native_asset symbol)                                          |  yes     |
-|treasury     | Contract |  Treasury contract                                                                                                |  yes     |
-|oracle       | Contract |  Oracle contract                                                                                                  |  no      |
-
+|Name             |Type      |Description                                                                                                        | optional |
+|-----------------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
+|admin            | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
+|native_asset     | Contract |  Asset to mint                                                                                                    |  no      |
+|peg              | String   |  Symbol to peg to when querying oracle (defaults to native_asset symbol)                                          |  yes     |
+|treasury         | Contract |  Treasury contract                                                                                                |  yes     |
+|oracle           | Contract |  Oracle contract                                                                                                  |  no      |
+|epoch_frequency  | String   |  The frequency in which the mint limit resets, if 0 then no limit is enforced                                     |  yes     |
+|epoch_mint_limit | String   |  The limit of uTokens to mint per epoch                                                                           |  yes     |
 ## Admin
 
 ### Messages
-### Migrate
-Migrates all the contracts state and data into a new contract
-#### Request
-| Name     | Type   | Description         | optional |
-|----------| -------|---------------------|----------|
-|label     | String | Contract label name | no       |
-|code_id   | u64    | Contract ID         | no       |
-|code_hash | String | Contract code hash  | no       |
-##### Response
-```json
-{
-  "update_config": {
-    "status": "success"
-  }
-}
-```
-
 #### UpdateConfig
 Updates the given values
 ##### Request
@@ -62,6 +48,22 @@ Updates the given values
 ```json
 {
   "update_config": {
+    "status": "success"
+  }
+}
+```
+
+#### UpdateMintLimit
+Updates the given values
+##### Request
+|Name      |Type      |Description                                                                            | optional |
+|----------|----------|---------------------------------------------------------------------------------------|----------|
+|epoch_frequency  | String   |  The frequency in which the mint limit resets, if 0 then no limit is enforced  |  yes     |
+|epoch_mint_limit | String   |  The limit of uTokens to mint per epoch                                        |  yes     |
+##### Response
+```json
+{
+  "update_mint_limit": {
     "status": "success"
   }
 }
@@ -120,7 +122,23 @@ Gets the contract's configuration variables
 }
 ```
 
-#### SupportedAssets
+#### GetMintLimit
+Gets the contract's configuration variables
+##### Response
+```json
+{
+  "limit": {
+    "mint_limit": {
+      "frequency": "Frequency per epoch reset",
+      "mint_capacity": "Mint capacity per epoch",
+      "total_minted": "Total minted in current epoch",
+      "next_epoch": "Timestamp for the next epoch"
+    }
+  }
+}
+```
+
+#### GetSupportedAssets
 Get all the contract's supported assets.
 ##### Response
 ```json
