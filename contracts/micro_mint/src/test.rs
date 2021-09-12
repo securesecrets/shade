@@ -68,6 +68,7 @@ pub mod tests {
             oracle,
             peg,
             treasury,
+            start_epoch: None,
             epoch_frequency: None,
             epoch_mint_limit: None
         };

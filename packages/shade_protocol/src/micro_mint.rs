@@ -46,6 +46,7 @@ pub struct InitMsg {
     // Both treasury & commission must be set to function
     pub treasury: Option<Contract>,
     // If left blank no limit will be enforced
+    pub start_epoch: Option<Uint128>,
     pub epoch_frequency: Option<Uint128>,
     pub epoch_mint_limit: Option<Uint128>,
 }
@@ -65,6 +66,7 @@ pub enum HandleMsg {
         treasury: Option<Contract>,
     },
     UpdateMintLimit {
+        start_epoch: Option<Uint128>,
         epoch_frequency: Option<Uint128>,
         epoch_limit: Option<Uint128>,
     },

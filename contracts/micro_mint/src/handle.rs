@@ -210,6 +210,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
+    start_epoch: Option<Uint128>,
     epoch_frequency: Option<Uint128>,
     epoch_limit: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
@@ -238,7 +239,11 @@ pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
         // Reset next epoch
         if state.frequency == 0 {
             state.next_epoch = 0;
-        } else {
+        }
+        else if let Some(next_epoch) = start_epoch {
+            state.next_epoch = next_epoch.u128() as u64;
+        }
+        else {
             state.next_epoch = env.block.time + state.frequency;
         }
         Ok(state)
