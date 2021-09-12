@@ -75,6 +75,9 @@ pub enum HandleMsg {
         // Commission * 100 e.g. 5 == .05 == 5%
         commission: Option<Uint128>,
     },
+    RemoveAsset {
+        address: HumanAddr,
+    },
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
@@ -97,6 +100,7 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     UpdateMintLimit { status: ResponseStatus },
     RegisterAsset { status: ResponseStatus },
+    RemoveAsset { status: ResponseStatus },
     Burn { status: ResponseStatus, mint_amount: Uint128 }
 }
 

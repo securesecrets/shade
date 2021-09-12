@@ -116,6 +116,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             contract,
             commission,
         } => handle::try_register_asset(deps, &env, &contract, commission),
+        HandleMsg::RemoveAsset {
+            address
+        } => handle::try_remove_asset(deps, &env, address),
         HandleMsg::Receive {
             sender,
             from,

@@ -324,6 +324,35 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    address: HumanAddr
+) -> StdResult<HandleResponse> {
+
+    let address_str = address.to_string();
+
+    // Remove asset from the array
+    asset_list_w(&mut deps.storage).update(|mut state| {
+        state.retain(|value| *value != address_str);
+        Ok(state)
+    })?;
+
+    // Remove supported asset
+    assets_w(&mut deps.storage).remove(&address_str.as_bytes());
+
+    // We wont remove the total burned since we want to keep track of all the burned assets
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary(
+            &HandleAnswer::RemoveAsset {
+                status: ResponseStatus::Success }
+        )?
+        )
+    })
+}
 
 pub fn register_receive (
     env: &Env,
