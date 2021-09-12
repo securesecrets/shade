@@ -19,11 +19,21 @@ pub struct Config {
 }
 
 
+/// Used to store the assets allowed to be burned
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct SupportedAsset {
     pub asset: Snip20Asset,
     // Commission percentage * 100 e.g. 5 == .05 == 5%
     pub commission: Uint128,
+}
+
+// Used to keep track of the cap
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct MintLimit {
+    pub frequency: u64,
+    pub mint_capacity: Uint128,
+    pub total_minted: Uint128,
+    pub next_epoch: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -35,6 +45,9 @@ pub struct InitMsg {
     pub peg: Option<String>,
     // Both treasury & commission must be set to function
     pub treasury: Option<Contract>,
+    // If left blank no limit will be enforced
+    pub epoch_frequency: Option<Uint128>,
+    pub epoch_mint_limit: Option<Uint128>,
 }
 
 impl InitCallback for InitMsg {
@@ -50,6 +63,10 @@ pub enum HandleMsg {
         owner: Option<HumanAddr>,
         oracle: Option<Contract>,
         treasury: Option<Contract>,
+    },
+    UpdateMintLimit {
+        epoch_frequency: Option<Uint128>,
+        epoch_limit: Option<Uint128>,
     },
     RegisterAsset {
         contract: Contract,
@@ -75,8 +92,9 @@ impl TestHandle for HandleMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     Init { status: ResponseStatus, address: HumanAddr },
-    UpdateConfig { status: ResponseStatus},
-    RegisterAsset { status: ResponseStatus},
+    UpdateConfig { status: ResponseStatus },
+    UpdateMintLimit { status: ResponseStatus },
+    RegisterAsset { status: ResponseStatus },
     Burn { status: ResponseStatus, mint_amount: Uint128 }
 }
 
@@ -89,6 +107,7 @@ pub enum QueryMsg {
         contract: String,
     },
     GetConfig {},
+    GetMintLimit {},
 }
 
 impl Query for QueryMsg {
@@ -104,5 +123,6 @@ pub enum QueryAnswer {
     SupportedAssets { assets: Vec<String>, },
     Asset { asset: SupportedAsset, burned: Uint128},
     Config { config: Config },
+    MintLimit { limit: MintLimit },
 }
 

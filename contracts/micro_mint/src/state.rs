@@ -1,11 +1,12 @@
 use cosmwasm_std::{Storage, Uint128};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
 use shade_protocol::{
-    micro_mint::{Config, SupportedAsset},
+    micro_mint::{Config, SupportedAsset, MintLimit},
     snip20::Snip20Asset,
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";
+pub static MINT_LIMIT: &[u8] = b"mint_limit";
 pub static NATIVE_ASSET: &[u8] = b"native_asset";
 pub static ASSET_PEG: &[u8] = b"asset_peg";
 pub static ASSET_KEY: &[u8] = b"assets";
@@ -18,6 +19,14 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
 
 pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
+}
+
+pub fn limit_w<S: Storage>(storage: &mut S) -> Singleton<S, MintLimit> {
+    singleton(storage, MINT_LIMIT)
+}
+
+pub fn limit_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, MintLimit> {
+    singleton_read(storage, MINT_LIMIT)
 }
 
 pub fn native_asset_w<S: Storage>(storage: &mut S) -> Singleton<S, Snip20Asset> {

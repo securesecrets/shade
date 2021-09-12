@@ -1,10 +1,20 @@
+use colored::*;
 use serde_json::Result;
 use rand::{distributions::Alphanumeric, Rng};
-use secretcli::{cli_types::NetContract, secretcli::{secretcli_run, account_address}};
+use secretcli::{cli_types::NetContract,
+                secretcli::{account_address, TestInit, TestHandle,
+                            TestQuery, list_contracts_by_code}};
 use shade_protocol::{initializer::{Snip20ContractInfo}, micro_mint, snip20::{InitConfig, InitialBalance}, oracle, band, snip20, initializer, mint};
-use secretcli::secretcli::{TestInit, TestHandle, TestQuery, list_contracts_by_code};
 use cosmwasm_std::{HumanAddr, Uint128, to_binary};
 use shade_protocol::asset::Contract;
+use std::fmt::Display;
+use serde::Serialize;
+use shade_protocol::micro_mint::MintLimit;
+
+const STORE_GAS: &str = "10000000";
+const GAS: &str = "800000";
+const VIEW_KEY: &str = "password";
+const ACCOUNT_KEY: &str = "a";
 
 fn generate_label(size: usize) -> String {
     rand::thread_rng()
@@ -15,47 +25,12 @@ fn generate_label(size: usize) -> String {
 }
 
 fn main() -> Result<()> {
-    let store_gas = "10000000";
-    let gas = "800000";
-    let view_key = "password";
+    let account = account_address(ACCOUNT_KEY)?;
 
-
-    // let demo = secretcli_run(vec!["query".to_string(),
-    //                               "compute".to_string(), "list-code".to_string()])?;
-    // println!("{}", demo[1]);
-
-    // let txhash = store_contract("../../compiled/oracle.wasm.gz",
-    //                             Option::from("admin"), None, None)?;
-    //
-    // println!("{}", txhash.txhash);
-
-    // let mint = NetContract {
-    //     label: "mint-GRypoSRJ".to_string(),
-    //     id: "30572".to_string(),
-    //     address: "secret13x46stce2f9s8aukey8nfz9wnfcx6qmdc7c0vy".to_string(),
-    //     code_hash: "F4255F459419F0B9CF1DA23609D69715D2964496A2D918548664AC9F58B196F9".to_string()
-    // };
-    // let query: mint::QueryAnswer = query_contract(
-    //     mint, mint::QueryMsg::GetSupportedAssets {})?;
-
-    // let query = mint::QueryMsg::GetSupportedAssets {}.t_query(mint)?;
-    //
-    // if let mint::QueryAnswer::SupportedAssets {assets} = query {
-    //     println!("Supported Assets: ");
-    //     for asset in assets {
-    //         println!("\t{},", asset);
-    //     }
-    // }
-
-    let account_key = "a";
-    //let account = account_address(account_key)?;
-    let account = "secret1r6rvc3sa4ctrg220eflr35n8e4nwuxvgulg86u";
-
-    println!("Test");
-    println!("Using Account: {}", account);
+    println!("Using Account: {}", account.blue());
 
     // Initialize sSCRT
-    println!("Initializing sSCRT");
+    print_header("Initializing sSCRT");
     let sSCRT = snip20::InitMsg {
         name: "sSCRT".to_string(),
         admin: None,
@@ -71,32 +46,23 @@ fn main() -> Result<()> {
             enable_burn: Some(false)
         })
     }.inst_init("../../compiled/snip20.wasm.gz", &*generate_label(8),
-                account_key, Some(store_gas), Some(gas),
+                ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
-    println!("sSCRT\nAddress: {}\nCode Hash: {}", sSCRT.address, sSCRT.code_hash);
+    print_contract(&sSCRT);
 
-    snip20::HandleMsg::SetViewingKey { key: String::from(view_key), padding: None }.t_handle(
-        &sSCRT, account_key, Some(gas), Some("test"), None);
+    snip20::HandleMsg::SetViewingKey { key: String::from(VIEW_KEY), padding: None }.t_handle(
+        &sSCRT, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
     println!("Depositing 1000000000uscrt");
 
-    snip20::HandleMsg::Deposit { padding: None }.t_handle(&sSCRT, account_key,
-                                                          Some(gas), Some("test"),
-                                                          Some("1000000000uscrt"));
+    snip20::HandleMsg::Deposit { padding: None }.t_handle(&sSCRT, ACCOUNT_KEY,
+                                                          Some(GAS), Some("test"),
+                                                          Some("1000000000uscrt"))?;
 
-    {
-        let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-            address: HumanAddr::from(account),
-            key: String::from(view_key),
-        }.t_query(&sSCRT)?;
-
-        if let snip20::QueryAnswer::Balance { amount } = balance {
-            println!("Total sSCRT: {}", amount);
-        }
-    }
+    println!("Total sSCRT: {}", get_balance(&sSCRT, account.clone()));
 
     // Initialize initializer
-    println!("Initializing Initializer");
+    print_header("Initializing Initializer");
     let mut shade = NetContract {
         label: generate_label(8),
         id: "".to_string(),
@@ -118,7 +84,7 @@ fn main() -> Result<()> {
             label: shade.label.clone(),
             admin: None,
             prng_seed: Default::default(),
-            initial_balances: Some(vec![InitialBalance{ address: HumanAddr::from(account), amount: Uint128(10000000) }])
+            initial_balances: Some(vec![InitialBalance{ address: HumanAddr::from(account.clone()), amount: Uint128(10000000) }])
         },
         silk: Snip20ContractInfo {
             label: silk.label.clone(),
@@ -127,73 +93,63 @@ fn main() -> Result<()> {
             initial_balances: None
         }
     }.inst_init("../../compiled/initializer.wasm.gz", &*generate_label(8),
-                account_key, Some(store_gas), Some(gas),
+                ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
-    println!("Initializer\nAddress: {}\nCode Hash: {}", initializer.address, initializer.code_hash);
+    print_contract(&initializer);
 
 
-    println!("Getting uploaded Snip20s");
+    print_header("Getting uploaded Snip20s");
 
     let contracts = list_contracts_by_code(sSCRT.id.clone())?;
 
     for contract in contracts {
         if &contract.label == &shade.label {
+            print_warning("Found Shade");
             shade.id = contract.code_id.to_string();
             shade.address = contract.address;
+            print_contract(&shade);
         }
         else if &contract.label == &silk.label {
+            print_warning("Found Silk");
             silk.id = contract.code_id.to_string();
             silk.address = contract.address;
+            print_contract(&silk);
         }
     }
 
     // Set View keys
-    snip20::HandleMsg::SetViewingKey { key: String::from(view_key), padding: None }.t_handle(
-        &shade, account_key, Some(gas), Some("test"), None);
+    snip20::HandleMsg::SetViewingKey { key: String::from(VIEW_KEY), padding: None }.t_handle(
+        &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
-    {
-        let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-            address: HumanAddr::from(account),
-            key: String::from(view_key),
-        }.t_query(&shade)?;
+    println!("Total shade: {}", get_balance(&shade, account.clone()));
 
-        if let snip20::QueryAnswer::Balance { amount } = balance {
-            println!("Total shade: {}", amount);
-        }
-    }
+    snip20::HandleMsg::SetViewingKey { key: String::from(VIEW_KEY), padding: None }.t_handle(
+        &silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
-    snip20::HandleMsg::SetViewingKey { key: String::from(view_key), padding: None }.t_handle(
-        &silk, account_key, Some(gas), Some("test"), None);
+    println!("Total silk: {}", get_balance(&silk, account.clone()));
 
-    {
-        let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-            address: HumanAddr::from(account),
-            key: String::from(view_key),
-        }.t_query(&silk)?;
+    print_header("Initializing Band Mock");
 
-        if let snip20::QueryAnswer::Balance { amount } = balance {
-            println!("Total silk: {}", amount);
-        }
-    }
-
-    println!("Initializing Band Mock");
-
-    let band = band::InitMsg {}.inst_init("../../compiled/mock_band.wasm.gz", 
-                                          &*generate_label(8), account_key, 
-                                          Some(store_gas), Some(gas),
+    let band = band::InitMsg {}.inst_init("../../compiled/mock_band.wasm.gz",
+                                          &*generate_label(8), ACCOUNT_KEY,
+                                          Some(STORE_GAS), Some(GAS),
                                           Some("test"))?;
 
-    println!("Initializing Oracle");
+    print_contract(&band);
+
+    print_header("Initializing Oracle");
     let oracle = oracle::InitMsg {
         admin: None,
         band: Contract { address: HumanAddr::from(band.address), code_hash: band.code_hash },
         sscrt: Contract { address: HumanAddr::from(sSCRT.address.clone()),
             code_hash: sSCRT.code_hash.clone() }
     }.inst_init("../../compiled/oracle.wasm.gz", &*generate_label(8),
-                account_key, Some(store_gas), Some(gas),
+                ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
 
-    println!("Initializing Mint-Shade");
+    print_contract(&oracle);
+
+    print_header("Initializing Mint-Shade");
     let mint_shade = micro_mint::InitMsg {
         admin: None,
         native_asset: Contract { address: HumanAddr::from(shade.address.clone()),
@@ -201,12 +157,18 @@ fn main() -> Result<()> {
         oracle: Contract { address: HumanAddr::from(oracle.address.clone()),
             code_hash: oracle.code_hash.clone() },
         peg: None,
-        treasury: None
+        treasury: None,
+        epoch_frequency: Some(Uint128(120)),
+        epoch_mint_limit: Some(Uint128(1000000000)),
     }.inst_init("../../compiled/micro_mint.wasm.gz", &*generate_label(8),
-                account_key, Some(store_gas), Some(gas),
+                ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
 
-    println!("Initializing Mint-Silk");
+    print_contract(&mint_shade);
+
+    print_epoch_info(&mint_shade);
+
+    print_header("Initializing Mint-Silk");
     let mint_silk = micro_mint::InitMsg {
         admin: None,
         native_asset: Contract { address: HumanAddr::from(silk.address.clone()),
@@ -214,144 +176,170 @@ fn main() -> Result<()> {
         oracle: Contract { address: HumanAddr::from(oracle.address.clone()),
             code_hash: oracle.code_hash.clone() },
         peg: None,
-        treasury: None
+        treasury: None,
+        epoch_frequency: Some(Uint128(120)),
+        epoch_mint_limit: Some(Uint128(1000000000)),
     }.inst_init("../../compiled/micro_mint.wasm.gz", &*generate_label(8),
-                account_key, Some(store_gas), Some(gas),
+                ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
 
-    println!("Registering allowed tokens");
+    print_contract(&mint_silk);
+
+    print_epoch_info(&mint_silk);
+
+    print_header("Registering allowed tokens");
     micro_mint::HandleMsg::RegisterAsset { contract: Contract {
         address: HumanAddr::from(sSCRT.address.clone()),
         code_hash: sSCRT.code_hash.clone() }, commission: Some(Uint128(1000)) }.t_handle(
-        &mint_shade, account_key, Some(gas), Some("test"), None);
+        &mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
     micro_mint::HandleMsg::RegisterAsset { contract: Contract {
         address: HumanAddr::from(silk.address.clone()),
         code_hash: silk.code_hash.clone() }, commission: Some(Uint128(1000)) }.t_handle(
-        &mint_shade, account_key, Some(gas), Some("test"), None)?;
+        &mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
     micro_mint::HandleMsg::RegisterAsset { contract: Contract {
         address: HumanAddr::from(shade.address.clone()),
         code_hash: shade.code_hash.clone() }, commission: Some(Uint128(1000)) }.t_handle(
-        &mint_silk, account_key, Some(gas), Some("test"), None)?;
+        &mint_silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
-    println!("Shade allowed tokens: ");
     {
         let query: micro_mint::QueryAnswer = micro_mint::QueryMsg::GetSupportedAssets {}.t_query(
             &mint_shade)?;
         if let micro_mint::QueryAnswer::SupportedAssets { assets } = query {
-            for asset in assets {
-                print!("{}, ", asset);
-            }
+            print_vec("Shade allowed tokens: ", assets);
         }
     }
 
-    println!("\nSilk allowed tokens: ");
     {
         let query: micro_mint::QueryAnswer = micro_mint::QueryMsg::GetSupportedAssets {}.t_query(
             &mint_silk)?;
         if let micro_mint::QueryAnswer::SupportedAssets { assets } = query {
-            for asset in assets {
-                print!("{}, ", asset);
-            }
+            print_vec("Silk allowed tokens: ", assets);
         }
     }
 
-    println!("\nSetting minters in snip20s");
+    print_header("Setting minters in snip20s");
     
-    snip20::HandleMsg::AddMinters {
+    snip20::HandleMsg::SetMinters {
         minters: vec![HumanAddr::from(mint_shade.address.clone())], padding: None }.t_handle(
-        &shade, account_key, Some(gas), Some("test"), None);
+        &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
-    println!("\nShade minters: ");
     {
         let query: snip20::QueryAnswer = snip20::QueryMsg::Minters {}.t_query(&shade)?;
         if let snip20::QueryAnswer::Minters { minters } = query {
-            for minter in minters {
-                print!("{}, ", minter.to_string());
-            }
+            print_vec("Shade minters: ", minters);
         }
     }
 
-    snip20::HandleMsg::AddMinters {
+    snip20::HandleMsg::SetMinters {
         minters: vec![HumanAddr::from(mint_silk.address.clone())], padding: None }.t_handle(
-        &silk, account_key, Some(gas), Some("test"), None);
+        &silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
-    println!("\nSilk minters: ");
     {
         let query: snip20::QueryAnswer = snip20::QueryMsg::Minters {}.t_query(&silk)?;
         if let snip20::QueryAnswer::Minters { minters } = query {
-            for minter in minters {
-                print!("{}, ", minter.to_string());
-            }
+            print_vec("Silk minters: ", minters);
         }
     }
 
-    println!("\nSending all the sSCRT to Shade");
-    let mut current_sscrt = Uint128(0);
+    print_header("Testing minting");
 
-    let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account),
-        key: String::from(view_key),
-    }.t_query(&sSCRT)?;
+    {
+        let amount = get_balance(&sSCRT, account.clone());
+        println!("Burning {} usSCRT for Shade", amount.to_string().blue());
 
-    if let snip20::QueryAnswer::Balance { amount } = balance {
-        println!("Total sSCRT: {}", amount);
-        current_sscrt = amount;
-    }
-    
-    snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(mint_shade.address.clone()),
-        amount: current_sscrt,
-        msg: Some(to_binary(&mint::MintMsgHook { minimum_expected_amount: Uint128(0)}).unwrap()),
-        memo: None,
-        padding: None
-    }.t_handle(&sSCRT, account_key, Some(gas), Some("test"),
-               None);
-
-    println!("Sending all the Shade to Silk");
-
-    let mut current_shade = Uint128(0);
-
-    let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account),
-        key: String::from(view_key),
-    }.t_query(&shade)?;
-
-    if let snip20::QueryAnswer::Balance { amount } = balance {
-        println!("Total shade: {}", amount);
-        current_shade = amount;
+        mint(&sSCRT, ACCOUNT_KEY, mint_shade.address.clone(), amount,
+             Uint128(0), "test");
     }
 
-    snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(mint_silk.address.clone()),
-        amount: current_shade,
-        msg: Some(to_binary(&mint::MintMsgHook { minimum_expected_amount: Uint128(0)}).unwrap()),
-        memo: None,
-        padding: None
-    }.t_handle(&shade, account_key, Some(gas), Some("test"),
-               None);
-
-    println!("Sending all the Silk to Shade");
-
-    let mut current_silk = Uint128(0);
-
-    let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account),
-        key: String::from(view_key),
-    }.t_query(&silk)?;
-
-    if let snip20::QueryAnswer::Balance { amount } = balance {
-        println!("Total silk: {}", amount);
-        current_silk = amount;
+    {
+        let amount = get_balance(&shade, account.clone());
+        println!("Minted {} uShade", amount.to_string().blue());
+        print_epoch_info(&mint_shade);
     }
 
-    snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(mint_shade.address.clone()),
-        msg: Some(to_binary(&mint::MintMsgHook { minimum_expected_amount: Uint128(0)}).unwrap()),
-        amount: current_silk,
-        memo: None,
-        padding: None
-    }.t_handle(&silk, account_key, Some(gas), Some("test"),
-               None);
+    // Test Mint Limit
+    {
+        let amount = Uint128(1000000000);
+        println!("Burning {} uShade for Silk ", amount.to_string().blue());
+        mint(&shade, ACCOUNT_KEY, mint_silk.address.clone(), amount,
+             Uint128(0), "test");
+        print_epoch_info(&mint_silk);
+        println!("Minted {} uSilk", get_balance(&silk, account.clone()));
+    }
+
+    // Try to send whats left
+    {
+        let amount = Uint128(10000000);
+        let expected_total = Uint128(1010000000);
+        while get_balance(&silk, account.clone()) != expected_total {
+            mint(&shade, ACCOUNT_KEY, mint_silk.address.clone(), amount,
+                 Uint128(0), "test");
+        }
+        print_epoch_info(&mint_silk);
+        println!("Finally minted {} uSilk", amount);
+    }
 
     Ok(())
+}
+
+fn print_header(header: &str) {
+    println!("{}", header.on_blue());
+}
+
+fn print_warning(warn: &str) {
+    println!("{}", warn.on_yellow());
+}
+
+fn print_contract(contract: &NetContract) {
+    println!("\tLabel: {}\n\tID: {}\n\tAddress: {}\n\tHash: {}", contract.label, contract.id,
+             contract.address, contract.code_hash);
+}
+
+fn print_epoch_info(minter: &NetContract) {
+    println!("\tEpoch information");
+    let query = micro_mint::QueryMsg::GetMintLimit {}.t_query(minter).unwrap();
+
+    if let micro_mint::QueryAnswer::MintLimit { limit } = query {
+        println!("\tFrequency: {}\n\tCapacity: {}\n\tTotal Minted: {}\n\tNext Epoch: {}",
+                 limit.frequency, limit.mint_capacity, limit.total_minted, limit.next_epoch);
+    }
+}
+
+fn print_struct<Printable: Serialize>(item: Printable) {
+    println!("{}", serde_json::to_string_pretty(&item).unwrap());
+}
+
+fn print_vec<Type: Display>(prefix: &str, vec: Vec<Type>) {
+    for e in vec.iter().take(1) {
+        print!("{}{}", prefix, e);
+    }
+    for e in vec.iter().skip(1) {
+        print!(", {}", e);
+    }
+    println!();
+}
+
+fn get_balance(contract: &NetContract, from: String, ) -> Uint128 {
+    let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
+        address: HumanAddr::from(from),
+        key: String::from(VIEW_KEY),
+    }.t_query(contract).unwrap();
+
+    if let snip20::QueryAnswer::Balance { amount } = balance {
+        return amount
+    }
+
+    Uint128(0)
+}
+
+fn mint(snip: &NetContract, sender: &str, minter: String, amount: Uint128,
+        minimum_expected: Uint128, backend: &str) {
+    snip20::HandleMsg::Send {
+        recipient: HumanAddr::from(minter),
+        amount,
+        msg: Some(to_binary(&mint::MintMsgHook {
+            minimum_expected_amount: minimum_expected}).unwrap()),
+        memo: None,
+        padding: None
+    }.t_handle(snip, sender, Some(GAS), Some(backend), None).unwrap();
 }
