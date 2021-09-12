@@ -142,7 +142,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::generic_err("Amount to be minted exceeds mint capacity"))
         }
 
-        limit.mint_capacity = new_total;
+        limit.total_minted = new_total;
 
         limit_storage.save(&limit);
     }
