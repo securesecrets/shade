@@ -99,7 +99,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         else {
             // If no config then dont burn
             if let Some(recipient) = config.secondary_burn {
-                messages.push(send_msg(recipient, amount, None, None, 1,
+                messages.push(send_msg(recipient, burn_amount, None, None, 1,
                                        burn_asset.asset.contract.code_hash.clone(),
                                        burn_asset.asset.contract.address.clone())?)
             }
@@ -108,7 +108,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     else  {
         // If no config then dont burn
         if let Some(recipient) = config.secondary_burn {
-            messages.push(send_msg(recipient, amount, None, None, 1,
+            messages.push(send_msg(recipient, burn_amount, None, None, 1,
                                    burn_asset.asset.contract.code_hash.clone(),
                                    burn_asset.asset.contract.address.clone())?)
         }
