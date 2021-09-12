@@ -37,6 +37,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         },
         oracle: msg.oracle,
         treasury: msg.treasury,
+        secondary_burn: msg.secondary_burn,
         activated: true,
     };
 
@@ -106,7 +107,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             owner,
             oracle,
             treasury,
-        } => handle::try_update_config(deps, env, owner, oracle, treasury),
+            secondary_burn,
+        } => handle::try_update_config(deps, env, owner, oracle, treasury, secondary_burn),
         HandleMsg::UpdateMintLimit {
             start_epoch,
             epoch_frequency,

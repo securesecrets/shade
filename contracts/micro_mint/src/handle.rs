@@ -87,20 +87,30 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    //TODO: if token_config is None, or cant burn, need to trash
-
     // Try to burn
-    match burn_asset.asset.token_config {
-        Some(ref conf) => {
-            if conf.burn_enabled {
-                messages.push(burn_msg(burn_amount,
-                                       None,
-                                       256,
+    if let Some(token_config) = burn_asset.asset.token_config.clone() {
+        if token_config.burn_enabled {
+            messages.push(burn_msg(burn_amount,
+                                   None,
+                                   256,
+                                   burn_asset.asset.contract.code_hash.clone(),
+                                   burn_asset.asset.contract.address.clone())?);
+        }
+        else {
+            // If no config then dont burn
+            if let Some(recipient) = config.secondary_burn {
+                messages.push(send_msg(recipient, amount, None, None, 1,
                                        burn_asset.asset.contract.code_hash.clone(),
-                                       burn_asset.asset.contract.address.clone())?);
+                                       burn_asset.asset.contract.address.clone())?)
             }
         }
-        None => {
+    }
+    else  {
+        // If no config then dont burn
+        if let Some(recipient) = config.secondary_burn {
+            messages.push(send_msg(recipient, amount, None, None, 1,
+                                   burn_asset.asset.contract.code_hash.clone(),
+                                   burn_asset.asset.contract.address.clone())?)
         }
     }
 
@@ -172,6 +182,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     owner: Option<HumanAddr>,
     oracle: Option<Contract>,
     treasury: Option<Contract>,
+    secondary_burn: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -195,6 +206,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
         if let Some(treasury) = treasury {
             state.treasury = Some(treasury);
+        }
+        if let Some(secondary_burn) = secondary_burn {
+            state.secondary_burn = Some(secondary_burn)
         }
         Ok(state)
     })?;
