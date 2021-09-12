@@ -14,7 +14,7 @@ use shade_protocol::{
         Config,
         SupportedAsset,
     },
-    mint::SnipMsgHook,
+    mint::MintMsgHook,
     snip20::{Snip20Asset, token_config_query, TokenConfig},
     oracle::{
         QueryMsg::GetPrice,
@@ -70,7 +70,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     // Setup msgs
     let mut messages = vec![];
-    let msgs: SnipMsgHook = match msg {
+    let msgs: MintMsgHook = match msg {
         Some(x) => from_binary(&x)?,
         None => return Err(StdError::generic_err("data cannot be empty")),
     };

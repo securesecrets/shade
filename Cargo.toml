@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "packages/shade_protocol",
+  "packages/secretcli",
   "contracts/initializer",
   "contracts/mint",
   "contracts/micro_mint",

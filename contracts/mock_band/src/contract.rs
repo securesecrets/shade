@@ -5,10 +5,7 @@ use cosmwasm_std::{
 };
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use shade_protocol::band::ReferenceData;
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg { }
+use shade_protocol::band::{ReferenceData, InitMsg};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,

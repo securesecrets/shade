@@ -2,6 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::snip20::InitialBalance;
 use cosmwasm_std::{HumanAddr, Binary};
+use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitializerConfig {
@@ -30,6 +31,8 @@ pub struct InitMsg {
     pub silk: Snip20ContractInfo,
 }
 
+impl TestInit for InitMsg {}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
@@ -41,8 +44,10 @@ pub enum QueryMsg {
     Contracts {},
 }
 
+impl TestQuery<QueryAnswer> for QueryMsg {}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct ContractsAnswer {
-    pub contracts: Vec<Snip20InitHistory>,
+pub enum QueryAnswer {
+    ContractsAnswer { contracts: Vec<Snip20InitHistory> }
 }
