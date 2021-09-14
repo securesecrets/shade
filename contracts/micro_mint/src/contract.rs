@@ -37,11 +37,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         },
         oracle: msg.oracle,
         treasury: msg.treasury,
+        secondary_burn: msg.secondary_burn,
         activated: true,
     };
 
     // Set the minting limit
-    let limit = MintLimit {
+    let mut limit = MintLimit {
         frequency: match msg.epoch_frequency {
             None => 0,
             Some(frequency) => frequency.u128() as u64,
@@ -56,6 +57,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             Some(frequency) => env.block.time + frequency.u128() as u64,
         },
     };
+    // Override the next epoch
+    if let Some(next_epoch) = msg.start_epoch {
+        limit.next_epoch = next_epoch.u128() as u64;
+    }
+
     limit_w(&mut deps.storage).save(&limit)?;
 
     config_w(&mut deps.storage).save(&state)?;
@@ -101,15 +107,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             owner,
             oracle,
             treasury,
-        } => handle::try_update_config(deps, env, owner, oracle, treasury),
+            secondary_burn,
+        } => handle::try_update_config(deps, env, owner, oracle, treasury, secondary_burn),
         HandleMsg::UpdateMintLimit {
+            start_epoch,
             epoch_frequency,
             epoch_limit,
-        } => handle::try_update_limit(deps, env, epoch_frequency, epoch_limit),
+        } => handle::try_update_limit(deps, env, start_epoch, epoch_frequency, epoch_limit),
         HandleMsg::RegisterAsset {
             contract,
             commission,
         } => handle::try_register_asset(deps, &env, &contract, commission),
+        HandleMsg::RemoveAsset {
+            address
+        } => handle::try_remove_asset(deps, &env, address),
         HandleMsg::Receive {
             sender,
             from,

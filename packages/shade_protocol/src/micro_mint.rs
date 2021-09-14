@@ -15,6 +15,7 @@ pub struct Config {
     pub oracle: Contract,
     // Both treasury & Commission must be set to function
     pub treasury: Option<Contract>,
+    pub secondary_burn: Option<HumanAddr>,
     pub activated: bool,
 }
 
@@ -45,7 +46,10 @@ pub struct InitMsg {
     pub peg: Option<String>,
     // Both treasury & commission must be set to function
     pub treasury: Option<Contract>,
+    // This is where the non-burnable assets will go, if not defined they will stay in this contract
+    pub secondary_burn: Option<HumanAddr>,
     // If left blank no limit will be enforced
+    pub start_epoch: Option<Uint128>,
     pub epoch_frequency: Option<Uint128>,
     pub epoch_mint_limit: Option<Uint128>,
 }
@@ -63,8 +67,10 @@ pub enum HandleMsg {
         owner: Option<HumanAddr>,
         oracle: Option<Contract>,
         treasury: Option<Contract>,
+        secondary_burn: Option<HumanAddr>,
     },
     UpdateMintLimit {
+        start_epoch: Option<Uint128>,
         epoch_frequency: Option<Uint128>,
         epoch_limit: Option<Uint128>,
     },
@@ -72,6 +78,9 @@ pub enum HandleMsg {
         contract: Contract,
         // Commission * 100 e.g. 5 == .05 == 5%
         commission: Option<Uint128>,
+    },
+    RemoveAsset {
+        address: HumanAddr,
     },
     Receive {
         sender: HumanAddr,
@@ -95,6 +104,7 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     UpdateMintLimit { status: ResponseStatus },
     RegisterAsset { status: ResponseStatus },
+    RemoveAsset { status: ResponseStatus },
     Burn { status: ResponseStatus, mint_amount: Uint128 }
 }
 

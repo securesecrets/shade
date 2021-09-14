@@ -87,20 +87,30 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    //TODO: if token_config is None, or cant burn, need to trash
-
     // Try to burn
-    match burn_asset.asset.token_config {
-        Some(ref conf) => {
-            if conf.burn_enabled {
-                messages.push(burn_msg(burn_amount,
-                                       None,
-                                       256,
+    if let Some(token_config) = burn_asset.asset.token_config.clone() {
+        if token_config.burn_enabled {
+            messages.push(burn_msg(burn_amount,
+                                   None,
+                                   256,
+                                   burn_asset.asset.contract.code_hash.clone(),
+                                   burn_asset.asset.contract.address.clone())?);
+        }
+        else {
+            // If no config then dont burn
+            if let Some(recipient) = config.secondary_burn {
+                messages.push(send_msg(recipient, burn_amount, None, None, 1,
                                        burn_asset.asset.contract.code_hash.clone(),
-                                       burn_asset.asset.contract.address.clone())?);
+                                       burn_asset.asset.contract.address.clone())?)
             }
         }
-        None => {
+    }
+    else  {
+        // If no config then dont burn
+        if let Some(recipient) = config.secondary_burn {
+            messages.push(send_msg(recipient, burn_amount, None, None, 1,
+                                   burn_asset.asset.contract.code_hash.clone(),
+                                   burn_asset.asset.contract.address.clone())?)
         }
     }
 
@@ -172,6 +182,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     owner: Option<HumanAddr>,
     oracle: Option<Contract>,
     treasury: Option<Contract>,
+    secondary_burn: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -196,6 +207,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         if let Some(treasury) = treasury {
             state.treasury = Some(treasury);
         }
+        if let Some(secondary_burn) = secondary_burn {
+            state.secondary_burn = Some(secondary_burn)
+        }
         Ok(state)
     })?;
 
@@ -210,6 +224,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
+    start_epoch: Option<Uint128>,
     epoch_frequency: Option<Uint128>,
     epoch_limit: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
@@ -238,7 +253,11 @@ pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
         // Reset next epoch
         if state.frequency == 0 {
             state.next_epoch = 0;
-        } else {
+        }
+        else if let Some(next_epoch) = start_epoch {
+            state.next_epoch = next_epoch.u128() as u64;
+        }
+        else {
             state.next_epoch = env.block.time + state.frequency;
         }
         Ok(state)
@@ -319,6 +338,35 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    address: HumanAddr
+) -> StdResult<HandleResponse> {
+
+    let address_str = address.to_string();
+
+    // Remove asset from the array
+    asset_list_w(&mut deps.storage).update(|mut state| {
+        state.retain(|value| *value != address_str);
+        Ok(state)
+    })?;
+
+    // Remove supported asset
+    assets_w(&mut deps.storage).remove(&address_str.as_bytes());
+
+    // We wont remove the total burned since we want to keep track of all the burned assets
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary(
+            &HandleAnswer::RemoveAsset {
+                status: ResponseStatus::Success }
+        )?
+        )
+    })
+}
 
 pub fn register_receive (
     env: &Env,

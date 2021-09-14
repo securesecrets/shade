@@ -8,6 +8,7 @@
             * [UpdateConfig](#UpdateConfig)
             * [UpdateMintLimit](#UpdateMintLimit)
             * [RegisterAsset](#RegisterAsset)
+            * [RemoveAsset](#RemoveAsset)
         * Queries
             * [GetNativeAsset](#GetNativeAsset)
             * [GetConfig](#GetConfig)
@@ -31,6 +32,7 @@ Contract responsible to mint a paired snip20 asset
 |peg              | String   |  Symbol to peg to when querying oracle (defaults to native_asset symbol)                                          |  yes     |
 |treasury         | Contract |  Treasury contract                                                                                                |  yes     |
 |oracle           | Contract |  Oracle contract                                                                                                  |  no      |
+|start_epoch      | String   |  The starting epoch                                                                                               |  yes     |
 |epoch_frequency  | String   |  The frequency in which the mint limit resets, if 0 then no limit is enforced                                     |  yes     |
 |epoch_mint_limit | String   |  The limit of uTokens to mint per epoch                                                                           |  yes     |
 ## Admin
@@ -56,8 +58,9 @@ Updates the given values
 #### UpdateMintLimit
 Updates the given values
 ##### Request
-|Name      |Type      |Description                                                                            | optional |
-|----------|----------|---------------------------------------------------------------------------------------|----------|
+|Name             |Type      |Description                                                                            | optional |
+|-----------------|----------|---------------------------------------------------------------------------------------|----------|
+|start_epoch      | String   |  The starting epoch                                                            |  yes     |
 |epoch_frequency  | String   |  The frequency in which the mint limit resets, if 0 then no limit is enforced  |  yes     |
 |epoch_mint_limit | String   |  The limit of uTokens to mint per epoch                                        |  yes     |
 ##### Response
@@ -72,7 +75,6 @@ Updates the given values
 #### RegisterAsset
 Registers a supported asset. The asset must be SNIP-20 compliant since [RegisterReceive](https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md#RegisterReceive) is called.
 
-Note: Will return an error if there's an asset with that address already registered.
 ##### Request
 |Name        |Type    |Description                                                                                                            | optional |
 |------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
@@ -81,6 +83,21 @@ Note: Will return an error if there's an asset with that address already registe
 ```json
 {
   "register_asset": {
+    "status": "success"
+  }
+}
+```
+
+#### RemoveAsset
+Remove a registered asset.
+##### Request
+|Name        |Type    |Description                                                                                                            | optional |
+|------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
+|address     | String |  The asset to remove's address                                                                                        |  no      |
+##### Response
+```json
+{
+  "remove_asset": {
     "status": "success"
   }
 }
