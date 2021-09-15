@@ -27,6 +27,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "airdrop"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema 0.10.0",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "mockall",
+ "mockall_double",
+ "schemars",
+ "secret-toolkit 0.1.0 (git+https://github.com/enigmampc/secret-toolkit?branch=debug-print)",
+ "serde",
+ "shade-protocol",
+ "snafu",
+]
+
+[[package]]
 name = "arrayref"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"

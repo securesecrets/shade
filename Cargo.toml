@@ -2,6 +2,7 @@
 members = [
   "packages/shade_protocol",
   "packages/secretcli",
+  "contracts/airdrop",
   "contracts/initializer",
   "contracts/mint",
   "contracts/micro_mint",
