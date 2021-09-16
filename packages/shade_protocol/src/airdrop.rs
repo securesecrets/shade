@@ -11,20 +11,29 @@ pub struct Config {
     pub owner: HumanAddr,
     // The snip20 to be minted
     pub airdrop_snip20: Contract,
-    pub prefered_validator: HumanAddr,
+    pub airdrop_decimals: u8,
+    pub sn_validator_weights: Vec<ValidatorWeight>,
+    pub sn_banned_validators: Vec<HumanAddr>,
+    pub sn_whale_cap: Option<Uint128>,
     // Checks if airdrop has started / ended
     pub start_date: u64,
-    pub end_date: u64,
+    pub end_date: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub airdrop_snip20: Contract,
-    pub prefered_validator: HumanAddr,
+    // These are weight modifiers that will inflate the amount of staked token
+    pub sn_validator_weights: Option<Vec<ValidatorWeight>>,
+    // These validators will not be counted
+    pub sn_banned_validators: Option<Vec<HumanAddr>>,
+    // Values greater than this will be ignored
+    pub sn_whale_cap: Option<Uint128>,
+    // The airdrop time limit
     pub start_date: Option<u64>,
-    pub end_date: u64,
-
+    // Can be set to never end
+    pub end_date: Option<u64>,
     // Secret network delegators snapshot
     pub sn_snapshot: Vec<Delegator>,
 }
@@ -41,7 +50,9 @@ pub enum HandleMsg {
     UpdateConfig {
         admin: Option<HumanAddr>,
         airdrop_snip20: Option<Contract>,
-        prefered_validator: Option<HumanAddr>,
+        sn_validator_weights: Option<Vec<ValidatorWeight>>,
+        sn_banned_validators: Option<Vec<HumanAddr>>,
+        sn_whale_cap: Option<Uint128>,
         start_date: Option<u64>,
         end_date: Option<u64>,
     },
@@ -65,6 +76,7 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    GetConfig { },
     GetDates { },
     GetEligibility { address: HumanAddr }
 }
@@ -78,7 +90,8 @@ impl TestQuery<QueryAnswer> for QueryMsg {}
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    Dates { start: u64, end: u64 },
+    Config { config: Config },
+    Dates { start: u64, end: Option<u64> },
     Eligibility { amount: Uint128 }
 }
 
@@ -93,7 +106,7 @@ pub struct Delegator {
 #[serde(rename_all = "snake_case")]
 pub struct StoredDelegator {
     pub address: HumanAddr,
-    pub delegations: Vec<Delegation>.
+    pub delegations: Vec<Delegation>,
     pub redeemed: bool,
 }
 
@@ -102,4 +115,12 @@ pub struct StoredDelegator {
 pub struct Delegation {
     pub validator_address: HumanAddr,
     pub amount: Uint128
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+// Uint128 has weight of 2 decimals
+pub struct ValidatorWeight {
+    pub validator_address: HumanAddr,
+    pub weight: Uint128
 }
