@@ -1,104 +1,132 @@
 #!/usr/bin/env python3 
 import random
-import click
+#import click
 import json
-from sys import exit
+from sys import exit, argv
 from collections import defaultdict
 
 
 from contractlib.contractlib import PreInstantiatedContract
 from contractlib.contractlib import Contract
-from contractlib.secretlib import secretlib
 from contractlib.snip20lib import SNIP20
 from contractlib.micro_mintlib import MicroMint
 from contractlib.oraclelib import Oracle
 from contractlib.treasurylib import Treasury
 from contractlib.utils import gen_label
 
-@click.command()
-@click.option('--no_prime', is_flag=True)
+from contractlib.secretlib.secretlib import GAS_METRICS, run_command, execute_contract, query_contract
 
+SHADE_FILE_NAME = 'shade_protocol.json'
 
-def deploy_network(no_prime: bool):
-    if no_prime:
-        print('Deploying without priming')
-    else:
-        print('Will deploy then prime the network with funds, pass --no_prime to skip')
+# Burns for core_assets assets
+entry_assets = [
+    ('secretSCRT', 'SSCRT'),
+]
 
-    # Burns for core_assets assets
-    entry_assets = [
-        ('secretSCRT', 'SSCRT'),
-    ]
+core_assets = [
+    # Core
+    ('Shade', 'SHD'),
+    ('Silk', 'SILK'),
+]
 
-    core_assets = [
-        # Core
-        ('Shade', 'SHD'),
-        ('Silk', 'SILK'),
-        # Synthetic assets stablecoin
-        #('Synthesis', 'SYN'),
-    ]
+# These will be generated into pairs of Synthetic/Stabilizer
+synthetic_assets = [
+    # Metals
+    ('Gold', 'XAU'),
+    ('Silver', 'XAG'),
 
-    # burn core assets for these, and back
-    synthetic_assets = [
-        # Metals
-        ('Synthetic Gold', 'XAU'),
-        ('Synthetic Silver', 'XAG'),
+    # Fiat
+    #('Euro', 'EUR'),
+    #('Japanese yen', 'JPY'),
+    #('Yuan', 'CNY'),
 
-        # Fiat
-        #('Synthetic Euro', 'EUR'),
-        #('Synthetic Japanese yen', 'JPY'),
-        #('Synthetic Yuan', 'CNY'),
+    # Crypto
+    #('Ethereum', 'ETH'),
+    #('Bitcoin', 'BTC'),
+    #('secret', 'SCRT'),
+    #('Dogecoin', 'DOGE'),
+    #('Uniswap', 'UNI'),
+    #('Stellar', 'XLM'),
+    #('PancakeSwap', 'CAKE'),
+    #('Band Protocol', 'BAND'),
+    #('Terra', 'LUNA'),
+    #('Cosmos', 'ATOM'),
 
-        # Crypto
-        #('Synthetic Ethereum', 'ETH'),
-        #('Synthetic Bitcoin', 'BTC'),
-        #('Synthetic secret', 'SCRT'),
-        #('Synthetic Dogecoin', 'DOGE'),
-        #('Synthetic Uniswap', 'UNI'),
-        #('Synthetic Stellar', 'XLM'),
-        #('Synthetic PancakeSwap', 'CAKE'),
-        #('Synthetic Band Protocol', 'BAND'),
-        #('Synthetic Terra', 'LUNA'),
-        #('Synthetic Cosmos', 'ATOM'),
+    # TODO: Oracle: add these sources
+    # Stocks 
+    # ('Tesla', 'TSLA'),
+    # ('Apple', 'AAPL'),
+    # ('Google', 'GOOG'),
+]
 
-        # TODO: Oracle: add these sources
-        # Stocks 
-        # ('Synthetic Tesla', 'TSLA'),
-        # ('Synthetic Apple', 'AAPL'),
-        # ('Synthetic Google', 'GOOG'),
-    ]
+BURN_MAP = {
+    # minted: burners
+    'SHD': ['SILK', 'SSCRT'],
+    'SILK': ['SHD', 'SSCRT']
+}
 
-    TESTNET_BAND = {
-        "address": "secret1p0jtg47hhwuwgp4cjpc46m7qq6vyjhdsvy2nph",
-        "code_hash": "77c854ea110315d5103a42b88d3e7b296ca245d8b095e668c69997b265a75ac5"
-    }
+# Synthetics and ARB's burn for eachother
+# SILK burns for Synthetic
+for _, s in synthetic_assets:
+    BURN_MAP[f'S{s}'] = [f'A{s}', 'SILK']
+    BURN_MAP[f'A{s}'] = [f'S{s}', 'SILK']
 
-    TESTNET_SSCRT = {
-        'address': 'secret1s7c6xp9wltthk5r6mmavql4xld5me3g37guhsx',
-        'code_hash': 'cd400fb73f5c99edbc6aab22c2593332b8c9f2ea806bf9b42e3a523f3ad06f62'
-    }
-    shade_network = defaultdict(dict)
+# synthetic and stabilizer of each asset
+synthetic_assets = [
+    ('Synthetic ' + name, 'S' + symbol)
+    for name, symbol in synthetic_assets
+] + [
+    ('Stabilizer ' + name, 'A' + symbol)
+    for name, symbol in synthetic_assets
+]
 
-    # 1%
-    commission = int(.01 * 10000)
-    # viewing_key = '4b734d7a2e71fb277a9e3355f5c56d347f1012e1a9533eb7fdbb3ceceedad5fc'
-    viewing_key = 'passsword'
+TESTNET_BAND = {
+    "address": "secret1p0jtg47hhwuwgp4cjpc46m7qq6vyjhdsvy2nph",
+    "code_hash": "77c854ea110315d5103a42b88d3e7b296ca245d8b095e668c69997b265a75ac5"
+}
 
-    chain_config = secretlib.run_command(['secretcli', 'config'])
+TESTNET_SSCRT = {
+    'address': 'secret1s7c6xp9wltthk5r6mmavql4xld5me3g37guhsx',
+    'code_hash': 'cd400fb73f5c99edbc6aab22c2593332b8c9f2ea806bf9b42e3a523f3ad06f62'
+}
 
-    chain_config = {
-        key.strip('" '): val.strip('" ')
-        for key, val in 
-        (
-            line.split('=') 
-            for line in chain_config.split('\n')
-            if line
-        )
-    }
+# 1%
+commission = int(.01 * 10000)
+# viewing_key = '4b734d7a2e71fb277a9e3355f5c56d347f1012e1a9533eb7fdbb3ceceedad5fc'
+viewing_key = 'passsword'
+
+chain_config = run_command(['secretcli', 'config'])
+
+chain_config = {
+    key.strip('" '): val.strip('" ')
+    for key, val in 
+    (
+        line.split('=') 
+        for line in chain_config.split('\n')
+        if line
+    )
+}
+account_key = 'drpresident' if chain_config['chain-id'] == 'holodeck-2' else 'a'
+backend = None if chain_config['chain-id'] == 'holodeck-2' else 'test'
+account = run_command(['secretcli', 'keys', 'show', '-a', account_key]).rstrip()
+
+def execute(contract: dict, msg: dict):
+    return execute_contract(contract['address'], json.dumps(msg), user=account_key, backend=backend)
+
+def query(contract: dict, msg: dict):
+    return query_contract(contract['address'], json.dumps(msg))
+
+def deploy():
+
+    sscrt = None
+    band = None
+
+    shade_protocol = defaultdict(dict)
+
+    shade_protocol['assets'] = defaultdict(dict)
+    shade_protocol['burn_map'] = BURN_MAP
 
     if chain_config['chain-id'] == 'holodeck-2':
-        account_key = 'drpresident'
-        backend = None
         print('Setting testnet SSCRT')
         sscrt = PreInstantiatedContract(TESTNET_SSCRT['address'], TESTNET_SSCRT['code_hash'])
         sscrt.symbol = 'SSCRT'
@@ -109,8 +137,6 @@ def deploy_network(no_prime: bool):
         print(TESTNET_BAND['address'])
 
     elif chain_config['chain-id'] == 'enigma-pub-testnet-3':
-        account_key = 'a'
-        backend = 'test'
         print('Configuring SSCRT')
         sscrt = SNIP20(gen_label(8), name='secretSCRT', symbol='SSCRT', decimals=6, public_total_supply=True, enable_deposit=True, enable_burn=True,
                     admin=account_key, uploader=account_key, backend=backend)
@@ -121,20 +147,11 @@ def deploy_network(no_prime: bool):
         band = Contract('mock_band.wasm.gz', '{}', gen_label(8))
         print(band.address)
 
-    else:
-        print('Failed to determine chain', chain_config['chain-id'])
-        exit(1)
-
-
-
-    account = secretlib.run_command(['secretcli', 'keys', 'show', '-a', account_key]).rstrip()
-
-    print(json.loads(secretlib.run_command(['secretcli', 'q', 'account', account]))['value']['coins'])
 
     print('Configuring Oracle')
-    oracle = Oracle(gen_label(8), band, 
+    oracle = Oracle(gen_label(8), band, sscrt,
                     admin=account_key, uploader=account_key, backend=backend)
-    shade_network['oracle'] = {
+    shade_protocol['oracle'] = {
         'address': oracle.address,
         'code_hash': oracle.code_hash,
     }
@@ -150,7 +167,7 @@ def deploy_network(no_prime: bool):
     treasury = Treasury(gen_label(8), 
                 admin=account_key, uploader=account_key, backend=backend)
     print(treasury.address)
-    shade_network['treasury'] = {
+    shade_protocol['treasury'] = {
         'address': treasury.address,
         'code_hash': treasury.code_hash,
     }
@@ -161,19 +178,23 @@ def deploy_network(no_prime: bool):
     snip20_id = None
     mint_id = None
 
-    shade_network['assets'] = {}
+    tokens = { 'SSCRT': sscrt }
+
     print('\nCore Snips')
     core_snips = []
+
     for name, symbol in core_assets:
+
         print('\nConfiguring', name, symbol)
         snip = SNIP20(gen_label(8), name=name, symbol=symbol, decimals=6, 
                 public_total_supply=True, enable_mint=True, enable_burn=True, 
                 admin=account_key, uploader=account_key, backend=backend,
                 code_id=snip20_id)
+
         if not snip20_id:
             snip20_id = snip.code_id
 
-        shade_network['assets'][snip.symbol]['snip20'] = {
+        shade_protocol['assets'][snip.symbol]['snip20'] = {
             'address': snip.address,
             'code_hash': snip.code_hash,
         }
@@ -185,8 +206,37 @@ def deploy_network(no_prime: bool):
         snip.set_view_key(account_key, viewing_key)
         print(snip.symbol, snip.address)
         core_snips.append(snip)
+        tokens[symbol] = snip
 
-    print('\nSynthetic Snips')
+    print('Core Mints')
+    # (snip, mint)
+    core_pairs = []
+    for snip in core_snips:
+        print('Configuring', snip.symbol, 'Mint')
+        mint = MicroMint(gen_label(8), snip, oracle, treasury, commission,
+                        # initial_assets=initial_assets,
+                        admin=account_key, uploader=account_key, backend=backend,
+                        code_id=mint_id)
+
+        if not mint_id:
+            mint_id = mint.code_id
+
+        shade_protocol['assets'][snip.symbol]['mint'] = {
+            'address': mint.address,
+            'code_hash': mint.code_hash,
+        }
+        print(mint.address)
+
+        print(f'Linking Snip/Mint {snip.symbol}')
+        snip.set_minters([mint.address])
+
+        for burn_symbol in BURN_MAP[snip.symbol]:
+            print(f'Registering {burn_symbol} with {snip.symbol}')
+            mint.register_asset(tokens[burn_symbol])
+
+        core_pairs.append((snip, mint))
+
+    print('\nSynthetics')
 
     synthetic_snips = []
     # (snip, mint)
@@ -199,10 +249,12 @@ def deploy_network(no_prime: bool):
                             enable_mint=True, enable_burn=True,
                             admin=account_key, uploader=account_key, backend=backend,
                             code_id=snip20_id)
-        shade_network['assets'][snip.symbol]['snip20'] = {
+
+        shade_protocol['assets'][snip.symbol]['snip20'] = {
             'address': snip.address,
             'code_hash': snip.code_hash,
         }
+
         print(f'Registering {snip.symbol} with treasury')
         treasury.register_asset(snip)
         print('Set Viewing Key')
@@ -210,70 +262,36 @@ def deploy_network(no_prime: bool):
         print(snip.symbol, snip.address)
 
         synthetic_snips.append(snip)
-
-    print('Core Mints')
-    # (snip, mint)
-    core_pairs = []
-    for snip in core_snips:
-        initial_assets = [
-                c
-                for c in core_snips
-                if c is not snip 
-            ] + synthetic_snips + [ sscrt ]
-        print('Configuring', snip.symbol, 'Mint')
-        mint = MicroMint(gen_label(8), snip, oracle, treasury, commission,
-                        # initial_assets=initial_assets,
-                        admin=account_key, uploader=account_key, backend=backend,
-                        code_id=mint_id)
-        if not mint_id:
-            mint_id = mint.code_id
-
-        shade_network['assets'][snip.symbol]['mint'] = {
-            'address': mint.address,
-            'code_hash': mint.code_hash,
-        }
-        print(mint.address)
-
-        print(f'Linking Snip/Mint {snip.symbol}')
-        snip.set_minters([mint.address])
-
-        for i in initial_assets:
-            print(f'Registering {i.symbol} with {snip.symbol}')
-            mint.register_asset(i)
-
-        core_pairs.append((snip, mint))
+        tokens[symbol] = snip
 
     print('Synthetic Mints')
+
     for snip in synthetic_snips:
-        initial_assets = [
-                s
-                for s in synthetic_snips
-                if s is not snip
-            ] + core_snips
+
         print('Configuring', snip.symbol, 'Mint')
-        mint = MicroMint(gen_label(8), snip, oracle, treasury, commission,
+        mint = MicroMint(gen_label(8), snip, oracle, treasury,
                         # initial_assets=initial_assets,
                         admin=account_key, uploader=account_key, backend=backend,
                         code_id=mint_id)
 
-        shade_network['assets'][snip.symbol]['mint'] = {
+        shade_protocol['assets'][snip.symbol]['mint'] = {
             'address': mint.address,
             'code_hash': mint.code_hash,
         }
         print(mint.address)
 
-        for i in initial_assets:
-            print(f'Registering {i.symbol} with {snip.symbol}')
-            mint.register_asset(i)
+        for burn_symbol in BURN_MAP[snip.symbol]:
+            print(f'Registering {burn_symbol} with {snip.symbol}')
+            mint.register_asset(tokens[burn_symbol])
 
         print(f'Linking Snip/Mint {snip.symbol}')
         snip.set_minters([mint.address])
 
         synthetics.append((snip, mint))
 
-    print(secretlib.run_command(['secretcli', 'q', 'account', account]))
+    print(run_command(['secretcli', 'q', 'account', account]))
 
-    if not no_prime:
+    if 'prime' in argv:
 
         sscrt_mint_amount = '100000000000000'
         print(f'\tDeposit  {sscrt_mint_amount} uSCRT')
@@ -363,17 +381,84 @@ def deploy_network(no_prime: bool):
     for snip in core_snips + synthetic_snips:
         print('\t', treasury.get_balance(snip), snip.symbol)
 
-    print(json.dumps(shade_network, indent=2))
+    print(json.dumps(shade_protocol, indent=2))
     suffix = 'local' if account_key == 'a' else 'testnet'
 
-    print(len(secretlib.GAS_METRICS), 'times gas was used')
-    open(f'logs/gas_metrics_{suffix}.json', 'w+').write(json.dumps(secretlib.GAS_METRICS, indent=2))
+    print(len(GAS_METRICS), 'times gas was used')
+    open(f'logs/gas_metrics_{suffix}.json', 'w+').write(json.dumps(GAS_METRICS, indent=2))
 
-    shade_network['gas_wanted'] = sum(int(g['want']) for g in secretlib.GAS_METRICS)
-    shade_network['gas_used'] = sum(int(g['used']) for g in secretlib.GAS_METRICS)
-    open(f'logs/shade_{suffix}.json', 'w+').write(json.dumps(shade_network, indent=2))
-    return shade_network
+    shade_protocol['gas_wanted'] = sum(int(g['want']) for g in GAS_METRICS)
+    shade_protocol['gas_used'] = sum(int(g['used']) for g in GAS_METRICS)
+
+
+    return shade_protocol
+
+'''
+Reads in the shade_protocol.json and verifies each contract
+'''
+def verify(shade_protocol):
+
+    print('ORACLE')
+    print(shade_protocol['oracle'])
+
+    print('Treasury')
+    print(shade_protocol['treasury'])
+
+    print('ASSETS')
+    for asset in shade_protocol['assets']:
+        print(asset)
+
+'''
+Primes networks with user funds
+'''
+def prime(shade_protocol):
+    pass
+
+
+'''
+Query contracts for more detailed information such as
+token_info, token_config & get_config
+code_id
+treasury balance, snip20 balances
+'''
+def enrich(shade_protocol):
+
+    print('Enriching')
+    print('Oracle')
+    shade_protocol['oracle'].update(query(shade_protocol['oracle'], {'get_config': {}}))
+
+    print('Treasury')
+    shade_protocol['treasury'].update(query(shade_protocol['treasury'], {'get_config': {}}))
+
+    for symbol, pair in shade_protocol['assets'].items():
+        print(symbol)
+        pair['snip20'].update(query(pair['snip20'], {'token_info': {}}))
+        pair['snip20'].update(query(pair['snip20'], {'token_config': {}}))
+        pair['mint'].update(query(pair['mint'], {'get_config': {}}))
+
+    return shade_protocol
 
 if __name__ == '__main__':
-    shade_network = deploy_network()
 
+    shade_protocol = None
+
+    for s in argv:
+        if s == 'load':
+            shade_protocol = json.loads(open(SHADE_FILE_NAME).read())
+
+        elif s == 'deploy':
+            shade_protocol = deploy()
+
+        elif s == 'verify':
+            verify(shade_protocol)
+
+        elif s == 'enrich':
+            shade_protocol = enrich(shade_protocol)
+
+        elif s == 'save':
+            open(SHADE_FILE_NAME, 'w+').write(json.dumps(shade_protocol, indent=2))
+
+    if shade_protocol:
+        print(json.dumps(shade_protocol, indent=2))
+    else:
+        print('nothing to do')
