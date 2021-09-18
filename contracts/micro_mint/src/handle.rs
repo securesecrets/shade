@@ -41,8 +41,10 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
+    let mint_asset = native_asset_r(&deps.storage).load()?;
+
     // Prevent sender to be native asset
-    if native_asset_r(&deps.storage).load()?.contract.address == env.message.sender {
+    if mint_asset.contract.address == env.message.sender {
         return Err(StdError::generic_err("Sender cannot be the same as the native asset."))
     }
 
@@ -61,73 +63,15 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         }),
     };
 
-    // Setup msgs
+
+    // This will calculate the total mint value
+    let amount_to_mint: Uint128 = mint_amount(&deps, amount, &burn_asset, &mint_asset)?;
+
     let mut messages = vec![];
     let msgs: MintMsgHook = match msg {
         Some(x) => from_binary(&x)?,
         None => return Err(StdError::generic_err("data cannot be empty")),
     };
-
-    let mut burn_amount = amount;
-    if let Some(treasury) = config.treasury {
-        // Ignore commission if the set commission is 0
-        if burn_asset.commission != Uint128(0) {
-            let commission_amount = calculate_commission(amount, burn_asset.commission);
-
-            // Commission to treasury
-            messages.push(send_msg(treasury.address,
-                                   commission_amount,
-                                   None,
-                                   None,
-                                   1,
-                                   burn_asset.asset.contract.code_hash.clone(),
-                                   burn_asset.asset.contract.address.clone())?);
-
-            burn_amount = (amount - commission_amount)?;
-        }
-    }
-
-    // Try to burn
-    if let Some(token_config) = burn_asset.asset.token_config.clone() {
-        if token_config.burn_enabled {
-            messages.push(burn_msg(burn_amount,
-                                   None,
-                                   256,
-                                   burn_asset.asset.contract.code_hash.clone(),
-                                   burn_asset.asset.contract.address.clone())?);
-        }
-        else {
-            // If no config then dont burn
-            if let Some(recipient) = config.secondary_burn {
-                messages.push(send_msg(recipient, burn_amount, None, None, 1,
-                                       burn_asset.asset.contract.code_hash.clone(),
-                                       burn_asset.asset.contract.address.clone())?)
-            }
-        }
-    }
-    else  {
-        // If no config then dont burn
-        if let Some(recipient) = config.secondary_burn {
-            messages.push(send_msg(recipient, burn_amount, None, None, 1,
-                                   burn_asset.asset.contract.code_hash.clone(),
-                                   burn_asset.asset.contract.address.clone())?)
-        }
-    }
-
-    // Update burned amount
-    total_burned_w(&mut deps.storage).update(
-        burn_asset.asset.contract.address.to_string().as_bytes(),
-        |burned| {
-            match burned {
-                Some(burned) => { Ok(burned + burn_amount) }
-                None => { Ok(burn_amount) }
-            }
-        })?;
-
-    let mint_asset = native_asset_r(&deps.storage).load()?;
-
-    // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(&deps, amount, &burn_asset, &mint_asset)?;
 
     // Check against slippage amount
     if amount_to_mint < msgs.minimum_expected_amount {
@@ -154,8 +98,57 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
         limit.total_minted = new_total;
 
-        limit_storage.save(&limit);
+        limit_storage.save(&limit)?;
     }
+
+    let mut burn_amount = amount;
+    if let Some(treasury) = config.treasury {
+        // Ignore commission if the set commission is 0
+        if burn_asset.commission != Uint128(0) {
+            let commission_amount = calculate_commission(amount, burn_asset.commission);
+
+            // Commission to treasury
+            messages.push(send_msg(treasury.address,
+                                   commission_amount,
+                                   None,
+                                   None,
+                                   1,
+                                   burn_asset.asset.contract.code_hash.clone(),
+                                   burn_asset.asset.contract.address.clone())?);
+
+            burn_amount = (amount - commission_amount)?;
+        }
+    }
+
+    // Try to burn
+    if let Some(token_config) = burn_asset.asset.token_config {
+        if token_config.burn_enabled {
+            messages.push(burn_msg(burn_amount, None, 256,
+                                   burn_asset.asset.contract.code_hash.clone(),
+                                   burn_asset.asset.contract.address.clone())?);
+        }
+        else if let Some(recipient) = config.secondary_burn {
+            messages.push(send_msg(recipient, burn_amount, None, None, 1,
+                                   burn_asset.asset.contract.code_hash.clone(),
+                                   burn_asset.asset.contract.address.clone())?)
+        }
+
+    }
+    else if let Some(recipient) = config.secondary_burn {
+        messages.push(send_msg(recipient, burn_amount, None, None, 1,
+                               burn_asset.asset.contract.code_hash.clone(),
+                               burn_asset.asset.contract.address.clone())?)
+    }
+
+    // Update burned amount
+    total_burned_w(&mut deps.storage).update(
+        burn_asset.asset.contract.address.to_string().as_bytes(),
+        |burned| {
+            match burned {
+                Some(burned) => { Ok(burned + burn_amount) }
+                None => { Ok(burn_amount) }
+            }
+        })?;
 
     debug_print!("Minting: {} {}", amount_to_mint, &mint_asset.token_info.symbol);
 
@@ -363,8 +356,7 @@ pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
         data: Some( to_binary(
             &HandleAnswer::RemoveAsset {
                 status: ResponseStatus::Success }
-        )?
-        )
+        )?)
     })
 }
 
