@@ -5,7 +5,6 @@ import json
 from sys import exit, argv
 from collections import defaultdict
 
-
 from contractlib.contractlib import PreInstantiatedContract
 from contractlib.contractlib import Contract
 from contractlib.snip20lib import SNIP20
@@ -65,6 +64,15 @@ BURN_MAP = {
     'SILK': ['SHD', 'SSCRT']
 }
 
+CAPTURE = {
+    'SSCRT': .5, # 50%
+}
+
+# normalize capture values
+CAPTURE = {
+    k: int(v * 10000) for k, v in CAPTURE.items()
+}
+
 # Synthetics and ARB's burn for eachother
 # SILK burns for Synthetic
 for _, s in synthetic_assets:
@@ -90,10 +98,8 @@ TESTNET_SSCRT = {
     'code_hash': 'cd400fb73f5c99edbc6aab22c2593332b8c9f2ea806bf9b42e3a523f3ad06f62'
 }
 
-# 1%
-commission = int(.01 * 10000)
 # viewing_key = '4b734d7a2e71fb277a9e3355f5c56d347f1012e1a9533eb7fdbb3ceceedad5fc'
-viewing_key = 'passsword'
+viewing_key = 'password'
 
 chain_config = run_command(['secretcli', 'config'])
 
@@ -173,7 +179,7 @@ def deploy():
     }
 
     print('Registering SSCRT with treasury')
-    print(treasury.register_asset(sscrt))
+    treasury.register_asset(sscrt)
 
     snip20_id = None
     mint_id = None
@@ -213,7 +219,7 @@ def deploy():
     core_pairs = []
     for snip in core_snips:
         print('Configuring', snip.symbol, 'Mint')
-        mint = MicroMint(gen_label(8), snip, oracle, treasury, commission,
+        mint = MicroMint(gen_label(8), snip, oracle, treasury,
                         # initial_assets=initial_assets,
                         admin=account_key, uploader=account_key, backend=backend,
                         code_id=mint_id)
@@ -231,8 +237,9 @@ def deploy():
         snip.set_minters([mint.address])
 
         for burn_symbol in BURN_MAP[snip.symbol]:
-            print(f'Registering {burn_symbol} with {snip.symbol}')
-            mint.register_asset(tokens[burn_symbol])
+            capture = CAPTURE.get(burn_symbol)
+            print(f'Registering {burn_symbol} with {snip.symbol}' + f' {capture} captured' if capture else '')
+            mint.register_asset(tokens[burn_symbol], capture)
 
         core_pairs.append((snip, mint))
 
@@ -281,8 +288,9 @@ def deploy():
         print(mint.address)
 
         for burn_symbol in BURN_MAP[snip.symbol]:
-            print(f'Registering {burn_symbol} with {snip.symbol}')
-            mint.register_asset(tokens[burn_symbol])
+            capture = CAPTURE.get(burn_symbol)
+            print(f'Registering {burn_symbol} with {snip.symbol}' + f' {capture} capture' if capture else '')
+            mint.register_asset(tokens[burn_symbol], CAPTURE.get(burn_symbol))
 
         print(f'Linking Snip/Mint {snip.symbol}')
         snip.set_minters([mint.address])
@@ -308,13 +316,12 @@ def deploy():
         for core, mint in core_pairs:
             print(f'Burning {send_amount} usSCRT for', core.symbol)
 
-            mint_response = sscrt.send(account_key, mint.address, send_amount)
-            # print(mint_response) 
+            mint_response = sscrt.send(account_key, mint.address, send_amount, {'minimum_expected_amount': '0'})
             if mint_response.get('output_error'):
                 print(f'Mint error: {mint_response["output_error"]}')
 
         print('Wallet Balance')
-        for snip in core_snips + synthetic_snips:
+        for snip in [sscrt] + core_snips + synthetic_snips:
             print('\t', snip.get_balance(account, viewing_key), snip.symbol)
 
         print('Treasury Balance')
@@ -333,7 +340,7 @@ def deploy():
                     continue
                 print(f'\nBurning {send_amount}', core.symbol, 'for', c.symbol)
 
-                mint_response = core.send(account_key, mint.address, send_amount)
+                mint_response = core.send(account_key, mint.address, send_amount, {'minimum_expected_amount': '0'})
                 # print(mint_response) 
                 if mint_response.get('output_error'):
                     print(f'Mint error: {mint_response["output_error"]}')
@@ -349,7 +356,7 @@ def deploy():
             for synthetic, mint in synthetics:
                 print(f'\nBurning {send_amount}', core.symbol, 'for', synthetic.symbol)
 
-                mint_response = core.send(account_key, mint.address, send_amount)
+                mint_response = core.send(account_key, mint.address, send_amount, {'minimum_expected_amount': '0'})
                 # print(mint_response) 
                 if mint_response.get('output_error'):
                     print(f'Mint error: {mint_response["output_error"]}')
@@ -366,14 +373,14 @@ def deploy():
                     continue
                 print(f'\nBurning {send_amount}', synthetic.symbol, 'for', s.symbol)
 
-                mint_response = synthetic.send(account_key, mint.address, send_amount)
+                mint_response = synthetic.send(account_key, mint.address, send_amount, {'minimum_expected_amount': '0'})
                 print(mint_response) 
                 if mint_response.get('output_error'):
                     print(f'Mint error: {mint_response["output_error"]}')
 
 
     print('Wallet Balance')
-    for snip in core_snips + synthetic_snips:
+    for snip in [sscrt] + core_snips + synthetic_snips:
         print('\t', snip.get_balance(account, viewing_key), snip.symbol)
 
     print('Treasury Balance')
@@ -412,7 +419,107 @@ def verify(shade_protocol):
 Primes networks with user funds
 '''
 def prime(shade_protocol):
-    pass
+
+    '''
+    sscrt_mint_amount = '100000000000000'
+    print(f'\tDeposit  {sscrt_mint_amount} uSCRT')
+    sscrt.deposit(account, sscrt_mint_amount + 'uscrt')
+    sscrt_minted = sscrt.get_balance(account, viewing_key)
+    print(f'\tReceived {sscrt_minted} usSCRT')
+    assert sscrt_mint_amount == sscrt_minted, f'Minted {sscrt_minted}; expected {sscrt_mint_amount}'
+    total_amount = 100000000000000
+    minimum_amount = 1000
+    send_amount = random.randint(1000, int(total_amount / len(core_pairs + synthetics)) - 1)
+
+    # Initializing balances with sscrt
+    print('\nEntry minting with SSCRT')
+    for core, mint in core_pairs:
+        print(f'Burning {send_amount} usSCRT for', core.symbol)
+
+        mint_response = sscrt.send(account_key, mint.address, send_amount, {'minimum_expected_amount': '0'})
+        if mint_response.get('output_error'):
+            print(f'Mint error: {mint_response["output_error"]}')
+
+    print('Wallet Balance')
+    for snip in core_snips + synthetic_snips:
+        print('\t', snip.get_balance(account, viewing_key), snip.symbol)
+
+    print('Treasury Balance')
+    print('\t', treasury.get_balance(sscrt), sscrt.symbol)
+    for snip in core_snips + synthetic_snips:
+        print('\t', treasury.get_balance(snip), snip.symbol)
+
+    print('\nBurning core assets for eachother')
+
+    for core, _ in core_pairs:
+        send_amount = int(
+                int(core.get_balance(account, viewing_key)) 
+                / 10)
+        for c, mint in core_pairs:
+            if c is core:
+                continue
+            print(f'\nBurning {send_amount}', core.symbol, 'for', c.symbol)
+
+            mint_response = core.send(account_key, mint.address, send_amount, {'minimum_expected_amount': '0'})
+            # print(mint_response) 
+            if mint_response.get('output_error'):
+                print(f'Mint error: {mint_response["output_error"]}')
+
+
+    print('\nBurning core assets for Synthetics')
+    #send_amount = int(send_amount / 3)
+    for core, _ in core_pairs:
+        send_amount = int(
+                int(core.get_balance(account, viewing_key)) 
+                / (len(synthetics) + 1))
+
+        for synthetic, mint in synthetics:
+            print(f'\nBurning {send_amount}', core.symbol, 'for', synthetic.symbol)
+
+            mint_response = core.send(account_key, mint.address, send_amount, {'minimum_expected_amount': '0'})
+            # print(mint_response) 
+            if mint_response.get('output_error'):
+                print(f'Mint error: {mint_response["output_error"]}')
+
+    print('\nBurning Synthetics amongst eachother')
+
+    for snip in synthetic_snips:
+        send_amount = int(
+                int(snip.get_balance(account, viewing_key)) 
+                / (len(synthetic_snips) + 1))
+
+        for s, mint in synthetics:
+            if s is snip:
+                continue
+            print(f'\nBurning {send_amount}', synthetic.symbol, 'for', s.symbol)
+
+            mint_response = synthetic.send(account_key, mint.address, send_amount, {'minimum_expected_amount': '0'})
+            print(mint_response) 
+            if mint_response.get('output_error'):
+                print(f'Mint error: {mint_response["output_error"]}')
+
+
+    print('Wallet Balance')
+    for snip in core_snips + synthetic_snips:
+        print('\t', snip.get_balance(account, viewing_key), snip.symbol)
+
+    print('Treasury Balance')
+    print('\t', treasury.get_balance(sscrt), sscrt.symbol)
+    for snip in core_snips + synthetic_snips:
+        print('\t', treasury.get_balance(snip), snip.symbol)
+
+    print(json.dumps(shade_protocol, indent=2))
+    suffix = 'local' if account_key == 'a' else 'testnet'
+
+    print(len(GAS_METRICS), 'times gas was used')
+    open(f'logs/gas_metrics_{suffix}.json', 'w+').write(json.dumps(GAS_METRICS, indent=2))
+
+    shade_protocol['gas_wanted'] = sum(int(g['want']) for g in GAS_METRICS)
+    shade_protocol['gas_used'] = sum(int(g['used']) for g in GAS_METRICS)
+
+
+    return shade_protocol
+    '''
 
 
 '''
@@ -443,19 +550,29 @@ if __name__ == '__main__':
     shade_protocol = None
 
     for s in argv:
+
         if s == 'load':
+            print('Loading')
             shade_protocol = json.loads(open(SHADE_FILE_NAME).read())
 
         elif s == 'deploy':
+            print('Deploying')
             shade_protocol = deploy()
 
         elif s == 'verify':
+            print('Verifying')
             verify(shade_protocol)
 
         elif s == 'enrich':
+            print('Enriching')
             shade_protocol = enrich(shade_protocol)
 
+        elif s == 'prime':
+            print('Priming')
+            shade_protocol = prime(shade_protocol)
+
         elif s == 'save':
+            print('Saving')
             open(SHADE_FILE_NAME, 'w+').write(json.dumps(shade_protocol, indent=2))
 
     if shade_protocol:
