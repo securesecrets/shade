@@ -1,7 +1,7 @@
 use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
 use shade_protocol::airdrop::{QueryAnswer};
 use crate::{state::config_r,
-            handle::calculate_airdrop };
+            handle::airdrop_from_address};
 
 pub fn config<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
@@ -18,7 +18,7 @@ pub fn airdrop_amount<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>, address: HumanAddr) -> StdResult<QueryAnswer> {
     let mut total: Uint128;
 
-    match calculate_airdrop(&deps, address) {
+    match airdrop_from_address(&deps, address) {
         Ok(amount) => total = amount,
         Err(_) => total = Uint128(0),
     };

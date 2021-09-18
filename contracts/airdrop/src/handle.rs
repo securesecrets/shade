@@ -1,7 +1,7 @@
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary, Empty};
 use shade_protocol::asset::Contract;
 use crate::state::{config_r, config_w, sn_delegators_r, sn_delegators_w};
-use shade_protocol::airdrop::{HandleAnswer, ValidatorWeight, StoredDelegator};
+use shade_protocol::airdrop::{HandleAnswer, ValidatorWeight, StoredDelegator, Delegation};
 use shade_protocol::generic_response::ResponseStatus;
 use secret_toolkit::snip20::{token_info_query, mint_msg};
 
@@ -75,7 +75,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     }
 
     // Calculate airdrop if eligible
-    let mint_amount = calculate_airdrop(&deps, env.message.sender.clone())?;
+    let mint_amount = airdrop_from_address(&deps, env.message.sender.clone())?;
 
     // Redeem and then cancel
     let messages =  vec![mint_msg(env.message.sender.clone(), mint_amount,
@@ -99,7 +99,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn calculate_airdrop<S: Storage, A: Api, Q: Querier>(
+pub fn airdrop_from_address<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     address: HumanAddr,
 ) -> StdResult<Uint128> {
@@ -115,22 +115,34 @@ pub fn calculate_airdrop<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None })
     }
 
-    let mut mint_total:u128 = 0;
+    Ok(calculate_airdrop(delegator.delegations, config.sn_validator_weights,
+                         config.sn_banned_validators, config.sn_whale_cap))
+}
 
-    for delegation in &delegator.delegations {
-        if !config.sn_banned_validators.contains(&delegation.validator_address) {
-            for validator in &config.sn_validator_weights {
+pub fn calculate_airdrop (
+    delegations: Vec<Delegation>,
+    validator_weights: Vec<ValidatorWeight>,
+    banned_validators: Vec<HumanAddr>,
+    whale_cap: Option<Uint128>,
+) -> Uint128 {
+    let mut total:u128 = 0;
+    // NOTE: PLACEHOLDER EQUATION
+    for delegation in &delegations {
+        // Check that delegation is not on banned validator
+        // and also delegation is not exceeding whale cap
+        if !banned_validators.contains(&delegation.validator_address) &&
+            delegation.amount < whale_cap {
+            let mut weight:u128 = 100;
+            // Check if delegating to validators with special weights
+            for validator in &validator_weights {
                 if delegation.validator_address == validator.validator_address {
-                    mint_total += delegation.amount.u128() * validator.weight.u128();
+                    weight = validator.weight.u128();
                     break;
                 }
-                mint_total += delegation.amount.u128();
             }
+            total += (delegation.amount.u128() * weight) / 100;
         }
     }
 
-    // Turn into uToken
-    mint_total = mint_total * 10u128.pow((config.airdrop_decimals - 2) as u32);
-
-    Ok(Uint128(mint_total))
+    Uint128(total)
 }
