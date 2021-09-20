@@ -9,7 +9,7 @@ use cosmwasm_std::{
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     oracle::{
-        QueryMsg, QueryAnswer, SswapPair
+        QueryAnswer, SswapPair
     },
     band::{ 
         BandQuery, ReferenceData,
@@ -17,7 +17,6 @@ use shade_protocol::{
     secretswap::{
         PairQuery,
         SimulationResponse,
-        Simulation,
         Asset,
         AssetInfo,
         Token,

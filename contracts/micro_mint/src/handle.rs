@@ -24,7 +24,15 @@ use shade_protocol::{
     generic_response::ResponseStatus,
 };
 
-use crate::state::{config_w, config_r, native_asset_r, asset_peg_r, assets_w, assets_r, asset_list_w, total_burned_w, limit_w, limit_r};
+use crate::state::{
+    config_w, config_r, 
+    native_asset_r, 
+    asset_peg_r, 
+    assets_w, assets_r, 
+    asset_list_w, 
+    total_burned_w, 
+    limit_w
+};
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -154,7 +162,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
         limit.total_minted = new_total;
 
-        limit_storage.save(&limit);
+        limit_storage.save(&limit)?;
     }
 
     debug_print!("Minting: {} {}", amount_to_mint, &mint_asset.token_info.symbol);
@@ -340,7 +348,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
 pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: &Env,
+    _env: &Env,
     address: HumanAddr
 ) -> StdResult<HandleResponse> {
 
