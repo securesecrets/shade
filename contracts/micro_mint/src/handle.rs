@@ -70,20 +70,20 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     let mut burn_amount = amount;
     if let Some(treasury) = config.treasury {
-        // Ignore commission if the set commission is 0
-        if burn_asset.commission != Uint128(0) {
-            let commission_amount = calculate_commission(amount, burn_asset.commission);
+        // Ignore capture if the set capture is 0
+        if burn_asset.capture != Uint128(0) {
+            let capture_amount = calculate_capture(amount, burn_asset.capture);
 
             // Commission to treasury
             messages.push(send_msg(treasury.address,
-                                   commission_amount,
+                                   capture_amount,
                                    None,
                                    None,
                                    1,
                                    burn_asset.asset.contract.code_hash.clone(),
                                    burn_asset.asset.contract.address.clone())?);
 
-            burn_amount = (amount - commission_amount)?;
+            burn_amount = (amount - capture_amount)?;
         }
     }
 
@@ -275,7 +275,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
-    commission: Option<Uint128>
+    capture: Option<Uint128>
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -308,8 +308,8 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             token_info: asset_info,
             token_config: asset_config,
         },
-        // If commission is not set then default to 0
-        commission: match commission {
+        // If capture is not set then default to 0
+        capture: match capture {
             None => Uint128(0),
             Some(value) => value
         }
@@ -440,16 +440,16 @@ pub fn calculate_mint(burn_price: Uint128, burn_amount: Uint128, burn_decimals: 
     }
 }
 
-pub fn calculate_commission(
-    amount: Uint128, commission: Uint128
+pub fn calculate_capture(
+    amount: Uint128, capture: Uint128
 ) -> Uint128 {
     /* amount: total amount sent to burn (uSSCRT/uSILK/uSHD)
-     * commission: commission_percent * 10,000 e.g. 532 = 5.32% = .0532
+     * capture: capture_percent * 10,000 e.g. 532 = 5.32% = .0532
      *
-     * commission_amount = amount * commission / 10000
+     * capture_amount = amount * capture / 10000
      */
 
-    return amount.multiply_ratio(commission,  10000u128);
+    return amount.multiply_ratio(capture,  10000u128);
 }
 
 fn oracle<S: Storage, A: Api, Q: Querier>(
