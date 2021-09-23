@@ -1,7 +1,10 @@
 [workspace]
 members = [
+  #"packages/network_tester",
+
   "packages/shade_protocol",
   "packages/secretcli",
+  "contracts/governance",
   "contracts/initializer",
   "contracts/mint",
   "contracts/micro_mint",
