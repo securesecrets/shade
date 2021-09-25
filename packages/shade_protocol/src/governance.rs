@@ -204,6 +204,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     GetProposals { total: Uint128, start: Uint128 },
     GetProposal { proposal_id: Uint128 },
+    GetTotalProposals {},
     GetSupportedContracts {},
     GetSupportedContract { name: String },
     GetAdminCommands {},
@@ -221,6 +222,7 @@ impl TestQuery<QueryAnswer> for QueryMsg {}
 pub enum QueryAnswer {
     Proposals { proposals: Vec<Proposal> },
     Proposal { proposal: Proposal },
+    TotalProposals { total: Uint128 },
     SupportedContracts { contracts: Vec<String> },
     SupportedContract { contract: Contract },
     AdminCommands { commands: Vec<String> },
