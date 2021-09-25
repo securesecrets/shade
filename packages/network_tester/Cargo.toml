@@ -39,3 +39,7 @@ path = "src/run.rs"
 [[bin]]
 name = "governance"
 path = "src/governance.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
