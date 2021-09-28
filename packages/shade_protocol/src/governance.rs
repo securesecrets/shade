@@ -93,26 +93,12 @@ pub enum HandleMsg {
 
     /// Admin Command
     /// These commands can be run by admins any time
-    RequestAddAdminCommand {
-        name: String,
-        proposal: String,
-        description: String,
-    },
     AddAdminCommand {
         name: String,
         proposal: String,
     },
-    RequestRemoveAdminCommand {
-        name: String,
-        description: String,
-    },
     RemoveAdminCommand {
         name: String,
-    },
-    RequestUpdateAdminCommand {
-        name: String,
-        proposal: String,
-        description: String,
     },
     UpdateAdminCommand {
         name: String,
@@ -125,15 +111,7 @@ pub enum HandleMsg {
         description: String,
     },
 
-    /// Governance Contract proposals
-    // Change contract config info
-    RequestUpdateConfig {
-        admin: Option<HumanAddr>,
-        proposal_deadline: Option<u64>,
-        minimum_votes: Option<Uint128>,
-        description: String,
-    },
-    // Request calls itself, this is to allow self to update config
+    /// Config changes
     UpdateConfig {
         admin: Option<HumanAddr>,
         proposal_deadline: Option<u64>,
@@ -142,27 +120,13 @@ pub enum HandleMsg {
 
     // RequestMigration {}
 
-    // This serves only to add an item to the governace to be queried
-    RequestAddSupportedContract {
-        name: String,
-        contract: Contract,
-        description: String,
-    },
+    /// Add a contract to send proposal msgs to
     AddSupportedContract {
         name: String,
         contract: Contract,
     },
-    RequestRemoveSupportedContract {
-        name: String,
-        description: String,
-    },
     RemoveSupportedContract {
         name: String,
-    },
-    RequestUpdateSupportedContract {
-        name: String,
-        contract: Contract,
-        description: String,
     },
     UpdateSupportedContract {
         name: String,

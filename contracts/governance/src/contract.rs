@@ -54,32 +54,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::try_create_proposal(deps, &env, target_contract,
                                          Binary::from(proposal.as_bytes()), description),
 
-        // Config proposals
-        HandleMsg::RequestUpdateConfig { admin, proposal_deadline,
-            minimum_votes, description
-        } => handle::try_request_update_config(deps, &env, admin, proposal_deadline,
-                                               minimum_votes, description),
-
-        // Supported contract proposals
-        HandleMsg::RequestAddSupportedContract { name, contract, description
-        } => handle::try_request_add_supported_contract(deps, &env, name, contract, description),
-
-        HandleMsg::RequestRemoveSupportedContract { name, description
-        } => handle::try_request_remove_supported_contract(deps, &env, name, description),
-
-        HandleMsg::RequestUpdateSupportedContract { name, contract, description
-        } => handle::try_request_update_supported_contract(deps, &env, name, contract, description),
-
-        // Admin command proposal
-        HandleMsg::RequestAddAdminCommand {name, proposal, description
-        } => handle::try_request_add_admin_command(deps, &env, name, proposal, description),
-
-        HandleMsg::RequestRemoveAdminCommand {name, description
-        } => handle::try_request_remove_admin_command(deps, &env, name, description),
-
-        HandleMsg::RequestUpdateAdminCommand {name, proposal, description
-        } => handle::try_request_update_admin_command(deps, &env, name, proposal, description),
-
         /// Self interactions
         // Config
         HandleMsg::UpdateConfig { admin, proposal_deadline,
