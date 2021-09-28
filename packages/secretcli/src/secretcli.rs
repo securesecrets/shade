@@ -13,7 +13,6 @@ fn vec_str_to_vec_string (str_in: Vec<&str>) -> Vec<String> {
     str_out
 }
 
-///
 /// Will run any scretcli command and return its output
 ///
 /// # Arguments
