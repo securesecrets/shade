@@ -11,10 +11,7 @@ use shade_protocol::{
     band::ReferenceData,
 };
 use crate::{
-    state::{
-        config_w, config_r,
-        hard_coded_r, hard_coded_w,
-    },
+    state::{ config_w, hard_coded_w },
     query, handle,
 };
 

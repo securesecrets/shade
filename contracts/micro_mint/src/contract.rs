@@ -116,8 +116,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::try_update_limit(deps, env, start_epoch, epoch_frequency, epoch_limit),
         HandleMsg::RegisterAsset {
             contract,
-            commission,
-        } => handle::try_register_asset(deps, &env, &contract, commission),
+            capture,
+        } => handle::try_register_asset(deps, &env, &contract, capture),
         HandleMsg::RemoveAsset {
             address
         } => handle::try_remove_asset(deps, &env, address),

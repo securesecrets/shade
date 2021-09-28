@@ -27,7 +27,7 @@ pub struct Config {
 pub struct SupportedAsset {
     pub asset: Snip20Asset,
     // Commission percentage * 100 e.g. 5 == .05 == 5%
-    pub commission: Uint128,
+    pub capture: Uint128,
 }
 
 // Used to keep track of the cap
@@ -46,7 +46,7 @@ pub struct InitMsg {
     pub oracle: Contract,
     //Symbol to peg to, default to snip20 symbol
     pub peg: Option<String>,
-    // Both treasury & commission must be set to function
+    // Both treasury & capture must be set to function
     pub treasury: Option<Contract>,
     // This is where the non-burnable assets will go, if not defined they will stay in this contract
     pub secondary_burn: Option<HumanAddr>,
@@ -80,7 +80,7 @@ pub enum HandleMsg {
     RegisterAsset {
         contract: Contract,
         // Commission * 100 e.g. 5 == .05 == 5%
-        commission: Option<Uint128>,
+        capture: Option<Uint128>,
     },
     RemoveAsset {
         address: HumanAddr,
