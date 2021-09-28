@@ -40,7 +40,7 @@ pub struct Proposal {
     pub due_date: u64,
     // Used to determine if community voted for it
     pub is_admin_command: bool,
-    pub vote_status: VoteStatus,
+    pub vote_status: ProposalStatus,
     // This will be available after proposal is run
     pub run_status: Option<ResponseStatus>
 }
@@ -49,12 +49,12 @@ pub struct Proposal {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum VoteStatus {
-    NoVote,
-    Voting,
-    NotEnoughVotes,
-    MajorityAgainst,
-    MajorityInFavor,
+pub enum ProposalStatus {
+    AdminRequested,
+    InProgress,
+    Expired,
+    Rejected,
+    Accepted,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -70,7 +70,7 @@ pub enum Vote {
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub proposal_deadline: u64,
-    pub minimum_votes: Uint128,
+    pub quorum: Uint128,
 }
 
 impl InitCallback for InitMsg {
@@ -172,7 +172,7 @@ pub enum HandleMsg {
 
 
     /// Proposal voting
-    Vote {
+    MakeVote {
         proposal_id: Uint128,
         option: Vote,
     },

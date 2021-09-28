@@ -25,7 +25,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             Some(admin) => { admin }
         },
         proposal_deadline: msg.proposal_deadline,
-        minimum_votes: msg.minimum_votes
+        minimum_votes: msg.quorum
     };
 
     config_w(&mut deps.storage).save(&state)?;
@@ -107,7 +107,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::try_update_admin_command(deps, &env, name, proposal),
 
         /// User interaction
-        HandleMsg::Vote { proposal_id, option
+        HandleMsg::MakeVote { proposal_id, option
         } => handle::try_vote(deps, &env, proposal_id, option),
 
         HandleMsg::TriggerProposal { proposal_id
