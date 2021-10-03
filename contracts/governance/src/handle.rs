@@ -1,11 +1,11 @@
 use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg};
 use crate::state::{supported_contract_r, config_r, total_proposals_w, proposal_w, config_w, supported_contract_w, proposal_r, admin_commands_r, admin_commands_w, admin_commands_list_w, supported_contracts_list_w};
 use shade_protocol::{
-    governance::{Proposal, VoteStatus, HandleAnswer, GOVERNANCE_SELF, HandleMsg},
+    governance::{Proposal, ProposalStatus, HandleAnswer, GOVERNANCE_SELF, HandleMsg},
     generic_response::ResponseStatus,
     asset::Contract,
 };
-use shade_protocol::governance::VoteStatus::MajorityInFavor;
+use shade_protocol::governance::ProposalStatus::Accepted;
 use shade_protocol::generic_response::ResponseStatus::{Success, Failure};
 use shade_protocol::governance::{AdminCommand, ADMIN_COMMAND_VARIABLE, Vote};
 
@@ -38,7 +38,7 @@ pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
         description,
         is_admin_command: false,
         due_date: env.block.time + config_r(&deps.storage).load()?.proposal_deadline,
-        vote_status: VoteStatus::Voting,
+        vote_status: ProposalStatus::InProgress,
         run_status: None
     };
 
@@ -65,7 +65,7 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     // TODO: missing part where proposal votes are counted and vote_status is updated
-    proposal.vote_status = MajorityInFavor;
+    proposal.vote_status = Accepted;
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
@@ -81,7 +81,7 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check if proposal passed or has a valid target contract
-    if proposal.vote_status != MajorityInFavor || target.is_none() {
+    if proposal.vote_status != Accepted || target.is_none() {
         proposal.run_status = Some(Failure);
     }
     else {
@@ -191,7 +191,7 @@ pub fn try_trigger_admin_command<S: Storage, A: Api, Q: Querier>(
         description,
         due_date: 0,
         is_admin_command: true,
-        vote_status: VoteStatus::NoVote,
+        vote_status: ProposalStatus::AdminRequested,
         run_status: match try_execute_msg(target_contract, Binary::from(finished_command.as_bytes())) {
             Ok(executed_msg) => {
                 messages.push(executed_msg);
@@ -465,189 +465,6 @@ pub fn try_update_admin_command<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some( to_binary( &HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success
-        })?),
-    })
-}
-
-/// SELF PROPOSALS
-
-pub fn try_request_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    admin: Option<HumanAddr>,
-    proposal_deadline: Option<u64>,
-    minimum_votes: Option<Uint128>,
-    description: String,
-) -> StdResult<HandleResponse> {
-
-    let msg = HandleMsg::UpdateConfig {
-        admin,
-        proposal_deadline,
-        minimum_votes
-    };
-
-    let proposal_id = create_proposal(deps, &env,
-                                      GOVERNANCE_SELF.to_string(),
-                                      to_binary(&msg)?, description)?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::CreateProposal {
-            status: ResponseStatus::Success,
-            proposal_id
-        })?),
-    })
-}
-
-pub fn try_request_add_supported_contract<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    name: String,
-    contract: Contract,
-    description: String,
-) -> StdResult<HandleResponse> {
-
-    let msg = HandleMsg::AddSupportedContract {
-        name,
-        contract
-    };
-
-    let proposal_id = create_proposal(deps, &env, GOVERNANCE_SELF.to_string(),
-                                      to_binary(&msg)?, description)?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::CreateProposal {
-            status: ResponseStatus::Success,
-            proposal_id
-        })?),
-    })
-}
-
-pub fn try_request_remove_supported_contract<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    name: String,
-    description: String,
-) -> StdResult<HandleResponse> {
-
-    let msg = HandleMsg::RemoveSupportedContract {
-        name
-    };
-
-    let proposal_id = create_proposal(deps, &env, GOVERNANCE_SELF.to_string(),
-                                      to_binary(&msg)?, description)?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::CreateProposal {
-            status: ResponseStatus::Success,
-            proposal_id
-        })?),
-    })
-}
-
-pub fn try_request_update_supported_contract<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    name: String,
-    contract: Contract,
-    description: String,
-) -> StdResult<HandleResponse> {
-
-    let msg = HandleMsg::UpdateSupportedContract {
-        name,
-        contract
-    };
-
-    let proposal_id = create_proposal(deps, &env, GOVERNANCE_SELF.to_string(),
-                                      to_binary(&msg)?, description)?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::CreateProposal {
-            status: ResponseStatus::Success,
-            proposal_id
-        })?),
-    })
-}
-
-pub fn try_request_add_admin_command<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    name: String,
-    proposal: String,
-    description: String,
-) -> StdResult<HandleResponse> {
-
-    let msg = HandleMsg::AddAdminCommand {
-        name,
-        proposal
-    };
-
-    let proposal_id = create_proposal(deps, &env, GOVERNANCE_SELF.to_string(),
-                                      to_binary(&msg)?, description)?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::CreateProposal {
-            status: ResponseStatus::Success,
-            proposal_id
-        })?),
-    })
-}
-
-pub fn try_request_remove_admin_command<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    name: String,
-    description: String,
-) -> StdResult<HandleResponse> {
-
-    let msg = HandleMsg::RemoveAdminCommand {
-        name
-    };
-
-    let proposal_id = create_proposal(deps, &env, GOVERNANCE_SELF.to_string(),
-                                      to_binary(&msg)?, description)?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::CreateProposal {
-            status: ResponseStatus::Success,
-            proposal_id
-        })?),
-    })
-}
-
-pub fn try_request_update_admin_command<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    name: String,
-    proposal: String,
-    description: String,
-) -> StdResult<HandleResponse> {
-
-    let msg = HandleMsg::UpdateAdminCommand {
-        name,
-        proposal
-    };
-
-    let proposal_id = create_proposal(deps, &env, GOVERNANCE_SELF.to_string(),
-                                      to_binary(&msg)?, description)?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::CreateProposal {
-            status: ResponseStatus::Success,
-            proposal_id
         })?),
     })
 }

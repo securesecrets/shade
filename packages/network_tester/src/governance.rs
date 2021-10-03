@@ -154,10 +154,10 @@ fn main() -> Result<()> {
     let governance = governance::InitMsg {
         admin: None,
         proposal_deadline: 0,
-        minimum_votes: Uint128(0),
+        quorum: Uint128(0)
     }.inst_init("../../compiled/governance.wasm.gz", &*generate_label(8),
-               ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
-               Some("test"))?;
+                ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
+                Some("test"))?;
 
     print_contract(&governance);
 
@@ -184,12 +184,15 @@ fn main() -> Result<()> {
 
     print_header("Request add mint-shade to governance");
 
-    governance::HandleMsg::RequestAddSupportedContract {
-        name: "mint-shade".to_string(),
-        contract: Contract{
-            address: HumanAddr::from(mint_shade.address.clone()),
-            code_hash: mint_shade.code_hash.clone()
-        },
+    governance::HandleMsg::CreateProposal {
+        target_contract: "SELF".to_string(),
+        proposal: serde_json::to_string(&governance::HandleMsg::AddSupportedContract {
+            name: "mint-shade".to_string(),
+            contract: Contract{
+                address: HumanAddr::from(mint_shade.address.clone()),
+                code_hash: mint_shade.code_hash.clone()
+            }
+        })?,
         description: "This is some description".to_string()
     }.t_handle(
         &governance, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
@@ -264,9 +267,12 @@ fn main() -> Result<()> {
     print_header("Give governance admin power");
     {
         // Using {} will allow us to replace with values
-        governance::HandleMsg::RequestAddAdminCommand {
-            name: "update-mint-limit".to_string(),
-            proposal: "{\"update_mint_limit\":{\"start_epoch\":null,\"epoch_frequency\":null,\"epoch_limit\":\"{}\"}}".to_string(),
+        governance::HandleMsg::CreateProposal {
+            target_contract: "SELF".to_string(),
+            proposal: serde_json::to_string(&governance::HandleMsg::AddAdminCommand {
+                name: "update-mint-limit".to_string(),
+                proposal: "{\"update_mint_limit\":{\"start_epoch\":null,\"epoch_frequency\":null,\"epoch_limit\":\"{}\"}}".to_string()
+            })?,
             description: "Give admin power to modify whenever for x and y reason".to_string()
         }.t_handle(&governance, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
