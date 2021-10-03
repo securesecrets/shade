@@ -2,7 +2,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::{HumanAddr, Uint128, Binary};
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
-use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 use crate::{
     asset::Contract,
     generic_response::ResponseStatus,
@@ -77,8 +76,6 @@ impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-impl TestInit for InitMsg {}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
@@ -151,8 +148,6 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-impl TestHandle for HandleMsg {}
-
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
@@ -179,8 +174,6 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-impl TestQuery<QueryAnswer> for QueryMsg {}
-
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
@@ -191,4 +184,14 @@ pub enum QueryAnswer {
     SupportedContract { contract: Contract },
     AdminCommands { commands: Vec<String> },
     AdminCommand { command: AdminCommand },
+}
+
+#[cfg(test)]
+mod test {
+    use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
+    use crate::governance::{InitMsg, HandleMsg, QueryMsg, QueryAnswer};
+
+    impl TestInit for InitMsg {}
+    impl TestHandle for HandleMsg {}
+    impl TestQuery<QueryAnswer> for QueryMsg {}
 }

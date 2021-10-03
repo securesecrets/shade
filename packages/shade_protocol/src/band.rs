@@ -2,6 +2,7 @@ use cosmwasm_std::{Uint128};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{Query, InitCallback};
+#[cfg(test)]
 use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -11,6 +12,7 @@ impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
+#[cfg(test)]
 impl TestInit for InitMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
