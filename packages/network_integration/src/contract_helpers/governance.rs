@@ -1,17 +1,19 @@
 use serde_json::{Result, Error};
-use secretcli::{cli_types::NetContract, secretcli::{TestInit, TestHandle, TestQuery}};
-use crate::utils::{print_header, generate_label, ACCOUNT_KEY, STORE_GAS, GAS,
-                   print_contract, print_warning};
 use shade_protocol::{governance, asset::Contract};
 use cosmwasm_std::{HumanAddr, Uint128};
 use shade_protocol::governance::GOVERNANCE_SELF;
 
-pub fn init_contract<Init: TestInit>(
+use crate::utils::{print_header, generate_label, ACCOUNT_KEY, STORE_GAS, GAS,
+                   print_contract, print_warning};
+
+use secretcli::{cli_types::NetContract, secretcli::{query_contract, test_contract_handle, test_inst_init}};
+
+pub fn init_contract<Init: serde::Serialize>(
     governance: &NetContract, contract_name: String,
     contract_path: &str, contract_init: Init) -> Result<NetContract> {
     print_header(&format!("{}{}", "Initializing ", contract_name.clone()));
 
-    let contract = contract_init.inst_init(contract_path,
+    let contract = test_inst_init(&contract_init, contract_path,
                                            &*generate_label(8), ACCOUNT_KEY,
                                            Some(STORE_GAS), Some(GAS),
                                            Some("test"))?;
@@ -24,8 +26,10 @@ pub fn init_contract<Init: TestInit>(
 }
 
 pub fn get_contract(governance: &NetContract, target: String) -> Result<Contract> {
-    let query: governance::QueryAnswer = governance::QueryMsg::GetSupportedContract {
-        name: target }.t_query(&governance)?;
+
+    let msg = governance::QueryMsg::GetSupportedContract { name: target };
+
+    let query: governance::QueryAnswer = query_contract(&governance, &msg)?;
 
     let mut ctrc = Contract {
         address: HumanAddr::from("not_found".to_string()),
@@ -51,7 +55,7 @@ pub fn add_contract(name: String, target: &NetContract, governance: &NetContract
     };
 
     create_proposal(governance, GOVERNANCE_SELF.to_string(),
-                    msg, Some("Add a contract"))?;
+                    &msg, Some("Add a contract"))?;
 
     Ok(())
 }
@@ -60,14 +64,16 @@ pub fn create_proposal<Handle: serde::Serialize>(
     governance: &NetContract, target: String, handle: Handle, desc: Option<&str>) -> Result<()> {
     let msg = serde_json::to_string(&handle)?;
 
-    governance::HandleMsg::CreateProposal {
+    let proposal_msg = governance::HandleMsg::CreateProposal {
         target_contract: target,
         proposal: msg,
         description: match desc {
             None => "Custom proposal".to_string(),
             Some(description) => description.to_string()
         }
-    }.t_handle(&governance, ACCOUNT_KEY, Some(GAS),
+    };
+
+    test_contract_handle(&proposal_msg, &governance, ACCOUNT_KEY, Some(GAS),
                Some("test"), None)?;
 
     trigger_latest_proposal(governance)?;
@@ -76,14 +82,18 @@ pub fn create_proposal<Handle: serde::Serialize>(
 }
 
 pub fn trigger_latest_proposal(governance: &NetContract) -> Result<Uint128> {
-    let query: governance::QueryAnswer = governance::QueryMsg::GetTotalProposals {
-    }.t_query(&governance)?;
+
+    let query_msg = governance::QueryMsg::GetTotalProposals {};
+
+    let query: governance::QueryAnswer = query_contract(&governance, &query_msg)?;
 
     let mut proposals = Uint128(1);
 
     if let governance::QueryAnswer::TotalProposals { total } = query {
-        governance::HandleMsg::TriggerProposal { proposal_id: total
-        }.t_handle(&governance, ACCOUNT_KEY, Some(GAS),
+
+        let handle_msg = governance::HandleMsg::TriggerProposal { proposal_id: total };
+
+        test_contract_handle(&handle_msg, &governance, ACCOUNT_KEY, Some(GAS),
                    Some("test"), None)?;
 
         proposals = total;

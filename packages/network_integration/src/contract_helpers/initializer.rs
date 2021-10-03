@@ -1,13 +1,14 @@
 use serde_json::Result;
 use cosmwasm_std::{HumanAddr, Uint128};
-use secretcli::{cli_types::NetContract,
-                secretcli::{TestInit, TestHandle, list_contracts_by_code}};
 use shade_protocol::{snip20::{InitialBalance}, snip20,
                      initializer, initializer::Snip20ContractInfo};
 use crate::{utils::{print_header, generate_label, print_contract, print_warning,
                     STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY},
             contract_helpers::governance::add_contract,
             contract_helpers::minter::get_balance};
+use secretcli::{cli_types::NetContract,
+                secretcli::{query_contract, test_contract_handle, test_inst_init}};
+use secretcli::secretcli::list_contracts_by_code;
 
 pub fn initialize_initializer(
     governance: &NetContract, sSCRT: &NetContract, account: String) -> Result<()> {
@@ -26,7 +27,7 @@ pub fn initialize_initializer(
         code_hash: sSCRT.code_hash.clone()
     };
 
-    let initializer = initializer::InitMsg {
+    let init_msg = initializer::InitMsg {
         snip20_id: sSCRT.id.parse::<u64>().unwrap(),
         snip20_code_hash: sSCRT.code_hash.clone(),
         shade: Snip20ContractInfo {
@@ -42,7 +43,9 @@ pub fn initialize_initializer(
             prng_seed: Default::default(),
             initial_balances: None
         }
-    }.inst_init("../../compiled/initializer.wasm.gz", &*generate_label(8),
+    };
+
+    let initializer = test_inst_init(&init_msg, "../../compiled/initializer.wasm.gz", &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
     print_contract(&initializer);
@@ -67,13 +70,25 @@ pub fn initialize_initializer(
     }
 
     // Set View keys
-    snip20::HandleMsg::SetViewingKey { key: String::from(VIEW_KEY), padding: None }.t_handle(
-        &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+    {
+        let msg = snip20::HandleMsg::SetViewingKey {
+            key: String::from(VIEW_KEY),
+            padding: None };
+
+        test_contract_handle(&msg, &shade, ACCOUNT_KEY,
+                             Some(GAS), Some("test"), None)?;
+    }
 
     println!("\n\tTotal shade: {}", get_balance(&shade, account.clone()));
 
-    snip20::HandleMsg::SetViewingKey { key: String::from(VIEW_KEY), padding: None }.t_handle(
-        &silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+    {
+        let msg = snip20::HandleMsg::SetViewingKey {
+            key: String::from(VIEW_KEY),
+            padding: None };
+
+        test_contract_handle(&msg, &silk, ACCOUNT_KEY, Some(GAS),
+                             Some("test"), None)?;
+    }
 
     println!("\tTotal silk: {}", get_balance(&silk, account.clone()));
 
