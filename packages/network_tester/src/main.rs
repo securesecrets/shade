@@ -6,12 +6,12 @@ use secretcli::{cli_types::NetContract,
                             TestQuery, list_contracts_by_code}};
 use shade_protocol::{snip20::{InitConfig, InitialBalance}, snip20, governance,
                      micro_mint, band, oracle, asset::Contract};
-use network_tester::{utils::{print_header, print_warning, generate_label, print_contract, gov_init_contract,
-                             gov_custom_proposal, gov_get_contract, STORE_GAS, GAS,
-                             VIEW_KEY, ACCOUNT_KEY, print_vec},
+use network_tester::{utils::{print_header, print_warning, generate_label, print_contract,
+                             STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec},
                      contract_helpers::{initializer::initialize_initializer,
+                                        governance::{init_contract, get_contract, add_contract,
+                                                     create_proposal, trigger_latest_proposal},
                                         minter::{initialize_minter, setup_minters}}};
-
 fn main() -> Result<()> {
     let account = account_address(ACCOUNT_KEY)?;
 
@@ -52,7 +52,7 @@ fn main() -> Result<()> {
     let governance = governance::InitMsg {
         admin: None,
         proposal_deadline: 0,
-        minimum_votes: Uint128(0),
+        quorum: Uint128(0)
     }.inst_init("../../compiled/governance.wasm.gz", &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
@@ -63,7 +63,7 @@ fn main() -> Result<()> {
     initialize_initializer(&governance, &sSCRT, account.clone())?;
 
     /// Initialize Band Mock
-    let band = gov_init_contract(&governance, "band_mock".to_string(),
+    let band = init_contract(&governance, "band_mock".to_string(),
                                  "../../compiled/mock_band.wasm.gz",
                                  band::InitMsg {})?;
 
@@ -79,12 +79,12 @@ fn main() -> Result<()> {
     }
     /// Set Snip20s
     print_warning("Getting Shade contract from governance");
-    let shade = gov_get_contract(&governance, "shade".to_string())?;
+    let shade = get_contract(&governance, "shade".to_string())?;
     print_warning("Getting Silk contract from governance");
-    let silk = gov_get_contract(&governance, "silk".to_string())?;
+    let silk = get_contract(&governance, "silk".to_string())?;
 
     /// Initialize Oracle
-    let oracle = gov_init_contract(&governance, "oracle".to_string(),
+    let oracle = init_contract(&governance, "oracle".to_string(),
                                    "../../compiled/oracle.wasm.gz",
                                    oracle::InitMsg {
                                        admin: None,

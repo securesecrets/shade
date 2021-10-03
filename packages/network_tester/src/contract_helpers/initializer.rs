@@ -5,7 +5,8 @@ use secretcli::{cli_types::NetContract,
 use shade_protocol::{snip20::{InitialBalance}, snip20,
                      initializer, initializer::Snip20ContractInfo};
 use crate::{utils::{print_header, generate_label, print_contract, print_warning,
-                    gov_add_contract, STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY},
+                    STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY},
+            contract_helpers::governance::add_contract,
             contract_helpers::minter::get_balance};
 
 pub fn initialize_initializer(
@@ -77,9 +78,9 @@ pub fn initialize_initializer(
     println!("\tTotal silk: {}", get_balance(&silk, account.clone()));
 
     // Add contracts
-    gov_add_contract("initializer".to_string(), &initializer, &governance)?;
-    gov_add_contract("shade".to_string(), &shade, &governance)?;
-    gov_add_contract("silk".to_string(), &silk, &governance)?;
+    add_contract("initializer".to_string(), &initializer, &governance)?;
+    add_contract("shade".to_string(), &shade, &governance)?;
+    add_contract("silk".to_string(), &silk, &governance)?;
 
     Ok(())
 }

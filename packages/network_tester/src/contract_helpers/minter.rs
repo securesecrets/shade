@@ -3,19 +3,21 @@ use cosmwasm_std::{HumanAddr, Uint128, to_binary};
 use secretcli::{cli_types::NetContract,
                 secretcli::{TestHandle, TestQuery}};
 use shade_protocol::{snip20, micro_mint, mint, asset::Contract};
-use crate::utils::{print_header, print_contract, gov_init_contract, gov_get_contract,
-                   print_epoch_info, gov_custom_proposal, print_vec, STORE_GAS, GAS,
-                   VIEW_KEY, ACCOUNT_KEY};
+use crate::{utils::{print_header, print_contract, print_epoch_info, print_vec,
+                    STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY},
+            contract_helpers::governance::{init_contract, get_contract, add_contract,
+                                           create_proposal, trigger_latest_proposal}};
+
 
 
 pub fn initialize_minter(governance: &NetContract, contract_name: String,
                          native_asset: &Contract) -> Result<NetContract> {
-    let minter = gov_init_contract(governance, contract_name,
+    let minter = init_contract(governance, contract_name,
                                    "../../compiled/micro_mint.wasm.gz",
                                    micro_mint::InitMsg {
             admin: Some(HumanAddr::from(governance.address.clone())),
             native_asset: native_asset.clone(),
-            oracle: gov_get_contract(governance, "oracle".to_string())?,
+            oracle: get_contract(governance, "oracle".to_string())?,
             peg: None,
             treasury: None,
             secondary_burn: None,
@@ -34,25 +36,28 @@ pub fn initialize_minter(governance: &NetContract, contract_name: String,
 pub fn setup_minters(governance: &NetContract, mint_shade: &NetContract, mint_silk: &NetContract,
                      shade: &Contract, silk: &Contract, sSCRT: &NetContract) -> Result<()> {
     print_header("Registering allowed tokens in mint contracts");
-    gov_custom_proposal(&governance, "shade_minter".to_string(),
-                        micro_mint::HandleMsg::RegisterAsset {
+    create_proposal(&governance, "shade_minter".to_string(),
+                    micro_mint::HandleMsg::RegisterAsset {
                             contract: Contract {
                                 address: HumanAddr::from(sSCRT.address.clone()),
                                 code_hash: sSCRT.code_hash.clone()
-                            }, commission: Some(Uint128(1000)) })?;
-    gov_custom_proposal(&governance, "shade_minter".to_string(),
-                        micro_mint::HandleMsg::RegisterAsset {
-                            contract: silk.clone(), commission: Some(Uint128(1000)) })?;
-    gov_custom_proposal(&governance, "silk_minter".to_string(),
-                        micro_mint::HandleMsg::RegisterAsset {
-                            contract: shade.clone(), commission: Some(Uint128(1000)) })?;
+                            },
+                        commission: Some(Uint128(1000))}, Some("Register asset"))?;
+    create_proposal(&governance, "shade_minter".to_string(),
+                    micro_mint::HandleMsg::RegisterAsset {
+                            contract: silk.clone(),
+                        commission: Some(Uint128(1000))}, Some("Register asset"))?;
+    create_proposal(&governance, "silk_minter".to_string(),
+                    micro_mint::HandleMsg::RegisterAsset {
+                            contract: shade.clone(),
+                        commission: Some(Uint128(1000))}, Some("Register asset"))?;
 
     print_header("Adding allowed minters in Snip20s");
 
-    gov_custom_proposal(&governance, "shade".to_string(),
-                        snip20::HandleMsg::SetMinters {
+    create_proposal(&governance, "shade".to_string(),
+                    snip20::HandleMsg::SetMinters {
                             minters: vec![HumanAddr::from(mint_shade.address.clone())],
-                            padding: None })?;
+                            padding: None }, Some("Set minters"))?;
 
     {
         let query: snip20::QueryAnswer = snip20::QueryMsg::Minters {}.t_query(&NetContract{
@@ -67,10 +72,10 @@ pub fn setup_minters(governance: &NetContract, mint_shade: &NetContract, mint_si
         }
     }
 
-    gov_custom_proposal(&governance, "silk".to_string(),
-                        snip20::HandleMsg::SetMinters {
+    create_proposal(&governance, "silk".to_string(),
+                    snip20::HandleMsg::SetMinters {
                             minters: vec![HumanAddr::from(mint_silk.address.clone())],
-                            padding: None })?;
+                            padding: None }, Some("Set minters"))?;
 
     {
         let query: snip20::QueryAnswer = snip20::QueryMsg::Minters {}.t_query(&NetContract{
