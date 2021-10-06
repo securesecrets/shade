@@ -18,6 +18,14 @@ pub struct Snip20Asset {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Delegation {
+    pub validator: HumanAddr,
+    pub denom: String,
+    pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
@@ -42,7 +50,15 @@ pub enum HandleMsg {
     },
     RegisterAsset {
         contract: Contract,
+        // Percent of asset to have staked on the derivative staking contract
+        stake: Option<Uint128>,
     },
+
+    //Trigger to refresh stake amounts, re-staking to reach approprate amounts
+    // TODO: Maybe initiate unstaking if balance falls below a threshold 
+    RefreshStake { },
+    // Trigger to claim all pending staking rewards
+    ClaimRewards { },
 }
 
 impl HandleCallback for HandleMsg {
@@ -65,6 +81,10 @@ pub enum QueryMsg {
     GetBalance {
         contract: HumanAddr,
     },
+    PendingRewards { 
+        denom: String,
+    },
+    Delegations { },
 }
 
 impl Query for QueryMsg {

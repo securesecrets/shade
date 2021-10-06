@@ -5,8 +5,9 @@ use cosmwasm_std::{
 };
 
 use shade_protocol::{
-    treasury::{
-        InitMsg, TreasuryConfig,
+    staking_pool::{
+        Config,
+        InitMsg, 
         HandleMsg,
         QueryMsg,
     },
@@ -28,16 +29,16 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
 
-    let state = TreasuryConfig {
+    let state = Config {
         owner: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
+        sscrt: msg.sscrt,
+        token: msg.token,
     };
 
     config_w(&mut deps.storage).save(&state)?;
-    viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
-    self_address_w(&mut deps.storage).save(&env.contract.address)?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -63,13 +64,19 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::UpdateConfig {
             owner,
         } => handle::try_update_config(deps, env, owner),
-        HandleMsg::RegisterAsset {
-            contract,
-        } => handle::try_register_asset(deps, &env, &contract),
-        HandleMsg::RefreshStake {
-        } => handle::refresh_stake(deps, &env),
         HandleMsg::ClaimRewards {
-        } => handle::claim_rewards(deps, &env),
+        } => handle::claim_rewards(deps, env),
+        HandleMsg::RefreshStake {
+        } => handle::refresh_stake(deps, env),
+        // Begin unbonding of a certain amount of scrt
+        // Handle unbonding in receive
+        /*
+        HandleMsg::Unbond {
+        } => handle::unbond(deps, env),
+        */
+        // Collect a completed unbonding
+        HandleMsg::Collect {
+        } => handle::refresh_stake(deps, env),
     }
 }
 
@@ -79,8 +86,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
-        QueryMsg::GetBalance { contract } => to_binary(&query::balance(deps, contract)?),
-        QueryMsg::PendingRewards {} => to_binary(&query::pending_rewards(deps)?),
-        QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
+        // All delegations
+        QueryMsg::Delegations { },
+        QueryMsg::Rewards { },
     }
 }
