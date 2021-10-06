@@ -1,4 +1,5 @@
 pub mod asset;
+pub mod governance;
 pub mod mint;
 pub mod micro_mint;
 pub mod oracle;

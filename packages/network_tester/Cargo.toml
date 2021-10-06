@@ -35,3 +35,7 @@ cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0
 [[bin]]
 name = "test"
 path = "src/run.rs"
+
+[[bin]]
+name = "governance"
+path = "src/governance.rs"
