@@ -1,7 +1,6 @@
 [workspace]
 members = [
-  #"packages/network_tester",
-
+  "packages/network_integration",
   "packages/shade_protocol",
   "packages/secretcli",
   "contracts/governance",

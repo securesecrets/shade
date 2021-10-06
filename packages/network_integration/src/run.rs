@@ -1,15 +1,15 @@
 use colored::*;
 use serde_json::Result;
+use std::fmt::Display;
+use serde::Serialize;
 use rand::{distributions::Alphanumeric, Rng};
 use secretcli::{cli_types::NetContract,
                 secretcli::{account_address, TestInit, TestHandle,
                             TestQuery, list_contracts_by_code}};
-use shade_protocol::{initializer::{Snip20ContractInfo}, micro_mint, snip20::{InitConfig, InitialBalance}, oracle, band, snip20, initializer, mint};
+use shade_protocol::{initializer::{Snip20ContractInfo}, micro_mint,
+                     snip20::{InitConfig, InitialBalance}, oracle,
+                     band, snip20, initializer, mint, asset::Contract, micro_mint::MintLimit};
 use cosmwasm_std::{HumanAddr, Uint128, to_binary};
-use shade_protocol::asset::Contract;
-use std::fmt::Display;
-use serde::Serialize;
-use shade_protocol::micro_mint::MintLimit;
 
 const STORE_GAS: &str = "10000000";
 const GAS: &str = "800000";

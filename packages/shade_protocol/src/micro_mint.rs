@@ -7,6 +7,8 @@ use crate::{
     asset::Contract,
     generic_response::ResponseStatus,
 };
+#[cfg(test)]
+use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
 #[cfg(test)]
 use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
