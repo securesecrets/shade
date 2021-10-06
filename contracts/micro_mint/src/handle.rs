@@ -129,7 +129,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     }
 
     // Try to burn
-    if let Some(token_config) = burn_asset.asset.token_config {
+    if let Some(token_config) = &burn_asset.asset.token_config {
         if token_config.burn_enabled {
             messages.push(burn_msg(burn_amount, None, 256,
                                    burn_asset.asset.contract.code_hash.clone(),
