@@ -6,7 +6,7 @@ use secretcli::{cli_types::NetContract,
                             test_inst_init, list_contracts_by_code}};
 use shade_protocol::{snip20::{InitConfig, InitialBalance}, snip20, governance,
                      micro_mint, band, oracle, asset::Contract};
-use network_tester::{utils::{print_header, print_warning, generate_label, print_contract,
+use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
                              STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec},
                      contract_helpers::{initializer::initialize_initializer,
                                         governance::{init_contract, get_contract, add_contract,

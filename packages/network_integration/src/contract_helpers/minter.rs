@@ -40,15 +40,15 @@ pub fn setup_minters(governance: &NetContract, mint_shade: &NetContract, mint_si
                                 address: HumanAddr::from(sSCRT.address.clone()),
                                 code_hash: sSCRT.code_hash.clone()
                             },
-                        commission: Some(Uint128(1000))}, Some("Register asset"))?;
+                        capture: Some(Uint128(1000))}, Some("Register asset"))?;
     create_proposal(&governance, "shade_minter".to_string(),
                     micro_mint::HandleMsg::RegisterAsset {
                             contract: silk.clone(),
-                        commission: Some(Uint128(1000))}, Some("Register asset"))?;
+                        capture: Some(Uint128(1000))}, Some("Register asset"))?;
     create_proposal(&governance, "silk_minter".to_string(),
                     micro_mint::HandleMsg::RegisterAsset {
                             contract: shade.clone(),
-                        commission: Some(Uint128(1000))}, Some("Register asset"))?;
+                        capture: Some(Uint128(1000))}, Some("Register asset"))?;
 
     print_header("Adding allowed minters in Snip20s");
 
