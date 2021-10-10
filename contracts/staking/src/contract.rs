@@ -16,6 +16,7 @@ use shade_protocol::{staking::Unbonding, snip20};
 use crate::{handle::{try_update_unbond_time, try_stake, try_unbond, try_query_staker, try_query_stakers, try_trigger_unbounds},
             state::{unbonding_w}};
 use secret_toolkit::utils::HandleCallback;
+use crate::state::total_staked_w;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -44,6 +45,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     // Initialize binary heap
     let unbonding_heap = BinaryHeap::new_min();
     unbonding_w(&mut deps.storage).save(&unbonding_heap)?;
+
+    // Initialize total staked
+    total_staked_w(&mut deps.storage).save(&Uint128(0))?;
 
     Ok(InitResponse {
         messages,
@@ -76,7 +80,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config { } => to_binary(&query::config(deps)),
-        QueryMsg::TotalStaked { } => to_binary(&query::total_staked(deps)),
+        QueryMsg::Config { } => to_binary(&query::config(deps)?),
+        QueryMsg::TotalStaked { } => to_binary(&query::total_staked(deps)?),
     }
 }

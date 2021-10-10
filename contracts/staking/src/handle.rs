@@ -57,6 +57,11 @@ pub fn try_stake<S: Storage, A: Api, Q: Querier>(
         Ok(total)
     })?;
 
+    // Update total stake
+    total_staked_w(&mut deps.storage).update(|total| {
+        Ok(total + amount)
+    })?;
+
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
@@ -89,9 +94,9 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
                         backtrace: None })
                 }
             }
-        }?;
+        };
 
-        Ok(total)
+        total
     })?;
 
     let config = config_r(&deps.storage).load()?;
@@ -175,19 +180,21 @@ pub fn try_trigger_unbounds<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
+    let mut messages = vec![];
+
     unbonding_w(&mut deps.storage).update(|mut queue| {
         while !queue.is_empty() && env.block.time >= queue.peek().unwrap().unbond_time {
             let unbond = queue.pop().unwrap();
-            send_msg(unbond.account, unbond.amount, None, None, 1,
+            messages.push(send_msg(unbond.account, unbond.amount, None, None, 1,
                      config.staked_token.code_hash.clone(),
-                     config.staked_token.address.clone())?;
+                     config.staked_token.address.clone())?);
         }
 
         Ok(queue)
     })?;
 
     Ok(HandleResponse {
-        messages: vec![],
+        messages,
         log: vec![],
         data: Some( to_binary( &HandleAnswer::TriggerUnbonds {
             status: Success,

@@ -12,6 +12,7 @@ use network_integration::{utils::{print_header, print_warning, generate_label, p
                                         governance::{init_contract, get_contract, add_contract,
                                                      create_proposal, trigger_latest_proposal},
                                         minter::{initialize_minter, setup_minters}}};
+use network_integration::contract_helpers::stake::setup_staker;
 
 #[test]
 fn run_testnet() -> Result<()> {
@@ -96,18 +97,7 @@ fn run_testnet() -> Result<()> {
     let silk = get_contract(&governance, "silk".to_string())?;
 
     /// Initialize staking
-    let staker = init_contract(&governance, "staking".to_string(),
-                               "../../compiled/staking.wasm.gz",
-                               staking::InitMsg{
-                                   admin: Some(HumanAddr::from(governance.address.clone())),
-                                   unbond_time: 0,
-                                   staked_token: Contract {
-                                       address: shade.address.clone(),
-                                       code_hash: shade.code_hash.clone()
-                                   }
-                               })?;
-
-    print_contract(&staker);
+    let staker = setup_staker(&governance, &shade, account.clone())?;
 
     /// Initialize Band Mock
     let band = init_contract(&governance, "band_mock".to_string(),
