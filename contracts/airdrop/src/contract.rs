@@ -5,10 +5,9 @@ use shade_protocol::{
         QueryMsg, Config
     }
 };
-use crate::{state::{config_w, sn_delegators_w},
+use crate::{state::{config_w, reward_w, claim_status_w},
             handle::{try_update_config, try_redeem},
             query };
-use shade_protocol::airdrop::{StoredDelegator, ValidatorWeight};
 use secret_toolkit::snip20::token_info_query;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -17,23 +16,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let config = Config{
-        owner: match msg.admin {
+        admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
         airdrop_snip20: msg.airdrop_snip20.clone(),
-        airdrop_decimals: token_info_query(&deps.querier, 1,
-                                           msg.airdrop_snip20.code_hash,
-                                           msg.airdrop_snip20.address)?.decimals,
-        sn_validator_weights: match msg.sn_validator_weights {
-            None => vec![],
-            Some(weights) => weights
-        },
-        sn_banned_validators: match msg.sn_banned_validators {
-            None => vec![],
-            Some(banned) => banned
-        },
-        sn_whale_cap: msg.sn_whale_cap,
         start_date: match msg.start_date {
             None => env.block.time,
             Some(date) => date
@@ -43,14 +30,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&config)?;
 
-    let mut delegators = sn_delegators_w(&mut deps.storage);
     // Store the delegators list
-    for delegator in msg.sn_snapshot {
-        delegators.save(delegator.address.to_string().as_bytes(), &StoredDelegator{
-            address: delegator.address,
-            delegations: delegator.delegations,
-            redeemed: false
-        });
+    for reward in msg.rewards {
+        let key = reward.address.to_string();
+
+        reward_w(&mut deps.storage).save(key.as_bytes(), &reward)?;
+        claim_status_w(&mut deps.storage).save(key.as_bytes(), &false)?;
     }
 
     Ok(InitResponse {
@@ -66,12 +51,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::UpdateConfig {
-            admin, airdrop_snip20, sn_validator_weights,
-            sn_banned_validators, sn_whale_cap,
-            start_date, end_date
-        } => try_update_config(deps, env, admin, airdrop_snip20, sn_validator_weights,
-                               sn_banned_validators, sn_whale_cap, start_date, end_date),
-        HandleMsg::Redeem { } => try_redeem(deps, env),
+            admin, start_date, end_date
+        } => try_update_config(deps, env, admin, start_date, end_date),
+        HandleMsg::Redeem { } => try_redeem(deps, &env),
     }
 }
 
@@ -83,6 +65,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetConfig { } => to_binary(&query::config(&deps)?),
         QueryMsg::GetDates { } => to_binary(&query::dates(&deps)?),
         QueryMsg::GetEligibility { address } => to_binary(
-            &query::airdrop_amount(&deps, address)),
+            &query::airdrop_amount(&deps, address)?),
     }
 }
