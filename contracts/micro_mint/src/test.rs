@@ -21,7 +21,7 @@ pub mod tests {
             init, handle, query,
         },
         handle::{
-            calculate_commission,
+            calculate_capture,
             calculate_mint,
             try_burn,
         }, 
@@ -60,7 +60,7 @@ pub mod tests {
         }
     }
 
-    fn dummy_init(admin: String, native_asset: Contract,  oracle: Contract, peg: Option<String>, treasury: Option<Contract>, commission: Option<Uint128>) -> Extern<MockStorage, MockApi, MockQuerier> {
+    fn dummy_init(admin: String, native_asset: Contract,  oracle: Contract, peg: Option<String>, treasury: Option<Contract>, capture: Option<Uint128>) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
             admin: None,
@@ -90,7 +90,7 @@ pub mod tests {
             peg: Option::from("TKN".to_string()),
             treasury: Option::from(create_contract("", "")),
             // 1%
-            commission: Option::from(Uint128(100)),
+            capture: Option::from(Uint128(100)),
         };
         let env = mock_env("creator", &coins(1000, "earth"));
 
@@ -106,7 +106,7 @@ pub mod tests {
         let native_asset = create_contract("snip20", "hash");
         let oracle = create_contract("oracle", "hash");
         let treasury = create_contract("treasury", "hash");
-        let commission = Uint128(100);
+        let capture = Uint128(100);
 
         let admin_env = mock_env("admin", &coins(1000, "earth"));
         let mut deps = dummy_init("admin".to_string(),
@@ -114,12 +114,12 @@ pub mod tests {
                                   oracle,
                                   None,
                                   Option::from(treasury),
-                                  Option::from(commission));
+                                  Option::from(capture));
 
         // new config vars
         let new_oracle = Option::from(create_contract("new_oracle", "hash"));
         let new_treasury = Option::from(create_contract("new_treasury", "hash"));
-        let new_commission = Option::from(Uint128(200));
+        let new_capture = Option::from(Uint128(200));
 
         // Update config
         let update_msg = HandleMsg::UpdateConfig {
@@ -127,7 +127,7 @@ pub mod tests {
             oracle: new_oracle.clone(),
             treasury: new_treasury.clone(),
             // 2%
-            commission: new_commission.clone(),
+            capture: new_capture.clone(),
         };
         let update_res = handle(&mut deps, admin_env, update_msg);
 
@@ -137,7 +137,7 @@ pub mod tests {
             QueryAnswer::Config { config } => {
                 assert_eq!(config.oracle, new_oracle.unwrap());
                 assert_eq!(config.treasury, new_treasury);
-                assert_eq!(config.commission, new_commission);
+                assert_eq!(config.capture, new_capture);
             }
             _ => { panic!("Received wrong answer") }
         }
@@ -371,12 +371,12 @@ pub mod tests {
     */
 
     #[test]
-    fn commission_calc() {
+    fn capture_calc() {
         let amount = Uint128(1_000_000_000_000_000_000);
         //10%
-        let commission = Uint128(1000);
+        let capture = Uint128(1000);
         let expected = Uint128(100_000_000_000_000_000);
-        let value = calculate_commission(amount, commission);
+        let value = calculate_capture(amount, capture);
         assert_eq!(value, expected);
     }
     #[test]

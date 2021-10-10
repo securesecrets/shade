@@ -17,11 +17,7 @@ use shade_protocol::{
     },
     asset::Contract,
     generic_response::ResponseStatus,
-    snip20::{
-        Snip20Asset,
-        token_config_query,
-        TokenConfig,
-    },
+    snip20::Snip20Asset,
     secretswap::{
         PairQuery,
         PairResponse,

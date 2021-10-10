@@ -1,11 +1,17 @@
+// Helper libraries
 pub mod asset;
-pub mod mint;
-pub mod micro_mint;
-pub mod oracle;
-pub mod treasury;
 pub mod generic_response;
 pub mod secretswap;
 pub mod band;
 pub mod snip20;
+
+// Protocol init libraries
 pub mod initializer;
 pub mod airdrop;
+
+// Protocol libraries
+pub mod governance;
+pub mod mint;
+pub mod micro_mint;
+pub mod oracle;
+pub mod treasury;

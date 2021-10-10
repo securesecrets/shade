@@ -4,6 +4,7 @@ use cosmwasm_std::{HumanAddr, Uint128, Binary};
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
+#[cfg(test)]
 use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -33,6 +34,7 @@ impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
+#[cfg(test)]
 impl TestInit for InitMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -66,6 +68,7 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
+#[cfg(test)]
 impl TestHandle for HandleMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -105,6 +108,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
+#[cfg(test)]
 impl TestQuery<QueryAnswer> for QueryMsg {}
 
 #[derive(Serialize, Deserialize, JsonSchema)]

@@ -239,6 +239,61 @@ pub trait TestInit: serde::Serialize {
     }
 }
 
+pub fn test_init<Message: serde::Serialize>
+(msg: &Message, contract: &NetContract, label: &str, sender: &str, gas: Option<&str>,
+ backend: Option<&str>) -> Result<TxQuery> {
+    let tx = instantiate_contract(contract, msg, label, sender,
+                                  gas, backend)?;
+    query_hash(tx.txhash)
+}
+
+pub fn test_inst_init<Message: serde::Serialize>
+(msg: &Message, contract_file: &str, label: &str, sender: &str, store_gas: Option<&str>,
+               init_gas: Option<&str>, backend: Option<&str>) -> Result<NetContract> {
+    let store_response = store_contract(contract_file,
+                                        Option::from(&*sender), store_gas, backend)?;
+
+    let store_query = query_hash(store_response.txhash)?;
+
+    let mut contract = NetContract {
+        label: label.to_string(),
+        id: "".to_string(),
+        address: "".to_string(),
+        code_hash: "".to_string()
+    };
+
+    // Look for the code ID
+    for attribute in  &store_query.logs[0].events[0].attributes {
+        if attribute.msg_key == "code_id" {
+            contract.id = attribute.value.clone();
+            break;
+        }
+    }
+
+    let init_query = test_init(&msg, &contract, label,
+                                 sender, init_gas, backend)?;
+
+    // Look for the contract's address
+    for attribute in &init_query.logs[0].events[0].attributes {
+        if attribute.msg_key == "contract_address" {
+            contract.address = attribute.value.clone();
+            break;
+        }
+    }
+
+    // Look for the contract's code hash
+    let listed_contracts = list_code()?;
+
+    for item in listed_contracts {
+        if item.id.to_string() == contract.id {
+            contract.code_hash = item.data_hash;
+            break;
+        }
+    }
+
+    Ok(contract)
+}
+
 ///
 /// Executes a contract's handle
 ///
@@ -301,6 +356,19 @@ pub trait TestHandle: serde::Serialize {
     }
 }
 
+
+///
+/// Function equivalent of the TestHandle trait
+///
+pub fn test_contract_handle<Message: serde::Serialize>(msg: &Message, contract: &NetContract, sender: &str, gas: Option<&str>,
+                   backend: Option<&str>, amount: Option<&str>) -> Result<TxCompute> {
+    let tx = execute_contract(contract, msg, sender, gas,
+                              backend, amount)?;
+
+    let response: Result<TxCompute> = compute_hash(tx.txhash);
+    response
+}
+
 ///
 /// Queries a given contract
 ///
@@ -330,3 +398,4 @@ pub trait TestQuery<Response: serde::de::DeserializeOwned>: serde::Serialize {
         query_contract(contract, self)
     }
 }
+
