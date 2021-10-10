@@ -27,9 +27,7 @@ pub struct Unbonding {
 }
 
 impl Ord for Unbonding {
-    fn cmp(&self, other: &Unbonding) -> Ordering {
-        other.unbond_time.cmp(&self.unbond_time)
-    }
+    fn cmp(&self, other: &Unbonding) -> Ordering { self.unbond_time.cmp(&other.unbond_time) }
 }
 
 impl PartialOrd for Unbonding {
