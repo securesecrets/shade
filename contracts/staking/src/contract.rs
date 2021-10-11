@@ -13,10 +13,12 @@ use crate::{
 use secret_toolkit::snip20::register_receive_msg;
 use binary_heap_plus::{BinaryHeap, MinComparator};
 use shade_protocol::{staking::Unbonding, snip20};
-use crate::{handle::{try_update_unbond_time, try_stake, try_unbond, try_query_staker, try_query_stakers, try_trigger_unbounds},
+use crate::{handle::{try_update_config, try_stake, try_unbond, try_query_staker, try_query_stakers, try_trigger_unbounds},
             state::{unbonding_w}};
 use secret_toolkit::utils::HandleCallback;
 use crate::state::total_staked_w;
+use crate::handle::try_vote;
+use shade_protocol::asset::Contract;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -26,7 +28,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     let state = Config {
         admin: match msg.admin {
-            None => { env.message.sender.clone() }
+            None => { Contract { address: env.message.sender.clone(), code_hash: "".to_string() } }
             Some(admin) => { admin }
         },
         unbond_time: msg.unbond_time,
@@ -61,12 +63,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::UpdateUnbondTime { unbond_time
-        } => try_update_unbond_time(deps, &env, unbond_time),
+        HandleMsg::UpdateConfig { admin, unbond_time
+        } => try_update_config(deps, &env, admin, unbond_time),
         HandleMsg::Receive { sender, from, amount
         } => try_stake(deps, &env, sender, from, amount),
         HandleMsg::Unbond { amount
         } => try_unbond(deps, &env, amount),
+        HandleMsg::Vote { proposal_id, votes
+        } => try_vote(deps, &env, proposal_id, votes),
         HandleMsg::QueryStaker { account
         } => try_query_staker(deps, &env, account),
         HandleMsg::QueryStakers { accounts

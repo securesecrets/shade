@@ -7,11 +7,12 @@ use crate::{
     generic_response::ResponseStatus,
 };
 use std::cmp::Ordering;
+use crate::governance::UserVote;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admin: HumanAddr,
+    pub admin: Contract,
     // Time to unbond
     pub unbond_time: u64,
     // Supported staking token
@@ -39,7 +40,7 @@ impl PartialOrd for Unbonding {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Contract>,
     pub unbond_time: u64,
     pub staked_token: Contract,
 }
@@ -47,7 +48,7 @@ pub struct InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    UpdateUnbondTime { unbond_time: u64 },
+    UpdateConfig {admin: Option<Contract>, unbond_time: Option<u64>},
     // Stake
     Receive {
         sender: HumanAddr,
@@ -55,6 +56,8 @@ pub enum HandleMsg {
         amount: Uint128,
     },
     Unbond { amount: Uint128 },
+    // While secure querying is resolved
+    Vote { proposal_id: Uint128, votes: Vec<UserVote> },
     QueryStaker { account: HumanAddr },
     QueryStakers { accounts: Vec<HumanAddr> },
     TriggerUnbonds {},
@@ -70,6 +73,7 @@ pub enum HandleAnswer {
     UpdateUnbondTime { status: ResponseStatus },
     Stake { status: ResponseStatus },
     Unbond { status: ResponseStatus },
+    Vote { status: ResponseStatus },
     QueryStaker { status: ResponseStatus, stake: Uint128 },
     QueryStakers { status: ResponseStatus, stake: Vec<Uint128> },
     TriggerUnbonds { status: ResponseStatus },

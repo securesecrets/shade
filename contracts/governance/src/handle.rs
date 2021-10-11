@@ -1,13 +1,14 @@
-use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg};
-use crate::state::{supported_contract_r, config_r, total_proposals_w, proposal_w, config_w, supported_contract_w, proposal_r, admin_commands_r, admin_commands_w, admin_commands_list_w, supported_contracts_list_w};
+use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg, Empty};
+use crate::state::{supported_contract_r, config_r, total_proposals_w, proposal_w, config_w, supported_contract_w, proposal_r, admin_commands_r, admin_commands_w, admin_commands_list_w, supported_contracts_list_w, total_proposals_r, total_proposal_votes_w, proposal_votes_w, total_proposal_votes_r, proposal_votes_r};
 use shade_protocol::{
     governance::{Proposal, ProposalStatus, HandleAnswer, GOVERNANCE_SELF, HandleMsg},
     generic_response::ResponseStatus,
     asset::Contract,
 };
-use shade_protocol::governance::ProposalStatus::Accepted;
+use shade_protocol::governance::ProposalStatus::{Accepted, Expired, Rejected};
 use shade_protocol::generic_response::ResponseStatus::{Success, Failure};
-use shade_protocol::governance::{AdminCommand, ADMIN_COMMAND_VARIABLE, Vote};
+use shade_protocol::governance::{AdminCommand, ADMIN_COMMAND_VARIABLE, Vote, UserVote, VoteTally};
+use secret_toolkit::utils::HandleCallback;
 
 pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -45,6 +46,14 @@ pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
     // Store the proposal
     proposal_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &proposal)?;
 
+    // Create proposal votes
+    total_proposal_votes_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(), &VoteTally{
+        yes: Uint128(0),
+        no: Uint128(0),
+        abstain: Uint128(0)
+    })?;
+
     Ok(proposal_id)
 }
 
@@ -64,8 +73,22 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
             backtrace: None })
     }
 
-    // TODO: missing part where proposal votes are counted and vote_status is updated
-    proposal.vote_status = Accepted;
+    // Check if proposal can be run
+    if proposal.due_date > env.block.time {
+        return Err(StdError::Unauthorized { backtrace: None })
+    }
+
+    let total_votes = total_proposal_votes_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())?;
+
+    let config = config_r(&deps.storage).load()?;
+    if total_votes.yes + total_votes.no + total_votes.abstain < config.minimum_votes {
+        proposal.vote_status = Expired;
+    } else if total_votes.yes > total_votes.no {
+        proposal.vote_status = Accepted;
+    } else {
+        proposal.vote_status = Rejected;
+    }
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
@@ -120,14 +143,56 @@ pub fn try_execute_msg(
 }
 
 pub fn try_vote<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
-    _env: &Env,
-    _proposal_id: Uint128,
-    _option: Vote,
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    voter: HumanAddr,
+    proposal_id: Uint128,
+    votes: VoteTally,
 ) -> StdResult<HandleResponse> {
 
-    // TODO: reach consensus on voting
-    // TODO: SNIP20 could have a voting command and it will automatically vote on governance
+    // Check that sender is staking contract
+    let config = config_r(&deps.storage).load()?;
+    if config.staker.address != env.message.sender {
+        return Err(StdError::Unauthorized { backtrace: None })
+    }
+
+    // Check that proposal exists
+    if proposal_id > total_proposals_r(&deps.storage).load()? {
+        return Err(StdError::NotFound { kind: "Proposal".to_string(), backtrace: None })
+    }
+
+    // Check that proposal is still votable
+    let proposal = proposal_r(&deps.storage).load(proposal_id.to_string().as_bytes())?;
+
+    if proposal.vote_status != ProposalStatus::InProgress || proposal.due_date <= env.block.time {
+        return Err(StdError::Unauthorized { backtrace: None })
+    }
+
+    // Get proposal voting state
+    let mut proposal_voting_state = total_proposal_votes_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())?;
+
+    // Check if user has already voted
+    match proposal_votes_r(&deps.storage, proposal_id).may_load(
+        voter.to_string().as_bytes())? {
+        None => {}
+        Some(old_votes) => {
+            // Remove those votes from state
+            proposal_voting_state.yes = (proposal_voting_state.yes - old_votes.yes)?;
+            proposal_voting_state.no = (proposal_voting_state.no - old_votes.no)?;
+            proposal_voting_state.abstain = (proposal_voting_state.abstain - old_votes.abstain)?;
+        }
+    }
+
+    // Update state
+    proposal_voting_state.yes += votes.yes;
+    proposal_voting_state.no += votes.no;
+    proposal_voting_state.abstain += votes.abstain;
+
+    // Save staker info
+    total_proposal_votes_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(),
+                                                   &proposal_voting_state)?;
+    proposal_votes_w(&mut deps.storage, proposal_id).save(voter.to_string().as_bytes(), &votes)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -241,6 +306,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     admin: Option<HumanAddr>,
+    staker: Option<Contract>,
     proposal_deadline: Option<u64>,
     minimum_votes: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
@@ -253,6 +319,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     config_w(&mut deps.storage).update(|mut state| {
         if let Some(admin) = admin {
             state.admin = admin;
+        }
+        if let Some(staker) = staker {
+            state.staker = staker;
         }
         if let Some(proposal_deadline) = proposal_deadline {
             state.proposal_deadline = proposal_deadline;

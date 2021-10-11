@@ -13,7 +13,9 @@ pub fn setup_staker(governance: &NetContract, shade: &Contract, staking_account:
     let staker = init_contract(&governance, "staking".to_string(),
                                "../../compiled/staking.wasm.gz",
                                staking::InitMsg{
-                                   admin: Some(HumanAddr::from(governance.address.clone())),
+                                   admin: Some(Contract{
+                                       address: HumanAddr::from(governance.address.clone()),
+                                       code_hash: governance.code_hash.clone() }),
                                    unbond_time: 0,
                                    staked_token: Contract {
                                        address: shade.address.clone(),
