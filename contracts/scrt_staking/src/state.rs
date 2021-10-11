@@ -1,7 +1,11 @@
 use cosmwasm_std::{Storage, HumanAddr};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
-use shade_protocol::staking_pool;
+use cosmwasm_storage::{
+    singleton, Singleton, 
+    singleton_read, ReadonlySingleton, 
+    bucket, Bucket, 
+    bucket_read, ReadonlyBucket
 };
+use shade_protocol::staking_pool;
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static DELEGATIONS: &[u8] = b"delegations";

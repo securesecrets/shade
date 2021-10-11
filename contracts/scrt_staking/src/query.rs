@@ -1,10 +1,11 @@
 use cosmwasm_std::{
     Api, Extern, Querier, Storage,
     StdResult, StdError, HumanAddr,
+    Delegation, Validator, StakingMsg,
 };
 use secret_toolkit::snip20;
 use shade_protocol::{
-    treasury::{
+    scrt_staking::{
         QueryAnswer
     },
 };
@@ -49,4 +50,17 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
         }
     };
 
+}
+
+pub fn delegations<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<Vec<Delegation>> {
+    deps.querier.query_all_delegations(env.contract.address)?
+}
+
+pub fn delegation<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    validator: HumanAddr,
+) -> StdResult<QueryAnswer> {
+    deps.querier.query_delegation(validator)?
 }
