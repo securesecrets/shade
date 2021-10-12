@@ -73,22 +73,35 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
             backtrace: None })
     }
 
-    // Check if proposal can be run
-    if proposal.due_date > env.block.time {
-        return Err(StdError::Unauthorized { backtrace: None })
-    }
-
-    let total_votes = total_proposal_votes_r(&deps.storage).load(
-        proposal_id.to_string().as_bytes())?;
-
+    // Change proposal behavior according to stake availability
     let config = config_r(&deps.storage).load()?;
-    if total_votes.yes + total_votes.no + total_votes.abstain < config.minimum_votes {
-        proposal.vote_status = Expired;
-    } else if total_votes.yes > total_votes.no {
-        proposal.vote_status = Accepted;
-    } else {
-        proposal.vote_status = Rejected;
-    }
+    match config.staker {
+        Some(staker) => {
+            // Check if proposal can be run
+            if proposal.due_date > env.block.time {
+                return Err(StdError::Unauthorized { backtrace: None })
+            }
+
+            let total_votes = total_proposal_votes_r(&deps.storage).load(
+                proposal_id.to_string().as_bytes())?;
+            
+            if total_votes.yes + total_votes.no + total_votes.abstain < config.minimum_votes {
+                proposal.vote_status = Expired;
+            } else if total_votes.yes > total_votes.no {
+                proposal.vote_status = Accepted;
+            } else {
+                proposal.vote_status = Rejected;
+            }
+        }
+        None => {
+            // Check if user is an admin in order to trigger the proposal
+            if config.admin == env.message.sender {
+                proposal.vote_status == Accepted;
+            } else {
+                return Err(StdError::Unauthorized { backtrace: None })
+            }
+        }
+    };
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
@@ -150,9 +163,9 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
     votes: VoteTally,
 ) -> StdResult<HandleResponse> {
 
-    // Check that sender is staking contract
+    // Check that sender is staking contract and staking is enabled
     let config = config_r(&deps.storage).load()?;
-    if config.staker.address != env.message.sender {
+    if config.staker.is_none() || config.staker.unwrap().address != env.message.sender {
         return Err(StdError::Unauthorized { backtrace: None })
     }
 
@@ -197,7 +210,7 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::Vote {
+        data: Some( to_binary( &HandleAnswer::MakeVote {
             status: Success,
         })?),
     })
@@ -320,7 +333,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         if let Some(admin) = admin {
             state.admin = admin;
         }
-        if let Some(staker) = staker {
+        if staker.is_some() {
             state.staker = staker;
         }
         if let Some(proposal_deadline) = proposal_deadline {
@@ -337,6 +350,25 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::UpdateConfig {
+            status: ResponseStatus::Success
+        })?),
+    })
+}
+
+pub fn try_disable_staker<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+) -> StdResult<HandleResponse> {
+
+    config_w(&mut deps.storage).update(|mut state| {
+        state.staker = None;
+        Ok(state)
+    })?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::DisableStaker {
             status: ResponseStatus::Success
         })?),
     })
@@ -376,7 +408,7 @@ pub fn try_add_supported_contract<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
+        data: Some( to_binary( &HandleAnswer::AddSupportedContract {
             status: ResponseStatus::Success
         })?),
     })
@@ -410,7 +442,7 @@ pub fn try_remove_supported_contract<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
+        data: Some( to_binary( &HandleAnswer::RemoveSupportedContract {
             status: ResponseStatus::Success
         })?),
     })
@@ -436,7 +468,7 @@ pub fn try_update_supported_contract<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
+        data: Some( to_binary( &HandleAnswer::UpdateSupportedContract {
             status: ResponseStatus::Success
         })?),
     })
@@ -474,7 +506,7 @@ pub fn try_add_admin_command<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
+        data: Some( to_binary( &HandleAnswer::AddAdminCommand {
             status: ResponseStatus::Success
         })?),
     })
@@ -503,7 +535,7 @@ pub fn try_remove_admin_command<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
+        data: Some( to_binary( &HandleAnswer::RemoveAdminCommand {
             status: ResponseStatus::Success
         })?),
     })
@@ -532,7 +564,7 @@ pub fn try_update_admin_command<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
+        data: Some( to_binary( &HandleAnswer::UpdateAdminCommand {
             status: ResponseStatus::Success
         })?),
     })

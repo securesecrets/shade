@@ -20,8 +20,8 @@ pub const ADMIN_COMMAND_VARIABLE: &str = "{}";
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub admin: HumanAddr,
-    // Staking contract
-    pub staker: Contract,
+    // Staking contract - optional to support admin only
+    pub staker: Option<Contract>,
     // The amount of time given for each proposal
     pub proposal_deadline: u64,
     // The minimum total amount of votes needed to approve deadline
@@ -95,7 +95,7 @@ pub struct UserVote {
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
-    pub staker: Contract,
+    pub staker: Option<Contract>,
     pub proposal_deadline: u64,
     pub quorum: Uint128,
 }
@@ -144,6 +144,8 @@ pub enum HandleMsg {
         minimum_votes: Option<Uint128>,
     },
 
+    DisableStaker {},
+
     // RequestMigration {}
 
     /// Add a contract to send proposal msgs to
@@ -182,10 +184,17 @@ impl HandleCallback for HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     CreateProposal { status: ResponseStatus, proposal_id: Uint128 },
-    Vote { status: ResponseStatus },
-    TriggerProposal { status: ResponseStatus },
+    AddAdminCommand { status: ResponseStatus },
+    RemoveAdminCommand { status: ResponseStatus },
+    UpdateAdminCommand { status: ResponseStatus },
     TriggerAdminCommand { status: ResponseStatus, proposal_id: Uint128 },
     UpdateConfig { status: ResponseStatus },
+    DisableStaker { status: ResponseStatus },
+    AddSupportedContract { status: ResponseStatus },
+    RemoveSupportedContract { status: ResponseStatus },
+    UpdateSupportedContract { status: ResponseStatus },
+    MakeVote { status: ResponseStatus },
+    TriggerProposal { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -12,6 +12,7 @@ use crate::{
 };
 use shade_protocol::asset::Contract;
 use crate::state::{admin_commands_list_w, supported_contracts_list_w};
+use crate::handle::try_disable_staker;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -60,6 +61,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::UpdateConfig { admin, staker, proposal_deadline,
             minimum_votes } =>
             handle::try_update_config(deps, &env, admin, staker, proposal_deadline, minimum_votes),
+
+        HandleMsg::DisableStaker {} => try_disable_staker(deps, &env),
 
         // Supported contract
         HandleMsg::AddSupportedContract { name, contract

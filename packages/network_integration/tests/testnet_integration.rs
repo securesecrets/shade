@@ -66,6 +66,7 @@ fn run_testnet() -> Result<()> {
 
     let governance_init_msg = governance::InitMsg {
         admin: None,
+        staker: None,
         proposal_deadline: 0,
         quorum: Uint128(0)
     };
