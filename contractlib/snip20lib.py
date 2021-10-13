@@ -1,5 +1,6 @@
 from .contractlib import Contract
 from .secretlib import secretlib
+from base64 import b64encode
 import json
 
 
@@ -78,7 +79,7 @@ class SNIP20(Contract):
         raw_msg = {"send": {"recipient": recipient, "amount": str(amount)}}
 
         if message is not None:
-            raw_msg["send"]["msg"] = message
+            raw_msg["send"]["msg"] = b64encode(json.dumps(message).encode('utf-8')).decode('utf-8')
 
         msg = json.dumps(raw_msg)
 

@@ -49,8 +49,10 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
+    let mint_asset = native_asset_r(&deps.storage).load()?;
+
     // Prevent sender to be native asset
-    if native_asset_r(&deps.storage).load()?.contract.address == env.message.sender {
+    if mint_asset.contract.address == env.message.sender {
         return Err(StdError::generic_err("Sender cannot be the same as the native asset."))
     }
 
@@ -69,12 +71,43 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         }),
     };
 
-    // Setup msgs
+
+    // This will calculate the total mint value
+    let amount_to_mint: Uint128 = mint_amount(&deps, amount, &burn_asset, &mint_asset)?;
+
     let mut messages = vec![];
     let msgs: MintMsgHook = match msg {
         Some(x) => from_binary(&x)?,
         None => return Err(StdError::generic_err("data cannot be empty")),
     };
+
+    // Check against slippage amount
+    if amount_to_mint < msgs.minimum_expected_amount {
+        return Err(StdError::generic_err("Mint amount is less than the minimum expected."))
+    }
+
+    // Check against mint cap
+    let mut limit_storage = limit_w(&mut deps.storage);
+    let mut limit = limit_storage.load()?;
+
+    // When frequency is 0 it means that mint limits are disabled
+    if limit.frequency != 0 {
+        // Reset total and next epoch
+        if limit.next_epoch <= env.block.time {
+            limit.next_epoch = env.block.time + limit.frequency;
+            limit.total_minted = Uint128(0);
+        }
+
+        let new_total = limit.total_minted + amount_to_mint;
+
+        if new_total > limit.mint_capacity {
+            return Err(StdError::generic_err("Amount to be minted exceeds mint capacity"))
+        }
+
+        limit.total_minted = new_total;
+
+        limit_storage.save(&limit)?;
+    }
 
     let mut burn_amount = amount;
     if let Some(treasury) = config.treasury {
@@ -96,30 +129,23 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     }
 
     // Try to burn
-    if let Some(token_config) = burn_asset.asset.token_config.clone() {
+    if let Some(token_config) = &burn_asset.asset.token_config {
         if token_config.burn_enabled {
-            messages.push(burn_msg(burn_amount,
-                                   None,
-                                   256,
+            messages.push(burn_msg(burn_amount, None, 256,
                                    burn_asset.asset.contract.code_hash.clone(),
                                    burn_asset.asset.contract.address.clone())?);
         }
-        else {
-            // If no config then dont burn
-            if let Some(recipient) = config.secondary_burn {
-                messages.push(send_msg(recipient, burn_amount, None, None, 1,
-                                       burn_asset.asset.contract.code_hash.clone(),
-                                       burn_asset.asset.contract.address.clone())?)
-            }
-        }
-    }
-    else  {
-        // If no config then dont burn
-        if let Some(recipient) = config.secondary_burn {
+        else if let Some(recipient) = config.secondary_burn {
             messages.push(send_msg(recipient, burn_amount, None, None, 1,
                                    burn_asset.asset.contract.code_hash.clone(),
                                    burn_asset.asset.contract.address.clone())?)
         }
+
+    }
+    else if let Some(recipient) = config.secondary_burn {
+        messages.push(send_msg(recipient, burn_amount, None, None, 1,
+                               burn_asset.asset.contract.code_hash.clone(),
+                               burn_asset.asset.contract.address.clone())?)
     }
 
     // Update burned amount
@@ -371,8 +397,7 @@ pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
         data: Some( to_binary(
             &HandleAnswer::RemoveAsset {
                 status: ResponseStatus::Success }
-        )?
-        )
+        )?)
     })
 }
 
