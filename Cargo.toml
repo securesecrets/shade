@@ -12,4 +12,5 @@ members = [
   "contracts/oracle",
   "contracts/snip20",
   "contracts/mock_band",
+  "contracts/scrt_staking",
 ]
