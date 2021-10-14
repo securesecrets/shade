@@ -5,20 +5,39 @@ use cosmwasm_storage::{
     bucket, Bucket, 
     bucket_read, ReadonlyBucket
 };
-use shade_protocol::staking_pool;
+use shade_protocol::scrt_staking;
 
 pub static CONFIG_KEY: &[u8] = b"config";
-pub static DELEGATIONS: &[u8] = b"delegations";
-pub static UNBONDINGS: &[u8] = b"unbondings";
+pub static SELF_ADDRESS: &[u8] = b"self_address";
+pub static VIEWING_KEY: &[u8] = b"viewing_key";
 
-pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, staking_pool::Config> {
+//pub static DELEGATIONS: &[u8] = b"delegations";
+
+pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, scrt_staking::Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, staking_pool::Config> {
+pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, scrt_staking::Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
+pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
+    singleton(storage, SELF_ADDRESS)
+}
+
+pub fn self_address_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, HumanAddr> {
+    singleton_read(storage, SELF_ADDRESS)
+}
+
+pub fn viewing_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
+    singleton(storage, VIEWING_KEY)
+}
+
+pub fn viewing_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
+    singleton_read(storage, VIEWING_KEY)
+}
+
+/*
 pub fn delegations_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Delegation>> {
     singleton_read(storage, DELEGATIONS)
 }
@@ -26,12 +45,4 @@ pub fn delegations_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Delega
 pub fn delegations_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Delegation>> {
     singleton(storage, DELEGATIONS)
 }
-
-// User address -> delegations
-pub fn unbondings_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<Unbonding>> {
-    bucket_read(storage, UNBONDINGS)
-}
-
-pub fn unbondings_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<Unbonding>> {
-    bucket(storage, UNBONDINGS)
-}
+*/

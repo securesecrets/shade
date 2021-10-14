@@ -1,3 +1,4 @@
+/*
 #[cfg(test)]
 pub mod tests {
     use cosmwasm_std::{
@@ -42,3 +43,4 @@ pub mod tests {
         return deps
     }
 }
+*/

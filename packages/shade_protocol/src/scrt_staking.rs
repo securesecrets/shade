@@ -1,6 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Binary};
+use cosmwasm_std::{
+    HumanAddr, Binary,
+    Uint128, Decimal,
+};
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
 use secret_toolkit::{
@@ -16,31 +19,16 @@ use secret_toolkit::{
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub owner: HumanAddr,
-    pub token: Contract,
+    pub sscrt: Contract,
     pub treasury: Contract,
     pub validator_bounds: ValidatorBounds,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Snip20Asset {
-    pub contract: Contract,
-    pub token_info: snip20::TokenInfo,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Unbonding {
-    pub amount: Uint128,
-    // epoch? datetime?
-    pub start: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct ValidatorBounds {
-    pub min_commission: Uint128,
-    pub max_commission: Uint128,
+    pub min_commission: Decimal,
+    pub max_commission: Decimal,
     pub top_position: Uint128,
     pub bottom_position: Uint128,
 }
@@ -48,9 +36,10 @@ pub struct ValidatorBounds {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
-    pub token: Contract,
+    pub sscrt: Contract,
     pub treasury: Contract,
     pub validator_bounds: ValidatorBounds,
+    pub viewing_key: String,
 }
 
 impl InitCallback for InitMsg {
@@ -60,6 +49,9 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    UpdateConfig {
+        owner: Option<HumanAddr>,
+    },
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
@@ -67,15 +59,12 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    UpdateConfig {
-        owner: Option<HumanAddr>,
+    Unbond {
+        amount: Uint128,
     },
-
-    //Trigger to refresh stake amounts, re-staking to reach approprate amounts
-    RefreshStake { },
-    // Trigger to claim all pending staking rewards
-    ClaimRewards { },
-    Unbond { amount: Uint128 },
+    Collect {
+        validator: HumanAddr,
+    },
 }
 
 impl HandleCallback for HandleMsg {
@@ -87,17 +76,17 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init { status: ResponseStatus, address: HumanAddr },
     UpdateConfig { status: ResponseStatus },
-    RegisterAsset { status: ResponseStatus },
     Receive { status: ResponseStatus },
+    Collect { amount: Uint128 },
+    Unbond { validators: Vec<Uint128>, amount: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetConfig {},
-    Staked { },
-    Rewards { },
     Delegations { },
+    Delegation { validator: HumanAddr },
 }
 
 impl Query for QueryMsg {
