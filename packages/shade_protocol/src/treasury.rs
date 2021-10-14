@@ -1,30 +1,28 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Binary};
+use cosmwasm_std::{HumanAddr, Uint128, Decimal, Binary};
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
 use secret_toolkit::{snip20, utils::{InitCallback, HandleCallback, Query}};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct TreasuryConfig {
+pub struct Config {
     pub owner: HumanAddr,
-    pub scrt_stake: Uint128,
-    pub sscrt: Contract,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Snip20Asset {
+pub struct Asset {
     pub contract: Contract,
     pub token_info: snip20::TokenInfo,
+    pub allocations: Option<Vec<Allocation>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Delegation {
-    pub validator: HumanAddr,
-    pub denom: String,
-    pub amount: Uint128,
+pub struct Allocation {
+    pub contract: Contract,
+    pub portion: Decimal,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -52,14 +50,14 @@ pub enum HandleMsg {
     },
     RegisterAsset {
         contract: Contract,
-        // Percent of asset to have staked on the derivative staking contract
-        stake: Option<Uint128>,
+        /* List of contracts/users given an allowance based on a percentage of the asset balance
+        * e.g. governance, LP, SKY
+        */
+        allocations: Option<Vec<Allocation>>,
     },
 
-    //Trigger to refresh stake amounts, re-staking to reach approprate amounts
-    RefreshStake { },
-    // Trigger to claim all pending staking rewards and restake them
-    ClaimRewards { },
+    // Trigger to re-calc asset allocations
+    Rebalance { },
 }
 
 impl HandleCallback for HandleMsg {
@@ -73,6 +71,7 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     RegisterAsset { status: ResponseStatus },
     Receive { status: ResponseStatus },
+    Rebalance { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -82,10 +81,7 @@ pub enum QueryMsg {
     GetBalance {
         contract: HumanAddr,
     },
-    PendingRewards { 
-        denom: String,
-    },
-    Delegations { },
+    CanRebalance { },
 }
 
 impl Query for QueryMsg {
@@ -95,6 +91,7 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    Config { config: TreasuryConfig },
+    Config { config: Config },
     Balance { amount: Uint128 },
+    CanRebalance { possible: bool},
 }

@@ -15,7 +15,8 @@ use secret_toolkit::{
 use shade_protocol::{
     treasury::{
         HandleAnswer, 
-        Snip20Asset
+        Asset,
+        Allocation,
     },
     asset::Contract,
     generic_response::ResponseStatus,
@@ -38,7 +39,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let assets = assets_r(&deps.storage);
 
-    let asset: Snip20Asset = assets.load(env.message.sender.to_string().as_bytes())?;
+    let asset: Asset = assets.load(env.message.sender.to_string().as_bytes())?;
     debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
 
     Ok(HandleResponse {
@@ -82,6 +83,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
+    allocations: Option<Vec<Allocation>>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -94,13 +96,20 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                                       contract.code_hash.clone(),
                                       contract.address.clone())?;
 
-    assets_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &Snip20Asset {
+    assets_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &Asset {
         contract: contract.clone(),
         token_info,
+        allocations,
     })?;
 
     // Register contract in asset
-    messages.push(register_receive(&env, &contract)?);
+    messages.push(register_receive_msg(
+        env.contract_code_hash.clone(),
+        None,
+        256,
+        contract.code_hash.clone(),
+        contract.address.clone(),
+    )?);
 
     // Set viewing key
     messages.push(set_viewing_key_msg(
@@ -122,17 +131,19 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn register_receive (
+pub fn rebalance<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
     env: &Env,
-    contract: &Contract,
-) -> StdResult<CosmosMsg> {
-    let cosmos_msg = register_receive_msg(
-        env.contract_code_hash.clone(),
-        None,
-        256,
-        contract.code_hash.clone(),
-        contract.address.clone(),
-    );
+) -> StdResult<HandleResponse> {
 
-    cosmos_msg
+    let mut messages = vec![];
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some( to_binary( 
+            &HandleAnswer::Rebalance {
+                status: ResponseStatus::Success } 
+            )? 
+        )
+    })
 }

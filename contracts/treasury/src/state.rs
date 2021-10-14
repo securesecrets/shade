@@ -1,8 +1,11 @@
 use cosmwasm_std::{Storage, HumanAddr};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
-use shade_protocol::{
-    treasury::{TreasuryConfig, Snip20Asset},
+use cosmwasm_storage::{
+    singleton, singleton_read,
+    Singleton, ReadonlySingleton,
+    Bucket, ReadonlyBucket,
+    bucket, bucket_read,
 };
+use shade_protocol::treasury;
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static ASSET_KEY: &[u8] = b"assets";
@@ -10,11 +13,11 @@ pub static ASSET_LIST_KEY: &[u8] = b"asset_list";
 pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 
-pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, TreasuryConfig> {
+pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury::Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, TreasuryConfig> {
+pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, treasury::Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
@@ -26,11 +29,11 @@ pub fn asset_list_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Stri
     singleton_read(storage, ASSET_LIST_KEY)
 }
 
-pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Snip20Asset> {
+pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, treasury::Asset> {
     bucket_read(ASSET_KEY, storage)
 }
 
-pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
+pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury::Asset> {
     bucket(ASSET_KEY, storage)
 }
 

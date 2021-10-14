@@ -6,7 +6,8 @@ use cosmwasm_std::{
 
 use shade_protocol::{
     treasury::{
-        InitMsg, TreasuryConfig,
+        InitMsg,
+        Config,
         HandleMsg,
         QueryMsg,
     },
@@ -28,7 +29,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
 
-    let state = TreasuryConfig {
+    let state = Config {
         owner: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
@@ -65,7 +66,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::try_update_config(deps, env, owner),
         HandleMsg::RegisterAsset {
             contract,
-        } => handle::try_register_asset(deps, &env, &contract),
+            allocations,
+        } => handle::try_register_asset(deps, &env, &contract, allocations),
+        HandleMsg::Rebalance {
+        } => handle::rebalance(deps, &env),
     }
 }
 
@@ -76,5 +80,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::GetBalance { contract } => to_binary(&query::balance(deps, contract)?),
+        QueryMsg::CanRebalance { } => to_binary(&query::can_rebalance(deps)?),
     }
 }
