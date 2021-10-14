@@ -17,8 +17,6 @@ use shade_protocol::{
         HandleAnswer, 
         Snip20Asset
     },
-    sscrt_staking::{
-    }
     asset::Contract,
     generic_response::ResponseStatus,
 };
@@ -137,80 +135,4 @@ pub fn register_receive (
     );
 
     cosmos_msg
-}
-
-pub fn refresh_stake<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-) -> StdResult<HandleResponse> {
-
-    let mut messages: Vec<CosmosMsg> = vec![];
-
-    let balance = (querier.query_balance(address.clone(), &"uscrt".to_string())?).amount;
-    let current_stake = Uint128(0);
-
-    let delegations = delegations_r(&deps.storage).load()?;
-
-    for delegation in delegations {
-        current_stake += delegation.amount;
-    }
-    let config = config_r(&deps.storage).load()?;
-
-    let desired_stake = calculate_stake(current_stake + balance, config.scrt_stake);
-
-    if current_stake < desired_stake {
-        messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
-            validator: HumanAddr(validator.to_string()),
-            amount: Coin {
-                denom: "uscrt".to_string(),
-                amount: desired_stake - current_stake,
-            },
-        }))
-    } else if desired_stake < current_stake {
-        messages.push(
-        )
-    }
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::Receive {
-            status: ResponseStatus::Success,
-        } )? ),
-    })
-
-}
-
-// unstakes amount
-pub fn unstake(amount: Uint128) {
-}
-
-// Converts amount sscrt -> scrt and stakes it
-pub fn stake(amount: Uint128) {
-    CosmosMsg::Staking(StakingMsg::Undelegate {
-        validator: HumanAddr(validator.to_string()),
-        amount: Coin {
-            denom: "uscrt".to_string(),
-            amount: Uint128(amount),
-        },
-    })
-}
-
-pub fn calculate_stake(
-    total_balance: Uint128, stake: Uint128
-) -> Uint128 {
-    total_balance.multiply_ratio(stake, 10000u128)
-}
-
-pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-) -> StdResult<HandleResponse> {
-}
-
-pub fn claim_rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-) -> StdResult<HandleResponse> {
-
 }

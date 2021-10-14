@@ -66,10 +66,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::RegisterAsset {
             contract,
         } => handle::try_register_asset(deps, &env, &contract),
-        HandleMsg::RefreshStake {
-        } => handle::refresh_stake(deps, &env),
-        HandleMsg::ClaimRewards {
-        } => handle::claim_rewards(deps, &env),
     }
 }
 
@@ -80,7 +76,5 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::GetBalance { contract } => to_binary(&query::balance(deps, contract)?),
-        QueryMsg::PendingRewards {} => to_binary(&query::pending_rewards(deps)?),
-        QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
     }
 }

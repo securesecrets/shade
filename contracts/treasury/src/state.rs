@@ -9,7 +9,6 @@ pub static ASSET_KEY: &[u8] = b"assets";
 pub static ASSET_LIST_KEY: &[u8] = b"asset_list";
 pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
-pub static DELEGATIONS: &[u8] = b"delegations";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, TreasuryConfig> {
     singleton(storage, CONFIG_KEY)
@@ -49,12 +48,4 @@ pub fn self_address_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, HumanAddr
 
 pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
     singleton(storage, SELF_ADDRESS)
-}
-
-pub fn delegations_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Delegation>> {
-    singleton(storage, DELEGATIONS)
-}
-
-pub fn delegations_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Delegation>> {
-    singleton(storage, DELEGATIONS)
 }
