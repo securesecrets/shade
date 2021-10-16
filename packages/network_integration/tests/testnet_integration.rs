@@ -4,7 +4,7 @@ use cosmwasm_std::{HumanAddr, Uint128, to_binary};
 use secretcli::{cli_types::NetContract,
                 secretcli::{account_address, query_contract, test_contract_handle,
                             test_inst_init, list_contracts_by_code}};
-use shade_protocol::{snip20::{InitConfig, InitialBalance}, snip20, governance,
+use shade_protocol::{snip20::{InitConfig, InitialBalance}, snip20, governance, staking,
                      micro_mint, band, oracle, asset::Contract};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
                              STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec},
@@ -12,6 +12,7 @@ use network_integration::{utils::{print_header, print_warning, generate_label, p
                                         governance::{init_contract, get_contract, add_contract,
                                                      create_proposal, trigger_latest_proposal},
                                         minter::{initialize_minter, setup_minters}}};
+use network_integration::contract_helpers::stake::setup_staker;
 
 #[test]
 fn run_testnet() -> Result<()> {
@@ -78,11 +79,6 @@ fn run_testnet() -> Result<()> {
     /// Initialize initializer and snip20s
     initialize_initializer(&governance, &sSCRT, account.clone())?;
 
-    /// Initialize Band Mock
-    let band = init_contract(&governance, "band_mock".to_string(),
-                             "../../compiled/mock_band.wasm.gz",
-                             band::InitMsg {})?;
-
     /// Print Contracts so far
     print_warning("Governance contracts so far");
     {
@@ -99,6 +95,14 @@ fn run_testnet() -> Result<()> {
     let shade = get_contract(&governance, "shade".to_string())?;
     print_warning("Getting Silk contract from governance");
     let silk = get_contract(&governance, "silk".to_string())?;
+
+    /// Initialize staking
+    let staker = setup_staker(&governance, &shade, account.clone())?;
+
+    /// Initialize Band Mock
+    let band = init_contract(&governance, "band_mock".to_string(),
+                             "../../compiled/mock_band.wasm.gz",
+                             band::InitMsg {})?;
 
     /// Initialize Oracle
     let oracle = init_contract(&governance, "oracle".to_string(),

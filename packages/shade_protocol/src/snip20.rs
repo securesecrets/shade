@@ -151,6 +151,10 @@ pub enum HandleMsg {
     },
 }
 
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
 #[cfg(test)]
 impl TestHandle for HandleMsg {}
 
@@ -170,6 +174,10 @@ pub enum QueryMsg {
         key: String,
     },
     Minters {},
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
