@@ -20,9 +20,9 @@ pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub airdrop_snip20: Contract,
     // The airdrop time limit
-    pub start_date: Option<u64>,
+    pub start_time: Option<u64>,
     // Can be set to never end
-    pub end_date: Option<u64>,
+    pub end_time: Option<u64>,
     // Secret network delegators snapshot
     pub rewards: Vec<Reward>,
 }
@@ -39,7 +39,7 @@ pub enum HandleMsg {
         start_date: Option<u64>,
         end_date: Option<u64>,
     },
-    Redeem {}
+    Claim {}
 }
 
 impl HandleCallback for HandleMsg {
@@ -51,7 +51,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init { status: ResponseStatus },
     UpdateConfig { status: ResponseStatus },
-    Redeem { status: ResponseStatus }
+    Claim { status: ResponseStatus }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

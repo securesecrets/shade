@@ -63,8 +63,8 @@ fn run_airdrop() -> Result<()> {
             address: HumanAddr::from(snip.address.clone()),
             code_hash: snip.code_hash.clone()
         },
-        start_date: None,
-        end_date: None,
+        start_time: None,
+        end_time: None,
         rewards: vec![Reward {
             address: HumanAddr::from(account.clone()),
             amount: expected_airdrop
@@ -98,7 +98,7 @@ fn run_airdrop() -> Result<()> {
 
     print_header("Claiming airdrop");
     /// Claim airdrop
-    test_contract_handle(&airdrop::HandleMsg::Redeem {},
+    test_contract_handle(&airdrop::HandleMsg::Claim {},
                          &airdrop, ACCOUNT_KEY, Some(GAS),
                          Some("test"), None)?;
 

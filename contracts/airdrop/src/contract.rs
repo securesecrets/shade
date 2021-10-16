@@ -6,7 +6,7 @@ use shade_protocol::{
     }
 };
 use crate::{state::{config_w, reward_w, claim_status_w},
-            handle::{try_update_config, try_redeem},
+            handle::{try_update_config, try_claim},
             query };
 use secret_toolkit::snip20::token_info_query;
 
@@ -21,11 +21,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             Some(admin) => { admin }
         },
         airdrop_snip20: msg.airdrop_snip20.clone(),
-        start_date: match msg.start_date {
+        start_date: match msg.start_time {
             None => env.block.time,
             Some(date) => date
         },
-        end_date: msg.end_date
+        end_date: msg.end_time
     };
 
     config_w(&mut deps.storage).save(&config)?;
@@ -53,7 +53,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::UpdateConfig {
             admin, start_date, end_date
         } => try_update_config(deps, env, admin, start_date, end_date),
-        HandleMsg::Redeem { } => try_redeem(deps, &env),
+        HandleMsg::Claim { } => try_claim(deps, &env),
     }
 }
 

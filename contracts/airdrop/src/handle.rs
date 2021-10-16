@@ -42,7 +42,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
+pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
 ) -> StdResult<HandleResponse> {
@@ -61,8 +61,13 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     let key = env.message.sender.to_string();
 
     // Check if user is eligible
-    if claim_status_r(&deps.storage).load(key.as_bytes())? {
-        return Err(StdError::GenericErr { msg: "Already Claimed".to_string(), backtrace: None })
+    match claim_status_r(&deps.storage).load(key.as_bytes()) {
+        Ok(claimed) => {
+            if claimed {
+                return Err(StdError::GenericErr { msg: "Already Claimed".to_string(), backtrace: None })
+            }
+        }
+        Err(_) => return Err(StdError::GenericErr { msg: "Not eligible".to_string(), backtrace: None })
     }
 
     // Load the user's reward
@@ -82,7 +87,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::Redeem {
+        data: Some( to_binary( &HandleAnswer::Claim {
             status: ResponseStatus::Success } )? )
     })
 }
