@@ -55,8 +55,8 @@ pub enum HandleMsg {
         amount: Uint128,
     },
     Unbond { amount: Uint128 },
-    QueryStaker { account: HumanAddr },
-    QueryStakers { accounts: Vec<HumanAddr> },
+    GetStaker { account: HumanAddr },
+    GetStakers { accounts: Vec<HumanAddr> },
     TriggerUnbonds {},
 }
 
@@ -70,8 +70,8 @@ pub enum HandleAnswer {
     UpdateUnbondTime { status: ResponseStatus },
     Stake { status: ResponseStatus },
     Unbond { status: ResponseStatus },
-    QueryStaker { status: ResponseStatus, stake: Uint128 },
-    QueryStakers { status: ResponseStatus, stake: Vec<Uint128> },
+    GetStaker { status: ResponseStatus, stake: Uint128 },
+    GetStakers { status: ResponseStatus, stake: Vec<Uint128> },
     TriggerUnbonds { status: ResponseStatus },
 }
 
