@@ -11,7 +11,7 @@ cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
 rm ./$(1).wasm
 endef
 
-CONTRACTS = initializer airdrop governance mint micro_mint treasury oracle mock_band
+CONTRACTS = initializer airdrop governance staking mint micro_mint treasury oracle mock_band
 
 COMPILED = ${CONTRACTS:=.wasm.gz}
 

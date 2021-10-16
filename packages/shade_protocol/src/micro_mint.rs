@@ -10,6 +10,9 @@ use crate::{
 #[cfg(test)]
 use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
+#[cfg(test)]
+use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub owner: HumanAddr,
