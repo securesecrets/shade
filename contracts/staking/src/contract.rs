@@ -13,7 +13,7 @@ use crate::{
 use secret_toolkit::snip20::register_receive_msg;
 use binary_heap_plus::{BinaryHeap, MinComparator};
 use shade_protocol::{staking::Unbonding, snip20};
-use crate::{handle::{try_update_config, try_stake, try_unbond, try_query_staker, try_query_stakers, try_trigger_unbounds},
+use crate::{handle::{try_update_config, try_stake, try_unbond, try_get_staker, try_get_stakers, try_trigger_unbounds},
             state::{unbonding_w}};
 use secret_toolkit::utils::HandleCallback;
 use crate::state::total_staked_w;
@@ -71,10 +71,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => try_unbond(deps, &env, amount),
         HandleMsg::Vote { proposal_id, votes
         } => try_vote(deps, &env, proposal_id, votes),
-        HandleMsg::QueryStaker { account
-        } => try_query_staker(deps, &env, account),
-        HandleMsg::QueryStakers { accounts
-        } => try_query_stakers(deps, &env, accounts),
+        HandleMsg::GetStaker { account
+        } => try_get_staker(deps, &env, account),
+        HandleMsg::GetStakers { accounts
+        } => try_get_stakers(deps, &env, accounts),
         HandleMsg::TriggerUnbonds { } => try_trigger_unbounds(deps, &env),
     }
 }

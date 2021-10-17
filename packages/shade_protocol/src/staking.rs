@@ -58,8 +58,8 @@ pub enum HandleMsg {
     Unbond { amount: Uint128 },
     // While secure querying is resolved
     Vote { proposal_id: Uint128, votes: Vec<UserVote> },
-    QueryStaker { account: HumanAddr },
-    QueryStakers { accounts: Vec<HumanAddr> },
+    GetStaker { account: HumanAddr },
+    GetStakers { accounts: Vec<HumanAddr> },
     TriggerUnbonds {},
 }
 
@@ -74,8 +74,8 @@ pub enum HandleAnswer {
     Stake { status: ResponseStatus },
     Unbond { status: ResponseStatus },
     Vote { status: ResponseStatus },
-    QueryStaker { status: ResponseStatus, stake: Uint128 },
-    QueryStakers { status: ResponseStatus, stake: Vec<Uint128> },
+    GetStaker { status: ResponseStatus, stake: Uint128 },
+    GetStakers { status: ResponseStatus, stake: Vec<Uint128> },
     TriggerUnbonds { status: ResponseStatus },
 }
 

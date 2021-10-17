@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg, Decimal};
+use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg};
 use crate::state::{config_r, config_w, staker_w, unbonding_w, staker_r, total_staked_w};
 use shade_protocol::{
     staking::{HandleMsg, HandleAnswer, QueryMsg, QueryAnswer},
@@ -190,7 +190,7 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_query_staker<S: Storage, A: Api, Q: Querier>(
+pub fn try_get_staker<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     account: HumanAddr
@@ -207,14 +207,14 @@ pub fn try_query_staker<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::QueryStaker {
+        data: Some( to_binary( &HandleAnswer::GetStaker {
             status: Success,
             stake
         })?),
     })
 }
 
-pub fn try_query_stakers<S: Storage, A: Api, Q: Querier>(
+pub fn try_get_stakers<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     stakers: Vec<HumanAddr>
@@ -235,7 +235,7 @@ pub fn try_query_stakers<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::QueryStakers {
+        data: Some( to_binary( &HandleAnswer::GetStakers {
             status: Success,
             stake
         })?),
