@@ -7,11 +7,6 @@ use crate::{
     asset::Contract,
     generic_response::ResponseStatus,
 };
-#[cfg(test)]
-use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
-
-#[cfg(test)]
-use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -62,9 +57,6 @@ impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[cfg(test)]
-impl TestInit for InitMsg {}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
@@ -100,9 +92,6 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[cfg(test)]
-impl TestHandle for HandleMsg {}
-
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
@@ -129,9 +118,6 @@ pub enum QueryMsg {
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
-
-#[cfg(test)]
-impl TestQuery<QueryAnswer> for QueryMsg {}
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]

@@ -13,10 +13,6 @@ pub const GOVERNANCE_SELF: &str = "SELF";
 // Admin command variable spot
 pub const ADMIN_COMMAND_VARIABLE: &str = "{}";
 
-/// TODO: GOVERNANCE CAN BE INITIALIZED WITHOUT STAKING
-/// THIS PUTS GOVERNANCE IN A NO VOTING STATE WHERE VOTES WILL NOT BE CONSIDERED,
-/// ADMINS CAN TRIGGER PROPOSALS WITHOUT VOTE TALLY
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub admin: HumanAddr,

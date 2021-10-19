@@ -75,33 +75,35 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
 
     // Change proposal behavior according to stake availability
     let config = config_r(&deps.storage).load()?;
-    match config.staker {
+    proposal.vote_status = match config.staker {
         Some(staker) => {
-            // Check if proposal can be run
-            if proposal.due_date > env.block.time {
-                return Err(StdError::Unauthorized { backtrace: None })
-            }
 
             let total_votes = total_proposal_votes_r(&deps.storage).load(
                 proposal_id.to_string().as_bytes())?;
-            
-            if total_votes.yes + total_votes.no + total_votes.abstain < config.minimum_votes {
-                proposal.vote_status = Expired;
-            } else if total_votes.yes > total_votes.no {
-                proposal.vote_status = Accepted;
-            } else {
-                proposal.vote_status = Rejected;
+
+            // Check if proposal can be run
+            if proposal.due_date > env.block.time {
+                Err(StdError::Unauthorized { backtrace: None })
+            }
+            else if total_votes.yes + total_votes.no + total_votes.abstain < config.minimum_votes {
+                Ok(Expired)
+            }
+            else if total_votes.yes > total_votes.no {
+                Ok(Accepted)
+            }
+            else {
+                Ok(Rejected)
             }
         }
         None => {
             // Check if user is an admin in order to trigger the proposal
             if config.admin == env.message.sender {
-                proposal.vote_status == Accepted;
+                Ok(Accepted)
             } else {
-                return Err(StdError::Unauthorized { backtrace: None })
+                Err(StdError::Unauthorized { backtrace: None })
             }
         }
-    };
+    }?;
 
     let mut messages: Vec<CosmosMsg> = vec![];
 

@@ -131,7 +131,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn stake_weight(stake: Uint128, weight: u8) -> Uint128 {
-    stake.multiply_ratio(100 as u128, weight)
+    stake.multiply_ratio(weight, 100 as u128)
 }
 
 pub fn try_vote<S: Storage, A: Api, Q: Querier>(
