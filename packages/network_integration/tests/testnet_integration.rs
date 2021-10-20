@@ -389,6 +389,5 @@ fn run_testnet() -> Result<()> {
         }
     }
 
-
     Ok(())
 }
