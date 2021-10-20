@@ -2,6 +2,16 @@
 pub mod tests {
     use binary_heap_plus::{BinaryHeap, MinComparator};
     use shade_protocol::staking::Unbonding;
+    use cosmwasm_std::Uint128;
+    use crate::handle::stake_weight;
+
+    #[test]
+    fn test_weight_calculation() {
+        let stake = Uint128(1000000);
+
+        assert_eq!(Uint128(500000), stake_weight(stake, 50));
+        assert_eq!(Uint128(250000), stake_weight(stake, 25));
+    }
 
     #[test]
     fn binary_heap_order() {
