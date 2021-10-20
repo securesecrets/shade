@@ -128,4 +128,3 @@ pub enum QueryAnswer {
     Config { config: Config },
     MintLimit { limit: MintLimit },
 }
-

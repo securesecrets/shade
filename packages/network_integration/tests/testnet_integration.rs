@@ -5,18 +5,124 @@ use secretcli::{cli_types::NetContract,
                 secretcli::{account_address, query_contract, test_contract_handle,
                             test_inst_init, list_contracts_by_code}};
 use shade_protocol::{snip20::{InitConfig, InitialBalance}, snip20, governance, staking,
-                     micro_mint, band, oracle, asset::Contract};
+                     micro_mint, band, oracle, asset::Contract, airdrop, airdrop::Reward,
+                     governance::{UserVote, Vote, ProposalStatus}, generic_response::ResponseStatus};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
                              STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec},
                      contract_helpers::{initializer::initialize_initializer,
                                         governance::{init_contract, get_contract, add_contract,
+                                                     create_proposal, get_latest_proposal,
                                                      create_and_trigger_proposal, trigger_latest_proposal},
-                                        minter::{initialize_minter, setup_minters}}};
-use network_integration::contract_helpers::stake::setup_staker;
-use network_integration::contract_helpers::governance::{create_proposal, get_latest_proposal};
-use shade_protocol::governance::{UserVote, Vote, ProposalStatus};
+                                        minter::{initialize_minter, setup_minters, get_balance},
+                                        stake::setup_staker}};
 use std::{thread, time};
-use shade_protocol::generic_response::ResponseStatus;
+
+#[test]
+fn run_airdrop() -> Result<()> {
+    let account = account_address(ACCOUNT_KEY)?;
+
+    /// Initialize dummy snip20
+    print_header("\nInitializing snip20");
+
+    let snip_init_msg = snip20::InitMsg {
+        name: "test".to_string(),
+        admin: None,
+        symbol: "TEST".to_string(),
+        decimals: 6,
+        initial_balances: None,
+        prng_seed: Default::default(),
+        config: Some(InitConfig {
+            public_total_supply: Some(true),
+            enable_deposit: Some(true),
+            enable_redeem: Some(true),
+            enable_mint: Some(true),
+            enable_burn: Some(false)
+        })
+    };
+
+    let snip = test_inst_init(&snip_init_msg, "../../compiled/snip20.wasm.gz", &*generate_label(8),
+                               ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
+                               Some("test"))?;
+    print_contract(&snip);
+
+    {
+        let msg = snip20::HandleMsg::SetViewingKey { key: String::from(VIEW_KEY), padding: None };
+
+        test_contract_handle(&msg, &snip, ACCOUNT_KEY, Some(GAS),
+                             Some("test"), None)?;
+    }
+
+    /// Assert that we start with nothing
+    assert_eq!(Uint128(0), get_balance(&snip, account.clone()));
+
+    let expected_airdrop = Uint128(1000000);
+
+    print_header("Initializing airdrop");
+
+    let airdrop_init_msg = airdrop::InitMsg {
+        admin: None,
+        airdrop_snip20: Contract {
+            address: HumanAddr::from(snip.address.clone()),
+            code_hash: snip.code_hash.clone()
+        },
+        start_time: None,
+        end_time: None,
+        rewards: vec![Reward {
+            address: HumanAddr::from(account.clone()),
+            amount: expected_airdrop
+        }]
+    };
+
+    let airdrop = test_inst_init(&airdrop_init_msg, "../../compiled/airdrop.wasm.gz", &*generate_label(8),
+                              ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
+                              Some("test"))?;
+    print_contract(&airdrop);
+
+    /// Query that airdrop is allowed
+    {
+        let msg = airdrop::QueryMsg::GetEligibility {
+            address: HumanAddr::from(account.clone())
+        };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::Eligibility { amount, claimed } = query {
+            assert_eq!(amount, expected_airdrop);
+            assert_eq!(claimed, false);
+        }
+    }
+
+    /// Register airdrop as allowed minter
+    test_contract_handle(&snip20::HandleMsg::SetMinters {
+        minters: vec![HumanAddr::from(airdrop.address.clone())], padding: None },
+                         &snip, ACCOUNT_KEY, Some(GAS),
+                         Some("test"), None)?;
+
+    print_header("Claiming airdrop");
+    /// Claim airdrop
+    test_contract_handle(&airdrop::HandleMsg::Claim {},
+                         &airdrop, ACCOUNT_KEY, Some(GAS),
+                         Some("test"), None)?;
+
+    /// Assert that we claimed
+    assert_eq!(expected_airdrop, get_balance(&snip, account.clone()));
+
+    /// Query that airdrop is claimed
+    {
+        let msg = airdrop::QueryMsg::GetEligibility {
+            address: HumanAddr::from(account.clone())
+        };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::Eligibility { amount, claimed } = query {
+            assert_eq!(amount, expected_airdrop);
+            assert_eq!(claimed, true);
+        }
+    }
+
+    Ok(())
+}
 
 #[test]
 fn run_testnet() -> Result<()> {
