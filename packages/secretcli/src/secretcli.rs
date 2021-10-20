@@ -112,6 +112,15 @@ pub fn list_contracts_by_code(code: String) -> Result<Vec<ListContractCode>> {
     serde_json::from_value(secretcli_run(vec_str_to_vec_string(command))?)
 }
 
+fn trim_newline(s: &mut String) {
+    if s.ends_with('\n') {
+        s.pop();
+        if s.ends_with('\r') {
+            s.pop();
+        }
+    }
+}
+
 pub fn account_address(acc: &str) -> Result<String> {
     let command = vec_str_to_vec_string(vec!["keys", "show", "-a", acc]);
 
@@ -136,7 +145,12 @@ pub fn account_address(acc: &str) -> Result<String> {
 
     let out = result.stdout;
 
-    Ok(String::from_utf8_lossy(&out).parse().unwrap())
+    let mut s: String = String::from_utf8_lossy(&out).parse().unwrap();
+
+    // Sometimes the resulting string has a newline, so we trim that
+    trim_newline(&mut s);
+
+    Ok(s)
 }
 
 ///
