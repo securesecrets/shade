@@ -1,16 +1,24 @@
 [workspace]
 members = [
-  #"packages/network_tester",
-
+  # Packages
+  "packages/network_integration",
   "packages/shade_protocol",
   "packages/secretcli",
-  "contracts/governance",
+
+  # Network setups
   "contracts/initializer",
+  "contracts/airdrop",
+
+  # Protocol contracts
+  "contracts/governance",
+  "contracts/staking",
   "contracts/mint",
   "contracts/micro_mint",
   "contracts/treasury",
   "contracts/oracle",
   "contracts/snip20",
+
+  # Mock contracts
   "contracts/mock_band",
   "contracts/scrt_staking",
 ]

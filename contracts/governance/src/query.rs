@@ -33,6 +33,14 @@ pub fn proposal<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn total_proposals<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::TotalProposals {
+        total: total_proposals_r(&deps.storage).load()?
+    })
+}
+
 pub fn supported_contracts<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
 

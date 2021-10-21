@@ -105,6 +105,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetProposal { proposal_id } => to_binary(
             &query::proposal(deps, proposal_id)?),
 
+        QueryMsg::GetTotalProposals {} => to_binary(
+            &query::total_proposals(deps)?),
+
         QueryMsg::GetSupportedContracts { } => to_binary(&query::supported_contracts(deps)?),
 
         QueryMsg::GetSupportedContract { name } => to_binary(

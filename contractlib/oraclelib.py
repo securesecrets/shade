@@ -33,22 +33,10 @@ class Oracle(Contract):
 
         return self.query(msg)
 
-    def get_prices(self, symbols):
-
-        msg = json.dumps({'get_prices': {'symbols': symbols}})
-
-        return self.query(msg)
-
     def register_sswap_pair(self, pair):
-
-        msg = json.dumps({
-            'register_sswap_pair': {
-                'pair': { 
-                    'address': pair.address,
-                    'code_hash': pair.code_hash,
-                }
-            }
-        })
+        msg = json.dumps({'pair': {
+            'address': pair.address,
+            'code_hash': pair.code_hash,
+        }})
 
         return self.execute(msg)
-

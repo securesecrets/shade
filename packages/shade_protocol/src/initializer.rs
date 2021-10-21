@@ -2,6 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::snip20::InitialBalance;
 use cosmwasm_std::{HumanAddr, Binary};
+#[cfg(test)]
 use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -31,6 +32,7 @@ pub struct InitMsg {
     pub silk: Snip20ContractInfo,
 }
 
+#[cfg(test)]
 impl TestInit for InitMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -44,6 +46,7 @@ pub enum QueryMsg {
     Contracts {},
 }
 
+#[cfg(test)]
 impl TestQuery<QueryAnswer> for QueryMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

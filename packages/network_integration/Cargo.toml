@@ -1,0 +1,32 @@
+[package]
+name = "network-integration"
+version = "0.1.0"
+authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[features]
+default = []
+
+[dependencies]
+colored = "2.0.0"
+shade-protocol = { version = "0.1.0", path = "../shade_protocol" }
+secretcli = { version = "0.1.0", path = "../secretcli" }
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.67"}
+getrandom = { version = "0.2", features = ["js"] } # Prevents wasm from freaking out when running make
+rand = { version = "0.8.4"}
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }

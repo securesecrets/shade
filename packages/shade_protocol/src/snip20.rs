@@ -2,6 +2,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::asset::Contract;
 use secret_toolkit::{snip20::TokenInfo, utils::Query};
+use cosmwasm_std::{StdResult, StdError, Querier, HumanAddr, Uint128, Binary};
+use secret_toolkit::utils::{InitCallback, HandleCallback};
+#[cfg(test)]
 use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 use cosmwasm_std::{
     StdResult, Querier, 
@@ -77,6 +80,7 @@ impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
+#[cfg(test)]
 impl TestInit for InitMsg {}
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Default, PartialEq, Debug)]
@@ -154,6 +158,11 @@ pub enum HandleMsg {
     },
 }
 
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[cfg(test)]
 impl TestHandle for HandleMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -172,6 +181,10 @@ pub enum QueryMsg {
         key: String,
     },
     Minters {},
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
@@ -211,4 +224,5 @@ pub enum QueryAnswer {
     },
 }
 
+#[cfg(test)]
 impl TestQuery<QueryAnswer> for QueryMsg {}
