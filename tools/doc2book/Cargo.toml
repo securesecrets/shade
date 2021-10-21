@@ -1,0 +1,11 @@
+[package]
+name = "doc2book"
+version = "0.1.0"
+edition = "2018"
+
+[[bin]]
+name = "doc2book"
+path = "src/doc2book.rs"
+
+[dev-dependencies]
+pretty_assertions = "1.0.0"
