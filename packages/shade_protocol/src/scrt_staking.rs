@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{
     HumanAddr, Binary,
     Uint128, Decimal,
+    Validator, FullDelegation,
+    Coin,
 };
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
@@ -19,9 +21,9 @@ use secret_toolkit::{
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub owner: HumanAddr,
+    pub treasury: HumanAddr,
     pub sscrt: Contract,
-    pub treasury: Contract,
-    pub validator_bounds: ValidatorBounds,
+    pub validator_bounds: Option<ValidatorBounds>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -36,9 +38,9 @@ pub struct ValidatorBounds {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
+    pub treasury: HumanAddr,
     pub sscrt: Contract,
-    pub treasury: Contract,
-    pub validator_bounds: ValidatorBounds,
+    pub validator_bounds: Option<ValidatorBounds>,
     pub viewing_key: String,
 }
 
@@ -60,7 +62,7 @@ pub enum HandleMsg {
         msg: Option<Binary>,
     },
     Unbond {
-        amount: Uint128,
+        validator: HumanAddr,
     },
     Collect {
         validator: HumanAddr,
@@ -76,9 +78,16 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init { status: ResponseStatus, address: HumanAddr },
     UpdateConfig { status: ResponseStatus },
-    Receive { status: ResponseStatus },
-    Collect { amount: Uint128 },
-    Unbond { validators: Vec<Uint128>, amount: Uint128 },
+    Receive { 
+        status: ResponseStatus,
+        validator: Validator,
+    },
+    //Collect { amount: Uint128 },
+    Collect { status: ResponseStatus },
+    Unbond { 
+        status: ResponseStatus,
+        delegation: FullDelegation,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

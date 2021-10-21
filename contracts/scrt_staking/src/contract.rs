@@ -91,12 +91,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::UpdateConfig {
             owner,
         } => handle::try_update_config(deps, env, owner),
-        
         // Begin unbonding of a certain amount of scrt
         HandleMsg::Unbond {
-            amount,
-        } => handle::unbond(deps, env, amount),
-
+            validator,
+        } => handle::unbond(deps, env, validator),
         // Collect a completed unbonding/rewards
         HandleMsg::Collect {
             validator,
