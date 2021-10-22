@@ -55,10 +55,8 @@ scrt_staking = Contract(
     gen_label(8),
 )
 
-print('get_config')
-print(scrt_staking.query({'get_config': {}}))
-print('delegations')
-print(scrt_staking.query({'delegations': {}}))
+#print('get_config')
+#print(scrt_staking.query({'get_config': {}}))
 print('Sending 100000000 usscrt for staking')
 print(sscrt.execute({
         "send": {
@@ -70,12 +68,27 @@ print(sscrt.execute({
 ))
 
 
-print('sSCRT')
+print('BALANCES')
 print(sscrt.query({'balance': {'address': scrt_staking.address, 'key': viewing_key}}))
-
-print('SCRT')
 print(run_command(['secretcli', 'q', 'account', scrt_staking.address]))
 
-print('delegations')
-for delegation in scrt_staking.query({'delegations': {}}):
+delegations = scrt_staking.query({'delegations': {}})
+
+print('DELEGATIONS')
+for delegation in delegations:
+    print(scrt_staking.query({'delegation': {'validator': delegation['validator']}}))
+
+print('UNBONDING')
+for delegation in delegations:
+    print(scrt_staking.execute({'unbond': {'validator': delegation['validator']}}))
+
+print('CLAIMING')
+for delegation in delegations:
+    print(scrt_staking.execute({'claim': {'validator': delegation['validator']}}))
+
+
+delegations = scrt_staking.query({'delegations': {}})
+
+print('DELEGATIONS')
+for delegation in delegations:
     print(scrt_staking.query({'delegation': {'validator': delegation['validator']}}))

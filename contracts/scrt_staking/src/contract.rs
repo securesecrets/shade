@@ -96,9 +96,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             validator,
         } => handle::unbond(deps, env, validator),
         // Collect a completed unbonding/rewards
-        HandleMsg::Collect {
+        HandleMsg::Claim {
             validator,
-        } => handle::collect(deps, env, validator),
+        } => handle::claim(deps, env, validator),
     }
 }
 

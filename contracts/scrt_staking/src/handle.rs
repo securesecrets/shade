@@ -162,7 +162,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
  *
  * TODO: convert to sSCRT first or rely on treasury to do so
  */
-pub fn collect<S: Storage, A: Api, Q: Querier>(
+pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     validator: HumanAddr,
@@ -178,8 +178,8 @@ pub fn collect<S: Storage, A: Api, Q: Querier>(
             })
         ],
         log: vec![],
-        data: Some( to_binary( 
-            &HandleAnswer::Collect {
+        data: Some( to_binary(
+            &HandleAnswer::Claim {
                 status: ResponseStatus::Success,
             }
         )?),

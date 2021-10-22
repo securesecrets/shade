@@ -61,10 +61,15 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
+    // Begin unbonding amount
     Unbond {
         validator: HumanAddr,
     },
-    Collect {
+    //TODO: switch to this interface for standardization
+    //Claim { amount: Uint128 },
+
+    // Claim all pending rewards & completed unbondings
+    Claim {
         validator: HumanAddr,
     },
 }
@@ -82,8 +87,7 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         validator: Validator,
     },
-    //Collect { amount: Uint128 },
-    Collect { status: ResponseStatus },
+    Claim { status: ResponseStatus },
     Unbond { 
         status: ResponseStatus,
         delegation: FullDelegation,
@@ -94,7 +98,9 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetConfig {},
-    Delegations { },
+    //TODO: find a way to query this and return
+    //Unbondings {},
+    Delegations {},
     Delegation { validator: HumanAddr },
 }
 
