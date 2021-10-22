@@ -1,16 +1,19 @@
-# Treasury Contract
+# sSCRT Staking Contract
 * [Introduction](#Introduction)
 * [Sections](#Sections)
     * [Init](#Init)
     * [Admin](#Admin)
         * Messages
             * [UpdateConfig](#UpdateConfig)
-            * [RegisterAsset](#RegisterAsset)
+            * [Receive](#Receive)
+            * [Unbond](#Unbond)
+            * [Claim](#Claim)
         * Queries
             * [GetConfig](#GetConfig)
-            * [GetBalance](#GetBalance)
+            * [Delegations](#Delegations)
+            * [Delegation](#Delegation)
 # Introduction
-The treasury contract holds network funds from things such as mint commission and pending airdrop funds
+The sSCRT Staking contract receives sSCRT, redeems it for SCRT, then stakes it with a validator that falls within the criteria it has been configured with. The configured `treasury` will receive all funds from claiming rewards/unbonding.
 
 # Sections
 
@@ -18,7 +21,10 @@ The treasury contract holds network funds from things such as mint commission an
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  contract owner/admin; a valid bech32 address; Controls funds
+|owner     | HumanAddr |  contract owner/admin; a valid bech32 address;
+|treasury  | HumanAddre |  contract designated to receive all outgoing funds
+|sscrt     | Contract |  sSCRT Snip-20 contract to accept for redemption/staking, all other funds will error
+|validator_bounds | ValidatorBounds | criteria defining an acceptable validator to stake with
 
 ## Admin
 
@@ -28,8 +34,11 @@ Updates the given values
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|oracle    | Contract |  Oracle contract                                                                                                  |  no      |
+|owner     | HumanAddr |  contract owner/admin; a valid bech32 address;
+|treasury  | HumanAddre |  contract designated to receive all outgoing funds
+|sscrt     | Contract |  sSCRT Snip-20 contract to accept for redemption/staking, all other funds will error
+|validator_bounds | ValidatorBounds | criteria defining an acceptable validator to stake with
+
 ##### Response
 ```json
 {
@@ -39,22 +48,6 @@ Updates the given values
 }
 ```
 
-#### RegisterAsset
-Registers a supported asset. The asset must be SNIP-20 compliant since [RegisterReceive](https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md#RegisterReceive) is called.
-
-Note: Will return an error if there's an asset with that address already registered.
-##### Request
-|Name        |Type    |Description                                                                                                            | optional |
-|------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
-|contract    | Contract |  Type explained [here](#Contract)                                                                                     |  no      |
-##### Response
-```json
-{
-  "register_asset": {
-    "status": "success"
-  }
-}
-```
 
 ### Queries
 
@@ -67,18 +60,6 @@ Gets the contract's configuration variables
     "config": {
       "owner": "Owner address",
     }
-  }
-}
-```
-
-#### GetBalance
-Get the treasury balance for a given snip20 asset
-Note: Snip20 assets must be registered to have viewing key set
-##### Response
-```json
-{
-  "get_balance": {
-    "contract": "asset address",
   }
 }
 ```
