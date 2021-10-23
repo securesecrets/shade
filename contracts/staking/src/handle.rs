@@ -1,14 +1,36 @@
+use std::ops::Add;
 use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg};
-use crate::state::{config_r, config_w, staker_w, unbonding_w, staker_r, total_staked_w};
+use crate::state::{config_r, config_w, staker_w, unbonding_w, staker_r, stake_state_w, stake_state_r};
 use shade_protocol::{
-    staking::{HandleMsg, HandleAnswer, QueryMsg, QueryAnswer},
-    generic_response::ResponseStatus::{Success, Failure}};
-use shade_protocol::staking::Unbonding;
-use secret_toolkit::snip20::send_msg;
-use shade_protocol::governance::{UserVote, VoteTally, Vote};
-use secret_toolkit::utils::HandleCallback;
-use shade_protocol::asset::Contract;
+    staking::{HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, StakeState, Unbonding},
+    generic_response::ResponseStatus::{Success, Failure},
+    governance::{UserVote, VoteTally, Vote},
+    asset::Contract
+};
+use secret_toolkit::{snip20::send_msg, utils::HandleCallback};
+use shade_protocol::staking::UserStakeState;
 
+pub(crate) fn calculate_shares(tokens: Uint128, state: &StakeState) -> Uint128 {
+    if state.total_shares == Uint128::zero() && state.total_tokens == Uint128::zero() {
+        tokens
+    }
+    else {
+        tokens.multiply_ratio(state.total_shares, state.total_tokens)
+    }
+}
+
+pub(crate) fn calculate_tokens(shares: Uint128, state: &StakeState) -> Uint128 {
+    if state.total_shares == Uint128::zero() && state.total_tokens == Uint128::zero() {
+        shares
+    }
+    else {
+        shares.multiply_ratio(state.total_tokens, state.total_shares)
+    }
+}
+
+pub(crate) fn calculate_rewards(user: &UserStakeState, state: &StakeState) -> Uint128 {
+    (calculate_tokens(user.shares, state) - user.tokens_staked).unwrap()
+}
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -56,20 +78,33 @@ pub fn try_stake<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
+    let mut state = stake_state_r(&deps.storage).load()?;
+
     // Either create a new account or add stake
-    staker_w(&mut deps.storage).update(sender.to_string().as_bytes(), |stake| {
-        let total = match stake {
-            None => amount,
-            Some(stake) => stake + amount,
+    staker_w(&mut deps.storage).update(sender.to_string().as_bytes(), |user_state| {
+        // Calculate shares proportional to stake amount
+        let shares = calculate_shares(amount, &state);
+
+        let new_state = match user_state {
+            None => UserStakeState {
+                shares,
+                tokens_staked: amount,
+            },
+            Some(mut user_state) => {
+                user_state.tokens_staked += amount;
+                user_state.shares += shares;
+                user_state
+            },
         };
 
-        Ok(total)
+        state.total_shares += shares;
+        state.total_tokens += amount;
+
+        Ok(new_state)
     })?;
 
     // Update total stake
-    total_staked_w(&mut deps.storage).update(|total| {
-        Ok(total + amount)
-    })?;
+    stake_state_w(&mut deps.storage).save(&state)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -88,15 +123,23 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
 
     let sender = env.message.sender.clone();
 
+    let mut state = stake_state_r(&deps.storage).load()?;
+
     // Check if user has >= amount
-    staker_w(&mut deps.storage).update(sender.to_string().as_bytes(), |stake| {
-        let total = match stake {
+    staker_w(&mut deps.storage).update(sender.to_string().as_bytes(), |user_state| {
+
+        let shares = calculate_shares(amount, &state);
+
+        let new_state = match user_state {
             None => return Err(StdError::GenericErr {
                 msg: "Not enough staked".to_string(),
                 backtrace: None }),
-            Some(stake) => {
-                if stake >= amount {
-                    (stake - amount)
+            Some(mut user_state) => {
+                if user_state.tokens_staked >= amount {
+                    UserStakeState {
+                        shares: (user_state.shares - shares)?,
+                        tokens_staked: (user_state.tokens_staked - amount)?
+                    }
                 } else {
                     return Err(StdError::GenericErr {
                         msg: "Not enough staked".to_string(),
@@ -105,7 +148,11 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
             }
         };
 
-        total
+        // Theres no pretty way of doing this
+        state.total_shares = (state.total_shares - shares)?;
+        state.total_tokens = (state.total_tokens - amount)?;
+
+        Ok(new_state)
     })?;
 
     let config = config_r(&deps.storage).load()?;
@@ -119,7 +166,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         Ok(unbonding_queue)
     })?;
 
-    total_staked_w(&mut deps.storage).update(|total| { total - amount })?;
+    stake_state_w(&mut deps.storage).save(&state)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -141,7 +188,7 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
     votes: Vec<UserVote>,
 ) -> StdResult<HandleResponse> {
 
-    let stake = staker_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
+    let user_state = staker_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     // check that percentage is <= 100 and calculate distribution
     let mut total_votes = VoteTally {
         yes: Uint128(0),
@@ -154,13 +201,13 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
     for vote in votes {
         match vote.vote {
             Vote::Yes => {
-                total_votes.yes += stake_weight(stake.clone(), vote.weight);
+                total_votes.yes += stake_weight(user_state.tokens_staked.clone(), vote.weight);
             }
             Vote::No => {
-                total_votes.no += stake_weight(stake.clone(), vote.weight);
+                total_votes.no += stake_weight(user_state.tokens_staked.clone(), vote.weight);
             }
             Vote::Abstain => {
-                total_votes.abstain += stake_weight(stake.clone(), vote.weight);
+                total_votes.abstain += stake_weight(user_state.tokens_staked.clone(), vote.weight);
             }
         };
         count += vote.weight;
@@ -186,58 +233,6 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some( to_binary( &HandleAnswer::Vote {
             status: Success,
-        })?),
-    })
-}
-
-pub fn try_get_staker<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    account: HumanAddr
-) -> StdResult<HandleResponse> {
-
-    let config = config_r(&deps.storage).load()?;
-    // Check if admin or account queried
-    if !(env.message.sender == config.admin.address || env.message.sender == account) {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-
-    let stake = staker_r(&deps.storage).load(account.to_string().as_bytes())?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::GetStaker {
-            status: Success,
-            stake
-        })?),
-    })
-}
-
-pub fn try_get_stakers<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    stakers: Vec<HumanAddr>
-) -> StdResult<HandleResponse> {
-
-    let config = config_r(&deps.storage).load()?;
-    // Check if admin
-    if env.message.sender != config.admin.address {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-
-    let mut stake = vec![];
-
-    for staker in stakers {
-        stake.push(staker_r(&deps.storage).load(staker.to_string().as_bytes())?);
-    }
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::GetStakers {
-            status: Success,
-            stake
         })?),
     })
 }

@@ -2,23 +2,18 @@ use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResp
 use shade_protocol::{
     staking::{
         InitMsg, HandleMsg,
-        QueryMsg, Config,
+        QueryMsg, Config, StakeState, Unbonding
     },
+    snip20,
+    asset::Contract
 };
 use crate::{
-    state::{config_w},
-    handle,
+    state::{config_w, unbonding_w, stake_state_w},
+    handle::{try_update_config, try_stake, try_unbond, try_trigger_unbounds, try_vote},
     query
 };
-use secret_toolkit::snip20::register_receive_msg;
+use secret_toolkit::{snip20::register_receive_msg, utils::HandleCallback};
 use binary_heap_plus::{BinaryHeap, MinComparator};
-use shade_protocol::{staking::Unbonding, snip20};
-use crate::{handle::{try_update_config, try_stake, try_unbond, try_get_staker, try_get_stakers, try_trigger_unbounds},
-            state::{unbonding_w}};
-use secret_toolkit::utils::HandleCallback;
-use crate::state::total_staked_w;
-use crate::handle::try_vote;
-use shade_protocol::asset::Contract;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -48,8 +43,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let unbonding_heap = BinaryHeap::new_min();
     unbonding_w(&mut deps.storage).save(&unbonding_heap)?;
 
-    // Initialize total staked
-    total_staked_w(&mut deps.storage).save(&Uint128(0))?;
+    // Initialize stake state
+    stake_state_w(&mut deps.storage).save(&StakeState{
+        total_shares: Uint128::zero(),
+        total_tokens: Uint128::zero()
+    })?;
 
     Ok(InitResponse {
         messages,
@@ -71,10 +69,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => try_unbond(deps, &env, amount),
         HandleMsg::Vote { proposal_id, votes
         } => try_vote(deps, &env, proposal_id, votes),
-        HandleMsg::GetStaker { account
-        } => try_get_staker(deps, &env, account),
-        HandleMsg::GetStakers { accounts
-        } => try_get_stakers(deps, &env, accounts),
         HandleMsg::TriggerUnbonds { } => try_trigger_unbounds(deps, &env),
     }
 }
