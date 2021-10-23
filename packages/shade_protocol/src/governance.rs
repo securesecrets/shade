@@ -16,6 +16,8 @@ pub const ADMIN_COMMAND_VARIABLE: &str = "{}";
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub admin: HumanAddr,
+    // Staking contract - optional to support admin only
+    pub staker: Option<Contract>,
     // The amount of time given for each proposal
     pub proposal_deadline: u64,
     // The minimum total amount of votes needed to approve deadline
@@ -49,11 +51,24 @@ pub struct Proposal {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProposalStatus {
+    // Admin command called
     AdminRequested,
+    // Voting not finished
     InProgress,
+    // Total votes did not reach minimum total votes
     Expired,
+    // Majority voted No
     Rejected,
+    // Majority votes yes
     Accepted,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct VoteTally {
+    pub yes: Uint128,
+    pub no: Uint128,
+    pub abstain: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -66,8 +81,17 @@ pub enum Vote {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+/// Used to give weight to votes per user
+pub struct UserVote {
+    pub vote: Vote,
+    pub weight: u8,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
+    pub staker: Option<Contract>,
     pub proposal_deadline: u64,
     pub quorum: Uint128,
 }
@@ -111,9 +135,12 @@ pub enum HandleMsg {
     /// Config changes
     UpdateConfig {
         admin: Option<HumanAddr>,
+        staker: Option<Contract>,
         proposal_deadline: Option<u64>,
         minimum_votes: Option<Uint128>,
     },
+
+    DisableStaker {},
 
     // RequestMigration {}
 
@@ -132,10 +159,11 @@ pub enum HandleMsg {
 
 
 
-    /// Proposal voting
+    /// Proposal voting - can only be done by staking contract
     MakeVote {
+        voter: HumanAddr,
         proposal_id: Uint128,
-        option: Vote,
+        votes: VoteTally,
     },
 
     /// Trigger proposal
@@ -152,15 +180,23 @@ impl HandleCallback for HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     CreateProposal { status: ResponseStatus, proposal_id: Uint128 },
-    Vote { status: ResponseStatus },
-    TriggerProposal { status: ResponseStatus },
+    AddAdminCommand { status: ResponseStatus },
+    RemoveAdminCommand { status: ResponseStatus },
+    UpdateAdminCommand { status: ResponseStatus },
     TriggerAdminCommand { status: ResponseStatus, proposal_id: Uint128 },
     UpdateConfig { status: ResponseStatus },
+    DisableStaker { status: ResponseStatus },
+    AddSupportedContract { status: ResponseStatus },
+    RemoveSupportedContract { status: ResponseStatus },
+    UpdateSupportedContract { status: ResponseStatus },
+    MakeVote { status: ResponseStatus },
+    TriggerProposal { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    GetProposalVotes { proposal_id: Uint128 },
     GetProposals { total: Uint128, start: Uint128 },
     GetProposal { proposal_id: Uint128 },
     GetTotalProposals {},
@@ -177,6 +213,7 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
+    ProposalVotes { status: VoteTally },
     Proposals { proposals: Vec<Proposal> },
     Proposal { proposal: Proposal },
     TotalProposals { total: Uint128 },
@@ -184,14 +221,4 @@ pub enum QueryAnswer {
     SupportedContract { contract: Contract },
     AdminCommands { commands: Vec<String> },
     AdminCommand { command: AdminCommand },
-}
-
-#[cfg(test)]
-mod test {
-    use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
-    use crate::governance::{InitMsg, HandleMsg, QueryMsg, QueryAnswer};
-
-    impl TestInit for InitMsg {}
-    impl TestHandle for HandleMsg {}
-    impl TestQuery<QueryAnswer> for QueryMsg {}
 }
