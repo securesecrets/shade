@@ -45,3 +45,7 @@ snafu = { version = "0.6.3" }
 mockall = "0.10.2"
 mockall_double = "0.2.0"
 binary-heap-plus = { version = "0.4.1", features = ["serde"] }
+
+[build-dependencies]
+cosmwasm-schema = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol" }
