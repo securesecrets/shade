@@ -61,7 +61,7 @@ fn run_airdrop() -> Result<()> {
 
     let airdrop_init_msg = airdrop::InitMsg {
         admin: None,
-        airdrop_snip20: Contract {
+        airdrop_token: Contract {
             address: HumanAddr::from(snip.address.clone()),
             code_hash: snip.code_hash.clone()
         },
