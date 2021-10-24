@@ -19,17 +19,14 @@ pub mod tests {
 
         // Add the three values in a non order fashion
         let val1 = Unbonding {
-            account: Default::default(),
             amount: Default::default(),
             unbond_time: 0
         };
         let val2 = Unbonding {
-            account: Default::default(),
             amount: Default::default(),
             unbond_time: 1
         };
         let val3 = Unbonding {
-            account: Default::default(),
             amount: Default::default(),
             unbond_time: 2
         };

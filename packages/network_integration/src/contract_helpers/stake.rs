@@ -9,8 +9,10 @@ use secretcli::{cli_types::NetContract,
                 secretcli::{query_contract, test_contract_handle, test_inst_init}};
 use crate::contract_helpers::minter::get_balance;
 use std::{thread, time};
+use std::time::UNIX_EPOCH;
 
-pub fn setup_staker(governance: &NetContract, shade: &Contract, staking_account: String) -> Result<NetContract> {
+pub fn setup_staker(governance: &NetContract, shade: &Contract,
+                    staking_account: String) -> Result<NetContract> {
     let staker = init_contract(&governance, "staking".to_string(),
                                "../../compiled/staking.wasm.gz",
                                staking::InitMsg{
@@ -41,6 +43,14 @@ pub fn setup_staker(governance: &NetContract, shade: &Contract, staking_account:
     let unbond_amount = Uint128(2000000);
     let balance_after_stake = (original_balance - stake_amount).unwrap();
 
+    // Make a query key
+    {
+        let msg = staking::HandleMsg::SetViewingKey { key: "password".to_string() };
+
+        test_contract_handle(&msg, &staker, ACCOUNT_KEY, Some(GAS),
+                             Some("test"), None)?;
+    }
+
     // Stake some Shade on it
     {
         let msg = snip20::HandleMsg::Send {
@@ -58,6 +68,10 @@ pub fn setup_staker(governance: &NetContract, shade: &Contract, staking_account:
     // Check total stake
     assert_eq!(get_total_staked(&staker), stake_amount);
 
+    // Check user stake
+    assert_eq!(get_user_stake(&staker, staking_account.clone(),
+                              "password".to_string()).staked, stake_amount);
+
     // Query total Shade now
     assert_eq!(balance_after_stake, get_balance(&shade_net,
                                                  staking_account.clone()));
@@ -74,28 +88,40 @@ pub fn setup_staker(governance: &NetContract, shade: &Contract, staking_account:
     // Check if unstaking
     assert_eq!(get_total_staked(&staker), (stake_amount - unbond_amount).unwrap());
 
+    // Check if user unstaking
+    {
+        let user_stake = get_user_stake(&staker, staking_account.clone(),
+                                        "password".to_string());
+
+        assert_eq!(user_stake.staked, (stake_amount - unbond_amount).unwrap());
+        assert_eq!(user_stake.unbonding, unbond_amount);
+    }
+
     print_header("Testing unbonding time");
     // User triggers but receives nothing
     {
-        let msg = staking::HandleMsg::TriggerUnbonds {};
+        let msg = staking::HandleMsg::ClaimUnbond {};
 
         test_contract_handle(&msg, &staker, ACCOUNT_KEY, Some(GAS),
                              Some("test"), None)?;
     }
 
     // Query total Shade now
-    {
-        assert_eq!(balance_after_stake, get_balance(&shade_net,
-                                                     staking_account.clone()));
-    }
+
+    assert_eq!(balance_after_stake, get_balance(&shade_net,
+                                                 staking_account.clone()));
 
     // Wait unbonding time
     thread::sleep(time::Duration::from_secs(180));
 
+    // Check if unbonded
+    assert_eq!(get_user_stake(&staker, staking_account.clone(),
+                              "password".to_string()).unbonded, unbond_amount);
+
     print_header("Testing unbonding asset release");
     // User triggers and receives something
     {
-        let msg = staking::HandleMsg::TriggerUnbonds {};
+        let msg = staking::HandleMsg::ClaimUnbond {};
 
         test_contract_handle(&msg, &staker, ACCOUNT_KEY, Some(GAS),
                              Some("test"), None)?;
@@ -117,5 +143,34 @@ pub fn get_total_staked(staker: &NetContract) -> Uint128 {
         return total
     }
 
-    Uint128(0)
+    Uint128::zero()
+}
+
+pub struct TestUserStake {
+    pub staked: Uint128,
+    pub pending_rewards: Uint128,
+    pub unbonding: Uint128,
+    pub unbonded: Uint128
+}
+
+pub fn get_user_stake(staker: &NetContract, address: String, key: String) -> TestUserStake {
+    let msg = staking::QueryMsg::UserStake { address: HumanAddr::from(address), key,
+        time: time::SystemTime::now().duration_since(UNIX_EPOCH).expect("").as_secs() };
+
+    let query: staking::QueryAnswer = query_contract(staker, &msg).unwrap();
+
+    if let staking::QueryAnswer::UserStake { staked, pending_rewards,
+        unbonding, unbonded } = query {
+        return TestUserStake {
+            staked, pending_rewards, unbonding, unbonded
+        }
+    }
+
+
+    TestUserStake {
+        staked: Uint128::zero(),
+        pending_rewards: Uint128::zero(),
+        unbonding: Uint128::zero(),
+        unbonded: Uint128::zero()
+    }
 }

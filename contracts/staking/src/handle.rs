@@ -1,6 +1,7 @@
 use std::ops::Add;
+use binary_heap_plus::{BinaryHeap, MinComparator};
 use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg};
-use crate::state::{config_r, config_w, staker_w, unbonding_w, staker_r, stake_state_w, stake_state_r};
+use crate::state::{config_r, config_w, staker_w, unbonding_w, staker_r, stake_state_w, stake_state_r, viewking_key_w, user_unbonding_w};
 use shade_protocol::{
     staking::{HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, StakeState, Unbonding},
     generic_response::ResponseStatus::{Success, Failure},
@@ -156,15 +157,28 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
     })?;
 
     let config = config_r(&deps.storage).load()?;
-    unbonding_w(&mut deps.storage).update(|mut unbonding_queue| {
-        unbonding_queue.push(Unbonding{
-            account: sender,
-            amount,
-            unbond_time: env.block.time + config.unbond_time
-        });
+    let unbonding = Unbonding {
+        amount,
+        unbond_time: env.block.time + config.unbond_time
+    };
 
+    unbonding_w(&mut deps.storage).update(|mut unbonding_queue| {
+        unbonding_queue.push(unbonding.clone());
         Ok(unbonding_queue)
     })?;
+
+    user_unbonding_w(&mut deps.storage).update(
+        env.message.sender.to_string().as_bytes(), |mut queue| {
+
+            let mut unbonding_queue= match queue {
+                None => BinaryHeap::new_min(),
+                Some(queue) => queue.clone(),
+            };
+
+            unbonding_queue.push(unbonding);
+
+            Ok(unbonding_queue)
+        })?;
 
     stake_state_w(&mut deps.storage).save(&state)?;
 
@@ -237,30 +251,97 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_trigger_unbounds<S: Storage, A: Api, Q: Querier>(
+pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
+
+    let mut total = Uint128::zero();
 
     let mut messages = vec![];
 
-    unbonding_w(&mut deps.storage).update(|mut queue| {
-        while !queue.is_empty() && env.block.time >= queue.peek().unwrap().unbond_time {
-            let unbond = queue.pop().unwrap();
-            messages.push(send_msg(unbond.account, unbond.amount, None, None, 1,
-                     config.staked_token.code_hash.clone(),
-                     config.staked_token.address.clone())?);
-        }
+    user_unbonding_w(&mut deps.storage).update(
+        env.message.sender.clone().to_string().as_bytes(), |mut queue| {
 
-        Ok(queue)
-    })?;
+            match queue {
+                None => Err(StdError::NotFound { kind: "user".to_string(), backtrace: None }),
+                Some(mut queue) => {
+                    while !queue.is_empty() && env.block.time >= queue.peek().unwrap().unbond_time {
+                        total += queue.pop().unwrap().amount;
+                    }
+
+                    messages.push(send_msg(env.message.sender.clone(), total,
+                                           None, None, 1,
+                                           config.staked_token.code_hash.clone(),
+                                           config.staked_token.address.clone())?);
+
+                    Ok(queue)
+                }
+            }
+        })?;
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::TriggerUnbonds {
+        data: Some( to_binary( &HandleAnswer::ClaimUnbond {
+            status: Success,
+        })?),
+    })
+}
+
+pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+) -> StdResult<HandleResponse> {
+    let config = config_r(&deps.storage).load()?;
+
+    let mut state = stake_state_r(&deps.storage).load()?;
+    let mut messages = vec![];
+
+    staker_w(&mut deps.storage).update(
+        env.message.sender.to_string().as_bytes(), |mut user| {
+
+            match user {
+                None => Err(StdError::NotFound { kind: "user".to_string(), backtrace: None }),
+                Some(mut user) => {
+                    let rewards = calculate_rewards(&user, &state);
+                    let shares = calculate_shares(rewards.clone(), &state);
+                    user.shares = (user.shares - shares)?;
+                    state.total_shares = (state.total_shares - shares)?;
+                    state.total_tokens = (state.total_tokens - rewards)?;
+
+                    messages.push(send_msg(env.message.sender.clone(), rewards,
+                                           None, None, 1,
+                                           config.staked_token.code_hash.clone(),
+                                           config.staked_token.address.clone())?);
+
+                    Ok(user)
+                }
+            }
+        })?;
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::ClaimRewards {
+            status: Success,
+        })?),
+    })
+}
+
+pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    key: String,
+) -> StdResult<HandleResponse> {
+
+    viewking_key_w(&mut deps.storage).save(env.message.sender.to_string().as_bytes(), &key)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::SetViewingKey {
             status: Success,
         })?),
     })

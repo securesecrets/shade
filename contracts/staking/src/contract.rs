@@ -9,7 +9,8 @@ use shade_protocol::{
 };
 use crate::{
     state::{config_w, unbonding_w, stake_state_w},
-    handle::{try_update_config, try_stake, try_unbond, try_trigger_unbounds, try_vote},
+    handle::{try_update_config, try_stake, try_unbond,
+             try_claim_unbond, try_claim_rewards, try_vote, try_set_viewing_key},
     query
 };
 use secret_toolkit::{snip20::register_receive_msg, utils::HandleCallback};
@@ -69,7 +70,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => try_unbond(deps, &env, amount),
         HandleMsg::Vote { proposal_id, votes
         } => try_vote(deps, &env, proposal_id, votes),
-        HandleMsg::TriggerUnbonds { } => try_trigger_unbounds(deps, &env),
+        HandleMsg::ClaimUnbond {} => try_claim_unbond(deps, &env),
+        HandleMsg::ClaimRewards {} => try_claim_rewards(deps, &env),
+        HandleMsg::SetViewingKey { key } => try_set_viewing_key(deps, &env, key),
     }
 }
 
@@ -80,5 +83,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config { } => to_binary(&query::config(deps)?),
         QueryMsg::TotalStaked { } => to_binary(&query::total_staked(deps)?),
+        QueryMsg::TotalUnbonding { start, end
+        } => to_binary(&query::total_unbonding(deps, start, end)?),
+        QueryMsg::UserStake { address, key, time
+        } => to_binary(&query::user_stake(deps, address, key, time)?),
     }
 }
