@@ -2,7 +2,8 @@ use cosmwasm_std::{
     debug_print, to_binary, Api, Binary,
     Env, Extern, HandleResponse,
     Querier, StdError, StdResult, Storage, 
-    CosmosMsg, HumanAddr, Uint128
+    CosmosMsg, HumanAddr,
+    Uint128, Decimal,
 };
 use secret_toolkit::{
     snip20::{
@@ -15,8 +16,11 @@ use secret_toolkit::{
 use shade_protocol::{
     treasury::{
         HandleAnswer, 
-        Asset,
-        Allocation,
+        Application,
+    },
+    snip20::{
+        Snip20Asset,
+        token_config_query,
     },
     asset::Contract,
     generic_response::ResponseStatus,
@@ -26,6 +30,9 @@ use crate::state::{
     config_w, config_r, 
     assets_r, assets_w,
     viewing_key_r,
+    apps_r, apps_w,
+    allocations_r,
+    allocations_w,
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -39,7 +46,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let assets = assets_r(&deps.storage);
 
-    let asset: Asset = assets.load(env.message.sender.to_string().as_bytes())?;
+    let asset = assets.load(env.message.sender.to_string().as_bytes())?;
     debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
 
     Ok(HandleResponse {
@@ -83,7 +90,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
-    allocations: Option<Vec<Allocation>>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -92,14 +98,14 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     }
 
     let mut messages = vec![];
-    let token_info = token_info_query(&deps.querier, 1,
-                                      contract.code_hash.clone(),
-                                      contract.address.clone())?;
+    let token_info = 
 
-    assets_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &Asset {
+    assets_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &Snip20Asset {
         contract: contract.clone(),
-        token_info,
-        allocations,
+        token_info: token_info_query(&deps.querier, 1,
+                                      contract.code_hash.clone(),
+                                      contract.address.clone())?,
+        token_config: Some(token_config_query(&deps.querier, contract.clone())?),
     })?;
 
     // Register contract in asset
@@ -129,6 +135,75 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             )? 
         )
     })
+}
+
+pub fn register_app<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    application: Contract,
+    asset: HumanAddr,
+    //token: Option<Contract>,
+    allocation: Decimal,
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    /* ADMIN ONLY */
+    if env.message.sender != config.owner {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+
+    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        None => {
+            return Err(StdError::GenericErr { msg: "Unregistered asset".to_string(), backtrace: None });
+        },
+        Some(asset) => {
+
+            apps_w(&mut deps.storage).update(|mut apps| {
+                if !apps.contains(&application.address) {
+                    apps.push(application.address.clone());
+                }
+                Ok(apps)
+            })?;
+
+            //let mut reserves = Decimal.one();
+
+            // Remove old instance and add new data 
+            // to assets allocation list
+            allocations_w(&mut deps.storage).update(asset.contract.address.to_string().as_bytes(), |allocations| {
+                    let mut allocs = match allocations {
+                        None => { vec![] }
+                        Some(allocs) => { allocs }
+                    };
+
+                    // remove old instance of app
+                    allocs.remove(allocs.iter().position(|a| a.application.address == application.address.clone()).unwrap());
+                    allocs.push(Application {
+                        application,
+                        allocation,
+                    });
+
+                    /*
+                    for a in allocs {
+                        reserves = reserves - a.allocation;
+                    }
+                    */
+
+                    Ok(allocs)
+                }
+            )?;
+
+            return Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: Some( to_binary( 
+                    &HandleAnswer::RegisterApp {
+                        status: ResponseStatus::Success } 
+                    )? 
+                )
+            });
+        }
+    }
 }
 
 pub fn rebalance<S: Storage, A: Api, Q: Querier>(

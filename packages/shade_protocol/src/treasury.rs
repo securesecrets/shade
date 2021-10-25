@@ -1,29 +1,29 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::{HumanAddr, Uint128, Decimal, Binary};
-use crate::asset::Contract;
-use crate::generic_response::ResponseStatus;
-use secret_toolkit::{snip20, utils::{InitCallback, HandleCallback, Query}};
+use crate::{
+    asset::Contract,
+    snip20::Snip20Asset,
+    generic_response::ResponseStatus,
+};
+use secret_toolkit::{
+    snip20, 
+    utils::{InitCallback, HandleCallback, Query},
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub owner: HumanAddr,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Asset {
-    pub contract: Contract,
-    pub token_info: snip20::TokenInfo,
-    pub allocations: Option<Vec<Allocation>>,
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Allocation {
-    pub contract: Contract,
-    pub portion: Decimal,
+pub struct Application {
+    pub application: Contract,
+    pub allocation: Decimal,
 }
+
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
@@ -50,10 +50,18 @@ pub enum HandleMsg {
     },
     RegisterAsset {
         contract: Contract,
-        /* List of contracts/users given an allowance based on a percentage of the asset balance
-        * e.g. governance, LP, SKY
-        */
-        allocations: Option<Vec<Allocation>>,
+    },
+    /* List of contracts/users given an allowance based on a percentage of the asset balance
+    * e.g. governance, LP, SKY
+    */
+    RegisterApp {
+        application: Contract,
+        //'staked' asset
+        asset: HumanAddr,
+        // % of balance allocated to app
+        allocation: Decimal,
+        // TODO: pool token
+        //token: Option<Contract>,
     },
 
     // Trigger to re-calc asset allocations
@@ -70,6 +78,7 @@ pub enum HandleAnswer {
     Init { status: ResponseStatus, address: HumanAddr },
     UpdateConfig { status: ResponseStatus },
     RegisterAsset { status: ResponseStatus },
+    RegisterApp { status: ResponseStatus },
     Receive { status: ResponseStatus },
     Rebalance { status: ResponseStatus },
 }

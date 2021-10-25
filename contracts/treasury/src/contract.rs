@@ -66,8 +66,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::try_update_config(deps, env, owner),
         HandleMsg::RegisterAsset {
             contract,
-            allocations,
-        } => handle::try_register_asset(deps, &env, &contract, allocations),
+        } => handle::try_register_asset(deps, &env, &contract),
+        HandleMsg::RegisterApp {
+            application,
+            asset,
+            allocation,
+        } => handle::register_app(deps, &env, application, asset, allocation),
         HandleMsg::Rebalance {
         } => handle::rebalance(deps, &env),
     }
