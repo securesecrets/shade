@@ -98,5 +98,13 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config { config: Config },
     Dates { start: u64, end: Option<u64> },
-    Eligibility { total: Uint128, claimed: Uint128, unclaimed: Uint128, finished_tasks: Vec<RequiredTask> }
+    Eligibility {
+        // Total eligible
+        total: Uint128,
+        // Total claimed
+        claimed: Uint128,
+        // Total unclaimed but available
+        unclaimed: Uint128,
+        finished_tasks: Vec<RequiredTask>
+    }
 }
