@@ -2,7 +2,7 @@ use serde_json::Result;
 use cosmwasm_std::{HumanAddr, Uint128, to_binary};
 use shade_protocol::{staking, snip20, asset::Contract};
 use crate::{utils::{print_header, print_contract, print_epoch_info, print_vec,
-                    STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY},
+                    STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, STAKING_FILE},
             contract_helpers::governance::{init_contract, get_contract, add_contract,
                                            create_and_trigger_proposal, trigger_latest_proposal}};
 use secretcli::{cli_types::NetContract,
@@ -12,7 +12,7 @@ use std::{thread, time};
 
 pub fn setup_staker(governance: &NetContract, shade: &Contract, staking_account: String) -> Result<NetContract> {
     let staker = init_contract(&governance, "staking".to_string(),
-                               "../../compiled/staking.wasm.gz",
+                               STAKING_FILE,
                                staking::InitMsg{
                                    admin: Some(Contract{
                                        address: HumanAddr::from(governance.address.clone()),
