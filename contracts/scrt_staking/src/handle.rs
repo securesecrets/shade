@@ -129,6 +129,10 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     validator: HumanAddr,
 ) -> StdResult<HandleResponse> {
 
+    if env.message.sender != config.owner && env.message.sender != config.treasury {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+
     if let Some(delegation) = deps.querier.query_delegation(env.contract.address, validator.clone())? {
 
         let mut messages: Vec<CosmosMsg> = vec![];
