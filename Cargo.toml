@@ -17,8 +17,8 @@ members = [
   "contracts/treasury",
   "contracts/oracle",
   "contracts/snip20",
+  "contracts/scrt_staking",
 
   # Mock contracts
   "contracts/mock_band",
-  "contracts/scrt_staking",
 ]
