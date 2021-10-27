@@ -20,7 +20,7 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Application {
-    pub application: Contract,
+    pub contract: Contract,
     pub allocation: Decimal,
 }
 
@@ -65,7 +65,7 @@ pub enum HandleMsg {
     },
 
     // Trigger to re-calc asset allocations
-    Rebalance { },
+    //Rebalance { },
 }
 
 impl HandleCallback for HandleMsg {
@@ -80,7 +80,7 @@ pub enum HandleAnswer {
     RegisterAsset { status: ResponseStatus },
     RegisterApp { status: ResponseStatus },
     Receive { status: ResponseStatus },
-    Rebalance { status: ResponseStatus },
+    //Rebalance { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -90,7 +90,7 @@ pub enum QueryMsg {
     GetBalance {
         contract: HumanAddr,
     },
-    CanRebalance { },
+    //CanRebalance { },
 }
 
 impl Query for QueryMsg {

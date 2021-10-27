@@ -10,6 +10,7 @@ use secret_toolkit::{
         token_info_query,
         register_receive_msg, 
         set_viewing_key_msg,
+        send_msg,
     },
 };
 
@@ -44,17 +45,29 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
 
-    let assets = assets_r(&deps.storage);
-
-    let asset = assets.load(env.message.sender.to_string().as_bytes())?;
+    let asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
+
+    let allocations = allocations_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
+
+    for app in allocations {
+        let allocation = amount.multiply_ratio(app.allocation, Uint128(1));
+        messages.push(send_msg(app.contract.address,
+                               capture_amount,
+                               None,
+                               None,
+                               1,
+                               asset.contract.code_hash.clone(),
+                               asset.contract.address.clone())?);
+        debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
+    }
 
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::Receive {
             status: ResponseStatus::Success,
-        } )? ),
+        })?),
     })
 }
 
@@ -171,27 +184,27 @@ pub fn register_app<S: Storage, A: Api, Q: Querier>(
             // Remove old instance and add new data 
             // to assets allocation list
             allocations_w(&mut deps.storage).update(asset.contract.address.to_string().as_bytes(), |allocations| {
-                    let mut allocs = match allocations {
-                        None => { vec![] }
-                        Some(allocs) => { allocs }
-                    };
 
-                    // remove old instance of app
-                    allocs.remove(allocs.iter().position(|a| a.application.address == application.address.clone()).unwrap());
-                    allocs.push(Application {
-                        application,
-                        allocation,
-                    });
+                let mut allocs = match allocations {
+                    None => { vec![] }
+                    Some(allocs) => { allocs }
+                };
 
-                    /*
-                    for a in allocs {
-                        reserves = reserves - a.allocation;
-                    }
-                    */
+                // remove old instance of app
+                allocs.remove(allocs.iter().position(|a| a.contract.address == application.address.clone()).unwrap());
+                allocs.push(Application {
+                    contract: application,
+                    allocation,
+                });
 
-                    Ok(allocs)
+                /*
+                for a in allocs {
+                    reserves = reserves - a.allocation;
                 }
-            )?;
+                */
+
+                Ok(allocs)
+            })?;
 
             return Ok(HandleResponse {
                 messages: vec![],
@@ -206,12 +219,24 @@ pub fn register_app<S: Storage, A: Api, Q: Querier>(
     }
 }
 
+/*
 pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
+    asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
 
     let mut messages = vec![];
+
+    let allocations = allocations_r(&deps.storage).load(asset.to_string().as_bytes())?;
+
+    let total = Decimal.one()
+
+    for alloc in allocations {
+
+    }
+
+
     Ok(HandleResponse {
         messages,
         log: vec![],
@@ -222,3 +247,4 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         )
     })
 }
+*/
