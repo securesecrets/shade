@@ -102,6 +102,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
+
     if env.message.sender != config.owner {
         return Err(StdError::Unauthorized { backtrace: None });
     }
@@ -128,6 +129,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     env: Env,
     validator: HumanAddr,
 ) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.owner && env.message.sender != config.treasury {
         return Err(StdError::Unauthorized { backtrace: None });
