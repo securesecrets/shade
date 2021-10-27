@@ -38,7 +38,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
 
     let mut state = Config {
-        owner: match msg.admin {
+        admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
@@ -89,8 +89,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig {
-            owner,
-        } => handle::try_update_config(deps, env, owner),
+            admin,
+        } => handle::try_update_config(deps, env, admin),
         // Begin unbonding of a certain amount of scrt
         HandleMsg::Unbond {
             validator,
