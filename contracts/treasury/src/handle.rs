@@ -20,7 +20,7 @@ use shade_protocol::{
         Application,
     },
     snip20::{
-        Snip20Asset,
+        Snip20Asset, fetch_snip20,
         token_config_query,
     },
     asset::Contract,
@@ -31,7 +31,6 @@ use crate::state::{
     config_w, config_r, 
     assets_r, assets_w,
     viewing_key_r,
-    apps_r, apps_w,
     allocations_r,
     allocations_w,
 };
@@ -50,25 +49,55 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let allocations = allocations_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
 
+    let mut messages = vec![];
+
     for app in allocations {
-        let allocation = amount.multiply_ratio(app.allocation, Uint128(1));
+
+        let allocation = allocate_amount(amount, app.allocation);
+
+        debug_print!("Allocating {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, app.contract.address);
+
         messages.push(send_msg(app.contract.address,
-                               capture_amount,
+                               allocation,
                                None,
                                None,
                                1,
                                asset.contract.code_hash.clone(),
                                asset.contract.address.clone())?);
-        debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
     }
 
     Ok(HandleResponse {
-        messages: vec![],
+        messages: messages,
         log: vec![],
         data: Some( to_binary( &HandleAnswer::Receive {
             status: ResponseStatus::Success,
         })?),
     })
+}
+
+/* Verifies the set of allocations is < 100%
+ */
+/*
+pub fn validate_allocations(
+    apps: Vec<Application>,
+    reserves: Option<Decimal>,
+) -> bool {
+
+    let allocated = Decimal::zero();
+    for app in apps {
+        allocated = allocated + app.allocation;
+    }
+
+    allocated < Decimal::one()
+}
+*/
+
+pub fn allocate_amount(
+    amount: Uint128, 
+    allocation: Decimal
+) -> Uint128 {
+
+    amount * allocation
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
@@ -78,6 +107,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
+
     if env.message.sender != config.owner {
         return Err(StdError::Unauthorized { backtrace: None });
     }
@@ -95,7 +125,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success } )? )
+            status: ResponseStatus::Success } 
+        )?)
     })
 }
 
@@ -111,15 +142,9 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     }
 
     let mut messages = vec![];
-    let token_info = 
 
-    assets_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &Snip20Asset {
-        contract: contract.clone(),
-        token_info: token_info_query(&deps.querier, 1,
-                                      contract.code_hash.clone(),
-                                      contract.address.clone())?,
-        token_config: Some(token_config_query(&deps.querier, contract.clone())?),
-    })?;
+    assets_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &fetch_snip20(&contract, &deps.querier)?)?;
+    allocations_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &vec![])?;
 
     // Register contract in asset
     messages.push(register_receive_msg(
@@ -138,22 +163,20 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                     contract.code_hash.clone(),
                     contract.address.clone())?);
 
-
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some( to_binary( 
+        data: Some( to_binary(
             &HandleAnswer::RegisterAsset {
-                status: ResponseStatus::Success } 
-            )? 
-        )
+                status: ResponseStatus::Success }
+        )?)
     })
 }
 
 pub fn register_app<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    application: Contract,
+    contract: Contract,
     asset: HumanAddr,
     //token: Option<Contract>,
     allocation: Decimal,
@@ -166,57 +189,57 @@ pub fn register_app<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
-        None => {
-            return Err(StdError::GenericErr { msg: "Unregistered asset".to_string(), backtrace: None });
-        },
-        Some(asset) => {
+    if (assets_r(&deps.storage).may_load(asset.to_string().as_bytes())?).is_none() {
+        return Err(StdError::GenericErr {
+            msg: "Unregistered asset".to_string(),
+            backtrace: None,
+        });
+    }
 
-            apps_w(&mut deps.storage).update(|mut apps| {
-                if !apps.contains(&application.address) {
-                    apps.push(application.address.clone());
-                }
-                Ok(apps)
-            })?;
+    allocations_w(&mut deps.storage).update(asset.to_string().as_bytes(), |allocations| {
 
-            //let mut reserves = Decimal.one();
+        // initialize list if it doesn't exist
+        let mut app_list = match allocations {
+            None => { vec![] }
+            Some(a) => { a }
+        };
 
-            // Remove old instance and add new data 
-            // to assets allocation list
-            allocations_w(&mut deps.storage).update(asset.contract.address.to_string().as_bytes(), |allocations| {
+        // Remove old instance of this contract
+        if let Some(pos) = app_list.iter().position(|a| a.contract.address == contract.address.clone()) {
+            app_list.remove(pos);
+        }
+        app_list.push(
+            Application {
+                contract,
+                allocation,
+            }
+        );
 
-                let mut allocs = match allocations {
-                    None => { vec![] }
-                    Some(allocs) => { allocs }
-                };
+        // Validate total allocation
+        let mut total = Decimal::zero();
+        for app in &app_list {
+            total = total + app.allocation;
+        }
 
-                // remove old instance of app
-                allocs.remove(allocs.iter().position(|a| a.contract.address == application.address.clone()).unwrap());
-                allocs.push(Application {
-                    contract: application,
-                    allocation,
-                });
-
-                /*
-                for a in allocs {
-                    reserves = reserves - a.allocation;
-                }
-                */
-
-                Ok(allocs)
-            })?;
-
-            return Ok(HandleResponse {
-                messages: vec![],
-                log: vec![],
-                data: Some( to_binary( 
-                    &HandleAnswer::RegisterApp {
-                        status: ResponseStatus::Success } 
-                    )? 
-                )
+        if total >= Decimal::one() {
+            return Err(StdError::GenericErr {
+                msg: "Allocated total exceeds 100%".to_string(),
+                backtrace: None,
             });
         }
-    }
+
+        Ok(app_list)
+    })?;
+
+    return Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( 
+            &HandleAnswer::RegisterApp {
+                status: ResponseStatus::Success } 
+            )? 
+        )
+    });
 }
 
 /*
@@ -226,14 +249,30 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
 
+    let config = config_r(&deps.storage).load()?;
+
+    if env.message.sender != config.owner {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+
     let mut messages = vec![];
 
-    let allocations = allocations_r(&deps.storage).load(asset.to_string().as_bytes())?;
+    let total = Decimal.one();
 
-    let total = Decimal.one()
+    if let Some(asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+            
+        for app in allocations_r(&deps.storage).load(asset.contract.address.to_string().as_bytes())? {
+            let allocation = allocate_amount(amount, app.allocation);
 
-    for alloc in allocations {
-
+            debug_print!("Allocating {} u{} to {}", allocation, asset.token_info.symbol, app.contract.address);
+            messages.push(send_msg(app.contract.address,
+                                   allocation,
+                                   None,
+                                   None,
+                                   1,
+                                   asset.contract.code_hash.clone(),
+                                   asset.contract.address.clone())?);
+        }
     }
 
 
@@ -241,7 +280,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         messages,
         log: vec![],
         data: Some( to_binary( 
-            &HandleAnswer::Rebalance {
+            &HandleAnswer::Receive {
                 status: ResponseStatus::Success } 
             )? 
         )

@@ -35,13 +35,27 @@ sscrt = SNIP20(gen_label(8),
 print(sscrt.address)
 sscrt.execute({'set_viewing_key': {'key': viewing_key}})
 
-deposit_amount = '100000000uscrt' 
+deposit_amount = '200000000uscrt' 
+# lol
+half_amount = '100000000uscrt' 
+
 print('Depositing', deposit_amount)
 sscrt.execute({'deposit': {}}, account, deposit_amount)
 
-init = {
+treasury_init = {
     'admin': account,
-    'treasury': account,
+    'viewing_key': viewing_key,
+}
+
+treasury = Contract(
+    '../compiled/treasury.wasm.gz',
+    json.dumps(treasury_init),
+    gen_label(8),
+)
+
+staking_init = {
+    'admin': account,
+    'treasury': treasury.address,
     'sscrt': {
         'address': sscrt.address,
         'code_hash': sscrt.code_hash,
@@ -51,13 +65,42 @@ init = {
 
 scrt_staking = Contract(
     '../compiled/scrt_staking.wasm.gz',
-    json.dumps(init),
+    json.dumps(staking_init),
     gen_label(8),
 )
 
-#print('get_config')
-#print(scrt_staking.query({'get_config': {}}))
-print('Sending 100000000 usscrt for staking')
+print('Configuring treasury')
+print(treasury.execute({
+    'register_asset': {
+        'contract': {
+            'address': sscrt.address, 
+            'code_hash': sscrt.code_hash,
+        }
+    }
+}))
+
+print(treasury.execute({
+    'register_app': {
+        'contract': {
+            'address': scrt_staking.address, 
+            'code_hash': scrt_staking.code_hash,
+        },
+        'asset': sscrt.address,
+        'allocation': '0.1',
+    }
+}))
+
+
+print('Treasury sSCRT Balance')
+print(treasury.query({'balance': {'asset': sscrt.address}}))
+
+print('Treasury sSCRT Applications')
+print(treasury.query({'allocations': {'asset': sscrt.address}}))
+
+#print('config')
+#print(scrt_staking.query({'config': {}}))
+'''
+print('Sending 100000000 usscrt direct to staking')
 print(sscrt.execute({
         "send": {
             "recipient": scrt_staking.address,
@@ -86,9 +129,27 @@ print('CLAIMING')
 for delegation in delegations:
     print(scrt_staking.execute({'claim': {'validator': delegation['validator']}}))
 
+print('Treasury sSCRT Balance')
+print(treasury.query({'balance': {'asset': sscrt.address}}))
+'''
 
-delegations = scrt_staking.query({'delegations': {}})
+for i in range(3):
+    print('Sending 100000000 usscrt to treasury')
+    print(sscrt.execute({
+            "send": {
+                "recipient": treasury.address,
+                "amount": str(100000000),
+            },
+        },
+        account,
+    ))
 
-print('DELEGATIONS')
-for delegation in delegations:
-    print(scrt_staking.query({'delegation': {'validator': delegation['validator']}}))
+    print('Treasury sSCRT Balance')
+    print(treasury.query({'balance': {'asset': sscrt.address}}))
+
+    delegations = scrt_staking.query({'delegations': {}})
+    print(delegations)
+
+    print('DELEGATIONS')
+    for delegation in delegations:
+        print(scrt_staking.query({'delegation': {'validator': delegation['validator']}}))

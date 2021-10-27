@@ -55,7 +55,7 @@ pub enum HandleMsg {
     * e.g. governance, LP, SKY
     */
     RegisterApp {
-        application: Contract,
+        contract: Contract,
         //'staked' asset
         asset: HumanAddr,
         // % of balance allocated to app
@@ -86,9 +86,12 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetConfig {},
-    GetBalance {
-        contract: HumanAddr,
+    Config {},
+    Balance {
+        asset: HumanAddr,
+    },
+    Allocations {
+        asset: HumanAddr,
     },
     //CanRebalance { },
 }
@@ -102,5 +105,6 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config { config: Config },
     Balance { amount: Uint128 },
-    CanRebalance { possible: bool},
+    //CanRebalance { possible: bool },
+    Allocations { allocations: Vec<Application> },
 }

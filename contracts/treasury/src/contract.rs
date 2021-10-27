@@ -68,10 +68,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             contract,
         } => handle::try_register_asset(deps, &env, &contract),
         HandleMsg::RegisterApp {
-            application,
+            contract,
             asset,
             allocation,
-        } => handle::register_app(deps, &env, application, asset, allocation),
+        } => handle::register_app(deps, &env, contract, asset, allocation),
         /*
         HandleMsg::Rebalance {
         } => handle::rebalance(deps, &env),
@@ -84,8 +84,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
-        QueryMsg::GetBalance { contract } => to_binary(&query::balance(deps, contract)?),
+        QueryMsg::Config {} => to_binary(&query::config(deps)?),
+        QueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
+        QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
         //QueryMsg::CanRebalance { } => to_binary(&query::can_rebalance(deps)?),
     }
 }

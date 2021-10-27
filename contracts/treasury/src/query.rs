@@ -14,6 +14,7 @@ use crate::state::{
     viewing_key_r,
     self_address_r,
     assets_r,
+    allocations_r
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
@@ -25,12 +26,12 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    contract: HumanAddr,
+    asset: HumanAddr,
 ) -> StdResult<QueryAnswer> {
 
     //TODO: restrict to admin
 
-    match assets_r(&deps.storage).may_load(&contract.to_string().as_bytes())? {
+    match assets_r(&deps.storage).may_load(&asset.to_string().as_bytes())? {
         Some(a) => {
             return Ok(snip20::QueryMsg::Balance { 
                 address: self_address_r(&deps.storage).load()?, 
@@ -39,18 +40,31 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
                  &deps.querier,
                  1,
                  a.contract.code_hash,
-                 contract.clone(),
+                 asset.clone(),
              )?)
         }
         None => { 
             return Err(StdError::NotFound { 
-                    kind: contract.to_string(), 
+                    kind: asset.to_string(), 
                     backtrace: None }) 
         }
     };
-
 }
 
+pub fn allocations<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::Allocations {
+        allocations: match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+            None => { vec![] }
+            Some(a) => { a }
+        }
+    })
+}
+
+/*
 pub fn can_rebalance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
@@ -59,3 +73,4 @@ pub fn can_rebalance<S: Storage, A: Api, Q: Querier>(
         possible: false,
     })
 }
+*/
