@@ -30,18 +30,15 @@ pub fn airdrop_amount<S: Storage, A: Api, Q: Querier>
     for (i, task) in config.task_claim.iter().enumerate() {
         let state = claim_status_r(&deps.storage, i).may_load(key.as_bytes())?;
 
-        match state {
-            None => {}
-            Some(task_claimed) => {
-                finished_tasks.push(task.clone());
-                let calc = task.percent.multiply_ratio(eligible_amount.clone(),
-                                                       Uint128(100));
-                match task_claimed {
-                    true => claimed += calc,
-                    false => unclaimed += calc
-                };
-            }
-        };
+        if let Some(task_claimed) = state {
+            finished_tasks.push(task.clone());
+            let calc = task.percent.multiply_ratio(eligible_amount.clone(),
+                                                   Uint128(100));
+            match task_claimed {
+                true => claimed += calc,
+                false => unclaimed += calc
+            };
+        }
     }
 
     Ok(QueryAnswer::Eligibility {
