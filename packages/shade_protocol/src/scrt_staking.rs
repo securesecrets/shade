@@ -1,33 +1,46 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Decimal, Binary};
+use cosmwasm_std::{
+    HumanAddr, Binary,
+    Uint128, Decimal,
+    Validator, FullDelegation,
+    Coin,
+};
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
-use secret_toolkit::{snip20, utils::{InitCallback, HandleCallback, Query}};
+use secret_toolkit::{
+    snip20,
+    utils::{
+        InitCallback,
+        HandleCallback,
+        Query,
+    }
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub owner: HumanAddr,
+    pub admin: HumanAddr,
+    pub treasury: HumanAddr,
+    pub sscrt: Contract,
+    pub validator_bounds: Option<ValidatorBounds>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Asset {
-    pub contract: Contract,
-    pub token_info: snip20::TokenInfo,
-    pub allocations: Option<Vec<Allocation>>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Allocation {
-    pub contract: Contract,
-    pub portion: Decimal,
+pub struct ValidatorBounds {
+    pub min_commission: Decimal,
+    pub max_commission: Decimal,
+    pub top_position: Uint128,
+    pub bottom_position: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
+    pub treasury: HumanAddr,
+    pub sscrt: Contract,
+    pub validator_bounds: Option<ValidatorBounds>,
     pub viewing_key: String,
 }
 
@@ -38,6 +51,9 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    UpdateConfig {
+        admin: Option<HumanAddr>,
+    },
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
@@ -45,19 +61,17 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    UpdateConfig {
-        owner: Option<HumanAddr>,
+    // Begin unbonding amount
+    Unbond {
+        validator: HumanAddr,
     },
-    RegisterAsset {
-        contract: Contract,
-        /* List of contracts/users given an allowance based on a percentage of the asset balance
-        * e.g. governance, LP, SKY
-        */
-        allocations: Option<Vec<Allocation>>,
-    },
+    //TODO: switch to this interface for standardization
+    //Claim { amount: Uint128 },
 
-    // Trigger to re-calc asset allocations
-    Rebalance { },
+    // Claim all pending rewards & completed unbondings
+    Claim {
+        validator: HumanAddr,
+    },
 }
 
 impl HandleCallback for HandleMsg {
@@ -69,19 +83,25 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init { status: ResponseStatus, address: HumanAddr },
     UpdateConfig { status: ResponseStatus },
-    RegisterAsset { status: ResponseStatus },
-    Receive { status: ResponseStatus },
-    Rebalance { status: ResponseStatus },
+    Receive { 
+        status: ResponseStatus,
+        validator: Validator,
+    },
+    Claim { status: ResponseStatus },
+    Unbond { 
+        status: ResponseStatus,
+        delegation: FullDelegation,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetConfig {},
-    GetBalance {
-        contract: HumanAddr,
-    },
-    CanRebalance { },
+    //TODO: find a way to query this and return
+    //Unbondings {},
+    Delegations {},
+    Delegation { validator: HumanAddr },
 }
 
 impl Query for QueryMsg {
@@ -91,7 +111,6 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    Config { config: Config },
+    Config { config: Config},
     Balance { amount: Uint128 },
-    CanRebalance { possible: bool},
 }
