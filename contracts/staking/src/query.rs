@@ -21,24 +21,26 @@ pub fn total_staked<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn total_unbonding<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>, start: Option<u64>, end: Option<u64>) -> StdResult<QueryAnswer> {
+    deps: &Extern<S, A, Q>, start_limit: Option<u64>, end_limit: Option<u64>) -> StdResult<QueryAnswer> {
 
     let mut total = Uint128::zero();
     let mut queue = unbonding_r(&deps.storage).load()?;
 
+    let start = match start_limit {
+        None => 0u64,
+        Some(start) => start
+    };
+
+    let end = match end_limit {
+        None => u64::MAX,
+        Some(end) => end
+    };
+
     while !queue.is_empty() {
         let item = queue.pop().unwrap();
 
-        if let Some(start) = start {
-            if item.unbond_time >= start {
-                total += item.amount;
-            }
-        }
-
-        if let Some(end) = end {
-            if item.unbond_time <= end {
-                total += item.amount;
-            }
+        if start <= item.unbond_time && item.unbond_time <= end {
+            total += item.amount;
         }
     }
 
