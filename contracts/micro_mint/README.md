@@ -15,8 +15,8 @@
         * Queries
             * [GetNativeAsset](#GetNativeAsset)
             * [GetConfig](#GetConfig)
-            * [MintLimit](#GetMintLimit)
-            * [SupportedAssets](#GetSupportedAssets)
+            * [GetMintLimit](#GetMintLimit)
+            * [GetSupportedAssets](#GetSupportedAssets)
             * [GetAsset](#GetAsset)
 # Introduction
 Contract responsible to mint a paired snip20 asset
