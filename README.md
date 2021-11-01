@@ -8,7 +8,7 @@
 ## Development
 
 ## Development Environment
-Instlal docker for local envirnment
+Install docker for local environment
 
 Source from [testnet](https://build.scrt.network/dev/quickstart.html#setup-the-local-developer-testnet)
 
