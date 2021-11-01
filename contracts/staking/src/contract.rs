@@ -2,21 +2,19 @@ use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResp
 use shade_protocol::{
     staking::{
         InitMsg, HandleMsg,
-        QueryMsg, Config,
+        QueryMsg, Config, StakeState, Unbonding
     },
+    snip20,
+    asset::Contract
 };
 use crate::{
-    state::{config_w},
-    handle,
+    state::{config_w, unbonding_w, stake_state_w},
+    handle::{try_update_config, try_stake, try_unbond,
+             try_claim_unbond, try_claim_rewards, try_vote, try_set_viewing_key},
     query
 };
-use secret_toolkit::snip20::register_receive_msg;
+use secret_toolkit::{snip20::register_receive_msg, utils::HandleCallback};
 use binary_heap_plus::{BinaryHeap, MinComparator};
-use shade_protocol::{staking::Unbonding, snip20};
-use crate::{handle::{try_update_unbond_time, try_stake, try_unbond, try_get_staker, try_get_stakers, try_trigger_unbounds},
-            state::{unbonding_w}};
-use secret_toolkit::utils::HandleCallback;
-use crate::state::total_staked_w;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -26,7 +24,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     let state = Config {
         admin: match msg.admin {
-            None => { env.message.sender.clone() }
+            None => { Contract { address: env.message.sender.clone(), code_hash: "".to_string() } }
             Some(admin) => { admin }
         },
         unbond_time: msg.unbond_time,
@@ -46,8 +44,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let unbonding_heap = BinaryHeap::new_min();
     unbonding_w(&mut deps.storage).save(&unbonding_heap)?;
 
-    // Initialize total staked
-    total_staked_w(&mut deps.storage).save(&Uint128(0))?;
+    // Initialize stake state
+    stake_state_w(&mut deps.storage).save(&StakeState{
+        total_shares: Uint128::zero(),
+        total_tokens: Uint128::zero()
+    })?;
 
     Ok(InitResponse {
         messages,
@@ -61,17 +62,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::UpdateUnbondTime { unbond_time
-        } => try_update_unbond_time(deps, &env, unbond_time),
+        HandleMsg::UpdateConfig { admin, unbond_time
+        } => try_update_config(deps, &env, admin, unbond_time),
         HandleMsg::Receive { sender, from, amount
         } => try_stake(deps, &env, sender, from, amount),
         HandleMsg::Unbond { amount
         } => try_unbond(deps, &env, amount),
-        HandleMsg::GetStaker { account
-        } => try_get_staker(deps, &env, account),
-        HandleMsg::GetStakers { accounts
-        } => try_get_stakers(deps, &env, accounts),
-        HandleMsg::TriggerUnbonds { } => try_trigger_unbounds(deps, &env),
+        HandleMsg::Vote { proposal_id, votes
+        } => try_vote(deps, &env, proposal_id, votes),
+        HandleMsg::ClaimUnbond {} => try_claim_unbond(deps, &env),
+        HandleMsg::ClaimRewards {} => try_claim_rewards(deps, &env),
+        HandleMsg::SetViewingKey { key } => try_set_viewing_key(deps, &env, key),
     }
 }
 
@@ -82,5 +83,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config { } => to_binary(&query::config(deps)?),
         QueryMsg::TotalStaked { } => to_binary(&query::total_staked(deps)?),
+        QueryMsg::TotalUnbonding { start, end
+        } => to_binary(&query::total_unbonding(deps, start, end)?),
+        QueryMsg::UserStake { address, key, time
+        } => to_binary(&query::user_stake(deps, address, key, time)?),
     }
 }

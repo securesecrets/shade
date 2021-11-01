@@ -1,6 +1,6 @@
 use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage, Uint128};
 use shade_protocol::governance::{QueryAnswer, Proposal};
-use crate::state::{total_proposals_r, proposal_r, supported_contracts_list_r, admin_commands_list_r, supported_contract_r, admin_commands_r};
+use crate::state::{total_proposals_r, proposal_r, supported_contracts_list_r, admin_commands_list_r, supported_contract_r, admin_commands_r, total_proposal_votes_r};
 
 pub fn proposals<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -38,6 +38,14 @@ pub fn total_proposals<S: Storage, A: Api, Q: Querier>(
 
     Ok(QueryAnswer::TotalProposals {
         total: total_proposals_r(&deps.storage).load()?
+    })
+}
+
+pub fn proposal_votes<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>, proposal_id: Uint128) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::ProposalVotes {
+        status: total_proposal_votes_r(&deps.storage).load(proposal_id.to_string().as_bytes())?
     })
 }
 

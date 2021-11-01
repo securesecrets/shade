@@ -12,6 +12,7 @@ use crate::{
 };
 use shade_protocol::asset::Contract;
 use crate::state::{admin_commands_list_w, supported_contracts_list_w};
+use crate::handle::try_disable_staker;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -24,6 +25,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
+        staker: msg.staker,
         proposal_deadline: msg.proposal_deadline,
         minimum_votes: msg.quorum
     };
@@ -56,9 +58,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
         /// Self interactions
         // Config
-        HandleMsg::UpdateConfig { admin, proposal_deadline,
+        HandleMsg::UpdateConfig { admin, staker, proposal_deadline,
             minimum_votes } =>
-            handle::try_update_config(deps, &env, admin, proposal_deadline, minimum_votes),
+            handle::try_update_config(deps, &env, admin, staker, proposal_deadline, minimum_votes),
+
+        HandleMsg::DisableStaker {} => try_disable_staker(deps, &env),
 
         // Supported contract
         HandleMsg::AddSupportedContract { name, contract
@@ -81,8 +85,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::try_update_admin_command(deps, &env, name, proposal),
 
         /// User interaction
-        HandleMsg::MakeVote { proposal_id, option
-        } => handle::try_vote(deps, &env, proposal_id, option),
+        HandleMsg::MakeVote { voter, proposal_id, votes
+        } => handle::try_vote(deps, &env, voter, proposal_id, votes),
 
         HandleMsg::TriggerProposal { proposal_id
         } => handle::try_trigger_proposal(deps, &env, proposal_id),
@@ -107,6 +111,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 
         QueryMsg::GetTotalProposals {} => to_binary(
             &query::total_proposals(deps)?),
+
+        QueryMsg::GetProposalVotes { proposal_id } => to_binary(
+            &query::proposal_votes(deps, proposal_id)?),
 
         QueryMsg::GetSupportedContracts { } => to_binary(&query::supported_contracts(deps)?),
 

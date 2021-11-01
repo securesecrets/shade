@@ -98,20 +98,20 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: Option<HumanAddr>,
+    admin: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
     // Save new info
     let mut config = config_w(&mut deps.storage);
     config.update(|mut state| {
-        if let Some(owner) = owner {
-            state.owner = owner;
+        if let Some(admin) = admin {
+            state.admin = admin;
         }
         Ok(state)
     })?;
@@ -132,7 +132,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.owner && env.message.sender != config.treasury {
+    if env.message.sender != config.admin && env.message.sender != config.treasury {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 

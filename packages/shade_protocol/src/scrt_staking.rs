@@ -20,7 +20,7 @@ use secret_toolkit::{
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub owner: HumanAddr,
+    pub admin: HumanAddr,
     pub treasury: HumanAddr,
     pub sscrt: Contract,
     pub validator_bounds: Option<ValidatorBounds>,
@@ -52,7 +52,7 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        owner: Option<HumanAddr>,
+        admin: Option<HumanAddr>,
     },
     Receive {
         sender: HumanAddr,

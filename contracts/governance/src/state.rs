@@ -4,12 +4,14 @@ use shade_protocol::{
     governance::{Config, Proposal},
     asset::Contract,
 };
-use shade_protocol::governance::AdminCommand;
+use shade_protocol::governance::{AdminCommand, UserVote, VoteTally};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static CONTRACT_KEY: &[u8] = b"supported_contracts";
 pub static CONTRACT_LIST_KEY: &[u8] = b"supported_contracts_list";
 pub static PROPOSAL_KEY: &[u8] = b"proposals";
+pub static PROPOSAL_VOTES_KEY: &str = "proposal_votes";
+pub static TOTAL_PROPOSAL_VOTES_KEY: &[u8] = b"total_proposal_votes";
 pub static TOTAL_PROPOSAL_KEY: &[u8] = b"total_proposals";
 pub static ADMIN_COMMANDS_KEY: &[u8] = b"admin_commands";
 pub static ADMIN_COMMANDS_LIST_KEY: &[u8] = b"admin_commands_list";
@@ -37,6 +39,23 @@ pub fn proposal_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Proposal> {
 
 pub fn proposal_w<S: Storage>(storage: &mut S) -> Bucket<S, Proposal> {
     bucket(PROPOSAL_KEY, storage)
+}
+
+// Adds the proposal ID to have better range
+pub fn proposal_votes_r<S: Storage>(storage: & S, proposal: Uint128) -> ReadonlyBucket<S, VoteTally> {
+    bucket_read((proposal.to_string() + PROPOSAL_VOTES_KEY).as_bytes(), storage)
+}
+
+pub fn proposal_votes_w<S: Storage>(storage: &mut S, proposal: Uint128) -> Bucket<S, VoteTally> {
+    bucket((proposal.to_string() + PROPOSAL_VOTES_KEY).as_bytes(), storage)
+}
+
+pub fn total_proposal_votes_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, VoteTally> {
+    bucket_read(TOTAL_PROPOSAL_VOTES_KEY, storage)
+}
+
+pub fn total_proposal_votes_w<S: Storage>(storage: &mut S) -> Bucket<S, VoteTally> {
+    bucket(TOTAL_PROPOSAL_VOTES_KEY, storage)
 }
 
 pub fn supported_contract_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Contract> {
