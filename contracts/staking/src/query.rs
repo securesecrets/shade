@@ -26,19 +26,11 @@ pub fn total_unbonding<S: Storage, A: Api, Q: Querier>(
     let mut total = Uint128::zero();
     let mut queue = unbonding_r(&deps.storage).load()?;
 
-    let start = match start_limit {
-        None => 0u64,
-        Some(start) => start
-    };
+    let start = start_limit.unwrap_or(0u64);
 
-    let end = match end_limit {
-        None => u64::MAX,
-        Some(end) => end
-    };
+    let end = end_limit.unwrap_or(u64::MAX);
 
-    while !queue.is_empty() {
-        let item = queue.pop().unwrap();
-
+    while let Some(item) = queue.pop() {
         if start <= item.unbond_time && item.unbond_time <= end {
             total += item.amount;
         }

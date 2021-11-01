@@ -1,10 +1,9 @@
-use std::ops::Add;
-use binary_heap_plus::{BinaryHeap, MinComparator};
-use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg};
+use binary_heap_plus::{BinaryHeap};
+use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
 use crate::state::{config_r, config_w, staker_w, unbonding_w, staker_r, stake_state_w, stake_state_r, viewking_key_w, user_unbonding_w};
 use shade_protocol::{
-    staking::{HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, StakeState, Unbonding},
-    generic_response::ResponseStatus::{Success, Failure},
+    staking::{HandleAnswer, StakeState, Unbonding},
+    generic_response::ResponseStatus::{Success},
     governance::{UserVote, VoteTally, Vote},
     asset::Contract
 };
@@ -12,7 +11,7 @@ use secret_toolkit::{snip20::send_msg, utils::HandleCallback};
 use shade_protocol::staking::UserStakeState;
 
 pub(crate) fn calculate_shares(tokens: Uint128, state: &StakeState) -> Uint128 {
-    if state.total_shares == Uint128::zero() && state.total_tokens == Uint128::zero() {
+    if state.total_shares.is_zero() && state.total_tokens.is_zero() {
         tokens
     }
     else {
@@ -21,7 +20,7 @@ pub(crate) fn calculate_shares(tokens: Uint128, state: &StakeState) -> Uint128 {
 }
 
 pub(crate) fn calculate_tokens(shares: Uint128, state: &StakeState) -> Uint128 {
-    if state.total_shares == Uint128::zero() && state.total_tokens == Uint128::zero() {
+    if state.total_shares.is_zero() && state.total_tokens.is_zero() {
         shares
     }
     else {
@@ -82,7 +81,7 @@ pub fn try_stake<S: Storage, A: Api, Q: Querier>(
     let mut state = stake_state_r(&deps.storage).load()?;
 
     // Either create a new account or add stake
-    staker_w(&mut deps.storage).update(sender.to_string().as_bytes(), |user_state| {
+    staker_w(&mut deps.storage).update(sender.as_str().as_bytes(), |user_state| {
         // Calculate shares proportional to stake amount
         let shares = calculate_shares(amount, &state);
 
@@ -135,7 +134,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
             None => return Err(StdError::GenericErr {
                 msg: "Not enough staked".to_string(),
                 backtrace: None }),
-            Some(mut user_state) => {
+            Some(user_state) => {
                 if user_state.tokens_staked >= amount {
                     UserStakeState {
                         shares: (user_state.shares - shares)?,
@@ -168,11 +167,11 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
     })?;
 
     user_unbonding_w(&mut deps.storage).update(
-        env.message.sender.to_string().as_bytes(), |mut queue| {
+        env.message.sender.to_string().as_bytes(), |queue| {
 
             let mut unbonding_queue= match queue {
                 None => BinaryHeap::new_min(),
-                Some(queue) => queue.clone(),
+                Some(queue) => queue,
             };
 
             unbonding_queue.push(unbonding);
@@ -192,7 +191,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn stake_weight(stake: Uint128, weight: u8) -> Uint128 {
-    stake.multiply_ratio(weight, 100 as u128)
+    stake.multiply_ratio(weight, 100u128)
 }
 
 pub fn try_vote<S: Storage, A: Api, Q: Querier>(
@@ -215,13 +214,13 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
     for vote in votes {
         match vote.vote {
             Vote::Yes => {
-                total_votes.yes += stake_weight(user_state.tokens_staked.clone(), vote.weight);
+                total_votes.yes += stake_weight(user_state.tokens_staked, vote.weight);
             }
             Vote::No => {
-                total_votes.no += stake_weight(user_state.tokens_staked.clone(), vote.weight);
+                total_votes.no += stake_weight(user_state.tokens_staked, vote.weight);
             }
             Vote::Abstain => {
-                total_votes.abstain += stake_weight(user_state.tokens_staked.clone(), vote.weight);
+                total_votes.abstain += stake_weight(user_state.tokens_staked, vote.weight);
             }
         };
         count += vote.weight;
@@ -262,23 +261,29 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     user_unbonding_w(&mut deps.storage).update(
-        env.message.sender.clone().to_string().as_bytes(), |mut queue| {
+        env.message.sender.clone().to_string().as_bytes(),
+        |queue| {
+            let mut new_queue = queue.ok_or_else(|| StdError::not_found("user"))?;
 
-            match queue {
-                None => Err(StdError::NotFound { kind: "user".to_string(), backtrace: None }),
-                Some(mut queue) => {
-                    while !queue.is_empty() && env.block.time >= queue.peek().unwrap().unbond_time {
-                        total += queue.pop().unwrap().amount;
-                    }
-
-                    messages.push(send_msg(env.message.sender.clone(), total,
-                                           None, None, 1,
-                                           config.staked_token.code_hash.clone(),
-                                           config.staked_token.address.clone())?);
-
-                    Ok(queue)
+            while let Some(unbonding) = new_queue.peek() {
+                if env.block.time < unbonding.unbond_time {
+                    break;
                 }
+
+                total += unbonding.amount;
+                new_queue.pop();
             }
+
+            messages.push(send_msg(
+                env.message.sender.clone(),
+                total,
+                None,
+                None,
+                1,
+                config.staked_token.code_hash.clone(),
+                config.staked_token.address.clone())?);
+
+            Ok(new_queue)
         })?;
 
     Ok(HandleResponse {
@@ -300,25 +305,21 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     staker_w(&mut deps.storage).update(
-        env.message.sender.to_string().as_bytes(), |mut user| {
+        env.message.sender.to_string().as_bytes(), |user_state| {
+            let mut user = user_state.ok_or_else(|| StdError::NotFound { kind: "user".to_string(), backtrace: None })?;
 
-            match user {
-                None => Err(StdError::NotFound { kind: "user".to_string(), backtrace: None }),
-                Some(mut user) => {
-                    let rewards = calculate_rewards(&user, &state);
-                    let shares = calculate_shares(rewards.clone(), &state);
-                    user.shares = (user.shares - shares)?;
-                    state.total_shares = (state.total_shares - shares)?;
-                    state.total_tokens = (state.total_tokens - rewards)?;
+            let rewards = calculate_rewards(&user, &state);
+            let shares = calculate_shares(rewards, &state);
+            user.shares = (user.shares - shares)?;
+            state.total_shares = (state.total_shares - shares)?;
+            state.total_tokens = (state.total_tokens - rewards)?;
 
-                    messages.push(send_msg(env.message.sender.clone(), rewards,
-                                           None, None, 1,
-                                           config.staked_token.code_hash.clone(),
-                                           config.staked_token.address.clone())?);
+            messages.push(send_msg(env.message.sender.clone(), rewards,
+                                   None, None, 1,
+                                   config.staked_token.code_hash.clone(),
+                                   config.staked_token.address.clone())?);
 
-                    Ok(user)
-                }
-            }
+            Ok(user)
         })?;
 
     Ok(HandleResponse {
