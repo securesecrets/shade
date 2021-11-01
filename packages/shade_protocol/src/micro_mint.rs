@@ -10,7 +10,7 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
-    pub owner: HumanAddr,
+    pub admin: HumanAddr,
     pub oracle: Contract,
     // Both treasury & Commission must be set to function
     pub treasury: Option<Contract>,
@@ -61,7 +61,7 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        owner: Option<HumanAddr>,
+        admin: Option<HumanAddr>,
         oracle: Option<Contract>,
         treasury: Option<Contract>,
         secondary_burn: Option<HumanAddr>,
