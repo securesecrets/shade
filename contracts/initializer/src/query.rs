@@ -3,5 +3,5 @@ use shade_protocol::initializer::{QueryMsg, QueryAnswer};
 use crate::state::config_r;
 
 pub fn query_contracts<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::ContractsAnswer { contracts: config_r(&deps.storage).load()?.contracts })
+    Ok(QueryAnswer::Contracts { contracts: config_r(&deps.storage).load()?.contracts })
 }
