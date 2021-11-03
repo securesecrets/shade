@@ -6,13 +6,12 @@ use shade_protocol::{
     },
 };
 use crate::{
-    state::{config_w, total_proposals_w},
+    state::{config_w, admin_commands_list_w, supported_contracts_list_w},
+    proposal_state::total_proposals_w,
     handle,
     query
 };
-use shade_protocol::asset::Contract;
-use crate::state::{admin_commands_list_w, supported_contracts_list_w};
-use crate::handle::try_disable_staker;
+use secret_toolkit::snip20::register_receive_msg;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -26,7 +25,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             Some(admin) => { admin }
         },
         staker: msg.staker,
-        proposal_deadline: msg.proposal_deadline,
+        funding_token: msg.funding_token.clone(),
+        funding_amount: msg.funding_amount,
+        funding_deadline: msg.funding_deadline,
+        voting_deadline: msg.voting_deadline,
         minimum_votes: msg.quorum
     };
 
@@ -40,7 +42,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     supported_contracts_list_w(&mut deps.storage).save(&vec![])?;
 
     Ok(InitResponse {
-        messages: vec![],
+        messages: vec![register_receive_msg(
+        env.contract_code_hash,
+        None,
+        256,
+        msg.funding_token.code_hash,
+        msg.funding_token.address,
+    )?],
         log: vec![]
     })
 }
@@ -59,10 +67,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         /// Self interactions
         // Config
         HandleMsg::UpdateConfig { admin, staker, proposal_deadline,
-            minimum_votes } =>
-            handle::try_update_config(deps, &env, admin, staker, proposal_deadline, minimum_votes),
+            funding_amount, funding_deadline, minimum_votes } =>
+            handle::try_update_config(deps, &env, admin, staker, proposal_deadline,
+                                      funding_amount, funding_deadline, minimum_votes),
 
-        HandleMsg::DisableStaker {} => try_disable_staker(deps, &env),
+        HandleMsg::DisableStaker {} => handle::try_disable_staker(deps, &env),
 
         // Supported contract
         HandleMsg::AddSupportedContract { name, contract
@@ -103,7 +112,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetProposals { total, start
+        QueryMsg::GetProposals { total, start, status
         } => to_binary(&query::proposals(deps, total, start)?),
 
         QueryMsg::GetProposal { proposal_id } => to_binary(

@@ -171,6 +171,9 @@ fn run_testnet() -> Result<()> {
                              Some("test"), Some("1000000000uscrt"))?;
     }
 
+    // Initialize initializer and snip20s
+    let (initializer, shade, silk) = initialize_initializer(&account, &s_sCRT, &account)?;
+
     // Initialize Governance
     print_header("Initializing Governance");
 
@@ -178,8 +181,13 @@ fn run_testnet() -> Result<()> {
         admin: None,
         // The next governance votes will not require voting
         staker: None,
-        // Minutes
-        proposal_deadline: 180,
+        funding_token: Contract {
+            address: HumanAddr::from(shade.address.clone()),
+            code_hash: shade.code_hash.clone()
+        },
+        funding_amount: Uint128(10),
+        funding_deadline: 180,
+        voting_deadline: 180,
         // 5 shade is the minimum
         quorum: Uint128(5000000)
     };
@@ -190,8 +198,23 @@ fn run_testnet() -> Result<()> {
 
     print_contract(&governance);
 
-    // Initialize initializer and snip20s
-    initialize_initializer(&governance, &s_sCRT, account.clone())?;
+    // Add contracts
+    add_contract("initializer".to_string(), &initializer, &governance)?;
+    add_contract("shade".to_string(), &shade, &governance)?;
+    add_contract("silk".to_string(), &silk, &governance)?;
+
+    // Change contract admin
+    {
+        let msg = snip20::HandleMsg::ChangeAdmin {
+            address: HumanAddr::from(governance.address.clone()),
+            padding: None
+        };
+
+        test_contract_handle(&msg, &shade, ACCOUNT_KEY, Some(GAS),
+                             Some("test"), None)?;
+        test_contract_handle(&msg, &silk, ACCOUNT_KEY, Some(GAS),
+                             Some("test"), None)?;
+    }
 
     // Print Contracts so far
     print_warning("Governance contracts so far");
@@ -246,13 +269,17 @@ fn run_testnet() -> Result<()> {
     print_warning("Enabling governance voting");
     create_and_trigger_proposal(&governance, governance::GOVERNANCE_SELF.to_string(),
                                 governance::HandleMsg::UpdateConfig {
-                        admin: None,
-                        staker: Some(Contract {
-                            address: HumanAddr::from(staker.address.clone()),
-                            code_hash: staker.code_hash.clone() }),
-                        proposal_deadline: None,
-                        minimum_votes: None
-                    }, Some("Remove control from admin and initialize governance"))?;
+                                    admin: None,
+                                    staker: Some(Contract {
+                                        address: HumanAddr::from(staker.address.clone()),
+                                        code_hash: staker.code_hash.clone()
+                                    }),
+                                    proposal_deadline: None,
+                                    funding_amount: None,
+                                    funding_deadline: None,
+                                    minimum_votes: None
+                                },
+                                Some("Remove control from admin and initialize governance"))?;
 
     // Proposal admin command
     print_header("Creating proposal expected to fail");
@@ -303,7 +330,7 @@ fn run_testnet() -> Result<()> {
             let query: governance::QueryAnswer = query_contract(&governance, msg)?;
 
             if let governance::QueryAnswer::Proposal { proposal } = query {
-                assert_eq!(proposal.vote_status, ProposalStatus::InProgress);
+                assert_eq!(proposal.status, ProposalStatus::InProgress);
             } else {
                 assert!(false, "Query returned unexpected response")
             }
@@ -320,7 +347,7 @@ fn run_testnet() -> Result<()> {
             let query: governance::QueryAnswer = query_contract(&governance, msg)?;
 
             if let governance::QueryAnswer::Proposal { proposal } = query {
-                assert_eq!(proposal.vote_status, ProposalStatus::Expired);
+                assert_eq!(proposal.status, ProposalStatus::Expired);
             } else {
                 assert!(false, "Query returned unexpected response")
             }
@@ -358,7 +385,7 @@ fn run_testnet() -> Result<()> {
             let query: governance::QueryAnswer = query_contract(&governance, msg)?;
 
             if let governance::QueryAnswer::Proposal { proposal } = query {
-                assert_eq!(proposal.vote_status, ProposalStatus::Accepted);
+                assert_eq!(proposal.status, ProposalStatus::Passed);
                 assert_eq!(proposal.run_status, Some(ResponseStatus::Success));
             } else {
                 assert!(false, "Query returned unexpected response")
