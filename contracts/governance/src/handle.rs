@@ -286,7 +286,7 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
         run_status = Failure;
     }
     else {
-        run_status = match try_execute_msg(target.unwrap(), proposal.msg.clone()) {
+        run_status = match try_execute_msg(target.unwrap(), proposal.msg) {
             Ok(msg) => {
                 messages.push(msg);
                 Success
