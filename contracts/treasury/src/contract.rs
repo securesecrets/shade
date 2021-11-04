@@ -29,14 +29,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
 
-    let state = Config {
-        owner: match msg.admin {
-            None => { env.message.sender.clone() }
-            Some(admin) => { admin }
-        },
-    };
+    config_w(&mut deps.storage).save(
+        &Config {
+            admin: match msg.admin {
+                None => { env.message.sender.clone() }
+                Some(admin) => { admin }
+            },
+        }
+    )?;
 
-    config_w(&mut deps.storage).save(&state)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
 
@@ -62,11 +63,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig {
-            owner,
-        } => handle::try_update_config(deps, env, owner),
+            admin,
+        } => handle::try_update_config(deps, env, admin),
         HandleMsg::RegisterAsset {
             contract,
-        } => handle::try_register_asset(deps, &env, &contract),
+            reserves,
+        } => handle::try_register_asset(deps, &env, &contract, reserves),
         HandleMsg::RegisterApp {
             contract,
             asset,
@@ -85,8 +87,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
-        QueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
         QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
-        //QueryMsg::CanRebalance { } => to_binary(&query::can_rebalance(deps)?),
+        //QueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
     }
 }

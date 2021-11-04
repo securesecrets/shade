@@ -31,8 +31,8 @@ use crate::state::{
     config_w, config_r, 
     assets_r, assets_w,
     viewing_key_r,
-    allocations_r,
-    allocations_w,
+    allocations_r, allocations_w,
+    reserves_r, reserves_w,
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -47,31 +47,46 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     let asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
 
-    let allocations = allocations_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
-
     let mut messages = vec![];
 
-    for app in allocations {
+    allocations_w(&mut deps.storage).update(env.message.sender.to_string().as_bytes(), |allocations| {
 
-        let allocation = allocate_amount(amount, app.allocation);
+        let mut app_list = match allocations {
+            None => { vec![] }
+            Some(a) => { a }
+        };
 
-        debug_print!("Allocating {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, app.contract.address);
+        for mut app in &mut app_list {
 
-        messages.push(send_msg(app.contract.address,
-                               allocation,
-                               None,
-                               None,
-                               1,
-                               asset.contract.code_hash.clone(),
-                               asset.contract.address.clone())?);
-    }
+            let allocation = amount * app.allocation;
+            app.amount_allocated += allocation;
+
+            debug_print!("Allocating {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, app.contract.address);
+
+            messages.push(
+                send_msg(
+                        app.contract.address.clone(),
+                        allocation,
+                        None,
+                        None,
+                        1,
+                        asset.contract.code_hash.clone(),
+                        asset.contract.address.clone(),
+                )?
+            );
+        }
+
+        Ok(app_list)
+    })?;
 
     Ok(HandleResponse {
         messages: messages,
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::Receive {
-            status: ResponseStatus::Success,
-        })?),
+        data: Some( to_binary(
+            &HandleAnswer::Receive {
+                status: ResponseStatus::Success,
+            }
+        )?),
     })
 }
 
@@ -90,7 +105,6 @@ pub fn validate_allocations(
 
     allocated < Decimal::one()
 }
-*/
 
 pub fn allocate_amount(
     amount: Uint128, 
@@ -99,24 +113,25 @@ pub fn allocate_amount(
 
     amount * allocation
 }
+*/
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: Option<HumanAddr>,
+    admin: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
     // Save new info
     let mut config = config_w(&mut deps.storage);
     config.update(|mut state| {
-        if let Some(owner) = owner {
-            state.owner = owner;
+        if let Some(admin) = admin {
+            state.admin = admin;
         }
         Ok(state)
     })?;
@@ -134,17 +149,33 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
+    reserves: Option<Decimal>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
     let mut messages = vec![];
 
-    assets_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &fetch_snip20(&contract, &deps.querier)?)?;
-    allocations_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &vec![])?;
+    assets_w(&mut deps.storage).save(
+        contract.address.to_string().as_bytes(), 
+        &fetch_snip20(&contract, &deps.querier)?
+    )?;
+
+    allocations_w(&mut deps.storage).save(
+        contract.address.to_string().as_bytes(), 
+        &vec![]
+    )?;
+
+    reserves_w(&mut deps.storage).save(
+        contract.address.to_string().as_bytes(), 
+        &match reserves {
+            None => { Decimal::zero() }
+            Some(r) => { r }
+        },
+    )?;
 
     // Register contract in asset
     messages.push(register_receive_msg(
@@ -185,7 +216,7 @@ pub fn register_app<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     /* ADMIN ONLY */
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -204,34 +235,36 @@ pub fn register_app<S: Storage, A: Api, Q: Querier>(
             Some(a) => { a }
         };
 
-        // Remove old instance of this contract
-        if let Some(pos) = app_list.iter().position(|a| a.contract.address == contract.address.clone()) {
-            app_list.remove(pos);
-        }
-        app_list.push(
-            Application {
-                contract,
-                allocation,
-            }
-        );
-
-        // Validate total allocation
+        // Validate addition does not exceed %100
         let mut total = Decimal::zero();
         for app in &app_list {
             total = total + app.allocation;
         }
 
-        if total >= Decimal::one() {
+        if (total + allocation) >= Decimal::one() {
             return Err(StdError::GenericErr {
-                msg: "Allocated total exceeds 100%".to_string(),
+                msg: "Allocation would exceed 100%".to_string(),
                 backtrace: None,
             });
         }
 
+        // Remove old instance of this contract
+        if let Some(pos) = app_list.iter().position(|a| a.contract.address == contract.address.clone()) {
+            app_list.remove(pos);
+        }
+
+        app_list.push(
+            Application {
+                contract,
+                allocation,
+                amount_allocated: Uint128(0),
+            }
+        );
+
         Ok(app_list)
     })?;
 
-    return Ok(HandleResponse {
+    Ok(HandleResponse {
         messages: vec![],
         log: vec![],
         data: Some( to_binary( 
@@ -239,7 +272,7 @@ pub fn register_app<S: Storage, A: Api, Q: Querier>(
                 status: ResponseStatus::Success } 
             )? 
         )
-    });
+    })
 }
 
 /*
@@ -251,7 +284,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -262,7 +295,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     if let Some(asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
             
         for app in allocations_r(&deps.storage).load(asset.contract.address.to_string().as_bytes())? {
-            let allocation = allocate_amount(amount, app.allocation);
+            let allocation = amount * app.allocation;
 
             debug_print!("Allocating {} u{} to {}", allocation, asset.token_info.symbol, app.contract.address);
             messages.push(send_msg(app.contract.address,

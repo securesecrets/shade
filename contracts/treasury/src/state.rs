@@ -1,4 +1,6 @@
-use cosmwasm_std::{Storage, HumanAddr};
+use cosmwasm_std::{
+    Storage, HumanAddr, Decimal
+};
 use cosmwasm_storage::{
     singleton, singleton_read,
     Singleton, ReadonlySingleton,
@@ -16,6 +18,7 @@ pub static ASSET_LIST_KEY: &[u8] = b"asset_list";
 pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static ALLOCATIONS: &[u8] = b"allocations";
+pub static RESERVES: &[u8] = b"reserves";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury::Config> {
     singleton(storage, CONFIG_KEY)
@@ -42,7 +45,6 @@ pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
     bucket(ASSET_KEY, storage)
 }
 
-
 pub fn viewing_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
     singleton_read(storage, VIEWING_KEY)
 }
@@ -65,4 +67,12 @@ pub fn allocations_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<treasury:
 
 pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::Application>> {
     bucket(ALLOCATIONS, storage)
+}
+
+pub fn reserves_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Decimal> {
+    bucket_read(RESERVES, storage)
+}
+
+pub fn reserves_w<S: Storage>(storage: &mut S) -> Bucket<S, Decimal> {
+    bucket(RESERVES, storage)
 }
