@@ -475,9 +475,62 @@ fn run_testnet() -> Result<()> {
     }
 
     // Make a failed funding period
+    print_header("Testing failed funding");
+    create_proposal(&governance, governance::GOVERNANCE_SELF.to_string(),
+                    governance::HandleMsg::AddAdminCommand {
+                        name: "stake_unbond_time".to_string(),
+                        proposal: admin_command.to_string() },
+                    Some("This wont be funded :("))?;
 
-    // Try to vote and fail
-    //print_warning("Voting before funding period finishes");
+
+    {
+        print_warning("Trying to fund");
+        let proposal = get_latest_proposal(&governance)?;
+
+        let lost_amount = Uint128(500000);
+        let balance_before = get_balance(&shade, account.clone());
+
+        test_contract_handle(&snip20::HandleMsg::Send {
+            recipient: HumanAddr::from(governance.address.clone()),
+            amount: lost_amount,
+            msg: Some(to_binary(&proposal).unwrap()),
+            memo: None,
+            padding: None
+        }, &shade, ACCOUNT_KEY, Some(GAS),
+                             Some("test"), None)?;
+
+        let balance_after = get_balance(&shade, account.clone());
+
+        assert_ne!(balance_before, balance_after);
+
+        // Wait funding period
+        thread::sleep(time::Duration::from_secs(180));
+
+        // Trigger funding
+        test_contract_handle(&snip20::HandleMsg::Send {
+            recipient: HumanAddr::from(governance.address.clone()),
+            amount: lost_amount,
+            msg: Some(to_binary(&proposal).unwrap()),
+            memo: None,
+            padding: None
+        }, &shade, ACCOUNT_KEY, Some(GAS),
+                             Some("test"), None)?;
+
+        assert_eq!(get_balance(&shade, account.clone()), balance_after);
+
+        print_warning("Proposal must be expired");
+        {
+            let msg = governance::QueryMsg::GetProposal { proposal_id: proposal };
+
+            let query: governance::QueryAnswer = query_contract(&governance, msg)?;
+
+            if let governance::QueryAnswer::Proposal { proposal } = query {
+                assert_eq!(proposal.status, ProposalStatus::Expired);
+            } else {
+                assert!(false, "Query returned unexpected response")
+            }
+        }
+    }
 
     Ok(())
 }
