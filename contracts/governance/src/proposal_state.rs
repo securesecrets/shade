@@ -4,6 +4,7 @@ use shade_protocol::{
     governance::{Proposal, ProposalStatus, VoteTally},
     generic_response::ResponseStatus,
 };
+use secret_toolkit::snip20::batch::SendAction;
 
 // Proposals
 pub static PROPOSAL_KEY: &[u8] = b"proposals";
@@ -12,6 +13,7 @@ pub static PROPOSAL_FUNDING_DEADLINE_KEY: &[u8] = b"proposal_funding_deadline_ke
 pub static PROPOSAL_STATUS_KEY: &[u8] = b"proposal_status_key";
 pub static PROPOSAL_RUN_KEY: &[u8] = b"proposal_run_key";
 pub static PROPOSAL_FUNDING_KEY: &[u8] = b"proposal_funding_key";
+pub static PROPOSAL_FUNDING_BATCH_KEY: &[u8] = b"proposal_funding_batch_key";
 pub static PROPOSAL_VOTES_KEY: &str = "proposal_votes";
 pub static TOTAL_PROPOSAL_VOTES_KEY: &[u8] = b"total_proposal_votes";
 pub static TOTAL_PROPOSAL_KEY: &[u8] = b"total_proposals";
@@ -68,6 +70,15 @@ pub fn proposal_funding_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Uint128
 
 pub fn proposal_funding_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
     bucket(PROPOSAL_FUNDING_KEY, storage)
+}
+
+// Proposal funding batch
+pub fn proposal_funding_batch_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Vec<SendAction>> {
+    bucket_read(PROPOSAL_FUNDING_BATCH_KEY, storage)
+}
+
+pub fn proposal_funding_batch_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<SendAction>> {
+    bucket(PROPOSAL_FUNDING_BATCH_KEY, storage)
 }
 
 // Proposal run status - will be available after proposal is run

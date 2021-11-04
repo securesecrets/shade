@@ -72,7 +72,7 @@ pub enum ProposalStatus {
     // In funding period
     Funding,
     // Voting in progress
-    InProgress,
+    Voting,
     // Total votes did not reach minimum total votes
     Expired,
     // Majority voted No
@@ -132,7 +132,14 @@ pub enum HandleMsg {
         proposal: String,
         description: String,
     },
-    //TODO: add receive to send money
+
+    /// Proposal funding
+    Receive {
+        sender: HumanAddr,
+        amount: Uint128,
+        // Proposal ID
+        msg: Option<Binary>,
+    },
 
     /// Admin Command
     /// These commands can be run by admins any time
@@ -204,6 +211,7 @@ impl HandleCallback for HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     CreateProposal { status: ResponseStatus, proposal_id: Uint128 },
+    FundProposal { status: ResponseStatus, total_funding: Uint128 },
     AddAdminCommand { status: ResponseStatus },
     RemoveAdminCommand { status: ResponseStatus },
     UpdateAdminCommand { status: ResponseStatus },

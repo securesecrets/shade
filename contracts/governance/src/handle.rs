@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError,
-    StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg
+    StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg, from_binary
 };
 use crate::{
     proposal_state::{
@@ -8,7 +8,8 @@ use crate::{
         total_proposal_votes_w, total_proposal_votes_r, proposal_votes_w, proposal_votes_r,
         proposal_funding_deadline_w, proposal_funding_deadline_r,
         proposal_voting_deadline_w, proposal_voting_deadline_r, proposal_status_w, proposal_status_r,
-        proposal_run_status_r, proposal_run_status_w, proposal_funding_r, proposal_funding_w
+        proposal_run_status_r, proposal_run_status_w, proposal_funding_r, proposal_funding_w,
+        proposal_funding_batch_w,
     },
     state::{
         supported_contract_r, config_r,  config_w, supported_contract_w,
@@ -19,11 +20,12 @@ use shade_protocol::{
     generic_response::ResponseStatus::{Success, Failure}, asset::Contract,
     governance::{
         Proposal, ProposalStatus, HandleAnswer, GOVERNANCE_SELF,
-        AdminCommand, ADMIN_COMMAND_VARIABLE, Vote, HandleMsg,
-        UserVote, VoteTally, ProposalStatus::{Passed, Expired, Rejected}
+        AdminCommand, ADMIN_COMMAND_VARIABLE, VoteTally, ProposalStatus::{Passed, Expired, Rejected}
     }
 };
 use shade_protocol::generic_response::ResponseStatus;
+use secret_toolkit::snip20::{send_msg, SendAction, batch_send_msg};
+use crate::proposal_state::proposal_funding_batch_r;
 
 pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -35,7 +37,7 @@ pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
 
     // Check that the target contract is neither the governance or a supported contract
     if supported_contract_r(&deps.storage).may_load(target_contract.as_bytes())?.is_none() &&
-        target_contract != GOVERNANCE_SELF.to_string(){
+        target_contract != *GOVERNANCE_SELF{
         return Err(StdError::NotFound {
             kind: "contract is not found".to_string(), backtrace: None })
     }
@@ -59,16 +61,17 @@ pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
     // Store the proposal
     proposal_w(&mut deps.storage).save(
         proposal_id.to_string().as_bytes(), &proposal)?;
-    // TODO: REMOVE THIS - THIS IS JUST FOR INITIAL TESTING
+    // Initialize deadline
     proposal_funding_deadline_w(&mut deps.storage).save(
         proposal_id.to_string().as_bytes(), &(env.block.time + config.funding_deadline))?;
+    proposal_status_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(), &ProposalStatus::Funding)?;
+
+    // Initialize total funding
     proposal_funding_w(&mut deps.storage).save(
         proposal_id.to_string().as_bytes(), &Uint128::zero())?;
-    proposal_voting_deadline_w(&mut deps.storage).save(
-        proposal_id.to_string().as_bytes(), &(env.block.time + config.voting_deadline))?;
-    // TODO: CHANGE TO FUNDING
-    proposal_status_w(&mut deps.storage).save(
-        proposal_id.to_string().as_bytes(), &ProposalStatus::InProgress)?;
+    // Initialize the funding batch
+    proposal_funding_batch_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &vec![]);
 
     // Create proposal votes
     total_proposal_votes_w(&mut deps.storage).save(
@@ -81,6 +84,132 @@ pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
     Ok(proposal_id)
 }
 
+pub fn try_fund_proposal<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    sender: HumanAddr,
+    amount: Uint128,
+    msg: Option<Binary>,
+) -> StdResult<HandleResponse> {
+
+    let proposal_id: Uint128 = from_binary(&msg.ok_or_else(||
+        StdError::not_found("Proposal ID in msg"))?)?;
+
+    // Check if proposal is in funding
+    let status = proposal_status_r(&deps.storage).may_load(
+        proposal_id.to_string().as_bytes())?.ok_or_else(||
+        StdError::not_found("Proposal"))?;
+    if status != ProposalStatus::Funding {
+        return Err(StdError::unauthorized())
+    }
+
+    let mut total = proposal_funding_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())?;
+
+    let config = config_r(&deps.storage).load()?;
+    let mut messages = vec![];
+
+    // Check if deadline is reached
+    if env.block.time >= proposal_funding_deadline_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())? {
+
+        proposal_status_w(&mut deps.storage).save(
+            proposal_id.to_string().as_bytes(), &ProposalStatus::Expired)?;
+
+        // Send back amount
+        messages.push(send_msg(sender.clone(),
+                               amount,
+                               None,
+                               None,
+                               None,
+                               1,
+                               config.funding_token.code_hash.clone(),
+                               config.funding_token.address)?);
+
+        // TODO: send total over to treasury
+
+        return Ok(HandleResponse {
+            messages,
+            log: vec![],
+            data: Some( to_binary( &HandleAnswer::FundProposal {
+                status: Failure,
+                total_funding: total
+            })?),
+        })
+    }
+
+    // Sum amount
+    total += amount;
+
+    let mut adjusted_amount = amount;
+
+    // return the excess
+    if total > config.funding_amount {
+        let excess = (total - config.funding_amount)?;
+        adjusted_amount = (adjusted_amount - excess)?;
+        // Set total to max
+        total = config.funding_amount;
+
+        messages.push(send_msg(sender.clone(),
+                               excess,
+                               None,
+                               None,
+                               None,
+                               1,
+                               config.funding_token.code_hash.clone(),
+                               config.funding_token.address.clone())?);
+
+    }
+
+    // Update list of people that funded
+    let mut amounts = proposal_funding_batch_w(&mut deps.storage).update(
+        proposal_id.to_string().as_bytes(),
+        |mut amounts| {
+            if let Some(mut amounts) = amounts {
+                amounts.push(SendAction{
+                    recipient: sender.clone(),
+                    amount: adjusted_amount,
+                    msg: None,
+                    memo: None
+                });
+
+                return Ok(amounts)
+            }
+
+            Err(StdError::not_found("Funding batch"))
+        })?;
+
+    // Update proposal status
+    if total == config.funding_amount {
+        // Update proposal status
+        proposal_status_w(&mut deps.storage).save(
+            proposal_id.to_string().as_bytes(), &ProposalStatus::Voting)?;
+        // Set vote deadline
+        proposal_voting_deadline_w(&mut deps.storage).save(
+            proposal_id.to_string().as_bytes(),
+            &(env.block.time + config.voting_deadline))?;
+
+        // Send back all of the invested prop amount
+        messages.push(batch_send_msg(amounts,
+                                     None,
+                                     1,
+                                     config.funding_token.code_hash,
+                                     config.funding_token.address.clone())?)
+    }
+
+    proposal_funding_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(), &total)?;
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::FundProposal {
+            status: Success,
+            total_funding: total
+        })?),
+    })
+}
+
 pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -88,25 +217,34 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     // Get proposal
-    let mut proposal = proposal_r(&deps.storage).load(proposal_id.to_string().as_bytes())?;
+    let proposal = proposal_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())?;
     let mut run_status: ResponseStatus;
-    let mut vote_status = proposal_status_r(&deps.storage).load(proposal_id.to_string().as_bytes())?;
-    let voting_deadline = proposal_voting_deadline_r(&deps.storage).may_load(proposal_id.to_string().as_bytes())?.ok_or_else(|| StdError::generic_err("No deadline set"))?;
+    let mut vote_status = proposal_status_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())?;
 
     // Check if proposal has run
-    if proposal_run_status_r(&deps.storage).may_load(proposal_id.to_string().as_bytes())?.is_some() {
-        return Err(StdError::generic_err("Proposal has already been executed"))
-    }
+    // TODO: This might not be needed
+    // if proposal_run_status_r(&deps.storage).may_load(proposal_id.to_string().as_bytes())?.is_some() {
+    //     return Err(StdError::generic_err("Proposal has already been executed"))
+    // }
 
     // Change proposal behavior according to stake availability
     let config = config_r(&deps.storage).load()?;
     vote_status = match config.staker {
         Some(staker) => {
 
+            // When staking is enabled funding is required
+            if vote_status != ProposalStatus::Voting {
+                return Err(StdError::unauthorized())
+            }
+
             let total_votes = total_proposal_votes_r(&deps.storage).load(
                 proposal_id.to_string().as_bytes())?;
 
             // Check if proposal can be run
+            let voting_deadline = proposal_voting_deadline_r(&deps.storage).may_load(
+                proposal_id.to_string().as_bytes())?.ok_or_else(|| StdError::generic_err("No deadline set"))?;
             if voting_deadline > env.block.time {
                 Err(StdError::unauthorized())
             }
@@ -158,7 +296,6 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     // Overwrite
-    proposal_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &proposal)?;
     proposal_run_status_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &run_status)?;
     proposal_status_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &vote_status)?;
 
@@ -199,18 +336,13 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None })
     }
 
-    // Check that proposal exists
-    if proposal_id > total_proposals_r(&deps.storage).load()? {
-        return Err(StdError::NotFound { kind: "Proposal".to_string(), backtrace: None })
-    }
-
-    // Check that proposal is still votable
-    let vote_status = proposal_status_r(&deps.storage).load(
-        proposal_id.to_string().as_bytes())?;
+    // Check that proposal is votable
+    let vote_status = proposal_status_r(&deps.storage).may_load(
+        proposal_id.to_string().as_bytes())?.ok_or_else(|| StdError::not_found("Proposal"))?;
     let voting_deadline = proposal_voting_deadline_r(&deps.storage).may_load(
         proposal_id.to_string().as_bytes())?.ok_or_else(|| StdError::generic_err("No deadline set"))?;
 
-    if vote_status != ProposalStatus::InProgress || voting_deadline <= env.block.time {
+    if vote_status != ProposalStatus::Voting || voting_deadline <= env.block.time {
         return Err(StdError::unauthorized())
     }
 
@@ -360,6 +492,7 @@ pub fn try_create_proposal<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+#[warn(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -410,7 +543,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
 pub fn try_disable_staker<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: &Env,
+    _env: &Env,
 ) -> StdResult<HandleResponse> {
 
     config_w(&mut deps.storage).update(|mut state| {
@@ -440,7 +573,7 @@ pub fn try_add_supported_contract<S: Storage, A: Api, Q: Querier>(
     }
 
     // Cannot be the same name as governance default
-    if name == GOVERNANCE_SELF.to_string() {
+    if name == *GOVERNANCE_SELF {
         return Err(StdError::Unauthorized { backtrace: None })
     }
 
@@ -479,7 +612,7 @@ pub fn try_remove_supported_contract<S: Storage, A: Api, Q: Querier>(
     }
 
     // Cannot be the same name as governance default
-    if name == GOVERNANCE_SELF.to_string() {
+    if name == *GOVERNANCE_SELF {
         return Err(StdError::Unauthorized { backtrace: None })
     }
 
@@ -509,7 +642,7 @@ pub fn try_update_supported_contract<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     // It has to be self and cannot be the same name as governance default
-    if env.contract.address != env.message.sender || name == GOVERNANCE_SELF.to_string() {
+    if env.contract.address != env.message.sender || name == *GOVERNANCE_SELF {
         return Err(StdError::Unauthorized { backtrace: None })
     }
 

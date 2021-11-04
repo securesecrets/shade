@@ -185,7 +185,7 @@ fn run_testnet() -> Result<()> {
             address: HumanAddr::from(shade.address.clone()),
             code_hash: shade.code_hash.clone()
         },
-        funding_amount: Uint128(10),
+        funding_amount: Uint128(1000000),
         funding_deadline: 180,
         voting_deadline: 180,
         // 5 shade is the minimum
@@ -229,9 +229,9 @@ fn run_testnet() -> Result<()> {
     }
     // Set Snip20s
     print_warning("Getting Shade contract from governance");
-    let shade = get_contract(&governance, "shade".to_string())?;
+    let shade_contract = get_contract(&governance, "shade".to_string())?;
     print_warning("Getting Silk contract from governance");
-    let silk = get_contract(&governance, "silk".to_string())?;
+    let silk_contract = get_contract(&governance, "silk".to_string())?;
 
     // Initialize Band Mock
     let band = init_contract(&governance, "band_mock".to_string(),
@@ -252,18 +252,18 @@ fn run_testnet() -> Result<()> {
 
     // Initialize Mint-Shade
     let mint_shade = initialize_minter(&governance, "shade_minter".to_string(),
-                                       &shade)?;
+                                       &shade_contract)?;
 
     // Initialize Mint-Silk
     let mint_silk = initialize_minter(&governance, "silk_minter".to_string(),
-                                      &silk)?;
+                                      &silk_contract)?;
 
     // Setup mint contracts
     // This also tests that governance can update allowed contracts
-    setup_minters(&governance, &mint_shade, &mint_silk, &shade, &silk, &s_sCRT)?;
+    setup_minters(&governance, &mint_shade, &mint_silk, &shade_contract, &silk_contract, &s_sCRT)?;
 
     // Initialize staking
-    let staker = setup_staker(&governance, &shade, account.clone())?;
+    let staker = setup_staker(&governance, &shade_contract, account.clone())?;
 
     // Set governance to require voting
     print_warning("Enabling governance voting");
@@ -291,6 +291,52 @@ fn run_testnet() -> Result<()> {
                         name: "stake_unbond_time".to_string(),
                         proposal: admin_command.to_string() },
                     Some("Staker unbond time can be updated by admin whenever"))?;
+
+    // Fund the proposal
+    print_warning("Funding proposal");
+    {
+        let proposal = get_latest_proposal(&governance)?;
+
+        // Check that its in a funding period
+        {
+            let msg = governance::QueryMsg::GetProposal { proposal_id: proposal };
+
+            let query: governance::QueryAnswer = query_contract(&governance, msg)?;
+
+            if let governance::QueryAnswer::Proposal { proposal } = query {
+                assert_eq!(proposal.status, ProposalStatus::Funding);
+            } else {
+                assert!(false, "Query returned unexpected response")
+            }
+        }
+
+        let balance = get_balance(&shade, account.clone());
+
+        test_contract_handle(&snip20::HandleMsg::Send {
+            recipient: HumanAddr::from(governance.address.clone()),
+            amount: Uint128(1000000),
+            msg: Some(to_binary(&proposal).unwrap()),
+            memo: None,
+            padding: None
+        }, &shade, ACCOUNT_KEY, Some(GAS),
+                             Some("test"), None)?;
+
+        // Check that its in a voting period
+        {
+            let msg = governance::QueryMsg::GetProposal { proposal_id: proposal };
+
+            let query: governance::QueryAnswer = query_contract(&governance, msg)?;
+
+            if let governance::QueryAnswer::Proposal { proposal } = query {
+                assert_eq!(proposal.status, ProposalStatus::Voting);
+            } else {
+                assert!(false, "Query returned unexpected response")
+            }
+        }
+
+        print_warning("Checking that funds are returned");
+        assert_eq!(balance, get_balance(&shade, account.clone()));
+    }
 
     print_warning("Voting on proposal");
     {
@@ -330,7 +376,7 @@ fn run_testnet() -> Result<()> {
             let query: governance::QueryAnswer = query_contract(&governance, msg)?;
 
             if let governance::QueryAnswer::Proposal { proposal } = query {
-                assert_eq!(proposal.status, ProposalStatus::InProgress);
+                assert_eq!(proposal.status, ProposalStatus::Voting);
             } else {
                 assert!(false, "Query returned unexpected response")
             }
@@ -361,11 +407,23 @@ fn run_testnet() -> Result<()> {
                         proposal: admin_command.to_string() },
                     Some("Staker unbond time can be updated by admin whenever"))?;
 
-    print_warning("Voting on proposal");
+
+
     {
         let proposal = get_latest_proposal(&governance)?;
 
+        print_warning("Funding proposal");
+        test_contract_handle(&snip20::HandleMsg::Send {
+            recipient: HumanAddr::from(governance.address.clone()),
+            amount: Uint128(1000000),
+            msg: Some(to_binary(&proposal).unwrap()),
+            memo: None,
+            padding: None
+        }, &shade, ACCOUNT_KEY, Some(GAS),
+                             Some("test"), None)?;
+
         // Vote on proposal
+        print_warning("Voting on proposal");
         test_contract_handle(&staking::HandleMsg::Vote {
             proposal_id: proposal,
             votes: vec![UserVote { vote: Vote::Yes, weight: 50 },
@@ -415,6 +473,11 @@ fn run_testnet() -> Result<()> {
             assert!(false, "Query returned unexpected response")
         }
     }
+
+    // Make a failed funding period
+
+    // Try to vote and fail
+    //print_warning("Voting before funding period finishes");
 
     Ok(())
 }
