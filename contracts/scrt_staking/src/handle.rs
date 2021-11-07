@@ -3,34 +3,21 @@ use cosmwasm_std::{
     Env, Extern, Storage, HandleResponse,
     StdResult, StdError,
     CosmosMsg, Uint128,
-    Delegation, Coin, StakingMsg,
+    Coin, StakingMsg,
     Validator, Querier, HumanAddr,
 };
-use secret_toolkit::{
-    snip20,
-    snip20::{
-        token_info_query,
-        register_receive_msg, 
-        set_viewing_key_msg,
-        redeem_msg, deposit_msg,
-    },
-};
+use secret_toolkit::snip20::redeem_msg;
 
 use shade_protocol::{
     scrt_staking::{
         HandleAnswer,
         ValidatorBounds,
     },
-    asset::Contract,
     generic_response::ResponseStatus,
 };
 
-use std::cmp;
-
 use crate::state::{
     config_w, config_r, 
-    self_address_r,
-    viewing_key_r,
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -73,7 +60,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
         )?
     );
 
-    let mut validator = choose_validator(&deps, env.block.time)?;
+    let validator = choose_validator(&deps, env.block.time)?;
 
     messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
         validator: validator.address.clone(),
@@ -171,7 +158,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
  */
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     validator: HumanAddr,
 ) -> StdResult<HandleResponse> {
 

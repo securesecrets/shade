@@ -2,7 +2,7 @@ use cosmwasm_std::{
     debug_print, to_binary, Api, Binary,
     Env, Extern, HandleResponse,
     Querier, StdError, StdResult, Storage, 
-    CosmosMsg, HumanAddr, Uint128
+    HumanAddr, Uint128
 };
 use secret_toolkit::{
     snip20::{
@@ -132,11 +132,11 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn rebalance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
+    _deps: &mut Extern<S, A, Q>,
+    _env: &Env,
 ) -> StdResult<HandleResponse> {
 
-    let mut messages = vec![];
+    let messages = vec![];
     Ok(HandleResponse {
         messages,
         log: vec![],

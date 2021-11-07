@@ -10,7 +10,6 @@ use crate::{
     handle,
     query
 };
-use shade_protocol::asset::Contract;
 use crate::state::{admin_commands_list_w, supported_contracts_list_w};
 use crate::handle::try_disable_staker;
 
@@ -51,12 +50,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        /// Proposals
+        // Proposals
         HandleMsg::CreateProposal { target_contract, proposal, description
         } => handle::try_create_proposal(deps, &env, target_contract,
                                          Binary::from(proposal.as_bytes()), description),
 
-        /// Self interactions
+        // Self interactions
         // Config
         HandleMsg::UpdateConfig { admin, staker, proposal_deadline,
             minimum_votes } =>
@@ -84,14 +83,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::UpdateAdminCommand { name, proposal
         } => handle::try_update_admin_command(deps, &env, name, proposal),
 
-        /// User interaction
+        // User interaction
         HandleMsg::MakeVote { voter, proposal_id, votes
         } => handle::try_vote(deps, &env, voter, proposal_id, votes),
 
         HandleMsg::TriggerProposal { proposal_id
         } => handle::try_trigger_proposal(deps, &env, proposal_id),
 
-        /// Admin interactions
+        // Admin interactions
         HandleMsg::TriggerAdminCommand { target, command,
             variables, description
         } => handle::try_trigger_admin_command(deps, &env, target, command, variables, description),

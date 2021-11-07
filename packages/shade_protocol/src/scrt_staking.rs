@@ -4,12 +4,10 @@ use cosmwasm_std::{
     HumanAddr, Binary,
     Uint128, Decimal,
     Validator, FullDelegation,
-    Coin,
 };
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
 use secret_toolkit::{
-    snip20,
     utils::{
         InitCallback,
         HandleCallback,
