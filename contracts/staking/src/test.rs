@@ -2,7 +2,7 @@
 pub mod tests {
     use binary_heap_plus::{BinaryHeap, MinComparator};
     use shade_protocol::staking::{StakeState, Unbonding, UserStakeState};
-    use cosmwasm_std::{Decimal, Uint128};
+    use cosmwasm_std::{Uint128};
     use crate::handle::{calculate_shares, calculate_tokens, stake_weight};
 
     #[test]

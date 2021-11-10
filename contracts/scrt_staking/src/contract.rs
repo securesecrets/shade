@@ -15,7 +15,6 @@ use shade_protocol::{
 
 use secret_toolkit::{
     snip20::{
-        token_info_query,
         register_receive_msg, 
         set_viewing_key_msg,
     },
@@ -24,8 +23,7 @@ use secret_toolkit::{
 use crate::{
     state::{
         viewing_key_w, viewing_key_r,
-        config_w,
-        self_address_w, self_address_r,
+        config_w, self_address_w,
     },
     handle, query,
 };
@@ -37,7 +35,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
 
-    let mut state = Config {
+    let config = Config {
         admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
@@ -47,7 +45,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         validator_bounds: msg.validator_bounds,
     };
 
-    config_w(&mut deps.storage).save(&state)?;
+    config_w(&mut deps.storage).save(&config)?;
 
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
@@ -60,15 +58,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 viewing_key_r(&deps.storage).load()?,
                 None,
                 1,
-                state.sscrt.code_hash.clone(),
-                state.sscrt.address.clone(),
+                config.sscrt.code_hash.clone(),
+                config.sscrt.address.clone(),
             )?,
             register_receive_msg(
                 env.contract_code_hash.clone(),
                 None,
                 256,
-                state.sscrt.code_hash.clone(),
-                state.sscrt.address.clone(),
+                config.sscrt.code_hash.clone(),
+                config.sscrt.address.clone(),
             )?,
         ],
         log: vec![]

@@ -3,8 +3,6 @@ use cosmwasm_std::{
     Extern,
     Querier, StdResult, Storage,
     Uint128,
-    Env,
-    StdError,
 };
 use secret_toolkit::utils::Query;
 use shade_protocol::{

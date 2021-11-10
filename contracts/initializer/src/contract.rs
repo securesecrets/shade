@@ -1,4 +1,4 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, HumanAddr};
+use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage}; 
 use crate::state::{config_w};
 use shade_protocol::initializer::{InitMsg, InitializerConfig, HandleMsg, QueryMsg, Snip20InitHistory};
 use secret_toolkit::utils::InitCallback;
@@ -78,9 +78,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    msg: HandleMsg,
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    _msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     return Ok(HandleResponse {
         messages: vec![],

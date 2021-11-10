@@ -1,5 +1,5 @@
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::{staking::{QueryMsg, QueryAnswer}, snip20};
+use shade_protocol::staking::QueryAnswer;
 use crate::{state::{config_r, stake_state_r}};
 use crate::handle::calculate_rewards;
 use crate::state::{staker_r, unbonding_r, user_unbonding_r, viewking_key_r};

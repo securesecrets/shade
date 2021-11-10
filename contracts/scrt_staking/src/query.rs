@@ -1,18 +1,14 @@
 use cosmwasm_std::{
     Api, Extern, Querier, Storage,
-    StdResult, StdError,
+    StdResult, HumanAddr,
     Delegation, FullDelegation,
-    Validator, StakingMsg,
-    HumanAddr,
 };
-use secret_toolkit::snip20;
 use shade_protocol::{
     scrt_staking::QueryAnswer,
 };
 
 use crate::state::{
     config_r, 
-    viewing_key_r,
     self_address_r,
 };
 

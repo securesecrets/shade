@@ -1,5 +1,4 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary, Empty};
-use shade_protocol::asset::Contract;
+use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr};
 use crate::state::{config_r, config_w, reward_r, claim_status_w, claim_status_r};
 use shade_protocol::airdrop::{HandleAnswer};
 use shade_protocol::generic_response::ResponseStatus;
@@ -32,7 +31,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
 
         Ok(state)
-    });
+    })?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -80,9 +79,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
                                   config.airdrop_snip20.address)?];
 
     // Mark reward as redeemed
-    claim_status_w(&mut deps.storage).update(key.as_bytes(), |claimed| {
-        Ok(true)
-    })?;
+    claim_status_w(&mut deps.storage).save(key.as_bytes(), &true)?;
 
     Ok(HandleResponse {
         messages,

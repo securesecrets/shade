@@ -2,8 +2,6 @@ use cosmwasm_std::{Storage, HumanAddr};
 use cosmwasm_storage::{
     singleton, Singleton, 
     singleton_read, ReadonlySingleton, 
-    bucket, Bucket, 
-    bucket_read, ReadonlyBucket
 };
 use shade_protocol::scrt_staking;
 

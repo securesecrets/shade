@@ -1,14 +1,13 @@
-use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg, Empty};
+use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg};
 use crate::state::{supported_contract_r, config_r, total_proposals_w, proposal_w, config_w, supported_contract_w, proposal_r, admin_commands_r, admin_commands_w, admin_commands_list_w, supported_contracts_list_w, total_proposals_r, total_proposal_votes_w, proposal_votes_w, total_proposal_votes_r, proposal_votes_r};
 use shade_protocol::{
-    governance::{Proposal, ProposalStatus, HandleAnswer, GOVERNANCE_SELF, HandleMsg},
+    governance::{Proposal, ProposalStatus, HandleAnswer, GOVERNANCE_SELF},
     generic_response::ResponseStatus,
     asset::Contract,
 };
 use shade_protocol::governance::ProposalStatus::{Accepted, Expired, Rejected};
 use shade_protocol::generic_response::ResponseStatus::{Success, Failure};
-use shade_protocol::governance::{AdminCommand, ADMIN_COMMAND_VARIABLE, Vote, UserVote, VoteTally};
-use secret_toolkit::utils::HandleCallback;
+use shade_protocol::governance::{AdminCommand, ADMIN_COMMAND_VARIABLE, VoteTally};
 
 pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -76,7 +75,7 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     // Change proposal behavior according to stake availability
     let config = config_r(&deps.storage).load()?;
     proposal.vote_status = match config.staker {
-        Some(staker) => {
+        Some(_) => {
 
             let total_votes = total_proposal_votes_r(&deps.storage).load(
                 proposal_id.to_string().as_bytes())?;
@@ -359,7 +358,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
 pub fn try_disable_staker<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: &Env,
+    _env: &Env,
 ) -> StdResult<HandleResponse> {
 
     config_w(&mut deps.storage).update(|mut state| {

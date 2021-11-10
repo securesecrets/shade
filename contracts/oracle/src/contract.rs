@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, 
     Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, StdError, Storage, Uint128,
+    Querier, StdResult, Storage, Uint128,
 };
 use shade_protocol::{
     oracle::{

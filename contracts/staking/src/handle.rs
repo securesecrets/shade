@@ -68,7 +68,7 @@ pub fn try_stake<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     sender: HumanAddr,
-    from: HumanAddr,
+    _from: HumanAddr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
 
