@@ -21,4 +21,7 @@ members = [
 
   # Mock contracts
   "contracts/mock_band",
+
+  # Tools
+  "tools/doc2book"
 ]
