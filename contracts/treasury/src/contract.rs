@@ -63,17 +63,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig {
-            admin,
-        } => handle::try_update_config(deps, env, admin),
+            config,
+        } => handle::try_update_config(deps, env, config),
         HandleMsg::RegisterAsset {
             contract,
             reserves,
         } => handle::try_register_asset(deps, &env, &contract, reserves),
-        HandleMsg::RegisterApp {
-            contract,
+        HandleMsg::RegisterAllocation {
             asset,
             allocation,
-        } => handle::register_app(deps, &env, contract, asset, allocation),
+        } => handle::register_allocation(deps, &env, asset, allocation),
         /*
         HandleMsg::Rebalance {
         } => handle::rebalance(deps, &env),
@@ -88,6 +87,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
-        //QueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
+        QueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
     }
 }

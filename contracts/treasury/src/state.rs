@@ -61,11 +61,11 @@ pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
     singleton(storage, SELF_ADDRESS)
 }
 
-pub fn allocations_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<treasury::Application>> {
+pub fn allocations_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<treasury::Allocation>> {
     bucket_read(ALLOCATIONS, storage)
 }
 
-pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::Application>> {
+pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::Allocation>> {
     bucket(ALLOCATIONS, storage)
 }
 

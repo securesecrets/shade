@@ -14,21 +14,41 @@ use secret_toolkit::{
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub admin: HumanAddr,
+    //pub account_holders: Vec<HumanAddr>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Application {
-    pub contract: Contract,
-    pub allocation: Decimal,
-    pub amount_allocated: Uint128,
+pub enum Allocation {
+    // To remain liquid
+    Reserves {
+        allocation: Decimal,
+    },
+    // SCRT/ATOM/OSMO staking
+    Staking {
+        contract: Contract,
+        allocation: Decimal,
+    },
+    // SKY
+    Application {
+        contract: Contract,
+        allocation: Decimal,
+        token: HumanAddr,
+    },
+    // Liquidity Providing
+    Pool {
+        contract: Contract,
+        allocation: Decimal,
+        secondary_asset: HumanAddr,
+        token: HumanAddr,
+    },
 }
-
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
+    //pub account_holders: Option<Vec<HumanAddr>>,
 }
 
 impl InitCallback for InitMsg {
@@ -46,7 +66,7 @@ pub enum HandleMsg {
         msg: Option<Binary>,
     },
     UpdateConfig {
-        admin: Option<HumanAddr>,
+        config: Config,
     },
     RegisterAsset {
         contract: Contract,
@@ -55,14 +75,9 @@ pub enum HandleMsg {
     /* List of contracts/users given an allowance based on a percentage of the asset balance
     * e.g. governance, LP, SKY
     */
-    RegisterApp {
-        contract: Contract,
-        //'staked' asset
+    RegisterAllocation {
         asset: HumanAddr,
-        // % of balance allocated to app
-        allocation: Decimal,
-        // TODO: pool token
-        //token: Option<Contract>,
+        allocation: Allocation,
     },
 
     // Trigger to re-allocate asset (all if none)
@@ -89,7 +104,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Allocations { asset: HumanAddr },
-    //Balance { asset: HumanAddr },
+    Balance { asset: HumanAddr },
 }
 
 impl Query for QueryMsg {
@@ -100,6 +115,6 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
-    Allocations { allocations: Vec<Application> },
-    //Balance { possible: bool },
+    Allocations { allocations: Vec<Allocation> },
+    Balance { amount: Uint128 },
 }

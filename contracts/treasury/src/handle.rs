@@ -17,7 +17,9 @@ use secret_toolkit::{
 use shade_protocol::{
     treasury::{
         HandleAnswer, 
-        Application,
+        QueryAnswer,
+        Allocation,
+        Config,
     },
     snip20::{
         Snip20Asset, fetch_snip20,
@@ -27,12 +29,15 @@ use shade_protocol::{
     generic_response::ResponseStatus,
 };
 
-use crate::state::{
-    config_w, config_r, 
-    assets_r, assets_w,
-    viewing_key_r,
-    allocations_r, allocations_w,
-    reserves_r, reserves_w,
+use crate::{
+    query,
+    state::{
+        config_w, config_r, 
+        assets_r, assets_w,
+        viewing_key_r,
+        allocations_r, allocations_w,
+        reserves_r, reserves_w,
+    },
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -49,34 +54,48 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let mut messages = vec![];
 
-    allocations_w(&mut deps.storage).update(env.message.sender.to_string().as_bytes(), |allocations| {
+    allocations_w(&mut deps.storage).update(asset.contract.address.to_string().as_bytes(), |allocs| {
 
-        let mut app_list = match allocations {
+        let mut alloc_list = match allocs {
             None => { vec![] }
             Some(a) => { a }
         };
 
-        for mut app in &mut app_list {
+        for mut alloc in &mut alloc_list {
 
-            let allocation = amount * app.allocation;
-            app.amount_allocated += allocation;
+            match alloc {
+                Allocation::Reserves { allocation } => {
+                },
+                Allocation::Staking { allocation, contract } => {
 
-            debug_print!("Allocating {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, app.contract.address);
+                    let allocation = amount * *allocation;
+                    //a.amount_allocated += allocation;
 
-            messages.push(
-                send_msg(
-                        app.contract.address.clone(),
-                        allocation,
-                        None,
-                        None,
-                        1,
-                        asset.contract.code_hash.clone(),
-                        asset.contract.address.clone(),
-                )?
-            );
+                    debug_print!("Staking {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
+
+                    messages.push(
+                        send_msg(
+                                contract.address.clone(),
+                                allocation,
+                                None,
+                                None,
+                                1,
+                                asset.contract.code_hash.clone(),
+                                asset.contract.address.clone(),
+                        )?
+                    );
+                },
+
+                Allocation::Application { contract, allocation, token } => {
+                    debug_print!("Applications Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
+                },
+                Allocation::Pool { contract, allocation, secondary_asset, token } => {
+                    debug_print!("Pools Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
+                },
+            };
         }
 
-        Ok(app_list)
+        Ok(alloc_list)
     })?;
 
     Ok(HandleResponse {
@@ -90,10 +109,10 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-/* Verifies the set of allocations is < 100%
+/* Verifies the set of apps is < 100%
  */
 /*
-pub fn validate_allocations(
+pub fn validate_apps(
     apps: Vec<Application>,
     reserves: Option<Decimal>,
 ) -> bool {
@@ -118,7 +137,7 @@ pub fn allocate_amount(
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    admin: Option<HumanAddr>,
+    config: Config,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -127,14 +146,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    // Save new info
-    let mut config = config_w(&mut deps.storage);
-    config.update(|mut state| {
-        if let Some(admin) = admin {
-            state.admin = admin;
-        }
-        Ok(state)
-    })?;
+    config_w(&mut deps.storage).save(&config);
 
     Ok(HandleResponse {
         messages: vec![],
@@ -163,6 +175,11 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         contract.address.to_string().as_bytes(), 
         &fetch_snip20(&contract, &deps.querier)?
     )?;
+
+    let allocs = match reserves {
+        Some(r) => { vec![Allocation::Reserves { allocation: r } ] }
+        None => { vec![] }
+    };
 
     allocations_w(&mut deps.storage).save(
         contract.address.to_string().as_bytes(), 
@@ -204,13 +221,11 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn register_app<S: Storage, A: Api, Q: Querier>(
+pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    contract: Contract,
     asset: HumanAddr,
-    //token: Option<Contract>,
-    allocation: Decimal,
+    allocation: Allocation,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -220,52 +235,98 @@ pub fn register_app<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    if (assets_r(&deps.storage).may_load(asset.to_string().as_bytes())?).is_none() {
-        return Err(StdError::GenericErr {
-            msg: "Unregistered asset".to_string(),
-            backtrace: None,
-        });
-    }
+    let full_asset = match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        Some(a) => { a }
+        None => {
+            return Err(StdError::GenericErr {
+                msg: "Unregistered asset".to_string(),
+                backtrace: None,
+            });
+        }
+    };
 
-    allocations_w(&mut deps.storage).update(asset.to_string().as_bytes(), |allocations| {
+    let alloc_portion = match allocation {
+        Allocation::Reserves { allocation } => allocation,
+        Allocation::Staking { contract, allocation } => allocation,
+        Allocation::Application { contract, allocation, token } => allocation,
+        Allocation::Pool { contract, allocation, secondary_asset, token } => allocation,
+    };
+
+    let allocated_amount = Decimal::zero();
+
+    allocations_w(&mut deps.storage).update(asset.to_string().as_bytes(), |apps| {
 
         // initialize list if it doesn't exist
-        let mut app_list = match allocations {
+        let mut app_list = match apps {
             None => { vec![] }
             Some(a) => { a }
         };
 
-        // Validate addition does not exceed %100
-        let mut total = Decimal::zero();
+        // Remove old instance of this contract
+        // TODO: need type comparison or something? gonna worry about it later
+        /*
+        for app in app_list.iter_mut() {
+
+            match app {
+                Allocation::Reserves(a) {
+                    alloc_amount
+                }
+            }
+            app_list.remove(pos);
+        }
+        */
+
+        // Validate addition does not exceed 100%
         for app in &app_list {
-            total = total + app.allocation;
+
+            allocated_amount = allocated_amount + match app {
+                Allocation::Reserves { mut allocation } => allocation,
+                Allocation::Staking { contract, mut allocation } => allocation,
+                Allocation::Application { contract, mut allocation, token } => allocation,
+                Allocation::Pool { contract, mut allocation, secondary_asset, token }=> allocation,
+            };
         }
 
-        if (total + allocation) >= Decimal::one() {
+        if (allocated_amount + alloc_portion) >= Decimal::one() {
             return Err(StdError::GenericErr {
-                msg: "Allocation would exceed 100%".to_string(),
+                msg: "Invalid allocation total exceeding 100%".to_string(),
                 backtrace: None,
             });
         }
 
-        // Remove old instance of this contract
-        if let Some(pos) = app_list.iter().position(|a| a.contract.address == contract.address.clone()) {
-            app_list.remove(pos);
-        }
-
-        app_list.push(
-            Application {
-                contract,
-                allocation,
-                amount_allocated: Uint128(0),
-            }
-        );
+        app_list.push(allocation);
 
         Ok(app_list)
     })?;
 
+    let mut liquid_amount = Decimal::one();//.Sub(allocated_amount);
+    liquid_amount = liquid_amount - allocated_amount;
+
+    let liquid_balance = match query::balance(&deps, &asset)? {
+        QueryAnswer::Balance { amount } => amount,
+        _ => {
+            return Err(StdError::GenericErr {
+                msg: "Unexpected balance response".to_string(),
+                backtrace: None,
+            });
+        }
+    };
+
+    // Determine how much of current balance is to be allocated
+    let to_allocate = liquid_balance * (liquid_amount - allocation);
+
     Ok(HandleResponse {
-        messages: vec![],
+        messages: vec![
+            send_msg(
+                    full_asset.contract.address.clone(),
+                    to_allocate,
+                    None,
+                    None,
+                    1,
+                    full_asset.contract.code_hash.clone(),
+                    full_asset.contract.address.clone(),
+            )?
+        ],
         log: vec![],
         data: Some( to_binary( 
             &HandleAnswer::RegisterApp {

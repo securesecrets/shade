@@ -26,14 +26,14 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: &HumanAddr,
 ) -> StdResult<QueryAnswer> {
 
     //TODO: restrict to admin
 
-    match assets_r(&deps.storage).may_load(&asset.to_string().as_bytes())? {
+    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => {
-            return Ok(snip20::QueryMsg::Balance { 
+            let resp: snip20::Balance = snip20::QueryMsg::Balance { 
                 address: self_address_r(&deps.storage).load()?, 
                 key: viewing_key_r(&deps.storage).load()?,
             }.query(
@@ -41,14 +41,17 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
                  1,
                  a.contract.code_hash,
                  asset.clone(),
-             )?)
+             )?;
+            Ok(QueryAnswer::Balance { 
+                amount: resp.amount 
+            })
         }
         None => { 
-            return Err(StdError::NotFound { 
+            Err(StdError::NotFound { 
                     kind: asset.to_string(), 
                     backtrace: None }) 
         }
-    };
+    }
 }
 
 pub fn allocations<S: Storage, A: Api, Q: Querier>(
