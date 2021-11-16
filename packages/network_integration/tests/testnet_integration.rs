@@ -5,10 +5,12 @@ use secretcli::{cli_types::NetContract,
                 secretcli::{account_address, query_contract, test_contract_handle,
                             test_inst_init, list_contracts_by_code}};
 use shade_protocol::{snip20::{InitConfig, InitialBalance}, snip20, governance, staking,
-                     micro_mint, band, oracle, asset::Contract, airdrop, airdrop::Reward,
+                     micro_mint, band, oracle, asset::Contract, airdrop,
+                     airdrop::{Reward, RequiredTask},
                      governance::{UserVote, Vote, ProposalStatus}, generic_response::ResponseStatus};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
-                             STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec},
+                             STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec,
+                                  SNIP20_FILE, AIRDROP_FILE, GOVERNANCE_FILE, MOCK_BAND_FILE, ORACLE_FILE},
                      contract_helpers::{initializer::initialize_initializer,
                                         governance::{init_contract, get_contract, add_contract,
                                                      create_proposal, get_latest_proposal,
@@ -40,9 +42,10 @@ fn run_airdrop() -> Result<()> {
         })
     };
 
-    let snip = test_inst_init(&snip_init_msg, "../../compiled/snip20.wasm.gz", &*generate_label(8),
-                               ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
-                               Some("test"))?;
+    let snip = test_inst_init(&snip_init_msg, SNIP20_FILE,
+                              &*generate_label(8),
+                              ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
+                              Some("test"))?;
     print_contract(&snip);
 
     {
@@ -55,13 +58,14 @@ fn run_airdrop() -> Result<()> {
     /// Assert that we start with nothing
     assert_eq!(Uint128(0), get_balance(&snip, account.clone()));
 
-    let expected_airdrop = Uint128(1000000);
+    let half_airdrop = Uint128(500000);
+    let full_airdrop = Uint128(1000000);
 
     print_header("Initializing airdrop");
 
     let airdrop_init_msg = airdrop::InitMsg {
         admin: None,
-        airdrop_snip20: Contract {
+        airdrop_token: Contract {
             address: HumanAddr::from(snip.address.clone()),
             code_hash: snip.code_hash.clone()
         },
@@ -69,11 +73,15 @@ fn run_airdrop() -> Result<()> {
         end_time: None,
         rewards: vec![Reward {
             address: HumanAddr::from(account.clone()),
-            amount: expected_airdrop
-        }]
+            amount: full_airdrop
+        }],
+        default_claim: Uint128(50),
+        task_claim: vec![RequiredTask {
+            address: HumanAddr::from(account.clone()),
+            percent: Uint128(50) }]
     };
 
-    let airdrop = test_inst_init(&airdrop_init_msg, "../../compiled/airdrop.wasm.gz", &*generate_label(8),
+    let airdrop = test_inst_init(&airdrop_init_msg, AIRDROP_FILE, &*generate_label(8),
                               ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                               Some("test"))?;
     print_contract(&airdrop);
@@ -86,9 +94,12 @@ fn run_airdrop() -> Result<()> {
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
 
-        if let airdrop::QueryAnswer::Eligibility { amount, claimed } = query {
-            assert_eq!(amount, expected_airdrop);
-            assert_eq!(claimed, false);
+        if let airdrop::QueryAnswer::Eligibility { total, claimed,
+            unclaimed, finished_tasks } = query {
+            assert_eq!(total, full_airdrop);
+            assert_eq!(claimed, Uint128::zero());
+            assert_eq!(unclaimed, half_airdrop);
+            assert_eq!(finished_tasks.len(), 1);
         }
     }
 
@@ -98,16 +109,16 @@ fn run_airdrop() -> Result<()> {
                          &snip, ACCOUNT_KEY, Some(GAS),
                          Some("test"), None)?;
 
-    print_header("Claiming airdrop");
+    print_warning("Claiming half of the airdrop");
     /// Claim airdrop
     test_contract_handle(&airdrop::HandleMsg::Claim {},
                          &airdrop, ACCOUNT_KEY, Some(GAS),
                          Some("test"), None)?;
 
     /// Assert that we claimed
-    assert_eq!(expected_airdrop, get_balance(&snip, account.clone()));
+    assert_eq!(half_airdrop, get_balance(&snip, account.clone()));
 
-    /// Query that airdrop is claimed
+    /// Query that half of the airdrop is claimed
     {
         let msg = airdrop::QueryMsg::GetEligibility {
             address: HumanAddr::from(account.clone())
@@ -115,9 +126,45 @@ fn run_airdrop() -> Result<()> {
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
 
-        if let airdrop::QueryAnswer::Eligibility { amount, claimed } = query {
-            assert_eq!(amount, expected_airdrop);
-            assert_eq!(claimed, true);
+        if let airdrop::QueryAnswer::Eligibility { total, claimed,
+            unclaimed, finished_tasks } = query {
+            assert_eq!(total, full_airdrop);
+            assert_eq!(claimed, half_airdrop);
+            assert_eq!(unclaimed, Uint128::zero());
+            assert_eq!(finished_tasks.len(), 1);
+        }
+    }
+
+    print_warning("Enabling the other half of the airdrop");
+
+    test_contract_handle(&airdrop::HandleMsg::CompleteTask {
+        address: HumanAddr::from(account.clone()) },
+                         &airdrop, ACCOUNT_KEY, Some(GAS),
+                         Some("test"), None)?;
+
+    print_warning("Claiming remaining half airdrop");
+
+    test_contract_handle(&airdrop::HandleMsg::Claim {},
+                         &airdrop, ACCOUNT_KEY, Some(GAS),
+                         Some("test"), None)?;
+
+    /// Assert that we claimed
+    assert_eq!(full_airdrop, get_balance(&snip, account.clone()));
+
+    /// Query that all of the airdrop is claimed
+    {
+        let msg = airdrop::QueryMsg::GetEligibility {
+            address: HumanAddr::from(account.clone())
+        };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::Eligibility { total, claimed,
+            unclaimed, finished_tasks } = query {
+            assert_eq!(total, full_airdrop);
+            assert_eq!(claimed, full_airdrop);
+            assert_eq!(unclaimed, Uint128::zero());
+            assert_eq!(finished_tasks.len(), 2);
         }
     }
 
@@ -149,7 +196,7 @@ fn run_testnet() -> Result<()> {
         })
     };
 
-    let s_sCRT = test_inst_init(&sscrt_init_msg, "../../compiled/snip20.wasm.gz", &*generate_label(8),
+    let s_sCRT = test_inst_init(&sscrt_init_msg, SNIP20_FILE, &*generate_label(8),
                                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                                 Some("test"))?;
     print_contract(&s_sCRT);
@@ -184,7 +231,7 @@ fn run_testnet() -> Result<()> {
         quorum: Uint128(5000000)
     };
 
-    let governance = test_inst_init(&governance_init_msg, "../../compiled/governance.wasm.gz", &*generate_label(8),
+    let governance = test_inst_init(&governance_init_msg, GOVERNANCE_FILE, &*generate_label(8),
                                     ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                                     Some("test"))?;
 
@@ -212,12 +259,12 @@ fn run_testnet() -> Result<()> {
 
     // Initialize Band Mock
     let band = init_contract(&governance, "band_mock".to_string(),
-                             "../../compiled/mock_band.wasm.gz",
+                             MOCK_BAND_FILE,
                              band::InitMsg {})?;
 
     // Initialize Oracle
     let oracle = init_contract(&governance, "oracle".to_string(),
-                               "../../compiled/oracle.wasm.gz",
+                               ORACLE_FILE,
                                oracle::InitMsg {
                                    admin: None,
                                    band: Contract {
