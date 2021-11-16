@@ -3,11 +3,11 @@ use cosmwasm_std::{HumanAddr, Uint128};
 use shade_protocol::{snip20::{InitialBalance}, snip20,
                      initializer, initializer::Snip20ContractInfo};
 use crate::{utils::{print_header, generate_label, print_contract, print_warning,
-                    STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY},
+                    STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, INITIALIZER_FILE},
+            contract_helpers::governance::add_contract,
             contract_helpers::minter::get_balance};
 use secretcli::{cli_types::NetContract,
-                secretcli::{test_contract_handle, test_inst_init}};
-use secretcli::secretcli::list_contracts_by_code;
+                secretcli::{test_contract_handle, test_inst_init, list_contracts_by_code}};
 
 pub fn initialize_initializer(
     admin: &String, sscrt: &NetContract, account: &String) -> Result<(NetContract, NetContract, NetContract)> {
@@ -44,7 +44,7 @@ pub fn initialize_initializer(
         }
     };
 
-    let initializer = test_inst_init(&init_msg, "../../compiled/initializer.wasm.gz", &*generate_label(8),
+    let initializer = test_inst_init(&init_msg, INITIALIZER_FILE, &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
     print_contract(&initializer);

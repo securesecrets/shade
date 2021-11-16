@@ -2,7 +2,7 @@ use serde_json::Result;
 use cosmwasm_std::{HumanAddr, Uint128, to_binary};
 use shade_protocol::{snip20, micro_mint, mint, asset::Contract};
 use crate::{utils::{print_header, print_contract, print_epoch_info, print_vec,
-                    GAS, VIEW_KEY},
+                    GAS, VIEW_KEY, MICRO_MINT_FILE},
             contract_helpers::governance::{init_contract, get_contract,
                                            create_and_trigger_proposal}};
 use secretcli::{cli_types::NetContract,
@@ -11,7 +11,7 @@ use secretcli::{cli_types::NetContract,
 pub fn initialize_minter(governance: &NetContract, contract_name: String,
                          native_asset: &Contract) -> Result<NetContract> {
     let minter = init_contract(governance, contract_name,
-                                   "../../compiled/micro_mint.wasm.gz",
+                                   MICRO_MINT_FILE,
                                    micro_mint::InitMsg {
             admin: Some(HumanAddr::from(governance.address.clone())),
             native_asset: native_asset.clone(),
