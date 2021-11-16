@@ -1,5 +1,5 @@
 use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::governance::{QueryAnswer, Proposal, QueriedProposal};
+use shade_protocol::governance::{QueryAnswer, QueriedProposal};
 
 use crate::{
     proposal_state::{

@@ -4,11 +4,11 @@ use cosmwasm_std::{
 };
 use crate::{
     proposal_state::{
-        proposal_w, proposal_r, total_proposals_w, total_proposals_r,
+        proposal_w, proposal_r, total_proposals_w,
         total_proposal_votes_w, total_proposal_votes_r, proposal_votes_w, proposal_votes_r,
         proposal_funding_deadline_w, proposal_funding_deadline_r,
         proposal_voting_deadline_w, proposal_voting_deadline_r, proposal_status_w, proposal_status_r,
-        proposal_run_status_r, proposal_run_status_w, proposal_funding_r, proposal_funding_w,
+        proposal_run_status_w, proposal_funding_r, proposal_funding_w,
         proposal_funding_batch_w,
     },
     state::{
@@ -25,7 +25,6 @@ use shade_protocol::{
 };
 use shade_protocol::generic_response::ResponseStatus;
 use secret_toolkit::snip20::{send_msg, SendAction, batch_send_msg};
-use crate::proposal_state::proposal_funding_batch_r;
 
 pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -71,7 +70,7 @@ pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
     proposal_funding_w(&mut deps.storage).save(
         proposal_id.to_string().as_bytes(), &Uint128::zero())?;
     // Initialize the funding batch
-    proposal_funding_batch_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &vec![]);
+    proposal_funding_batch_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &vec![])?;
 
     // Create proposal votes
     total_proposal_votes_w(&mut deps.storage).save(
@@ -162,9 +161,9 @@ pub fn try_fund_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     // Update list of people that funded
-    let mut amounts = proposal_funding_batch_w(&mut deps.storage).update(
+    let amounts = proposal_funding_batch_w(&mut deps.storage).update(
         proposal_id.to_string().as_bytes(),
-        |mut amounts| {
+        |amounts| {
             if let Some(mut amounts) = amounts {
                 amounts.push(SendAction{
                     recipient: sender.clone(),
@@ -219,7 +218,7 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     // Get proposal
     let proposal = proposal_r(&deps.storage).load(
         proposal_id.to_string().as_bytes())?;
-    let mut run_status: ResponseStatus;
+    let run_status: ResponseStatus;
     let mut vote_status = proposal_status_r(&deps.storage).load(
         proposal_id.to_string().as_bytes())?;
 
@@ -232,7 +231,7 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     // Change proposal behavior according to stake availability
     let config = config_r(&deps.storage).load()?;
     vote_status = match config.staker {
-        Some(staker) => {
+        Some(_) => {
 
             // When staking is enabled funding is required
             if vote_status != ProposalStatus::Voting {
