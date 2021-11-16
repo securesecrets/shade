@@ -386,7 +386,6 @@ fn call_oracle<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbol: String,
 ) -> StdResult<Uint128> {
-    let block_size = 1; //update this later
     let config = config_read(&deps.storage).load()?;
     let query_msg = GetPrice { symbol };
     let answer: ReferenceData = query_msg.query(&deps.querier,

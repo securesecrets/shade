@@ -32,13 +32,13 @@ pub fn initialize_minter(governance: &NetContract, contract_name: String,
 }
 
 pub fn setup_minters(governance: &NetContract, mint_shade: &NetContract, mint_silk: &NetContract,
-                     shade: &Contract, silk: &Contract, sSCRT: &NetContract) -> Result<()> {
+                     shade: &Contract, silk: &Contract, sscrt: &NetContract) -> Result<()> {
     print_header("Registering allowed tokens in mint contracts");
     create_and_trigger_proposal(&governance, "shade_minter".to_string(),
                                 micro_mint::HandleMsg::RegisterAsset {
                             contract: Contract {
-                                address: HumanAddr::from(sSCRT.address.clone()),
-                                code_hash: sSCRT.code_hash.clone()
+                                address: HumanAddr::from(sscrt.address.clone()),
+                                code_hash: sscrt.code_hash.clone()
                             },
                         capture: Some(Uint128(1000))}, Some("Register asset"))?;
     create_and_trigger_proposal(&governance, "shade_minter".to_string(),

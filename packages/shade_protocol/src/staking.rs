@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Binary};
-use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
+use cosmwasm_std::{HumanAddr, Uint128};
+use secret_toolkit::utils::{HandleCallback, Query};
 use crate::{
     asset::Contract,
     generic_response::ResponseStatus,
@@ -21,8 +21,22 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct StakeState{
+    pub total_shares: Uint128,
+    pub total_tokens: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct UserStakeState{
+    pub shares: Uint128,
+    // This is used to derive the actual value to recover
+    pub tokens_staked: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Unbonding {
-    pub account: HumanAddr,
     pub amount: Uint128,
     pub unbond_time: u64,
 }
@@ -58,9 +72,9 @@ pub enum HandleMsg {
     Unbond { amount: Uint128 },
     // While secure querying is resolved
     Vote { proposal_id: Uint128, votes: Vec<UserVote> },
-    GetStaker { account: HumanAddr },
-    GetStakers { accounts: Vec<HumanAddr> },
-    TriggerUnbonds {},
+    ClaimUnbond {},
+    ClaimRewards {},
+    SetViewingKey { key: String },
 }
 
 impl HandleCallback for HandleMsg {
@@ -74,9 +88,9 @@ pub enum HandleAnswer {
     Stake { status: ResponseStatus },
     Unbond { status: ResponseStatus },
     Vote { status: ResponseStatus },
-    GetStaker { status: ResponseStatus, stake: Uint128 },
-    GetStakers { status: ResponseStatus, stake: Vec<Uint128> },
-    TriggerUnbonds { status: ResponseStatus },
+    ClaimUnbond { status: ResponseStatus },
+    ClaimRewards { status: ResponseStatus },
+    SetViewingKey { status: ResponseStatus }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -84,6 +98,8 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     TotalStaked {},
+    TotalUnbonding { start: Option<u64>, end: Option<u64> },
+    UserStake { address: HumanAddr, key: String, time: u64},
 }
 
 impl Query for QueryMsg {
@@ -95,4 +111,6 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config { config: Config },
     TotalStaked { total: Uint128 },
+    TotalUnbonding { total: Uint128 },
+    UserStake { staked: Uint128, pending_rewards: Uint128, unbonding: Uint128, unbonded: Uint128 },
 }

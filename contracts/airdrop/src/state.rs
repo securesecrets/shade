@@ -1,4 +1,4 @@
-use cosmwasm_std::{Storage, Uint128};
+use cosmwasm_std::Storage;
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
 use shade_protocol::airdrop::{Config, Reward};
 

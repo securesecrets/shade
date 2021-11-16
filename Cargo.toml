@@ -17,7 +17,22 @@ members = [
   "contracts/treasury",
   "contracts/oracle",
   "contracts/snip20",
+  "contracts/scrt_staking",
 
   # Mock contracts
   "contracts/mock_band",
+
+  # Tools
+  "tools/doc2book"
 ]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true

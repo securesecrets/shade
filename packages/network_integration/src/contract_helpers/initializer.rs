@@ -11,25 +11,25 @@ use secretcli::{cli_types::NetContract,
                             test_inst_init, list_contracts_by_code}};
 
 pub fn initialize_initializer(
-    governance: &NetContract, sSCRT: &NetContract, account: String) -> Result<()> {
+    governance: &NetContract, sscrt: &NetContract, account: String) -> Result<()> {
     print_header("Initializing Initializer");
     let mut shade = NetContract {
         label: generate_label(8),
         id: "".to_string(),
         address: "".to_string(),
-        code_hash: sSCRT.code_hash.clone()
+        code_hash: sscrt.code_hash.clone()
     };
 
     let mut silk = NetContract {
         label: generate_label(8),
         id: "".to_string(),
         address: "".to_string(),
-        code_hash: sSCRT.code_hash.clone()
+        code_hash: sscrt.code_hash.clone()
     };
 
     let init_msg = initializer::InitMsg {
-        snip20_id: sSCRT.id.parse::<u64>().unwrap(),
-        snip20_code_hash: sSCRT.code_hash.clone(),
+        snip20_id: sscrt.id.parse::<u64>().unwrap(),
+        snip20_code_hash: sscrt.code_hash.clone(),
         shade: Snip20ContractInfo {
             label: shade.label.clone(),
             admin: Some(HumanAddr::from(governance.address.clone())),
@@ -52,7 +52,7 @@ pub fn initialize_initializer(
 
     print_header("Getting uploaded Snip20s");
 
-    let contracts = list_contracts_by_code(sSCRT.id.clone())?;
+    let contracts = list_contracts_by_code(sscrt.id.clone())?;
 
     for contract in contracts {
         if &contract.label == &shade.label {
