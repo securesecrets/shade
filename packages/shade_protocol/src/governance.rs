@@ -18,8 +18,14 @@ pub struct Config {
     pub admin: HumanAddr,
     // Staking contract - optional to support admin only
     pub staker: Option<Contract>,
-    // The amount of time given for each proposal
-    pub proposal_deadline: u64,
+    // The token allowed for funding
+    pub funding_token: Contract,
+    // The amount required to fund a proposal
+    pub funding_amount: Uint128,
+    // Proposal funding period deadline
+    pub funding_deadline: u64,
+    // Proposal voting period deadline
+    pub voting_deadline: u64,
     // The minimum total amount of votes needed to approve deadline
     pub minimum_votes: Uint128,
 }
@@ -34,33 +40,45 @@ pub struct AdminCommand {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Proposal {
+    // Proposal ID
+    pub id: Uint128,
+    // Target smart contract
+    pub target: String,
+    // Message to execute
+    pub msg: Binary,
+    // Description of proposal
+    pub description: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct QueriedProposal {
     pub id: Uint128,
     pub target: String,
     pub msg: Binary,
     pub description: String,
-    pub due_date: u64,
-    // Used to determine if community voted for it
-    pub is_admin_command: bool,
-    pub vote_status: ProposalStatus,
-    // This will be available after proposal is run
-    pub run_status: Option<ResponseStatus>
+    pub funding_deadline: u64,
+    pub voting_deadline: Option<u64>,
+    pub total_funding: Uint128,
+    pub status: ProposalStatus,
+    pub run_status: Option<ResponseStatus>,
 }
-//TODO: move vote status to its own store
-//TODO: move run status to its own store
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProposalStatus {
     // Admin command called
     AdminRequested,
-    // Voting not finished
-    InProgress,
+    // In funding period
+    Funding,
+    // Voting in progress
+    Voting,
     // Total votes did not reach minimum total votes
     Expired,
     // Majority voted No
     Rejected,
     // Majority votes yes
-    Accepted,
+    Passed,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -92,7 +110,10 @@ pub struct UserVote {
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub staker: Option<Contract>,
-    pub proposal_deadline: u64,
+    pub funding_token: Contract,
+    pub funding_amount: Uint128,
+    pub funding_deadline: u64,
+    pub voting_deadline: u64,
     pub quorum: Uint128,
 }
 
@@ -110,6 +131,14 @@ pub enum HandleMsg {
         // This will be saved as binary
         proposal: String,
         description: String,
+    },
+
+    /// Proposal funding
+    Receive {
+        sender: HumanAddr,
+        amount: Uint128,
+        // Proposal ID
+        msg: Option<Binary>,
     },
 
     /// Admin Command
@@ -137,6 +166,8 @@ pub enum HandleMsg {
         admin: Option<HumanAddr>,
         staker: Option<Contract>,
         proposal_deadline: Option<u64>,
+        funding_amount: Option<Uint128>,
+        funding_deadline: Option<u64>,
         minimum_votes: Option<Uint128>,
     },
 
@@ -180,6 +211,7 @@ impl HandleCallback for HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     CreateProposal { status: ResponseStatus, proposal_id: Uint128 },
+    FundProposal { status: ResponseStatus, total_funding: Uint128 },
     AddAdminCommand { status: ResponseStatus },
     RemoveAdminCommand { status: ResponseStatus },
     UpdateAdminCommand { status: ResponseStatus },
@@ -195,9 +227,11 @@ pub enum HandleAnswer {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+// TODO: RETURNED PROPOSAL INFO NEEDS TO BE FIXED
 pub enum QueryMsg {
     GetProposalVotes { proposal_id: Uint128 },
-    GetProposals { total: Uint128, start: Uint128 },
+    //TODO: IMPLEMENT THE STATUS FLAG
+    GetProposals { total: Uint128, start: Uint128, status: Option<ProposalStatus> },
     GetProposal { proposal_id: Uint128 },
     GetTotalProposals {},
     GetSupportedContracts {},
@@ -214,8 +248,8 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     ProposalVotes { status: VoteTally },
-    Proposals { proposals: Vec<Proposal> },
-    Proposal { proposal: Proposal },
+    Proposals { proposals: Vec<QueriedProposal> },
+    Proposal { proposal: QueriedProposal },
     TotalProposals { total: Uint128 },
     SupportedContracts { contracts: Vec<String> },
     SupportedContract { contract: Contract },

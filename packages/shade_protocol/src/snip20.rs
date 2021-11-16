@@ -98,6 +98,10 @@ pub struct InitConfig {
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    ChangeAdmin {
+        address: HumanAddr,
+        padding: Option<String>,
+    },
     // Native coin interactions
     Redeem {
         amount: Uint128,

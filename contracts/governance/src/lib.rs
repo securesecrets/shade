@@ -1,5 +1,6 @@
 pub mod contract;
 pub mod state;
+pub mod proposal_state;
 pub mod handle;
 pub mod query;
 
