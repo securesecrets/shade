@@ -4,7 +4,7 @@ use shade_protocol::{
     governance::{Config, Proposal},
     asset::Contract,
 };
-use shade_protocol::governance::{AdminCommand, UserVote, VoteTally};
+use shade_protocol::governance::{AdminCommand, VoteTally};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 // Saved contracts

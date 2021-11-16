@@ -1,4 +1,4 @@
-use serde_json::{Result, Error};
+use serde_json::{Result};
 use shade_protocol::{governance, asset::Contract};
 use cosmwasm_std::{HumanAddr, Uint128};
 use shade_protocol::governance::GOVERNANCE_SELF;
@@ -20,7 +20,7 @@ pub fn init_contract<Init: serde::Serialize>(
 
     print_contract(&contract);
 
-    add_contract(contract_name, &contract, &governance);
+    add_contract(contract_name, &contract, &governance)?;
 
     Ok(contract)
 }

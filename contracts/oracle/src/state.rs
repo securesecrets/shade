@@ -10,7 +10,6 @@ use cosmwasm_storage::{
 use shade_protocol::{
     oracle::{ OracleConfig, SswapPair },
     band::ReferenceData,
-    asset::Contract,
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";

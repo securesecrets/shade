@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Binary};
-use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
+use cosmwasm_std::{HumanAddr, Uint128};
+use secret_toolkit::utils::{HandleCallback, Query};
 use crate::{
     asset::Contract,
     generic_response::ResponseStatus,
