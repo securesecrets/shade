@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr};
+use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
 use crate::state::{config_r, config_w, reward_r, claim_status_w, claim_status_r};
 use shade_protocol::airdrop::{HandleAnswer, RequiredTask};
 use shade_protocol::generic_response::ResponseStatus;

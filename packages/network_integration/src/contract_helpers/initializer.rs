@@ -7,8 +7,7 @@ use crate::{utils::{print_header, generate_label, print_contract, print_warning,
             contract_helpers::governance::add_contract,
             contract_helpers::minter::get_balance};
 use secretcli::{cli_types::NetContract,
-                secretcli::{query_contract, test_contract_handle,
-                            test_inst_init, list_contracts_by_code}};
+                secretcli::{test_contract_handle, test_inst_init, list_contracts_by_code}};
 
 pub fn initialize_initializer(
     governance: &NetContract, sscrt: &NetContract, account: String) -> Result<()> {

@@ -1,4 +1,4 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128, HumanAddr, StdError};
+use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128, StdError};
 use shade_protocol::{
     airdrop::{
         InitMsg, HandleMsg,
@@ -8,7 +8,6 @@ use shade_protocol::{
 use crate::{state::{config_w, reward_w, claim_status_w},
             handle::{try_update_config, try_add_tasks, try_complete_task, try_claim},
             query };
-use secret_toolkit::snip20::token_info_query;
 use shade_protocol::airdrop::RequiredTask;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(

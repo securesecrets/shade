@@ -1,13 +1,9 @@
 use serde_json::Result;
 use cosmwasm_std::{HumanAddr, Uint128};
 use shade_protocol::{staking, snip20, asset::Contract};
-use crate::{utils::{print_header, print_contract, print_epoch_info, print_vec,
-                    STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, STAKING_FILE},
-            contract_helpers::governance::{init_contract, get_contract, add_contract,
-                                           create_and_trigger_proposal, trigger_latest_proposal}};
 use crate::{utils::{print_header, print_contract,
-                    GAS, ACCOUNT_KEY},
-            contract_helpers::governance::init_contract};
+                    GAS, ACCOUNT_KEY, STAKING_FILE},
+            contract_helpers::governance::{init_contract}};
 use secretcli::{cli_types::NetContract,
                 secretcli::{query_contract, test_contract_handle}};
 use crate::contract_helpers::minter::get_balance;
