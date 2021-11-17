@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary,
+    to_binary, Api, Binary,
     Env, Extern, HandleResponse,
     Querier, StdError, StdResult, Storage, 
     CosmosMsg, HumanAddr,
@@ -50,7 +50,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     let asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
-    debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
+    //debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
 
     let mut messages = vec![];
 
@@ -71,7 +71,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                     let allocation = amount * *allocation;
                     //a.amount_allocated += allocation;
 
-                    debug_print!("Staking {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
+                    //debug_print!("Staking {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
 
                     messages.push(
                         send_msg(
@@ -87,10 +87,10 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                 },
 
                 Allocation::Application { contract, allocation, token } => {
-                    debug_print!("Applications Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
+                    //debug_print!("Applications Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
                 },
                 Allocation::Pool { contract, allocation, secondary_asset, token } => {
-                    debug_print!("Pools Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
+                    //debug_print!("Pools Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
                 },
             };
         }
@@ -280,7 +280,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         for app in &app_list {
 
             allocated_amount = allocated_amount + match app {
-                Allocation::Reserves { mut allocation } => allocation,
+                Allocation::Reserves { allocation } => Decimal::zero(),
                 Allocation::Staking { contract, mut allocation } => allocation,
                 Allocation::Application { contract, mut allocation, token } => allocation,
                 Allocation::Pool { contract, mut allocation, secondary_asset, token }=> allocation,
@@ -299,8 +299,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         Ok(app_list)
     })?;
 
-    let mut liquid_amount = Decimal::one();//.Sub(allocated_amount);
-    liquid_amount = liquid_amount - allocated_amount;
+    let liquid_portion = Decimal::one() - allocated_amount;
 
     let liquid_balance = match query::balance(&deps, &asset)? {
         QueryAnswer::Balance { amount } => amount,
@@ -313,7 +312,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     };
 
     // Determine how much of current balance is to be allocated
-    let to_allocate = liquid_balance * (liquid_amount - allocation);
+    let to_allocate = liquid_balance * (alloc_portion / liquid_portion);
 
     Ok(HandleResponse {
         messages: vec![
