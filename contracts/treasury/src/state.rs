@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    Storage, HumanAddr, Decimal
+    Storage, HumanAddr,
+    Decimal,
 };
 use cosmwasm_storage::{
     singleton, singleton_read,
@@ -10,6 +11,7 @@ use cosmwasm_storage::{
 use shade_protocol::{
     treasury,
     snip20::Snip20Asset,
+    //math::Decimal,
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";

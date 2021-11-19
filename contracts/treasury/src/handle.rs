@@ -1,9 +1,10 @@
+use cosmwasm_std;
 use cosmwasm_std::{
     to_binary, Api, Binary,
     Env, Extern, HandleResponse,
     Querier, StdError, StdResult, Storage, 
     CosmosMsg, HumanAddr,
-    Uint128, Decimal,
+    Uint128, Decimal
 };
 use secret_toolkit::{
     snip20::{
@@ -27,6 +28,7 @@ use shade_protocol::{
     },
     asset::Contract,
     generic_response::ResponseStatus,
+    //math::Decimal,
 };
 
 use crate::{
@@ -61,14 +63,13 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             Some(a) => { a }
         };
 
-        for mut alloc in &mut alloc_list {
+        for alloc in &mut alloc_list {
 
             match alloc {
-                Allocation::Reserves { allocation } => {
-                },
+                Allocation::Reserves { allocation } => { },
                 Allocation::Staking { allocation, contract } => {
 
-                    let allocation = amount * *allocation;
+                    let mut allocation = amount * *allocation;
                     //a.amount_allocated += allocation;
 
                     //debug_print!("Staking {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
@@ -108,31 +109,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
         )?),
     })
 }
-
-/* Verifies the set of apps is < 100%
- */
-/*
-pub fn validate_apps(
-    apps: Vec<Application>,
-    reserves: Option<Decimal>,
-) -> bool {
-
-    let allocated = Decimal::zero();
-    for app in apps {
-        allocated = allocated + app.allocation;
-    }
-
-    allocated < Decimal::one()
-}
-
-pub fn allocate_amount(
-    amount: Uint128, 
-    allocation: Decimal
-) -> Uint128 {
-
-    amount * allocation
-}
-*/
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -225,7 +201,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     asset: HumanAddr,
-    allocation: Allocation,
+    alloc: Allocation,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -245,14 +221,24 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    let alloc_portion = match allocation {
+    let liquid_balance: Uint128 = match query::balance(&deps, &asset)? {
+        QueryAnswer::Balance { amount } => amount,
+        _ => {
+            return Err(StdError::GenericErr {
+                msg: "Unexpected response for balance".to_string(),
+                backtrace: None,
+            });
+        }
+    };
+
+    let alloc_portion = *match &alloc {
         Allocation::Reserves { allocation } => allocation,
         Allocation::Staking { contract, allocation } => allocation,
         Allocation::Application { contract, allocation, token } => allocation,
         Allocation::Pool { contract, allocation, secondary_asset, token } => allocation,
     };
 
-    let allocated_amount = Decimal::zero();
+    let mut allocated_portion = Decimal::zero();
 
     allocations_w(&mut deps.storage).update(asset.to_string().as_bytes(), |apps| {
 
@@ -279,43 +265,38 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         // Validate addition does not exceed 100%
         for app in &app_list {
 
-            allocated_amount = allocated_amount + match app {
+            allocated_portion = allocated_portion + match app {
                 Allocation::Reserves { allocation } => Decimal::zero(),
-                Allocation::Staking { contract, mut allocation } => allocation,
-                Allocation::Application { contract, mut allocation, token } => allocation,
-                Allocation::Pool { contract, mut allocation, secondary_asset, token }=> allocation,
+                Allocation::Staking { contract, allocation } => *allocation,
+                Allocation::Application { contract, allocation, token } => *allocation,
+                Allocation::Pool { contract, allocation, secondary_asset, token } => *allocation,
             };
         }
 
-        if (allocated_amount + alloc_portion) >= Decimal::one() {
+        if (allocated_portion + alloc_portion) >= Decimal::one() {
             return Err(StdError::GenericErr {
                 msg: "Invalid allocation total exceeding 100%".to_string(),
                 backtrace: None,
             });
         }
 
-        app_list.push(allocation);
+        app_list.push(alloc);
 
         Ok(app_list)
     })?;
 
-    let liquid_portion = Decimal::one() - allocated_amount;
-
-    let liquid_balance = match query::balance(&deps, &asset)? {
-        QueryAnswer::Balance { amount } => amount,
-        _ => {
-            return Err(StdError::GenericErr {
-                msg: "Unexpected balance response".to_string(),
-                backtrace: None,
-            });
-        }
-    };
+    //TODO: get Decimal math functions to do these things (untested)
+    //TODO: re-add send_msg below
+    /*
+    let liquid_portion = (allocated_portion * liquid_balance) / allocated_portion;
 
     // Determine how much of current balance is to be allocated
-    let to_allocate = liquid_balance * (alloc_portion / liquid_portion);
+    let to_allocate = liquid_balance - (alloc_portion / liquid_portion);
+    */
 
     Ok(HandleResponse {
         messages: vec![
+            /*
             send_msg(
                     full_asset.contract.address.clone(),
                     to_allocate,
@@ -325,6 +306,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
                     full_asset.contract.code_hash.clone(),
                     full_asset.contract.address.clone(),
             )?
+            */
         ],
         log: vec![],
         data: Some( to_binary( 
@@ -334,49 +316,3 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         )
     })
 }
-
-/*
-pub fn rebalance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
-
-    let config = config_r(&deps.storage).load()?;
-
-    if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-
-    let mut messages = vec![];
-
-    let total = Decimal.one();
-
-    if let Some(asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
-            
-        for app in allocations_r(&deps.storage).load(asset.contract.address.to_string().as_bytes())? {
-            let allocation = amount * app.allocation;
-
-            debug_print!("Allocating {} u{} to {}", allocation, asset.token_info.symbol, app.contract.address);
-            messages.push(send_msg(app.contract.address,
-                                   allocation,
-                                   None,
-                                   None,
-                                   1,
-                                   asset.contract.code_hash.clone(),
-                                   asset.contract.address.clone())?);
-        }
-    }
-
-
-    Ok(HandleResponse {
-        messages,
-        log: vec![],
-        data: Some( to_binary( 
-            &HandleAnswer::Receive {
-                status: ResponseStatus::Success } 
-            )? 
-        )
-    })
-}
-*/

@@ -1,14 +1,15 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Decimal, Binary};
+use cosmwasm_std::{HumanAddr, Binary, Uint128, Decimal};
+use secret_toolkit::{
+    snip20, 
+    utils::{InitCallback, HandleCallback, Query},
+};
 use crate::{
     asset::Contract,
     snip20::Snip20Asset,
     generic_response::ResponseStatus,
-};
-use secret_toolkit::{
-    snip20, 
-    utils::{InitCallback, HandleCallback, Query},
+    //math::Decimal
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

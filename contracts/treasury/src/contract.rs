@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary,
     Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, Storage, 
+    Querier, StdResult, Storage,
 };
 
 use shade_protocol::{
