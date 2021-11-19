@@ -96,6 +96,7 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
+    // TODO: add total claimed in config
     Config { config: Config },
     Dates { start: u64, end: Option<u64> },
     Eligibility {

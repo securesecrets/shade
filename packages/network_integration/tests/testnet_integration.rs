@@ -1,11 +1,9 @@
 use colored::*;
 use serde_json::Result;
 use cosmwasm_std::{HumanAddr, Uint128, to_binary};
-use secretcli::{cli_types::NetContract,
-                secretcli::{account_address, query_contract, test_contract_handle,
-                            test_inst_init, list_contracts_by_code}};
-use shade_protocol::{snip20::{InitConfig, InitialBalance}, snip20, governance, staking,
-                     micro_mint, band, oracle, asset::Contract, airdrop,
+use secretcli::{secretcli::{account_address, query_contract, test_contract_handle, test_inst_init}};
+use shade_protocol::{snip20::{InitConfig}, snip20, governance, staking,
+                     band, oracle, asset::Contract, airdrop,
                      airdrop::{Reward, RequiredTask},
                      governance::{UserVote, Vote, ProposalStatus}, generic_response::ResponseStatus};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,

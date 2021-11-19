@@ -1,5 +1,5 @@
 use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
-use crate::state::{config_r, config_w, reward_r, claim_status_w, claim_status_r};
+use crate::state::{config_r, config_w, reward_r, claim_status_w, claim_status_r, user_total_claimed_w, total_claimed_w};
 use shade_protocol::airdrop::{HandleAnswer, RequiredTask};
 use shade_protocol::generic_response::ResponseStatus;
 use secret_toolkit::snip20::mint_msg;
@@ -95,7 +95,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
                         Ok(false)
                     }
                     else {
-                        Err(StdError::Unauthorized { backtrace: None })
+                        Err(StdError::unauthorized())
                     }
                 })?;
 
@@ -131,26 +131,45 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     let user = env.message.sender.clone();
     let user_key = user.to_string();
 
-    let eligible_amount = reward_r(&deps.storage).load(
-        user.to_string().as_bytes())?.amount;
+    let eligible_amount = reward_r(&deps.storage).load(user_key.as_bytes())?.amount;
 
+    let mut claimed_percentage = Uint128::zero();
     let mut total = Uint128::zero();
     for (i, task) in config.task_claim.iter().enumerate() {
         // Check if completed
-        let state = claim_status_r(&deps.storage, i).may_load(user_key.as_bytes())?;
+        let state = claim_status_r(&deps.storage, i).may_load(
+            user_key.as_bytes())?;
         match state {
             None => {}
             Some(claimed) => {
+                claimed_percentage += task.percent;
                 if !claimed {
-                    claim_status_w(&mut deps.storage, i).save(user_key.as_bytes(), &true)?;
-                    total += task.percent.multiply_ratio(eligible_amount, Uint128(100));
+                    claim_status_w(&mut deps.storage, i).save(
+                        user_key.as_bytes(), &true)?;
+                    total += task.percent.multiply_ratio(
+                        eligible_amount, Uint128(100));
                 }
             }
         };
     }
 
+    // Update redeem info
+    let mut redeem_amount = total;
+    user_total_claimed_w(&mut deps.storage).update(
+        user_key.as_bytes(), |total_claimed| {
+            // Fix division issues
+            if claimed_percentage == Uint128(100) {
+                redeem_amount = (eligible_amount - total_claimed.unwrap())?;
+            }
+            Ok(total_claimed.unwrap() + redeem_amount)
+        })?;
+
+    total_claimed_w(&mut deps.storage).update(|total_claimed| {
+        Ok(total_claimed + claimed_percentage)
+    })?;
+
     // Redeem
-    let messages =  vec![mint_msg(user, total,
+    let messages =  vec![mint_msg(user, redeem_amount,
                                   None, 1,
                                   config.airdrop_snip20.code_hash,
                                   config.airdrop_snip20.address)?];
