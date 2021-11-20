@@ -23,6 +23,8 @@ pub struct Config {
     pub admin: HumanAddr,
     // The snip20 to be minted
     pub airdrop_snip20: Contract,
+    // Total claimable amount
+    pub airdrop_total: Uint128,
     // Required tasks
     pub task_claim: Vec<RequiredTask>,
     // Checks if airdrop has started / ended
@@ -38,7 +40,7 @@ pub struct InitMsg {
     pub start_time: Option<u64>,
     // Can be set to never end
     pub end_time: Option<u64>,
-    // Secret network delegators snapshot
+    // Delegators snapshot
     pub rewards: Vec<Reward>,
     // Default gifted amount
     pub default_claim: Uint128,
@@ -96,8 +98,7 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    // TODO: add total claimed in config
-    Config { config: Config },
+    Config { config: Config, total_claimed: Uint128 },
     Dates { start: u64, end: Option<u64> },
     Eligibility {
         // Total eligible

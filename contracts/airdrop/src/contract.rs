@@ -34,12 +34,25 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::GenericErr { msg: "tasks above 100%".to_string(), backtrace: None })
     }
 
+    // Store the delegators list
+    let mut airdrop_total = Uint128::zero();
+    for reward in msg.rewards {
+        let key = reward.address.to_string();
+
+        reward_w(&mut deps.storage).save(key.as_bytes(), &reward)?;
+        airdrop_total += reward.amount;
+        user_total_claimed_w(&mut deps.storage).save(key.as_bytes(), &Uint128::zero())?;
+        // Save the initial claim
+        claim_status_w(&mut deps.storage, 0).save(key.as_bytes(), &false)?;
+    }
+
     let config = Config{
         admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
         airdrop_snip20: msg.airdrop_token.clone(),
+        airdrop_total,
         task_claim,
         start_date: match msg.start_time {
             None => env.block.time,
@@ -49,16 +62,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     };
 
     config_w(&mut deps.storage).save(&config)?;
-
-    // Store the delegators list
-    for reward in msg.rewards {
-        let key = reward.address.to_string();
-
-        reward_w(&mut deps.storage).save(key.as_bytes(), &reward)?;
-        user_total_claimed_w(&mut deps.storage).save(key.as_bytes(), &Uint128::zero())?;
-        // Save the initial claim
-        claim_status_w(&mut deps.storage, 0).save(key.as_bytes(), &false)?;
-    }
 
     // Initialize claim amount
     total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
