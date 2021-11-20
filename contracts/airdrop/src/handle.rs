@@ -2,7 +2,7 @@ use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdErro
 use crate::state::{config_r, config_w, reward_r, claim_status_w, claim_status_r, user_total_claimed_w, total_claimed_w};
 use shade_protocol::airdrop::{HandleAnswer, RequiredTask};
 use shade_protocol::generic_response::ResponseStatus;
-use secret_toolkit::snip20::mint_msg;
+use secret_toolkit::snip20::send_msg;
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -169,8 +169,8 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     })?;
 
     // Redeem
-    let messages =  vec![mint_msg(user, redeem_amount,
-                                  None, 1,
+    let messages =  vec![send_msg(user, redeem_amount,
+                                  None, None, 0,
                                   config.airdrop_snip20.code_hash,
                                   config.airdrop_snip20.address)?];
 

@@ -16,10 +16,14 @@ use network_integration::{utils::{print_header, print_warning, generate_label, p
                                         minter::{initialize_minter, setup_minters, get_balance},
                                         stake::setup_staker}};
 use std::{thread, time};
+use shade_protocol::snip20::InitialBalance;
 
 #[test]
 fn run_airdrop() -> Result<()> {
     let account = account_address(ACCOUNT_KEY)?;
+
+    let half_airdrop = Uint128(500000);
+    let full_airdrop = Uint128(1000000);
 
     /// Initialize dummy snip20
     print_header("\nInitializing snip20");
@@ -29,7 +33,9 @@ fn run_airdrop() -> Result<()> {
         admin: None,
         symbol: "TEST".to_string(),
         decimals: 6,
-        initial_balances: None,
+        initial_balances: Some(vec![InitialBalance{
+            address: HumanAddr::from(account.clone()),
+            amount: full_airdrop }]),
         prng_seed: Default::default(),
         config: Some(InitConfig {
             public_total_supply: Some(true),
@@ -52,12 +58,6 @@ fn run_airdrop() -> Result<()> {
         test_contract_handle(&msg, &snip, ACCOUNT_KEY, Some(GAS),
                              Some("test"), None)?;
     }
-
-    /// Assert that we start with nothing
-    assert_eq!(Uint128(0), get_balance(&snip, account.clone()));
-
-    let half_airdrop = Uint128(500000);
-    let full_airdrop = Uint128(1000000);
 
     print_header("Initializing airdrop");
 
@@ -84,6 +84,18 @@ fn run_airdrop() -> Result<()> {
                               Some("test"))?;
     print_contract(&airdrop);
 
+    /// Assert that we start with nothing
+    {
+        test_contract_handle(&snip20::HandleMsg::Send {
+            recipient: HumanAddr::from(airdrop.address.clone()),
+            amount: full_airdrop,
+            msg: None,
+            memo: None,
+            padding: None
+        }, &snip, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+    }
+    assert_eq!(Uint128(0), get_balance(&snip, account.clone()));
+
     /// Query that airdrop is allowed
     {
         let msg = airdrop::QueryMsg::GetEligibility {
@@ -101,11 +113,11 @@ fn run_airdrop() -> Result<()> {
         }
     }
 
-    /// Register airdrop as allowed minter
-    test_contract_handle(&snip20::HandleMsg::SetMinters {
-        minters: vec![HumanAddr::from(airdrop.address.clone())], padding: None },
-                         &snip, ACCOUNT_KEY, Some(GAS),
-                         Some("test"), None)?;
+    // /// Register airdrop as allowed minter
+    // test_contract_handle(&snip20::HandleMsg::SetMinters {
+    //     minters: vec![HumanAddr::from(airdrop.address.clone())], padding: None },
+    //                      &snip, ACCOUNT_KEY, Some(GAS),
+    //                      Some("test"), None)?;
 
     print_warning("Claiming half of the airdrop");
     /// Claim airdrop
