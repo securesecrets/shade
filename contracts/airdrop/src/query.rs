@@ -25,7 +25,7 @@ pub fn airdrop_amount<S: Storage, A: Api, Q: Querier>
     let eligible_amount = reward_r(&deps.storage).load(key.as_bytes())?.amount;
 
     let mut finished_tasks = vec![];
-    let mut claimed = user_total_claimed_r(&deps.storage).load(key.as_bytes())?;
+    let claimed = user_total_claimed_r(&deps.storage).load(key.as_bytes())?;
     let mut unclaimed = Uint128::zero();
 
     let config = config_r(&deps.storage).load()?;

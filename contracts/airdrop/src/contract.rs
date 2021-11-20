@@ -6,7 +6,7 @@ use shade_protocol::{
     }
 };
 use crate::{state::{config_w, reward_w, claim_status_w, user_total_claimed_w, total_claimed_w},
-            handle::{try_update_config, try_add_tasks, try_complete_task, try_claim},
+            handle::{try_update_config, try_add_tasks, try_complete_task, try_claim, try_decay},
             query };
 use shade_protocol::airdrop::RequiredTask;
 
@@ -51,6 +51,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
+        dump_address: msg.dump_address,
         airdrop_snip20: msg.airdrop_token.clone(),
         airdrop_total,
         task_claim,
@@ -79,13 +80,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::UpdateConfig {
-            admin, start_date, end_date
-        } => try_update_config(deps, env, admin, start_date, end_date),
+            admin, dump_address,
+            start_date, end_date
+        } => try_update_config(deps, env, admin, dump_address,
+                               start_date, end_date),
         HandleMsg::AddTasks { tasks
         } => try_add_tasks(deps, &env, tasks),
         HandleMsg::CompleteTask { address
         } => try_complete_task(deps, &env, address),
         HandleMsg::Claim { } => try_claim(deps, &env),
+        HandleMsg::Decay { } => try_decay(deps, &env),
     }
 }
 
