@@ -7,7 +7,8 @@ use cosmwasm_std::{
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     oracle::{
-        QueryAnswer, SswapPair
+        QueryAnswer, SswapPair,
+        IndexElement,
     },
     band::{ 
         BandQuery, ReferenceData,
@@ -25,6 +26,8 @@ use crate::state::{
     config_r,
     hard_coded_r,
     sswap_pairs_r,
+    indices_r,
+    index_r,
 };
 use std::convert::TryFrom;
 
@@ -139,6 +142,12 @@ pub fn reference_data<S: Storage, A: Api, Q: Querier>(
         config_r.band.code_hash,
         config_r.band.address,
     )?)
+}
+
+pub fn eval_index<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    basket: Vec<IndexElement>,
+) -> StdResult<ReferenceData> {
 }
 
 pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(

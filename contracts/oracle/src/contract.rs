@@ -59,6 +59,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::RegisterSswapPair {
             pair,
         } => handle::register_sswap_pair(deps, env, pair),
+        HandleMsg::RegisterIndex {
+            symbol,
+            basket,
+        } => handle::register_index(deps, env, symbol, basket),
     }
 }
 

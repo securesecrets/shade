@@ -13,7 +13,8 @@ use secret_toolkit::{
 use shade_protocol::{
     oracle::{
         HandleAnswer,
-        SswapPair
+        SswapPair,
+        IndexElement,
     },
     asset::Contract,
     generic_response::ResponseStatus,
@@ -25,7 +26,9 @@ use shade_protocol::{
 };
 use crate::state::{
     config_w, config_r,
-    sswap_pairs_w,
+    sswap_pairs_w, sswap_pairs_r,
+    index_w, index_r,
+    indices_w, indices_r,
 };
 
 pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
@@ -80,6 +83,45 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some( to_binary( &HandleAnswer::RegisterSswapPair {
             status: ResponseStatus::Success } )? )
+    })
+
+}
+
+pub fn register_index<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    symbol: String,
+    basket: Vec<IndexElement>,
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+    if env.message.sender != config.owner {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+
+    match sswap_pairs_r(&deps.storage).may_load(&symbol.as_bytes())? {
+        None => { }
+        Some(_) => {
+            return Err(StdError::GenericErr {
+                msg: "symbol collides with an existing SecretSwap Pair".to_string(),
+                backtrace: None
+            })
+        }
+    }
+
+    indices_w(&mut deps.storage).update(|mut symbols| {
+        symbols.push(symbol.clone());
+        Ok(symbols)
+    })?;
+
+    index_w(&mut deps.storage).save(symbol.as_bytes(), &basket)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::RegisterIndex {
+            status: ResponseStatus::Success 
+        })?)
     })
 
 }

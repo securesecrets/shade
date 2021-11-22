@@ -1,4 +1,4 @@
-use cosmwasm_std::{HumanAddr};
+use cosmwasm_std::{HumanAddr, Decimal};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
@@ -7,6 +7,7 @@ use crate::{
     generic_response::ResponseStatus,
     snip20::Snip20Asset,
 };
+
 #[cfg(test)]
 use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
@@ -16,6 +17,12 @@ pub struct SswapPair {
     pub pair: Contract,
     // non-sscrt asset, other asset on pair should be sscrt
     pub asset: Snip20Asset,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct IndexElement {
+    pub symbol: String,
+    pub weight: Decimal,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -50,6 +57,10 @@ pub enum HandleMsg {
     RegisterSswapPair {
         pair: Contract,
     },
+    RegisterIndex {
+        symbol: String,
+        basket: Vec<IndexElement>,
+    },
 }
 
 impl HandleCallback for HandleMsg {
@@ -64,6 +75,7 @@ impl TestHandle for HandleMsg {}
 pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus},
     RegisterSswapPair { status: ResponseStatus},
+    RegisterIndex { status: ResponseStatus},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
