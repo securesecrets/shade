@@ -1,10 +1,9 @@
-use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128, Empty, CosmosMsg, StdError, WasmMsg, from_binary};
+use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128};
 use shade_protocol::{
     staking::{
         InitMsg, HandleMsg,
-        QueryMsg, Config, StakeState, Unbonding
+        QueryMsg, Config, StakeState
     },
-    snip20,
     asset::Contract
 };
 use crate::{
@@ -13,8 +12,8 @@ use crate::{
              try_claim_unbond, try_claim_rewards, try_vote, try_set_viewing_key},
     query
 };
-use secret_toolkit::{snip20::register_receive_msg, utils::HandleCallback};
-use binary_heap_plus::{BinaryHeap, MinComparator};
+use secret_toolkit::snip20::register_receive_msg;
+use binary_heap_plus::BinaryHeap;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -38,7 +37,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         env.contract_code_hash, None, 256,
         state.staked_token.code_hash.clone(),
         state.staked_token.address.clone())?;
-    let mut messages = vec![cosmos_msg];
 
     // Initialize binary heap
     let unbonding_heap = BinaryHeap::new_min();
@@ -51,7 +49,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     })?;
 
     Ok(InitResponse {
-        messages,
+        messages: vec![cosmos_msg],
         log: vec![]
     })
 }

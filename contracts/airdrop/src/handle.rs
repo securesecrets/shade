@@ -1,7 +1,6 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary, Empty};
-use shade_protocol::asset::Contract;
+use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
 use crate::state::{config_r, config_w, reward_r, claim_status_w, claim_status_r};
-use shade_protocol::airdrop::{HandleAnswer};
+use shade_protocol::airdrop::{HandleAnswer, RequiredTask};
 use shade_protocol::generic_response::ResponseStatus;
 use secret_toolkit::snip20::mint_msg;
 
@@ -32,7 +31,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
 
         Ok(state)
-    });
+    })?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -40,6 +39,77 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         data: Some( to_binary( &HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success } )? )
     })
+}
+
+pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    tasks: Vec<RequiredTask>
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+    // Check if admin
+    if env.message.sender != config.admin {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+
+    config_w(&mut deps.storage).update(|mut config| {
+        let mut task_list = tasks;
+        config.task_claim.append(&mut task_list);
+
+        //Validate that they do not excede 100
+        let mut count = Uint128::zero();
+        for task in config.task_claim.iter() {
+            count += task.percent;
+        }
+
+        if count > Uint128(100) {
+            return Err(StdError::GenericErr { msg: "tasks above 100%".to_string(), backtrace: None })
+        }
+
+        Ok(config)
+    })?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::AddTask {
+            status: ResponseStatus::Success } )? )
+    })
+}
+
+pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    address: HumanAddr,
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    for (i, item) in config.task_claim.iter().enumerate() {
+        if item.address == env.message.sender {
+            claim_status_w(&mut deps.storage, i).update(
+                address.to_string().as_bytes(), |status| {
+                    // If there was a state then ignore
+                    if status.is_none() {
+                        Ok(false)
+                    }
+                    else {
+                        Err(StdError::Unauthorized { backtrace: None })
+                    }
+                })?;
+
+            return Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: Some( to_binary( &HandleAnswer::Claim {
+                    status: ResponseStatus::Success } )? )
+            })
+        }
+    }
+
+    // if not found
+    Err(StdError::NotFound { kind: "task".to_string(), backtrace: None })
 }
 
 pub fn try_claim<S: Storage, A: Api, Q: Querier>(
@@ -58,31 +128,32 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let key = env.message.sender.to_string();
+    let user = env.message.sender.clone();
+    let user_key = user.to_string();
 
-    // Check if user is eligible
-    match claim_status_r(&deps.storage).load(key.as_bytes()) {
-        Ok(claimed) => {
-            if claimed {
-                return Err(StdError::GenericErr { msg: "Already Claimed".to_string(), backtrace: None })
+    let eligible_amount = reward_r(&deps.storage).load(
+        user.to_string().as_bytes())?.amount;
+
+    let mut total = Uint128::zero();
+    for (i, task) in config.task_claim.iter().enumerate() {
+        // Check if completed
+        let state = claim_status_r(&deps.storage, i).may_load(user_key.as_bytes())?;
+        match state {
+            None => {}
+            Some(claimed) => {
+                if !claimed {
+                    claim_status_w(&mut deps.storage, i).save(user_key.as_bytes(), &true)?;
+                    total += task.percent.multiply_ratio(eligible_amount, Uint128(100));
+                }
             }
-        }
-        Err(_) => return Err(StdError::GenericErr { msg: "Not eligible".to_string(), backtrace: None })
+        };
     }
 
-    // Load the user's reward
-    let airdrop = reward_r(&deps.storage).load(key.as_bytes())?;
-
     // Redeem
-    let messages =  vec![mint_msg(env.message.sender.clone(), airdrop.amount,
+    let messages =  vec![mint_msg(user, total,
                                   None, 1,
                                   config.airdrop_snip20.code_hash,
                                   config.airdrop_snip20.address)?];
-
-    // Mark reward as redeemed
-    claim_status_w(&mut deps.storage).update(key.as_bytes(), |claimed| {
-        Ok(true)
-    })?;
 
     Ok(HandleResponse {
         messages,

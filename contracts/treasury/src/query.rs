@@ -69,7 +69,7 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
 
 /*
 pub fn can_rebalance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    _deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
 
     Ok(QueryAnswer::CanRebalance {

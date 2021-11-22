@@ -2,16 +2,16 @@ use serde_json::Result;
 use cosmwasm_std::{HumanAddr, Uint128, to_binary};
 use shade_protocol::{snip20, micro_mint, mint, asset::Contract};
 use crate::{utils::{print_header, print_contract, print_epoch_info, print_vec,
-                    STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY},
-            contract_helpers::governance::{init_contract, get_contract, add_contract,
-                                           create_and_trigger_proposal, trigger_latest_proposal}};
+                    GAS, VIEW_KEY, MICRO_MINT_FILE},
+            contract_helpers::governance::{init_contract, get_contract,
+                                           create_and_trigger_proposal}};
 use secretcli::{cli_types::NetContract,
-                secretcli::{query_contract, test_contract_handle, test_inst_init}};
+                secretcli::{query_contract, test_contract_handle}};
 
 pub fn initialize_minter(governance: &NetContract, contract_name: String,
                          native_asset: &Contract) -> Result<NetContract> {
     let minter = init_contract(governance, contract_name,
-                                   "../../compiled/micro_mint.wasm.gz",
+                                   MICRO_MINT_FILE,
                                    micro_mint::InitMsg {
             admin: Some(HumanAddr::from(governance.address.clone())),
             native_asset: native_asset.clone(),
@@ -32,13 +32,13 @@ pub fn initialize_minter(governance: &NetContract, contract_name: String,
 }
 
 pub fn setup_minters(governance: &NetContract, mint_shade: &NetContract, mint_silk: &NetContract,
-                     shade: &Contract, silk: &Contract, sSCRT: &NetContract) -> Result<()> {
+                     shade: &Contract, silk: &Contract, sscrt: &NetContract) -> Result<()> {
     print_header("Registering allowed tokens in mint contracts");
     create_and_trigger_proposal(&governance, "shade_minter".to_string(),
                                 micro_mint::HandleMsg::RegisterAsset {
                             contract: Contract {
-                                address: HumanAddr::from(sSCRT.address.clone()),
-                                code_hash: sSCRT.code_hash.clone()
+                                address: HumanAddr::from(sscrt.address.clone()),
+                                code_hash: sscrt.code_hash.clone()
                             },
                         capture: Some(Uint128(1000))}, Some("Register asset"))?;
     create_and_trigger_proposal(&governance, "shade_minter".to_string(),
