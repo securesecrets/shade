@@ -172,14 +172,11 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         Ok(total_claimed + redeem_amount)
     })?;
 
-    // Redeem
-    let messages =  vec![send_msg(user, redeem_amount,
-                                  None, None, 0,
-                                  config.airdrop_snip20.code_hash,
-                                  config.airdrop_snip20.address)?];
-
     Ok(HandleResponse {
-        messages,
+        messages: vec![send_msg(user, redeem_amount,
+                                None, None, 0,
+                                config.airdrop_snip20.code_hash,
+                                config.airdrop_snip20.address)?],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::Claim {
             status: ResponseStatus::Success } )? )
