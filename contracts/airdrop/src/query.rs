@@ -1,11 +1,13 @@
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, HumanAddr, Uint128};
 use shade_protocol::airdrop::{QueryAnswer};
 use crate::{state::{config_r, reward_r}};
-use crate::state::claim_status_r;
+use crate::state::{claim_status_r, total_claimed_r, user_total_claimed_r};
 
 pub fn config<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::Config { config: config_r(&deps.storage).load()?
+    Ok(QueryAnswer::Config {
+        config: config_r(&deps.storage).load()?,
+        total_claimed: total_claimed_r(&deps.storage).load()?,
     })
 }
 
@@ -23,7 +25,7 @@ pub fn airdrop_amount<S: Storage, A: Api, Q: Querier>
     let eligible_amount = reward_r(&deps.storage).load(key.as_bytes())?.amount;
 
     let mut finished_tasks = vec![];
-    let mut claimed = Uint128::zero();
+    let claimed = user_total_claimed_r(&deps.storage).load(key.as_bytes())?;
     let mut unclaimed = Uint128::zero();
 
     let config = config_r(&deps.storage).load()?;
@@ -35,8 +37,8 @@ pub fn airdrop_amount<S: Storage, A: Api, Q: Querier>
             let calc = task.percent.multiply_ratio(eligible_amount.clone(),
                                                    Uint128(100));
             match task_claimed {
-                true => claimed += calc,
-                false => unclaimed += calc
+                false => unclaimed += calc,
+                _ => {}
             };
         }
     }

@@ -4,7 +4,6 @@ use shade_protocol::{snip20::{InitialBalance}, snip20,
                      initializer, initializer::Snip20ContractInfo};
 use crate::{utils::{print_header, generate_label, print_contract, print_warning,
                     STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, INITIALIZER_FILE},
-            contract_helpers::governance::add_contract,
             contract_helpers::minter::get_balance};
 use secretcli::{cli_types::NetContract,
                 secretcli::{test_contract_handle, test_inst_init, list_contracts_by_code}};

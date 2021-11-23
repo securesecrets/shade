@@ -1,11 +1,9 @@
 use colored::*;
 use serde_json::Result;
 use cosmwasm_std::{HumanAddr, Uint128, to_binary};
-use secretcli::{cli_types::NetContract,
-                secretcli::{account_address, query_contract, test_contract_handle,
-                            test_inst_init, list_contracts_by_code}};
-use shade_protocol::{snip20::{InitConfig, InitialBalance}, snip20, governance, staking,
-                     micro_mint, band, oracle, asset::Contract, airdrop,
+use secretcli::{secretcli::{account_address, query_contract, test_contract_handle, test_inst_init}};
+use shade_protocol::{snip20::{InitConfig}, snip20, governance, staking,
+                     band, oracle, asset::Contract, airdrop,
                      airdrop::{Reward, RequiredTask},
                      governance::{UserVote, Vote, ProposalStatus}, generic_response::ResponseStatus};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
@@ -18,10 +16,17 @@ use network_integration::{utils::{print_header, print_warning, generate_label, p
                                         minter::{initialize_minter, setup_minters, get_balance},
                                         stake::setup_staker}};
 use std::{thread, time};
+use chrono;
+use shade_protocol::snip20::InitialBalance;
 
 #[test]
 fn run_airdrop() -> Result<()> {
     let account = account_address(ACCOUNT_KEY)?;
+    let secondary_account = account_address("b")?;
+
+    let half_airdrop = Uint128(500000);
+    let full_airdrop = Uint128(1000000);
+    let all_airdrop = Uint128(2000000);
 
     /// Initialize dummy snip20
     print_header("\nInitializing snip20");
@@ -31,7 +36,9 @@ fn run_airdrop() -> Result<()> {
         admin: None,
         symbol: "TEST".to_string(),
         decimals: 6,
-        initial_balances: None,
+        initial_balances: Some(vec![InitialBalance{
+            address: HumanAddr::from(account.clone()),
+            amount: all_airdrop }]),
         prng_seed: Default::default(),
         config: Some(InitConfig {
             public_total_supply: Some(true),
@@ -49,30 +56,33 @@ fn run_airdrop() -> Result<()> {
     print_contract(&snip);
 
     {
-        let msg = snip20::HandleMsg::SetViewingKey { key: String::from(VIEW_KEY), padding: None };
+        let msg = snip20::HandleMsg::SetViewingKey {
+            key: String::from(VIEW_KEY),
+            padding: None };
 
         test_contract_handle(&msg, &snip, ACCOUNT_KEY, Some(GAS),
                              Some("test"), None)?;
     }
 
-    /// Assert that we start with nothing
-    assert_eq!(Uint128(0), get_balance(&snip, account.clone()));
-
-    let half_airdrop = Uint128(500000);
-    let full_airdrop = Uint128(1000000);
-
     print_header("Initializing airdrop");
+
+    let now = chrono::offset::Utc::now().timestamp() as u64;
+    let duration = 180;
 
     let airdrop_init_msg = airdrop::InitMsg {
         admin: None,
+        dump_address: Some(HumanAddr::from(account.clone())),
         airdrop_token: Contract {
             address: HumanAddr::from(snip.address.clone()),
             code_hash: snip.code_hash.clone()
         },
         start_time: None,
-        end_time: None,
+        end_time: Some(now + duration),
         rewards: vec![Reward {
             address: HumanAddr::from(account.clone()),
+            amount: full_airdrop
+        }, Reward {
+            address: HumanAddr::from(secondary_account),
             amount: full_airdrop
         }],
         default_claim: Uint128(50),
@@ -85,6 +95,18 @@ fn run_airdrop() -> Result<()> {
                               ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                               Some("test"))?;
     print_contract(&airdrop);
+
+    /// Assert that we start with nothing
+    {
+        test_contract_handle(&snip20::HandleMsg::Send {
+            recipient: HumanAddr::from(airdrop.address.clone()),
+            amount: all_airdrop,
+            msg: None,
+            memo: None,
+            padding: None
+        }, &snip, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+    }
+    assert_eq!(Uint128(0), get_balance(&snip, account.clone()));
 
     /// Query that airdrop is allowed
     {
@@ -102,12 +124,6 @@ fn run_airdrop() -> Result<()> {
             assert_eq!(finished_tasks.len(), 1);
         }
     }
-
-    /// Register airdrop as allowed minter
-    test_contract_handle(&snip20::HandleMsg::SetMinters {
-        minters: vec![HumanAddr::from(airdrop.address.clone())], padding: None },
-                         &snip, ACCOUNT_KEY, Some(GAS),
-                         Some("test"), None)?;
 
     print_warning("Claiming half of the airdrop");
     /// Claim airdrop
@@ -167,6 +183,16 @@ fn run_airdrop() -> Result<()> {
             assert_eq!(finished_tasks.len(), 2);
         }
     }
+
+    /// Try to claim expired tokens
+    print_warning("Claiming expired tokens");
+    thread::sleep(time::Duration::from_secs(duration));
+
+    test_contract_handle(&airdrop::HandleMsg::Decay {},
+                         &airdrop, ACCOUNT_KEY, Some(GAS),
+                         Some("test"), None)?;
+
+    assert_eq!(all_airdrop, get_balance(&snip, account.clone()));
 
     Ok(())
 }
