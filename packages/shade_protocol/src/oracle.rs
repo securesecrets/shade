@@ -1,4 +1,4 @@
-use cosmwasm_std::{HumanAddr, Decimal};
+use cosmwasm_std::{HumanAddr, Decimal, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
@@ -22,7 +22,8 @@ pub struct SswapPair {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct IndexElement {
     pub symbol: String,
-    pub weight: Decimal,
+    //TODO: Decimal, when better implementation is available
+    pub weight: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -97,5 +98,4 @@ impl TestQuery<QueryAnswer> for QueryMsg {}
 pub enum QueryAnswer {
     Config { config: OracleConfig },
 }
-
 

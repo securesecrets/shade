@@ -48,25 +48,60 @@ pub fn get_price<S: Storage, A: Api, Q: Querier>(
         return Ok(reference_data);
     }
 
-    // symbol registered sswap pair
+    // secret swap pair
+    // TODO: sienna pair
     if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+        return sswap_price(deps, sswap_pair)
+    }
 
-        let trade_price = sswap_simulate(&deps, sswap_pair)?;
-
-        let scrt_result = reference_data(deps, "SCRT".to_string(), "USD".to_string())?;
-
-        //return Err(StdError::NotFound { kind: translate_price(scrt_result.rate, trade_price).to_string(), backtrace: None });
-
+    // Index
+    if let Some(index) = index_r(&deps.storage).may_load(symbol.as_bytes())? {
         return Ok(ReferenceData {
-            // SCRT-USD / SCRT-symbol
-            rate: translate_price(scrt_result.rate, trade_price),
+            rate: eval_index(&deps, symbol, index)?,
             last_updated_base: 0,
-            last_updated_quote: 0
-        });
+            last_updated_quote: 0,
+        })
     }
 
     // symbol/USD price from BAND
     reference_data(deps, symbol, "USD".to_string())
+}
+
+pub fn eval_index<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    symbol: String,
+    index: Vec<IndexElement>,
+) -> StdResult<Uint128> {
+
+    let mut weight_total = Uint128::zero();
+    let mut price = Uint128::zero();
+
+    let mut band_bases = vec![];
+    let mut band_quotes = vec![];
+    let mut band_weights = vec![];
+
+    for element in index {
+
+        weight_total = weight_total + element.weight;
+
+        if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+            price += sswap_price(&deps, sswap_pair)?.rate.multiply_ratio(element.weight, Uint128(18));
+        }
+        else {
+            band_weights.push(element.weight);
+            band_bases.push(element.symbol.clone());
+            band_quotes.push("USD".to_string());
+        }
+    }
+
+    let ref_data = reference_data_bulk(deps, band_bases, band_quotes)?;
+
+    for (reference, weight) in ref_data.iter().zip(band_weights.iter()) {
+        //let (reference, weight) = it;
+        price += reference.rate.multiply_ratio(*weight, Uint128(18));
+    }
+
+    Ok(price.multiply_ratio(Uint128(1), weight_total))
 }
 
 /* Translate price from symbol/sSCRT -> symbol/USD
@@ -96,6 +131,25 @@ pub fn normalize_price(
 }
 
 // Secret Swap interactions
+
+pub fn sswap_price<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    sswap_pair: SswapPair,
+) -> StdResult<ReferenceData> {
+
+    let trade_price = sswap_simulate(&deps, sswap_pair)?;
+
+    let scrt_result = reference_data(deps, "SCRT".to_string(), "USD".to_string())?;
+
+    //return Err(StdError::NotFound { kind: translate_price(scrt_result.rate, trade_price).to_string(), backtrace: None });
+
+    return Ok(ReferenceData {
+        // SCRT-USD / SCRT-symbol
+        rate: translate_price(scrt_result.rate, trade_price),
+        last_updated_base: 0,
+        last_updated_quote: 0
+    })
+}
 
 pub fn sswap_simulate<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -142,12 +196,6 @@ pub fn reference_data<S: Storage, A: Api, Q: Querier>(
         config_r.band.code_hash,
         config_r.band.address,
     )?)
-}
-
-pub fn eval_index<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    basket: Vec<IndexElement>,
-) -> StdResult<ReferenceData> {
 }
 
 pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(
