@@ -2,7 +2,7 @@ use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResp
 use shade_protocol::{
     staking::{
         InitMsg, HandleMsg,
-        QueryMsg, Config, StakeState
+        QueryMsg, Config, stake::Stake
     },
     asset::Contract
 };
@@ -43,7 +43,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     unbonding_w(&mut deps.storage).save(&unbonding_heap)?;
 
     // Initialize stake state
-    stake_state_w(&mut deps.storage).save(&StakeState{
+    stake_state_w(&mut deps.storage).save(&Stake {
         total_shares: Uint128::zero(),
         total_tokens: Uint128::zero()
     })?;

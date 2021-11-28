@@ -2,15 +2,14 @@ use binary_heap_plus::{BinaryHeap};
 use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
 use crate::state::{config_r, config_w, staker_w, unbonding_w, staker_r, stake_state_w, stake_state_r, viewking_key_w, user_unbonding_w};
 use shade_protocol::{
-    staking::{HandleAnswer, StakeState, Unbonding},
+    staking::{HandleAnswer, stake::{Stake, UserStake, Unbonding}},
     generic_response::ResponseStatus::{Success},
-    governance::{UserVote, VoteTally, Vote},
+    governance::{vote::{UserVote, VoteTally, Vote}},
     asset::Contract
 };
 use secret_toolkit::{snip20::send_msg, utils::HandleCallback};
-use shade_protocol::staking::UserStakeState;
 
-pub(crate) fn calculate_shares(tokens: Uint128, state: &StakeState) -> Uint128 {
+pub(crate) fn calculate_shares(tokens: Uint128, state: &Stake) -> Uint128 {
     if state.total_shares.is_zero() && state.total_tokens.is_zero() {
         tokens
     }
@@ -19,7 +18,7 @@ pub(crate) fn calculate_shares(tokens: Uint128, state: &StakeState) -> Uint128 {
     }
 }
 
-pub(crate) fn calculate_tokens(shares: Uint128, state: &StakeState) -> Uint128 {
+pub(crate) fn calculate_tokens(shares: Uint128, state: &Stake) -> Uint128 {
     if state.total_shares.is_zero() && state.total_tokens.is_zero() {
         shares
     }
@@ -28,7 +27,7 @@ pub(crate) fn calculate_tokens(shares: Uint128, state: &StakeState) -> Uint128 {
     }
 }
 
-pub(crate) fn calculate_rewards(user: &UserStakeState, state: &StakeState) -> Uint128 {
+pub(crate) fn calculate_rewards(user: &UserStake, state: &Stake) -> Uint128 {
     (calculate_tokens(user.shares, state) - user.tokens_staked).unwrap()
 }
 
@@ -86,7 +85,7 @@ pub fn try_stake<S: Storage, A: Api, Q: Querier>(
         let shares = calculate_shares(amount, &state);
 
         let new_state = match user_state {
-            None => UserStakeState {
+            None => UserStake {
                 shares,
                 tokens_staked: amount,
             },
@@ -136,7 +135,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
                 backtrace: None }),
             Some(user_state) => {
                 if user_state.tokens_staked >= amount {
-                    UserStakeState {
+                    UserStake {
                         shares: (user_state.shares - shares)?,
                         tokens_staked: (user_state.tokens_staked - amount)?
                     }
