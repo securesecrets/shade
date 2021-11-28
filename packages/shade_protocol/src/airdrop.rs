@@ -4,6 +4,7 @@ use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
 use cosmwasm_std::{HumanAddr, Uint128};
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
+use crate::signature::Permit;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct RequiredTask {
@@ -16,6 +17,15 @@ pub struct RequiredTask {
 pub struct Reward {
     pub address: HumanAddr,
     pub amount: Uint128,
+}
+
+type AddressProofPermit = Permit<AddressProofMsg>;
+
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AddressProofMsg {
+    pub address: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
