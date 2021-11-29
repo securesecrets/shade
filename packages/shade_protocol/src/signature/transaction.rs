@@ -19,6 +19,15 @@ pub struct PubKey {
     pub value: Binary,
 }
 
+impl PubKey {
+    pub fn new(pubkey: Binary) -> Self {
+        Self {
+            r#type: "tendermint/PubKeySecp256k1".to_string(),
+            value: pubkey
+        }
+    }
+}
+
 #[remain::sorted]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

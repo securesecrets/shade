@@ -29,6 +29,7 @@ snafu = { version = "0.6.3" }
 remain = "0.2.2"
 ripemd160 = "0.9.1"
 secp256k1 = "0.20.3"
+bech32 = "0.8.1"
 
 [dev-dependencies]
 secretcli = { version = "0.1.0", path = "../secretcli" }
