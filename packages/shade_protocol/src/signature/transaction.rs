@@ -28,7 +28,7 @@ pub struct TxMsg<T> {
     pub value: T,
 }
 
-impl<T: Clone> TxMsg<T> {
+impl<T: Clone + Serialize> TxMsg<T> {
     pub fn from_permit(permit: &Permit<T>) -> Self {
         Self {
             r#type: "signature_proof".to_string(),
@@ -55,7 +55,7 @@ pub struct SignedTx<T> {
     pub sequence: Uint128,
 }
 
-impl<T> SignedTx<T> {
+impl<T: Clone + Serialize> SignedTx<T> {
     pub fn from_msg(item: TxMsg<T>, chain_id: String) -> Self {
         Self {
             account_number: Uint128::zero(),
