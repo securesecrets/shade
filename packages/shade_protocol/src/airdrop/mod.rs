@@ -1,32 +1,11 @@
+pub mod claim_info;
+pub mod account;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
 use cosmwasm_std::{HumanAddr, Uint128};
-use crate::asset::Contract;
-use crate::generic_response::ResponseStatus;
-use crate::signature::Permit;
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct RequiredTask {
-    pub address: HumanAddr,
-    pub percent: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Reward {
-    pub address: HumanAddr,
-    pub amount: Uint128,
-}
-
-type AddressProofPermit = Permit<AddressProofMsg>;
-
-#[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct AddressProofMsg {
-    pub address: HumanAddr,
-}
+use crate::{asset::Contract, generic_response::ResponseStatus,
+            airdrop::{claim_info::{RequiredTask, Reward}, account::AddressProofPermit}};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -81,6 +60,13 @@ pub enum HandleMsg {
     CompleteTask {
         address: HumanAddr
     },
+    CreateAccount {
+        addresses: Vec<AddressProofPermit>
+    },
+    /// Adds more addresses to accounts
+    UpdateAccount {
+        addresses: Vec<AddressProofPermit>
+    },
     Claim {},
     Decay {},
 }
@@ -96,6 +82,8 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     AddTask { status: ResponseStatus },
     CompleteTask { status: ResponseStatus },
+    CreateAccount { status: ResponseStatus },
+    UpdateAccount { status: ResponseStatus },
     Claim { status: ResponseStatus },
     Decay { status: ResponseStatus },
 }

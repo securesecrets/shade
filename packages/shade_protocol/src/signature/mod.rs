@@ -1,7 +1,6 @@
 pub mod transaction;
 
-use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr, StdError, StdResult,
-                   to_binary, Extern, Storage, Api, Querier};
+use cosmwasm_std::{Binary, CanonicalAddr, StdError, StdResult, to_binary};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ripemd160::{Digest, Ripemd160};
@@ -23,8 +22,8 @@ pub struct Permit<T: Clone + Serialize> {
     pub signature: PermitSignature,
 }
 
-pub fn bech32_to_canonical(addr: HumanAddr) -> CanonicalAddr {
-    let (_, data, _) = bech32::decode(&addr.to_string()).unwrap();
+pub fn bech32_to_canonical(addr: &str) -> CanonicalAddr {
+    let (_, data, _) = bech32::decode(addr).unwrap();
     CanonicalAddr(Binary(Vec::<u8>::from_base32(&data).unwrap()))
 }
 
@@ -35,7 +34,7 @@ impl<T: Clone + Serialize> Permit<T> {
     }
 
     /// Returns the permit signer
-    pub fn validate<S: Storage, A: Api, Q: Querier>(&self, deps: &Extern<S, A, Q>) -> StdResult<CanonicalAddr> {
+    pub fn validate(&self) -> StdResult<CanonicalAddr> {
         let pubkey = &self.signature.pub_key.value;
         let account = pubkey_to_account(pubkey);
 
@@ -82,7 +81,7 @@ mod signature_tests {
     use cosmwasm_std::Uint128;
     use crate::signature::transaction::PubKey;
     use cosmwasm_std::testing::mock_dependencies;
-    use bech32::{self, FromBase32, ToBase32, Variant};
+    use bech32::{self, Variant};
 
     #[remain::sorted]
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -98,6 +97,7 @@ mod signature_tests {
     const PUBKEY: &str = "A0qzJ3s16OKUfn1KFyh533vBnBOQIT0jm+R/FBobJCfa";
     const SIGNED_TX: &str = "4pZtghyHKHHmwiGNC5JD8JxCJiO+44j6GqaLPc19Q7lt85tr0IRZHYcnc0pkokIds8otxU9rcuvPXb0+etLyVA==";
 
+    // Use secretcli tx sign-doc file --from account
     //{
     //  "account_number": "0",
     //  "chain_id": "pulsar-1",
@@ -119,6 +119,8 @@ mod signature_tests {
     //  "sequence": "0"
     // }
 
+    // TODO: test that some dont work
+
     #[test]
     fn test_signed_tx() {
         let permit = TestPermit {
@@ -133,9 +135,8 @@ mod signature_tests {
             }
         };
 
-        let deps = mock_dependencies(20, &[]);
-        let addr = permit.validate(&deps).unwrap();
-        assert_eq!(addr, bech32_to_canonical(HumanAddr(ADDRESS.to_string())));
+        let addr = permit.validate().unwrap();
+        assert_eq!(addr, bech32_to_canonical(ADDRESS));
     }
 
 }
