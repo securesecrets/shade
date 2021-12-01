@@ -69,7 +69,7 @@ impl<T: Clone + Serialize> SignedTx<T> {
         Self {
             account_number: Uint128::zero(),
             chain_id,
-            fee: Fee::new(),
+            fee: Default::default(),
             memo: String::new(),
             msgs: vec![item],
             sequence: Uint128::zero(),
@@ -85,10 +85,10 @@ pub struct Fee {
     pub gas: Uint128,
 }
 
-impl Fee {
-    pub fn new() -> Self {
+impl Default for Fee {
+    fn default() -> Self {
         Self {
-            amount: vec![Coin::new()],
+            amount: vec![Coin::default()],
             gas: Uint128(1),
         }
     }
@@ -102,8 +102,8 @@ pub struct Coin {
     pub denom: String,
 }
 
-impl Coin {
-    pub fn new() -> Self {
+impl Default for Coin {
+    fn default() -> Self {
         Self {
             amount: Uint128::zero(),
             denom: "uscrt".to_string(),
