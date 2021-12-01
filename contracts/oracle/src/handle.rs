@@ -28,7 +28,6 @@ use crate::state::{
     config_w, config_r,
     sswap_pairs_w, sswap_pairs_r,
     index_w, index_r,
-    indices_w, indices_r,
 };
 
 pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
@@ -109,10 +108,13 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    //Dont need this, can just use may_load
+    /*
     indices_w(&mut deps.storage).update(|mut symbols| {
         symbols.push(symbol.clone());
         Ok(symbols)
     })?;
+    */
 
     index_w(&mut deps.storage).save(symbol.as_bytes(), &basket)?;
 

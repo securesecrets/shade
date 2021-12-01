@@ -20,7 +20,6 @@ pub static CONFIG_KEY: &[u8] = b"config";
 pub static HARD_CODED: &[u8] = b"hard_coded";
 pub static SSWAP_PAIRS: &[u8] = b"sswap_pairs";
 pub static INDEX: &[u8] = b"index";
-pub static INDICES: &[u8] = b"indices";
 
 pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, OracleConfig> {
     singleton_read(storage, CONFIG_KEY)
@@ -52,12 +51,4 @@ pub fn index_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<IndexElement>> 
 
 pub fn index_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<IndexElement>> {
     bucket(INDEX, storage)
-}
-
-pub fn indices_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<String>> {
-    singleton_read(storage, INDICES)
-}
-
-pub fn indices_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<String>> {
-    singleton(storage, INDICES)
 }

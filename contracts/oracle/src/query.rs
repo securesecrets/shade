@@ -26,7 +26,6 @@ use crate::state::{
     config_r,
     hard_coded_r,
     sswap_pairs_r,
-    indices_r,
     index_r,
 };
 use std::convert::TryFrom;
@@ -35,7 +34,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
     Ok(QueryAnswer::Config { config: config_r(&deps.storage).load()? })
 }
 
-pub fn get_price<S: Storage, A: Api, Q: Querier>(
+pub fn price<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbol: String,
 ) -> StdResult<ReferenceData> {
@@ -57,7 +56,7 @@ pub fn get_price<S: Storage, A: Api, Q: Querier>(
     // Index
     if let Some(index) = index_r(&deps.storage).may_load(symbol.as_bytes())? {
         return Ok(ReferenceData {
-            rate: eval_index(&deps, symbol, index)?,
+            rate: eval_index(&deps, &symbol, index)?,
             last_updated_base: 0,
             last_updated_quote: 0,
         })
@@ -67,9 +66,45 @@ pub fn get_price<S: Storage, A: Api, Q: Querier>(
     reference_data(deps, symbol, "USD".to_string())
 }
 
+pub fn prices<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    symbols: Vec<String>,
+) -> StdResult<Vec<Uint128>> {
+
+    let mut band_symbols = vec![];
+    let mut band_quotes = vec![];
+    let mut results = vec![Uint128(0); symbols.len()];
+
+    for (i, sym) in symbols.iter().enumerate() {
+        if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(sym.as_bytes())?
+        {
+            results[i] = sswap_price(&deps, sswap_pair)?.rate;
+        }
+        else if let Some(index) = index_r(&deps.storage).may_load(sym.as_bytes())?
+        {
+
+            results[i] = eval_index(&deps, sym, index)?;
+        }
+        else 
+        {
+            band_symbols.push(sym.clone());
+            band_quotes.push("USD".to_string());
+        }
+    }
+
+    let ref_data = reference_data_bulk(deps, band_symbols.clone(), band_quotes)?;
+
+    for (data, sym) in ref_data.iter().zip(band_symbols.iter()) {
+        let result_index = symbols.iter().enumerate().find(|&s| s.1.to_string() == sym.to_string()).unwrap().0;
+        results[result_index] = data.rate;
+    }
+
+    Ok(results)
+}
+
 pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    symbol: String,
+    symbol: &String,
     index: Vec<IndexElement>,
 ) -> StdResult<Uint128> {
 
