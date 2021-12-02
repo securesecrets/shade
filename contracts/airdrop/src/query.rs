@@ -1,9 +1,7 @@
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, HumanAddr, Uint128, StdError};
-use shade_protocol::airdrop::{QueryAnswer};
-use crate::{state::{config_r, airdrop_address_r}};
-use crate::state::{claim_status_r, total_claimed_r, account_total_claimed_r, validate_permit, account_r};
-use shade_protocol::airdrop::account::AddressProofPermit;
-use shade_protocol::airdrop::claim_info::RequiredTask;
+use shade_protocol::airdrop::{QueryAnswer, account::AddressProofPermit, claim_info::RequiredTask};
+use crate::state::{config_r, airdrop_address_r, claim_status_r,
+                   total_claimed_r, validate_permit, account_r};
 
 pub fn config<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
@@ -55,9 +53,11 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
             None => {}
             Some(claimed) => {
                 finished_tasks.push(task.clone());
-                completed_percentage += task.percent;
                 if !claimed {
                     unclaimed_percentage += task.percent;
+                }
+                else {
+                    completed_percentage += task.percent;
                 }
             }
         }

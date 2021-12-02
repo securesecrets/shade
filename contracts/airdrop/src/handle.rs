@@ -1,10 +1,11 @@
 use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
-use crate::state::{config_r, config_w, airdrop_address_r, claim_status_w, claim_status_r, account_total_claimed_w, total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_permit, revoke_permit};
-use shade_protocol::{airdrop::{HandleAnswer, claim_info::RequiredTask, account::AddressProofPermit},
+use crate::state::{config_r, config_w, airdrop_address_r, claim_status_w, claim_status_r,
+                   account_total_claimed_w, total_claimed_w, total_claimed_r, account_r,
+                   address_in_account_w, account_w, validate_permit, revoke_permit};
+use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::RequiredTask,
+                               account::{Account, AddressProofPermit}},
                      generic_response::ResponseStatus};
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::airdrop::Config;
-use shade_protocol::airdrop::account::Account;
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -107,6 +108,26 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
         addresses: vec![],
         total_claimable: Uint128::zero()
     };
+
+    // Try to add sender account
+    match  airdrop_address_r(&deps.storage).may_load(sender.as_bytes())? {
+        None => {}
+        Some(airdrop) => {
+            address_in_account_w(&mut deps.storage).update(sender.as_bytes(), |state| {
+                let in_account = state.unwrap();
+
+                // Check that address has not been added to an account
+                if in_account {
+                    return Err(StdError::generic_err(
+                        format!("{:?} already in an account", sender.clone())))
+                }
+
+                Ok(true)
+            })?;
+            account.addresses.push(airdrop.address);
+            account.total_claimable += airdrop.amount;
+        }
+    }
 
     // Validate permits
     validate_address_permits(&mut deps.storage, &mut account, addresses)?;
