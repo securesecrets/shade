@@ -1,11 +1,11 @@
 use colored::*;
 use serde_json::Result;
-use cosmwasm_std::{HumanAddr, Uint128, to_binary};
+use cosmwasm_std::{HumanAddr, Uint128, to_binary, Binary};
 use secretcli::{secretcli::{account_address, query_contract, test_contract_handle, test_inst_init}};
-use shade_protocol::{snip20::{InitConfig}, snip20, governance, staking,
-                     band, oracle, asset::Contract, airdrop,
-                     airdrop::{Reward, RequiredTask},
-                     governance::{UserVote, Vote, ProposalStatus}, generic_response::ResponseStatus};
+use shade_protocol::{snip20::{InitConfig}, snip20, governance, staking, band, oracle,
+                     asset::Contract, airdrop, airdrop::{claim_info::{Reward, RequiredTask}},
+                     governance::{vote::{UserVote, Vote}, proposal::ProposalStatus},
+                     generic_response::ResponseStatus, signature};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
                              STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec,
                                   SNIP20_FILE, AIRDROP_FILE, GOVERNANCE_FILE, MOCK_BAND_FILE, ORACLE_FILE},
@@ -16,17 +16,54 @@ use network_integration::{utils::{print_header, print_warning, generate_label, p
                                         minter::{initialize_minter, setup_minters, get_balance},
                                         stake::setup_staker}};
 use std::{thread, time};
-use chrono;
 use shade_protocol::snip20::InitialBalance;
+use shade_protocol::airdrop::account::AddressProofMsg;
+use serde::Serialize;
+use shade_protocol::signature::Permit;
+use secretcli::secretcli::create_permit;
+use shade_protocol::signature::transaction::PermitSignature;
+
+fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Permit<T> {
+    let chain_id = "testnet".to_string();
+    let unsigned_msg = signature::transaction::SignedTx::from_msg(
+        signature::transaction::TxMsg{
+            r#type: "signature_proof".to_string(),
+            value: permit_msg.clone()
+        }, chain_id.clone());
+
+    let signed_info = create_permit(unsigned_msg, signer).unwrap();
+
+    let permit = Permit {
+        params: permit_msg,
+        chain_id,
+        signature: PermitSignature {
+            pub_key: signature::transaction::PubKey {
+                r#type: signed_info.pub_key.msg_type,
+                value: Binary::from_base64(&signed_info.pub_key.value).unwrap()
+            },
+            signature: Binary::from_base64(&signed_info.signature).unwrap()
+        }
+    };
+
+    permit
+}
 
 #[test]
 fn run_airdrop() -> Result<()> {
-    let account = account_address(ACCOUNT_KEY)?;
-    let secondary_account = account_address("b")?;
+    let account_a = account_address(ACCOUNT_KEY)?;
+    let account_b = account_address("b")?;
+    let account_c = account_address("c")?;
 
-    let half_airdrop = Uint128(500000);
-    let full_airdrop = Uint128(1000000);
-    let all_airdrop = Uint128(2000000);
+    let a_airdrop = Uint128(50000000);
+    let b_airdrop = Uint128(20000000);
+    let ab_half_airdrop = Uint128(35000000);
+    let c_airdrop = Uint128(10000000);
+    let total_airdrop= a_airdrop + b_airdrop + c_airdrop; // 80000000
+    let half_airdrop = Uint128(40000000);
+
+    // let half_airdrop = Uint128(500000);
+    // let full_airdrop = Uint128(1000000);
+    // let all_airdrop = Uint128(2000000);
 
     /// Initialize dummy snip20
     print_header("\nInitializing snip20");
@@ -37,8 +74,8 @@ fn run_airdrop() -> Result<()> {
         symbol: "TEST".to_string(),
         decimals: 6,
         initial_balances: Some(vec![InitialBalance{
-            address: HumanAddr::from(account.clone()),
-            amount: all_airdrop }]),
+            address: HumanAddr::from(account_a.clone()),
+            amount: total_airdrop }]),
         prng_seed: Default::default(),
         config: Some(InitConfig {
             public_total_supply: Some(true),
@@ -71,7 +108,7 @@ fn run_airdrop() -> Result<()> {
 
     let airdrop_init_msg = airdrop::InitMsg {
         admin: None,
-        dump_address: Some(HumanAddr::from(account.clone())),
+        dump_address: Some(HumanAddr::from(account_a.clone())),
         airdrop_token: Contract {
             address: HumanAddr::from(snip.address.clone()),
             code_hash: snip.code_hash.clone()
@@ -79,15 +116,18 @@ fn run_airdrop() -> Result<()> {
         start_time: None,
         end_time: Some(now + duration),
         rewards: vec![Reward {
-            address: HumanAddr::from(account.clone()),
-            amount: full_airdrop
+            address: HumanAddr::from(account_a.clone()),
+            amount: a_airdrop
         }, Reward {
-            address: HumanAddr::from(secondary_account),
-            amount: full_airdrop
+            address: HumanAddr::from(account_b.clone()),
+            amount: b_airdrop
+        }, Reward {
+            address: HumanAddr::from(account_c.clone()),
+            amount: c_airdrop
         }],
         default_claim: Uint128(50),
         task_claim: vec![RequiredTask {
-            address: HumanAddr::from(account.clone()),
+            address: HumanAddr::from(account_a.clone()),
             percent: Uint128(50) }]
     };
 
@@ -100,27 +140,64 @@ fn run_airdrop() -> Result<()> {
     {
         test_contract_handle(&snip20::HandleMsg::Send {
             recipient: HumanAddr::from(airdrop.address.clone()),
-            amount: all_airdrop,
+            amount: total_airdrop,
             msg: None,
             memo: None,
             padding: None
         }, &snip, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
     }
-    assert_eq!(Uint128(0), get_balance(&snip, account.clone()));
+    assert_eq!(Uint128(0), get_balance(&snip, account_a.clone()));
 
     /// Query that airdrop is allowed
     {
         let msg = airdrop::QueryMsg::GetEligibility {
-            address: HumanAddr::from(account.clone())
+            address: HumanAddr::from(account_a.clone())
         };
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
 
-        if let airdrop::QueryAnswer::Eligibility { total, claimed,
+        if let airdrop::QueryAnswer::Eligibility { amount } = query {
+            assert_eq!(amount, a_airdrop);
+        }
+    }
+
+    /// Create AB permit
+    let b_address_proof = AddressProofMsg {
+        address: HumanAddr(account_b.clone()),
+        contract: HumanAddr(airdrop.address.clone()),
+        key: "key".to_string()
+    };
+
+    let b_permit = create_signed_permit(b_address_proof, "b");
+
+    let a_address_proof = AddressProofMsg {
+        address: HumanAddr(account_a.clone()),
+        contract: HumanAddr(airdrop.address.clone()),
+        key: "key".to_string()
+    };
+
+    let a_permit = create_signed_permit(a_address_proof, ACCOUNT_KEY);
+
+    /// Create an account
+    print_warning("Creating an account");
+    test_contract_handle(&airdrop::HandleMsg::CreateAccount { addresses: vec![b_permit] },
+                         &airdrop, ACCOUNT_KEY, Some("1000000"),
+                         Some("test"), None)?;
+
+    print_warning("Getting initial account information");
+    {
+        let msg = airdrop::QueryMsg::GetAccount {
+            address: HumanAddr(account_a.clone()),
+            permit: a_permit.clone()
+        };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::Account { total, claimed,
             unclaimed, finished_tasks } = query {
-            assert_eq!(total, full_airdrop);
+            assert_eq!(total, a_airdrop + b_airdrop);
             assert_eq!(claimed, Uint128::zero());
-            assert_eq!(unclaimed, half_airdrop);
+            assert_eq!(unclaimed, ab_half_airdrop);
             assert_eq!(finished_tasks.len(), 1);
         }
     }
@@ -132,20 +209,21 @@ fn run_airdrop() -> Result<()> {
                          Some("test"), None)?;
 
     /// Assert that we claimed
-    assert_eq!(half_airdrop, get_balance(&snip, account.clone()));
+    assert_eq!(ab_half_airdrop, get_balance(&snip, account_a.clone()));
 
     /// Query that half of the airdrop is claimed
     {
-        let msg = airdrop::QueryMsg::GetEligibility {
-            address: HumanAddr::from(account.clone())
+        let msg = airdrop::QueryMsg::GetAccount {
+            address: HumanAddr(account_a.clone()),
+            permit: a_permit.clone()
         };
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
 
-        if let airdrop::QueryAnswer::Eligibility { total, claimed,
+        if let airdrop::QueryAnswer::Account { total, claimed,
             unclaimed, finished_tasks } = query {
-            assert_eq!(total, full_airdrop);
-            assert_eq!(claimed, half_airdrop);
+            assert_eq!(total, a_airdrop + b_airdrop);
+            assert_eq!(claimed, ab_half_airdrop);
             assert_eq!(unclaimed, Uint128::zero());
             assert_eq!(finished_tasks.len(), 1);
         }
@@ -154,37 +232,65 @@ fn run_airdrop() -> Result<()> {
     print_warning("Enabling the other half of the airdrop");
 
     test_contract_handle(&airdrop::HandleMsg::CompleteTask {
-        address: HumanAddr::from(account.clone()) },
+        address: HumanAddr::from(account_a.clone()) },
                          &airdrop, ACCOUNT_KEY, Some(GAS),
                          Some("test"), None)?;
 
-    print_warning("Claiming remaining half airdrop");
-
-    test_contract_handle(&airdrop::HandleMsg::Claim {},
-                         &airdrop, ACCOUNT_KEY, Some(GAS),
-                         Some("test"), None)?;
-
-    /// Assert that we claimed
-    assert_eq!(full_airdrop, get_balance(&snip, account.clone()));
-
-    /// Query that all of the airdrop is claimed
     {
-        let msg = airdrop::QueryMsg::GetEligibility {
-            address: HumanAddr::from(account.clone())
+        let msg = airdrop::QueryMsg::GetAccount {
+            address: HumanAddr(account_a.clone()),
+            permit: a_permit.clone()
         };
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
 
-        if let airdrop::QueryAnswer::Eligibility { total, claimed,
+        if let airdrop::QueryAnswer::Account { total, claimed,
             unclaimed, finished_tasks } = query {
-            assert_eq!(total, full_airdrop);
-            assert_eq!(claimed, full_airdrop);
+            assert_eq!(total, a_airdrop + b_airdrop);
+            assert_eq!(claimed, ab_half_airdrop);
+            assert_eq!(unclaimed, ab_half_airdrop);
+            assert_eq!(finished_tasks.len(), 2);
+        }
+    }
+
+    print_warning("Confirming full airdrop after adding C");
+
+    let c_address_proof = AddressProofMsg {
+        address: HumanAddr(account_c.clone()),
+        contract: HumanAddr(airdrop.address.clone()),
+        key: "key".to_string()
+    };
+
+    let c_permit = create_signed_permit(c_address_proof, "c");
+
+    test_contract_handle(&airdrop::HandleMsg::UpdateAccount{ addresses: vec![c_permit] },
+                         &airdrop, ACCOUNT_KEY, Some("1000000"),
+                         Some("test"), None)?;
+
+    /// Assert that we claimed
+    assert_eq!(total_airdrop, get_balance(&snip, account_a.clone()));
+
+    /// Query that all of the airdrop is claimed
+    {
+        let msg = airdrop::QueryMsg::GetAccount {
+            address: HumanAddr(account_a.clone()),
+            permit: a_permit.clone()
+        };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::Account { total, claimed,
+            unclaimed, finished_tasks } = query {
+            assert_eq!(total, total_airdrop);
+            assert_eq!(claimed, total_airdrop);
             assert_eq!(unclaimed, Uint128::zero());
             assert_eq!(finished_tasks.len(), 2);
         }
     }
 
-    /// Try to claim expired tokens
+    //TODO: verify that banning a key works
+
+    /// Try to claim expired tokens - TODO: add a bit extra amount for the decay
     print_warning("Claiming expired tokens");
     thread::sleep(time::Duration::from_secs(duration));
 
@@ -192,7 +298,7 @@ fn run_airdrop() -> Result<()> {
                          &airdrop, ACCOUNT_KEY, Some(GAS),
                          Some("test"), None)?;
 
-    assert_eq!(all_airdrop, get_balance(&snip, account.clone()));
+    assert_eq!(total_airdrop, get_balance(&snip, account_a.clone()));
 
     Ok(())
 }

@@ -32,7 +32,6 @@ impl PubKey {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TxMsg<T> {
-    // Must be "tendermint/PubKeySecp256k1"
     pub r#type: String,
     pub value: T,
 }
