@@ -30,4 +30,8 @@ impl AddressProofPermit {
 #[serde(rename_all = "snake_case")]
 pub struct AddressProofMsg {
     pub address: HumanAddr,
+    // Used to prevent permits from being used elsewhere
+    pub contract: HumanAddr,
+    // Used to ban permits
+    pub key: String,
 }

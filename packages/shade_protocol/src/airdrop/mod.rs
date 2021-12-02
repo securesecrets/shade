@@ -67,6 +67,7 @@ pub enum HandleMsg {
     UpdateAccount {
         addresses: Vec<AddressProofPermit>
     },
+    DisablePermitKey { key: String },
     Claim {},
     Decay {},
 }
@@ -84,6 +85,7 @@ pub enum HandleAnswer {
     CompleteTask { status: ResponseStatus },
     CreateAccount { status: ResponseStatus },
     UpdateAccount { status: ResponseStatus },
+    DisablePermitKey { status: ResponseStatus },
     Claim { status: ResponseStatus },
     Decay { status: ResponseStatus },
 }
@@ -93,7 +95,8 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     GetConfig { },
     GetDates { },
-    GetEligibility { address: HumanAddr }
+    GetEligibility { address: HumanAddr },
+    GetAccount { address: HumanAddr, permit: AddressProofPermit },
 }
 
 impl Query for QueryMsg {
@@ -106,6 +109,9 @@ pub enum QueryAnswer {
     Config { config: Config, total_claimed: Uint128 },
     Dates { start: u64, end: Option<u64> },
     Eligibility {
+        amount: Uint128,
+    },
+    Account {
         // Total eligible
         total: Uint128,
         // Total claimed

@@ -5,8 +5,9 @@ use shade_protocol::{
         QueryMsg, Config, claim_info::RequiredTask
     }
 };
-use crate::{state::{config_w, airdrop_address_w, total_claimed_w, address_in_account_w},
-            handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account, try_update_account, try_claim, try_decay},
+use crate::{state::{config_w, airdrop_address_w, total_claimed_w, address_in_account_w, contract_w},
+            handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account,
+                     try_update_account, try_disable_permit_key, try_claim, try_decay},
             query };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -14,6 +15,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
+
+    contract_w(&mut deps.storage).save(&env.contract.address)?;
 
     // Setup task claim
     let mut task_claim= vec![RequiredTask {
@@ -90,6 +93,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => try_create_account(deps, &env, addresses),
         HandleMsg::UpdateAccount { addresses
         } => try_update_account(deps, &env, addresses),
+        HandleMsg::DisablePermitKey { key
+        } => try_disable_permit_key(deps, &env, key),
         HandleMsg::Claim { } => try_claim(deps, &env),
         HandleMsg::Decay { } => try_decay(deps, &env),
     }
@@ -104,5 +109,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetDates { } => to_binary(&query::dates(&deps)?),
         QueryMsg::GetEligibility { address } => to_binary(
             &query::airdrop_amount(&deps, address)?),
+        QueryMsg::GetAccount { address, permit } => to_binary(
+            &query::account(&deps, address, permit)?),
     }
 }

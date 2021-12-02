@@ -1,5 +1,5 @@
 use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
-use crate::state::{config_r, config_w, airdrop_address_r, claim_status_w, claim_status_r, account_total_claimed_w, total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w};
+use crate::state::{config_r, config_w, airdrop_address_r, claim_status_w, claim_status_r, account_total_claimed_w, total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_permit, revoke_permit};
 use shade_protocol::{airdrop::{HandleAnswer, claim_info::RequiredTask, account::AddressProofPermit},
                      generic_response::ResponseStatus};
 use secret_toolkit::snip20::send_msg;
@@ -109,7 +109,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     };
 
     // Validate permits
-    validate_address_permits(deps, &mut account, addresses)?;
+    validate_address_permits(&mut deps.storage, &mut account, addresses)?;
 
     // Save account
     account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
@@ -146,10 +146,10 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
 
     // Run the claim function
     let old_claim_amount = account.total_claimable;
-    let (redeem_amount, completed_percentage) = claim_tokens(deps, env, &config, &account)?;
+    let (redeem_amount, completed_percentage) = claim_tokens(&mut deps.storage, env, &config, &account)?;
 
     // Setup the new addresses
-    validate_address_permits(deps, &mut account, addresses)?;
+    validate_address_permits(&mut deps.storage, &mut account, addresses)?;
 
     // Calculate the total new address amount
     let added_address_total = (account.total_claimable - old_claim_amount)?;
@@ -182,6 +182,23 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success } )? )
     })
 }
+
+pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    key: String,
+) -> StdResult<HandleResponse> {
+
+    revoke_permit(&mut deps.storage, env.message.sender.to_string(), key);
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::DisablePermitKey {
+            status: ResponseStatus::Success } )? )
+    })
+}
+
 
 pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -233,7 +250,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     let account = account_r(&deps.storage).load(sender.to_string().as_bytes())?;
 
     // Calculate airdrop
-    let (redeem_amount, _) = claim_tokens(deps, env, &config, &account)?;
+    let (redeem_amount, _) = claim_tokens(&mut deps.storage, env, &config, &account)?;
 
     Ok(HandleResponse {
         messages: vec![send_msg(sender, redeem_amount,
@@ -275,8 +292,8 @@ pub fn try_decay<S: Storage, A: Api, Q: Querier>(
     Err(StdError::unauthorized())
 }
 
-pub fn claim_tokens<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn claim_tokens<S: Storage>(
+    storage: &mut S,
     env: &Env,
     config: &Config,
     account: &Account,
@@ -288,7 +305,7 @@ pub fn claim_tokens<S: Storage, A: Api, Q: Querier>(
     let mut unclaimed_percentage = Uint128::zero();
     for (index, task) in config.task_claim.iter().enumerate() {
         // Check if task has been completed
-        let state = claim_status_r(&deps.storage, index).may_load(
+        let state = claim_status_r(storage, index).may_load(
             sender.as_bytes())?;
 
         match state {
@@ -298,7 +315,7 @@ pub fn claim_tokens<S: Storage, A: Api, Q: Querier>(
                 completed_percentage += task.percent;
                 if !claimed {
                     // Set claim status to true since we're going to claim it now
-                    claim_status_w(&mut deps.storage, index).save(
+                    claim_status_w(storage, index).save(
                         sender.as_bytes(), &true)?;
 
                     unclaimed_percentage += task.percent;
@@ -315,7 +332,7 @@ pub fn claim_tokens<S: Storage, A: Api, Q: Querier>(
     let mut redeem_amount = Uint128::zero();
 
     // Update total claimed and calculate claimable
-    account_total_claimed_w(&mut deps.storage).update(sender.as_bytes(), |claimed| {
+    account_total_claimed_w(storage).update(sender.as_bytes(), |claimed| {
         // This solves possible uToken inaccuracies
         if completed_percentage == Uint128(100) {
             redeem_amount = (account.total_claimable - claimed.unwrap())?;
@@ -327,23 +344,24 @@ pub fn claim_tokens<S: Storage, A: Api, Q: Querier>(
         }
     })?;
 
-    total_claimed_w(&mut deps.storage).update(|claimed| {
+    total_claimed_w(storage).update(|claimed| {
         Ok(claimed + redeem_amount)
     })?;
 
     Ok((redeem_amount, completed_percentage))
 }
 
-pub fn validate_address_permits<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn validate_address_permits<S: Storage>(
+    storage: &mut S,
     account: &mut Account,
     addresses: Vec<AddressProofPermit>
 ) -> StdResult<()> {
     // Iterate addresses
     for permit in addresses.iter() {
-        let address = permit.authenticate()?;
+        // Check that permit is available
+        let address = validate_permit(storage, permit)?;
 
-        address_in_account_w(&mut deps.storage).update(address.to_string().as_bytes(), |state| {
+        address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
             let in_account = state.unwrap();
 
             // Check that address has not been added to an account
@@ -356,7 +374,7 @@ pub fn validate_address_permits<S: Storage, A: Api, Q: Querier>(
         })?;
 
         // If valid then add to account array and sum total amount
-        let airdrop = airdrop_address_r(&deps.storage).load(address.to_string().as_bytes())?;
+        let airdrop = airdrop_address_r(storage).load(address.to_string().as_bytes())?;
         account.addresses.push(address);
         account.total_claimable += airdrop.amount;
     }
