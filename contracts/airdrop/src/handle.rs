@@ -259,6 +259,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
 ) -> StdResult<HandleResponse> {
+
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasnt ended

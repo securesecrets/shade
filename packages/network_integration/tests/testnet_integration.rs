@@ -53,6 +53,7 @@ fn run_airdrop() -> Result<()> {
     let account_a = account_address(ACCOUNT_KEY)?;
     let account_b = account_address("b")?;
     let account_c = account_address("c")?;
+    let account_d = account_address("d")?;
 
     let a_airdrop = Uint128(50000000);
     let b_airdrop = Uint128(20000000);
@@ -60,6 +61,7 @@ fn run_airdrop() -> Result<()> {
     let c_airdrop = Uint128(10000000);
     let total_airdrop= a_airdrop + b_airdrop + c_airdrop; // 80000000
     let half_airdrop = Uint128(40000000);
+    let decay_amount = Uint128(10000000);
 
     // let half_airdrop = Uint128(500000);
     // let full_airdrop = Uint128(1000000);
@@ -75,7 +77,7 @@ fn run_airdrop() -> Result<()> {
         decimals: 6,
         initial_balances: Some(vec![InitialBalance{
             address: HumanAddr::from(account_a.clone()),
-            amount: total_airdrop }]),
+            amount: total_airdrop+decay_amount }]),
         prng_seed: Default::default(),
         config: Some(InitConfig {
             public_total_supply: Some(true),
@@ -124,6 +126,9 @@ fn run_airdrop() -> Result<()> {
         }, Reward {
             address: HumanAddr::from(account_c.clone()),
             amount: c_airdrop
+        }, Reward {
+            address: HumanAddr::from(account_d.clone()),
+            amount: decay_amount
         }],
         default_claim: Uint128(50),
         task_claim: vec![RequiredTask {
@@ -137,15 +142,14 @@ fn run_airdrop() -> Result<()> {
     print_contract(&airdrop);
 
     /// Assert that we start with nothing
-    {
-        test_contract_handle(&snip20::HandleMsg::Send {
-            recipient: HumanAddr::from(airdrop.address.clone()),
-            amount: total_airdrop,
-            msg: None,
-            memo: None,
-            padding: None
-        }, &snip, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
-    }
+    test_contract_handle(&snip20::HandleMsg::Send {
+        recipient: HumanAddr::from(airdrop.address.clone()),
+        amount: total_airdrop+decay_amount,
+        msg: None,
+        memo: None,
+        padding: None
+    }, &snip, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+
     assert_eq!(Uint128(0), get_balance(&snip, account_a.clone()));
 
     /// Query that airdrop is allowed
@@ -288,9 +292,48 @@ fn run_airdrop() -> Result<()> {
         }
     }
 
-    //TODO: verify that banning a key works
+    print_warning("Disabling permit");
+    test_contract_handle(&airdrop::HandleMsg::DisablePermitKey{ key: "key".to_string() },
+                         &airdrop, ACCOUNT_KEY, Some(GAS),
+                         Some("test"), None)?;
 
-    /// Try to claim expired tokens - TODO: add a bit extra amount for the decay
+    {
+        let msg = airdrop::QueryMsg::GetAccount {
+            address: HumanAddr(account_a.clone()),
+            permit: a_permit.clone()
+        };
+
+        let query: Result<airdrop::QueryAnswer> = query_contract(&airdrop, msg);
+
+        assert!(query.is_err());
+    }
+
+    let new_a_address_proof = AddressProofMsg {
+        address: HumanAddr(account_a.clone()),
+        contract: HumanAddr(airdrop.address.clone()),
+        key: "new_key".to_string()
+    };
+
+    let new_a_permit = create_signed_permit(new_a_address_proof, ACCOUNT_KEY);
+
+    {
+        let msg = airdrop::QueryMsg::GetAccount {
+            address: HumanAddr(account_a.clone()),
+            permit: new_a_permit.clone()
+        };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::Account { total, claimed,
+            unclaimed, finished_tasks } = query {
+            assert_eq!(total, total_airdrop);
+            assert_eq!(claimed, total_airdrop);
+            assert_eq!(unclaimed, Uint128::zero());
+            assert_eq!(finished_tasks.len(), 2);
+        }
+    }
+
+    /// Try to claim expired tokens
     print_warning("Claiming expired tokens");
     thread::sleep(time::Duration::from_secs(duration));
 
@@ -298,7 +341,7 @@ fn run_airdrop() -> Result<()> {
                          &airdrop, ACCOUNT_KEY, Some(GAS),
                          Some("test"), None)?;
 
-    assert_eq!(total_airdrop, get_balance(&snip, account_a.clone()));
+    assert_eq!(total_airdrop + decay_amount, get_balance(&snip, account_a.clone()));
 
     Ok(())
 }
