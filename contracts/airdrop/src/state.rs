@@ -30,11 +30,11 @@ pub fn airdrop_total_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128>
 }
 
 // Airdrop eligible address
-pub fn airdrop_address_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Reward> {
+pub fn airdrop_address_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Uint128> {
     bucket_read(REWARDS_KEY, storage)
 }
 
-pub fn airdrop_address_w<S: Storage>(storage: &mut S) -> Bucket<S, Reward> {
+pub fn airdrop_address_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
     bucket(REWARDS_KEY, storage)
 }
 

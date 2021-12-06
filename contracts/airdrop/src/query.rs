@@ -22,7 +22,7 @@ pub fn airdrop_amount<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>, address: HumanAddr) -> StdResult<QueryAnswer> {
 
     Ok(QueryAnswer::Eligibility {
-        amount: airdrop_address_r(&deps.storage).load(address.to_string().as_bytes())?.amount,
+        amount: airdrop_address_r(&deps.storage).load(address.to_string().as_bytes())?,
     })
 }
 

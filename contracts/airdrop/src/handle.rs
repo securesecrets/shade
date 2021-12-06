@@ -63,8 +63,7 @@ pub fn try_add_reward_chunk<S: Storage, A: Api, Q: Querier>(
     for reward in reward_chunk {
         let key = reward.address.to_string();
 
-        airdrop_address_w(&mut deps.storage).save(key.as_bytes(), &reward)?;
-        address_in_account_w(&mut deps.storage).save(key.as_bytes(), &false)?;
+        airdrop_address_w(&mut deps.storage).save(key.as_bytes(), &reward.amount)?;
         current_total += reward.amount;
     }
 
@@ -146,18 +145,17 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
         None => {}
         Some(airdrop) => {
             address_in_account_w(&mut deps.storage).update(sender.as_bytes(), |state| {
-                let in_account = state.unwrap();
 
                 // Check that address has not been added to an account
-                if in_account {
+                if state.is_some() {
                     return Err(StdError::generic_err(
                         format!("{:?} already in an account", sender.clone())))
                 }
 
                 Ok(true)
             })?;
-            account.addresses.push(airdrop.address);
-            account.total_claimable += airdrop.amount;
+            account.addresses.push(env.message.sender.clone());
+            account.total_claimable += airdrop;
         }
     }
 
@@ -418,10 +416,9 @@ pub fn validate_address_permits<S: Storage>(
         let address = validate_permit(storage, permit, contract.clone())?;
 
         address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
-            let in_account = state.unwrap();
 
             // Check that address has not been added to an account
-            if in_account {
+            if state.is_some() {
                 return Err(StdError::generic_err(
                     format!("{:?} already in an account", address.to_string())))
             }
@@ -432,7 +429,7 @@ pub fn validate_address_permits<S: Storage>(
         // If valid then add to account array and sum total amount
         let airdrop = airdrop_address_r(storage).load(address.to_string().as_bytes())?;
         account.addresses.push(address);
-        account.total_claimable += airdrop.amount;
+        account.total_claimable += airdrop;
     }
 
     Ok(())
