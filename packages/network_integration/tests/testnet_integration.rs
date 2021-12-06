@@ -117,7 +117,18 @@ fn run_airdrop() -> Result<()> {
         },
         start_time: None,
         end_time: Some(now + duration),
-        rewards: vec![Reward {
+        default_claim: Uint128(50),
+        task_claim: vec![RequiredTask {
+            address: HumanAddr::from(account_a.clone()),
+            percent: Uint128(50) }]
+    };
+
+    let airdrop = test_inst_init(&airdrop_init_msg, AIRDROP_FILE, &*generate_label(8),
+                              ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
+                              Some("test"))?;
+
+    test_contract_handle(&airdrop::HandleMsg::AddRewardChunk { reward_chunk: vec![
+        Reward {
             address: HumanAddr::from(account_a.clone()),
             amount: a_airdrop
         }, Reward {
@@ -129,16 +140,9 @@ fn run_airdrop() -> Result<()> {
         }, Reward {
             address: HumanAddr::from(account_d.clone()),
             amount: decay_amount
-        }],
-        default_claim: Uint128(50),
-        task_claim: vec![RequiredTask {
-            address: HumanAddr::from(account_a.clone()),
-            percent: Uint128(50) }]
-    };
+        }] }, &airdrop, ACCOUNT_KEY, Some("1000000"),
+                         Some("test"), None)?;
 
-    let airdrop = test_inst_init(&airdrop_init_msg, AIRDROP_FILE, &*generate_label(8),
-                              ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
-                              Some("test"))?;
     print_contract(&airdrop);
 
     /// Assert that we start with nothing

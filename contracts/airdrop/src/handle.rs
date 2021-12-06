@@ -1,11 +1,10 @@
 use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
-use crate::state::{config_r, config_w, airdrop_address_r, claim_status_w, claim_status_r,
-                   account_total_claimed_w, total_claimed_w, total_claimed_r, account_r,
-                   address_in_account_w, account_w, validate_permit, revoke_permit};
+use crate::state::{config_r, config_w, airdrop_address_r, claim_status_w, claim_status_r, account_total_claimed_w, total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_permit, revoke_permit, airdrop_address_w, airdrop_total_w, airdrop_total_r};
 use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::RequiredTask,
                                account::{Account, AddressProofPermit}},
                      generic_response::ResponseStatus};
 use secret_toolkit::snip20::send_msg;
+use shade_protocol::airdrop::claim_info::Reward;
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -44,6 +43,39 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::UpdateConfig {
+            status: ResponseStatus::Success } )? )
+    })
+}
+
+pub fn try_add_reward_chunk<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    reward_chunk: Vec<Reward>,
+) -> StdResult<HandleResponse> {
+    let config = config_r(&deps.storage).load()?;
+    // Check if admin
+    if env.message.sender != config.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    // Store the delegators list
+    let mut current_total = Uint128::zero();
+    for reward in reward_chunk {
+        let key = reward.address.to_string();
+
+        airdrop_address_w(&mut deps.storage).save(key.as_bytes(), &reward)?;
+        address_in_account_w(&mut deps.storage).save(key.as_bytes(), &false)?;
+        current_total += reward.amount;
+    }
+
+    airdrop_total_w(&mut deps.storage).update(|total| {
+        Ok(total+current_total)
+    })?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::AddRewardChunk {
             status: ResponseStatus::Success } )? )
     })
 }
@@ -130,7 +162,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     }
 
     // Validate permits
-    validate_address_permits(&mut deps.storage, &mut account, addresses)?;
+    validate_address_permits(&mut deps.storage, &mut account, addresses, config.contract)?;
 
     // Save account
     account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
@@ -170,7 +202,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     let (redeem_amount, completed_percentage) = claim_tokens(&mut deps.storage, env, &config, &account)?;
 
     // Setup the new addresses
-    validate_address_permits(&mut deps.storage, &mut account, addresses)?;
+    validate_address_permits(&mut deps.storage, &mut account, addresses, config.contract)?;
 
     // Calculate the total new address amount
     let added_address_total = (account.total_claimable - old_claim_amount)?;
@@ -290,12 +322,13 @@ pub fn try_decay<S: Storage, A: Api, Q: Querier>(
     env: &Env,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
+    let airdrop_total = airdrop_total_r(&deps.storage).load()?;
 
     // Check if airdrop ended
     if let Some(end_date) = config.end_date {
         if let Some(dump_address) = config.dump_address {
             if env.block.time > end_date {
-                let send_total = (config.airdrop_total - total_claimed_r(&deps.storage).load()?)?;
+                let send_total = (airdrop_total - total_claimed_r(&deps.storage).load()?)?;
                 let messages = vec![send_msg(
                     dump_address, send_total, None, None,
                     1, config.airdrop_snip20.code_hash,
@@ -376,12 +409,13 @@ pub fn claim_tokens<S: Storage>(
 pub fn validate_address_permits<S: Storage>(
     storage: &mut S,
     account: &mut Account,
-    addresses: Vec<AddressProofPermit>
+    addresses: Vec<AddressProofPermit>,
+    contract: HumanAddr
 ) -> StdResult<()> {
     // Iterate addresses
     for permit in addresses.iter() {
         // Check that permit is available
-        let address = validate_permit(storage, permit)?;
+        let address = validate_permit(storage, permit, contract.clone())?;
 
         address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
             let in_account = state.unwrap();

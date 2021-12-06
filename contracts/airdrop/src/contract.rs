@@ -5,22 +5,21 @@ use shade_protocol::{
         QueryMsg, Config, claim_info::RequiredTask
     }
 };
-use crate::{state::{config_w, airdrop_address_w, total_claimed_w, address_in_account_w, contract_w},
+use crate::{state::{config_w, airdrop_address_w, total_claimed_w, address_in_account_w},
             handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account,
                      try_update_account, try_disable_permit_key, try_claim, try_decay},
             query };
+use crate::handle::try_add_reward_chunk;
+use crate::state::airdrop_total_w;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
-    contract_w(&mut deps.storage).save(&env.contract.address)?;
-
     // Setup task claim
     let mut task_claim= vec![RequiredTask {
-        address: env.contract.address,
+        address: env.contract.address.clone(),
         percent: msg.default_claim
     }];
     let mut claim = msg.task_claim;
@@ -36,25 +35,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::GenericErr { msg: "tasks above 100%".to_string(), backtrace: None })
     }
 
-    // Store the delegators list
-    let mut airdrop_total = Uint128::zero();
-    for reward in msg.rewards {
-        let key = reward.address.to_string();
-
-        airdrop_address_w(&mut deps.storage).save(key.as_bytes(), &reward)?;
-        address_in_account_w(&mut deps.storage).save(key.as_bytes(), &false)?;
-        airdrop_total += reward.amount;
-        // Save the initial claim
-    }
-
     let config = Config{
         admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
+        contract: env.contract.address.clone(),
         dump_address: msg.dump_address,
         airdrop_snip20: msg.airdrop_token.clone(),
-        airdrop_total,
         task_claim,
         start_date: match msg.start_time {
             None => env.block.time,
@@ -67,6 +55,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     // Initialize claim amount
     total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
+
+    airdrop_total_w(&mut deps.storage).save(&Uint128::zero())?;
 
     Ok(InitResponse {
         messages: vec![],
@@ -85,6 +75,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             start_date, end_date
         } => try_update_config(deps, env, admin, dump_address,
                                start_date, end_date),
+        HandleMsg::AddRewardChunk { reward_chunk
+        } => try_add_reward_chunk(deps, env, reward_chunk),
         HandleMsg::AddTasks { tasks
         } => try_add_tasks(deps, &env, tasks),
         HandleMsg::CompleteTask { address

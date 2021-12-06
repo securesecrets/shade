@@ -30,7 +30,9 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>, address: HumanAddr, permit: AddressProofPermit
 ) -> StdResult<QueryAnswer> {
 
-    let account_address = validate_permit(&deps.storage, &permit)?;
+    let config = config_r(&deps.storage).load()?;
+
+    let account_address = validate_permit(&deps.storage, &permit, config.contract)?;
 
     if account_address != address {
         return Err(StdError::unauthorized())
