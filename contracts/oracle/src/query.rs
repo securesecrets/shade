@@ -43,9 +43,11 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
         return reference_data(deps, "SCRT".to_string(), "USD".to_string());
     }
 
+    /*
     if let Some(reference_data) = hard_coded_r(&deps.storage).may_load(&symbol.as_bytes())? {
         return Ok(reference_data);
     }
+    */
 
     // secret swap pair
     // TODO: sienna pair
@@ -120,7 +122,7 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
         weight_total = weight_total + element.weight;
 
         if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-            price += sswap_price(&deps, sswap_pair)?.rate.multiply_ratio(element.weight, Uint128(18));
+            price += sswap_price(&deps, sswap_pair)?.rate.multiply_ratio(element.weight, 10u128.pow(18));
         }
         else {
             band_weights.push(element.weight);
@@ -132,11 +134,10 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     let ref_data = reference_data_bulk(deps, band_bases, band_quotes)?;
 
     for (reference, weight) in ref_data.iter().zip(band_weights.iter()) {
-        //let (reference, weight) = it;
-        price += reference.rate.multiply_ratio(*weight, Uint128(18));
+        price += reference.rate.multiply_ratio(*weight, 10u128.pow(18));
     }
 
-    Ok(price.multiply_ratio(Uint128(1), weight_total))
+    Ok(price)
 }
 
 /* Translate price from symbol/sSCRT -> symbol/USD

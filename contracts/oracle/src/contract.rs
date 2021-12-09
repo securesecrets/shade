@@ -21,7 +21,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let state = OracleConfig {
-        owner: match msg.admin {
+        admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
@@ -53,9 +53,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
     match msg {
         HandleMsg::UpdateConfig {
-            owner,
+            admin,
             band,
-        } => handle::try_update_config(deps, env, owner, band),
+        } => handle::try_update_config(deps, env, admin, band),
         HandleMsg::RegisterSswapPair {
             pair,
         } => handle::register_sswap_pair(deps, env, pair),

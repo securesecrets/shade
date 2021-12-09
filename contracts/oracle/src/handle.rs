@@ -37,7 +37,7 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -94,7 +94,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -131,20 +131,20 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: Option<HumanAddr>,
+    admin: Option<HumanAddr>,
     band: Option<Contract>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
     // Save new info
     let mut config = config_w(&mut deps.storage);
     config.update(|mut state| {
-        if let Some(owner) = owner {
-            state.owner = owner;
+        if let Some(admin) = admin {
+            state.admin = admin;
         }
         if let Some(band) = band {
             state.band = band;
@@ -156,7 +156,10 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig{
-            status: ResponseStatus::Success } )? )
+        data: Some(to_binary(
+            &HandleAnswer::UpdateConfig {
+                status: ResponseStatus::Success
+            }
+        )?)
     })
 }

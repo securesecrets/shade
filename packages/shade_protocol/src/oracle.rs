@@ -28,7 +28,7 @@ pub struct IndexElement {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OracleConfig {
-    pub owner: HumanAddr,
+    pub admin: HumanAddr,
     pub band: Contract,
     pub sscrt: Contract,
 }
@@ -51,7 +51,7 @@ impl TestInit for InitMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        owner: Option<HumanAddr>,
+        admin: Option<HumanAddr>,
         band: Option<Contract>,
     },
     // Register Secret Swap Pair (should be */SCRT)
