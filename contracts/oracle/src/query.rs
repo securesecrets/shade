@@ -137,7 +137,7 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
         price += reference.rate.multiply_ratio(*weight, 10u128.pow(18));
     }
 
-    Ok(price)
+    Ok(price.multiply_ratio(10u128.pow(18), weight_total))
 }
 
 /* Translate price from symbol/sSCRT -> symbol/USD
