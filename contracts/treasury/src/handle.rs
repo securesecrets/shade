@@ -3,8 +3,8 @@ use cosmwasm_std::{
     to_binary, Api, Binary,
     Env, Extern, HandleResponse,
     Querier, StdError, StdResult, Storage, 
-    CosmosMsg, HumanAddr,
-    Uint128, Decimal
+    Uint128, Decimal,
+    HumanAddr
 };
 use secret_toolkit::{
     snip20::{
