@@ -14,7 +14,7 @@ The oracle contract is used to query the price of different currencies
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|admin     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
+|admin     | string   |  New contract admin; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
 |sscrt     | Contract |  sSCRT snip20 token contract |  no      |
 |band      | Contract |  Band protocol contract   |  no      |
 
