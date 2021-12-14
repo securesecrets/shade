@@ -17,7 +17,7 @@ use shade_protocol::{
     mint::MintMsgHook,
     snip20::{Snip20Asset, token_config_query, TokenConfig},
     oracle::{
-        QueryMsg::GetPrice,
+        QueryMsg::Price,
     },
     band::ReferenceData,
     asset::Contract,
@@ -491,7 +491,7 @@ fn oracle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Uint128> {
 
     let config: Config = config_r(&deps.storage).load()?;
-    let answer: ReferenceData = GetPrice { 
+    let answer: ReferenceData = Price { 
         symbol: symbol.to_string() 
     }.query(&deps.querier,
              config.oracle.code_hash,

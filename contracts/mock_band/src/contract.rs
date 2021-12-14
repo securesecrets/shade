@@ -7,6 +7,21 @@ use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use shade_protocol::band::{ReferenceData, InitMsg};
 
+use cosmwasm_storage::{
+    bucket, bucket_read,
+    Bucket, ReadonlyBucket
+};
+
+pub static PRICE: &[u8] = b"prices";
+
+pub fn price_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
+    bucket_read(PRICE, storage)
+}
+
+pub fn price_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
+    bucket(PRICE, storage)
+}
+
 pub fn init<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
@@ -17,13 +32,24 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg { }
+pub enum HandleMsg {
+    MockPrice {
+        symbol: String,
+        price: Uint128,
+    }
+}
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    deps: &mut Extern<S, A, Q>,
     _env: Env,
-    _msg: HandleMsg,
+    msg: HandleMsg,
 ) -> StdResult<HandleResponse> { 
+    match msg {
+        HandleMsg::MockPrice { symbol, price } => {
+            price_w(&mut deps.storage).save(&symbol.as_bytes(), &price)?;
+            return Ok(HandleResponse::default())
+        }
+    }
 
     Err(StdError::GenericErr { msg: "Not Implemented".to_string(), backtrace: None})
 }
@@ -41,29 +67,40 @@ pub enum QueryMsg {
     },
 }
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    _deps: &Extern<S, A, Q>,
+    deps: &Extern<S, A, Q>,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetReferenceData { base_symbol: _, quote_symbol: _ } => 
-            to_binary(&ReferenceData {
-              rate: Uint128(1_000_000_000_000_000_000),
-              last_updated_base: 1628544285u64,
-              last_updated_quote: 3377610u64
-            }),
+        QueryMsg::GetReferenceData { 
+            base_symbol,
+            quote_symbol: _ 
+        } => {
+            if let Some(price) = price_r(&deps.storage).may_load(&base_symbol.as_bytes())? {
+                return to_binary(&ReferenceData {
+                      rate: price,
+                      last_updated_base: 0,
+                      last_updated_quote: 0 
+                })
+            }
+            return Err(StdError::GenericErr { msg: "Missing Price Feed".to_string(), backtrace: None})
+        },
         QueryMsg::GetReferenceDataBulk {
             base_symbols,
             quote_symbols: _
         } => {
             let mut results = Vec::new();
-            let data = ReferenceData {
-                  rate: Uint128(1_000_000_000_000_000_000),
-                  last_updated_base: 1628544285u64,
-                  last_updated_quote: 3377610u64
-            };
 
-            for _ in base_symbols {
-                results.push(data.clone());
+            for sym in base_symbols {
+                if let Some(price) = price_r(&deps.storage).may_load(&sym.as_bytes())? {
+                    results.push(ReferenceData {
+                          rate: price,
+                          last_updated_base: 0,
+                          last_updated_quote: 0 
+                    });
+                }
+                else {
+                    return Err(StdError::GenericErr { msg: "Missing Price Feed".to_string(), backtrace: None})
+                }
             }
             to_binary(&results)
         },

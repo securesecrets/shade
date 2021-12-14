@@ -21,7 +21,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let state = OracleConfig {
-        owner: match msg.admin {
+        admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
@@ -53,12 +53,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
     match msg {
         HandleMsg::UpdateConfig {
-            owner,
+            admin,
             band,
-        } => handle::try_update_config(deps, env, owner, band),
+        } => handle::try_update_config(deps, env, admin, band),
         HandleMsg::RegisterSswapPair {
             pair,
         } => handle::register_sswap_pair(deps, env, pair),
+        HandleMsg::RegisterIndex {
+            symbol,
+            basket,
+        } => handle::register_index(deps, env, symbol, basket),
     }
 }
 
@@ -67,7 +71,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
-        QueryMsg::GetPrice { symbol } => to_binary(&query::get_price(deps, symbol)?),
+        QueryMsg::Config {} => to_binary(&query::config(deps)?),
+        QueryMsg::Price { symbol } => to_binary(&query::price(deps, symbol)?),
+        QueryMsg::Prices { symbols } => to_binary(&query::prices(deps, symbols)?),
     }
 }

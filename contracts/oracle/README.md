@@ -14,7 +14,8 @@ The oracle contract is used to query the price of different currencies
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
+|admin     | string   |  New contract admin; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
+|sscrt     | Contract |  sSCRT snip20 token contract |  no      |
 |band      | Contract |  Band protocol contract   |  no      |
 
 ##User
@@ -40,8 +41,8 @@ Updates the given values
 
 ### Queries
 
-#### GetPrice
-Get asset price according to band protocol.
+#### Price
+Get asset price
 ##### Request
 |Name        |Type    |Description                                                                                                            | optional |
 |------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
@@ -56,20 +57,22 @@ Get asset price according to band protocol.
   }
 }
 ```
-#### GetReferenceData
-Get base asset price relative to quote asset according to band protocol.
+#### Prices
+Get prices of list of assets
 ##### Request
 |Name        |Type    |Description                                                                                                            | optional |
 |------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
-|base_symbol | string |  asset abbreviation e.g. BTC/ETH/SCRT;   |  no      |
-|quote_symbol| string |  asset abbreviation e.g. BTC/ETH/SCRT;   |  no      |
+|symbols      | list |  list of asset symbols e.g. BTC/ETH/SCRT;   |  no      |
 ##### Response
 ```json
 {
-  {
-    "rate": "1470000000000000000",
-    "last_updated_base": 1628569146,
-    "last_updated_quote": 3377610
-  }
+  [
+    {
+      "rate": "1470000000000000000",
+      "last_updated_base": 1628569146,
+      "last_updated_quote": 3377610
+    },
+    ...
+  ]
 }
 ```
