@@ -1,14 +1,13 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128, HumanAddr, StdError};
+use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128, StdError};
 use shade_protocol::{
     airdrop::{
         InitMsg, HandleMsg,
         QueryMsg, Config
     }
 };
-use crate::{state::{config_w, reward_w, claim_status_w},
-            handle::{try_update_config, try_add_tasks, try_complete_task, try_claim},
+use crate::{state::{config_w, reward_w, claim_status_w, user_total_claimed_w, total_claimed_w},
+            handle::{try_update_config, try_add_tasks, try_complete_task, try_claim, try_decay},
             query };
-use secret_toolkit::snip20::token_info_query;
 use shade_protocol::airdrop::RequiredTask;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -35,12 +34,26 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::GenericErr { msg: "tasks above 100%".to_string(), backtrace: None })
     }
 
+    // Store the delegators list
+    let mut airdrop_total = Uint128::zero();
+    for reward in msg.rewards {
+        let key = reward.address.to_string();
+
+        reward_w(&mut deps.storage).save(key.as_bytes(), &reward)?;
+        airdrop_total += reward.amount;
+        user_total_claimed_w(&mut deps.storage).save(key.as_bytes(), &Uint128::zero())?;
+        // Save the initial claim
+        claim_status_w(&mut deps.storage, 0).save(key.as_bytes(), &false)?;
+    }
+
     let config = Config{
         admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
+        dump_address: msg.dump_address,
         airdrop_snip20: msg.airdrop_token.clone(),
+        airdrop_total,
         task_claim,
         start_date: match msg.start_time {
             None => env.block.time,
@@ -51,14 +64,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&config)?;
 
-    // Store the delegators list
-    for reward in msg.rewards {
-        let key = reward.address.to_string();
-
-        reward_w(&mut deps.storage).save(key.as_bytes(), &reward)?;
-        // Save the initial claim
-        claim_status_w(&mut deps.storage, 0).save(key.as_bytes(), &false)?;
-    }
+    // Initialize claim amount
+    total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
 
     Ok(InitResponse {
         messages: vec![],
@@ -73,13 +80,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::UpdateConfig {
-            admin, start_date, end_date
-        } => try_update_config(deps, env, admin, start_date, end_date),
+            admin, dump_address,
+            start_date, end_date
+        } => try_update_config(deps, env, admin, dump_address,
+                               start_date, end_date),
         HandleMsg::AddTasks { tasks
         } => try_add_tasks(deps, &env, tasks),
         HandleMsg::CompleteTask { address
         } => try_complete_task(deps, &env, address),
         HandleMsg::Claim { } => try_claim(deps, &env),
+        HandleMsg::Decay { } => try_decay(deps, &env),
     }
 }
 

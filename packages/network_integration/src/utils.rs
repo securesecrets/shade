@@ -1,12 +1,10 @@
-use serde_json::{Result, Error};
 use colored::*;
 use rand::{distributions::Alphanumeric, Rng};
-use shade_protocol::{micro_mint, asset::Contract};
-use cosmwasm_std::{HumanAddr, Uint128};
+use shade_protocol::{micro_mint};
 use std::fmt::Display;
 use serde::Serialize;
 use secretcli::{cli_types::NetContract,
-                secretcli::{query_contract, test_contract_handle, test_inst_init}};
+                secretcli::{query_contract}};
 
 // Smart contracts
 pub const SNIP20_FILE: &str = "../../compiled/snip20.wasm.gz";

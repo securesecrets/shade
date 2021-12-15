@@ -1,4 +1,4 @@
-use std::process::{Command, Output};
+use std::process::{Command};
 use serde_json::{Value, Result};
 use crate::cli_types::{TxResponse, NetContract, TxCompute, TxQuery, ListCodeResponse, ListContractCode};
 use std::{thread, time};

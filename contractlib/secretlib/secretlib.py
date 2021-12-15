@@ -85,7 +85,7 @@ def list_contract_by_code(code):
 
 
 def execute_contract(contract, msg, user='a', backend='test', amount=None, compute=True):
-    command = ['secretcli', 'tx', 'compute', 'execute', contract, msg, '--from', user, '--gas', GAS, '-y']
+    command = ['secretcli', 'tx', 'compute', 'execute', contract, json.dumps(msg), '--from', user, '--gas', GAS, '-y']
 
     if backend is not None:
         command += ['--keyring-backend', backend]
@@ -108,7 +108,7 @@ def compute_hash(hash):
 
 
 def query_contract(contract, msg):
-    command = ['secretcli', 'query', 'compute', 'query', contract, msg]
+    command = ['secretcli', 'query', 'compute', 'query', contract, json.dumps(msg)]
     out = run_command(command)
     try:
         return json.loads(out)

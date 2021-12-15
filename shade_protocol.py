@@ -65,7 +65,9 @@ BURN_MAP = {
 }
 
 CAPTURE = {
-    'SSCRT': .5, # 50%
+    'SSCRT': 1, # 100%
+    'SILK': .01, # 1%
+    'SHD': .01, # 1%
 }
 
 # normalize capture values

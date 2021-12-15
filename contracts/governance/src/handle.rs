@@ -1,14 +1,30 @@
-use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg, Empty};
-use crate::state::{supported_contract_r, config_r, total_proposals_w, proposal_w, config_w, supported_contract_w, proposal_r, admin_commands_r, admin_commands_w, admin_commands_list_w, supported_contracts_list_w, total_proposals_r, total_proposal_votes_w, proposal_votes_w, total_proposal_votes_r, proposal_votes_r};
-use shade_protocol::{
-    governance::{Proposal, ProposalStatus, HandleAnswer, GOVERNANCE_SELF, HandleMsg},
-    generic_response::ResponseStatus,
-    asset::Contract,
+use cosmwasm_std::{
+    to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError,
+    StdResult, Storage, CosmosMsg, HumanAddr, Uint128, WasmMsg, from_binary
 };
-use shade_protocol::governance::ProposalStatus::{Accepted, Expired, Rejected};
-use shade_protocol::generic_response::ResponseStatus::{Success, Failure};
-use shade_protocol::governance::{AdminCommand, ADMIN_COMMAND_VARIABLE, Vote, UserVote, VoteTally};
-use secret_toolkit::utils::HandleCallback;
+use crate::{
+    proposal_state::{
+        proposal_w, proposal_r, total_proposals_w,
+        total_proposal_votes_w, total_proposal_votes_r, proposal_votes_w, proposal_votes_r,
+        proposal_funding_deadline_w, proposal_funding_deadline_r,
+        proposal_voting_deadline_w, proposal_voting_deadline_r, proposal_status_w, proposal_status_r,
+        proposal_run_status_w, proposal_funding_r, proposal_funding_w,
+        proposal_funding_batch_w,
+    },
+    state::{
+        supported_contract_r, config_r,  config_w, supported_contract_w,
+        admin_commands_r, admin_commands_w, admin_commands_list_w, supported_contracts_list_w
+    }
+};
+use shade_protocol::{
+    generic_response::ResponseStatus::{Success, Failure}, asset::Contract,
+    governance::{
+        Proposal, ProposalStatus, HandleAnswer, GOVERNANCE_SELF,
+        AdminCommand, ADMIN_COMMAND_VARIABLE, VoteTally, ProposalStatus::{Passed, Expired, Rejected}
+    }
+};
+use shade_protocol::generic_response::ResponseStatus;
+use secret_toolkit::snip20::{send_msg, SendAction, batch_send_msg};
 
 pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -20,7 +36,7 @@ pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
 
     // Check that the target contract is neither the governance or a supported contract
     if supported_contract_r(&deps.storage).may_load(target_contract.as_bytes())?.is_none() &&
-        target_contract != GOVERNANCE_SELF.to_string(){
+        target_contract != *GOVERNANCE_SELF{
         return Err(StdError::NotFound {
             kind: "contract is not found".to_string(), backtrace: None })
     }
@@ -37,24 +53,160 @@ pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
         target: target_contract,
         msg: proposal,
         description,
-        is_admin_command: false,
-        due_date: env.block.time + config_r(&deps.storage).load()?.proposal_deadline,
-        vote_status: ProposalStatus::InProgress,
-        run_status: None
     };
 
+    let config = config_r(&deps.storage).load()?;
+
     // Store the proposal
-    proposal_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &proposal)?;
+    proposal_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(), &proposal)?;
+    // Initialize deadline
+    proposal_funding_deadline_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(), &(env.block.time + config.funding_deadline))?;
+    proposal_status_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(), &ProposalStatus::Funding)?;
+
+    // Initialize total funding
+    proposal_funding_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(), &Uint128::zero())?;
+    // Initialize the funding batch
+    proposal_funding_batch_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &vec![])?;
 
     // Create proposal votes
     total_proposal_votes_w(&mut deps.storage).save(
         proposal_id.to_string().as_bytes(), &VoteTally{
-        yes: Uint128(0),
-        no: Uint128(0),
-        abstain: Uint128(0)
+        yes: Uint128::zero(),
+        no: Uint128::zero(),
+        abstain: Uint128::zero()
     })?;
 
     Ok(proposal_id)
+}
+
+pub fn try_fund_proposal<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    sender: HumanAddr,
+    amount: Uint128,
+    msg: Option<Binary>,
+) -> StdResult<HandleResponse> {
+
+    let proposal_id: Uint128 = from_binary(&msg.ok_or_else(||
+        StdError::not_found("Proposal ID in msg"))?)?;
+
+    // Check if proposal is in funding
+    let status = proposal_status_r(&deps.storage).may_load(
+        proposal_id.to_string().as_bytes())?.ok_or_else(||
+        StdError::not_found("Proposal"))?;
+    if status != ProposalStatus::Funding {
+        return Err(StdError::unauthorized())
+    }
+
+    let mut total = proposal_funding_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())?;
+
+    let config = config_r(&deps.storage).load()?;
+    let mut messages = vec![];
+
+    // Check if deadline is reached
+    if env.block.time >= proposal_funding_deadline_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())? {
+
+        proposal_status_w(&mut deps.storage).save(
+            proposal_id.to_string().as_bytes(), &ProposalStatus::Expired)?;
+
+        // Send back amount
+        messages.push(send_msg(sender.clone(),
+                               amount,
+                               None,
+                               None,
+                               None,
+                               1,
+                               config.funding_token.code_hash.clone(),
+                               config.funding_token.address)?);
+
+        // TODO: send total over to treasury
+
+        return Ok(HandleResponse {
+            messages,
+            log: vec![],
+            data: Some( to_binary( &HandleAnswer::FundProposal {
+                status: Failure,
+                total_funding: total
+            })?),
+        })
+    }
+
+    // Sum amount
+    total += amount;
+
+    let mut adjusted_amount = amount;
+
+    // return the excess
+    if total > config.funding_amount {
+        let excess = (total - config.funding_amount)?;
+        adjusted_amount = (adjusted_amount - excess)?;
+        // Set total to max
+        total = config.funding_amount;
+
+        messages.push(send_msg(sender.clone(),
+                               excess,
+                               None,
+                               None,
+                               None,
+                               1,
+                               config.funding_token.code_hash.clone(),
+                               config.funding_token.address.clone())?);
+
+    }
+
+    // Update list of people that funded
+    let amounts = proposal_funding_batch_w(&mut deps.storage).update(
+        proposal_id.to_string().as_bytes(),
+        |amounts| {
+            if let Some(mut amounts) = amounts {
+                amounts.push(SendAction{
+                    recipient: sender.clone(),
+                    amount: adjusted_amount,
+                    msg: None,
+                    memo: None
+                });
+
+                return Ok(amounts)
+            }
+
+            Err(StdError::not_found("Funding batch"))
+        })?;
+
+    // Update proposal status
+    if total == config.funding_amount {
+        // Update proposal status
+        proposal_status_w(&mut deps.storage).save(
+            proposal_id.to_string().as_bytes(), &ProposalStatus::Voting)?;
+        // Set vote deadline
+        proposal_voting_deadline_w(&mut deps.storage).save(
+            proposal_id.to_string().as_bytes(),
+            &(env.block.time + config.voting_deadline))?;
+
+        // Send back all of the invested prop amount
+        messages.push(batch_send_msg(amounts,
+                                     None,
+                                     1,
+                                     config.funding_token.code_hash,
+                                     config.funding_token.address.clone())?)
+    }
+
+    proposal_funding_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(), &total)?;
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::FundProposal {
+            status: Success,
+            total_funding: total
+        })?),
+    })
 }
 
 pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
@@ -64,32 +216,42 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     // Get proposal
-    let mut proposal = proposal_r(&deps.storage).load(proposal_id.to_string().as_bytes())?;
+    let proposal = proposal_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())?;
+    let run_status: ResponseStatus;
+    let mut vote_status = proposal_status_r(&deps.storage).load(
+        proposal_id.to_string().as_bytes())?;
 
     // Check if proposal has run
-    if proposal.run_status.is_some() {
-        return Err(StdError::GenericErr {
-            msg: "Proposal has already been executed".to_string(),
-            backtrace: None })
-    }
+    // TODO: This might not be needed
+    // if proposal_run_status_r(&deps.storage).may_load(proposal_id.to_string().as_bytes())?.is_some() {
+    //     return Err(StdError::generic_err("Proposal has already been executed"))
+    // }
 
     // Change proposal behavior according to stake availability
     let config = config_r(&deps.storage).load()?;
-    proposal.vote_status = match config.staker {
-        Some(staker) => {
+    vote_status = match config.staker {
+        Some(_) => {
+
+            // When staking is enabled funding is required
+            if vote_status != ProposalStatus::Voting {
+                return Err(StdError::unauthorized())
+            }
 
             let total_votes = total_proposal_votes_r(&deps.storage).load(
                 proposal_id.to_string().as_bytes())?;
 
             // Check if proposal can be run
-            if proposal.due_date > env.block.time {
-                Err(StdError::Unauthorized { backtrace: None })
+            let voting_deadline = proposal_voting_deadline_r(&deps.storage).may_load(
+                proposal_id.to_string().as_bytes())?.ok_or_else(|| StdError::generic_err("No deadline set"))?;
+            if voting_deadline > env.block.time {
+                Err(StdError::unauthorized())
             }
             else if total_votes.yes + total_votes.no + total_votes.abstain < config.minimum_votes {
                 Ok(Expired)
             }
             else if total_votes.yes > total_votes.no {
-                Ok(Accepted)
+                Ok(Passed)
             }
             else {
                 Ok(Rejected)
@@ -98,9 +260,9 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
         None => {
             // Check if user is an admin in order to trigger the proposal
             if config.admin == env.message.sender {
-                Ok(Accepted)
+                Ok(Passed)
             } else {
-                Err(StdError::Unauthorized { backtrace: None })
+                Err(StdError::unauthorized())
             }
         }
     }?;
@@ -119,27 +281,29 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check if proposal passed or has a valid target contract
-    if proposal.vote_status != Accepted || target.is_none() {
-        proposal.run_status = Some(Failure);
+    if vote_status != Passed || target.is_none() {
+        run_status = Failure;
     }
     else {
-        match try_execute_msg(target.unwrap(), proposal.msg.clone()) {
+        run_status = match try_execute_msg(target.unwrap(), proposal.msg) {
             Ok(msg) => {
-                proposal.run_status = Some(Success);
                 messages.push(msg);
+                Success
             }
-            Err(_) => proposal.run_status = Some(Failure),
+            Err(_) => Failure,
         };
     }
 
     // Overwrite
-    proposal_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &proposal)?;
+    proposal_run_status_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &run_status)?;
+    proposal_status_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &vote_status)?;
+
 
     Ok(HandleResponse {
         messages,
         log: vec![],
         data: Some( to_binary( &HandleAnswer::TriggerProposal {
-            status: proposal.run_status.unwrap(),
+            status: run_status,
         })?),
     })
 }
@@ -171,16 +335,14 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None })
     }
 
-    // Check that proposal exists
-    if proposal_id > total_proposals_r(&deps.storage).load()? {
-        return Err(StdError::NotFound { kind: "Proposal".to_string(), backtrace: None })
-    }
+    // Check that proposal is votable
+    let vote_status = proposal_status_r(&deps.storage).may_load(
+        proposal_id.to_string().as_bytes())?.ok_or_else(|| StdError::not_found("Proposal"))?;
+    let voting_deadline = proposal_voting_deadline_r(&deps.storage).may_load(
+        proposal_id.to_string().as_bytes())?.ok_or_else(|| StdError::generic_err("No deadline set"))?;
 
-    // Check that proposal is still votable
-    let proposal = proposal_r(&deps.storage).load(proposal_id.to_string().as_bytes())?;
-
-    if proposal.vote_status != ProposalStatus::InProgress || proposal.due_date <= env.block.time {
-        return Err(StdError::Unauthorized { backtrace: None })
+    if vote_status != ProposalStatus::Voting || voting_deadline <= env.block.time {
+        return Err(StdError::unauthorized())
     }
 
     // Get proposal voting state
@@ -269,27 +431,39 @@ pub fn try_trigger_admin_command<S: Storage, A: Api, Q: Querier>(
         target,
         msg: Binary::from(finished_command.as_bytes()),
         description,
-        due_date: 0,
-        is_admin_command: true,
-        vote_status: ProposalStatus::AdminRequested,
-        run_status: match try_execute_msg(target_contract, Binary::from(finished_command.as_bytes())) {
-            Ok(executed_msg) => {
-                messages.push(executed_msg);
-                Some(Success)
-            },
-            Err(_) => Some(Failure)
-        },
     };
 
     // Store the proposal
     proposal_w(&mut deps.storage).save(proposal_id.to_string().as_bytes(), &proposal)?;
-
+    proposal_funding_deadline_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(),
+        &env.block.time
+    )?;
+    proposal_voting_deadline_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(),
+        &env.block.time
+    )?;
+    proposal_status_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(),
+        &ProposalStatus::AdminRequested
+    )?;
+    let run_status = match try_execute_msg(target_contract, Binary::from(finished_command.as_bytes())) {
+        Ok(executed_msg) => {
+            messages.push(executed_msg);
+            Success
+        },
+        Err(_) => Failure
+    };
+    proposal_run_status_w(&mut deps.storage).save(
+        proposal_id.to_string().as_bytes(),
+        &run_status
+    )?;
 
     Ok(HandleResponse {
         messages,
         log: vec![],
         data: Some( to_binary( &HandleAnswer::TriggerAdminCommand {
-            status: proposal.run_status.unwrap(),
+            status: run_status,
             proposal_id
         })?),
     })
@@ -311,18 +485,21 @@ pub fn try_create_proposal<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::CreateProposal {
-            status: ResponseStatus::Success,
+            status: Success,
             proposal_id
         })?),
     })
 }
 
+#[warn(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     admin: Option<HumanAddr>,
     staker: Option<Contract>,
     proposal_deadline: Option<u64>,
+    funding_amount: Option<Uint128>,
+    funding_deadline: Option<u64>,
     minimum_votes: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
 
@@ -339,7 +516,13 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             state.staker = staker;
         }
         if let Some(proposal_deadline) = proposal_deadline {
-            state.proposal_deadline = proposal_deadline;
+            state.voting_deadline = proposal_deadline;
+        }
+        if let Some(funding_amount) = funding_amount {
+            state.funding_amount = funding_amount;
+        }
+        if let Some(funding_deadline) = funding_deadline {
+            state.funding_deadline = funding_deadline;
         }
         if let Some(minimum_votes) = minimum_votes {
             state.minimum_votes = minimum_votes;
@@ -352,14 +535,14 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success
+            status: Success
         })?),
     })
 }
 
 pub fn try_disable_staker<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: &Env,
+    _env: &Env,
 ) -> StdResult<HandleResponse> {
 
     config_w(&mut deps.storage).update(|mut state| {
@@ -371,7 +554,7 @@ pub fn try_disable_staker<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::DisableStaker {
-            status: ResponseStatus::Success
+            status: Success
         })?),
     })
 }
@@ -389,7 +572,7 @@ pub fn try_add_supported_contract<S: Storage, A: Api, Q: Querier>(
     }
 
     // Cannot be the same name as governance default
-    if name == GOVERNANCE_SELF.to_string() {
+    if name == *GOVERNANCE_SELF {
         return Err(StdError::Unauthorized { backtrace: None })
     }
 
@@ -411,7 +594,7 @@ pub fn try_add_supported_contract<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::AddSupportedContract {
-            status: ResponseStatus::Success
+            status: Success
         })?),
     })
 }
@@ -428,7 +611,7 @@ pub fn try_remove_supported_contract<S: Storage, A: Api, Q: Querier>(
     }
 
     // Cannot be the same name as governance default
-    if name == GOVERNANCE_SELF.to_string() {
+    if name == *GOVERNANCE_SELF {
         return Err(StdError::Unauthorized { backtrace: None })
     }
 
@@ -445,7 +628,7 @@ pub fn try_remove_supported_contract<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::RemoveSupportedContract {
-            status: ResponseStatus::Success
+            status: Success
         })?),
     })
 }
@@ -458,7 +641,7 @@ pub fn try_update_supported_contract<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     // It has to be self and cannot be the same name as governance default
-    if env.contract.address != env.message.sender || name == GOVERNANCE_SELF.to_string() {
+    if env.contract.address != env.message.sender || name == *GOVERNANCE_SELF {
         return Err(StdError::Unauthorized { backtrace: None })
     }
 
@@ -471,7 +654,7 @@ pub fn try_update_supported_contract<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::UpdateSupportedContract {
-            status: ResponseStatus::Success
+            status: Success
         })?),
     })
 }
@@ -509,7 +692,7 @@ pub fn try_add_admin_command<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::AddAdminCommand {
-            status: ResponseStatus::Success
+            status: Success
         })?),
     })
 }
@@ -538,7 +721,7 @@ pub fn try_remove_admin_command<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::RemoveAdminCommand {
-            status: ResponseStatus::Success
+            status: Success
         })?),
     })
 }
@@ -567,7 +750,7 @@ pub fn try_update_admin_command<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::UpdateAdminCommand {
-            status: ResponseStatus::Success
+            status: Success
         })?),
     })
 }

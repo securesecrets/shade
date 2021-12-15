@@ -1,3 +1,4 @@
 [submodule "contracts/snip20"]
 	path = contracts/snip20
 	url = git@github.com:enigmampc/snip20-reference-impl.git
+  branch = master

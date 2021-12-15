@@ -50,3 +50,12 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     };
 
 }
+
+pub fn can_rebalance<S: Storage, A: Api, Q: Querier>(
+    _deps: &Extern<S, A, Q>,
+) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::CanRebalance {
+        possible: false,
+    })
+}

@@ -4,42 +4,40 @@ use shade_protocol::{snip20::{InitialBalance}, snip20,
                      initializer, initializer::Snip20ContractInfo};
 use crate::{utils::{print_header, generate_label, print_contract, print_warning,
                     STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, INITIALIZER_FILE},
-            contract_helpers::governance::add_contract,
             contract_helpers::minter::get_balance};
 use secretcli::{cli_types::NetContract,
-                secretcli::{query_contract, test_contract_handle,
-                            test_inst_init, list_contracts_by_code}};
+                secretcli::{test_contract_handle, test_inst_init, list_contracts_by_code}};
 
 pub fn initialize_initializer(
-    governance: &NetContract, sSCRT: &NetContract, account: String) -> Result<()> {
+    admin: &String, sscrt: &NetContract, account: &String) -> Result<(NetContract, NetContract, NetContract)> {
     print_header("Initializing Initializer");
     let mut shade = NetContract {
         label: generate_label(8),
         id: "".to_string(),
         address: "".to_string(),
-        code_hash: sSCRT.code_hash.clone()
+        code_hash: sscrt.code_hash.clone()
     };
 
     let mut silk = NetContract {
         label: generate_label(8),
         id: "".to_string(),
         address: "".to_string(),
-        code_hash: sSCRT.code_hash.clone()
+        code_hash: sscrt.code_hash.clone()
     };
 
     let init_msg = initializer::InitMsg {
-        snip20_id: sSCRT.id.parse::<u64>().unwrap(),
-        snip20_code_hash: sSCRT.code_hash.clone(),
+        snip20_id: sscrt.id.parse::<u64>().unwrap(),
+        snip20_code_hash: sscrt.code_hash.clone(),
         shade: Snip20ContractInfo {
             label: shade.label.clone(),
-            admin: Some(HumanAddr::from(governance.address.clone())),
+            admin: Some(HumanAddr::from(admin.clone())),
             prng_seed: Default::default(),
             initial_balances: Some(vec![InitialBalance{
                 address: HumanAddr::from(account.clone()), amount: Uint128(10000000) }])
         },
         silk: Snip20ContractInfo {
             label: silk.label.clone(),
-            admin: Some(HumanAddr::from(governance.address.clone())),
+            admin: Some(HumanAddr::from(admin.clone())),
             prng_seed: Default::default(),
             initial_balances: None
         }
@@ -52,16 +50,16 @@ pub fn initialize_initializer(
 
     print_header("Getting uploaded Snip20s");
 
-    let contracts = list_contracts_by_code(sSCRT.id.clone())?;
+    let contracts = list_contracts_by_code(sscrt.id.clone())?;
 
     for contract in contracts {
-        if &contract.label == &shade.label {
+        if contract.label == shade.label {
             print_warning("Found Shade");
             shade.id = contract.code_id.to_string();
             shade.address = contract.address;
             print_contract(&shade);
         }
-        else if &contract.label == &silk.label {
+        else if contract.label == silk.label {
             print_warning("Found Silk");
             silk.id = contract.code_id.to_string();
             silk.address = contract.address;
@@ -92,10 +90,5 @@ pub fn initialize_initializer(
 
     println!("\tTotal silk: {}", get_balance(&silk, account.clone()));
 
-    // Add contracts
-    add_contract("initializer".to_string(), &initializer, &governance)?;
-    add_contract("shade".to_string(), &shade, &governance)?;
-    add_contract("silk".to_string(), &silk, &governance)?;
-
-    Ok(())
+    Ok((initializer, shade, silk))
 }
