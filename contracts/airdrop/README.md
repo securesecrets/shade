@@ -1,5 +1,5 @@
 
-# Mint Contract
+# Airdrop Contract
 * [Introduction](#Introduction)
 * [Sections](#Sections)
     * [Init](#Init)
