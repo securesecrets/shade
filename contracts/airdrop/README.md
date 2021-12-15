@@ -7,11 +7,14 @@
         * Messages
             * [UpdateConfig](#UpdateConfig)
             * [AddTasks](#AddTasks)
+            * [Decay](#Decay)
     * [Task_Admin](#Task_Admin)
         * Messages
             * [CompleteTask](#CompleteTask)
     * [User](#User)
         * Messages
+            * [CreateAccount](#CreateAccount)
+            * [UpdateAccount](#UpdateAccount)
             * [Claim](#Claim)
         * Queries
             * [GetConfig](#GetConfig)
@@ -28,10 +31,14 @@ Contract responsible to handle snip20 airdrop
 |Name          |Type           |Description                                           | optional |
 |--------------|---------------|------------------------------------------------------|----------|
 |admin         | String        | New contract owner; SHOULD be a valid bech32 address |  yes     |
+|dump_address  | String        | Where the decay amount will be sent                  |  yes     |
 |airdrop_token | Contract      | The token that will be airdropped                    |  no      |
+| airdrop_amount | String      | Total airdrop amount to be claimed                   |  no      |
 |start_time    | u64           | When the airdrop starts in UNIX time                 |  yes     |
 |end_time      | u64           | When the airdrop ends in UNIX time                   |  yes     |
-|rewards       | Rewards       | The total rewards for all the addresses              |  no      |
+| merkle_root  | String        | Base 64 encoded merkle root of the airdrop data tree |  no      |
+| total_accounts | String      | Total accounts in airdrop (needed for merkle proof)  |  no      |
+| max_amount   | String        | Used to limit the user permit amounts (lowers exploit possibility) |  no|
 |default_claim | String        | The default amount to be gifted regardless of tasks  |  no      |
 |task_claim    | RequiredTasks | The amounts per tasks to gift                        |  no      |
 
@@ -45,6 +52,7 @@ Updates the given values
 |Name          |Type        |Description                                            | optional |
 |--------------|------------|-------------------------------------------------------|----------|
 |admin         | string     |  New contract admin; SHOULD be a valid bech32 address |  yes     |
+| dump_address | string     | Sets the dump address if there isnt any               |  yes     |
 |start_time    | u64        | When the airdrop starts in UNIX time                  |  yes     |
 |end_time      | u64        | When the airdrop ends in UNIX time                    |  yes     |
 
@@ -59,6 +67,18 @@ Adds more tasks to complete
 ```json
 {
   "add_tasks": {
+    "status": "success"
+  }
+}
+```
+
+#### Decay
+Drains the decayed amount of airdrop into a dump address
+
+##### Response
+```json
+{
+  "decay": {
     "status": "success"
   }
 }
@@ -87,6 +107,40 @@ Complete that address' tasks for a given user
 ##User
 
 ### Messages
+
+### CreateAccount
+Creates an account from which the user will claim all of his given addresses' rewards
+##### Request
+| Name      | Type                             | Description                              | optional |
+|-----------|----------------------------------|------------------------------------------|----------|
+| addresses | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses | no       |
+| partial_tree | Array of string                  | An array of nodes that serve as a proof for the addresses | no |
+
+##### Response
+```json
+{
+  "create_account": {
+    "status": "success"
+  }
+}
+```
+
+### UpdateAccount
+Updates a users accounts with more addresses
+##### Request
+| Name      | Type                        | Description                              | optional |
+|-----------|-----------------------------|------------------------------------------|----------|
+| addresses | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses | no       |
+| partial_tree | Array of string          | An array of nodes that serve as a proof for the addresses | no |
+
+##### Response
+```json
+{
+  "update_account": {
+    "status": "success"
+  }
+}
+```
 
 #### Claim
 Claim the user's available claimable amount
@@ -140,3 +194,50 @@ Get the contract's eligibility per user
   }
 }
 ```
+
+## AddressProofPermit
+This is a structure used to prove that the user has permission to query that address's information (when querying account info).
+This is also used to prove that the user owns that address (when creating/updating accounts) and the given amount is in the airdrop.
+
+NOTE: The parameters must be in order
+
+[How to sign](https://github.com/securesecrets/shade/blob/77abdc70bc645d97aee7de5eb9a2347d22da425f/packages/shade_protocol/src/signature/mod.rs#L100)
+#### Structure
+| Name       | Type            | Description                                        | optional |
+|------------|-----------------|----------------------------------------------------|----------|
+| params     | AddressProofMsg | Information relevant to the airdrop information    | no       |
+| chain_id   | String          | Chain ID of the network this proof will be used in | no       |
+| signature  | PermitSignature | Signature of the permit                            | no       |
+
+## AddressProofMsg
+The information inside permits that validate the airdrop eligibility and validate the account holder's key.
+
+NOTE: The parameters must be in order
+### Structure
+| Name     | Type    | Description                                             | optional |
+|----------|---------|---------------------------------------------------------|----------|
+| address  | String  | Address of the signer (might be redundant)              | no       |
+| amount   | String  | Airdrop amount                                          | no       |                                 
+| contract | String  | Airdrop contract                                        | no       |
+| index    | Integer | Index of airdrop data in reference to the original tree | no       |
+| key      | String  | Some permit key                                         | no       |
+
+## PermitSignature
+The signature that proves the validity of the data
+
+NOTE: The parameters must be in order
+### Structure
+| Name      | Type   | Description               | optional |
+|-----------|--------|---------------------------|----------|
+| pub_key   | pubkey | Signer's public key       | no       |
+| signature | String | Base 64 encoded signature | no       |
+
+## Pubkey
+Public key
+
+NOTE: The parameters must be in order
+### Structure
+| Name  | Type   | Description                        | optional |
+|-------|--------|------------------------------------|----------|
+| type  | String | Must be tendermint/PubKeySecp256k1 | no       |
+| value | String | The base 64 key                    | no       |
