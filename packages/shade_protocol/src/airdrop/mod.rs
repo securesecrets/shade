@@ -3,7 +3,7 @@ pub mod account;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use crate::{asset::Contract, generic_response::ResponseStatus,
             airdrop::{claim_info::{RequiredTask, Reward}, account::AddressProofPermit}};
 
@@ -16,11 +16,20 @@ pub struct Config {
     pub dump_address: Option<HumanAddr>,
     // The snip20 to be minted
     pub airdrop_snip20: Contract,
+    // Airdrop amount
+    pub airdrop_amount: Uint128,
     // Required tasks
     pub task_claim: Vec<RequiredTask>,
     // Checks if airdrop has started / ended
     pub start_date: u64,
     pub end_date: Option<u64>,
+    // This is necessary to validate the airdrop information
+    // tree root
+    pub merkle_root: Binary,
+    // tree height
+    pub total_accounts: u32,
+    // max possible reward amount/ used to prevent collision possibility
+    pub max_amount: Uint128
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -29,10 +38,18 @@ pub struct InitMsg {
     // Where the decayed tokens will be dumped, if none then nothing happens
     pub dump_address: Option<HumanAddr>,
     pub airdrop_token: Contract,
+    // Airdrop amount
+    pub airdrop_amount: Uint128,
     // The airdrop time limit
     pub start_time: Option<u64>,
     // Can be set to never end
     pub end_time: Option<u64>,
+    // Base64 encoded version of the tree root
+    pub merkle_root: String,
+    // Root height
+    pub total_accounts: u32,
+    // Max possible reward amount
+    pub max_amount: Uint128,
     // Default gifted amount
     pub default_claim: Uint128,
     // The task related claims
@@ -52,10 +69,6 @@ pub enum HandleMsg {
         start_date: Option<u64>,
         end_date: Option<u64>,
     },
-    AddRewardChunk {
-        // Delegators snapshot json chunk
-        reward_chunk: Vec<Reward>
-    },
     AddTasks {
         tasks: Vec<RequiredTask>
     },
@@ -63,11 +76,13 @@ pub enum HandleMsg {
         address: HumanAddr
     },
     CreateAccount {
-        addresses: Vec<AddressProofPermit>
+        addresses: Vec<AddressProofPermit>,
+        partial_tree: Vec<String>,
     },
     /// Adds more addresses to accounts
     UpdateAccount {
-        addresses: Vec<AddressProofPermit>
+        addresses: Vec<AddressProofPermit>,
+        partial_tree: Vec<String>,
     },
     DisablePermitKey { key: String },
     Claim {},
@@ -82,7 +97,6 @@ impl HandleCallback for HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
-    AddRewardChunk { status: ResponseStatus },
     AddTask { status: ResponseStatus },
     CompleteTask { status: ResponseStatus },
     CreateAccount { status: ResponseStatus },
@@ -97,7 +111,6 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     GetConfig { },
     GetDates { },
-    GetEligibility { address: HumanAddr },
     GetAccount { address: HumanAddr, permit: AddressProofPermit },
 }
 
@@ -110,9 +123,6 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config { config: Config, total_claimed: Uint128 },
     Dates { start: u64, end: Option<u64> },
-    Eligibility {
-        amount: Uint128,
-    },
     Account {
         // Total eligible
         total: Uint128,
