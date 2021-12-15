@@ -43,7 +43,7 @@ pub enum HandleMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Contracts {},
+    GetContracts {},
 }
 
 #[cfg(test)]
@@ -52,5 +52,5 @@ impl TestQuery<QueryAnswer> for QueryMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    ContractsAnswer { contracts: Vec<Snip20InitHistory> }
+    Contracts { contracts: Vec<Snip20InitHistory> }
 }

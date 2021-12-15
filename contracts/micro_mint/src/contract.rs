@@ -31,7 +31,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
 
     let state = Config {
-        owner: match msg.admin {
+        admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
@@ -104,7 +104,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::UpdateConfig {
-            owner,
+            admin: owner,
             oracle,
             treasury,
             secondary_burn,
