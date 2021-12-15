@@ -95,7 +95,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     addresses: Vec<AddressProofPermit>,
-    partial_tree: Vec<String>,
+    partial_tree: Vec<Binary>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -138,7 +138,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     addresses: Vec<AddressProofPermit>,
-    partial_tree: Vec<String>,
+    partial_tree: Vec<Binary>,
 ) -> StdResult<HandleResponse> {
 
     // Check if airdrop active
@@ -368,7 +368,7 @@ pub fn validate_address_permits<S: Storage>(
     sender: &HumanAddr,
     account: &mut Account,
     addresses: Vec<AddressProofPermit>,
-    partial_tree: Vec<String>,
+    partial_tree: Vec<Binary>,
 ) -> StdResult<()> {
     // Setup the items to validate
     let mut leafs_to_validate: Vec<(usize, [u8; 32])> = vec![];
@@ -424,9 +424,9 @@ pub fn validate_address_permits<S: Storage>(
 
     // Convert partial tree from base64 to binary
     let mut partial_tree_binary: Vec<[u8; 32]> = vec![];
-    for layer in partial_tree.iter() {
+    for node in partial_tree.iter() {
         let mut arr: [u8; 32] = Default::default();
-        arr.clone_from_slice(Binary::from_base64(layer).unwrap().as_slice());
+        arr.clone_from_slice(node.as_slice());
         partial_tree_binary.push(arr);
     }
 

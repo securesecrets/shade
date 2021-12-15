@@ -45,7 +45,7 @@ pub struct InitMsg {
     // Can be set to never end
     pub end_time: Option<u64>,
     // Base64 encoded version of the tree root
-    pub merkle_root: String,
+    pub merkle_root: Binary,
     // Root height
     pub total_accounts: u32,
     // Max possible reward amount
@@ -77,12 +77,12 @@ pub enum HandleMsg {
     },
     CreateAccount {
         addresses: Vec<AddressProofPermit>,
-        partial_tree: Vec<String>,
+        partial_tree: Vec<Binary>,
     },
     /// Adds more addresses to accounts
     UpdateAccount {
         addresses: Vec<AddressProofPermit>,
-        partial_tree: Vec<String>,
+        partial_tree: Vec<Binary>,
     },
     DisablePermitKey { key: String },
     Claim {},

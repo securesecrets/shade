@@ -48,7 +48,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             Some(date) => date
         },
         end_date: msg.end_time,
-        merkle_root: Binary::from_base64(&msg.merkle_root)?,
+        merkle_root: msg.merkle_root,
         total_accounts: msg.total_accounts,
         max_amount: msg.max_amount,
     };

@@ -44,9 +44,9 @@ fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Pe
     permit
 }
 
-fn proof_from_tree(indices: &Vec<usize>, tree: &Vec<Vec<[u8; 32]>>) -> Vec<String> {
+fn proof_from_tree(indices: &Vec<usize>, tree: &Vec<Vec<[u8; 32]>>) -> Vec<Binary> {
     let mut current_indices: Vec<usize> = indices.clone();
-    let mut helper_nodes: Vec<String> = Vec::new();
+    let mut helper_nodes: Vec<Binary> = Vec::new();
 
     for layer in tree {
         let mut siblings: Vec<usize> = Vec::new();
@@ -66,7 +66,7 @@ fn proof_from_tree(indices: &Vec<usize>, tree: &Vec<Vec<[u8; 32]>>) -> Vec<Strin
         for sibling in siblings {
             if !current_indices.contains(&sibling) {
                 if let Some(item) = layer.get(sibling) {
-                    helper_nodes.push(Binary(item.to_vec()).to_base64());
+                    helper_nodes.push(Binary(item.to_vec()));
                 }
             }
         }
@@ -152,7 +152,7 @@ fn run_airdrop() -> Result<()> {
         airdrop_amount: total_airdrop+decay_amount,
         start_time: None,
         end_time: Some(now + duration),
-        merkle_root: Binary(merlke_tree.root().unwrap().to_vec()).to_base64(),
+        merkle_root: Binary(merlke_tree.root().unwrap().to_vec()),
         total_accounts: leaves.len() as u32,
         max_amount: a_airdrop,
         default_claim: Uint128(50),
