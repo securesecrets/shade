@@ -379,13 +379,14 @@ pub trait TestHandle: serde::Serialize {
 /// Function equivalent of the TestHandle trait
 ///
 pub fn test_contract_handle<Message: serde::Serialize>(msg: &Message, contract: &NetContract, sender: &str, gas: Option<&str>,
-                   backend: Option<&str>, amount: Option<&str>) -> Result<TxCompute> {
+                   backend: Option<&str>, amount: Option<&str>) -> Result<(TxCompute, TxQuery)> {
 
     let tx = execute_contract(contract, msg, sender, gas,
                               backend, amount)?;
 
-    let response: Result<TxCompute> = compute_hash(tx.txhash);
-    response
+    let computed_response = compute_hash(tx.txhash.clone())?;
+    let queried_response  = query_hash(tx.txhash)?;
+    Ok((computed_response, queried_response))
 }
 
 ///

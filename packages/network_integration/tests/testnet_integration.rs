@@ -1,11 +1,13 @@
+use std::{thread, time};
 use colored::*;
 use serde_json::Result;
+use serde::Serialize;
 use cosmwasm_std::{HumanAddr, Uint128, to_binary, Binary};
-use secretcli::{secretcli::{account_address, query_contract, test_contract_handle, test_inst_init}};
-use shade_protocol::{snip20::{InitConfig}, snip20, governance, staking, band, oracle,
-                     asset::Contract, airdrop, airdrop::{claim_info::{Reward, RequiredTask}},
+use secretcli::{secretcli::{account_address, query_contract, test_contract_handle, test_inst_init, create_permit}};
+use shade_protocol::{snip20::{self, InitConfig, InitialBalance}, governance, staking, band, oracle,
+                     asset::Contract, airdrop::{self, claim_info::{Reward, RequiredTask}, account::{AddressProofMsg}},
                      governance::{vote::{UserVote, Vote}, proposal::ProposalStatus},
-                     generic_response::ResponseStatus, signature};
+                     generic_response::ResponseStatus, signature::{self, Permit, transaction::PermitSignature}};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
                              STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec,
                                   SNIP20_FILE, AIRDROP_FILE, GOVERNANCE_FILE, MOCK_BAND_FILE, ORACLE_FILE},
@@ -15,13 +17,7 @@ use network_integration::{utils::{print_header, print_warning, generate_label, p
                                                      create_and_trigger_proposal, trigger_latest_proposal},
                                         minter::{initialize_minter, setup_minters, get_balance},
                                         stake::setup_staker}};
-use std::{thread, time};
-use shade_protocol::snip20::InitialBalance;
-use shade_protocol::airdrop::account::AddressProofMsg;
-use serde::Serialize;
-use shade_protocol::signature::Permit;
-use secretcli::secretcli::create_permit;
-use shade_protocol::signature::transaction::PermitSignature;
+use rs_merkle::{Hasher, MerkleTree, algorithms::Sha256};
 
 fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Permit<T> {
     let chain_id = "testnet".to_string();
@@ -48,6 +44,40 @@ fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Pe
     permit
 }
 
+fn proof_from_tree(indices: &Vec<usize>, tree: &Vec<Vec<[u8; 32]>>) -> Vec<String> {
+    let mut current_indices: Vec<usize> = indices.clone();
+    let mut helper_nodes: Vec<String> = Vec::new();
+
+    for layer in tree {
+        let mut siblings: Vec<usize> = Vec::new();
+        let mut parents: Vec<usize> = Vec::new();
+
+        for index in current_indices.iter() {
+            if index % 2 == 0 {
+                siblings.push(index + 1);
+                parents.push(index / 2);
+            }
+            else {
+                siblings.push(index - 1);
+                parents.push((index-1) / 2);
+            }
+        }
+
+        for sibling in siblings {
+            if !current_indices.contains(&sibling) {
+                if let Some(item) = layer.get(sibling) {
+                    helper_nodes.push(Binary(item.to_vec()).to_base64());
+                }
+            }
+        }
+
+        parents.dedup();
+        current_indices = parents.clone();
+    }
+
+    helper_nodes
+}
+
 #[test]
 fn run_airdrop() -> Result<()> {
     let account_a = account_address(ACCOUNT_KEY)?;
@@ -60,12 +90,7 @@ fn run_airdrop() -> Result<()> {
     let ab_half_airdrop = Uint128(35000000);
     let c_airdrop = Uint128(10000000);
     let total_airdrop= a_airdrop + b_airdrop + c_airdrop; // 80000000
-    let half_airdrop = Uint128(40000000);
     let decay_amount = Uint128(10000000);
-
-    // let half_airdrop = Uint128(500000);
-    // let full_airdrop = Uint128(1000000);
-    // let all_airdrop = Uint128(2000000);
 
     /// Initialize dummy snip20
     print_header("\nInitializing snip20");
@@ -103,6 +128,15 @@ fn run_airdrop() -> Result<()> {
                              Some("test"), None)?;
     }
 
+    print_header("Creating merkle tree");
+    let leaves: Vec<[u8; 32]> = vec![
+        Sha256::hash((account_a.clone() + &a_airdrop.to_string()).as_bytes()),
+        Sha256::hash((account_b.clone() + &b_airdrop.to_string()).as_bytes()),
+        Sha256::hash((account_c.clone() + &c_airdrop.to_string()).as_bytes()),
+        Sha256::hash((account_d.clone() + &decay_amount.to_string()).as_bytes())];
+
+    let merlke_tree = MerkleTree::<Sha256>::from_leaves(&leaves);
+
     print_header("Initializing airdrop");
 
     let now = chrono::offset::Utc::now().timestamp() as u64;
@@ -115,8 +149,12 @@ fn run_airdrop() -> Result<()> {
             address: HumanAddr::from(snip.address.clone()),
             code_hash: snip.code_hash.clone()
         },
+        airdrop_amount: total_airdrop+decay_amount,
         start_time: None,
         end_time: Some(now + duration),
+        merkle_root: Binary(merlke_tree.root().unwrap().to_vec()).to_base64(),
+        total_accounts: leaves.len() as u32,
+        max_amount: a_airdrop,
         default_claim: Uint128(50),
         task_claim: vec![RequiredTask {
             address: HumanAddr::from(account_a.clone()),
@@ -126,22 +164,6 @@ fn run_airdrop() -> Result<()> {
     let airdrop = test_inst_init(&airdrop_init_msg, AIRDROP_FILE, &*generate_label(8),
                               ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                               Some("test"))?;
-
-    test_contract_handle(&airdrop::HandleMsg::AddRewardChunk { reward_chunk: vec![
-        Reward {
-            address: HumanAddr::from(account_a.clone()),
-            amount: a_airdrop
-        }, Reward {
-            address: HumanAddr::from(account_b.clone()),
-            amount: b_airdrop
-        }, Reward {
-            address: HumanAddr::from(account_c.clone()),
-            amount: c_airdrop
-        }, Reward {
-            address: HumanAddr::from(account_d.clone()),
-            amount: decay_amount
-        }] }, &airdrop, ACCOUNT_KEY, Some("1000000"),
-                         Some("test"), None)?;
 
     print_contract(&airdrop);
 
@@ -156,23 +178,13 @@ fn run_airdrop() -> Result<()> {
 
     assert_eq!(Uint128(0), get_balance(&snip, account_a.clone()));
 
-    /// Query that airdrop is allowed
-    {
-        let msg = airdrop::QueryMsg::GetEligibility {
-            address: HumanAddr::from(account_a.clone())
-        };
-
-        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
-
-        if let airdrop::QueryAnswer::Eligibility { amount } = query {
-            assert_eq!(amount, a_airdrop);
-        }
-    }
-
+    print_warning("Creating initial permits");
     /// Create AB permit
     let b_address_proof = AddressProofMsg {
         address: HumanAddr(account_b.clone()),
+        amount: b_airdrop,
         contract: HumanAddr(airdrop.address.clone()),
+        index: 1,
         key: "key".to_string()
     };
 
@@ -180,17 +192,26 @@ fn run_airdrop() -> Result<()> {
 
     let a_address_proof = AddressProofMsg {
         address: HumanAddr(account_a.clone()),
+        amount: a_airdrop,
         contract: HumanAddr(airdrop.address.clone()),
+        index: 0,
         key: "key".to_string()
     };
+
+    print_warning("Creating proof");
+    let initial_proof = proof_from_tree(&vec![0,1], &merlke_tree.layers());
 
     let a_permit = create_signed_permit(a_address_proof, ACCOUNT_KEY);
 
     /// Create an account
     print_warning("Creating an account");
-    test_contract_handle(&airdrop::HandleMsg::CreateAccount { addresses: vec![b_permit] },
-                         &airdrop, ACCOUNT_KEY, Some("1000000"),
-                         Some("test"), None)?;
+    {
+        let tx_info = test_contract_handle(&airdrop::HandleMsg::CreateAccount {
+            addresses: vec![b_permit, a_permit.clone()], partial_tree: initial_proof }, &airdrop, ACCOUNT_KEY,
+                                           Some("1000000"), Some("test"), None)?.1;
+
+        println!("Gas used: {}", tx_info.gas_used);
+    }
 
     print_warning("Getting initial account information");
     {
@@ -265,15 +286,18 @@ fn run_airdrop() -> Result<()> {
 
     let c_address_proof = AddressProofMsg {
         address: HumanAddr(account_c.clone()),
+        amount: c_airdrop,
         contract: HumanAddr(airdrop.address.clone()),
+        index: 2,
         key: "key".to_string()
     };
 
     let c_permit = create_signed_permit(c_address_proof, "c");
+    let other_proof = proof_from_tree(&vec![2], &merlke_tree.layers());
 
-    test_contract_handle(&airdrop::HandleMsg::UpdateAccount{ addresses: vec![c_permit] },
-                         &airdrop, ACCOUNT_KEY, Some("1000000"),
-                         Some("test"), None)?;
+    test_contract_handle(&airdrop::HandleMsg::UpdateAccount{
+        addresses: vec![c_permit], partial_tree: other_proof }, &airdrop, ACCOUNT_KEY,
+                         Some("1000000"), Some("test"), None)?;
 
     /// Assert that we claimed
     assert_eq!(total_airdrop, get_balance(&snip, account_a.clone()));
@@ -314,7 +338,9 @@ fn run_airdrop() -> Result<()> {
 
     let new_a_address_proof = AddressProofMsg {
         address: HumanAddr(account_a.clone()),
+        amount: a_airdrop,
         contract: HumanAddr(airdrop.address.clone()),
+        index: 0,
         key: "new_key".to_string()
     };
 
