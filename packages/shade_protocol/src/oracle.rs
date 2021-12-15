@@ -1,4 +1,4 @@
-use cosmwasm_std::{HumanAddr};
+use cosmwasm_std::{HumanAddr, Decimal, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
@@ -7,6 +7,7 @@ use crate::{
     generic_response::ResponseStatus,
     snip20::Snip20Asset,
 };
+
 #[cfg(test)]
 use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
 
@@ -19,8 +20,15 @@ pub struct SswapPair {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct IndexElement {
+    pub symbol: String,
+    //TODO: Decimal, when better implementation is available
+    pub weight: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OracleConfig {
-    pub owner: HumanAddr,
+    pub admin: HumanAddr,
     pub band: Contract,
     pub sscrt: Contract,
 }
@@ -43,12 +51,16 @@ impl TestInit for InitMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        owner: Option<HumanAddr>,
+        admin: Option<HumanAddr>,
         band: Option<Contract>,
     },
     // Register Secret Swap Pair (should be */SCRT)
     RegisterSswapPair {
         pair: Contract,
+    },
+    RegisterIndex {
+        symbol: String,
+        basket: Vec<IndexElement>,
     },
 }
 
@@ -64,13 +76,15 @@ impl TestHandle for HandleMsg {}
 pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus},
     RegisterSswapPair { status: ResponseStatus},
+    RegisterIndex { status: ResponseStatus},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetPrice { symbol: String },
-    GetConfig {},
+    Config {},
+    Price { symbol: String },
+    Prices { symbols: Vec<String> },
 }
 
 impl Query for QueryMsg {
@@ -85,5 +99,4 @@ impl TestQuery<QueryAnswer> for QueryMsg {}
 pub enum QueryAnswer {
     Config { config: OracleConfig },
 }
-
 

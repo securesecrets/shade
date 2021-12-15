@@ -7,7 +7,7 @@ use secret_toolkit::{
 use shade_protocol::{
     mint::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, MintConfig, SupportedAsset, SnipMsgHook},
     oracle::{
-        QueryMsg::GetPrice,
+        QueryMsg::Price,
     },
     band::ReferenceData,
     asset::{Contract},
@@ -387,7 +387,7 @@ fn call_oracle<S: Storage, A: Api, Q: Querier>(
     symbol: String,
 ) -> StdResult<Uint128> {
     let config = config_read(&deps.storage).load()?;
-    let query_msg = GetPrice { symbol };
+    let query_msg = Price { symbol };
     let answer: ReferenceData = query_msg.query(&deps.querier,
                                  config.oracle.code_hash,
                                  config.oracle.address)?;

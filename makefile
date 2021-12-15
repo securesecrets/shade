@@ -25,3 +25,6 @@ setup: $(compiled_dir) $(checksum_dir)
 
 $(compiled_dir) $(checksum_dir):
 	mkdir $@
+
+clean:
+	rm -r $(CONTRACTS)
