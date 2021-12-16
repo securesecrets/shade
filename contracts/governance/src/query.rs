@@ -1,5 +1,5 @@
 use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::governance::{QueryAnswer, proposal::QueriedProposal};
+use shade_protocol::governance::{QueryAnswer, proposal::QueriedProposal, proposal::ProposalStatus};
 
 use crate::{
     proposal_state::{
@@ -34,7 +34,8 @@ fn build_proposal<S: Storage, A: Api, Q: Querier>(
 pub fn proposals<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     total: Uint128,
-    start: Uint128) -> StdResult<QueryAnswer> {
+    start: Uint128,
+    status: Option<ProposalStatus>) -> StdResult<QueryAnswer> {
 
     let mut proposals: Vec<QueriedProposal> = vec![];
 
@@ -47,7 +48,15 @@ pub fn proposals<S: Storage, A: Api, Q: Querier>(
     let clamped_start = start.max(Uint128(1));
 
     for i in clamped_start.u128()..((total+clamped_start).min(max).u128() + 1) {
-        proposals.push(build_proposal(&deps, Uint128(i))?)
+        let proposal = build_proposal(&deps, Uint128(i))?;
+
+        // Filter proposal by status if it was specified in fn params.
+        if let Some(s) = &status {
+            if s != &proposal.status {
+                continue
+            }
+        }
+        proposals.push(proposal)
     }
 
     Ok(QueryAnswer::Proposals { proposals })
