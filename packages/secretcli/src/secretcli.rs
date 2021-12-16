@@ -1,7 +1,11 @@
 use std::process::{Command};
 use serde_json::{Value, Result};
-use crate::cli_types::{TxResponse, NetContract, TxCompute, TxQuery, ListCodeResponse, ListContractCode};
+use crate::cli_types::{TxResponse, NetContract, TxCompute, TxQuery, ListCodeResponse, ListContractCode, SignedTx};
 use std::{thread, time};
+use std::fs::File;
+use std::io::Write;
+
+//secretcli tx sign-doc tx_to_sign --from sign-test
 
 fn vec_str_to_vec_string (str_in: Vec<&str>) -> Vec<String> {
     let mut str_out: Vec<String> = vec![];
@@ -22,7 +26,7 @@ fn vec_str_to_vec_string (str_in: Vec<&str>) -> Vec<String> {
 ///
 pub fn secretcli_run(command: Vec<String>) -> Result<Value> {
     let retry = 20;
-    let mut cli = Command::new("secretcli".to_string());
+    let mut cli = Command::new("secretd".to_string());
     if command.len() > 0 {
         cli.args(command.clone());
     }
@@ -125,7 +129,7 @@ pub fn account_address(acc: &str) -> Result<String> {
     let command = vec_str_to_vec_string(vec!["keys", "show", "-a", acc]);
 
     let retry = 20;
-    let mut cli = Command::new("secretcli".to_string());
+    let mut cli = Command::new("secretd".to_string());
     if command.len() > 0 {
         cli.args(command.clone());
     }
@@ -376,6 +380,7 @@ pub trait TestHandle: serde::Serialize {
 ///
 pub fn test_contract_handle<Message: serde::Serialize>(msg: &Message, contract: &NetContract, sender: &str, gas: Option<&str>,
                    backend: Option<&str>, amount: Option<&str>) -> Result<TxCompute> {
+
     let tx = execute_contract(contract, msg, sender, gas,
                               backend, amount)?;
 
@@ -413,3 +418,24 @@ pub trait TestQuery<Response: serde::de::DeserializeOwned>: serde::Serialize {
     }
 }
 
+///
+/// Create a signed permit
+///
+/// # Arguments
+///
+/// * 'tx' - The message to sign
+/// * 'signer' - The key of the signer
+///
+pub fn create_permit<Tx: serde::Serialize>(tx: Tx, signer: &str) -> Result<SignedTx> {
+    let msg = serde_json::to_string(&tx)?;
+
+    // send to a file
+    let mut file = File::create("./tx_to_sign").unwrap();
+    file.write_all(msg.as_bytes()).unwrap();
+
+    let command = vec!["tx", "sign-doc", "tx_to_sign", "--from", &signer];
+
+    let response: SignedTx = serde_json::from_value(secretcli_run(vec_str_to_vec_string(command))?)?;
+
+    Ok(response)
+}

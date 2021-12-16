@@ -4,6 +4,7 @@ pub mod generic_response;
 pub mod secretswap;
 pub mod band;
 pub mod snip20;
+pub mod signature;
 
 // Protocol init libraries
 pub mod initializer;
