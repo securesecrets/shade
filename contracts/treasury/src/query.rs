@@ -27,7 +27,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-) -> StdResult<QueryAnswer> {
+) -> StdResult<snip20::Balance> {
 
     //TODO: restrict to admin
 
@@ -40,11 +40,9 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
                  &deps.querier,
                  1,
                  a.contract.code_hash,
-                 asset.clone(),
-             )?;
-            Ok(QueryAnswer::Balance { 
-                amount: resp.amount 
-            })
+                 a.contract.address,
+            )?;
+            Ok(resp)
         }
         None => { 
             Err(StdError::NotFound { 

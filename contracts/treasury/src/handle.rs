@@ -3,10 +3,10 @@ use cosmwasm_std::{
     to_binary, Api, Binary,
     Env, Extern, HandleResponse,
     Querier, StdError, StdResult, Storage, 
-    Uint128, Decimal,
-    HumanAddr
+    Uint128, HumanAddr
 };
 use secret_toolkit::{
+    snip20,
     snip20::{
         token_info_query,
         register_receive_msg, 
@@ -28,7 +28,7 @@ use shade_protocol::{
     },
     asset::Contract,
     generic_response::ResponseStatus,
-    //math::Decimal,
+    //math::Uint128,
 };
 
 use crate::{
@@ -69,7 +69,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                 Allocation::Reserves { allocation } => { },
                 Allocation::Staking { allocation, contract } => {
 
-                    let mut allocation = amount * *allocation;
+                    let mut allocation = amount.multiply_ratio(*allocation, 10u128.pow(18));
                     //a.amount_allocated += allocation;
 
                     //debug_print!("Staking {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
@@ -137,7 +137,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
-    reserves: Option<Decimal>,
+    reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -165,7 +165,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     reserves_w(&mut deps.storage).save(
         contract.address.to_string().as_bytes(), 
         &match reserves {
-            None => { Decimal::zero() }
+            None => { Uint128::zero() }
             Some(r) => { r }
         },
     )?;
@@ -222,7 +222,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     };
 
     let liquid_balance: Uint128 = match query::balance(&deps, &asset)? {
-        QueryAnswer::Balance { amount } => amount,
+        snip20::Balance { amount } => amount,
         _ => {
             return Err(StdError::GenericErr {
                 msg: "Unexpected response for balance".to_string(),
@@ -238,7 +238,14 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         Allocation::Pool { contract, allocation, secondary_asset, token } => allocation,
     };
 
-    let mut allocated_portion = Decimal::zero();
+    let alloc_address = match &alloc {
+        Allocation::Staking { contract, allocation } => Some(contract.address.clone()),
+        Allocation::Application { contract, allocation, token } => Some(contract.address.clone()),
+        Allocation::Pool { contract, allocation, secondary_asset, token } => Some(contract.address.clone()),
+        _ => None,
+    };
+
+    let mut allocated_portion = Uint128::zero();
 
     allocations_w(&mut deps.storage).update(asset.to_string().as_bytes(), |apps| {
 
@@ -250,30 +257,55 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
 
         // Remove old instance of this contract
         // TODO: need type comparison or something? gonna worry about it later
-        /*
-        for app in app_list.iter_mut() {
+        let mut existing_index = None;
+        for (i, app) in app_list.iter_mut().enumerate() {
 
-            match app {
-                Allocation::Reserves(a) {
-                    alloc_amount
+            if let Some(address) = match app {
+                Allocation::Reserves { allocation } => None,
+                Allocation::Staking { contract, allocation } => Some(contract.address.clone()),
+                Allocation::Application { contract, allocation, token } => Some(contract.address.clone()),
+                Allocation::Pool { contract, allocation, secondary_asset, token } => Some(contract.address.clone()),
+            } {
+                match &alloc_address {
+                    Some(a) => {
+                        if address == *a {
+                            existing_index = Option::from(i);
+                            break;
+                        }
+                    }
+                    None => { }
                 }
             }
-            app_list.remove(pos);
+            else {
+                match alloc_address {
+                    Some(_) => { }
+                    None => { 
+                        existing_index = Option::from(i);
+                        break;
+                    }
+                }
+            }
         }
-        */
+
+        match existing_index {
+            Some(i) => {
+                app_list.remove(i);
+            }
+            _ => {}
+        }
 
         // Validate addition does not exceed 100%
         for app in &app_list {
 
             allocated_portion = allocated_portion + match app {
-                Allocation::Reserves { allocation } => Decimal::zero(),
+                Allocation::Reserves { allocation } => Uint128::zero(),
                 Allocation::Staking { contract, allocation } => *allocation,
                 Allocation::Application { contract, allocation, token } => *allocation,
                 Allocation::Pool { contract, allocation, secondary_asset, token } => *allocation,
             };
         }
 
-        if (allocated_portion + alloc_portion) >= Decimal::one() {
+        if (allocated_portion + alloc_portion) >= Uint128(1) {
             return Err(StdError::GenericErr {
                 msg: "Invalid allocation total exceeding 100%".to_string(),
                 backtrace: None,
@@ -285,7 +317,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         Ok(app_list)
     })?;
 
-    //TODO: get Decimal math functions to do these things (untested)
+    //TODO: get Uint128 math functions to do these things (untested)
     //TODO: re-add send_msg below
     /*
     let liquid_portion = (allocated_portion * liquid_balance) / allocated_portion;

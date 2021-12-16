@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Binary, Uint128, Decimal};
+use cosmwasm_std::{HumanAddr, Binary, Uint128};
 use secret_toolkit::{
     snip20, 
     utils::{InitCallback, HandleCallback, Query},
@@ -9,7 +9,6 @@ use crate::{
     asset::Contract,
     snip20::Snip20Asset,
     generic_response::ResponseStatus,
-    //math::Decimal
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -23,23 +22,23 @@ pub struct Config {
 pub enum Allocation {
     // To remain liquid
     Reserves {
-        allocation: Decimal,
+        allocation: Uint128,
     },
     // SCRT/ATOM/OSMO staking
     Staking {
         contract: Contract,
-        allocation: Decimal,
+        allocation: Uint128,
     },
     // SKY
     Application {
         contract: Contract,
-        allocation: Decimal,
+        allocation: Uint128,
         token: HumanAddr,
     },
     // Liquidity Providing
     Pool {
         contract: Contract,
-        allocation: Decimal,
+        allocation: Uint128,
         secondary_asset: HumanAddr,
         token: HumanAddr,
     },
@@ -71,7 +70,7 @@ pub enum HandleMsg {
     },
     RegisterAsset {
         contract: Contract,
-        reserves: Option<Decimal>,
+        reserves: Option<Uint128>,
     },
     /* List of contracts/users given an allowance based on a percentage of the asset balance
     * e.g. governance, LP, SKY

@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     Storage, HumanAddr,
-    Decimal,
+    Uint128,
 };
 use cosmwasm_storage::{
     singleton, singleton_read,
@@ -11,7 +11,6 @@ use cosmwasm_storage::{
 use shade_protocol::{
     treasury,
     snip20::Snip20Asset,
-    //math::Decimal,
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";
@@ -71,10 +70,10 @@ pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::All
     bucket(ALLOCATIONS, storage)
 }
 
-pub fn reserves_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Decimal> {
+pub fn reserves_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
     bucket_read(RESERVES, storage)
 }
 
-pub fn reserves_w<S: Storage>(storage: &mut S) -> Bucket<S, Decimal> {
+pub fn reserves_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
     bucket(RESERVES, storage)
 }

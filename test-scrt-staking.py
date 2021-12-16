@@ -5,7 +5,8 @@ from contractlib.utils import gen_label
 from contractlib.secretlib.secretlib import run_command, execute_contract, query_contract
 from contractlib.snip20lib import SNIP20
 
-chain_config = run_command(['secretcli', 'config'])
+'''
+chain_config = run_command(['secretd', 'config'])
 
 chain_config = {
     key.strip('" '): val.strip('" ')
@@ -16,12 +17,13 @@ chain_config = {
         if line
     )
 }
+'''
 
 viewing_key = 'password'
 
-account_key = 'drpresident' if chain_config['chain-id'] == 'holodeck-2' else 'a'
-backend = None if chain_config['chain-id'] == 'holodeck-2' else 'test'
-account = run_command(['secretcli', 'keys', 'show', '-a', account_key]).rstrip()
+account_key = 'a' #if chain_config['chain-id'] == 'holodeck-2' else 'a'
+backend = None# if chain_config['chain-id'] == 'holodeck-2' else 'test'
+account = run_command(['secretd', 'keys', 'show', '-a', account_key]).rstrip()
 
 print('ACCOUNT', account)
 
@@ -30,8 +32,8 @@ sscrt = SNIP20(gen_label(8),
         name='secretSCRT', symbol='SSCRT', 
         decimals=6, public_total_supply=True, 
         enable_deposit=True, enable_burn=True,
-        enable_redeem=True, admin=account_key, 
-        uploader=account_key, backend=backend)
+        enable_redeem=True, admin=account, 
+        uploader=account, backend=backend)
 print(sscrt.address)
 sscrt.execute({'set_viewing_key': {'key': viewing_key}})
 
@@ -42,20 +44,21 @@ half_amount = '100000000uscrt'
 print('Depositing', deposit_amount)
 sscrt.execute({'deposit': {}}, account, deposit_amount)
 
-treasury_init = {
-    'admin': account,
-    'viewing_key': viewing_key,
-}
-
+'''
 treasury = Contract(
     '../compiled/treasury.wasm.gz',
-    json.dumps(treasury_init),
+    json.dumps({
+        'admin': account,
+        'viewing_key': viewing_key,
+    }),
     gen_label(8),
 )
+print('TREASURY', treasury.address)
+'''
 
 staking_init = {
     'admin': account,
-    'treasury': treasury.address,
+    'treasury': account,
     'sscrt': {
         'address': sscrt.address,
         'code_hash': sscrt.code_hash,
@@ -68,7 +71,9 @@ scrt_staking = Contract(
     json.dumps(staking_init),
     gen_label(8),
 )
+print('STAKING', scrt_staking.address)
 
+'''
 print('Configuring treasury')
 print(treasury.execute({
     'register_asset': {
@@ -80,13 +85,17 @@ print(treasury.execute({
 }))
 
 print(treasury.execute({
-    'register_app': {
-        'contract': {
-            'address': scrt_staking.address, 
-            'code_hash': scrt_staking.code_hash,
-        },
+    'register_allocation': {
         'asset': sscrt.address,
-        'allocation': '0.1',
+        'allocation': {
+            'staking': {
+                'contract': {
+                    'address': scrt_staking.address, 
+                    'code_hash': scrt_staking.code_hash,
+                },
+                'allocation': '100000000000000000', # 0.1
+            },
+        }
     }
 }))
 
@@ -111,16 +120,17 @@ print(sscrt.execute({
 ))
 
 
-print('BALANCES')
-print(sscrt.query({'balance': {'address': scrt_staking.address, 'key': viewing_key}}))
-print(run_command(['secretcli', 'q', 'account', scrt_staking.address]))
-
 delegations = scrt_staking.query({'delegations': {}})
 
 print('DELEGATIONS')
 for delegation in delegations:
     print(scrt_staking.query({'delegation': {'validator': delegation['validator']}}))
 
+print('BALANCES')
+print(sscrt.query({'balance': {'address': scrt_staking.address, 'key': viewing_key}}))
+print(run_command(['secretd', 'q', 'account', scrt_staking.address]))
+
+'''
 print('UNBONDING')
 for delegation in delegations:
     print(scrt_staking.execute({'unbond': {'validator': delegation['validator']}}))
@@ -131,7 +141,6 @@ for delegation in delegations:
 
 print('Treasury sSCRT Balance')
 print(treasury.query({'balance': {'asset': sscrt.address}}))
-'''
 
 for i in range(3):
     print('Sending 100000000 usscrt to treasury')
@@ -153,3 +162,4 @@ for i in range(3):
     print('DELEGATIONS')
     for delegation in delegations:
         print(scrt_staking.query({'delegation': {'validator': delegation['validator']}}))
+'''
