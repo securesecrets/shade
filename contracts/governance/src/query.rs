@@ -33,8 +33,8 @@ fn build_proposal<S: Storage, A: Api, Q: Querier>(
 
 pub fn proposals<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    total: Uint128,
     start: Uint128,
+    end: Uint128,
     status: Option<ProposalStatus>) -> StdResult<QueryAnswer> {
 
     let mut proposals: Vec<QueriedProposal> = vec![];
@@ -47,7 +47,7 @@ pub fn proposals<S: Storage, A: Api, Q: Querier>(
 
     let clamped_start = start.max(Uint128(1));
 
-    for i in clamped_start.u128()..((total+clamped_start).min(max).u128() + 1) {
+    for i in clamped_start.u128()..((end +clamped_start).min(max).u128() + 1) {
         let proposal = build_proposal(&deps, Uint128(i))?;
 
         // Filter proposal by status if it was specified in fn params.

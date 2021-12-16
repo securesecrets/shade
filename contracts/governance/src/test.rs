@@ -35,8 +35,8 @@ mod tests {
 
         // Initialized governance contract has no proposals.
         let res = contract::query(&deps, governance::QueryMsg::GetProposals {
-            total: Uint128(100),
             start: Uint128(0),
+            end: Uint128(100),
             status: Some(ProposalStatus::Funding)
         }).unwrap();
         let value: governance::QueryAnswer = from_binary(&res).unwrap();
@@ -70,8 +70,8 @@ mod tests {
 
         // Should return this proposal when no specific status is specified.
         assert_get_proposals(&deps, governance::QueryMsg::GetProposals {
-            total: Uint128(100),
             start: Uint128(0),
+            end: Uint128(100),
             status: None
         }, |proposals| {
             assert_eq!(1, proposals.len());
@@ -80,8 +80,8 @@ mod tests {
 
         // Should return this proposal when `funding` status is specified.
         assert_get_proposals(&deps, governance::QueryMsg::GetProposals {
-            total: Uint128(100),
             start: Uint128(0),
+            end: Uint128(100),
             status: Some(ProposalStatus::Funding)
         }, |proposals| {
             assert_eq!(1, proposals.len());
@@ -90,8 +90,8 @@ mod tests {
 
         // Shouldn't return this proposal when querying by status different from `funding`.
         assert_get_proposals(&deps, governance::QueryMsg::GetProposals {
-            total: Uint128(100),
             start: Uint128(0),
+            end: Uint128(100),
             status: Some(ProposalStatus::Voting)
         }, |proposals| {
             assert_eq!(0, proposals.len());
