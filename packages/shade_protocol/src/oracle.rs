@@ -58,6 +58,10 @@ pub enum HandleMsg {
     RegisterSswapPair {
         pair: Contract,
     },
+    // Unregister Secret Swap Pair (symbol/SCRT)
+    UnregisterSswapPair {
+        symbol: String,
+    },
     RegisterIndex {
         symbol: String,
         basket: Vec<IndexElement>,
@@ -76,6 +80,7 @@ impl TestHandle for HandleMsg {}
 pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus},
     RegisterSswapPair { status: ResponseStatus},
+    UnregisterSswapPair { status: ResponseStatus},
     RegisterIndex { status: ResponseStatus},
 }
 
