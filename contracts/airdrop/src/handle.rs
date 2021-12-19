@@ -20,6 +20,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     dump_address: Option<HumanAddr>,
     start_date: Option<u64>,
     end_date: Option<u64>,
+    decay_start: Option<u64>
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
@@ -37,10 +38,52 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             state.dump_address = Some(dump_address);
         }
         if let Some(start_date) = start_date {
+            // Avoid date collisions
+            if let Some(end_date) = end_date {
+                if start_date > end_date {
+                    return Err(StdError::generic_err("New start date is greater than end date"))
+                }
+            }
+            else if let Some(end_date) = state.end_date {
+                if start_date > end_date {
+                    return Err(StdError::generic_err("New start date is greater than the current end date"))
+                }
+            }
+
             state.start_date = start_date;
         }
         if let Some(end_date) = end_date {
+            // Avoid date collisions
+            if let Some(start_date) = state.start_date {
+                if start_date > end_date {
+                    return Err(StdError::generic_err("New end date is before start date"))
+                }
+            }
+            if let Some(decay_start) = decay_start {
+                if decay_start > end_date {
+                    return Err(StdError::generic_err("New end date is before start of decay"))
+                }
+            }
+            else if let Some(decay_start) = state.decay_start {
+                if decay_start > end_date {
+                    return Err(StdError::generic_err("New end date is before current start of decay"))
+                }
+            }
+
             state.end_date = Some(end_date);
+        }
+        if let Some(decay_start) = decay_start {
+            // Avoid date collisions
+            if let Some(end_date) = state.end_date {
+                if decay_start > end_date {
+                    return Err(StdError::generic_err("New start of decay is after end date"))
+                }
+            }
+            else {
+                return Err(StdError::generic_err("No end date set"))
+            }
+
+            state.decay_start = Some(decay_start)
         }
 
         Ok(state)

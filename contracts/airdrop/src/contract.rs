@@ -33,6 +33,29 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::GenericErr { msg: "tasks above 100%".to_string(), backtrace: None })
     }
 
+    let start_date = match msg.start_date {
+        None => env.block.time,
+        Some(date) => date
+    };
+
+    if let Some(end_date) = msg.end_date {
+        if end_date < start_date {
+            return Err(StdError::generic_err("Start date must come before end date"))
+        }
+    }
+
+    // Avoid decay collisions
+    if let Some(start_decay) = msg.decay_start {
+        if let Some(end_date) = msg.end_date {
+            if start_decay > end_date {
+                return Err(StdError::generic_err("Decay cannot start after the end date"))
+            }
+        }
+        else {
+            return Err(StdError::generic_err("Decay must have an end date"))
+        }
+    }
+
     let config = Config{
         admin: match msg.admin {
             None => { env.message.sender.clone() }
@@ -43,11 +66,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         airdrop_snip20: msg.airdrop_token.clone(),
         airdrop_amount: msg.airdrop_amount,
         task_claim,
-        start_date: match msg.start_time {
-            None => env.block.time,
-            Some(date) => date
-        },
-        end_date: msg.end_time,
+        start_date,
+        end_date: msg.end_date,
+        decay_start: msg.decay_start,
         merkle_root: msg.merkle_root,
         total_accounts: msg.total_accounts,
         max_amount: msg.max_amount,
@@ -72,9 +93,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::UpdateConfig {
             admin, dump_address,
-            start_date, end_date
+            start_date, end_date, start_decay
         } => try_update_config(deps, env, admin, dump_address,
-                               start_date, end_date),
+                               start_date, end_date, start_decay),
         HandleMsg::AddTasks { tasks
         } => try_add_tasks(deps, &env, tasks),
         HandleMsg::CompleteTask { address

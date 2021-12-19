@@ -22,7 +22,10 @@ pub struct Config {
     pub task_claim: Vec<RequiredTask>,
     // Checks if airdrop has started / ended
     pub start_date: u64,
+    // Airdrop stops at end date if there is one
     pub end_date: Option<u64>,
+    // Starts to decay at this date
+    pub decay_start: Option<u64>,
     // This is necessary to validate the airdrop information
     // tree root
     pub merkle_root: Binary,
@@ -41,9 +44,11 @@ pub struct InitMsg {
     // Airdrop amount
     pub airdrop_amount: Uint128,
     // The airdrop time limit
-    pub start_time: Option<u64>,
+    pub start_date: Option<u64>,
     // Can be set to never end
-    pub end_time: Option<u64>,
+    pub end_date: Option<u64>,
+    // Starts to decay at this date
+    pub decay_start: Option<u64>,
     // Base64 encoded version of the tree root
     pub merkle_root: Binary,
     // Root height
@@ -68,6 +73,7 @@ pub enum HandleMsg {
         dump_address: Option<HumanAddr>,
         start_date: Option<u64>,
         end_date: Option<u64>,
+        start_decay: Option<u64>,
     },
     AddTasks {
         tasks: Vec<RequiredTask>
