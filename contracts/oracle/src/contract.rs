@@ -59,6 +59,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::RegisterSswapPair {
             pair,
         } => handle::register_sswap_pair(deps, env, pair),
+        HandleMsg::UnregisterSswapPair {
+            symbol,
+        } => handle::unregister_sswap_pair(deps, env, symbol),
         HandleMsg::RegisterIndex {
             symbol,
             basket,

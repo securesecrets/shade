@@ -27,7 +27,7 @@ use shade_protocol::{
 use crate::state::{
     config_w, config_r,
     sswap_pairs_w, sswap_pairs_r,
-    index_w, index_r,
+    index_w,
 };
 
 pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
@@ -83,7 +83,27 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
         data: Some( to_binary( &HandleAnswer::RegisterSswapPair {
             status: ResponseStatus::Success } )? )
     })
+}
 
+pub fn unregister_sswap_pair<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    symbol: String,
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+    if env.message.sender != config.admin {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+
+    sswap_pairs_w(&mut deps.storage).remove(symbol.as_bytes());
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::UnregisterSswapPair {
+            status: ResponseStatus::Success } )? )
+    })
 }
 
 pub fn register_index<S: Storage, A: Api, Q: Querier>(

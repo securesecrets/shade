@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::query;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier};
+    
     use cosmwasm_std::{Uint128};
 
     macro_rules! normalize_price_tests {
