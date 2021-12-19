@@ -1,7 +1,4 @@
-use cosmwasm_std::{
-    to_binary, Api, Env, Extern, HandleResponse, Querier,
-    StdError, StdResult, Storage, HumanAddr, Uint128, Binary
-};
+use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128, Binary, Decimal};
 use rs_merkle::{Hasher, MerkleProof, algorithms::Sha256};
 use crate::state::{
     config_r, config_w, claim_status_w, claim_status_r, account_total_claimed_w,
@@ -54,10 +51,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
         if let Some(end_date) = end_date {
             // Avoid date collisions
-            if let Some(start_date) = state.start_date {
-                if start_date > end_date {
-                    return Err(StdError::generic_err("New end date is before start date"))
-                }
+            if state.start_date > end_date {
+                return Err(StdError::generic_err("New end date is before start date"))
             }
             if let Some(decay_start) = decay_start {
                 if decay_start > end_date {
@@ -168,6 +163,10 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     // Add default claim at index 0
     account_total_claimed_w(&mut deps.storage).save(sender.as_bytes(), &Uint128::zero())?;
     claim_status_w(&mut deps.storage, 0).save(sender.as_bytes(), &false)?;
+
+    // Claim the airdrop after account creation
+    //TODO: replace with claim function to avoid double checking airdrop config
+    try_claim(deps, env);
 
     Ok(HandleResponse {
         messages: vec![],
@@ -397,6 +396,15 @@ pub fn claim_tokens<S: Storage>(
         }
     })?;
 
+    // Calculate redeem amount after applying decay
+    if let Some(decay_start) = config.decay_start {
+        if env.block.time >= decay_start {
+            redeem_amount = redeem_amount * calculate_decay_factor(decay_start,
+                                                                   env.block.time,
+                                                                   config.end_date.unwrap());
+        }
+    }
+
     total_claimed_w(storage).update(|claimed| {
         Ok(claimed + redeem_amount)
     })?;
@@ -499,4 +507,9 @@ pub fn available( config: &Config, env: &Env ) -> bool {
     }
 
     true
+}
+
+pub fn calculate_decay_factor(min: u64, x: u64, max: u64) -> Decimal {
+    // Get the inverse normalized value [0,1] of x between [min, max]
+    Decimal::from_ratio(max - x, max - min)
 }
