@@ -101,9 +101,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasnt ended
-    if !available(&config, env) {
-        return Err(StdError::unauthorized())
-    }
+    available(&config, &env)?;
 
     // Check that account doesnt exist
     let sender = env.message.sender.to_string();
@@ -145,9 +143,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasnt ended
-    if !available(&config, env) {
-        return Err(StdError::unauthorized())
-    }
+    available(&config, &env)?;
 
     // Get account
     let sender = env.message.sender.clone().to_string();
@@ -251,9 +247,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasnt ended
-    if !available(&config, &env) {
-        return Err(StdError::unauthorized())
-    }
+    available(&config, &env)?;
 
     // Get account
     let sender = env.message.sender.clone();
@@ -442,18 +436,18 @@ pub fn validate_address_permits<S: Storage>(
     Ok(())
 }
 
-pub fn available( config: &Config, env: &Env ) -> bool {
+pub fn available( config: &Config, env: &Env ) -> StdResult<()> {
     let current_time = env.block.time;
 
     // Check if airdrop started
     if current_time < config.start_date {
-        return false
+        return Err(StdError::generic_err(format!("Airdrop starts on {}", config.start_date)))
     }
     if let Some(end_date) = config.end_date {
         if current_time > end_date {
-            return false
+            return Err(StdError::generic_err(format!("Airdrop ended on {}", end_date)))
         }
     }
 
-    true
+    Ok(())
 }
