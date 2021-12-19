@@ -115,7 +115,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     };
 
     // Validate permits
-    validate_address_permits(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
 
     // Save account
     account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
@@ -154,7 +154,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     let (redeem_amount, completed_percentage) = claim_tokens(&mut deps.storage, env, &config, &account)?;
 
     // Setup the new addresses
-    validate_address_permits(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
 
     // Calculate the total new address amount
     let added_address_total = (account.total_claimable - old_claim_amount)?;
@@ -356,7 +356,7 @@ pub fn claim_tokens<S: Storage>(
 }
 
 /// Validates all of the information and updates relevant states
-pub fn validate_address_permits<S: Storage>(
+pub fn try_add_account_addresses<S: Storage>(
     storage: &mut S,
     config: &Config,
     sender: &HumanAddr,
@@ -369,9 +369,10 @@ pub fn validate_address_permits<S: Storage>(
 
     // Iterate addresses
     for permit in addresses.iter() {
-        // Check permit legitimacy / skip if permit is sender
         let address: HumanAddr;
+        // Avoid verifying sender
         if &permit.params.address != sender {
+            // Check permit legitimacy
             address = validate_permit(storage, permit, config.contract.clone())?;
             if address != permit.params.address {
                 return Err(StdError::generic_err("Signer address is not the same as the permit address"))
@@ -386,7 +387,7 @@ pub fn validate_address_permits<S: Storage>(
             return Err(StdError::generic_err("Amount exceeds maximum amount"))
         }
 
-        // Check that address has not been added to an account
+        // Update address if its not in an account
         address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
             if state.is_some() {
                 return Err(StdError::generic_err(

@@ -36,6 +36,6 @@ pub struct AddressProofMsg {
     pub contract: HumanAddr,
     // Index of the address in the leafs array
     pub index: u32,
-    // Used to ban permits
+    // Used to identify permits
     pub key: String,
 }
