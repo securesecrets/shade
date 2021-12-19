@@ -1,10 +1,17 @@
-use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
-use crate::state::{config_r, config_w, airdrop_address_r, claim_status_w, claim_status_r, account_total_claimed_w, total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_permit, revoke_permit, airdrop_address_w, airdrop_total_w, airdrop_total_r};
-use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::RequiredTask,
+use cosmwasm_std::{
+    to_binary, Api, Env, Extern, HandleResponse, Querier,
+    StdError, StdResult, Storage, HumanAddr, Uint128, Binary
+};
+use rs_merkle::{Hasher, MerkleProof, algorithms::Sha256};
+use crate::state::{
+    config_r, config_w, claim_status_w, claim_status_r, account_total_claimed_w,
+    total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_permit,
+    revoke_permit
+};
+use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::{RequiredTask, Reward},
                                account::{Account, AddressProofPermit}},
                      generic_response::ResponseStatus};
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::airdrop::claim_info::Reward;
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -43,38 +50,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success } )? )
-    })
-}
-
-pub fn try_add_reward_chunk<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    reward_chunk: Vec<Reward>,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-    // Check if admin
-    if env.message.sender != config.admin {
-        return Err(StdError::unauthorized());
-    }
-
-    // Store the delegators list
-    let mut current_total = Uint128::zero();
-    for reward in reward_chunk {
-        let key = reward.address.to_string();
-
-        airdrop_address_w(&mut deps.storage).save(key.as_bytes(), &reward.amount)?;
-        current_total += reward.amount;
-    }
-
-    airdrop_total_w(&mut deps.storage).update(|total| {
-        Ok(total+current_total)
-    })?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some( to_binary( &HandleAnswer::AddRewardChunk {
             status: ResponseStatus::Success } )? )
     })
 }
@@ -120,6 +95,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     addresses: Vec<AddressProofPermit>,
+    partial_tree: Vec<Binary>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
@@ -138,27 +114,8 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
         total_claimable: Uint128::zero()
     };
 
-    // Try to add sender account
-    match  airdrop_address_r(&deps.storage).may_load(sender.as_bytes())? {
-        None => {}
-        Some(airdrop) => {
-            address_in_account_w(&mut deps.storage).update(sender.as_bytes(), |state| {
-
-                // Check that address has not been added to an account
-                if state.is_some() {
-                    return Err(StdError::generic_err(
-                        format!("{:?} already in an account", sender.clone())))
-                }
-
-                Ok(true)
-            })?;
-            account.addresses.push(env.message.sender.clone());
-            account.total_claimable += airdrop;
-        }
-    }
-
     // Validate permits
-    validate_address_permits(&mut deps.storage, &mut account, addresses, config.contract)?;
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
 
     // Save account
     account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
@@ -179,6 +136,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     addresses: Vec<AddressProofPermit>,
+    partial_tree: Vec<Binary>,
 ) -> StdResult<HandleResponse> {
 
     // Check if airdrop active
@@ -196,7 +154,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     let (redeem_amount, completed_percentage) = claim_tokens(&mut deps.storage, env, &config, &account)?;
 
     // Setup the new addresses
-    validate_address_permits(&mut deps.storage, &mut account, addresses, config.contract)?;
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
 
     // Calculate the total new address amount
     let added_address_total = (account.total_claimable - old_claim_amount)?;
@@ -314,13 +272,12 @@ pub fn try_decay<S: Storage, A: Api, Q: Querier>(
     env: &Env,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
-    let airdrop_total = airdrop_total_r(&deps.storage).load()?;
 
     // Check if airdrop ended
     if let Some(end_date) = config.end_date {
         if let Some(dump_address) = config.dump_address {
             if env.block.time > end_date {
-                let send_total = (airdrop_total - total_claimed_r(&deps.storage).load()?)?;
+                let send_total = (config.airdrop_amount - total_claimed_r(&deps.storage).load()?)?;
                 let messages = vec![send_msg(
                     dump_address, send_total, None, None,
                     1, config.airdrop_snip20.code_hash,
@@ -398,20 +355,40 @@ pub fn claim_tokens<S: Storage>(
     Ok((redeem_amount, completed_percentage))
 }
 
-pub fn validate_address_permits<S: Storage>(
+/// Validates all of the information and updates relevant states
+pub fn try_add_account_addresses<S: Storage>(
     storage: &mut S,
+    config: &Config,
+    sender: &HumanAddr,
     account: &mut Account,
     addresses: Vec<AddressProofPermit>,
-    contract: HumanAddr
+    partial_tree: Vec<Binary>,
 ) -> StdResult<()> {
+    // Setup the items to validate
+    let mut leafs_to_validate: Vec<(usize, [u8; 32])> = vec![];
+
     // Iterate addresses
     for permit in addresses.iter() {
-        // Check that permit is available
-        let address = validate_permit(storage, permit, contract.clone())?;
+        let address: HumanAddr;
+        // Avoid verifying sender
+        if &permit.params.address != sender {
+            // Check permit legitimacy
+            address = validate_permit(storage, permit, config.contract.clone())?;
+            if address != permit.params.address {
+                return Err(StdError::generic_err("Signer address is not the same as the permit address"))
+            }
+        }
+        else {
+            address = sender.clone();
+        }
 
+        // Check that airdrop amount does not exceed maximum
+        if permit.params.amount > config.max_amount {
+            return Err(StdError::generic_err("Amount exceeds maximum amount"))
+        }
+
+        // Update address if its not in an account
         address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
-
-            // Check that address has not been added to an account
             if state.is_some() {
                 return Err(StdError::generic_err(
                     format!("{:?} already in an account", address.to_string())))
@@ -420,10 +397,41 @@ pub fn validate_address_permits<S: Storage>(
             Ok(true)
         })?;
 
+        // Add account as a leaf
+        let leaf_hash = Sha256::hash((address.to_string() + &permit.params.amount.to_string()).as_bytes());
+        leafs_to_validate.push((permit.params.index as usize, leaf_hash));
+
         // If valid then add to account array and sum total amount
-        let airdrop = airdrop_address_r(storage).load(address.to_string().as_bytes())?;
         account.addresses.push(address);
-        account.total_claimable += airdrop;
+        account.total_claimable += permit.params.amount;
+    }
+
+    // Need to sort by index in order for the proof to work
+    leafs_to_validate.sort_by_key(|item| item.0);
+
+    let mut indices: Vec<usize> = vec![];
+    let mut leaves: Vec<[u8; 32]> = vec![];
+
+    for leaf in leafs_to_validate.iter() {
+        indices.push(leaf.0);
+        leaves.push(leaf.1);
+    };
+
+    // Convert partial tree from base64 to binary
+    let mut partial_tree_binary: Vec<[u8; 32]> = vec![];
+    for node in partial_tree.iter() {
+        let mut arr: [u8; 32] = Default::default();
+        arr.clone_from_slice(node.as_slice());
+        partial_tree_binary.push(arr);
+    }
+
+    // Prove that user is in airdrop
+    let proof = MerkleProof::<Sha256>::new(partial_tree_binary);
+    // Convert to a fixed length array without messing up the contract
+    let mut root: [u8; 32] = Default::default();
+    root.clone_from_slice(config.merkle_root.as_slice());
+    if !proof.verify(root, &indices, &leaves, config.total_accounts as usize) {
+        return Err(StdError::generic_err("Invalid proof"))
     }
 
     Ok(())

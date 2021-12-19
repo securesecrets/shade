@@ -1,6 +1,6 @@
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, HumanAddr, Uint128, StdError};
 use shade_protocol::airdrop::{QueryAnswer, account::AddressProofPermit, claim_info::RequiredTask};
-use crate::state::{config_r, airdrop_address_r, claim_status_r,
+use crate::state::{config_r, claim_status_r,
                    total_claimed_r, validate_permit, account_r};
 
 pub fn config<S: Storage, A: Api, Q: Querier>
@@ -15,14 +15,6 @@ pub fn dates<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
     Ok(QueryAnswer::Dates { start: config.start_date, end: config.end_date
-    })
-}
-
-pub fn airdrop_amount<S: Storage, A: Api, Q: Querier>
-(deps: &Extern<S, A, Q>, address: HumanAddr) -> StdResult<QueryAnswer> {
-
-    Ok(QueryAnswer::Eligibility {
-        amount: airdrop_address_r(&deps.storage).load(address.to_string().as_bytes())?,
     })
 }
 

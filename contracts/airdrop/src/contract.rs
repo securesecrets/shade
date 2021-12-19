@@ -5,12 +5,10 @@ use shade_protocol::{
         QueryMsg, Config, claim_info::RequiredTask
     }
 };
-use crate::{state::{config_w, airdrop_address_w, total_claimed_w, address_in_account_w},
+use crate::{state::{config_w, total_claimed_w, address_in_account_w},
             handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account,
                      try_update_account, try_disable_permit_key, try_claim, try_decay},
             query };
-use crate::handle::try_add_reward_chunk;
-use crate::state::airdrop_total_w;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -43,20 +41,22 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         contract: env.contract.address.clone(),
         dump_address: msg.dump_address,
         airdrop_snip20: msg.airdrop_token.clone(),
+        airdrop_amount: msg.airdrop_amount,
         task_claim,
         start_date: match msg.start_time {
             None => env.block.time,
             Some(date) => date
         },
-        end_date: msg.end_time
+        end_date: msg.end_time,
+        merkle_root: msg.merkle_root,
+        total_accounts: msg.total_accounts,
+        max_amount: msg.max_amount,
     };
 
     config_w(&mut deps.storage).save(&config)?;
 
     // Initialize claim amount
     total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
-
-    airdrop_total_w(&mut deps.storage).save(&Uint128::zero())?;
 
     Ok(InitResponse {
         messages: vec![],
@@ -75,16 +75,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             start_date, end_date
         } => try_update_config(deps, env, admin, dump_address,
                                start_date, end_date),
-        HandleMsg::AddRewardChunk { reward_chunk
-        } => try_add_reward_chunk(deps, env, reward_chunk),
         HandleMsg::AddTasks { tasks
         } => try_add_tasks(deps, &env, tasks),
         HandleMsg::CompleteTask { address
         } => try_complete_task(deps, &env, address),
-        HandleMsg::CreateAccount { addresses
-        } => try_create_account(deps, &env, addresses),
-        HandleMsg::UpdateAccount { addresses
-        } => try_update_account(deps, &env, addresses),
+        HandleMsg::CreateAccount { addresses, partial_tree
+        } => try_create_account(deps, &env, addresses, partial_tree),
+        HandleMsg::UpdateAccount { addresses, partial_tree
+        } => try_update_account(deps, &env, addresses, partial_tree),
         HandleMsg::DisablePermitKey { key
         } => try_disable_permit_key(deps, &env, key),
         HandleMsg::Claim { } => try_claim(deps, &env),
@@ -99,8 +97,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig { } => to_binary(&query::config(&deps)?),
         QueryMsg::GetDates { } => to_binary(&query::dates(&deps)?),
-        QueryMsg::GetEligibility { address } => to_binary(
-            &query::airdrop_amount(&deps, address)?),
         QueryMsg::GetAccount { address, permit } => to_binary(
             &query::account(&deps, address, permit)?),
     }

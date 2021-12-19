@@ -25,6 +25,8 @@ secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit", branch =
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
+# Needed for airdrop
+rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }
 # Needed for transactions
 remain = "0.2.2"
 ripemd160 = "0.9.1"

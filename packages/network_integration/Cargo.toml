@@ -20,3 +20,4 @@ serde_json = { version = "1.0.67"}
 getrandom = { version = "0.2", features = ["js"] } # Prevents wasm from freaking out when running make
 rand = { version = "0.8.4"}
 cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
+rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }

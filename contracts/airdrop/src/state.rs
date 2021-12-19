@@ -4,9 +4,7 @@ use shade_protocol::airdrop::{Config, claim_info::Reward, account::Account};
 use shade_protocol::airdrop::account::AddressProofPermit;
 
 pub static CONFIG_KEY: &[u8] = b"config";
-pub static TOTAL_KEY: &[u8] = b"total";
 pub static CLAIM_STATUS_KEY: &[u8] = b"claim_status_";
-pub static REWARDS_KEY: &[u8] = b"rewards";
 pub static REWARD_IN_ACCOUNT_KEY: &[u8] = b"reward_in_account";
 pub static ACCOUNTS_KEY: &[u8] = b"accounts";
 pub static TOTAL_CLAIMED_KEY: &[u8] = b"total_claimed";
@@ -19,23 +17,6 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
 
 pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
-}
-
-pub fn airdrop_total_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
-    singleton(storage, TOTAL_KEY)
-}
-
-pub fn airdrop_total_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
-    singleton_read(storage, TOTAL_KEY)
-}
-
-// Airdrop eligible address
-pub fn airdrop_address_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Uint128> {
-    bucket_read(REWARDS_KEY, storage)
-}
-
-pub fn airdrop_address_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
-    bucket(REWARDS_KEY, storage)
 }
 
 // Is address added to an account
