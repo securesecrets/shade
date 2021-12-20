@@ -73,7 +73,7 @@ pub enum HandleMsg {
         dump_address: Option<HumanAddr>,
         start_date: Option<u64>,
         end_date: Option<u64>,
-        start_decay: Option<u64>,
+        decay_start: Option<u64>,
     },
     AddTasks {
         tasks: Vec<RequiredTask>
@@ -92,7 +92,7 @@ pub enum HandleMsg {
     },
     DisablePermitKey { key: String },
     Claim {},
-    Decay {},
+    ClaimDecay {},
 }
 
 impl HandleCallback for HandleMsg {
@@ -109,7 +109,7 @@ pub enum HandleAnswer {
     UpdateAccount { status: ResponseStatus },
     DisablePermitKey { status: ResponseStatus },
     Claim { status: ResponseStatus },
-    Decay { status: ResponseStatus },
+    ClaimDecay { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -117,7 +117,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     GetConfig { },
     GetDates { current_date: Option<u64> },
-    GetAccount { address: HumanAddr, permit: AddressProofPermit, current_date: Option<u64> },
+    GetAccount { permit: AddressProofPermit, current_date: Option<u64> },
 }
 
 impl Query for QueryMsg {
@@ -128,7 +128,8 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config, total_claimed: Uint128 },
-    Dates { start: u64, end: Option<u64>, decay_start: Option<u64>, decay_factor: Option<Uint128> },
+    Dates { start: u64, end: Option<u64>,
+        decay_start: Option<u64>, decay_factor: Option<Uint128> },
     Account {
         // Total eligible
         total: Uint128,

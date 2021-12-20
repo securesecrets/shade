@@ -7,7 +7,7 @@ use shade_protocol::{
 };
 use crate::{state::{config_w, total_claimed_w, address_in_account_w},
             handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account,
-                     try_update_account, try_disable_permit_key, try_claim, try_decay},
+                     try_update_account, try_disable_permit_key, try_claim, try_claim_decay},
             query };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -93,7 +93,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::UpdateConfig {
             admin, dump_address,
-            start_date, end_date, start_decay
+            start_date, end_date, decay_start: start_decay
         } => try_update_config(deps, env, admin, dump_address,
                                start_date, end_date, start_decay),
         HandleMsg::AddTasks { tasks
@@ -107,7 +107,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::DisablePermitKey { key
         } => try_disable_permit_key(deps, &env, key),
         HandleMsg::Claim { } => try_claim(deps, &env),
-        HandleMsg::Decay { } => try_decay(deps, &env),
+        HandleMsg::ClaimDecay { } => try_claim_decay(deps, &env),
     }
 }
 
@@ -118,7 +118,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig { } => to_binary(&query::config(&deps)?),
         QueryMsg::GetDates { current_date } => to_binary(&query::dates(&deps, current_date)?),
-        QueryMsg::GetAccount { address, permit, current_date } => to_binary(
-            &query::account(&deps, address, permit, current_date)?),
+        QueryMsg::GetAccount { permit, current_date } => to_binary(
+            &query::account(&deps, permit, current_date)?),
     }
 }

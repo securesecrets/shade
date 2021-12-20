@@ -344,7 +344,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_decay<S: Storage, A: Api, Q: Querier>(
+pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
 ) -> StdResult<HandleResponse> {
@@ -363,7 +363,7 @@ pub fn try_decay<S: Storage, A: Api, Q: Querier>(
                 return Ok(HandleResponse {
                     messages,
                     log: vec![],
-                    data: Some( to_binary( &HandleAnswer::Decay {
+                    data: Some( to_binary( &HandleAnswer::ClaimDecay {
                         status: ResponseStatus::Success } )? )
                 })
             }

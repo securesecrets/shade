@@ -26,19 +26,14 @@ pub fn dates<S: Storage, A: Api, Q: Querier>
 }
 
 pub fn account<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>, address: HumanAddr,
-    permit: AddressProofPermit, current_date: Option<u64>
+    deps: &Extern<S, A, Q>, permit: AddressProofPermit, current_date: Option<u64>
 ) -> StdResult<QueryAnswer> {
 
     let config = config_r(&deps.storage).load()?;
 
     let account_address = validate_permit(&deps.storage, &permit, config.contract)?;
 
-    if account_address != address {
-        return Err(StdError::unauthorized())
-    }
-
-    let account = account_r(&deps.storage).load(address.to_string().as_bytes())?;
+    let account = account_r(&deps.storage).load(account_address.to_string().as_bytes())?;
 
     // Calculate eligible tasks
     let config = config_r(&deps.storage).load()?;
@@ -48,7 +43,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
     for (index, task) in config.task_claim.iter().enumerate() {
         // Check if task has been completed
         let state = claim_status_r(&deps.storage, index).may_load(
-            address.to_string().as_bytes())?;
+            account_address.to_string().as_bytes())?;
 
         match state {
             // Ignore if none
@@ -80,7 +75,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
 
     Ok(QueryAnswer::Account {
         total: account.total_claimable,
-        claimed: account_total_claimed_r(&deps.storage).load(address.to_string().as_bytes())?,
+        claimed: account_total_claimed_r(&deps.storage).load(account_address.to_string().as_bytes())?,
         unclaimed,
         finished_tasks
     })
