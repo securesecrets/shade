@@ -4,6 +4,9 @@ pub mod proposal_state;
 pub mod handle;
 pub mod query;
 
+#[cfg(test)]
+mod test;
+
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::contract;

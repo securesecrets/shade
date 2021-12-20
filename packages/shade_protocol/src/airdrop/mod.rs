@@ -31,7 +31,7 @@ pub struct Config {
     pub merkle_root: Binary,
     // tree height
     pub total_accounts: u32,
-    // max possible reward amount/ used to prevent collision possibility
+    // max possible reward amount; used to prevent collision possibility
     pub max_amount: Uint128
 }
 

@@ -67,19 +67,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
             state.end_date = Some(end_date);
         }
-        if let Some(decay_start) = decay_start {
-            // Avoid date collisions
-            if let Some(end_date) = state.end_date {
-                if decay_start > end_date {
-                    return Err(StdError::generic_err("New start of decay is after end date"))
-                }
-            }
-            else {
-                return Err(StdError::generic_err("No end date set"))
-            }
-
-            state.decay_start = Some(decay_start)
-        }
 
         Ok(state)
     })?;
@@ -139,9 +126,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasnt ended
-    if !available(&config, env) {
-        return Err(StdError::unauthorized())
-    }
+    available(&config, &env)?;
 
     // Check that account doesnt exist
     let sender = env.message.sender.to_string();
@@ -155,7 +140,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     };
 
     // Validate permits
-    validate_address_permits(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
 
     // Save account
     account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
@@ -187,9 +172,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasnt ended
-    if !available(&config, env) {
-        return Err(StdError::unauthorized())
-    }
+    available(&config, &env)?;
 
     // Get account
     let sender = env.message.sender.clone().to_string();
@@ -200,7 +183,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     let (redeem_amount, completed_percentage) = claim_tokens(&mut deps.storage, env, &config, &account)?;
 
     // Setup the new addresses
-    validate_address_permits(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
 
     // Calculate the total new address amount
     let added_address_total = (account.total_claimable - old_claim_amount)?;
@@ -293,9 +276,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasnt ended
-    if !available(&config, &env) {
-        return Err(StdError::unauthorized())
-    }
+    available(&config, &env)?;
 
     // Get account
     let sender = env.message.sender.clone();
@@ -413,7 +394,7 @@ pub fn claim_tokens<S: Storage>(
 }
 
 /// Validates all of the information and updates relevant states
-pub fn validate_address_permits<S: Storage>(
+pub fn try_add_account_addresses<S: Storage>(
     storage: &mut S,
     config: &Config,
     sender: &HumanAddr,
@@ -426,9 +407,10 @@ pub fn validate_address_permits<S: Storage>(
 
     // Iterate addresses
     for permit in addresses.iter() {
-        // Check permit legitimacy / skip if permit is sender
         let address: HumanAddr;
+        // Avoid verifying sender
         if &permit.params.address != sender {
+            // Check permit legitimacy
             address = validate_permit(storage, permit, config.contract.clone())?;
             if address != permit.params.address {
                 return Err(StdError::generic_err("Signer address is not the same as the permit address"))
@@ -443,7 +425,7 @@ pub fn validate_address_permits<S: Storage>(
             return Err(StdError::generic_err("Amount exceeds maximum amount"))
         }
 
-        // Check that address has not been added to an account
+        // Update address if its not in an account
         address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
             if state.is_some() {
                 return Err(StdError::generic_err(
@@ -493,20 +475,20 @@ pub fn validate_address_permits<S: Storage>(
     Ok(())
 }
 
-pub fn available( config: &Config, env: &Env ) -> bool {
+pub fn available( config: &Config, env: &Env ) -> StdResult<()> {
     let current_time = env.block.time;
 
     // Check if airdrop started
     if current_time < config.start_date {
-        return false
+        return Err(StdError::generic_err(format!("Airdrop starts on {}", config.start_date)))
     }
     if let Some(end_date) = config.end_date {
         if current_time > end_date {
-            return false
+            return Err(StdError::generic_err(format!("Airdrop ended on {}", end_date)))
         }
     }
 
-    true
+    Ok(())
 }
 
 pub fn calculate_decay_factor(min: u64, x: u64, max: u64) -> Decimal {

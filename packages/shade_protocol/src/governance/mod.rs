@@ -164,8 +164,7 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetProposalVotes { proposal_id: Uint128 },
-    //TODO: IMPLEMENT THE STATUS FLAG
-    GetProposals { total: Uint128, start: Uint128, status: Option<proposal::ProposalStatus> },
+    GetProposals { start: Uint128, end: Uint128, status: Option<proposal::ProposalStatus> },
     GetProposal { proposal_id: Uint128 },
     GetTotalProposals {},
     GetSupportedContracts {},
