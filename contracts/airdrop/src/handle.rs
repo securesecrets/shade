@@ -5,7 +5,7 @@ use crate::state::{
     total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_permit,
     revoke_permit
 };
-use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::{RequiredTask, Reward},
+use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::{RequiredTask},
                                account::{Account, AddressProofPermit}},
                      generic_response::ResponseStatus};
 use secret_toolkit::snip20::send_msg;
@@ -413,7 +413,7 @@ pub fn claim_tokens<S: Storage>(
     account: &Account,
     completed_percentage: Uint128,
     unclaimed_percentage: Uint128,
-) -> StdResult<(Uint128)> { // send_amount
+) -> StdResult<Uint128> { // send_amount
     let sender = env.message.sender.to_string();
 
     // Amount to be redeemed

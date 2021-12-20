@@ -5,7 +5,7 @@ use shade_protocol::{
         QueryMsg, Config, claim_info::RequiredTask
     }
 };
-use crate::{state::{config_w, total_claimed_w, address_in_account_w},
+use crate::{state::{config_w, total_claimed_w},
             handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account,
                      try_update_account, try_disable_permit_key, try_claim, try_claim_decay},
             query };

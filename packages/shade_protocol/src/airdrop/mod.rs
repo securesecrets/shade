@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use crate::{asset::Contract, generic_response::ResponseStatus,
-            airdrop::{claim_info::{RequiredTask, Reward}, account::AddressProofPermit}};
+            airdrop::{claim_info::{RequiredTask}, account::AddressProofPermit}};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {

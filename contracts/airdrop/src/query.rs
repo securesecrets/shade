@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, HumanAddr, Uint128, StdError};
+use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use shade_protocol::airdrop::{QueryAnswer, account::AddressProofPermit, claim_info::RequiredTask};
 use crate::handle::decay_factor;
 use crate::state::{config_r, claim_status_r, total_claimed_r, validate_permit, account_r, account_total_claimed_r};
