@@ -12,6 +12,7 @@ default = []
 
 [dependencies]
 colored = "2.0.0"
+chrono = "0.4.19"
 shade-protocol = { version = "0.1.0", path = "../shade_protocol" }
 secretcli = { version = "0.1.0", path = "../secretcli" }
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
