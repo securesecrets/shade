@@ -32,8 +32,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     //TODO: restrict to admin
 
     match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
-        Some(a) => {
-            let resp: snip20::Balance = snip20::QueryMsg::Balance { 
+        Some(a) => Ok(snip20::QueryMsg::Balance { 
                 address: self_address_r(&deps.storage).load()?, 
                 key: viewing_key_r(&deps.storage).load()?,
             }.query(
@@ -41,9 +40,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
                  1,
                  a.contract.code_hash,
                  a.contract.address,
-            )?;
-            Ok(resp)
-        }
+            )?),
         None => { 
             Err(StdError::NotFound { 
                     kind: asset.to_string(), 

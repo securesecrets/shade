@@ -109,6 +109,8 @@ class SNIP20(Contract):
         """
         msg = json.dumps(
             {"balance": {"key": password, "address": address}})
+
+        msg = {"balance": {"key": password, "address": address}}
         res = self.query(msg)
 
         return res["balance"]["amount"]
