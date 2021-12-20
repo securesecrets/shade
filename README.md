@@ -1,14 +1,18 @@
 # Shade Protocol Core Contracts
 | Contract                    | Reference                         | Description                           |
 | --------------------------- | --------------------------------- | ------------------------------------- |
-| [`mint`](./contracts/mint)  | [doc](./contracts/mint/README.md) | Handles asset burning and silk minting|
-| [`oracle`](./contracts/oracle)  | [doc](./contracts/oracle/README.md) | Handles asset price queries |
-| [`treasury`](./contracts/treasury)  | [doc](./contracts/treasury/README.md) | Handles asset price queries |
+| [`governance`](./contracts/governance)  | [doc](./contracts/governance/README.md) | Protocol's governance module |
+| [`shade_staking`](./contracts/staking)  | [doc](./contracts/staking/README.md) | Snip20 staker |
+| [`scrt_staking`](./contracts/scrt_staking)  | [doc](./contracts/scrt_staking/README.md) | SCRT staker |
+| [`treasury`](./contracts/treasury)  | [doc](./contracts/treasury/README.md) | Protocol's asset manager |
+| [`mint`](./contracts/micro_mint)  | [doc](./contracts/micro_mint/README.md) | Asset burner and minter |
+| [`oracle`](./contracts/oracle)  | [doc](./contracts/oracle/README.md) | Asset price querier |
+| [`airdrop`](./contracts/airdrop)  | [doc](./contracts/airdrop/README.md) | Task based, multichain snip20 airdropper  |
 
 ## Development
 
 ## Development Environment
-Instlal docker for local envirnment
+Install docker for local environment
 
 Source from [testnet](https://build.scrt.network/dev/quickstart.html#setup-the-local-developer-testnet)
 
@@ -16,12 +20,15 @@ Source from [testnet](https://build.scrt.network/dev/quickstart.html#setup-the-l
 docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1337:1337 -v $(pwd):/root/code --name secretdev enigmampc/secret-network-sw-dev
 
 docker exec -it secretdev /bin/bash
-
 ```
 #### Testing the environment
-Inside the container:
+First go inside the repo and build all of the contracts:
 ```
-run python3 contract_tester.py
+make
+```
+Then inside the container run:
+```
+cargo test -- --nocapture --test-threads=1
 ```
 
 ### Environment Setup
@@ -47,26 +54,24 @@ rustup target add wasm32-unknown-unknown
 apt install binaryen
 ```
 
-### Unit / Integration Tests
+### Unit Tests
 
 Each contract contains Rust unit and integration tests embedded within the contract source directories. You can run:
 
 ```sh
 cargo unit-test
-cargo integration-test
 ```
 
 ### Compiling
 
-Run this script to run all of the contract's unit / integration tests and then prepare the contracts for production in /contracts/compiled:
+Run this script to run all of the contract's unit / integration tests and then prepare the contracts for production in /compiled:
 
 ```sh
-bash ./compile-contracts.sh
+make
 ```
 
 ### Testing
 
-You can optionally run extended tests using the [tester](contracts/compiled/tester.py)
+You can optionally run extended tests using the [tester](packages/network_integration)
 
-To run a test deployment on a public testnet you can run ```tester.py --testnet public```.
-For the private testnet you can run ```tester.py --testnet private```.
+For the private testnet you can run ```cargo test -- --nocapture --test-threads=1```
