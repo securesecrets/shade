@@ -99,7 +99,8 @@ pub enum QueryMsg {
     //TODO: find a way to query this and return
     //Unbondings {},
     Delegations {},
-    Delegation { validator: HumanAddr },
+    //Delegation { validator: HumanAddr },
+    Rewards {},
 }
 
 impl Query for QueryMsg {

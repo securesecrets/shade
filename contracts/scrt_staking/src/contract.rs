@@ -108,6 +108,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         // All delegations
         QueryMsg::Delegations { } => to_binary(&query::delegations(deps)?),
-        QueryMsg::Delegation { validator } => to_binary(&query::delegation(deps, validator)?),
+        //QueryMsg::Delegation { validator } => to_binary(&query::delegation(deps, validator)?),
+        QueryMsg::Rewards { } => to_binary(&query::rewards(deps)?),
     }
 }

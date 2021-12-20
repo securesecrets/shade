@@ -5,8 +5,15 @@ use cosmwasm_std::{
     CosmosMsg, Uint128,
     Coin, StakingMsg,
     Validator, Querier, HumanAddr,
+    BankQuery, BalanceResponse,
 };
-use secret_toolkit::snip20::redeem_msg;
+
+use secret_toolkit::{
+    snip20::{
+        redeem_msg, deposit_msg,
+        send_msg,
+    },
+};
 
 use shade_protocol::{
     scrt_staking::{
@@ -16,8 +23,12 @@ use shade_protocol::{
     generic_response::ResponseStatus,
 };
 
-use crate::state::{
-    config_w, config_r, 
+use crate::{
+    query,
+    state::{
+        config_w, config_r, 
+        self_address_r,
+    },
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -31,14 +42,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     debug_print!("Received {}", amount);
 
-    //TODO: verify sscrt else (fail/send to treasury)
-
-    // Redeem all sscrt for scrt
-    // Fail if incorrect denom
-    // Stake all current scrt - unbondings
-
-    let mut messages: Vec<CosmosMsg> = vec![];
-
     let config = config_r(&deps.storage).load()?;
 
     if config.sscrt.address != env.message.sender {
@@ -48,30 +51,26 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
         });
     }
 
-    // Redeem sSCRT -> SCRT
-    messages.push(
-        redeem_msg(
-            amount,
-            None,
-            None,
-            256,
-            config.sscrt.code_hash.clone(),
-            config.sscrt.address.clone(),
-        )?
-    );
-
     let validator = choose_validator(&deps, env.block.time)?;
 
-    messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
-        validator: validator.address.clone(),
-        amount: Coin {
-            amount,
-            denom: "uscrt".to_string(),
-        }
-    }));
-
     Ok(HandleResponse {
-        messages: messages,
+        messages: vec![
+            redeem_msg(
+                amount,
+                None,
+                None,
+                256,
+                config.sscrt.code_hash.clone(),
+                config.sscrt.address.clone(),
+            )?,
+            CosmosMsg::Staking(StakingMsg::Delegate {
+                validator: validator.address.clone(),
+                amount: Coin {
+                    amount,
+                    denom: "uscrt".to_string(),
+                }
+            }),
+        ],
         log: vec![],
         data: Some( to_binary( 
             &HandleAnswer::Receive {
@@ -117,6 +116,11 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     validator: HumanAddr,
 ) -> StdResult<HandleResponse> {
 
+    /* Unbonding to the scrt staking contract
+     * Once scrt is on balance sheet, treasury can claim
+     * and this contract will take all scrt->sscrt and send
+     */
+
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin && env.message.sender != config.treasury {
@@ -125,15 +129,13 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     if let Some(delegation) = deps.querier.query_delegation(env.contract.address, validator.clone())? {
 
-        let mut messages: Vec<CosmosMsg> = vec![];
-
-        messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
-            validator,
-            amount: delegation.amount.clone(),
-        }));
-
         return Ok(HandleResponse {
-            messages: messages,
+            messages: vec![
+                CosmosMsg::Staking(StakingMsg::Undelegate {
+                    validator,
+                    amount: delegation.amount.clone(),
+                }),
+            ],
             log: vec![],
             data: Some( to_binary( 
                 &HandleAnswer::Unbond {
@@ -164,13 +166,53 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
+    //TODO: query scrt balance and deposit into sscrt
+
+    let mut messages = vec![];
+    let address = self_address_r(&deps.storage).load()?;
+
+    let amount = query::rewards(&deps)?;
+
+    messages.push(CosmosMsg::Staking(StakingMsg::Withdraw {
+        validator,
+        recipient: Some(address.clone()),
+    }));
+
+    // Get total scrt balance, to get recently claimed rewards + lingering unbonded scrt
+    let scrt_balance: BalanceResponse = deps.querier.query(&BankQuery::Balance {
+        address: address.clone(),
+        denom: "uscrt".to_string(),
+    }.into())?;
+
+    //let amount = scrt_balance.amount.amount;
+
+    messages.push(deposit_msg(
+        amount,
+        None,
+        256,
+        config.sscrt.code_hash.clone(),
+        config.sscrt.address.clone(),
+    )?);
+
+    /* NOTE: This will likely trigger the receive callback which
+     *       would result in re-delegating a portion of the funds.
+     *       This case will need to be tested and mitigated by either
+     *       - accounting for it when rebalancing
+     *       - add a "unallocated" flag with funds to force treasury not to 
+     *         allocate them, to then be allocated at rebalancing
+     */
+    messages.push(send_msg(
+        config.treasury,
+        amount,
+        None,
+        None,
+        1,
+        config.sscrt.code_hash.clone(),
+        config.sscrt.address.clone(),
+    )?);
+
     Ok(HandleResponse {
-        messages: vec![
-            CosmosMsg::Staking(StakingMsg::Withdraw {
-                validator,
-                recipient: Some(config.treasury),
-            })
-        ],
+        messages,
         log: vec![],
         data: Some( to_binary(
             &HandleAnswer::Claim {
@@ -200,11 +242,12 @@ pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
     }
 
     if validators.len() == 0 {
-        return Err(StdError::GenericErr { 
+        return Err(StdError::GenericErr {
             msg: "No validators within bounds".to_string(),
-            backtrace: None 
+            backtrace: None
         })
     }
+
     // seed will likely be env.block.time
     Ok(validators[(seed % validators.len() as u64) as usize].clone())
 }

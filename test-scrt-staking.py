@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+from time import sleep
 from contractlib.contractlib import Contract
 from contractlib.utils import gen_label
 from contractlib.secretlib.secretlib import run_command, execute_contract, query_contract
@@ -21,19 +22,21 @@ chain_config = {
 
 viewing_key = 'password'
 
+
 account_key = 'a' #if chain_config['chain-id'] == 'holodeck-2' else 'a'
-backend = None# if chain_config['chain-id'] == 'holodeck-2' else 'test'
+backend = 'test' #None if chain_config['chain-id'] == 'holodeck-2' else 'test'
 account = run_command(['secretd', 'keys', 'show', '-a', account_key]).rstrip()
+
 
 print('ACCOUNT', account)
 
 print('Configuring sSCRT')
 sscrt = SNIP20(gen_label(8), 
-        name='secretSCRT', symbol='SSCRT', 
-        decimals=6, public_total_supply=True, 
-        enable_deposit=True, enable_burn=True,
-        enable_redeem=True, admin=account, 
-        uploader=account, backend=backend)
+            name='secretSCRT', symbol='SSCRT', 
+            decimals=6, public_total_supply=True, 
+            enable_deposit=True, enable_burn=True,
+            enable_redeem=True, admin=account, 
+            uploader=account, backend=backend)
 print(sscrt.address)
 sscrt.execute({'set_viewing_key': {'key': viewing_key}})
 
@@ -43,6 +46,7 @@ half_amount = '100000000uscrt'
 
 print('Depositing', deposit_amount)
 sscrt.execute({'deposit': {}}, account, deposit_amount)
+print('SSCRT', sscrt.get_balance(account, viewing_key))
 
 '''
 treasury = Contract(
@@ -110,38 +114,62 @@ print(treasury.query({'allocations': {'asset': sscrt.address}}))
 #print(scrt_staking.query({'config': {}}))
 '''
 print('Sending 100000000 usscrt direct to staking')
-print(sscrt.execute({
+sscrt.execute({
         "send": {
             "recipient": scrt_staking.address,
             "amount": str(100000000),
         },
     },
     account,
-))
+)
 
-
-delegations = scrt_staking.query({'delegations': {}})
+'''
+print('staking sscrt')
+print(sscrt.get_balance(scrt_staking.address, viewing_key))
+'''
 
 print('DELEGATIONS')
-for delegation in delegations:
-    print(scrt_staking.query({'delegation': {'validator': delegation['validator']}}))
+delegations = scrt_staking.query({'delegations': {}})
+print(delegations)
 
-print('BALANCES')
-print(sscrt.query({'balance': {'address': scrt_staking.address, 'key': viewing_key}}))
-print(run_command(['secretd', 'q', 'account', scrt_staking.address]))
+
+sleep(3)
+scrt_balance = json.loads(run_command(['secretd', 'q', 'bank', 'balances', account]))
+print('SCRT', scrt_balance['balances'][0]['amount'])
+print('SSCRT', sscrt.get_balance(account, viewing_key))
+print('REWARDS', scrt_staking.query({'rewards': {}}))
+'''
+for delegation in delegations:
+    print(json.dumps({'delegation': {'validator': delegation['validator']}}))
+    print(scrt_staking.query({'delegation': {'validator': delegation['validator']}}))
+'''
+
+'''
+print('Treasury sSCRT Balance')
+print(treasury.query({'balance': {'asset': sscrt.address}}))
+'''
+
+#print('BALANCES')
+#print(sscrt.query({'balance': {'address': scrt_staking.address, 'key': viewing_key}}))
+#print(run_command(['secretd', 'q', 'account', scrt_staking.address]))
 
 '''
 print('UNBONDING')
 for delegation in delegations:
     print(scrt_staking.execute({'unbond': {'validator': delegation['validator']}}))
+'''
 
-print('CLAIMING')
+print('CLAIMING REWARDS')
 for delegation in delegations:
+    print('CLAIM VD', delegation['validator'])
     print(scrt_staking.execute({'claim': {'validator': delegation['validator']}}))
 
-print('Treasury sSCRT Balance')
-print(treasury.query({'balance': {'asset': sscrt.address}}))
+scrt_balance = json.loads(run_command(['secretd', 'q', 'bank', 'balances', account]))
+print('SCRT', scrt_balance['balances'][0]['amount'])
+print('SSCRT', sscrt.get_balance(account, viewing_key))
+print('REWARDS', scrt_staking.query({'rewards': {}}))
 
+'''
 for i in range(3):
     print('Sending 100000000 usscrt to treasury')
     print(sscrt.execute({
