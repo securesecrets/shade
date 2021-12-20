@@ -54,11 +54,11 @@ pub enum HandleMsg {
         admin: Option<HumanAddr>,
         band: Option<Contract>,
     },
-    // Register Secret Swap Pair (should be */SCRT or SSCRT/*)
+    // Register Secret Swap Pair (should be */sSCRT or sSCRT/*)
     RegisterSswapPair {
         pair: Contract,
     },
-    // Unregister Secret Swap Pair that corresponds to symbol/SCRT or SSCRT/symbol
+    // Unregister Secret Swap Pair that corresponds to symbol/sSCRT or sSCRT/symbol
     UnregisterSswapPair {
         symbol: String,
     },
