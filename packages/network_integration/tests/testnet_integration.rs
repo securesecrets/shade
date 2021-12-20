@@ -220,7 +220,6 @@ fn run_airdrop() -> Result<()> {
     print_warning("Getting initial account information");
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
             permit: a_permit.clone(),
             current_date: None
         };
@@ -248,7 +247,6 @@ fn run_airdrop() -> Result<()> {
 
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
             permit: a_permit.clone(),
             current_date: None
         };
@@ -287,7 +285,6 @@ fn run_airdrop() -> Result<()> {
     /// Query that all of the airdrop is claimed
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
             permit: a_permit.clone(),
             current_date: None
         };
@@ -310,7 +307,6 @@ fn run_airdrop() -> Result<()> {
 
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
             permit: a_permit.clone(),
             current_date: None
         };
@@ -332,7 +328,6 @@ fn run_airdrop() -> Result<()> {
 
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
             permit: new_a_permit.clone(),
             current_date: None
         };
@@ -386,7 +381,7 @@ fn run_airdrop() -> Result<()> {
         thread::sleep(time::Duration::from_secs(end_date - current + 4));
     }
 
-    test_contract_handle(&airdrop::HandleMsg::Decay {},
+    test_contract_handle(&airdrop::HandleMsg::ClaimDecay {},
                          &airdrop, ACCOUNT_KEY, Some(GAS),
                          Some("test"), None)?;
 
