@@ -116,8 +116,8 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetConfig { },
-    GetDates { },
-    GetAccount { address: HumanAddr, permit: AddressProofPermit },
+    GetDates { current_date: Option<u64> },
+    GetAccount { address: HumanAddr, permit: AddressProofPermit, current_date: Option<u64> },
 }
 
 impl Query for QueryMsg {
@@ -128,7 +128,7 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config, total_claimed: Uint128 },
-    Dates { start: u64, end: Option<u64> },
+    Dates { start: u64, end: Option<u64>, decay_start: Option<u64>, decay_factor: Option<Uint128> },
     Account {
         // Total eligible
         total: Uint128,

@@ -117,8 +117,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig { } => to_binary(&query::config(&deps)?),
-        QueryMsg::GetDates { } => to_binary(&query::dates(&deps)?),
-        QueryMsg::GetAccount { address, permit } => to_binary(
-            &query::account(&deps, address, permit)?),
+        QueryMsg::GetDates { current_date } => to_binary(&query::dates(&deps, current_date)?),
+        QueryMsg::GetAccount { address, permit, current_date } => to_binary(
+            &query::account(&deps, address, permit, current_date)?),
     }
 }
