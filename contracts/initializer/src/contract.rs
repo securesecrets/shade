@@ -94,6 +94,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Contracts {} => to_binary(&query_contracts(deps)?),
+        QueryMsg::GetContracts {} => to_binary(&query_contracts(deps)?),
     }
 }

@@ -9,6 +9,9 @@ from contractlib.utils import gen_label
 #sscrt_snip = 'secret1s7c6xp9wltthk5r6mmavql4xld5me3g37guhsx'
 #sscrt_code_hash = 'cd400fb73f5c99edbc6aab22c2593332b8c9f2ea806bf9b42e3a523f3ad06f62'
 
+USER = 'a' # drpresident
+KEYRING = 'test'
+
 silk_snip = 'secret12dlkq02clar92hrtxsd8dy54xcm088mzu2vftu'
 silk_pair = 'secret1j3llhgudfqtuqq3qhfflqzyhu5dgrxeeztxhqx'
 
@@ -43,7 +46,7 @@ sscrt = Contract(
 sim = {
   "simulation": {
     "offer_asset": {
-    # 1 sSCRT?
+      # 1 sSCRT
       "amount": '1000000',
       "info": {
         "token": {
@@ -80,7 +83,7 @@ def sswap_price(snip20, sscrt_pair):
     return_amount = int(results['return_amount'])
     return normalize(return_amount, info['decimals']), info['symbol']
 
-oracle = Oracle(gen_label(8), band, sscrt, admin='drpresident', uploader='drpresident', backend=None)
+oracle = Oracle(gen_label(8), band, sscrt, admin=USER, uploader=USER, backend=KEYRING)
 print(oracle.address)
 print(oracle.code_hash)
 '''
@@ -93,8 +96,8 @@ oracle = Oracle('', band, sscrt, instantiated_contract=pre_oracle)
 
 print('Registering SETH')
 print(oracle.register_sswap_pair(seth_pair))
-print(oracle.get_price('SETH')['rate'], 'SETH')
+print(oracle.price('SETH')['rate'], 'SETH')
 
 print('Registering SOCEAN')
 print(oracle.register_sswap_pair(socean_pair))
-print(oracle.get_price('SOCEAN')['rate'], 'SOCEAN')
+print(oracle.price('SOCEAN')['rate'], 'SOCEAN')

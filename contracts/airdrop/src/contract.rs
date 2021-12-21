@@ -2,23 +2,22 @@ use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResp
 use shade_protocol::{
     airdrop::{
         InitMsg, HandleMsg,
-        QueryMsg, Config
+        QueryMsg, Config, claim_info::RequiredTask
     }
 };
-use crate::{state::{config_w, reward_w, claim_status_w, user_total_claimed_w, total_claimed_w},
-            handle::{try_update_config, try_add_tasks, try_complete_task, try_claim, try_decay},
+use crate::{state::{config_w, total_claimed_w, address_in_account_w},
+            handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account,
+                     try_update_account, try_disable_permit_key, try_claim, try_decay},
             query };
-use shade_protocol::airdrop::RequiredTask;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
     // Setup task claim
     let mut task_claim= vec![RequiredTask {
-        address: env.contract.address,
+        address: env.contract.address.clone(),
         percent: msg.default_claim
     }];
     let mut claim = msg.task_claim;
@@ -34,32 +33,24 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::GenericErr { msg: "tasks above 100%".to_string(), backtrace: None })
     }
 
-    // Store the delegators list
-    let mut airdrop_total = Uint128::zero();
-    for reward in msg.rewards {
-        let key = reward.address.to_string();
-
-        reward_w(&mut deps.storage).save(key.as_bytes(), &reward)?;
-        airdrop_total += reward.amount;
-        user_total_claimed_w(&mut deps.storage).save(key.as_bytes(), &Uint128::zero())?;
-        // Save the initial claim
-        claim_status_w(&mut deps.storage, 0).save(key.as_bytes(), &false)?;
-    }
-
     let config = Config{
         admin: match msg.admin {
             None => { env.message.sender.clone() }
             Some(admin) => { admin }
         },
+        contract: env.contract.address.clone(),
         dump_address: msg.dump_address,
         airdrop_snip20: msg.airdrop_token.clone(),
-        airdrop_total,
+        airdrop_amount: msg.airdrop_amount,
         task_claim,
         start_date: match msg.start_time {
             None => env.block.time,
             Some(date) => date
         },
-        end_date: msg.end_time
+        end_date: msg.end_time,
+        merkle_root: msg.merkle_root,
+        total_accounts: msg.total_accounts,
+        max_amount: msg.max_amount,
     };
 
     config_w(&mut deps.storage).save(&config)?;
@@ -88,6 +79,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => try_add_tasks(deps, &env, tasks),
         HandleMsg::CompleteTask { address
         } => try_complete_task(deps, &env, address),
+        HandleMsg::CreateAccount { addresses, partial_tree
+        } => try_create_account(deps, &env, addresses, partial_tree),
+        HandleMsg::UpdateAccount { addresses, partial_tree
+        } => try_update_account(deps, &env, addresses, partial_tree),
+        HandleMsg::DisablePermitKey { key
+        } => try_disable_permit_key(deps, &env, key),
         HandleMsg::Claim { } => try_claim(deps, &env),
         HandleMsg::Decay { } => try_decay(deps, &env),
     }
@@ -100,7 +97,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig { } => to_binary(&query::config(&deps)?),
         QueryMsg::GetDates { } => to_binary(&query::dates(&deps)?),
-        QueryMsg::GetEligibility { address } => to_binary(
-            &query::airdrop_amount(&deps, address)?),
+        QueryMsg::GetAccount { address, permit } => to_binary(
+            &query::account(&deps, address, permit)?),
     }
 }

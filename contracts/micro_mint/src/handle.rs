@@ -17,7 +17,7 @@ use shade_protocol::{
     mint::MintMsgHook,
     snip20::{Snip20Asset, token_config_query, TokenConfig},
     oracle::{
-        QueryMsg::GetPrice,
+        QueryMsg::Price,
     },
     band::ReferenceData,
     asset::Contract,
@@ -221,7 +221,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
     // Check if admin
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
     // Check if contract enabled
@@ -233,7 +233,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     let mut config = config_w(&mut deps.storage);
     config.update(|mut state| {
         if let Some(owner) = owner {
-            state.owner = owner;
+            state.admin = owner;
         }
         if let Some(oracle) = oracle {
             state.oracle = oracle;
@@ -264,7 +264,7 @@ pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
     // Check if contract enabled
@@ -314,7 +314,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
     // Check if admin
-    if env.message.sender != config.owner {
+    if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
     // Check if contract enabled
@@ -491,7 +491,7 @@ fn oracle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Uint128> {
 
     let config: Config = config_r(&deps.storage).load()?;
-    let answer: ReferenceData = GetPrice { 
+    let answer: ReferenceData = Price { 
         symbol: symbol.to_string() 
     }.query(&deps.querier,
              config.oracle.code_hash,

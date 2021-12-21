@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod tests {
     use binary_heap_plus::{BinaryHeap, MinComparator};
-    use shade_protocol::staking::{StakeState, Unbonding, UserStakeState};
+    use shade_protocol::staking::stake::{Stake, Unbonding, UserStake};
     use cosmwasm_std::{Uint128};
     use crate::handle::{calculate_shares, calculate_tokens, stake_weight};
 
@@ -40,14 +40,14 @@ pub mod tests {
         assert_eq!(2, unbonding_heap.pop().unwrap().unbond_time);
     }
 
-    fn init_user() -> UserStakeState {
-        UserStakeState {
+    fn init_user() -> UserStake {
+        UserStake {
             shares: Uint128::zero(),
             tokens_staked: Uint128::zero()
         }
     }
 
-    fn stake(state: &mut StakeState, user: &mut UserStakeState, amount: Uint128) -> Uint128 {
+    fn stake(state: &mut Stake, user: &mut UserStake, amount: Uint128) -> Uint128 {
         let shares = calculate_shares(amount, state);
         state.total_tokens += amount;
         state.total_shares += shares;
@@ -57,7 +57,7 @@ pub mod tests {
         shares
     }
 
-    fn unbond(state: &mut StakeState, user: &mut UserStakeState, amount: Uint128) -> Uint128 {
+    fn unbond(state: &mut Stake, user: &mut UserStake, amount: Uint128) -> Uint128 {
         let shares = calculate_shares(amount, state);
         state.total_tokens = (state.total_tokens - amount).unwrap();
         state.total_shares = (state.total_shares - shares).unwrap();
@@ -69,7 +69,7 @@ pub mod tests {
 
     #[test]
     fn standard_staking() {
-        let mut state = StakeState {
+        let mut state = Stake {
             total_shares: Uint128::zero(),
             total_tokens: Uint128::zero()
         };
@@ -101,7 +101,7 @@ pub mod tests {
 
     #[test]
     fn unbonding() {
-        let mut state = StakeState {
+        let mut state = Stake {
             total_shares: Uint128::zero(),
             total_tokens: Uint128::zero()
         };
@@ -133,7 +133,7 @@ pub mod tests {
 
     #[test]
     fn rewards_distribution() {
-        let mut state = StakeState {
+        let mut state = Stake {
             total_shares: Uint128::zero(),
             total_tokens: Uint128::zero()
         };

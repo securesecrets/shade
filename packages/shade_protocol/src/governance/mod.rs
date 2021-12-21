@@ -1,3 +1,6 @@
+pub mod proposal;
+pub mod vote;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::{HumanAddr, Uint128, Binary};
@@ -35,74 +38,6 @@ pub struct Config {
 pub struct AdminCommand {
     pub msg: String,
     pub total_arguments: u16,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Proposal {
-    // Proposal ID
-    pub id: Uint128,
-    // Target smart contract
-    pub target: String,
-    // Message to execute
-    pub msg: Binary,
-    // Description of proposal
-    pub description: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct QueriedProposal {
-    pub id: Uint128,
-    pub target: String,
-    pub msg: Binary,
-    pub description: String,
-    pub funding_deadline: u64,
-    pub voting_deadline: Option<u64>,
-    pub total_funding: Uint128,
-    pub status: ProposalStatus,
-    pub run_status: Option<ResponseStatus>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ProposalStatus {
-    // Admin command called
-    AdminRequested,
-    // In funding period
-    Funding,
-    // Voting in progress
-    Voting,
-    // Total votes did not reach minimum total votes
-    Expired,
-    // Majority voted No
-    Rejected,
-    // Majority votes yes
-    Passed,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct VoteTally {
-    pub yes: Uint128,
-    pub no: Uint128,
-    pub abstain: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Vote {
-    Yes,
-    No,
-    Abstain,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-/// Used to give weight to votes per user
-pub struct UserVote {
-    pub vote: Vote,
-    pub weight: u8,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -194,7 +129,7 @@ pub enum HandleMsg {
     MakeVote {
         voter: HumanAddr,
         proposal_id: Uint128,
-        votes: VoteTally,
+        votes: vote::VoteTally,
     },
 
     /// Trigger proposal
@@ -227,11 +162,9 @@ pub enum HandleAnswer {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-// TODO: RETURNED PROPOSAL INFO NEEDS TO BE FIXED
 pub enum QueryMsg {
     GetProposalVotes { proposal_id: Uint128 },
-    //TODO: IMPLEMENT THE STATUS FLAG
-    GetProposals { total: Uint128, start: Uint128, status: Option<ProposalStatus> },
+    GetProposals { start: Uint128, end: Uint128, status: Option<proposal::ProposalStatus> },
     GetProposal { proposal_id: Uint128 },
     GetTotalProposals {},
     GetSupportedContracts {},
@@ -247,9 +180,9 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    ProposalVotes { status: VoteTally },
-    Proposals { proposals: Vec<QueriedProposal> },
-    Proposal { proposal: QueriedProposal },
+    ProposalVotes { status: vote::VoteTally },
+    Proposals { proposals: Vec<proposal::QueriedProposal> },
+    Proposal { proposal: proposal::QueriedProposal },
     TotalProposals { total: Uint128 },
     SupportedContracts { contracts: Vec<String> },
     SupportedContract { contract: Contract },

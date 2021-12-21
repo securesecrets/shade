@@ -115,8 +115,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetProposals { total, start, status
-        } => to_binary(&query::proposals(deps, total, start)?),
+        QueryMsg::GetProposals {
+            start, end, status
+        } => to_binary(&query::proposals(deps, start, end, status)?),
 
         QueryMsg::GetProposal { proposal_id } => to_binary(
             &query::proposal(deps, proposal_id)?),

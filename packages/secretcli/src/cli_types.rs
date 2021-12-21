@@ -4,7 +4,9 @@ use serde::{Serialize, Deserialize};
 pub struct TxResponse {
     pub height: String,
     pub txhash: String,
-    pub code: Option<String>,
+    pub codespace: String,
+    pub code: Option<u128>,
+    pub data: String,
     pub raw_log: String
 }
 
@@ -12,12 +14,7 @@ pub struct TxResponse {
 pub struct TxCompute {
     //#[serde(rename="key")]
     //pub msg_key: String,
-    pub raw_input: String,
-    //pub output_data: String,
-    pub output_data_as_string: String,
-    //pub output_log: Vec<String>,
-    pub plaintext_error: String,
-
+    pub input: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -59,8 +56,6 @@ pub struct ListCodeResponse {
     pub id: u128,
     pub creator: String,
     pub data_hash: String,
-    pub source: String,
-    pub builder: String
 }
 
 #[derive(Serialize, Deserialize)]
@@ -77,4 +72,17 @@ pub struct NetContract {
     pub id: String,
     pub address: String,
     pub code_hash: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SignedTx {
+    pub pub_key: PubKey,
+    pub signature: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PubKey {
+    #[serde(rename="type")]
+    pub msg_type: String,
+    pub value: String
 }

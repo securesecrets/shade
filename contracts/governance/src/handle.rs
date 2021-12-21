@@ -19,8 +19,8 @@ use crate::{
 use shade_protocol::{
     generic_response::ResponseStatus::{Success, Failure}, asset::Contract,
     governance::{
-        Proposal, ProposalStatus, HandleAnswer, GOVERNANCE_SELF,
-        AdminCommand, ADMIN_COMMAND_VARIABLE, VoteTally, ProposalStatus::{Passed, Expired, Rejected}
+        proposal::{Proposal, ProposalStatus}, HandleAnswer,
+        GOVERNANCE_SELF, AdminCommand, ADMIN_COMMAND_VARIABLE, vote::VoteTally
     }
 };
 use shade_protocol::generic_response::ResponseStatus;
@@ -248,19 +248,19 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
                 Err(StdError::unauthorized())
             }
             else if total_votes.yes + total_votes.no + total_votes.abstain < config.minimum_votes {
-                Ok(Expired)
+                Ok(ProposalStatus::Expired)
             }
             else if total_votes.yes > total_votes.no {
-                Ok(Passed)
+                Ok(ProposalStatus::Passed)
             }
             else {
-                Ok(Rejected)
+                Ok(ProposalStatus::Rejected)
             }
         }
         None => {
             // Check if user is an admin in order to trigger the proposal
             if config.admin == env.message.sender {
-                Ok(Passed)
+                Ok(ProposalStatus::Passed)
             } else {
                 Err(StdError::unauthorized())
             }
@@ -281,7 +281,7 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check if proposal passed or has a valid target contract
-    if vote_status != Passed || target.is_none() {
+    if vote_status != ProposalStatus::Passed || target.is_none() {
         run_status = Failure;
     }
     else {

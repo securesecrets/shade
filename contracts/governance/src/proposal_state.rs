@@ -1,7 +1,7 @@
 use cosmwasm_std::{Storage, Uint128};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
 use shade_protocol::{
-    governance::{Proposal, ProposalStatus, VoteTally},
+    governance::{proposal::{Proposal, ProposalStatus}, vote::VoteTally},
     generic_response::ResponseStatus,
 };
 use secret_toolkit::snip20::batch::SendAction;

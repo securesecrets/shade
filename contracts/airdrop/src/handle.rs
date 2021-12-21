@@ -1,7 +1,16 @@
-use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128};
-use crate::state::{config_r, config_w, reward_r, claim_status_w, claim_status_r, user_total_claimed_w, total_claimed_w, total_claimed_r};
-use shade_protocol::airdrop::{HandleAnswer, RequiredTask};
-use shade_protocol::generic_response::ResponseStatus;
+use cosmwasm_std::{
+    to_binary, Api, Env, Extern, HandleResponse, Querier,
+    StdError, StdResult, Storage, HumanAddr, Uint128, Binary
+};
+use rs_merkle::{Hasher, MerkleProof, algorithms::Sha256};
+use crate::state::{
+    config_r, config_w, claim_status_w, claim_status_r, account_total_claimed_w,
+    total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_permit,
+    revoke_permit
+};
+use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::{RequiredTask, Reward},
+                               account::{Account, AddressProofPermit}},
+                     generic_response::ResponseStatus};
 use secret_toolkit::snip20::send_msg;
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
@@ -82,24 +91,138 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
+pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    address: HumanAddr,
+    addresses: Vec<AddressProofPermit>,
+    partial_tree: Vec<Binary>,
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
 
-    for (i, item) in config.task_claim.iter().enumerate() {
-        if item.address == env.message.sender {
+    // Check that airdrop hasnt ended
+    available(&config, &env)?;
+
+    // Check that account doesnt exist
+    let sender = env.message.sender.to_string();
+    if account_r(&deps.storage).may_load(sender.as_bytes())?.is_some() {
+        return Err(StdError::generic_err("Account already made"))
+    }
+
+    let mut account = Account {
+        addresses: vec![],
+        total_claimable: Uint128::zero()
+    };
+
+    // Validate permits
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
+
+    // Save account
+    account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
+
+    // Add default claim at index 0
+    account_total_claimed_w(&mut deps.storage).save(sender.as_bytes(), &Uint128::zero())?;
+    claim_status_w(&mut deps.storage, 0).save(sender.as_bytes(), &false)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::CreateAccount {
+            status: ResponseStatus::Success } )? )
+    })
+}
+
+pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    addresses: Vec<AddressProofPermit>,
+    partial_tree: Vec<Binary>,
+) -> StdResult<HandleResponse> {
+
+    // Check if airdrop active
+    let config = config_r(&deps.storage).load()?;
+
+    // Check that airdrop hasnt ended
+    available(&config, &env)?;
+
+    // Get account
+    let sender = env.message.sender.clone().to_string();
+    let mut account = account_r(&deps.storage).load(sender.as_bytes())?;
+
+    // Run the claim function
+    let old_claim_amount = account.total_claimable;
+    let (redeem_amount, completed_percentage) = claim_tokens(&mut deps.storage, env, &config, &account)?;
+
+    // Setup the new addresses
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
+
+    // Calculate the total new address amount
+    let added_address_total = (account.total_claimable - old_claim_amount)?;
+    let mut new_redeem = Uint128::zero();
+    account_total_claimed_w(&mut deps.storage).update(sender.as_bytes(), |claimed| {
+        if completed_percentage == Uint128(100) {
+            new_redeem += added_address_total;
+            Ok(account.total_claimable)
+        }
+        else {
+            new_redeem += completed_percentage.multiply_ratio(
+                added_address_total, Uint128(100));
+            Ok(claimed.unwrap() + new_redeem)
+        }
+    })?;
+
+    total_claimed_w(&mut deps.storage).update(|claimed| {
+        Ok(claimed + new_redeem)
+    })?;
+
+    account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
+
+    Ok(HandleResponse {
+        messages: vec![send_msg(env.message.sender.clone(), redeem_amount+new_redeem,
+                                None, None, 0,
+                                config.airdrop_snip20.code_hash,
+                                config.airdrop_snip20.address)?],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::UpdateAccount {
+            status: ResponseStatus::Success } )? )
+    })
+}
+
+pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    key: String,
+) -> StdResult<HandleResponse> {
+
+    revoke_permit(&mut deps.storage, env.message.sender.to_string(), key);
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::DisablePermitKey {
+            status: ResponseStatus::Success } )? )
+    })
+}
+
+
+pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    account: HumanAddr,
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    for (i, task) in config.task_claim.iter().enumerate() {
+        if task.address == env.message.sender {
             claim_status_w(&mut deps.storage, i).update(
-                address.to_string().as_bytes(), |status| {
+                account.to_string().as_bytes(), |status| {
                     // If there was a state then ignore
-                    if status.is_none() {
-                        Ok(false)
+                    if let Some(status) = status {
+                        Ok(status)
                     }
                     else {
-                        Err(StdError::unauthorized())
+                        Ok(false)
                     }
                 })?;
 
@@ -120,60 +243,21 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
 ) -> StdResult<HandleResponse> {
+
     let config = config_r(&deps.storage).load()?;
 
-    // Check if airdrop started
-    if env.block.time < config.start_date {
-        return Err(StdError::unauthorized())
-    }
-    if let Some(end_date) = config.end_date {
-        if env.block.time > end_date {
-            return Err(StdError::unauthorized())
-        }
-    }
+    // Check that airdrop hasnt ended
+    available(&config, &env)?;
 
-    let user = env.message.sender.clone();
-    let user_key = user.to_string();
+    // Get account
+    let sender = env.message.sender.clone();
+    let account = account_r(&deps.storage).load(sender.to_string().as_bytes())?;
 
-    let eligible_amount = reward_r(&deps.storage).load(user_key.as_bytes())?.amount;
-
-    let mut claimed_percentage = Uint128::zero();
-    let mut total = Uint128::zero();
-    for (i, task) in config.task_claim.iter().enumerate() {
-        // Check if completed
-        let state = claim_status_r(&deps.storage, i).may_load(
-            user_key.as_bytes())?;
-        match state {
-            None => {}
-            Some(claimed) => {
-                claimed_percentage += task.percent;
-                if !claimed {
-                    claim_status_w(&mut deps.storage, i).save(
-                        user_key.as_bytes(), &true)?;
-                    total += task.percent.multiply_ratio(
-                        eligible_amount, Uint128(100));
-                }
-            }
-        };
-    }
-
-    // Update redeem info
-    let mut redeem_amount = total;
-    user_total_claimed_w(&mut deps.storage).update(
-        user_key.as_bytes(), |total_claimed| {
-            // Fix division issues
-            if claimed_percentage == Uint128(100) {
-                redeem_amount = (eligible_amount - total_claimed.unwrap())?;
-            }
-            Ok(total_claimed.unwrap() + redeem_amount)
-        })?;
-
-    total_claimed_w(&mut deps.storage).update(|total_claimed| {
-        Ok(total_claimed + redeem_amount)
-    })?;
+    // Calculate airdrop
+    let (redeem_amount, _) = claim_tokens(&mut deps.storage, env, &config, &account)?;
 
     Ok(HandleResponse {
-        messages: vec![send_msg(user, redeem_amount,
+        messages: vec![send_msg(sender, redeem_amount,
                                 None, None, 0,
                                 config.airdrop_snip20.code_hash,
                                 config.airdrop_snip20.address)?],
@@ -193,7 +277,7 @@ pub fn try_decay<S: Storage, A: Api, Q: Querier>(
     if let Some(end_date) = config.end_date {
         if let Some(dump_address) = config.dump_address {
             if env.block.time > end_date {
-                let send_total = (config.airdrop_total - total_claimed_r(&deps.storage).load()?)?;
+                let send_total = (config.airdrop_amount - total_claimed_r(&deps.storage).load()?)?;
                 let messages = vec![send_msg(
                     dump_address, send_total, None, None,
                     1, config.airdrop_snip20.code_hash,
@@ -210,4 +294,161 @@ pub fn try_decay<S: Storage, A: Api, Q: Querier>(
     }
 
     Err(StdError::unauthorized())
+}
+
+pub fn claim_tokens<S: Storage>(
+    storage: &mut S,
+    env: &Env,
+    config: &Config,
+    account: &Account,
+) -> StdResult<(Uint128, Uint128)> { // (send_amount, completed_percentage)
+    let sender = env.message.sender.to_string();
+
+    // Calculate eligible tasks
+    let mut completed_percentage = Uint128::zero();
+    let mut unclaimed_percentage = Uint128::zero();
+    for (index, task) in config.task_claim.iter().enumerate() {
+        // Check if task has been completed
+        let state = claim_status_r(storage, index).may_load(
+            sender.as_bytes())?;
+
+        match state {
+            // Ignore if none
+            None => {}
+            Some(claimed) => {
+                completed_percentage += task.percent;
+                if !claimed {
+                    // Set claim status to true since we're going to claim it now
+                    claim_status_w(storage, index).save(
+                        sender.as_bytes(), &true)?;
+
+                    unclaimed_percentage += task.percent;
+                }
+            }
+        }
+    }
+
+    if unclaimed_percentage == Uint128::zero() {
+        return Err(StdError::generic_err("No claimable amount available"))
+    }
+
+    // Amount to be redeemed
+    let mut redeem_amount = Uint128::zero();
+
+    // Update total claimed and calculate claimable
+    account_total_claimed_w(storage).update(sender.as_bytes(), |claimed| {
+        // This solves possible uToken inaccuracies
+        if completed_percentage == Uint128(100) {
+            redeem_amount = (account.total_claimable - claimed.unwrap())?;
+            Ok(account.total_claimable)
+        }
+        else {
+            redeem_amount = unclaimed_percentage.multiply_ratio(account.total_claimable, Uint128(100));
+            Ok(claimed.unwrap() + redeem_amount)
+        }
+    })?;
+
+    total_claimed_w(storage).update(|claimed| {
+        Ok(claimed + redeem_amount)
+    })?;
+
+    Ok((redeem_amount, completed_percentage))
+}
+
+/// Validates all of the information and updates relevant states
+pub fn try_add_account_addresses<S: Storage>(
+    storage: &mut S,
+    config: &Config,
+    sender: &HumanAddr,
+    account: &mut Account,
+    addresses: Vec<AddressProofPermit>,
+    partial_tree: Vec<Binary>,
+) -> StdResult<()> {
+    // Setup the items to validate
+    let mut leafs_to_validate: Vec<(usize, [u8; 32])> = vec![];
+
+    // Iterate addresses
+    for permit in addresses.iter() {
+        let address: HumanAddr;
+        // Avoid verifying sender
+        if &permit.params.address != sender {
+            // Check permit legitimacy
+            address = validate_permit(storage, permit, config.contract.clone())?;
+            if address != permit.params.address {
+                return Err(StdError::generic_err("Signer address is not the same as the permit address"))
+            }
+        }
+        else {
+            address = sender.clone();
+        }
+
+        // Check that airdrop amount does not exceed maximum
+        if permit.params.amount > config.max_amount {
+            return Err(StdError::generic_err("Amount exceeds maximum amount"))
+        }
+
+        // Update address if its not in an account
+        address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
+            if state.is_some() {
+                return Err(StdError::generic_err(
+                    format!("{:?} already in an account", address.to_string())))
+            }
+
+            Ok(true)
+        })?;
+
+        // Add account as a leaf
+        let leaf_hash = Sha256::hash((address.to_string() + &permit.params.amount.to_string()).as_bytes());
+        leafs_to_validate.push((permit.params.index as usize, leaf_hash));
+
+        // If valid then add to account array and sum total amount
+        account.addresses.push(address);
+        account.total_claimable += permit.params.amount;
+    }
+
+    // Need to sort by index in order for the proof to work
+    leafs_to_validate.sort_by_key(|item| item.0);
+
+    let mut indices: Vec<usize> = vec![];
+    let mut leaves: Vec<[u8; 32]> = vec![];
+
+    for leaf in leafs_to_validate.iter() {
+        indices.push(leaf.0);
+        leaves.push(leaf.1);
+    };
+
+    // Convert partial tree from base64 to binary
+    let mut partial_tree_binary: Vec<[u8; 32]> = vec![];
+    for node in partial_tree.iter() {
+        let mut arr: [u8; 32] = Default::default();
+        arr.clone_from_slice(node.as_slice());
+        partial_tree_binary.push(arr);
+    }
+
+    // Prove that user is in airdrop
+    let proof = MerkleProof::<Sha256>::new(partial_tree_binary);
+    // Convert to a fixed length array without messing up the contract
+    let mut root: [u8; 32] = Default::default();
+    root.clone_from_slice(config.merkle_root.as_slice());
+    if !proof.verify(root, &indices, &leaves, config.total_accounts as usize) {
+        return Err(StdError::generic_err("Invalid proof"))
+    }
+
+    Ok(())
+}
+
+pub fn available( config: &Config, env: &Env ) -> StdResult<()> {
+    let current_time = env.block.time;
+
+    // Check if airdrop started
+    if current_time < config.start_date {
+        return Err(StdError::generic_err(format!("Airdrop starts on {}", config.start_date)))
+    }
+    if let Some(end_date) = config.end_date {
+        if current_time > end_date {
+            return Err(StdError::generic_err(format!("Airdrop ended on {}", end_date)))
+        }
+    }
+
+    Ok(())
 }

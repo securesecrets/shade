@@ -1,7 +1,7 @@
 use cosmwasm_std::Storage;
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
 
-use shade_protocol::staking::{Config, StakeState, Unbonding, UserStakeState};
+use shade_protocol::staking::{Config, stake::{Stake, UserStake, Unbonding}};
 use binary_heap_plus::{BinaryHeap, MinComparator};
 
 pub static CONFIG_KEY: &[u8] = b"config";
@@ -19,19 +19,19 @@ pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn stake_state_w<S: Storage>(storage: &mut S) -> Singleton<S, StakeState> {
+pub fn stake_state_w<S: Storage>(storage: &mut S) -> Singleton<S, Stake> {
     singleton(storage, STAKE_STATE_KEY)
 }
 
-pub fn stake_state_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, StakeState> {
+pub fn stake_state_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Stake> {
     singleton_read(storage, STAKE_STATE_KEY)
 }
 
-pub fn staker_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, UserStakeState> {
+pub fn staker_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, UserStake> {
     bucket_read(STAKER_KEY, storage)
 }
 
-pub fn staker_w<S: Storage>(storage: &mut S) -> Bucket<S, UserStakeState> {
+pub fn staker_w<S: Storage>(storage: &mut S) -> Bucket<S, UserStake> {
     bucket(STAKER_KEY, storage)
 }
 
