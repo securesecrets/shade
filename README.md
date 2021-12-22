@@ -9,49 +9,35 @@
 | [`oracle`](./contracts/oracle)  | [doc](./contracts/oracle/README.md) | Asset price querier |
 | [`airdrop`](./contracts/airdrop)  | [doc](./contracts/airdrop/README.md) | Task based, multichain snip20 airdropper  |
 
-## Development
-
 ## Development Environment
-Install docker for local environment
-
-Source from [testnet](https://build.scrt.network/dev/quickstart.html#setup-the-local-developer-testnet)
-
-```
-docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1337:1337 -v $(pwd):/root/code --name secretdev enigmampc/secret-network-sw-dev
-
-docker exec -it secretdev /bin/bash
-```
-#### Testing the environment
-First go inside the repo and build all of the contracts:
-```
-make
-```
-Then inside the container run:
-```
-cargo test -- --nocapture --test-threads=1
-```
 
 ### Environment Setup
 
-- Rust v1.44.1+
-- `wasm32-unknown-unknown` target
-- Docker
-- binaryen
+1. Make sure [Docker](https://www.docker.com/) is installed
 
-1. Install `rustup` via https://rustup.rs/
-
-2. Run the following:
-
-```sh
-rustup default stable
-rustup target add wasm32-unknown-unknown
+2. Pull the SN-testnet image
+```shell
+docker pull floppydisck/sn-testnet:v0.2
 ```
 
-3. Make sure [Docker](https://www.docker.com/) is installed
+3. Open a terminal inside this repo and run:
+```shell
+docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1337:1337 -v $(pwd):/root/code --name shade-testnet floppydisck/sn-testnet:v0.2
+```
 
-4. To compile the contracts install binaryen
-```sh
-apt install binaryen
+4. Inside another terminal run:
+```shell
+docker exec -it shade-testnet /bin/bash
+```
+
+#### Testing the environment
+Inside the container, go to /root/code and compile all of the smart contracts:
+```
+make
+```
+Then test run all the Protocol unit-tests and integration tests using the [tester](packages/network_integration):
+```
+cargo test -- --nocapture --test-threads=1
 ```
 
 ### Unit Tests
@@ -61,17 +47,3 @@ Each contract contains Rust unit and integration tests embedded within the contr
 ```sh
 cargo unit-test
 ```
-
-### Compiling
-
-Run this script to run all of the contract's unit / integration tests and then prepare the contracts for production in /compiled:
-
-```sh
-make
-```
-
-### Testing
-
-You can optionally run extended tests using the [tester](packages/network_integration)
-
-For the private testnet you can run ```cargo test -- --nocapture --test-threads=1```
