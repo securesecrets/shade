@@ -137,6 +137,10 @@ sleep(3)
 scrt_balance = json.loads(run_command(['secretd', 'q', 'bank', 'balances', account]))
 print('SCRT', scrt_balance['balances'][0]['amount'])
 print('SSCRT', sscrt.get_balance(account, viewing_key))
+
+while scrt_staking.query({'rewards': {}}) == 0:
+    pass
+    
 print('REWARDS', scrt_staking.query({'rewards': {}}))
 '''
 for delegation in delegations:
@@ -153,21 +157,31 @@ print(treasury.query({'balance': {'asset': sscrt.address}}))
 #print(sscrt.query({'balance': {'address': scrt_staking.address, 'key': viewing_key}}))
 #print(run_command(['secretd', 'q', 'account', scrt_staking.address]))
 
-'''
-print('UNBONDING')
+print('CLAIMING')
 for delegation in delegations:
-    print(scrt_staking.execute({'unbond': {'validator': delegation['validator']}}))
-'''
-
-print('CLAIMING REWARDS')
-for delegation in delegations:
-    print('CLAIM VD', delegation['validator'])
     print(scrt_staking.execute({'claim': {'validator': delegation['validator']}}))
 
 scrt_balance = json.loads(run_command(['secretd', 'q', 'bank', 'balances', account]))
 print('SCRT', scrt_balance['balances'][0]['amount'])
 print('SSCRT', sscrt.get_balance(account, viewing_key))
 print('REWARDS', scrt_staking.query({'rewards': {}}))
+
+print('UNBONDING')
+for delegation in delegations:
+    print(scrt_staking.execute({'unbond': {'validator': delegation['validator']}}))
+
+print('CLAIMING')
+for delegation in scrt_staking.query({'delegations': {}}):
+    print(scrt_staking.execute({'claim': {'validator': delegation['validator']}}))
+
+print('DELEGATIONS')
+delegations = scrt_staking.query({'delegations': {}})
+print(delegations)
+
+print('SCRT', scrt_balance['balances'][0]['amount'])
+print('SSCRT', sscrt.get_balance(account, viewing_key))
+print('REWARDS', scrt_staking.query({'rewards': {}}))
+
 
 '''
 for i in range(3):

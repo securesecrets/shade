@@ -127,6 +127,27 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
+    for delegation in deps.querier.query_all_delegations(self_address_r(&deps.storage).load()?)? {
+        if delegation.validator == validator {
+            return Ok(HandleResponse {
+                messages: vec![
+                    CosmosMsg::Staking(StakingMsg::Undelegate {
+                        validator,
+                        amount: delegation.amount.clone(),
+                    }),
+                ],
+                log: vec![],
+                data: Some( to_binary( 
+                    &HandleAnswer::Unbond {
+                        status: ResponseStatus::Success,
+                        delegation,
+                    }
+                )?),
+            });
+        }
+    }
+
+    /*
     if let Some(delegation) = deps.querier.query_delegation(env.contract.address, validator.clone())? {
 
         return Ok(HandleResponse {
@@ -145,9 +166,10 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             )?),
         });
     }
+    */
 
     Err(StdError::GenericErr { 
-        msg: "No delegation".to_string(),
+        msg: "No delegation to given validator".to_string(),
         backtrace: None 
     })
 }

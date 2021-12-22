@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{
     HumanAddr, Binary,
     Uint128, Decimal,
-    Validator, FullDelegation,
+    Validator, Delegation,
 };
 use crate::asset::Contract;
 use crate::generic_response::ResponseStatus;
@@ -88,7 +88,7 @@ pub enum HandleAnswer {
     Claim { status: ResponseStatus },
     Unbond { 
         status: ResponseStatus,
-        delegation: FullDelegation,
+        delegation: Delegation,
     },
 }
 
