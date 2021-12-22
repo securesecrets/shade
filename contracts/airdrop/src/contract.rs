@@ -5,9 +5,9 @@ use shade_protocol::{
         QueryMsg, Config, claim_info::RequiredTask
     }
 };
-use crate::{state::{config_w, total_claimed_w, address_in_account_w},
+use crate::{state::{config_w, total_claimed_w},
             handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account,
-                     try_update_account, try_disable_permit_key, try_claim, try_decay},
+                     try_update_account, try_disable_permit_key, try_claim, try_claim_decay},
             query };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -33,6 +33,29 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::GenericErr { msg: "tasks above 100%".to_string(), backtrace: None })
     }
 
+    let start_date = match msg.start_date {
+        None => env.block.time,
+        Some(date) => date
+    };
+
+    if let Some(end_date) = msg.end_date {
+        if end_date < start_date {
+            return Err(StdError::generic_err("Start date must come before end date"))
+        }
+    }
+
+    // Avoid decay collisions
+    if let Some(start_decay) = msg.decay_start {
+        if let Some(end_date) = msg.end_date {
+            if start_decay > end_date {
+                return Err(StdError::generic_err("Decay cannot start after the end date"))
+            }
+        }
+        else {
+            return Err(StdError::generic_err("Decay must have an end date"))
+        }
+    }
+
     let config = Config{
         admin: match msg.admin {
             None => { env.message.sender.clone() }
@@ -43,11 +66,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         airdrop_snip20: msg.airdrop_token.clone(),
         airdrop_amount: msg.airdrop_amount,
         task_claim,
-        start_date: match msg.start_time {
-            None => env.block.time,
-            Some(date) => date
-        },
-        end_date: msg.end_time,
+        start_date,
+        end_date: msg.end_date,
+        decay_start: msg.decay_start,
         merkle_root: msg.merkle_root,
         total_accounts: msg.total_accounts,
         max_amount: msg.max_amount,
@@ -72,9 +93,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::UpdateConfig {
             admin, dump_address,
-            start_date, end_date
+            start_date, end_date, decay_start: start_decay
         } => try_update_config(deps, env, admin, dump_address,
-                               start_date, end_date),
+                               start_date, end_date, start_decay),
         HandleMsg::AddTasks { tasks
         } => try_add_tasks(deps, &env, tasks),
         HandleMsg::CompleteTask { address
@@ -86,7 +107,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::DisablePermitKey { key
         } => try_disable_permit_key(deps, &env, key),
         HandleMsg::Claim { } => try_claim(deps, &env),
-        HandleMsg::Decay { } => try_decay(deps, &env),
+        HandleMsg::ClaimDecay { } => try_claim_decay(deps, &env),
     }
 }
 
@@ -96,8 +117,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig { } => to_binary(&query::config(&deps)?),
-        QueryMsg::GetDates { } => to_binary(&query::dates(&deps)?),
-        QueryMsg::GetAccount { address, permit } => to_binary(
-            &query::account(&deps, address, permit)?),
+        QueryMsg::GetDates { current_date } => to_binary(&query::dates(&deps, current_date)?),
+        QueryMsg::GetAccount { permit, current_date } => to_binary(
+            &query::account(&deps, permit, current_date)?),
     }
 }

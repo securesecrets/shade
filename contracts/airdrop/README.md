@@ -7,7 +7,7 @@
         * Messages
             * [UpdateConfig](#UpdateConfig)
             * [AddTasks](#AddTasks)
-            * [Decay](#Decay)
+            * [ClaimDecay](#ClaimDecay)
     * [Task_Admin](#Task_Admin)
         * Messages
             * [CompleteTask](#CompleteTask)
@@ -19,7 +19,7 @@
         * Queries
             * [GetConfig](#GetConfig)
             * [GetDates](#GetDates)
-            * [GetEligibility](#GetEligibility)
+            * [GetAccount](#GetAccount)
     
 # Introduction
 Contract responsible to handle snip20 airdrop
@@ -33,12 +33,13 @@ Contract responsible to handle snip20 airdrop
 |admin         | String        | New contract owner; SHOULD be a valid bech32 address |  yes     |
 |dump_address  | String        | Where the decay amount will be sent                  |  yes     |
 |airdrop_token | Contract      | The token that will be airdropped                    |  no      |
-| airdrop_amount | String      | Total airdrop amount to be claimed                   |  no      |
-|start_time    | u64           | When the airdrop starts in UNIX time                 |  yes     |
-|end_time      | u64           | When the airdrop ends in UNIX time                   |  yes     |
-| merkle_root  | String        | Base 64 encoded merkle root of the airdrop data tree |  no      |
-| total_accounts | String      | Total accounts in airdrop (needed for merkle proof)  |  no      |
-| max_amount   | String        | Used to limit the user permit amounts (lowers exploit possibility) |  no|
+|airdrop_amount | String      | Total airdrop amount to be claimed                   |  no      |
+|start_date    | u64           | When the airdrop starts in UNIX time                 |  yes     |
+|end_date      | u64           | When the airdrop ends in UNIX time                   |  yes     |
+|decay_start   | u64          | When the airdrop decay starts in UNIX time           | yes|
+|merkle_root  | String        | Base 64 encoded merkle root of the airdrop data tree |  no      |
+|total_accounts | String      | Total accounts in airdrop (needed for merkle proof)  |  no      |
+|max_amount   | String        | Used to limit the user permit amounts (lowers exploit possibility) |  no|
 |default_claim | String        | The default amount to be gifted regardless of tasks  |  no      |
 |task_claim    | RequiredTasks | The amounts per tasks to gift                        |  no      |
 
@@ -53,8 +54,9 @@ Updates the given values
 |--------------|------------|-------------------------------------------------------|----------|
 |admin         | string     |  New contract admin; SHOULD be a valid bech32 address |  yes     |
 | dump_address | string     | Sets the dump address if there isnt any               |  yes     |
-|start_time    | u64        | When the airdrop starts in UNIX time                  |  yes     |
-|end_time      | u64        | When the airdrop ends in UNIX time                    |  yes     |
+|start_date    | u64        | When the airdrop starts in UNIX time                  |  yes     |
+|end_date      | u64        | When the airdrop ends in UNIX time                    |  yes     |
+|decay_start   | u64        | When the airdrop decay starts in UNIX time            |  yes |
 
 #### AddTasks
 Adds more tasks to complete
@@ -72,13 +74,13 @@ Adds more tasks to complete
 }
 ```
 
-#### Decay
+#### ClaimDecay
 Drains the decayed amount of airdrop into a dump address
 
 ##### Response
 ```json
 {
-  "decay": {
+  "claim_decay": {
     "status": "success"
   }
 }
@@ -168,22 +170,29 @@ Gets the contract's config
 ```
 
 ## GetDates
-Get the contracts airdrop timeframe
+Get the contracts airdrop timeframe, can calculate the decay factor if a time is given
+##### Request
+|Name    |Type    |Description                          | optional |
+|--------|--------|-------------------------------------|----------|
+|current_date | u64 | The current time in UNIX format | yes       |
 ```json
 {
   "dates": {
     "start": "Airdrop start",
-    "end": "Airdrop end"
+    "end": "Airdrop end",
+    "decay_start": "Airdrop start of decay",
+    "decay_factor": "Decay percentage"
   }
 }
 ```
 
-## GetEligibility
-Get the contract's eligibility per user
+## GetAccount
+Get the account's information
 ##### Request
 |Name    |Type    |Description                          | optional |
 |--------|--------|-------------------------------------|----------|
-|address | String | The address to check eligibility of | no       |
+|permit  | [AddressProofPermit](#AddressProofPermit)|Address's permit | no |
+|current_date | u64 | Current time in UNIT format       | yes      |
 ```json
 {
   "eligibility": {

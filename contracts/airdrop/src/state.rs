@@ -1,6 +1,6 @@
 use cosmwasm_std::{Storage, Uint128, StdResult, HumanAddr, StdError};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
-use shade_protocol::airdrop::{Config, claim_info::Reward, account::Account};
+use shade_protocol::airdrop::{Config, account::Account};
 use shade_protocol::airdrop::account::AddressProofPermit;
 
 pub static CONFIG_KEY: &[u8] = b"config";
