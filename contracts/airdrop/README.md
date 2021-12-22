@@ -191,7 +191,7 @@ Get the account's information
 ##### Request
 |Name    |Type    |Description                          | optional |
 |--------|--------|-------------------------------------|----------|
-|permit  | [AddressProofPermit](#AddressProofPermit)|Address's permit | no |
+|permit  | [AccountProofPermit](#AccountProofMsg)|Address's permit | no |
 |current_date | u64 | Current time in UNIT format       | yes      |
 ```json
 {
@@ -217,6 +217,17 @@ NOTE: The parameters must be in order
 | params     | AddressProofMsg | Information relevant to the airdrop information    | no       |
 | chain_id   | String          | Chain ID of the network this proof will be used in | no       |
 | signature  | PermitSignature | Signature of the permit                            | no       |
+
+## AccountProofMsg
+THe information inside permits that validate account ownership
+
+NOTE: The parameters must be in order
+### Structure
+| Name     | Type    | Description                                             | optional |
+|----------|---------|---------------------------------------------------------|----------|
+| contract | String  | Airdrop contract                                        | no       |
+| key      | String  | Some permit key                                         | no       |
+
 
 ## AddressProofMsg
 The information inside permits that validate the airdrop eligibility and validate the account holder's key.

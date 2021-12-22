@@ -3,11 +3,10 @@ pub mod transaction;
 use cosmwasm_std::{Binary, CanonicalAddr, StdError, StdResult, to_binary};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use ripemd160::{Digest, Ripemd160};
 use secp256k1::Secp256k1;
 use bech32::FromBase32;
 use secret_toolkit::crypto::sha_256;
-use crate::signature::transaction::{SignedTx, TxMsg, PermitSignature};
+use crate::signature::transaction::{SignedTx, TxMsg, PermitSignature, PubKeyValue};
 
 // NOTE: Struct order is very important for signatures
 
@@ -34,9 +33,9 @@ impl<T: Clone + Serialize> Permit<T> {
     }
 
     /// Returns the permit signer
-    pub fn validate(&self) -> StdResult<CanonicalAddr> {
+    pub fn validate(&self) -> StdResult<PubKeyValue> {
         let pubkey = &self.signature.pub_key.value;
-        let account = pubkey_to_account(pubkey);
+        //let account = pubkey_to_account(pubkey);
 
         // Validate signature
         let signed_bytes = to_binary(&self.create_signed_tx())?;
@@ -65,14 +64,8 @@ impl<T: Clone + Serialize> Permit<T> {
                 ))
             })?;
 
-        Ok(account)
+        Ok(PubKeyValue(pubkey.clone()))
     }
-}
-
-pub fn pubkey_to_account(pubkey: &Binary) -> CanonicalAddr {
-    let mut hasher = Ripemd160::new();
-    hasher.update(sha_256(&pubkey.0));
-    CanonicalAddr(Binary(hasher.finalize().to_vec()))
 }
 
 #[cfg(test)]
@@ -136,7 +129,7 @@ mod signature_tests {
         };
 
         let addr = permit.validate().unwrap();
-        assert_eq!(addr, bech32_to_canonical(ADDRESS));
+        assert_eq!(addr.as_canonical(), bech32_to_canonical(ADDRESS));
     }
 
 }

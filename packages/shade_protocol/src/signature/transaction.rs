@@ -1,6 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{Binary, Uint128};
+use cosmwasm_std::{Api, Binary, CanonicalAddr, HumanAddr, StdResult, Uint128};
+use ripemd160::{Digest, Ripemd160};
+use secret_toolkit::crypto::sha_256;
 use crate::signature::Permit;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -25,6 +27,20 @@ impl PubKey {
             r#type: "tendermint/PubKeySecp256k1".to_string(),
             value: pubkey
         }
+    }
+}
+
+pub struct PubKeyValue(pub Binary);
+
+impl PubKeyValue {
+    pub fn as_canonical(&self) -> CanonicalAddr {
+        let mut hasher = Ripemd160::new();
+        hasher.update(sha_256(&self.0.0));
+        CanonicalAddr(Binary(hasher.finalize().to_vec()))
+    }
+
+    pub fn as_humanaddr<A: Api>(&self, api: &A) -> StdResult<HumanAddr> {
+        api.human_address(&self.as_canonical())
     }
 }
 

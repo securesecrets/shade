@@ -1,7 +1,7 @@
-use cosmwasm_std::{Storage, Uint128, StdResult, HumanAddr, StdError};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
-use shade_protocol::airdrop::{Config, account::Account};
-use shade_protocol::airdrop::account::AddressProofPermit;
+use cosmwasm_std::{Storage, Uint128, StdResult, HumanAddr, StdError, Api, Querier, Extern};
+use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton,
+                       bucket, Bucket, bucket_read, ReadonlyBucket};
+use shade_protocol::airdrop::{Config, account::{Account, AccountPermit, AddressProofPermit}};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static CLAIM_STATUS_KEY: &[u8] = b"claim_status_";
@@ -92,7 +92,9 @@ pub fn is_permit_revoked<S: Storage>(storage: &S, account: String, permit_key: S
     }
 }
 
-pub fn validate_permit<S: Storage>(storage: &S, permit: &AddressProofPermit, contract: HumanAddr) -> StdResult<HumanAddr> {
+pub fn validate_address_permit<S: Storage>(
+    storage: &S, permit: &AddressProofPermit, contract: HumanAddr
+) -> StdResult<HumanAddr> {
     // Check that contract matches
     if permit.params.contract != contract {
         return Err(StdError::unauthorized())
@@ -106,4 +108,24 @@ pub fn validate_permit<S: Storage>(storage: &S, permit: &AddressProofPermit, con
 
     // Authenticate permit
     permit.authenticate()
+}
+
+pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>, permit: &AccountPermit, contract: HumanAddr
+) -> StdResult<HumanAddr> {
+    // Check that contract matches
+    if permit.params.contract != contract {
+        return Err(StdError::unauthorized())
+    }
+
+    // Authenticate permit
+    let address = permit.authenticate(&deps.api)?;
+
+    // Check that permit is not revoked
+    if is_permit_revoked(&deps.storage, address.to_string(),
+                         permit.params.key.clone())? {
+        return Err(StdError::generic_err("permit key revoked"))
+    }
+
+    Ok(address)
 }
