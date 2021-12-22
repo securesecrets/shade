@@ -171,20 +171,18 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
     let address = self_address_r(&deps.storage).load()?;
 
-    let amount = query::rewards(&deps)?;
-
-    messages.push(CosmosMsg::Staking(StakingMsg::Withdraw {
-        validator,
-        recipient: Some(address.clone()),
-    }));
-
     // Get total scrt balance, to get recently claimed rewards + lingering unbonded scrt
     let scrt_balance: BalanceResponse = deps.querier.query(&BankQuery::Balance {
         address: address.clone(),
         denom: "uscrt".to_string(),
     }.into())?;
 
-    //let amount = scrt_balance.amount.amount;
+    let amount = query::rewards(&deps)? + scrt_balance.amount.amount;
+
+    messages.push(CosmosMsg::Staking(StakingMsg::Withdraw {
+        validator,
+        recipient: Some(address.clone()),
+    }));
 
     messages.push(deposit_msg(
         amount,

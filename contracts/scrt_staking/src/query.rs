@@ -3,7 +3,8 @@ use cosmwasm_std::{
     StdResult, StdError,
     HumanAddr, Delegation, FullDelegation,
     DistQuery, RewardsResponse,
-    Uint128,
+    BankQuery, BalanceResponse,
+    Uint128, 
 };
 use shade_protocol::{
     scrt_staking::QueryAnswer,
@@ -28,9 +29,15 @@ pub fn delegations<S: Storage, A: Api, Q: Querier>(
     deps.querier.query_all_delegations(self_address_r(&deps.storage).load()?)
 }
 
+// TODO: change to 'claimable'
 pub fn rewards<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<Uint128> {
+
+    let scrt_balance: BalanceResponse = deps.querier.query(&BankQuery::Balance {
+        address: self_address_r(&deps.storage).load()?,
+        denom: "uscrt".to_string(),
+    }.into())?;
 
     let query_rewards: RewardsResponse = deps.querier
         .query(&DistQuery::Rewards { 
@@ -42,7 +49,7 @@ pub fn rewards<S: Storage, A: Api, Q: Querier>(
             });
 
     if query_rewards.total.is_empty() {
-        return Ok(Uint128(0));
+        return Ok(scrt_balance.amount.amount);
     }
 
     let denom = query_rewards.total[0].denom.as_str();
@@ -54,7 +61,7 @@ pub fn rewards<S: Storage, A: Api, Q: Querier>(
                 denom, &d.denom
             )))
         } else {
-            Ok(acc + d.amount)
+            Ok(acc + d.amount + scrt_balance.amount.amount)
         }
     })
 }
