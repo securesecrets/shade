@@ -141,6 +141,8 @@ fn run_airdrop() -> Result<()> {
 
     let now = chrono::offset::Utc::now().timestamp() as u64;
     let duration = 180;
+    let decay_date = now + duration;
+    let end_date = now + duration + 80;
 
     let airdrop_init_msg = airdrop::InitMsg {
         admin: None,
@@ -150,8 +152,10 @@ fn run_airdrop() -> Result<()> {
             code_hash: snip.code_hash.clone()
         },
         airdrop_amount: total_airdrop+decay_amount,
-        start_time: None,
-        end_time: Some(now + duration),
+        start_date: None,
+        // Add one more minute for testing decay
+        end_date: Some(end_date),
+        decay_start: Some(decay_date),
         merkle_root: Binary(merlke_tree.root().unwrap().to_vec()),
         total_accounts: leaves.len() as u32,
         max_amount: a_airdrop,
@@ -203,7 +207,7 @@ fn run_airdrop() -> Result<()> {
 
     let a_permit = create_signed_permit(a_address_proof, ACCOUNT_KEY);
 
-    /// Create an account
+    /// Create an account which will also claim whatever amount is available
     print_warning("Creating an account");
     {
         let tx_info = test_contract_handle(&airdrop::HandleMsg::CreateAccount {
@@ -216,35 +220,8 @@ fn run_airdrop() -> Result<()> {
     print_warning("Getting initial account information");
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
-            permit: a_permit.clone()
-        };
-
-        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
-
-        if let airdrop::QueryAnswer::Account { total, claimed,
-            unclaimed, finished_tasks } = query {
-            assert_eq!(total, a_airdrop + b_airdrop);
-            assert_eq!(claimed, Uint128::zero());
-            assert_eq!(unclaimed, ab_half_airdrop);
-            assert_eq!(finished_tasks.len(), 1);
-        }
-    }
-
-    print_warning("Claiming half of the airdrop");
-    /// Claim airdrop
-    test_contract_handle(&airdrop::HandleMsg::Claim {},
-                         &airdrop, ACCOUNT_KEY, Some(GAS),
-                         Some("test"), None)?;
-
-    /// Assert that we claimed
-    assert_eq!(ab_half_airdrop, get_balance(&snip, account_a.clone()));
-
-    /// Query that half of the airdrop is claimed
-    {
-        let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
-            permit: a_permit.clone()
+            permit: a_permit.clone(),
+            current_date: None
         };
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
@@ -258,6 +235,9 @@ fn run_airdrop() -> Result<()> {
         }
     }
 
+    /// Assert that we claimed
+    assert_eq!(ab_half_airdrop, get_balance(&snip, account_a.clone()));
+
     print_warning("Enabling the other half of the airdrop");
 
     test_contract_handle(&airdrop::HandleMsg::CompleteTask {
@@ -267,8 +247,8 @@ fn run_airdrop() -> Result<()> {
 
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
-            permit: a_permit.clone()
+            permit: a_permit.clone(),
+            current_date: None
         };
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
@@ -305,8 +285,8 @@ fn run_airdrop() -> Result<()> {
     /// Query that all of the airdrop is claimed
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
-            permit: a_permit.clone()
+            permit: a_permit.clone(),
+            current_date: None
         };
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
@@ -327,8 +307,8 @@ fn run_airdrop() -> Result<()> {
 
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
-            permit: a_permit.clone()
+            permit: a_permit.clone(),
+            current_date: None
         };
 
         let query: Result<airdrop::QueryAnswer> = query_contract(&airdrop, msg);
@@ -348,8 +328,8 @@ fn run_airdrop() -> Result<()> {
 
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            address: HumanAddr(account_a.clone()),
-            permit: new_a_permit.clone()
+            permit: new_a_permit.clone(),
+            current_date: None
         };
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
@@ -363,11 +343,45 @@ fn run_airdrop() -> Result<()> {
         }
     }
 
+    print_warning("Claiming partially decayed tokens");
+    {
+        let current = chrono::offset::Utc::now().timestamp() as u64;
+        // Wait until times is between decay start and end of airdrop
+        thread::sleep(time::Duration::from_secs(decay_date - current + 30));
+    }
+
+    {
+        let d_address_proof = AddressProofMsg {
+            address: HumanAddr(account_d.clone()),
+            amount: decay_amount,
+            contract: HumanAddr(airdrop.address.clone()),
+            index: 3,
+            key: "key".to_string(),
+        };
+
+        let d_permit = create_signed_permit(d_address_proof, "d");
+        let d_proof = proof_from_tree(&vec![3], &merlke_tree.layers());
+
+        test_contract_handle(&airdrop::HandleMsg::UpdateAccount {
+            addresses: vec![d_permit],
+            partial_tree: d_proof,
+        }, &airdrop, ACCOUNT_KEY,
+                             Some("1000000"), Some("test"), None)?;
+
+        let balance = get_balance(&snip, account_a.clone());
+
+        assert!(balance > total_airdrop && balance < total_airdrop + decay_amount);
+    }
+
     /// Try to claim expired tokens
     print_warning("Claiming expired tokens");
-    thread::sleep(time::Duration::from_secs(duration));
+    {
+        let current = chrono::offset::Utc::now().timestamp() as u64;
+        // Wait until times is between decay start and end of airdrop
+        thread::sleep(time::Duration::from_secs(end_date - current + 4));
+    }
 
-    test_contract_handle(&airdrop::HandleMsg::Decay {},
+    test_contract_handle(&airdrop::HandleMsg::ClaimDecay {},
                          &airdrop, ACCOUNT_KEY, Some(GAS),
                          Some("test"), None)?;
 
@@ -592,6 +606,7 @@ fn run_testnet() -> Result<()> {
 
     print_warning("Voting on proposal");
     {
+        let proposal_time = chrono::offset::Utc::now().timestamp() as u64;
         let proposal = get_latest_proposal(&governance)?;
 
         // Vote on proposal
@@ -635,7 +650,9 @@ fn run_testnet() -> Result<()> {
         }
 
         // Wait for the time limit and try to trigger it
-        thread::sleep(time::Duration::from_secs(180));
+        let now = chrono::offset::Utc::now().timestamp() as u64;
+        thread::sleep(time::Duration::from_secs(proposal_time + 184 - now));
+
         trigger_latest_proposal(&governance)?;
 
         // Query its status and expect it to break
@@ -662,6 +679,7 @@ fn run_testnet() -> Result<()> {
 
 
     {
+        let proposal_time = chrono::offset::Utc::now().timestamp() as u64;
         let proposal = get_latest_proposal(&governance)?;
 
         print_warning("Funding proposal");
@@ -685,7 +703,8 @@ fn run_testnet() -> Result<()> {
                              Some("test"), None)?;
 
         // Wait for the time limit and try to trigger it
-        thread::sleep(time::Duration::from_secs(180));
+        let now = chrono::offset::Utc::now().timestamp() as u64;
+        thread::sleep(time::Duration::from_secs(proposal_time + 184 - now));
         trigger_latest_proposal(&governance)?;
 
         // Query its status and expect it to finish
@@ -738,6 +757,7 @@ fn run_testnet() -> Result<()> {
     {
         print_warning("Trying to fund");
         let proposal = get_latest_proposal(&governance)?;
+        let proposal_time = chrono::offset::Utc::now().timestamp() as u64;
 
         let lost_amount = Uint128(500000);
         let balance_before = get_balance(&shade, account.clone());
@@ -756,7 +776,8 @@ fn run_testnet() -> Result<()> {
         assert_ne!(balance_before, balance_after);
 
         // Wait funding period
-        thread::sleep(time::Duration::from_secs(180));
+        let now = chrono::offset::Utc::now().timestamp() as u64;
+        thread::sleep(time::Duration::from_secs(proposal_time + 184 - now));
 
         // Trigger funding
         test_contract_handle(&snip20::HandleMsg::Send {

@@ -1,7 +1,7 @@
-use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, HumanAddr, Uint128, StdError};
+use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use shade_protocol::airdrop::{QueryAnswer, account::AddressProofPermit, claim_info::RequiredTask};
-use crate::state::{config_r, claim_status_r,
-                   total_claimed_r, validate_permit, account_r};
+use crate::handle::decay_factor;
+use crate::state::{config_r, claim_status_r, total_claimed_r, validate_permit, account_r, account_total_claimed_r};
 
 pub fn config<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
@@ -12,25 +12,28 @@ pub fn config<S: Storage, A: Api, Q: Querier>
 }
 
 pub fn dates<S: Storage, A: Api, Q: Querier>
-(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+(deps: &Extern<S, A, Q>, current_date: Option<u64>) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
-    Ok(QueryAnswer::Dates { start: config.start_date, end: config.end_date
+    Ok(QueryAnswer::Dates {
+        start: config.start_date,
+        end: config.end_date,
+        decay_start: config.decay_start,
+        decay_factor: match current_date {
+            None => None,
+            Some(date) => Some(Uint128(100) * decay_factor(date, &config))
+        }
     })
 }
 
 pub fn account<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>, address: HumanAddr, permit: AddressProofPermit
+    deps: &Extern<S, A, Q>, permit: AddressProofPermit, current_date: Option<u64>
 ) -> StdResult<QueryAnswer> {
 
     let config = config_r(&deps.storage).load()?;
 
     let account_address = validate_permit(&deps.storage, &permit, config.contract)?;
 
-    if account_address != address {
-        return Err(StdError::unauthorized())
-    }
-
-    let account = account_r(&deps.storage).load(address.to_string().as_bytes())?;
+    let account = account_r(&deps.storage).load(account_address.to_string().as_bytes())?;
 
     // Calculate eligible tasks
     let config = config_r(&deps.storage).load()?;
@@ -40,7 +43,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
     for (index, task) in config.task_claim.iter().enumerate() {
         // Check if task has been completed
         let state = claim_status_r(&deps.storage, index).may_load(
-            address.to_string().as_bytes())?;
+            account_address.to_string().as_bytes())?;
 
         match state {
             // Ignore if none
@@ -57,15 +60,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let claimed: Uint128;
-    let unclaimed: Uint128;
-
-    if completed_percentage == Uint128(100) {
-        claimed = account.total_claimable;
-    }
-    else {
-        claimed = completed_percentage.multiply_ratio(account.total_claimable, Uint128(100));
-    }
+    let mut unclaimed: Uint128;
 
     if unclaimed_percentage == Uint128(100) {
         unclaimed = account.total_claimable;
@@ -74,9 +69,13 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
         unclaimed = unclaimed_percentage.multiply_ratio(account.total_claimable, Uint128(100));
     }
 
+    if let Some(time) = current_date {
+        unclaimed = unclaimed * decay_factor(time, &config);
+    }
+
     Ok(QueryAnswer::Account {
         total: account.total_claimable,
-        claimed,
+        claimed: account_total_claimed_r(&deps.storage).load(account_address.to_string().as_bytes())?,
         unclaimed,
         finished_tasks
     })
