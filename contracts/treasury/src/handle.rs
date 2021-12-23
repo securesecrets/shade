@@ -3,7 +3,8 @@ use cosmwasm_std::{
     to_binary, Api, Binary,
     Env, Extern, HandleResponse,
     Querier, StdError, StdResult, Storage, 
-    Uint128, HumanAddr
+    Uint128, HumanAddr,
+    from_binary,
 };
 use secret_toolkit::{
     snip20,
@@ -21,6 +22,7 @@ use shade_protocol::{
         QueryAnswer,
         Allocation,
         Config,
+        Flag,
     },
     snip20::{
         Snip20Asset, fetch_snip20,
@@ -48,11 +50,26 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     _sender: HumanAddr,
     _from: HumanAddr,
     amount: Uint128,
-    _msg: Option<Binary>,
+    msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
 
     let asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     //debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
+    // skip the rest if the send the "unallocated" flag
+    if let Some(f) = msg {
+        let flag: Flag = from_binary(&f)?;
+        if flag.flag == "unallocated" {
+            return Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: Some( to_binary(
+                    &HandleAnswer::Receive {
+                        status: ResponseStatus::Success,
+                    }
+                )?),
+            })
+        }
+    };
 
     let mut messages = vec![];
 

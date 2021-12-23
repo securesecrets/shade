@@ -43,6 +43,13 @@ pub enum Allocation {
         token: HumanAddr,
     },
 }
+//
+// Flag to be sent with funds
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Flag {
+    pub flag: String
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {

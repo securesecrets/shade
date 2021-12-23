@@ -16,6 +16,7 @@ use secret_toolkit::{
 };
 
 use shade_protocol::{
+    treasury::Flag,
     scrt_staking::{
         HandleAnswer,
         ValidatorBounds,
@@ -224,7 +225,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     messages.push(send_msg(
         config.treasury,
         amount,
-        None,
+        Some(to_binary(&Flag { flag: "unallocated".to_string()})?),
         None,
         1,
         config.sscrt.code_hash.clone(),
