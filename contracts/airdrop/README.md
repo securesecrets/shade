@@ -219,7 +219,7 @@ NOTE: The parameters must be in order
 | signature  | PermitSignature | Signature of the permit                            | no       |
 
 ## AccountProofMsg
-THe information inside permits that validate account ownership
+The information inside permits that validate account ownership
 
 NOTE: The parameters must be in order
 ### Structure

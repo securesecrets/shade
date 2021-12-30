@@ -35,7 +35,6 @@ impl<T: Clone + Serialize> Permit<T> {
     /// Returns the permit signer
     pub fn validate(&self) -> StdResult<PubKeyValue> {
         let pubkey = &self.signature.pub_key.value;
-        //let account = pubkey_to_account(pubkey);
 
         // Validate signature
         let signed_bytes = to_binary(&self.create_signed_tx())?;
