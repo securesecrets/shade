@@ -26,9 +26,11 @@ fn vec_str_to_vec_string (str_in: Vec<&str>) -> Vec<String> {
 ///
 pub fn secretcli_run(command: Vec<String>) -> Result<Value> {
     let retry = 20;
+    let mut commands = command.clone();
+    commands.append(&mut vec_str_to_vec_string(vec!["--output", "json"]));
     let mut cli = Command::new("secretd".to_string());
-    if command.len() > 0 {
-        cli.args(command.clone());
+    if commands.len() > 0 {
+        cli.args(commands.clone());
     }
 
     let mut result = cli.output().expect("Unexpected error");
@@ -44,9 +46,7 @@ pub fn secretcli_run(command: Vec<String>) -> Result<Value> {
         result = cli.output().expect("Unexpected error");
     }
     let out = result.stdout;
-    //println!("{}", String::from_utf8_lossy(&result.stderr));
-    let json= serde_json::from_str(&String::from_utf8_lossy(&out));
-    json
+    serde_json::from_str(&String::from_utf8_lossy(&out))
 }
 
 ///
@@ -63,16 +63,13 @@ pub fn store_contract(contract: &str, user: Option<&str>,
                       gas: Option<&str>, backend: Option<&str>) -> Result<TxResponse> {
 
     let mut command_arr = vec!["tx", "compute", "store", contract,
-                   "--from", match user {None => "a", Some(usr) => usr },
-                   "--gas", match gas {None => "10000000", Some(gas) => gas}, "-y",
+                   "--from", user.unwrap_or("a"),
+                   "--gas", gas.unwrap_or("10000000"), "-y",
     ];
 
-    match backend {
-        None => {},
-        Some(backend) => {
-            command_arr.push("--keyring-backend");
-            command_arr.push(backend);
-        }
+    if let Some(backend) = backend {
+        command_arr.push("--keyring-backend");
+        command_arr.push(backend);
     }
 
     let command = vec_str_to_vec_string(command_arr);
@@ -270,16 +267,13 @@ pub fn test_inst_init<Message: serde::Serialize>
                init_gas: Option<&str>, backend: Option<&str>) -> Result<NetContract> {
     let store_response = store_contract(contract_file,
                                         Option::from(&*sender), store_gas, backend)?;
-
     let store_query = query_hash(store_response.txhash)?;
-
     let mut contract = NetContract {
         label: label.to_string(),
         id: "".to_string(),
         address: "".to_string(),
         code_hash: "".to_string()
     };
-
     // Look for the code ID
     for attribute in  &store_query.logs[0].events[0].attributes {
         if attribute.msg_key == "code_id" {
@@ -287,7 +281,6 @@ pub fn test_inst_init<Message: serde::Serialize>
             break;
         }
     }
-
     let init_query = test_init(&msg, &contract, label,
                                  sender, init_gas, backend)?;
 
@@ -298,7 +291,6 @@ pub fn test_inst_init<Message: serde::Serialize>
             break;
         }
     }
-
     // Look for the contract's code hash
     let listed_contracts = list_code()?;
 
@@ -308,7 +300,6 @@ pub fn test_inst_init<Message: serde::Serialize>
             break;
         }
     }
-
     Ok(contract)
 }
 
