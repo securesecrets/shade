@@ -20,7 +20,6 @@ all: setup $(CONTRACTS); $(call build_wasm,snip20,snip20_reference_impl)
 $(CONTRACTS):
 	$(call build_wasm,$@,$@)
 
-
 setup: $(compiled_dir) $(checksum_dir)
 
 $(compiled_dir) $(checksum_dir):
@@ -28,3 +27,6 @@ $(compiled_dir) $(checksum_dir):
 
 clean:
 	rm -r $(CONTRACTS)
+
+format:
+	cargo fmt
