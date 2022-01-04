@@ -21,3 +21,5 @@ getrandom = { version = "0.2", features = ["js"] } # Prevents wasm from freaking
 rand = { version = "0.8.4"}
 cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
 rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }
+flexible-permits = {git = "https://github.com/securesecrets/flexible-permits", tag = "v1.0.0"}
+

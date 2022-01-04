@@ -3,11 +3,12 @@ use colored::*;
 use serde_json::Result;
 use serde::Serialize;
 use cosmwasm_std::{HumanAddr, Uint128, to_binary, Binary};
+use flexible_permits::{permit::Permit, transaction::PermitSignature};
 use secretcli::{secretcli::{account_address, query_contract, test_contract_handle, test_inst_init, create_permit}};
 use shade_protocol::{snip20::{self, InitConfig, InitialBalance}, governance, staking, band, oracle,
                      asset::Contract, airdrop::{self, claim_info::{Reward, RequiredTask}, account::{AddressProofMsg}},
                      governance::{vote::{UserVote, Vote}, proposal::ProposalStatus},
-                     generic_response::ResponseStatus, signature::{self, Permit, transaction::PermitSignature}};
+                     generic_response::ResponseStatus};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
                              STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec,
                                   SNIP20_FILE, AIRDROP_FILE, GOVERNANCE_FILE, MOCK_BAND_FILE, ORACLE_FILE},
@@ -21,9 +22,9 @@ use rs_merkle::{Hasher, MerkleTree, algorithms::Sha256};
 use shade_protocol::airdrop::account::AccountPermitMsg;
 
 fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Permit<T> {
-    let chain_id = "testnet".to_string();
-    let unsigned_msg = signature::transaction::SignedTx::from_msg(
-        signature::transaction::TxMsg{
+    let chain_id = Some("testnet".to_string());
+    let unsigned_msg = flexible_permits::transaction::SignedTx::from_msg(
+        flexible_permits::transaction::TxMsg{
             r#type: "signature_proof".to_string(),
             value: permit_msg.clone()
         }, chain_id.clone());
@@ -34,7 +35,7 @@ fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Pe
         params: permit_msg,
         chain_id,
         signature: PermitSignature {
-            pub_key: signature::transaction::PubKey {
+            pub_key: flexible_permits::transaction::PubKey {
                 r#type: signed_info.pub_key.msg_type,
                 value: Binary::from_base64(&signed_info.pub_key.value).unwrap()
             },

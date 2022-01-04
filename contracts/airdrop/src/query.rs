@@ -1,7 +1,7 @@
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use shade_protocol::airdrop::{QueryAnswer, account::AccountPermit, claim_info::RequiredTask};
 use crate::handle::decay_factor;
-use crate::state::{config_r, claim_status_r, total_claimed_r, validate_address_permit, account_r, account_total_claimed_r, validate_account_permit};
+use crate::state::{config_r, claim_status_r, total_claimed_r, account_r, account_total_claimed_r, validate_account_permit};
 
 pub fn config<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
