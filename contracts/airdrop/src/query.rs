@@ -1,7 +1,7 @@
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
-use shade_protocol::airdrop::{QueryAnswer, account::AddressProofPermit, claim_info::RequiredTask};
+use shade_protocol::airdrop::{QueryAnswer, account::AccountPermit, claim_info::RequiredTask};
 use crate::handle::decay_factor;
-use crate::state::{config_r, claim_status_r, total_claimed_r, validate_permit, account_r, account_total_claimed_r};
+use crate::state::{config_r, claim_status_r, total_claimed_r, validate_address_permit, account_r, account_total_claimed_r, validate_account_permit};
 
 pub fn config<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
@@ -26,12 +26,12 @@ pub fn dates<S: Storage, A: Api, Q: Querier>
 }
 
 pub fn account<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>, permit: AddressProofPermit, current_date: Option<u64>
+    deps: &Extern<S, A, Q>, permit: AccountPermit, current_date: Option<u64>
 ) -> StdResult<QueryAnswer> {
 
     let config = config_r(&deps.storage).load()?;
 
-    let account_address = validate_permit(&deps.storage, &permit, config.contract)?;
+    let account_address = validate_account_permit(&deps, &permit, config.contract)?;
 
     let account = account_r(&deps.storage).load(account_address.to_string().as_bytes())?;
 

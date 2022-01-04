@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use crate::{asset::Contract, generic_response::ResponseStatus,
-            airdrop::{claim_info::{RequiredTask}, account::AddressProofPermit}};
+            airdrop::{claim_info::{RequiredTask}, account::{AccountPermit, AddressProofPermit}}};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -117,7 +117,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     GetConfig { },
     GetDates { current_date: Option<u64> },
-    GetAccount { permit: AddressProofPermit, current_date: Option<u64> },
+    GetAccount { permit: AccountPermit, current_date: Option<u64> },
 }
 
 impl Query for QueryMsg {
