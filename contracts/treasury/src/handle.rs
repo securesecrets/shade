@@ -16,6 +16,7 @@ use secret_toolkit::{
     },
 };
 
+use shade_protocol;
 use shade_protocol::{
     treasury::{
         HandleAnswer, 
@@ -188,21 +189,26 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     )?;
 
     // Register contract in asset
-    messages.push(register_receive_msg(
-        env.contract_code_hash.clone(),
-        None,
-        256,
-        contract.code_hash.clone(),
-        contract.address.clone(),
-    )?);
+    messages.push(
+        register_receive_msg(
+            env.contract_code_hash.clone(),
+            None,
+            256,
+            contract.code_hash.clone(),
+            contract.address.clone(),
+        )?
+    );
 
     // Set viewing key
-    messages.push(set_viewing_key_msg(
-                    viewing_key_r(&deps.storage).load()?,
-                    None,
-                    1,
-                    contract.code_hash.clone(),
-                    contract.address.clone())?);
+    messages.push(
+        set_viewing_key_msg(
+            viewing_key_r(&deps.storage).load()?,
+            None,
+            1,
+            contract.code_hash.clone(),
+            contract.address.clone()
+        )?
+    );
 
     Ok(HandleResponse {
         messages,
@@ -239,7 +245,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     };
 
     let liquid_balance: Uint128 = match query::balance(&deps, &asset)? {
-        snip20::Balance { amount } => amount,
+        QueryAnswer::Balance { amount } => amount,
         _ => {
             return Err(StdError::GenericErr {
                 msg: "Unexpected response for balance".to_string(),
@@ -322,7 +328,8 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
             };
         }
 
-        if (allocated_portion + alloc_portion) >= Uint128(1) {
+        
+        if (allocated_portion + alloc_portion) >= Uint128(10u128.pow(18)) {
             return Err(StdError::GenericErr {
                 msg: "Invalid allocation total exceeding 100%".to_string(),
                 backtrace: None,

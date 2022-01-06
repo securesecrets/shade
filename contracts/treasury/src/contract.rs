@@ -4,6 +4,7 @@ use cosmwasm_std::{
     Querier, StdResult, Storage,
 };
 
+use secret_toolkit;
 use shade_protocol::{
     treasury::{
         InitMsg,
