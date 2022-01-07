@@ -1,7 +1,7 @@
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use shade_protocol::airdrop::{QueryAnswer, account::AccountPermit, claim_info::RequiredTask};
 use crate::handle::decay_factor;
-use crate::state::{config_r, claim_status_r, total_claimed_r, account_r, account_total_claimed_r, validate_account_permit};
+use crate::state::{config_r, claim_status_r, total_claimed_r, account_r, account_total_claimed_r, validate_account_permit, decay_claimed_r};
 
 pub fn config<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
@@ -27,8 +27,18 @@ pub fn dates<S: Storage, A: Api, Q: Querier>
 
 pub fn total_claimed<S: Storage, A: Api, Q: Querier>
 (deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+    let claimed: Uint128;
+    let total_claimed = total_claimed_r(&deps.storage).load()?;
+    if decay_claimed_r(&deps.storage).load()? {
+        claimed = total_claimed;
+    }
+    else {
+        let config = config_r(&deps.storage).load()?;
+        claimed = total_claimed.multiply_ratio(Uint128(1), config.redeem_step_size)
+            .multiply_ratio(config.redeem_step_size, Uint128(1));
+    }
     Ok(QueryAnswer::TotalClaimed {
-        claimed: total_claimed_r(&deps.storage).load()?
+        claimed
     })
 }
 

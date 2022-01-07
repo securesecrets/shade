@@ -101,5 +101,21 @@ pub mod tests {
         assert_ne!(permit_addr.as_canonical(), bech32_to_canonical("terra19m2zgdyuq0crpww00jc2a9k70ut944dum53p7x"));
     }
 
+    #[test]
+    fn claim_query() {
+        assert_eq!(Uint128(300), Uint128(345).multiply_ratio(Uint128(1), Uint128(100))
+            .multiply_ratio(Uint128(100), Uint128(1)))
+    }
 
+    #[test]
+    fn claim_query_odd_multiple() {
+        assert_eq!(Uint128(13475), Uint128(13480).multiply_ratio(Uint128(1), Uint128(7))
+            .multiply_ratio(Uint128(7), Uint128(1)))
+    }
+
+    #[test]
+    fn claim_query_under_step() {
+        assert_eq!(Uint128(0), Uint128(200).multiply_ratio(Uint128(1), Uint128(1000))
+            .multiply_ratio(Uint128(1000), Uint128(1)))
+    }
 }

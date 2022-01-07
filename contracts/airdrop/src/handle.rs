@@ -1,10 +1,6 @@
 use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, HumanAddr, Uint128, Binary, Decimal};
 use rs_merkle::{Hasher, MerkleProof, algorithms::Sha256};
-use crate::state::{
-    config_r, config_w, claim_status_w, claim_status_r, account_total_claimed_w,
-    total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_address_permit,
-    revoke_permit
-};
+use crate::state::{config_r, config_w, claim_status_w, claim_status_r, account_total_claimed_w, total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_address_permit, revoke_permit, decay_claimed_w};
 use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::{RequiredTask},
                                account::{Account, AddressProofPermit}},
                      generic_response::ResponseStatus};
@@ -362,6 +358,15 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
     if let Some(end_date) = config.end_date {
         if let Some(dump_address) = config.dump_address {
             if env.block.time > end_date {
+                decay_claimed_w(&mut deps.storage).update(| claimed | {
+                    if claimed {
+                        return Err(StdError::generic_err("Decay already claimed"))
+                    }
+                    else {
+                        Ok(true)
+                    }
+                })?;
+
                 let send_total = (config.airdrop_amount - total_claimed_r(&deps.storage).load()?)?;
                 let messages = vec![send_msg(
                     dump_address, send_total, None, None,

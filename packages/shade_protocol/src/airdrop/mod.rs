@@ -32,7 +32,9 @@ pub struct Config {
     // tree height
     pub total_accounts: u32,
     // max possible reward amount; used to prevent collision possibility
-    pub max_amount: Uint128
+    pub max_amount: Uint128,
+    // Protects from leaking user information by limiting amount detail
+    pub redeem_step_size: Uint128
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -58,7 +60,9 @@ pub struct InitMsg {
     // Default gifted amount
     pub default_claim: Uint128,
     // The task related claims
-    pub task_claim: Vec<RequiredTask>
+    pub task_claim: Vec<RequiredTask>,
+    // Protects from leaking user information by limiting amount detail
+    pub redeem_step_size: Uint128
 }
 
 impl InitCallback for InitMsg {
@@ -115,10 +119,10 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetConfig { },
-    GetDates { current_date: Option<u64> },
+    Config { },
+    Dates { current_date: Option<u64> },
     TotalClaimed { },
-    GetAccount { permit: AccountPermit, current_date: Option<u64> },
+    Account { permit: AccountPermit, current_date: Option<u64> },
 }
 
 impl Query for QueryMsg {
