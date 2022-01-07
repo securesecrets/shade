@@ -1,7 +1,7 @@
 use cosmwasm_std::{Storage, Uint128, StdResult, HumanAddr, StdError, Api, Querier, Extern};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton,
                        bucket, Bucket, bucket_read, ReadonlyBucket};
-use shade_protocol::airdrop::{Config, account::{Account, AccountPermit, AddressProofPermit}};
+use shade_protocol::airdrop::{Config, account::{Account, AccountPermit, AddressProofPermit, authenticate_ownership}};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static CLAIM_STATUS_KEY: &[u8] = b"claim_status_";
@@ -107,7 +107,7 @@ pub fn validate_address_permit<S: Storage>(
     }
 
     // Authenticate permit
-    permit.authenticate()
+    authenticate_ownership(&permit)
 }
 
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
@@ -119,7 +119,7 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Authenticate permit
-    let address = permit.authenticate(&deps.api)?;
+    let address = permit.validate()?.as_humanaddr(&deps.api)?;
 
     // Check that permit is not revoked
     if is_permit_revoked(&deps.storage, address.to_string(),

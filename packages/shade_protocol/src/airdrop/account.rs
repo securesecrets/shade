@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, StdResult, StdError, Api};
-use crate::signature::{Permit, bech32_to_canonical};
+use cosmwasm_std::{HumanAddr, Uint128, StdResult, StdError};
+use flexible_permits::permit::{bech32_to_canonical, Permit};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -12,12 +12,6 @@ pub struct Account {
 
 // Used for querying account information
 pub type AccountPermit = Permit<AccountPermitMsg>;
-
-impl AccountPermit {
-    pub fn authenticate<A: Api>(&self, api: &A) -> StdResult<HumanAddr> {
-        self.validate()?.as_humanaddr(api)
-    }
-}
 
 #[remain::sorted]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -30,17 +24,14 @@ pub struct AccountPermitMsg {
 // Used to prove ownership over IBC addresses
 pub type AddressProofPermit = Permit<AddressProofMsg>;
 
-impl AddressProofPermit {
-    /// Will check if signer is the same as the given address
-    pub fn authenticate(&self) -> StdResult<HumanAddr> {
-        let permit_address = self.params.address.clone();
-        let signer_address = self.validate()?.as_canonical();
-        if signer_address != bech32_to_canonical(permit_address.as_str()) {
-            return Err(StdError::generic_err(
-                format!("{:?} is not the message signer", permit_address.as_str())))
-        }
-        Ok(permit_address)
+pub fn authenticate_ownership(permit: &AddressProofPermit) -> StdResult<HumanAddr> {
+    let permit_address = permit.params.address.clone();
+    let signer_address = permit.validate()?.as_canonical();
+    if signer_address != bech32_to_canonical(permit_address.as_str()) {
+        return Err(StdError::generic_err(
+            format!("{:?} is not the message signer", permit_address.as_str())))
     }
+    Ok(permit_address)
 }
 
 #[remain::sorted]
