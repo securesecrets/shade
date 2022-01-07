@@ -25,6 +25,13 @@ pub fn dates<S: Storage, A: Api, Q: Querier>
     })
 }
 
+pub fn total_claimed<S: Storage, A: Api, Q: Querier>
+(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::TotalClaimed {
+        claimed: total_claimed_r(&deps.storage).load()?
+    })
+}
+
 pub fn account<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>, permit: AccountPermit, current_date: Option<u64>
 ) -> StdResult<QueryAnswer> {

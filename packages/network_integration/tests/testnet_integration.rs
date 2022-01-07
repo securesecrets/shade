@@ -6,7 +6,7 @@ use cosmwasm_std::{HumanAddr, Uint128, to_binary, Binary};
 use flexible_permits::{permit::Permit, transaction::PermitSignature};
 use secretcli::{secretcli::{account_address, query_contract, test_contract_handle, test_inst_init, create_permit}};
 use shade_protocol::{snip20::{self, InitConfig, InitialBalance}, governance, staking, band, oracle,
-                     asset::Contract, airdrop::{self, claim_info::{Reward, RequiredTask}, account::{AddressProofMsg}},
+                     asset::Contract, airdrop::{self, claim_info::RequiredTask, account::{AddressProofMsg}},
                      governance::{vote::{UserVote, Vote}, proposal::ProposalStatus},
                      generic_response::ResponseStatus};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
@@ -381,7 +381,7 @@ fn run_airdrop() -> Result<()> {
     {
         let current = chrono::offset::Utc::now().timestamp() as u64;
         // Wait until times is between decay start and end of airdrop
-        thread::sleep(time::Duration::from_secs(end_date - current + 4));
+        thread::sleep(time::Duration::from_secs(end_date - current + 20));
     }
 
     test_contract_handle(&airdrop::HandleMsg::ClaimDecay {},
