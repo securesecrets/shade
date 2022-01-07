@@ -76,7 +76,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         merkle_root: msg.merkle_root,
         total_accounts: msg.total_accounts,
         max_amount: msg.max_amount,
-        redeem_step_size: msg.redeem_step_size
+        query_rounding: msg.query_rounding
     };
 
     config_w(&mut deps.storage).save(&config)?;
@@ -99,9 +99,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::UpdateConfig {
-            admin, dump_address,
+            admin, dump_address, query_rounding: redeem_step_size,
             start_date, end_date, decay_start: start_decay
-        } => try_update_config(deps, env, admin, dump_address,
+        } => try_update_config(deps, env, admin, dump_address, redeem_step_size,
                                start_date, end_date, start_decay),
         HandleMsg::AddTasks { tasks
         } => try_add_tasks(deps, &env, tasks),

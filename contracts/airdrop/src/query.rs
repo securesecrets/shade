@@ -1,5 +1,6 @@
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use shade_protocol::airdrop::{QueryAnswer, account::AccountPermit, claim_info::RequiredTask};
+use shade_protocol::math::{div, mult};
 use crate::handle::decay_factor;
 use crate::state::{config_r, claim_status_r, total_claimed_r, account_r, account_total_claimed_r, validate_account_permit, decay_claimed_r};
 
@@ -34,8 +35,7 @@ pub fn total_claimed<S: Storage, A: Api, Q: Querier>
     }
     else {
         let config = config_r(&deps.storage).load()?;
-        claimed = total_claimed.multiply_ratio(Uint128(1), config.redeem_step_size)
-            .multiply_ratio(config.redeem_step_size, Uint128(1));
+        claimed = mult(div(total_claimed, config.query_rounding)?, config.query_rounding);
     }
     Ok(QueryAnswer::TotalClaimed {
         claimed

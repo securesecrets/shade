@@ -165,7 +165,7 @@ fn run_airdrop() -> Result<()> {
         task_claim: vec![RequiredTask {
             address: HumanAddr::from(account_a.clone()),
             percent: Uint128(50) }],
-        redeem_step_size: Uint128(30000000)
+        query_rounding: Uint128(30000000)
     };
 
     let airdrop = test_inst_init(&airdrop_init_msg, AIRDROP_FILE, &*generate_label(8),

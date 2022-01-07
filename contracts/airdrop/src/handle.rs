@@ -11,6 +11,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     admin: Option<HumanAddr>,
     dump_address: Option<HumanAddr>,
+    query_rounding: Option<Uint128>,
     start_date: Option<u64>,
     end_date: Option<u64>,
     decay_start: Option<u64>
@@ -29,6 +30,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
         if let Some(dump_address)= dump_address {
             state.dump_address = Some(dump_address);
+        }
+        if let Some(query_rounding)= query_rounding {
+            state.query_rounding = query_rounding;
         }
         if let Some(start_date) = start_date {
             // Avoid date collisions

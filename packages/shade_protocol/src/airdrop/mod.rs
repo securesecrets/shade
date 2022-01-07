@@ -34,7 +34,7 @@ pub struct Config {
     // max possible reward amount; used to prevent collision possibility
     pub max_amount: Uint128,
     // Protects from leaking user information by limiting amount detail
-    pub redeem_step_size: Uint128
+    pub query_rounding: Uint128
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -62,7 +62,7 @@ pub struct InitMsg {
     // The task related claims
     pub task_claim: Vec<RequiredTask>,
     // Protects from leaking user information by limiting amount detail
-    pub redeem_step_size: Uint128
+    pub query_rounding: Uint128
 }
 
 impl InitCallback for InitMsg {
@@ -75,6 +75,7 @@ pub enum HandleMsg {
     UpdateConfig {
         admin: Option<HumanAddr>,
         dump_address: Option<HumanAddr>,
+        query_rounding: Option<Uint128>,
         start_date: Option<u64>,
         end_date: Option<u64>,
         decay_start: Option<u64>,

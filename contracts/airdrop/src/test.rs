@@ -5,6 +5,7 @@ pub mod tests {
     use shade_protocol::{airdrop::{account::{AddressProofMsg, AddressProofPermit},
                                    claim_info::RequiredTask, InitMsg}, asset::Contract};
     use flexible_permits::{transaction::{PermitSignature, PubKey}, permit::bech32_to_canonical};
+    use shade_protocol::math::{div, mult};
     use crate::{handle::inverse_normalizer, contract::init};
 
     #[test]
@@ -103,19 +104,17 @@ pub mod tests {
 
     #[test]
     fn claim_query() {
-        assert_eq!(Uint128(300), Uint128(345).multiply_ratio(Uint128(1), Uint128(100))
-            .multiply_ratio(Uint128(100), Uint128(1)))
+
+        assert_eq!(Uint128(300), mult(div(Uint128(345), Uint128(100)).unwrap(), Uint128(100)))
     }
 
     #[test]
     fn claim_query_odd_multiple() {
-        assert_eq!(Uint128(13475), Uint128(13480).multiply_ratio(Uint128(1), Uint128(7))
-            .multiply_ratio(Uint128(7), Uint128(1)))
+        assert_eq!(Uint128(13475), mult(div(Uint128(13480), Uint128(7)).unwrap(), Uint128(7)))
     }
 
     #[test]
     fn claim_query_under_step() {
-        assert_eq!(Uint128(0), Uint128(200).multiply_ratio(Uint128(1), Uint128(1000))
-            .multiply_ratio(Uint128(1000), Uint128(1)))
+        assert_eq!(Uint128(0), mult(div(Uint128(200), Uint128(1000)).unwrap(), Uint128(1000)))
     }
 }
