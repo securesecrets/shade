@@ -117,6 +117,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     GetConfig { },
     GetDates { current_date: Option<u64> },
+    TotalClaimed { },
     GetAccount { permit: AccountPermit, current_date: Option<u64> },
 }
 
@@ -130,6 +131,7 @@ pub enum QueryAnswer {
     Config { config: Config, total_claimed: Uint128 },
     Dates { start: u64, end: Option<u64>,
         decay_start: Option<u64>, decay_factor: Option<Uint128> },
+    TotalClaimed { claimed: Uint128 },
     Account {
         // Total eligible
         total: Uint128,

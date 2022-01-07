@@ -46,6 +46,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     // Avoid decay collisions
     if let Some(start_decay) = msg.decay_start {
+        if start_decay < start_date {
+            return Err(StdError::generic_err("Decay cannot start before start date"))
+        }
         if let Some(end_date) = msg.end_date {
             if start_decay > end_date {
                 return Err(StdError::generic_err("Decay cannot start after the end date"))
@@ -118,6 +121,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig { } => to_binary(&query::config(&deps)?),
         QueryMsg::GetDates { current_date } => to_binary(&query::dates(&deps, current_date)?),
+        QueryMsg::TotalClaimed {} => to_binary(&query::total_claimed(&deps)?),
         QueryMsg::GetAccount { permit, current_date } => to_binary(
             &query::account(&deps, permit, current_date)?),
     }

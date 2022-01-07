@@ -46,14 +46,21 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
                     return Err(StdError::generic_err("New start date is greater than the current end date"))
                 }
             }
+            if let Some(start_decay) = decay_start {
+                if start_date > start_decay {
+                    return Err(StdError::generic_err("New start date is greater than start of decay"))
+                }
+            }
+            else if let Some(start_decay) = state.decay_start {
+                if start_date > start_decay {
+                    return Err(StdError::generic_err("New start date is greater than the current start of decay"))
+                }
+            }
 
             state.start_date = start_date;
         }
         if let Some(end_date) = end_date {
             // Avoid date collisions
-            if state.start_date > end_date {
-                return Err(StdError::generic_err("New end date is before start date"))
-            }
             if let Some(decay_start) = decay_start {
                 if decay_start > end_date {
                     return Err(StdError::generic_err("New end date is before start of decay"))
@@ -66,6 +73,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             }
 
             state.end_date = Some(end_date);
+        }
+        if decay_start.is_some() {
+            state.decay_start = decay_start
         }
 
         Ok(state)
@@ -95,7 +105,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
         let mut task_list = tasks;
         config.task_claim.append(&mut task_list);
 
-        //Validate that they do not excede 100
+        //Validate that they do not exceed 100
         let mut count = Uint128::zero();
         for task in config.task_claim.iter() {
             count += task.percent;
@@ -125,7 +135,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    // Check that airdrop hasnt ended
+    // Check that airdrop hasn't ended
     available(&config, &env)?;
 
     // Check that account doesnt exist
@@ -140,7 +150,8 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     };
 
     // Validate permits
-    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account,
+                              addresses, partial_tree)?;
 
     // Save account
     account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
@@ -206,7 +217,8 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     }
 
     // Setup the new addresses
-    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account, addresses, partial_tree)?;
+    try_add_account_addresses(&mut deps.storage, &config, &env.message.sender, &mut account,
+                              addresses, partial_tree)?;
 
     let mut messages = vec![];
     if completed_percentage > Uint128::zero() {
@@ -269,7 +281,6 @@ pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-
 pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -290,18 +301,15 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
                         Ok(false)
                     }
                 })?;
-
-            return Ok(HandleResponse {
-                messages: vec![],
-                log: vec![],
-                data: Some( to_binary( &HandleAnswer::Claim {
-                    status: ResponseStatus::Success } )? )
-            })
         }
     }
 
-    // if not found
-    Err(StdError::not_found("task"))
+    return Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some( to_binary( &HandleAnswer::Claim {
+            status: ResponseStatus::Success } )? )
+    })
 }
 
 pub fn try_claim<S: Storage, A: Api, Q: Querier>(
@@ -454,7 +462,7 @@ pub fn try_add_account_addresses<S: Storage>(
     partial_tree: Vec<Binary>,
 ) -> StdResult<()> {
     // Setup the items to validate
-    let mut leafs_to_validate: Vec<(usize, [u8; 32])> = vec![];
+    let mut leaves_to_validate: Vec<(usize, [u8; 32])> = vec![];
 
     // Iterate addresses
     for permit in addresses.iter() {
@@ -488,7 +496,7 @@ pub fn try_add_account_addresses<S: Storage>(
 
         // Add account as a leaf
         let leaf_hash = Sha256::hash((address.to_string() + &permit.params.amount.to_string()).as_bytes());
-        leafs_to_validate.push((permit.params.index as usize, leaf_hash));
+        leaves_to_validate.push((permit.params.index as usize, leaf_hash));
 
         // If valid then add to account array and sum total amount
         account.addresses.push(address);
@@ -496,12 +504,12 @@ pub fn try_add_account_addresses<S: Storage>(
     }
 
     // Need to sort by index in order for the proof to work
-    leafs_to_validate.sort_by_key(|item| item.0);
+    leaves_to_validate.sort_by_key(|item| item.0);
 
     let mut indices: Vec<usize> = vec![];
     let mut leaves: Vec<[u8; 32]> = vec![];
 
-    for leaf in leafs_to_validate.iter() {
+    for leaf in leaves_to_validate.iter() {
         indices.push(leaf.0);
         leaves.push(leaf.1);
     };

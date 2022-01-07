@@ -1,15 +1,11 @@
 #[cfg(test)]
 pub mod tests {
-    use cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr, Uint128};
-    use shade_protocol::airdrop::account::{AddressProofMsg, AddressProofPermit};
-    use shade_protocol::airdrop::claim_info::RequiredTask;
-    use shade_protocol::airdrop::InitMsg;
-    use shade_protocol::asset::Contract;
-    use shade_protocol::signature::{bech32_to_canonical, pubkey_to_account};
-    use shade_protocol::signature::transaction::{PermitSignature, PubKey};
-    use crate::contract::init;
-    use crate::handle::inverse_normalizer;
+    use cosmwasm_std::{testing::{mock_dependencies, mock_env}, Binary, CanonicalAddr,
+                       HumanAddr, Uint128};
+    use shade_protocol::{airdrop::{account::{AddressProofMsg, AddressProofPermit},
+                                   claim_info::RequiredTask, InitMsg}, asset::Contract};
+    use flexible_permits::{transaction::{PermitSignature, PubKey}, permit::bech32_to_canonical};
+    use crate::{handle::inverse_normalizer, contract::init};
 
     #[test]
     fn decay_factor() {
@@ -28,7 +24,7 @@ pub mod tests {
                 index: 11,
                 key: "account-creation-permit".to_string()
             },
-            chain_id: "pulsar-2".to_string(),
+            chain_id: Some("pulsar-2".to_string()),
             signature: PermitSignature {
                 pub_key: PubKey {
                     r#type: "tendermint/PubKeySecp256k1".to_string(),
@@ -43,6 +39,8 @@ pub mod tests {
         };
 
         let permit_addr = permit.validate().expect("Signature validation failed");
+        assert_eq!(permit_addr.as_canonical(), bech32_to_canonical(permit.params.address.clone().as_str()));
+        assert_ne!(permit_addr.as_canonical(), bech32_to_canonical("secret17q23878cx2pmjn8cp7sqhylqfpvdw9r8p5q8um"));
     }
 
     #[test]
@@ -55,7 +53,7 @@ pub mod tests {
                 index: 6,
                 key: "account-creation-permit".to_string()
             },
-            chain_id: "cosmoshub-4".to_string(),
+            chain_id: Some("cosmoshub-4".to_string()),
             signature: PermitSignature {
                 pub_key: PubKey {
                     r#type: "tendermint/PubKeySecp256k1".to_string(),
@@ -70,8 +68,8 @@ pub mod tests {
         };
 
         let permit_addr = permit.validate().expect("Signature validation failed");
-        assert_eq!(permit_addr, bech32_to_canonical(permit.params.address.clone().as_str()));
-        assert_ne!(permit_addr, bech32_to_canonical("cosmos1ceqk06xpqrq45melc9f8khae0fwaa5y5w0gz6x"));
+        assert_eq!(permit_addr.as_canonical(), bech32_to_canonical(permit.params.address.clone().as_str()));
+        assert_ne!(permit_addr.as_canonical(), bech32_to_canonical("cosmos1ceqk06xpqrq45melc9f8khae0fwaa5y5w0gz6x"));
     }
 
     #[test]
@@ -84,7 +82,7 @@ pub mod tests {
                 index: 0,
                 key: "account-creation-permit".to_string()
             },
-            chain_id: "columbus-5".to_string(),
+            chain_id: Some("columbus-5".to_string()),
             signature: PermitSignature {
                 pub_key: PubKey {
                     r#type: "tendermint/PubKeySecp256k1".to_string(),
@@ -99,8 +97,8 @@ pub mod tests {
         };
 
         let permit_addr = permit.validate().expect("Signature validation failed");
-        assert_eq!(permit_addr, bech32_to_canonical(permit.params.address.clone().as_str()));
-        assert_ne!(permit_addr, bech32_to_canonical("terra19m2zgdyuq0crpww00jc2a9k70ut944dum53p7x"));
+        assert_eq!(permit_addr.as_canonical(), bech32_to_canonical(permit.params.address.clone().as_str()));
+        assert_ne!(permit_addr.as_canonical(), bech32_to_canonical("terra19m2zgdyuq0crpww00jc2a9k70ut944dum53p7x"));
     }
 
 
