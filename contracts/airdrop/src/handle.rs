@@ -2,7 +2,7 @@ use cosmwasm_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdErro
 use rs_merkle::{Hasher, MerkleProof, algorithms::Sha256};
 use crate::state::{
     config_r, config_w, claim_status_w, claim_status_r, account_total_claimed_w,
-    total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_permit,
+    total_claimed_w, total_claimed_r, account_r, address_in_account_w, account_w, validate_address_permit,
     revoke_permit
 };
 use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::{RequiredTask},
@@ -462,7 +462,7 @@ pub fn try_add_account_addresses<S: Storage>(
         // Avoid verifying sender
         if &permit.params.address != sender {
             // Check permit legitimacy
-            address = validate_permit(storage, permit, config.contract.clone())?;
+            address = validate_address_permit(storage, permit, config.contract.clone())?;
             if address != permit.params.address {
                 return Err(StdError::generic_err("Signer address is not the same as the permit address"))
             }

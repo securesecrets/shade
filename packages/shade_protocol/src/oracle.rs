@@ -54,8 +54,12 @@ pub enum HandleMsg {
         admin: Option<HumanAddr>,
         band: Option<Contract>,
     },
-    // Register Secret Swap Pair (should be */SCRT)
+    // Register Secret Swap Pair (should be */sSCRT or sSCRT/*)
     RegisterSswapPair {
+        pair: Contract,
+    },
+    // Unregister Secret Swap Pair (opposite action to RegisterSswapPair)
+    UnregisterSswapPair {
         pair: Contract,
     },
     RegisterIndex {
@@ -76,6 +80,7 @@ impl TestHandle for HandleMsg {}
 pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus},
     RegisterSswapPair { status: ResponseStatus},
+    UnregisterSswapPair { status: ResponseStatus},
     RegisterIndex { status: ResponseStatus},
 }
 

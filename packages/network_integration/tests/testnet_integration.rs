@@ -3,11 +3,12 @@ use colored::*;
 use serde_json::Result;
 use serde::Serialize;
 use cosmwasm_std::{HumanAddr, Uint128, to_binary, Binary};
+use flexible_permits::{permit::Permit, transaction::PermitSignature};
 use secretcli::{secretcli::{account_address, query_contract, test_contract_handle, test_inst_init, create_permit}};
 use shade_protocol::{snip20::{self, InitConfig, InitialBalance}, governance, staking, band, oracle,
                      asset::Contract, airdrop::{self, claim_info::{Reward, RequiredTask}, account::{AddressProofMsg}},
                      governance::{vote::{UserVote, Vote}, proposal::ProposalStatus},
-                     generic_response::ResponseStatus, signature::{self, Permit, transaction::PermitSignature}};
+                     generic_response::ResponseStatus};
 use network_integration::{utils::{print_header, print_warning, generate_label, print_contract,
                              STORE_GAS, GAS, VIEW_KEY, ACCOUNT_KEY, print_vec,
                                   SNIP20_FILE, AIRDROP_FILE, GOVERNANCE_FILE, MOCK_BAND_FILE, ORACLE_FILE},
@@ -18,11 +19,12 @@ use network_integration::{utils::{print_header, print_warning, generate_label, p
                                         minter::{initialize_minter, setup_minters, get_balance},
                                         stake::setup_staker}};
 use rs_merkle::{Hasher, MerkleTree, algorithms::Sha256};
+use shade_protocol::airdrop::account::AccountPermitMsg;
 
 fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Permit<T> {
-    let chain_id = "testnet".to_string();
-    let unsigned_msg = signature::transaction::SignedTx::from_msg(
-        signature::transaction::TxMsg{
+    let chain_id = Some("testnet".to_string());
+    let unsigned_msg = flexible_permits::transaction::SignedTx::from_msg(
+        flexible_permits::transaction::TxMsg{
             r#type: "signature_proof".to_string(),
             value: permit_msg.clone()
         }, chain_id.clone());
@@ -33,7 +35,7 @@ fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Pe
         params: permit_msg,
         chain_id,
         signature: PermitSignature {
-            pub_key: signature::transaction::PubKey {
+            pub_key: flexible_permits::transaction::PubKey {
                 r#type: signed_info.pub_key.msg_type,
                 value: Binary::from_base64(&signed_info.pub_key.value).unwrap()
             },
@@ -140,9 +142,9 @@ fn run_airdrop() -> Result<()> {
     print_header("Initializing airdrop");
 
     let now = chrono::offset::Utc::now().timestamp() as u64;
-    let duration = 180;
+    let duration = 200;
     let decay_date = now + duration;
-    let end_date = now + duration + 80;
+    let end_date = decay_date + 60;
 
     let airdrop_init_msg = airdrop::InitMsg {
         admin: None,
@@ -206,6 +208,10 @@ fn run_airdrop() -> Result<()> {
     let initial_proof = proof_from_tree(&vec![0,1], &merlke_tree.layers());
 
     let a_permit = create_signed_permit(a_address_proof, ACCOUNT_KEY);
+    let account_permit = create_signed_permit(
+        AccountPermitMsg{
+            contract: HumanAddr(airdrop.address.clone()),
+            key: "key".to_string() }, ACCOUNT_KEY);
 
     /// Create an account which will also claim whatever amount is available
     print_warning("Creating an account");
@@ -220,7 +226,7 @@ fn run_airdrop() -> Result<()> {
     print_warning("Getting initial account information");
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            permit: a_permit.clone(),
+            permit: account_permit.clone(),
             current_date: None
         };
 
@@ -247,7 +253,7 @@ fn run_airdrop() -> Result<()> {
 
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            permit: a_permit.clone(),
+            permit: account_permit.clone(),
             current_date: None
         };
 
@@ -285,7 +291,7 @@ fn run_airdrop() -> Result<()> {
     /// Query that all of the airdrop is claimed
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            permit: a_permit.clone(),
+            permit: account_permit.clone(),
             current_date: None
         };
 
@@ -307,7 +313,7 @@ fn run_airdrop() -> Result<()> {
 
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            permit: a_permit.clone(),
+            permit: account_permit.clone(),
             current_date: None
         };
 
@@ -316,19 +322,15 @@ fn run_airdrop() -> Result<()> {
         assert!(query.is_err());
     }
 
-    let new_a_address_proof = AddressProofMsg {
-        address: HumanAddr(account_a.clone()),
-        amount: a_airdrop,
-        contract: HumanAddr(airdrop.address.clone()),
-        index: 0,
-        key: "new_key".to_string()
-    };
 
-    let new_a_permit = create_signed_permit(new_a_address_proof, ACCOUNT_KEY);
+    let new_account_permit = create_signed_permit(
+        AccountPermitMsg{
+            contract: HumanAddr(airdrop.address.clone()),
+            key: "new_key".to_string() }, ACCOUNT_KEY);
 
     {
         let msg = airdrop::QueryMsg::GetAccount {
-            permit: new_a_permit.clone(),
+            permit: new_account_permit.clone(),
             current_date: None
         };
 
@@ -347,7 +349,7 @@ fn run_airdrop() -> Result<()> {
     {
         let current = chrono::offset::Utc::now().timestamp() as u64;
         // Wait until times is between decay start and end of airdrop
-        thread::sleep(time::Duration::from_secs(decay_date - current + 30));
+        thread::sleep(time::Duration::from_secs((decay_date - current) + 20));
     }
 
     {
@@ -370,7 +372,8 @@ fn run_airdrop() -> Result<()> {
 
         let balance = get_balance(&snip, account_a.clone());
 
-        assert!(balance > total_airdrop && balance < total_airdrop + decay_amount);
+        assert!(balance > total_airdrop);
+        assert!(balance < total_airdrop + decay_amount);
     }
 
     /// Try to claim expired tokens

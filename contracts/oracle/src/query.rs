@@ -24,7 +24,6 @@ use shade_protocol::{
 };
 use crate::state::{
     config_r,
-    hard_coded_r,
     sswap_pairs_r,
     index_r,
 };

@@ -4,7 +4,6 @@ pub mod generic_response;
 pub mod secretswap;
 pub mod band;
 pub mod snip20;
-pub mod signature;
 
 //pub mod math;
 
