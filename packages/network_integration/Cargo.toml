@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
 edition = "2018"
 
+[[bin]]
+name = "testnet_airdrop"
+path = "src/testnet_airdrop.rs"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
