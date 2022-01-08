@@ -1,4 +1,4 @@
 [submodule "contracts/snip20"]
 	path = contracts/snip20
-	url = git@github.com:enigmampc/snip20-reference-impl.git
+	url = https://github.com/scrtlabs/snip20-reference-impl.git
   branch = master
