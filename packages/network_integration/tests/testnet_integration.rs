@@ -164,7 +164,8 @@ fn run_airdrop() -> Result<()> {
         default_claim: Uint128(50),
         task_claim: vec![RequiredTask {
             address: HumanAddr::from(account_a.clone()),
-            percent: Uint128(50) }]
+            percent: Uint128(50) }],
+        query_rounding: Uint128(30000000)
     };
 
     let airdrop = test_inst_init(&airdrop_init_msg, AIRDROP_FILE, &*generate_label(8),
@@ -225,7 +226,7 @@ fn run_airdrop() -> Result<()> {
 
     print_warning("Getting initial account information");
     {
-        let msg = airdrop::QueryMsg::GetAccount {
+        let msg = airdrop::QueryMsg::Account {
             permit: account_permit.clone(),
             current_date: None
         };
@@ -252,7 +253,7 @@ fn run_airdrop() -> Result<()> {
                          Some("test"), None)?;
 
     {
-        let msg = airdrop::QueryMsg::GetAccount {
+        let msg = airdrop::QueryMsg::Account {
             permit: account_permit.clone(),
             current_date: None
         };
@@ -265,6 +266,18 @@ fn run_airdrop() -> Result<()> {
             assert_eq!(claimed, ab_half_airdrop);
             assert_eq!(unclaimed, ab_half_airdrop);
             assert_eq!(finished_tasks.len(), 2);
+        }
+    }
+
+    print_warning("Verifying query step functionality");
+
+    {
+        let msg = airdrop::QueryMsg::TotalClaimed { };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::TotalClaimed { claimed } = query {
+            assert_eq!(claimed, Uint128(30000000));
         }
     }
 
@@ -290,7 +303,7 @@ fn run_airdrop() -> Result<()> {
 
     /// Query that all of the airdrop is claimed
     {
-        let msg = airdrop::QueryMsg::GetAccount {
+        let msg = airdrop::QueryMsg::Account {
             permit: account_permit.clone(),
             current_date: None
         };
@@ -312,7 +325,7 @@ fn run_airdrop() -> Result<()> {
                          Some("test"), None)?;
 
     {
-        let msg = airdrop::QueryMsg::GetAccount {
+        let msg = airdrop::QueryMsg::Account {
             permit: account_permit.clone(),
             current_date: None
         };
@@ -329,7 +342,7 @@ fn run_airdrop() -> Result<()> {
             key: "new_key".to_string() }, ACCOUNT_KEY);
 
     {
-        let msg = airdrop::QueryMsg::GetAccount {
+        let msg = airdrop::QueryMsg::Account {
             permit: new_account_permit.clone(),
             current_date: None
         };
@@ -376,6 +389,8 @@ fn run_airdrop() -> Result<()> {
         assert!(balance < total_airdrop + decay_amount);
     }
 
+    let pre_decay_balance = get_balance(&snip, account_a.clone());
+
     /// Try to claim expired tokens
     print_warning("Claiming expired tokens");
     {
@@ -389,6 +404,18 @@ fn run_airdrop() -> Result<()> {
                          Some("test"), None)?;
 
     assert_eq!(total_airdrop + decay_amount, get_balance(&snip, account_a.clone()));
+
+    print_warning("Verifying query step functionality after decay claim");
+
+    {
+        let msg = airdrop::QueryMsg::TotalClaimed { };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::TotalClaimed { claimed } = query {
+            assert_eq!(claimed, pre_decay_balance);
+        }
+    }
 
     Ok(())
 }

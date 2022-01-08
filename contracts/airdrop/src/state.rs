@@ -4,6 +4,7 @@ use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton,
 use shade_protocol::airdrop::{Config, account::{Account, AccountPermit, AddressProofPermit, authenticate_ownership}};
 
 pub static CONFIG_KEY: &[u8] = b"config";
+pub static DECAY_CLAIMED_KEY: &[u8] = b"decay_claimed";
 pub static CLAIM_STATUS_KEY: &[u8] = b"claim_status_";
 pub static REWARD_IN_ACCOUNT_KEY: &[u8] = b"reward_in_account";
 pub static ACCOUNTS_KEY: &[u8] = b"accounts";
@@ -17,6 +18,14 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
 
 pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
+}
+
+pub fn decay_claimed_w<S: Storage>(storage: &mut S) -> Singleton<S, bool> {
+    singleton(storage, DECAY_CLAIMED_KEY)
+}
+
+pub fn decay_claimed_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, bool> {
+    singleton_read(storage, DECAY_CLAIMED_KEY)
 }
 
 // Is address added to an account

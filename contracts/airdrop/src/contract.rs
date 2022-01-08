@@ -9,6 +9,7 @@ use crate::{state::{config_w, total_claimed_w},
             handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account,
                      try_update_account, try_disable_permit_key, try_claim, try_claim_decay},
             query };
+use crate::state::decay_claimed_w;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -75,12 +76,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         merkle_root: msg.merkle_root,
         total_accounts: msg.total_accounts,
         max_amount: msg.max_amount,
+        query_rounding: msg.query_rounding
     };
 
     config_w(&mut deps.storage).save(&config)?;
 
     // Initialize claim amount
     total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
+
+    decay_claimed_w(&mut deps.storage).save(&false)?;
 
     Ok(InitResponse {
         messages: vec![],
@@ -95,9 +99,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::UpdateConfig {
-            admin, dump_address,
+            admin, dump_address, query_rounding: redeem_step_size,
             start_date, end_date, decay_start: start_decay
-        } => try_update_config(deps, env, admin, dump_address,
+        } => try_update_config(deps, env, admin, dump_address, redeem_step_size,
                                start_date, end_date, start_decay),
         HandleMsg::AddTasks { tasks
         } => try_add_tasks(deps, &env, tasks),
@@ -119,10 +123,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetConfig { } => to_binary(&query::config(&deps)?),
-        QueryMsg::GetDates { current_date } => to_binary(&query::dates(&deps, current_date)?),
+        QueryMsg::Config { } => to_binary(&query::config(&deps)?),
+        QueryMsg::Dates { current_date } => to_binary(&query::dates(&deps, current_date)?),
         QueryMsg::TotalClaimed {} => to_binary(&query::total_claimed(&deps)?),
-        QueryMsg::GetAccount { permit, current_date } => to_binary(
+        QueryMsg::Account { permit, current_date } => to_binary(
             &query::account(&deps, permit, current_date)?),
     }
 }

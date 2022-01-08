@@ -5,6 +5,7 @@ pub mod tests {
     use shade_protocol::{airdrop::{account::{AddressProofMsg, AddressProofPermit},
                                    claim_info::RequiredTask, InitMsg}, asset::Contract};
     use flexible_permits::{transaction::{PermitSignature, PubKey}, permit::bech32_to_canonical};
+    use shade_protocol::math::{div, mult};
     use crate::{handle::inverse_normalizer, contract::init};
 
     #[test]
@@ -101,5 +102,19 @@ pub mod tests {
         assert_ne!(permit_addr.as_canonical(), bech32_to_canonical("terra19m2zgdyuq0crpww00jc2a9k70ut944dum53p7x"));
     }
 
+    #[test]
+    fn claim_query() {
 
+        assert_eq!(Uint128(300), mult(div(Uint128(345), Uint128(100)).unwrap(), Uint128(100)))
+    }
+
+    #[test]
+    fn claim_query_odd_multiple() {
+        assert_eq!(Uint128(13475), mult(div(Uint128(13480), Uint128(7)).unwrap(), Uint128(7)))
+    }
+
+    #[test]
+    fn claim_query_under_step() {
+        assert_eq!(Uint128(0), mult(div(Uint128(200), Uint128(1000)).unwrap(), Uint128(1000)))
+    }
 }
