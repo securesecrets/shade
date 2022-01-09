@@ -4,6 +4,7 @@ checksum_dir=${compiled_dir}/checksum
 
 # Compresses the wasm file, args: compressed_file_name, built_file_name
 define compress_wasm =
+(cd $(contracts_dir)/$(1); cargo unit-test)
 wasm-opt -Oz ./target/wasm32-unknown-unknown/release/$(2).wasm -o ./$(1).wasm
 echo $(md5sum $(1).wasm | cut -f 1 -d " ") >> ${checksum_dir}/$(1).txt
 cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
