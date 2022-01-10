@@ -17,17 +17,17 @@
 
 2. Pull the SN-testnet image
 ```shell
-docker pull securesecrets/sn-testnet:v0.2
+make server-download
 ```
 
 3. Open a terminal inside this repo and run:
 ```shell
-docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1337:1337 -v $(pwd):/root/code --name shade-testnet securesecrets/sn-testnet:v0.2
+make server-start
 ```
 
 4. Inside another terminal run:
 ```shell
-docker exec -it shade-testnet /bin/bash
+make server-connect
 ```
 
 #### Testing the environment
@@ -37,7 +37,7 @@ make
 ```
 Then test run all the Protocol unit-tests and integration tests using the [tester](packages/network_integration):
 ```shell
-cargo test -- --nocapture --test-threads=1
+make integration-tests
 ```
 
 ### Unit Tests
