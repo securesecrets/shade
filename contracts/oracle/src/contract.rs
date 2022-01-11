@@ -11,7 +11,7 @@ use shade_protocol::{
     band::ReferenceData,
 };
 use crate::{
-    state::{ config_w, hard_coded_w },
+    state::{ config_w },
     query, handle,
 };
 
@@ -30,15 +30,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     };
 
     config_w(&mut deps.storage).save(&state)?;
-
-    /* Hard-coded SILK = $1.00
-     */
-    hard_coded_w(&mut deps.storage).save("SILK".as_bytes(), &ReferenceData {
-                //1$
-                rate: Uint128(1 * 10u128.pow(18)),
-                last_updated_base: 0,
-                last_updated_quote: 0
-            })?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 

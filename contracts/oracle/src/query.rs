@@ -42,12 +42,6 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
         return reference_data(deps, "SCRT".to_string(), "USD".to_string());
     }
 
-    /*
-    if let Some(reference_data) = hard_coded_r(&deps.storage).may_load(&symbol.as_bytes())? {
-        return Ok(reference_data);
-    }
-    */
-
     // secret swap pair
     // TODO: sienna pair
     if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {

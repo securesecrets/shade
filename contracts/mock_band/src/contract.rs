@@ -50,8 +50,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             return Ok(HandleResponse::default())
         }
     }
-
-    Err(StdError::GenericErr { msg: "Not Implemented".to_string(), backtrace: None})
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
