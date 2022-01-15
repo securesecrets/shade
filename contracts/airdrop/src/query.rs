@@ -19,7 +19,6 @@ use shade_protocol::{
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
-        total_claimed: total_claimed_r(&deps.storage).load()?,
     })
 }
 

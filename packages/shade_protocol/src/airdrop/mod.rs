@@ -158,7 +158,6 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config {
         config: Config,
-        total_claimed: Uint128,
     },
     Dates {
         start: u64,
