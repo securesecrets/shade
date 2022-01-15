@@ -15,11 +15,13 @@
         * Messages
             * [CreateAccount](#CreateAccount)
             * [UpdateAccount](#UpdateAccount)
+            * [DisablePermitKey](#DisablePermitKey)
             * [Claim](#Claim)
         * Queries
-            * [GetConfig](#GetConfig)
-            * [GetDates](#GetDates)
-            * [GetAccount](#GetAccount)
+            * [Config](#Config)
+            * [Dates](#Dates)
+            * [TotalClaimed](#TotalClaimed)
+            * [Account](#Account)
     
 # Introduction
 Contract responsible to handle snip20 airdrop
@@ -42,6 +44,7 @@ Contract responsible to handle snip20 airdrop
 |max_amount   | String        | Used to limit the user permit amounts (lowers exploit possibility) |  no|
 |default_claim | String        | The default amount to be gifted regardless of tasks  |  no      |
 |task_claim    | RequiredTasks | The amounts per tasks to gift                        |  no      |
+|query_rounding | string       | To prevent leaking information, total claimed is rounded off to this value | no
 
 ##Admin
 
@@ -57,13 +60,15 @@ Updates the given values
 |start_date    | u64        | When the airdrop starts in UNIX time                  |  yes     |
 |end_date      | u64        | When the airdrop ends in UNIX time                    |  yes     |
 |decay_start   | u64        | When the airdrop decay starts in UNIX time            |  yes |
+|padding       | string     | Allows for enforcing constant length messages         |  yes |
 
 #### AddTasks
 Adds more tasks to complete
 ##### Request
 |Name  |Type   |Description                | optional |
 |------|-------|---------------------------|----------|
-|Tasks | Tasks | The new tasks to be added | no       |
+|tasks | Tasks | The new tasks to be added | no       |
+|padding       | string     | Allows for enforcing constant length messages         |  yes |
 
 ##### Response
 ```json
@@ -96,6 +101,7 @@ Complete that address' tasks for a given user
 |Name    |Type    |Description                          | optional |
 |--------|--------|-------------------------------------|----------|
 |address | String | The address that completed the task | no       |
+|padding       | string     | Allows for enforcing constant length messages         |  yes |
 
 ##### Response
 ```json
@@ -117,6 +123,7 @@ Creates an account from which the user will claim all of his given addresses' re
 |-----------|----------------------------------|------------------------------------------|----------|
 | addresses | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses | no       |
 | partial_tree | Array of string                  | An array of nodes that serve as a proof for the addresses | no |
+|padding       | string     | Allows for enforcing constant length messages         |  yes |
 
 ##### Response
 ```json
@@ -134,11 +141,29 @@ Updates a users accounts with more addresses
 |-----------|-----------------------------|------------------------------------------|----------|
 | addresses | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses | no       |
 | partial_tree | Array of string          | An array of nodes that serve as a proof for the addresses | no |
+|padding       | string     | Allows for enforcing constant length messages         |  yes |
 
 ##### Response
 ```json
 {
   "update_account": {
+    "status": "success"
+  }
+}
+```
+
+### DisablePermitKey
+Disables that permit's key. Any permit that has that key for that address will be declined.
+##### Request
+| Name      | Type                        | Description                              | optional |
+|-----------|-----------------------------|------------------------------------------|----------|
+| key | string | Permit key | no       |
+|padding       | string     | Allows for enforcing constant length messages         |  yes |
+
+##### Response
+```json
+{
+  "disable_permit_key": {
     "status": "success"
   }
 }
@@ -169,7 +194,7 @@ Gets the contract's config
 }
 ```
 
-## GetDates
+## Dates
 Get the contracts airdrop timeframe, can calculate the decay factor if a time is given
 ##### Request
 |Name    |Type    |Description                          | optional |
@@ -186,7 +211,18 @@ Get the contracts airdrop timeframe, can calculate the decay factor if a time is
 }
 ```
 
-## GetAccount
+## TotalClaimed
+Shows the total amount of the token that has been claimed. If airdrop hasn't ended then it'll just show an estimation.
+##### Request
+```json
+{
+  "total_claimed": {
+    "claimed": "Claimed amount"
+  }
+}
+```
+
+## Account
 Get the account's information
 ##### Request
 |Name    |Type    |Description                          | optional |
@@ -195,7 +231,7 @@ Get the account's information
 |current_date | u64 | Current time in UNIT format       | yes      |
 ```json
 {
-  "eligibility": {
+  "account": {
     "total": "Total airdrop amount",
     "claimed": "Claimed amount",
     "unclaimed": "Amount available to claim",
