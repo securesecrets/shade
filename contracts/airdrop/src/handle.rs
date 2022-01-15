@@ -260,7 +260,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasnt ended
-    available(&config, &env)?;
+    available(&config, env)?;
 
     // Get account
     let sender = env.message.sender.clone().to_string();

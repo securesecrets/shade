@@ -34,15 +34,15 @@ pub fn secretcli_run(command: Vec<String>) -> Result<Value> {
     let mut commands = command;
     commands.append(&mut vec_str_to_vec_string(vec!["--output", "json"]));
     let mut cli = Command::new("secretd".to_string());
-    if commands.len() > 0 {
-        cli.args(commands.clone());
+    if commands.is_empty() {
+        cli.args(commands);
     }
 
     let mut result = cli.output().expect("Unexpected error");
 
     // We wait cause sometimes the query/action takes a while
     for _ in 0..retry {
-        if result.stderr.len() > 0 {
+        if result.stderr.is_empty() {
             thread::sleep(time::Duration::from_secs(1));
         } else {
             break;
@@ -140,15 +140,15 @@ pub fn account_address(acc: &str) -> Result<String> {
 
     let retry = 20;
     let mut cli = Command::new("secretd".to_string());
-    if command.len() > 0 {
-        cli.args(command.clone());
+    if command.is_empty() {
+        cli.args(command);
     }
 
     let mut result = cli.output().expect("Unexpected error");
 
     // We wait cause sometimes the query/action takes a while
     for _ in 0..retry {
-        if result.stderr.len() > 0 {
+        if result.stderr.is_empty() {
             thread::sleep(time::Duration::from_secs(1));
         } else {
             break;
@@ -382,7 +382,7 @@ pub fn execute_contract<Handle: serde::Serialize>(
         &contract.address,
         &message,
         "--from",
-        &sender,
+        sender,
         "--gas",
     ];
 
@@ -506,7 +506,7 @@ pub fn create_permit<Tx: serde::Serialize>(tx: Tx, signer: &str) -> Result<Signe
     let mut file = File::create("./tx_to_sign").unwrap();
     file.write_all(msg.as_bytes()).unwrap();
 
-    let command = vec!["tx", "sign-doc", "tx_to_sign", "--from", &signer];
+    let command = vec!["tx", "sign-doc", "tx_to_sign", "--from", signer];
 
     let response: SignedTx =
         serde_json::from_value(secretcli_run(vec_str_to_vec_string(command))?)?;
