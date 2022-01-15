@@ -1,32 +1,27 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary,
-    Env, Extern, HandleResponse,
-    Querier, StdError, StdResult, Storage, 
-    HumanAddr, Uint128
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
 };
-use secret_toolkit::{
-    snip20::{
-        token_info_query,
-        register_receive_msg, 
-        set_viewing_key_msg,
-    },
-};
+use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg, token_info_query};
 
 use shade_protocol::{
-    treasury::{
-        HandleAnswer, 
-        Asset,
-        Allocation,
-    },
     asset::Contract,
     generic_response::ResponseStatus,
+    treasury::{Allocation, Asset, HandleAnswer},
 };
 
-use crate::state::{
-    config_w, config_r, 
-    assets_r, assets_w,
-    viewing_key_r,
-};
+use crate::state::{assets_r, assets_w, config_r, config_w, viewing_key_r};
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -36,7 +31,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-
     let assets = assets_r(&deps.storage);
 
     let asset: Asset = assets.load(env.message.sender.to_string().as_bytes())?;
@@ -45,9 +39,9 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::Receive {
+        data: Some(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,
-        } )? ),
+        })?),
     })
 }
 
@@ -56,7 +50,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     owner: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.owner {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -74,8 +67,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success } )? )
+        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -85,16 +79,18 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     contract: &Contract,
     allocations: Option<Vec<Allocation>>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.owner {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
     let mut messages = vec![];
-    let token_info = token_info_query(&deps.querier, 1,
-                                      contract.code_hash.clone(),
-                                      contract.address.clone())?;
+    let token_info = token_info_query(
+        &deps.querier,
+        1,
+        contract.code_hash.clone(),
+        contract.address.clone(),
+    )?;
 
     assets_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &Asset {
         contract: contract.clone(),
@@ -113,21 +109,19 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
     // Set viewing key
     messages.push(set_viewing_key_msg(
-                    viewing_key_r(&deps.storage).load()?,
-                    None,
-                    1,
-                    contract.code_hash.clone(),
-                    contract.address.clone())?);
-
+        viewing_key_r(&deps.storage).load()?,
+        None,
+        1,
+        contract.code_hash.clone(),
+        contract.address.clone(),
+    )?);
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some( to_binary( 
-            &HandleAnswer::RegisterAsset {
-                status: ResponseStatus::Success } 
-            )? 
-        )
+        data: Some(to_binary(&HandleAnswer::RegisterAsset {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -135,15 +129,12 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: &Env,
 ) -> StdResult<HandleResponse> {
-
     let messages = vec![];
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some( to_binary( 
-            &HandleAnswer::Rebalance {
-                status: ResponseStatus::Success } 
-            )? 
-        )
+        data: Some(to_binary(&HandleAnswer::Rebalance {
+            status: ResponseStatus::Success,
+        })?),
     })
 }

@@ -1,34 +1,26 @@
+use crate::state::{config_r, config_w, index_w, sswap_pairs_r, sswap_pairs_w};
 use cosmwasm_std::{
-    to_binary, Api,
-    Env, Extern, HandleResponse,
-    Querier, StdResult, StdError, Storage,
+    to_binary,
+    Api,
+    Env,
+    Extern,
+    HandleResponse,
     HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use secret_toolkit::{
+    snip20::{token_info_query, TokenInfo},
     utils::Query,
-    snip20::{
-        token_info_query,
-        TokenInfo,
-    },
 };
 use shade_protocol::{
-    oracle::{
-        HandleAnswer,
-        SswapPair,
-        IndexElement,
-    },
     asset::Contract,
     generic_response::ResponseStatus,
+    oracle::{HandleAnswer, IndexElement, SswapPair},
+    secretswap::{PairQuery, PairResponse},
     snip20::Snip20Asset,
-    secretswap::{
-        PairQuery,
-        PairResponse,
-    }
-};
-use crate::state::{
-    config_w, config_r,
-    sswap_pairs_w, sswap_pairs_r,
-    index_w,
 };
 
 pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
@@ -36,17 +28,13 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
     env: Env,
     pair: Contract,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    let (token_contract, token_info) = fetch_token_paired_to_sscrt_on_sswap(
-        deps,
-        config.sscrt.address,
-        &pair
-    )?;
+    let (token_contract, token_info) =
+        fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
 
     sswap_pairs_w(&mut deps.storage).save(token_info.symbol.as_bytes(), &SswapPair {
         pair,
@@ -54,14 +42,15 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
             contract: token_contract,
             token_info: token_info.clone(),
             token_config: None,
-        }
+        },
     })?;
 
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::RegisterSswapPair {
-            status: ResponseStatus::Success } )? )
+        data: Some(to_binary(&HandleAnswer::RegisterSswapPair {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -70,25 +59,21 @@ pub fn unregister_sswap_pair<S: Storage, A: Api, Q: Querier>(
     env: Env,
     pair: Contract,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    let (_, token_info) = fetch_token_paired_to_sscrt_on_sswap(
-        deps,
-        config.sscrt.address,
-        &pair
-    )?;
+    let (_, token_info) = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
 
     sswap_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
 
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UnregisterSswapPair {
-            status: ResponseStatus::Success } )? )
+        data: Some(to_binary(&HandleAnswer::UnregisterSswapPair {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -102,11 +87,8 @@ fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
     // Query for snip20's in the pair
-    let response: PairResponse = PairQuery::Pair{}.query(
-        &deps.querier,
-        pair.code_hash.clone(),
-        pair.address.clone(),
-    )?;
+    let response: PairResponse =
+        PairQuery::Pair {}.query(&deps.querier, pair.code_hash.clone(), pair.address.clone())?;
 
     let mut token_contract = Contract {
         address: response.asset_infos[0].token.contract_addr.clone(),
@@ -121,12 +103,18 @@ fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
     }
     // if neither is sscrt
     else if response.asset_infos[1].token.contract_addr != sscrt_addr {
-        return Err(StdError::NotFound { kind: "Not an SSCRT Pair".to_string(), backtrace: None });
+        return Err(StdError::NotFound {
+            kind: "Not an SSCRT Pair".to_string(),
+            backtrace: None,
+        });
     }
 
-    let token_info = token_info_query(&deps.querier, 1,
-                                      token_contract.code_hash.clone(),
-                                      token_contract.address.clone())?;
+    let token_info = token_info_query(
+        &deps.querier,
+        1,
+        token_contract.code_hash.clone(),
+        token_contract.address.clone(),
+    )?;
 
     Ok((token_contract, token_info))
 }
@@ -137,19 +125,18 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
     symbol: String,
     basket: Vec<IndexElement>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
     match sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-        None => { }
+        None => {}
         Some(_) => {
             return Err(StdError::GenericErr {
                 msg: "symbol collides with an existing SecretSwap Pair".to_string(),
-                backtrace: None
-            })
+                backtrace: None,
+            });
         }
     }
 
@@ -166,11 +153,10 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::RegisterIndex {
-            status: ResponseStatus::Success 
-        })?)
+        data: Some(to_binary(&HandleAnswer::RegisterIndex {
+            status: ResponseStatus::Success,
+        })?),
     })
-
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
@@ -179,7 +165,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     admin: Option<HumanAddr>,
     band: Option<Contract>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -201,10 +186,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(
-            &HandleAnswer::UpdateConfig {
-                status: ResponseStatus::Success
-            }
-        )?)
+        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+            status: ResponseStatus::Success,
+        })?),
     })
 }

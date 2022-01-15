@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct TxResponse {
@@ -7,7 +7,7 @@ pub struct TxResponse {
     pub codespace: String,
     pub code: Option<u128>,
     pub data: String,
-    pub raw_log: String
+    pub raw_log: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -34,21 +34,21 @@ pub struct TxQuery {
 pub struct TxQueryLogs {
     pub msg_index: i128,
     pub log: String,
-    pub events: Vec<TxQueryEvents>
+    pub events: Vec<TxQueryEvents>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct TxQueryEvents {
-    #[serde(rename="type")]
+    #[serde(rename = "type")]
     pub msg_type: String,
-    pub attributes: Vec<TxQueryKeyValue>
+    pub attributes: Vec<TxQueryKeyValue>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct TxQueryKeyValue {
-    #[serde(rename="key")]
+    #[serde(rename = "key")]
     pub msg_key: String,
-    pub value: String
+    pub value: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -63,7 +63,7 @@ pub struct ListContractCode {
     pub code_id: u128,
     pub creator: String,
     pub label: String,
-    pub address: String
+    pub address: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -82,7 +82,7 @@ pub struct SignedTx {
 
 #[derive(Serialize, Deserialize)]
 pub struct PubKey {
-    #[serde(rename="type")]
+    #[serde(rename = "type")]
     pub msg_type: String,
-    pub value: String
+    pub value: String,
 }

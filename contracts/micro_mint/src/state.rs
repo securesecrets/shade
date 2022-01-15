@@ -1,7 +1,16 @@
 use cosmwasm_std::{Storage, Uint128};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
+use cosmwasm_storage::{
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
+};
 use shade_protocol::{
-    micro_mint::{Config, SupportedAsset, MintLimit},
+    micro_mint::{Config, MintLimit, SupportedAsset},
     snip20::Snip20Asset,
 };
 
@@ -53,7 +62,7 @@ pub fn asset_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<String>
     singleton_read(storage, ASSET_LIST_KEY)
 }
 
-pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, SupportedAsset> {
+pub fn assets_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, SupportedAsset> {
     bucket_read(ASSET_KEY, storage)
 }
 
@@ -61,7 +70,7 @@ pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, SupportedAsset> {
     bucket(ASSET_KEY, storage)
 }
 
-pub fn total_burned_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Uint128> {
+pub fn total_burned_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
     bucket_read(BURN_COUNT_KEY, storage)
 }
 

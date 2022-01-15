@@ -1,44 +1,36 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary,
-    Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, Storage, 
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
 };
 
-use shade_protocol::{
-    scrt_staking::{
-        Config,
-        InitMsg, 
-        HandleMsg,
-        QueryMsg,
-    },
-};
+use shade_protocol::scrt_staking::{Config, HandleMsg, InitMsg, QueryMsg};
 
-use secret_toolkit::{
-    snip20::{
-        register_receive_msg, 
-        set_viewing_key_msg,
-    },
-};
+use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
 
 use crate::{
-    state::{
-        viewing_key_w, viewing_key_r,
-        config_w, self_address_w,
-    },
-    handle, query,
+    handle,
+    query,
+    state::{config_w, self_address_w, viewing_key_r, viewing_key_w},
 };
-
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
     let config = Config {
         admin: match msg.admin {
-            None => { env.message.sender.clone() }
-            Some(admin) => { admin }
+            None => env.message.sender.clone(),
+            Some(admin) => admin,
         },
         sscrt: msg.sscrt,
         treasury: msg.treasury,
@@ -69,7 +61,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 config.sscrt.address,
             )?,
         ],
-        log: vec![]
+        log: vec![],
     })
 }
 
@@ -86,17 +78,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg,
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
-        HandleMsg::UpdateConfig {
-            admin,
-        } => handle::try_update_config(deps, env, admin),
+        HandleMsg::UpdateConfig { admin } => handle::try_update_config(deps, env, admin),
         // Begin unbonding of a certain amount of scrt
-        HandleMsg::Unbond {
-            validator,
-        } => handle::unbond(deps, env, validator),
+        HandleMsg::Unbond { validator } => handle::unbond(deps, env, validator),
         // Collect a completed unbonding/rewards
-        HandleMsg::Claim {
-            validator,
-        } => handle::claim(deps, env, validator),
+        HandleMsg::Claim { validator } => handle::claim(deps, env, validator),
     }
 }
 
@@ -107,7 +93,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         // All delegations
-        QueryMsg::Delegations { } => to_binary(&query::delegations(deps)?),
+        QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
         QueryMsg::Delegation { validator } => to_binary(&query::delegation(deps, validator)?),
     }
 }

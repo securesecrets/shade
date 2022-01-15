@@ -1,10 +1,8 @@
+use crate::asset::Contract;
 use cosmwasm_std::{HumanAddr, Uint128};
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
-use crate::{
-    asset::Contract,
-};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -35,12 +33,10 @@ pub struct Simulation {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum PairQuery{
+pub enum PairQuery {
     Pair {},
     Pool {},
-    Simulation {
-        offer_asset: Asset,
-    },
+    Simulation { offer_asset: Asset },
     //ReverseSimulation {},
 }
 

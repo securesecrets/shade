@@ -1,15 +1,32 @@
-use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128, StdError};
-use shade_protocol::{
-    airdrop::{
-        InitMsg, HandleMsg,
-        QueryMsg, Config, claim_info::RequiredTask
-    }
+use crate::{
+    handle::{
+        try_add_tasks,
+        try_claim,
+        try_claim_decay,
+        try_complete_task,
+        try_create_account,
+        try_disable_permit_key,
+        try_update_account,
+        try_update_config,
+    },
+    query,
+    state::{config_w, decay_claimed_w, total_claimed_w},
 };
-use crate::{state::{config_w, total_claimed_w},
-            handle::{try_update_config, try_add_tasks, try_complete_task, try_create_account,
-                     try_update_account, try_disable_permit_key, try_claim, try_claim_decay},
-            query };
-use crate::state::decay_claimed_w;
+use cosmwasm_std::{
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
+};
+use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -17,9 +34,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     // Setup task claim
-    let mut task_claim= vec![RequiredTask {
+    let mut task_claim = vec![RequiredTask {
         address: env.contract.address.clone(),
-        percent: msg.default_claim
+        percent: msg.default_claim,
     }];
     let mut claim = msg.task_claim;
     task_claim.append(&mut claim);
@@ -31,36 +48,44 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }
 
     if count > Uint128(100) {
-        return Err(StdError::GenericErr { msg: "tasks above 100%".to_string(), backtrace: None })
+        return Err(StdError::GenericErr {
+            msg: "tasks above 100%".to_string(),
+            backtrace: None,
+        });
     }
 
     let start_date = match msg.start_date {
         None => env.block.time,
-        Some(date) => date
+        Some(date) => date,
     };
 
     if let Some(end_date) = msg.end_date {
         if end_date < start_date {
-            return Err(StdError::generic_err("Start date must come before end date"))
+            return Err(StdError::generic_err(
+                "Start date must come before end date",
+            ));
         }
     }
 
     // Avoid decay collisions
     if let Some(start_decay) = msg.decay_start {
         if start_decay < start_date {
-            return Err(StdError::generic_err("Decay cannot start before start date"))
+            return Err(StdError::generic_err(
+                "Decay cannot start before start date",
+            ));
         }
         if let Some(end_date) = msg.end_date {
             if start_decay > end_date {
-                return Err(StdError::generic_err("Decay cannot start after the end date"))
+                return Err(StdError::generic_err(
+                    "Decay cannot start after the end date",
+                ));
             }
-        }
-        else {
-            return Err(StdError::generic_err("Decay must have an end date"))
+        } else {
+            return Err(StdError::generic_err("Decay must have an end date"));
         }
     }
 
-    let config = Config{
+    let config = Config {
         admin: msg.admin.unwrap_or(env.message.sender),
         contract: env.contract.address,
         dump_address: msg.dump_address,
@@ -73,7 +98,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         merkle_root: msg.merkle_root,
         total_accounts: msg.total_accounts,
         max_amount: msg.max_amount,
-        query_rounding: msg.query_rounding
+        query_rounding: msg.query_rounding,
     };
 
     config_w(&mut deps.storage).save(&config)?;
@@ -85,7 +110,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     Ok(InitResponse {
         messages: vec![],
-        log: vec![]
+        log: vec![],
     })
 }
 
@@ -96,22 +121,35 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::UpdateConfig {
-            admin, dump_address, query_rounding: redeem_step_size,
-            start_date, end_date, decay_start: start_decay
-        } => try_update_config(deps, env, admin, dump_address, redeem_step_size,
-                               start_date, end_date, start_decay),
-        HandleMsg::AddTasks { tasks
-        } => try_add_tasks(deps, &env, tasks),
-        HandleMsg::CompleteTask { address
-        } => try_complete_task(deps, &env, address),
-        HandleMsg::CreateAccount { addresses, partial_tree
+            admin,
+            dump_address,
+            query_rounding: redeem_step_size,
+            start_date,
+            end_date,
+            decay_start: start_decay,
+        } => try_update_config(
+            deps,
+            env,
+            admin,
+            dump_address,
+            redeem_step_size,
+            start_date,
+            end_date,
+            start_decay,
+        ),
+        HandleMsg::AddTasks { tasks } => try_add_tasks(deps, &env, tasks),
+        HandleMsg::CompleteTask { address } => try_complete_task(deps, &env, address),
+        HandleMsg::CreateAccount {
+            addresses,
+            partial_tree,
         } => try_create_account(deps, &env, addresses, partial_tree),
-        HandleMsg::UpdateAccount { addresses, partial_tree
+        HandleMsg::UpdateAccount {
+            addresses,
+            partial_tree,
         } => try_update_account(deps, &env, addresses, partial_tree),
-        HandleMsg::DisablePermitKey { key
-        } => try_disable_permit_key(deps, &env, key),
-        HandleMsg::Claim { } => try_claim(deps, &env),
-        HandleMsg::ClaimDecay { } => try_claim_decay(deps, &env),
+        HandleMsg::DisablePermitKey { key } => try_disable_permit_key(deps, &env, key),
+        HandleMsg::Claim {} => try_claim(deps, &env),
+        HandleMsg::ClaimDecay {} => try_claim_decay(deps, &env),
     }
 }
 
@@ -120,10 +158,12 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config { } => to_binary(&query::config(deps)?),
+        QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Dates { current_date } => to_binary(&query::dates(deps, current_date)?),
         QueryMsg::TotalClaimed {} => to_binary(&query::total_claimed(deps)?),
-        QueryMsg::Account { permit, current_date } => to_binary(
-            &query::account(deps, permit, current_date)?),
+        QueryMsg::Account {
+            permit,
+            current_date,
+        } => to_binary(&query::account(deps, permit, current_date)?),
     }
 }

@@ -1,38 +1,34 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary,
-    Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, Storage, 
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
 };
 
-use shade_protocol::{
-    treasury::{
-        InitMsg,
-        Config,
-        HandleMsg,
-        QueryMsg,
-    },
-};
+use shade_protocol::treasury::{Config, HandleMsg, InitMsg, QueryMsg};
 
 use crate::{
-    state::{
-        viewing_key_w,
-        config_w,
-        self_address_w,
-    },
-    handle, query,
+    handle,
+    query,
+    state::{config_w, self_address_w, viewing_key_w},
 };
-
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
     let state = Config {
         owner: match msg.admin {
-            None => { env.message.sender.clone() }
-            Some(admin) => { admin }
+            None => env.message.sender.clone(),
+            Some(admin) => admin,
         },
     };
 
@@ -44,7 +40,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     Ok(InitResponse {
         messages: vec![],
-        log: vec![]
+        log: vec![],
     })
 }
 
@@ -61,15 +57,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg,
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
-        HandleMsg::UpdateConfig {
-            owner,
-        } => handle::try_update_config(deps, env, owner),
+        HandleMsg::UpdateConfig { owner } => handle::try_update_config(deps, env, owner),
         HandleMsg::RegisterAsset {
             contract,
             allocations,
         } => handle::try_register_asset(deps, &env, &contract, allocations),
-        HandleMsg::Rebalance {
-        } => handle::rebalance(deps, &env),
+        HandleMsg::Rebalance {} => handle::rebalance(deps, &env),
     }
 }
 
@@ -80,6 +73,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::GetBalance { contract } => to_binary(&query::balance(deps, contract)?),
-        QueryMsg::CanRebalance { } => to_binary(&query::can_rebalance(deps)?),
+        QueryMsg::CanRebalance {} => to_binary(&query::can_rebalance(deps)?),
     }
 }

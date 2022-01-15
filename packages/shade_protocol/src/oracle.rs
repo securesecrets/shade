@@ -1,15 +1,11 @@
+use crate::{asset::Contract, generic_response::ResponseStatus, snip20::Snip20Asset};
 use cosmwasm_std::{HumanAddr, Uint128};
 use schemars::JsonSchema;
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
-use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
-use crate::{
-    asset::Contract,
-    generic_response::ResponseStatus,
-    snip20::Snip20Asset,
-};
 
 #[cfg(test)]
-use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
+use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct SswapPair {
@@ -78,10 +74,10 @@ impl TestHandle for HandleMsg {}
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    UpdateConfig { status: ResponseStatus},
-    RegisterSswapPair { status: ResponseStatus},
-    UnregisterSswapPair { status: ResponseStatus},
-    RegisterIndex { status: ResponseStatus},
+    UpdateConfig { status: ResponseStatus },
+    RegisterSswapPair { status: ResponseStatus },
+    UnregisterSswapPair { status: ResponseStatus },
+    RegisterIndex { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -104,4 +100,3 @@ impl TestQuery<QueryAnswer> for QueryMsg {}
 pub enum QueryAnswer {
     Config { config: OracleConfig },
 }
-

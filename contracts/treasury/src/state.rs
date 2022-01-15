@@ -1,9 +1,13 @@
-use cosmwasm_std::{Storage, HumanAddr};
+use cosmwasm_std::{HumanAddr, Storage};
 use cosmwasm_storage::{
-    singleton, singleton_read,
-    Singleton, ReadonlySingleton,
-    Bucket, ReadonlyBucket,
-    bucket, bucket_read,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
 };
 use shade_protocol::treasury;
 
@@ -29,7 +33,7 @@ pub fn asset_list_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Stri
     singleton_read(storage, ASSET_LIST_KEY)
 }
 
-pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, treasury::Asset> {
+pub fn assets_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury::Asset> {
     bucket_read(ASSET_KEY, storage)
 }
 

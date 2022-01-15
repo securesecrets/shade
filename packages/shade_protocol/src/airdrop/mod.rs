@@ -1,11 +1,17 @@
-pub mod claim_info;
 pub mod account;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
+pub mod claim_info;
+use crate::{
+    airdrop::{
+        account::{AccountPermit, AddressProofPermit},
+        claim_info::RequiredTask,
+    },
+    asset::Contract,
+    generic_response::ResponseStatus,
+};
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
-use crate::{asset::Contract, generic_response::ResponseStatus,
-            airdrop::{claim_info::{RequiredTask}, account::{AccountPermit, AddressProofPermit}}};
+use schemars::JsonSchema;
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -34,7 +40,7 @@ pub struct Config {
     // max possible reward amount; used to prevent collision possibility
     pub max_amount: Uint128,
     // Protects from leaking user information by limiting amount detail
-    pub query_rounding: Uint128
+    pub query_rounding: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -62,7 +68,7 @@ pub struct InitMsg {
     // The task related claims
     pub task_claim: Vec<RequiredTask>,
     // Protects from leaking user information by limiting amount detail
-    pub query_rounding: Uint128
+    pub query_rounding: Uint128,
 }
 
 impl InitCallback for InitMsg {
@@ -81,10 +87,10 @@ pub enum HandleMsg {
         decay_start: Option<u64>,
     },
     AddTasks {
-        tasks: Vec<RequiredTask>
+        tasks: Vec<RequiredTask>,
     },
     CompleteTask {
-        address: HumanAddr
+        address: HumanAddr,
     },
     CreateAccount {
         addresses: Vec<AddressProofPermit>,
@@ -95,7 +101,9 @@ pub enum HandleMsg {
         addresses: Vec<AddressProofPermit>,
         partial_tree: Vec<Binary>,
     },
-    DisablePermitKey { key: String },
+    DisablePermitKey {
+        key: String,
+    },
     Claim {},
     ClaimDecay {},
 }
@@ -120,10 +128,15 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Config { },
-    Dates { current_date: Option<u64> },
-    TotalClaimed { },
-    Account { permit: AccountPermit, current_date: Option<u64> },
+    Config {},
+    Dates {
+        current_date: Option<u64>,
+    },
+    TotalClaimed {},
+    Account {
+        permit: AccountPermit,
+        current_date: Option<u64>,
+    },
 }
 
 impl Query for QueryMsg {
@@ -133,10 +146,19 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    Config { config: Config, total_claimed: Uint128 },
-    Dates { start: u64, end: Option<u64>,
-        decay_start: Option<u64>, decay_factor: Option<Uint128> },
-    TotalClaimed { claimed: Uint128 },
+    Config {
+        config: Config,
+        total_claimed: Uint128,
+    },
+    Dates {
+        start: u64,
+        end: Option<u64>,
+        decay_start: Option<u64>,
+        decay_factor: Option<Uint128>,
+    },
+    TotalClaimed {
+        claimed: Uint128,
+    },
     Account {
         // Total eligible
         total: Uint128,
@@ -144,6 +166,6 @@ pub enum QueryAnswer {
         claimed: Uint128,
         // Total unclaimed but available
         unclaimed: Uint128,
-        finished_tasks: Vec<RequiredTask>
-    }
+        finished_tasks: Vec<RequiredTask>,
+    },
 }

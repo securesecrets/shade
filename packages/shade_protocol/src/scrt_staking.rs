@@ -1,19 +1,8 @@
+use crate::{asset::Contract, generic_response::ResponseStatus};
+use cosmwasm_std::{Binary, Decimal, FullDelegation, HumanAddr, Uint128, Validator};
 use schemars::JsonSchema;
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{
-    HumanAddr, Binary,
-    Uint128, Decimal,
-    Validator, FullDelegation,
-};
-use crate::asset::Contract;
-use crate::generic_response::ResponseStatus;
-use secret_toolkit::{
-    utils::{
-        InitCallback,
-        HandleCallback,
-        Query,
-    }
-};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -79,14 +68,21 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    Init { status: ResponseStatus, address: HumanAddr },
-    UpdateConfig { status: ResponseStatus },
-    Receive { 
+    Init {
+        status: ResponseStatus,
+        address: HumanAddr,
+    },
+    UpdateConfig {
+        status: ResponseStatus,
+    },
+    Receive {
         status: ResponseStatus,
         validator: Validator,
     },
-    Claim { status: ResponseStatus },
-    Unbond { 
+    Claim {
+        status: ResponseStatus,
+    },
+    Unbond {
         status: ResponseStatus,
         delegation: FullDelegation,
     },
@@ -109,6 +105,6 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    Config { config: Config},
+    Config { config: Config },
     Balance { amount: Uint128 },
 }

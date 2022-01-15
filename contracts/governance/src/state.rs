@@ -1,10 +1,18 @@
-use cosmwasm_std::{Storage};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
-use shade_protocol::{
-    governance::{Config},
-    asset::Contract,
+use cosmwasm_std::Storage;
+use cosmwasm_storage::{
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
 };
-use shade_protocol::governance::{AdminCommand};
+use shade_protocol::{
+    asset::Contract,
+    governance::{AdminCommand, Config},
+};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 // Saved contracts
@@ -24,7 +32,7 @@ pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
 
 // Supported contracts
 
-pub fn supported_contract_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Contract> {
+pub fn supported_contract_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Contract> {
     bucket_read(CONTRACT_KEY, storage)
 }
 
@@ -42,7 +50,7 @@ pub fn supported_contracts_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<
 
 // Admin commands
 
-pub fn admin_commands_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, AdminCommand> {
+pub fn admin_commands_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, AdminCommand> {
     bucket_read(ADMIN_COMMANDS_KEY, storage)
 }
 

@@ -1,9 +1,9 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use crate::snip20::InitialBalance;
-use cosmwasm_std::{HumanAddr, Binary};
+use cosmwasm_std::{Binary, HumanAddr};
+use schemars::JsonSchema;
 #[cfg(test)]
-use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
+use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitializerConfig {
@@ -37,8 +37,7 @@ impl TestInit for InitMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
-}
+pub enum HandleMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -52,5 +51,5 @@ impl TestQuery<QueryAnswer> for QueryMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    Contracts { contracts: Vec<Snip20InitHistory> }
+    Contracts { contracts: Vec<Snip20InitHistory> },
 }
