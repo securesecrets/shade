@@ -2,7 +2,7 @@ use std::fs;
 use std::env;
 use serde_json::Result;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{Binary, to_binary, Uint128, HumanAddr};
+use cosmwasm_std::{Binary, Uint128, HumanAddr};
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use network_integration::utils::{AIRDROP_FILE, GAS, generate_label, print_contract, print_header, SNIP20_FILE, STORE_GAS};
 use secretcli::secretcli::{account_address, test_contract_handle, test_inst_init};
@@ -107,7 +107,7 @@ fn main() -> Result<()> {
         max_amount: args.max_amount,
         default_claim: Uint128(20),
         task_claim: vec![RequiredTask {
-            address: HumanAddr::from(account_addr.clone()),
+            address: HumanAddr::from(account_addr),
             percent: Uint128(50) }],
         query_rounding: Uint128(10000000000)
     };
@@ -120,7 +120,7 @@ fn main() -> Result<()> {
 
     print_header("Funding airdrop");
     test_contract_handle(&snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(airdrop.address.clone()),
+        recipient: HumanAddr::from(airdrop.address),
         amount: args.initial_amount,
         msg: None,
         memo: None,

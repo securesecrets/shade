@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary};
 use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read};
 use secret_toolkit::{
@@ -168,22 +169,18 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             Some(x) => x,
         },
         contract,
-        burnable: match burnable {
-            None => false,
-            Some(x) => x
-        },
+        burnable: burnable.unwrap_or(false),
         total_burned: match total_burned {
             None => Uint128(0),
             Some(amount) => amount,
         }
     };
 
-    if !authorized(deps, &env, AllowedAccess::Admin)? {
+    if !authorized(deps, env, AllowedAccess::Admin)? {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    let mut messages = vec![];
-    messages.push(save_asset(deps, env, asset)?);
+    let messages = vec![save_asset(deps, env, asset)?];
 
     Ok(HandleResponse {
         messages,
@@ -233,8 +230,8 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     }
 
     // Query prices
-    let in_price = call_oracle(&deps, burning_asset.name)?;
-    let target_price = call_oracle(&deps, minting_asset.name)?;
+    let in_price = call_oracle(deps, burning_asset.name)?;
+    let target_price = call_oracle(deps, minting_asset.name)?;
 
     // Get asset decimals
     // Load the decimal information for both coins
@@ -308,25 +305,31 @@ fn authorized<S: Storage, A: Api, Q: Querier>(
             return Ok(false)
         }
     }
-    return Ok(true)
+    Ok(true)
 }
 
 fn register_receive (
     env: &Env,
     contract: Contract
 ) -> StdResult<CosmosMsg> {
-    let cosmos_msg = register_receive_msg(
+
+    register_receive_msg(
         env.contract_code_hash.clone(),
         None,
         256,
         contract.code_hash,
         contract.address,
-    );
-
-    cosmos_msg
+    )
 }
 
-fn calculate_mint(in_price: Uint128, target_price: Uint128, in_amount: Uint128, in_decimals: u32, target_decimals: u32) -> Uint128 {
+fn calculate_mint(
+    in_price: Uint128,
+    target_price: Uint128,
+    in_amount: Uint128,
+    in_decimals: u32,
+    target_decimals: u32
+) -> Uint128 {
+
     // Math must only be made in integers
     // in_decimals  = x
     // target_decimals = y
@@ -347,14 +350,10 @@ fn calculate_mint(in_price: Uint128, target_price: Uint128, in_amount: Uint128, 
     let difference: i32 = target_decimals as i32 - in_decimals as i32;
 
     // To avoid a mess of different types doing math
-    if difference < 0 {
-        in_total.multiply_ratio(1u128, 10u128.pow(u32::try_from(difference.abs()).unwrap()))
-    }
-    else if difference > 0 {
-        Uint128(in_total.u128() * 10u128.pow(u32::try_from(difference).unwrap()))
-    }
-    else {
-        in_total
+    match difference.cmp(&0) {
+        Ordering::Greater => Uint128(in_total.u128() * 10u128.pow(u32::try_from(difference).unwrap())),
+        Ordering::Less => in_total.multiply_ratio(1u128, 10u128.pow(u32::try_from(difference.abs()).unwrap())),
+        Ordering::Equal => in_total
     }
 }
 

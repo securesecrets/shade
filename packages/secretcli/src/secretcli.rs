@@ -26,7 +26,7 @@ fn vec_str_to_vec_string (str_in: Vec<&str>) -> Vec<String> {
 ///
 pub fn secretcli_run(command: Vec<String>) -> Result<Value> {
     let retry = 20;
-    let mut commands = command.clone();
+    let mut commands = command;
     commands.append(&mut vec_str_to_vec_string(vec!["--output", "json"]));
     let mut cli = Command::new("secretd".to_string());
     if commands.len() > 0 {

@@ -143,7 +143,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    match sswap_pairs_r(&deps.storage).may_load(&symbol.as_bytes())? {
+    match sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
         None => { }
         Some(_) => {
             return Err(StdError::GenericErr {

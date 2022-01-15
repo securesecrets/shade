@@ -61,11 +61,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }
 
     let config = Config{
-        admin: match msg.admin {
-            None => { env.message.sender.clone() }
-            Some(admin) => { admin }
-        },
-        contract: env.contract.address.clone(),
+        admin: msg.admin.unwrap_or(env.message.sender),
+        contract: env.contract.address,
         dump_address: msg.dump_address,
         airdrop_snip20: msg.airdrop_token.clone(),
         airdrop_amount: msg.airdrop_amount,
@@ -123,10 +120,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config { } => to_binary(&query::config(&deps)?),
-        QueryMsg::Dates { current_date } => to_binary(&query::dates(&deps, current_date)?),
-        QueryMsg::TotalClaimed {} => to_binary(&query::total_claimed(&deps)?),
+        QueryMsg::Config { } => to_binary(&query::config(deps)?),
+        QueryMsg::Dates { current_date } => to_binary(&query::dates(deps, current_date)?),
+        QueryMsg::TotalClaimed {} => to_binary(&query::total_claimed(deps)?),
         QueryMsg::Account { permit, current_date } => to_binary(
-            &query::account(&deps, permit, current_date)?),
+            &query::account(deps, permit, current_date)?),
     }
 }

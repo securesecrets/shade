@@ -36,7 +36,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let cosmos_msg = register_receive_msg(
         env.contract_code_hash, None, 256,
         state.staked_token.code_hash.clone(),
-        state.staked_token.address.clone())?;
+        state.staked_token.address)?;
 
     // Initialize binary heap
     let unbonding_heap = BinaryHeap::new_min();

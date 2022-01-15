@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::convert::TryFrom;
 use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary};
 use secret_toolkit::{
@@ -73,7 +74,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
 
     // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(&deps, amount, &burn_asset, &mint_asset)?;
+    let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
 
     let mut messages = vec![];
     let msgs: MintMsgHook = match msg {
@@ -161,7 +162,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let mint_asset = native_asset_r(&deps.storage).load()?;
 
     // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(&deps, amount, &burn_asset, &mint_asset)?;
+    let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
 
     // Check against slippage amount
     if amount_to_mint < msgs.minimum_expected_amount {
@@ -198,7 +199,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                            None,
                            256,
                            mint_asset.contract.code_hash.clone(),
-                           mint_asset.contract.address.clone())?);
+                           mint_asset.contract.address)?);
 
     Ok(HandleResponse {
         messages,
@@ -336,7 +337,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     };
 
     debug_print!("Registering {}", asset_info.symbol);
-    assets.save(&contract_str.as_bytes(), &SupportedAsset {
+    assets.save(contract_str.as_bytes(), &SupportedAsset {
         asset: Snip20Asset {
             contract: contract.clone(),
             token_info: asset_info,
@@ -349,7 +350,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         }
     })?;
 
-    total_burned_w(&mut deps.storage).save(&contract_str.as_bytes(), &Uint128(0))?;
+    total_burned_w(&mut deps.storage).save(contract_str.as_bytes(), &Uint128(0))?;
 
     // Add the asset to list
     asset_list_w(&mut deps.storage).update(|mut state| {
@@ -358,8 +359,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     })?;
 
     // Register contract in asset
-    let mut messages = vec![];
-    messages.push(register_receive(env, contract)?);
+    let messages = vec![register_receive(env, contract)?];
 
     Ok(HandleResponse {
         messages,
@@ -387,7 +387,7 @@ pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
     })?;
 
     // Remove supported asset
-    assets_w(&mut deps.storage).remove(&address_str.as_bytes());
+    assets_w(&mut deps.storage).remove(address_str.as_bytes());
 
     // We wont remove the total burned since we want to keep track of all the burned assets
 
@@ -405,15 +405,13 @@ pub fn register_receive (
     env: &Env,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    let cosmos_msg = register_receive_msg(
+    register_receive_msg(
         env.contract_code_hash.clone(),
         None,
         256,
         contract.code_hash.clone(),
         contract.address.clone(),
-    );
-
-    cosmos_msg
+    )
 }
 
 pub fn mint_amount<S: Storage, A: Api, Q: Querier>(
@@ -429,10 +427,10 @@ pub fn mint_amount<S: Storage, A: Api, Q: Querier>(
                  burn_asset.asset.token_info.symbol,
                  mint_asset.token_info.symbol);
 
-    let burn_price = oracle(&deps, &burn_asset.asset.token_info.symbol)?;
+    let burn_price = oracle(deps, burn_asset.asset.token_info.symbol.clone())?;
     debug_print!("Burn Price: {}", burn_price);
 
-    let mint_price = oracle(&deps, &asset_peg_r(&deps.storage).load()?)?;
+    let mint_price = oracle(deps, asset_peg_r(&deps.storage).load()?)?;
     debug_print!("Mint Price: {}", mint_price);
 
     Ok(calculate_mint(burn_price, burn_amount, burn_asset.asset.token_info.decimals,
@@ -462,14 +460,10 @@ pub fn calculate_mint(burn_price: Uint128, burn_amount: Uint128, burn_decimals: 
     let difference: i32 = mint_decimals as i32 - burn_decimals as i32;
 
     // To avoid a mess of different types doing math
-    if difference < 0 {
-        burn_value.multiply_ratio(1u128, 10u128.pow(u32::try_from(difference.abs()).unwrap()))
-    }
-    else if difference > 0 {
-        Uint128(burn_value.u128() * 10u128.pow(u32::try_from(difference).unwrap()))
-    }
-    else {
-        burn_value
+    match difference.cmp(&0) {
+        Ordering::Greater => Uint128(burn_value.u128() * 10u128.pow(u32::try_from(difference).unwrap())),
+        Ordering::Less => burn_value.multiply_ratio(1u128, 10u128.pow(u32::try_from(difference.abs()).unwrap())),
+        Ordering::Equal => burn_value
     }
 }
 
@@ -482,17 +476,17 @@ pub fn calculate_capture(
      * capture_amount = amount * capture / 10000
      */
 
-    return amount.multiply_ratio(capture,  10000u128);
+    amount.multiply_ratio(capture,  10000u128)
 }
 
 fn oracle<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    symbol: &String,
+    symbol: String,
 ) -> StdResult<Uint128> {
 
     let config: Config = config_r(&deps.storage).load()?;
     let answer: ReferenceData = Price { 
-        symbol: symbol.to_string() 
+        symbol
     }.query(&deps.querier,
              config.oracle.code_hash,
              config.oracle.address)?;

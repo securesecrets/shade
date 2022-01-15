@@ -58,7 +58,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         decimals: 6,
         initial_balances: msg.shade.initial_balances.clone(),
         prng_seed: msg.shade.prng_seed,
-        config: coin_config.clone()
+        config: coin_config
     };
     state.contracts.push(Snip20InitHistory{
         label: msg.shade.label.clone(),
@@ -82,7 +82,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     _env: Env,
     _msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
-    return Ok(HandleResponse {
+    Ok(HandleResponse {
         messages: vec![],
         log: vec![],
         data: None

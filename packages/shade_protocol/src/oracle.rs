@@ -1,4 +1,4 @@
-use cosmwasm_std::{HumanAddr, Decimal, Uint128};
+use cosmwasm_std::{HumanAddr, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{InitCallback, HandleCallback, Query};

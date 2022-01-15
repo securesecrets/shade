@@ -13,7 +13,6 @@ use shade_protocol::{
         SswapPair,
         IndexElement,
     },
-    band::ReferenceData,
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";

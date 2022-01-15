@@ -116,7 +116,7 @@ pub fn validate_address_permit<S: Storage>(
     }
 
     // Authenticate permit
-    authenticate_ownership(&permit)
+    authenticate_ownership(permit)
 }
 
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(

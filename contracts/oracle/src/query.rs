@@ -51,7 +51,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     // Index
     if let Some(index) = index_r(&deps.storage).may_load(symbol.as_bytes())? {
         return Ok(ReferenceData {
-            rate: eval_index(&deps, &symbol, index)?,
+            rate: eval_index(deps, &symbol, index)?,
             last_updated_base: 0,
             last_updated_quote: 0,
         })
@@ -73,12 +73,12 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
     for (i, sym) in symbols.iter().enumerate() {
         if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(sym.as_bytes())?
         {
-            results[i] = sswap_price(&deps, sswap_pair)?.rate;
+            results[i] = sswap_price(deps, sswap_pair)?.rate;
         }
         else if let Some(index) = index_r(&deps.storage).may_load(sym.as_bytes())?
         {
 
-            results[i] = eval_index(&deps, sym, index)?;
+            results[i] = eval_index(deps, sym, index)?;
         }
         else 
         {
@@ -99,7 +99,7 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
 
 pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    symbol: &String,
+    symbol: &str,
     index: Vec<IndexElement>,
 ) -> StdResult<Uint128> {
 
@@ -112,10 +112,10 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
 
     for element in index {
 
-        weight_total = weight_total + element.weight;
+        weight_total += element.weight;
 
         if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-            price += sswap_price(&deps, sswap_pair)?.rate.multiply_ratio(element.weight, 10u128.pow(18));
+            price += sswap_price(deps, sswap_pair)?.rate.multiply_ratio(element.weight, 10u128.pow(18));
         }
         else {
             band_weights.push(element.weight);
@@ -166,13 +166,13 @@ pub fn sswap_price<S: Storage, A: Api, Q: Querier>(
     sswap_pair: SswapPair,
 ) -> StdResult<ReferenceData> {
 
-    let trade_price = sswap_simulate(&deps, sswap_pair)?;
+    let trade_price = sswap_simulate(deps, sswap_pair)?;
 
     let scrt_result = reference_data(deps, "SCRT".to_string(), "USD".to_string())?;
 
     //return Err(StdError::NotFound { kind: translate_price(scrt_result.rate, trade_price).to_string(), backtrace: None });
 
-    return Ok(ReferenceData {
+    Ok(ReferenceData {
         // SCRT-USD / SCRT-symbol
         rate: translate_price(scrt_result.rate, trade_price),
         last_updated_base: 0,
@@ -204,7 +204,7 @@ pub fn sswap_simulate<S: Storage, A: Api, Q: Querier>(
         sswap_pair.pair.address,
     )?;
 
-    return Ok(normalize_price(response.return_amount, sswap_pair.asset.token_info.decimals));
+    Ok(normalize_price(response.return_amount, sswap_pair.asset.token_info.decimals))
 }
 
 // BAND interactions
@@ -217,14 +217,14 @@ pub fn reference_data<S: Storage, A: Api, Q: Querier>(
 
     let config_r = config_r(&deps.storage).load()?;
 
-    Ok(BandQuery::GetReferenceData {
+    BandQuery::GetReferenceData {
             base_symbol,
             quote_symbol,
     }.query(
         &deps.querier,
         config_r.band.code_hash,
         config_r.band.address,
-    )?)
+    )
 }
 
 pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(
@@ -235,12 +235,12 @@ pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(
 
     let config_r = config_r(&deps.storage).load()?;
 
-    Ok(BandQuery::GetReferenceDataBulk {
+    BandQuery::GetReferenceDataBulk {
             base_symbols,
             quote_symbols,
     }.query(
         &deps.querier,
         config_r.band.code_hash,
         config_r.band.address,
-    )?)
+    )
 }

@@ -12,7 +12,7 @@ use std::time::UNIX_EPOCH;
 
 pub fn setup_staker(governance: &NetContract, shade: &Contract,
                     staking_account: String) -> Result<NetContract> {
-    let staker = init_contract(&governance, "staking".to_string(),
+    let staker = init_contract(governance, "staking".to_string(),
                                STAKING_FILE,
                                staking::InitMsg{
                                    admin: Some(Contract{
@@ -127,8 +127,7 @@ pub fn setup_staker(governance: &NetContract, shade: &Contract,
     }
 
     // Query total Shade now
-    assert_eq!((balance_after_stake + unbond_amount), get_balance(&shade_net,
-                                             staking_account.clone()));
+    assert_eq!((balance_after_stake + unbond_amount), get_balance(&shade_net, staking_account));
 
     Ok(staker)
 }

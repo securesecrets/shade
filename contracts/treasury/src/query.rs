@@ -30,22 +30,20 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
     //TODO: restrict to admin
 
-    match assets_r(&deps.storage).may_load(&contract.to_string().as_bytes())? {
+    return match assets_r(&deps.storage).may_load(contract.to_string().as_bytes())? {
         Some(a) => {
-            return Ok(snip20::QueryMsg::Balance { 
-                address: self_address_r(&deps.storage).load()?, 
+            Ok(snip20::QueryMsg::Balance {
+                address: self_address_r(&deps.storage).load()?,
                 key: viewing_key_r(&deps.storage).load()?,
             }.query(
-                 &deps.querier,
-                 1,
-                 a.contract.code_hash,
-                 contract.clone(),
-             )?)
+                &deps.querier,
+                1,
+                a.contract.code_hash,
+                contract,
+            )?)
         }
-        None => { 
-            return Err(StdError::NotFound { 
-                    kind: contract.to_string(), 
-                    backtrace: None }) 
+        None => {
+            Err(StdError::not_found(contract.to_string()))
         }
     };
 

@@ -19,10 +19,7 @@ pub fn dates<S: Storage, A: Api, Q: Querier>
         start: config.start_date,
         end: config.end_date,
         decay_start: config.decay_start,
-        decay_factor: match current_date {
-            None => None,
-            Some(date) => Some(Uint128(100) * decay_factor(date, &config))
-        }
+        decay_factor: current_date.map(|date| Uint128(100) * decay_factor(date, &config))
     })
 }
 
@@ -48,7 +45,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    let account_address = validate_account_permit(&deps, &permit, config.contract)?;
+    let account_address = validate_account_permit(deps, &permit, config.contract)?;
 
     let account = account_r(&deps.storage).load(account_address.to_string().as_bytes())?;
 

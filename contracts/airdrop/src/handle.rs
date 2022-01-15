@@ -6,6 +6,7 @@ use shade_protocol::{airdrop::{HandleAnswer, Config, claim_info::{RequiredTask},
                      generic_response::ResponseStatus};
 use secret_toolkit::snip20::send_msg;
 
+#[allow(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -136,7 +137,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasn't ended
-    available(&config, &env)?;
+    available(&config, env)?;
 
     // Check that account doesnt exist
     let sender = env.message.sender.to_string();
@@ -162,7 +163,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
 
     // Claim the airdrop after account creation
     let (completed_percentage, unclaimed_percentage) = update_tasks(&mut deps.storage,
-                                                                    &config, sender.to_string())?;
+                                                                    &config, sender)?;
     let mut messages = vec![];
     // Avoid calculating if theres nothing to claim
     if unclaimed_percentage > Uint128::zero() {
@@ -241,7 +242,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
                 Ok(claimed + new_redeem)
             }
             else {
-                return Err(StdError::generic_err("Account total claimed not set"))
+                Err(StdError::generic_err("Account total claimed not set"))
             }
         })?;
 
@@ -304,7 +305,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    return Ok(HandleResponse {
+    Ok(HandleResponse {
         messages: vec![],
         log: vec![],
         data: Some( to_binary( &HandleAnswer::Claim {
@@ -319,8 +320,8 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    // Check that airdrop hasnt ended
-    available(&config, &env)?;
+    // Check that airdrop hasn't ended
+    available(&config, env)?;
 
     // Get account
     let sender = env.message.sender.clone();
@@ -364,7 +365,7 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
             if env.block.time > end_date {
                 decay_claimed_w(&mut deps.storage).update(| claimed | {
                     if claimed {
-                        return Err(StdError::generic_err("Decay already claimed"))
+                        Err(StdError::generic_err("Decay already claimed"))
                     }
                     else {
                         Ok(true)
@@ -449,12 +450,12 @@ pub fn claim_tokens<S: Storage>(
             }
 
             // Update redeem amount with the decay multiplier
-            redeem_amount = redeem_amount * decay_factor(env.block.time, &config);
+            redeem_amount = redeem_amount * decay_factor(env.block.time, config);
 
             Ok(claimed + redeem_amount)
         }
         else {
-            return Err(StdError::generic_err("Account total claimed not set"))
+            Err(StdError::generic_err("Account total claimed not set"))
         }
     })?;
 

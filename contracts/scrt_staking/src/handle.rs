@@ -56,11 +56,11 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             None,
             256,
             config.sscrt.code_hash.clone(),
-            config.sscrt.address.clone(),
+            config.sscrt.address,
         )?
     );
 
-    let validator = choose_validator(&deps, env.block.time)?;
+    let validator = choose_validator(deps, env.block.time)?;
 
     messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
         validator: validator.address.clone(),
@@ -71,7 +71,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     }));
 
     Ok(HandleResponse {
-        messages: messages,
+        messages,
         log: vec![],
         data: Some( to_binary( 
             &HandleAnswer::Receive {
@@ -125,15 +125,13 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     if let Some(delegation) = deps.querier.query_delegation(env.contract.address, validator.clone())? {
 
-        let mut messages: Vec<CosmosMsg> = vec![];
-
-        messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
+        let messages: Vec<CosmosMsg> = vec![CosmosMsg::Staking(StakingMsg::Undelegate {
             validator,
             amount: delegation.amount.clone(),
-        }));
+        })];
 
         return Ok(HandleResponse {
-            messages: messages,
+            messages,
             log: vec![],
             data: Some( to_binary( 
                 &HandleAnswer::Unbond {
@@ -199,7 +197,7 @@ pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
         validators = candidates;
     }
 
-    if validators.len() == 0 {
+    if validators.is_empty() {
         return Err(StdError::GenericErr { 
             msg: "No validators within bounds".to_string(),
             backtrace: None 

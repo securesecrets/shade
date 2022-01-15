@@ -48,7 +48,7 @@ pub fn proposals<S: Storage, A: Api, Q: Querier>(
     let clamped_start = start.max(Uint128(1));
 
     for i in clamped_start.u128()..((end +clamped_start).min(max).u128() + 1) {
-        let proposal = build_proposal(&deps, Uint128(i))?;
+        let proposal = build_proposal(deps, Uint128(i))?;
 
         // Filter proposal by status if it was specified in fn params.
         if let Some(s) = &status {
@@ -67,7 +67,7 @@ pub fn proposal<S: Storage, A: Api, Q: Querier>(
     proposal_id: Uint128) -> StdResult<QueryAnswer> {
 
     Ok(QueryAnswer::Proposal {
-        proposal: build_proposal(&deps, proposal_id)?
+        proposal: build_proposal(deps, proposal_id)?
     })
 }
 

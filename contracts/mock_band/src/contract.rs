@@ -43,11 +43,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> { 
-    match msg {
+) -> StdResult<HandleResponse> {
+    return match msg {
         HandleMsg::MockPrice { symbol, price } => {
-            price_w(&mut deps.storage).save(&symbol.as_bytes(), &price)?;
-            return Ok(HandleResponse::default())
+            price_w(&mut deps.storage).save(symbol.as_bytes(), &price)?;
+            Ok(HandleResponse::default())
         }
     }
 }
@@ -73,14 +73,14 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             base_symbol,
             quote_symbol: _ 
         } => {
-            if let Some(price) = price_r(&deps.storage).may_load(&base_symbol.as_bytes())? {
+            if let Some(price) = price_r(&deps.storage).may_load(base_symbol.as_bytes())? {
                 return to_binary(&ReferenceData {
                       rate: price,
                       last_updated_base: 0,
                       last_updated_quote: 0 
                 })
             }
-            return Err(StdError::GenericErr { msg: "Missing Price Feed".to_string(), backtrace: None})
+            Err(StdError::generic_err("Missing Price Feed"))
         },
         QueryMsg::GetReferenceDataBulk {
             base_symbols,
@@ -89,7 +89,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             let mut results = Vec::new();
 
             for sym in base_symbols {
-                if let Some(price) = price_r(&deps.storage).may_load(&sym.as_bytes())? {
+                if let Some(price) = price_r(&deps.storage).may_load(sym.as_bytes())? {
                     results.push(ReferenceData {
                           rate: price,
                           last_updated_base: 0,

@@ -155,7 +155,6 @@ fn run_airdrop() -> Result<()> {
         },
         airdrop_amount: total_airdrop+decay_amount,
         start_date: None,
-        // Add one more minute for testing decay
         end_date: Some(end_date),
         decay_start: Some(decay_date),
         merkle_root: Binary(merlke_tree.root().unwrap().to_vec()),
@@ -468,7 +467,7 @@ fn run_testnet() -> Result<()> {
     }
 
     // Initialize initializer and snip20s
-    let (initializer, shade, silk) = initialize_initializer(&account, &s_sCRT, &account)?;
+    let (initializer, shade, silk) = initialize_initializer(account.clone(), &s_sCRT, account.clone())?;
 
     // Initialize Governance
     print_header("Initializing Governance");

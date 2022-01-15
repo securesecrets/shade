@@ -34,25 +34,25 @@ pub fn initialize_minter(governance: &NetContract, contract_name: String,
 pub fn setup_minters(governance: &NetContract, mint_shade: &NetContract, mint_silk: &NetContract,
                      shade: &Contract, silk: &Contract, sscrt: &NetContract) -> Result<()> {
     print_header("Registering allowed tokens in mint contracts");
-    create_and_trigger_proposal(&governance, "shade_minter".to_string(),
+    create_and_trigger_proposal(governance, "shade_minter".to_string(),
                                 micro_mint::HandleMsg::RegisterAsset {
                             contract: Contract {
                                 address: HumanAddr::from(sscrt.address.clone()),
                                 code_hash: sscrt.code_hash.clone()
                             },
                         capture: Some(Uint128(1000))}, Some("Register asset"))?;
-    create_and_trigger_proposal(&governance, "shade_minter".to_string(),
+    create_and_trigger_proposal(governance, "shade_minter".to_string(),
                                 micro_mint::HandleMsg::RegisterAsset {
                             contract: silk.clone(),
                         capture: Some(Uint128(1000))}, Some("Register asset"))?;
-    create_and_trigger_proposal(&governance, "silk_minter".to_string(),
+    create_and_trigger_proposal(governance, "silk_minter".to_string(),
                                 micro_mint::HandleMsg::RegisterAsset {
                             contract: shade.clone(),
                         capture: Some(Uint128(1000))}, Some("Register asset"))?;
 
     print_header("Adding allowed minters in Snip20s");
 
-    create_and_trigger_proposal(&governance, "shade".to_string(),
+    create_and_trigger_proposal(governance, "shade".to_string(),
                                 snip20::HandleMsg::SetMinters {
                             minters: vec![HumanAddr::from(mint_shade.address.clone())],
                             padding: None }, Some("Set minters"))?;
@@ -72,7 +72,7 @@ pub fn setup_minters(governance: &NetContract, mint_shade: &NetContract, mint_si
         }
     }
 
-    create_and_trigger_proposal(&governance, "silk".to_string(),
+    create_and_trigger_proposal(governance, "silk".to_string(),
                                 snip20::HandleMsg::SetMinters {
                             minters: vec![HumanAddr::from(mint_silk.address.clone())],
                             padding: None }, Some("Set minters"))?;

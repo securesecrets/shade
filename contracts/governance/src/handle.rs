@@ -116,7 +116,7 @@ pub fn try_fund_proposal<S: Storage, A: Api, Q: Querier>(
             proposal_id.to_string().as_bytes(), &ProposalStatus::Expired)?;
 
         // Send back amount
-        messages.push(send_msg(sender.clone(),
+        messages.push(send_msg(sender,
                                amount,
                                None,
                                None,
@@ -193,7 +193,7 @@ pub fn try_fund_proposal<S: Storage, A: Api, Q: Querier>(
                                      None,
                                      1,
                                      config.funding_token.code_hash,
-                                     config.funding_token.address.clone())?)
+                                     config.funding_token.address)?)
     }
 
     proposal_funding_w(&mut deps.storage).save(
@@ -281,17 +281,20 @@ pub fn try_trigger_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check if proposal passed or has a valid target contract
-    if vote_status != ProposalStatus::Passed || target.is_none() {
+    if vote_status != ProposalStatus::Passed {
         run_status = Failure;
     }
-    else {
-        run_status = match try_execute_msg(target.unwrap(), proposal.msg) {
+    else if let Some(target) = target {
+        run_status = match try_execute_msg(target, proposal.msg) {
             Ok(msg) => {
                 messages.push(msg);
                 Success
             }
             Err(_) => Failure,
         };
+    }
+    else  {
+        run_status = Failure;
     }
 
     // Overwrite
@@ -479,7 +482,7 @@ pub fn try_create_proposal<S: Storage, A: Api, Q: Querier>(
     description: String,
 ) -> StdResult<HandleResponse> {
 
-    let proposal_id = create_proposal(deps, &env, target_contract, proposal, description)?;
+    let proposal_id = create_proposal(deps, env, target_contract, proposal, description)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -491,7 +494,7 @@ pub fn try_create_proposal<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-#[warn(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,

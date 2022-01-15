@@ -1,14 +1,13 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, 
     Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, Storage, Uint128,
+    Querier, StdResult, Storage,
 };
 use shade_protocol::{
     oracle::{
         InitMsg, HandleMsg,
         QueryMsg, OracleConfig,
     },
-    band::ReferenceData,
 };
 use crate::{
     state::{ config_w },

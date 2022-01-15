@@ -62,11 +62,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 config.sscrt.address.clone(),
             )?,
             register_receive_msg(
-                env.contract_code_hash.clone(),
+                env.contract_code_hash,
                 None,
                 256,
-                config.sscrt.code_hash.clone(),
-                config.sscrt.address.clone(),
+                config.sscrt.code_hash,
+                config.sscrt.address,
             )?,
         ],
         log: vec![]

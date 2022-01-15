@@ -9,7 +9,11 @@ use secretcli::{cli_types::NetContract,
                 secretcli::{test_contract_handle, test_inst_init, list_contracts_by_code}};
 
 pub fn initialize_initializer(
-    admin: &String, sscrt: &NetContract, account: &String) -> Result<(NetContract, NetContract, NetContract)> {
+    admin: String,
+    sscrt: &NetContract,
+    account: String
+) -> Result<(NetContract, NetContract, NetContract)> {
+
     print_header("Initializing Initializer");
     let mut shade = NetContract {
         label: generate_label(8),
@@ -37,7 +41,7 @@ pub fn initialize_initializer(
         },
         silk: Snip20ContractInfo {
             label: silk.label.clone(),
-            admin: Some(HumanAddr::from(admin.clone())),
+            admin: Some(HumanAddr::from(admin)),
             prng_seed: Default::default(),
             initial_balances: None
         }
@@ -88,7 +92,7 @@ pub fn initialize_initializer(
                              Some("test"), None)?;
     }
 
-    println!("\tTotal silk: {}", get_balance(&silk, account.clone()));
+    println!("\tTotal silk: {}", get_balance(&silk, account));
 
     Ok((initializer, shade, silk))
 }
