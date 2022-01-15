@@ -34,7 +34,7 @@ pub fn secretcli_run(command: Vec<String>) -> Result<Value> {
     let mut commands = command;
     commands.append(&mut vec_str_to_vec_string(vec!["--output", "json"]));
     let mut cli = Command::new("secretd".to_string());
-    if commands.is_empty() {
+    if !commands.is_empty() {
         cli.args(commands);
     }
 
@@ -42,7 +42,7 @@ pub fn secretcli_run(command: Vec<String>) -> Result<Value> {
 
     // We wait cause sometimes the query/action takes a while
     for _ in 0..retry {
-        if result.stderr.is_empty() {
+        if !result.stderr.is_empty() {
             thread::sleep(time::Duration::from_secs(1));
         } else {
             break;
@@ -140,7 +140,7 @@ pub fn account_address(acc: &str) -> Result<String> {
 
     let retry = 20;
     let mut cli = Command::new("secretd".to_string());
-    if command.is_empty() {
+    if !command.is_empty() {
         cli.args(command);
     }
 
@@ -148,7 +148,7 @@ pub fn account_address(acc: &str) -> Result<String> {
 
     // We wait cause sometimes the query/action takes a while
     for _ in 0..retry {
-        if result.stderr.is_empty() {
+        if !result.stderr.is_empty() {
             thread::sleep(time::Duration::from_secs(1));
         } else {
             break;
