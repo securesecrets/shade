@@ -218,6 +218,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         amount,
         Some(to_binary(&Flag { flag: "unallocated".to_string()})?),
         None,
+        None,
         1,
         config.sscrt.code_hash.clone(),
         config.sscrt.address.clone(),

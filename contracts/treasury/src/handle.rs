@@ -79,17 +79,29 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
             match alloc {
                 Allocation::Reserves { allocation } => { },
+                Allocation::Rewards { allocation, contract } => {
+                    messages.push(
+                        send_msg(
+                                contract.address.clone(),
+                                amount.multiply_ratio(*allocation, 10u128.pow(18)),
+                                None,
+                                None,
+                                None,
+                                1,
+                                asset.contract.code_hash.clone(),
+                                asset.contract.address.clone(),
+                        )?
+                    );
+                },
                 Allocation::Staking { allocation, contract } => {
-
-                    let mut allocation = amount.multiply_ratio(*allocation, 10u128.pow(18));
-                    //a.amount_allocated += allocation;
 
                     //debug_print!("Staking {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
 
                     messages.push(
                         send_msg(
                                 contract.address.clone(),
-                                allocation,
+                                amount.multiply_ratio(*allocation, 10u128.pow(18)),
+                                None,
                                 None,
                                 None,
                                 1,
@@ -133,7 +145,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    config_w(&mut deps.storage).save(&config);
+    config_w(&mut deps.storage).save(&config)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -248,6 +260,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
 
     let alloc_portion = *match &alloc {
         Allocation::Reserves { allocation } => allocation,
+        Allocation::Rewards { contract, allocation } => allocation,
         Allocation::Staking { contract, allocation } => allocation,
         Allocation::Application { contract, allocation, token } => allocation,
         Allocation::Pool { contract, allocation, secondary_asset, token } => allocation,
@@ -277,6 +290,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
 
             if let Some(address) = match app {
                 Allocation::Reserves { allocation } => None,
+                Allocation::Rewards { contract, allocation } => Some(contract.address.clone()),
                 Allocation::Staking { contract, allocation } => Some(contract.address.clone()),
                 Allocation::Application { contract, allocation, token } => Some(contract.address.clone()),
                 Allocation::Pool { contract, allocation, secondary_asset, token } => Some(contract.address.clone()),
@@ -314,6 +328,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
 
             allocated_portion = allocated_portion + match app {
                 Allocation::Reserves { allocation } => Uint128::zero(),
+                Allocation::Rewards { contract, allocation } => *allocation,
                 Allocation::Staking { contract, allocation } => *allocation,
                 Allocation::Application { contract, allocation, token } => *allocation,
                 Allocation::Pool { contract, allocation, secondary_asset, token } => *allocation,

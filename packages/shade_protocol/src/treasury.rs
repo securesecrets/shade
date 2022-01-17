@@ -20,6 +20,10 @@ pub enum Allocation {
     Reserves {
         allocation: Uint128,
     },
+    Rewards {
+        contract: Contract,
+        allocation: Uint128,
+    },
     // SCRT/ATOM/OSMO staking
     Staking {
         contract: Contract,
