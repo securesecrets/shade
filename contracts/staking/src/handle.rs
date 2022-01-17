@@ -298,6 +298,7 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
                 total,
                 None,
                 None,
+                None,
                 1,
                 config.staked_token.code_hash.clone(),
                 config.staked_token.address.clone(),
@@ -340,6 +341,7 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
             messages.push(send_msg(
                 env.message.sender.clone(),
                 rewards,
+                None,
                 None,
                 None,
                 1,

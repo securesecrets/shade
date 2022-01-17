@@ -66,7 +66,7 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
         let result_index = symbols
             .iter()
             .enumerate()
-            .find(|&s| s.1.to_string() == sym.to_string())
+            .find(|&s| *s.1 == *sym)
             .unwrap()
             .0;
         results[result_index] = data.rate;
