@@ -137,6 +137,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                 capture_amount,
                 None,
                 None,
+                None,
                 1,
                 burn_asset.asset.contract.code_hash.clone(),
                 burn_asset.asset.contract.address.clone(),
@@ -152,6 +153,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
             messages.push(burn_msg(
                 burn_amount,
                 None,
+                None,
                 256,
                 burn_asset.asset.contract.code_hash.clone(),
                 burn_asset.asset.contract.address.clone(),
@@ -160,6 +162,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
             messages.push(send_msg(
                 recipient,
                 burn_amount,
+                None,
                 None,
                 None,
                 1,
@@ -171,6 +174,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         messages.push(send_msg(
             recipient,
             burn_amount,
+            None,
             None,
             None,
             1,
@@ -234,6 +238,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     messages.push(mint_msg(
         from,
         amount_to_mint,
+        None,
         None,
         256,
         mint_asset.contract.code_hash.clone(),

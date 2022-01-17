@@ -1,10 +1,8 @@
 #[cfg(test)]
 pub mod tests {
-    use crate::{contract::init, handle::inverse_normalizer};
+    use crate::handle::inverse_normalizer;
     use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env},
         Binary,
-        CanonicalAddr,
         HumanAddr,
         Uint128,
     };
@@ -15,10 +13,7 @@ pub mod tests {
     use shade_protocol::{
         airdrop::{
             account::{AddressProofMsg, AddressProofPermit},
-            claim_info::RequiredTask,
-            InitMsg,
         },
-        asset::Contract,
         math::{div, mult},
     };
 
@@ -59,7 +54,7 @@ pub mod tests {
         let permit_addr = permit.validate().expect("Signature validation failed");
         assert_eq!(
             permit_addr.as_canonical(),
-            bech32_to_canonical(permit.params.address.clone().as_str())
+            bech32_to_canonical(permit.params.address.as_str())
         );
         assert_ne!(
             permit_addr.as_canonical(),
@@ -94,7 +89,7 @@ pub mod tests {
         let permit_addr = permit.validate().expect("Signature validation failed");
         assert_eq!(
             permit_addr.as_canonical(),
-            bech32_to_canonical(permit.params.address.clone().as_str())
+            bech32_to_canonical(permit.params.address.as_str())
         );
         assert_ne!(
             permit_addr.as_canonical(),
@@ -129,7 +124,7 @@ pub mod tests {
         let permit_addr = permit.validate().expect("Signature validation failed");
         assert_eq!(
             permit_addr.as_canonical(),
-            bech32_to_canonical(permit.params.address.clone().as_str())
+            bech32_to_canonical(permit.params.address.as_str())
         );
         assert_ne!(
             permit_addr.as_canonical(),

@@ -311,6 +311,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         messages.push(burn_msg(
             amount,
             None,
+            None,
             256,
             burning_asset.contract.code_hash,
             burning_asset.contract.address,
@@ -329,6 +330,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     messages.push(mint_msg(
         from,
         amount_to_mint,
+        None,
         None,
         256,
         minting_asset.contract.code_hash,
