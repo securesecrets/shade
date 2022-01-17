@@ -1,20 +1,15 @@
-use cosmwasm_std::{
-    Storage
-};
+use cosmwasm_std::Storage;
 use cosmwasm_storage::{
-    singleton, singleton_read, 
-    Singleton, ReadonlySingleton,
-    bucket, bucket_read,
-    Bucket, ReadonlyBucket
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
 };
-use shade_protocol::{
-    oracle::{
-        OracleConfig, 
-        SswapPair,
-        IndexElement,
-    },
-    band::ReferenceData,
-};
+use shade_protocol::oracle::{IndexElement, OracleConfig, SswapPair};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SSWAP_PAIRS: &[u8] = b"sswap_pairs";

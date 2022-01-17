@@ -1,14 +1,11 @@
 pub mod proposal;
 pub mod vote;
 
+use crate::{asset::Contract, generic_response::ResponseStatus};
+use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Binary};
-use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
-use crate::{
-    asset::Contract,
-    generic_response::ResponseStatus,
-};
 
 // This is used when calling itself
 pub const GOVERNANCE_SELF: &str = "SELF";
@@ -109,7 +106,6 @@ pub enum HandleMsg {
     DisableStaker {},
 
     // RequestMigration {}
-
     /// Add a contract to send proposal msgs to
     AddSupportedContract {
         name: String,
@@ -123,8 +119,6 @@ pub enum HandleMsg {
         contract: Contract,
     },
 
-
-
     /// Proposal voting - can only be done by staking contract
     MakeVote {
         voter: HumanAddr,
@@ -135,7 +129,7 @@ pub enum HandleMsg {
     /// Trigger proposal
     TriggerProposal {
         proposal_id: Uint128,
-    }
+    },
 }
 
 impl HandleCallback for HandleMsg {
@@ -145,32 +139,73 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    CreateProposal { status: ResponseStatus, proposal_id: Uint128 },
-    FundProposal { status: ResponseStatus, total_funding: Uint128 },
-    AddAdminCommand { status: ResponseStatus },
-    RemoveAdminCommand { status: ResponseStatus },
-    UpdateAdminCommand { status: ResponseStatus },
-    TriggerAdminCommand { status: ResponseStatus, proposal_id: Uint128 },
-    UpdateConfig { status: ResponseStatus },
-    DisableStaker { status: ResponseStatus },
-    AddSupportedContract { status: ResponseStatus },
-    RemoveSupportedContract { status: ResponseStatus },
-    UpdateSupportedContract { status: ResponseStatus },
-    MakeVote { status: ResponseStatus },
-    TriggerProposal { status: ResponseStatus },
+    CreateProposal {
+        status: ResponseStatus,
+        proposal_id: Uint128,
+    },
+    FundProposal {
+        status: ResponseStatus,
+        total_funding: Uint128,
+    },
+    AddAdminCommand {
+        status: ResponseStatus,
+    },
+    RemoveAdminCommand {
+        status: ResponseStatus,
+    },
+    UpdateAdminCommand {
+        status: ResponseStatus,
+    },
+    TriggerAdminCommand {
+        status: ResponseStatus,
+        proposal_id: Uint128,
+    },
+    UpdateConfig {
+        status: ResponseStatus,
+    },
+    DisableStaker {
+        status: ResponseStatus,
+    },
+    AddSupportedContract {
+        status: ResponseStatus,
+    },
+    RemoveSupportedContract {
+        status: ResponseStatus,
+    },
+    UpdateSupportedContract {
+        status: ResponseStatus,
+    },
+    MakeVote {
+        status: ResponseStatus,
+    },
+    TriggerProposal {
+        status: ResponseStatus,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetProposalVotes { proposal_id: Uint128 },
-    GetProposals { start: Uint128, end: Uint128, status: Option<proposal::ProposalStatus> },
-    GetProposal { proposal_id: Uint128 },
+    GetProposalVotes {
+        proposal_id: Uint128,
+    },
+    GetProposals {
+        start: Uint128,
+        end: Uint128,
+        status: Option<proposal::ProposalStatus>,
+    },
+    GetProposal {
+        proposal_id: Uint128,
+    },
     GetTotalProposals {},
     GetSupportedContracts {},
-    GetSupportedContract { name: String },
+    GetSupportedContract {
+        name: String,
+    },
     GetAdminCommands {},
-    GetAdminCommand { name: String },
+    GetAdminCommand {
+        name: String,
+    },
 }
 
 impl Query for QueryMsg {
@@ -180,12 +215,28 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    ProposalVotes { status: vote::VoteTally },
-    Proposals { proposals: Vec<proposal::QueriedProposal> },
-    Proposal { proposal: proposal::QueriedProposal },
-    TotalProposals { total: Uint128 },
-    SupportedContracts { contracts: Vec<String> },
-    SupportedContract { contract: Contract },
-    AdminCommands { commands: Vec<String> },
-    AdminCommand { command: AdminCommand },
+    ProposalVotes {
+        status: vote::VoteTally,
+    },
+    Proposals {
+        proposals: Vec<proposal::QueriedProposal>,
+    },
+    Proposal {
+        proposal: proposal::QueriedProposal,
+    },
+    TotalProposals {
+        total: Uint128,
+    },
+    SupportedContracts {
+        contracts: Vec<String>,
+    },
+    SupportedContract {
+        contract: Contract,
+    },
+    AdminCommands {
+        commands: Vec<String>,
+    },
+    AdminCommand {
+        command: AdminCommand,
+    },
 }

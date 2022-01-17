@@ -1,7 +1,7 @@
+use cosmwasm_std::{HumanAddr, StdError, StdResult, Uint128};
+use flexible_permits::permit::{bech32_to_canonical, Permit};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, StdResult, StdError};
-use flexible_permits::permit::{bech32_to_canonical, Permit};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -28,8 +28,10 @@ pub fn authenticate_ownership(permit: &AddressProofPermit) -> StdResult<HumanAdd
     let permit_address = permit.params.address.clone();
     let signer_address = permit.validate()?.as_canonical();
     if signer_address != bech32_to_canonical(permit_address.as_str()) {
-        return Err(StdError::generic_err(
-            format!("{:?} is not the message signer", permit_address.as_str())))
+        return Err(StdError::generic_err(format!(
+            "{:?} is not the message signer",
+            permit_address.as_str()
+        )));
     }
     Ok(permit_address)
 }

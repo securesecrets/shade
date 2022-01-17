@@ -1,24 +1,30 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary,
-    Env, Extern, Storage, HandleResponse,
-    StdResult, StdError,
-    CosmosMsg, Uint128,
-    Coin, StakingMsg,
-    Validator, Querier, HumanAddr,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Coin,
+    CosmosMsg,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StakingMsg,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
+    Validator,
 };
 use secret_toolkit::snip20::redeem_msg;
 
 use shade_protocol::{
-    scrt_staking::{
-        HandleAnswer,
-        ValidatorBounds,
-    },
     generic_response::ResponseStatus,
+    scrt_staking::{HandleAnswer, ValidatorBounds},
 };
 
-use crate::state::{
-    config_w, config_r, 
-};
+use crate::state::{config_r, config_w};
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -28,7 +34,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-
     debug_print!("Received {}", amount);
 
     //TODO: verify sscrt else (fail/send to treasury)
@@ -42,43 +47,39 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     if config.sscrt.address != env.message.sender {
-        return Err(StdError::GenericErr { 
-            msg: "Only accepts sSCRT".to_string(), 
-            backtrace: None 
+        return Err(StdError::GenericErr {
+            msg: "Only accepts sSCRT".to_string(),
+            backtrace: None,
         });
     }
 
     // Redeem sSCRT -> SCRT
-    messages.push(
-        redeem_msg(
-            amount,
-            None,
-            None,
-            256,
-            config.sscrt.code_hash.clone(),
-            config.sscrt.address.clone(),
-        )?
-    );
+    messages.push(redeem_msg(
+        amount,
+        None,
+        None,
+        256,
+        config.sscrt.code_hash.clone(),
+        config.sscrt.address,
+    )?);
 
-    let validator = choose_validator(&deps, env.block.time)?;
+    let validator = choose_validator(deps, env.block.time)?;
 
     messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
         validator: validator.address.clone(),
         amount: Coin {
             amount,
             denom: "uscrt".to_string(),
-        }
+        },
     }));
 
     Ok(HandleResponse {
-        messages: messages,
+        messages,
         log: vec![],
-        data: Some( to_binary( 
-            &HandleAnswer::Receive {
-                status: ResponseStatus::Success,
-                validator,
-            } 
-        )?),
+        data: Some(to_binary(&HandleAnswer::Receive {
+            status: ResponseStatus::Success,
+            validator,
+        })?),
     })
 }
 
@@ -87,7 +88,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     admin: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin {
@@ -106,8 +106,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success } )? )
+        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -116,37 +117,34 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     env: Env,
     validator: HumanAddr,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin && env.message.sender != config.treasury {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    if let Some(delegation) = deps.querier.query_delegation(env.contract.address, validator.clone())? {
-
-        let mut messages: Vec<CosmosMsg> = vec![];
-
-        messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
+    if let Some(delegation) = deps
+        .querier
+        .query_delegation(env.contract.address, validator.clone())?
+    {
+        let messages: Vec<CosmosMsg> = vec![CosmosMsg::Staking(StakingMsg::Undelegate {
             validator,
             amount: delegation.amount.clone(),
-        }));
+        })];
 
         return Ok(HandleResponse {
-            messages: messages,
+            messages,
             log: vec![],
-            data: Some( to_binary( 
-                &HandleAnswer::Unbond {
-                    status: ResponseStatus::Success,
-                    delegation,
-                }
-            )?),
+            data: Some(to_binary(&HandleAnswer::Unbond {
+                status: ResponseStatus::Success,
+                delegation,
+            })?),
         });
     }
 
-    Err(StdError::GenericErr { 
+    Err(StdError::GenericErr {
         msg: "No delegation".to_string(),
-        backtrace: None 
+        backtrace: None,
     })
 }
 
@@ -161,22 +159,17 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     _env: Env,
     validator: HumanAddr,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     Ok(HandleResponse {
-        messages: vec![
-            CosmosMsg::Staking(StakingMsg::Withdraw {
-                validator,
-                recipient: Some(config.treasury),
-            })
-        ],
+        messages: vec![CosmosMsg::Staking(StakingMsg::Withdraw {
+            validator,
+            recipient: Some(config.treasury),
+        })],
         log: vec![],
-        data: Some( to_binary(
-            &HandleAnswer::Claim {
-                status: ResponseStatus::Success,
-            }
-        )?),
+        data: Some(to_binary(&HandleAnswer::Claim {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -184,7 +177,6 @@ pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     seed: u64,
 ) -> StdResult<Validator> {
-
     let mut validators = deps.querier.query_validators()?;
     let bounds = (config_r(&deps.storage).load()?).validator_bounds;
 
@@ -199,20 +191,16 @@ pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
         validators = candidates;
     }
 
-    if validators.len() == 0 {
-        return Err(StdError::GenericErr { 
+    if validators.is_empty() {
+        return Err(StdError::GenericErr {
             msg: "No validators within bounds".to_string(),
-            backtrace: None 
-        })
+            backtrace: None,
+        });
     }
     // seed will likely be env.block.time
     Ok(validators[(seed % validators.len() as u64) as usize].clone())
 }
 
-pub fn is_validator_inbounds(
-    validator: &Validator,
-    bounds: &ValidatorBounds,
-) -> bool {
-
+pub fn is_validator_inbounds(validator: &Validator, bounds: &ValidatorBounds) -> bool {
     validator.commission <= bounds.max_commission && validator.commission >= bounds.min_commission
 }

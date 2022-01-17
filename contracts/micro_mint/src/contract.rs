@@ -1,39 +1,40 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, Uint128};
+use cosmwasm_std::{
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
+    Uint128,
+};
 use secret_toolkit::snip20::token_info_query;
 
 use shade_protocol::{
-    micro_mint::{
-        InitMsg, HandleMsg,
-        QueryMsg, Config,
-    },
-    snip20::{
-        Snip20Asset,
-        token_config_query,
-    },
+    micro_mint::{Config, HandleMsg, InitMsg, QueryMsg},
+    snip20::{token_config_query, Snip20Asset},
 };
 
 use crate::{
-    state::{
-        config_w,
-        native_asset_w,
-        asset_peg_w,
-        asset_list_w,
-    },
-    handle, query,
+    handle,
+    query,
+    state::{asset_list_w, asset_peg_w, config_w, limit_w, native_asset_w},
 };
 use shade_protocol::micro_mint::MintLimit;
-use crate::state::limit_w;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
     let state = Config {
         admin: match msg.admin {
-            None => { env.message.sender.clone() }
-            Some(admin) => { admin }
+            None => env.message.sender.clone(),
+            Some(admin) => admin,
         },
         oracle: msg.oracle,
         treasury: msg.treasury,
@@ -49,7 +50,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         },
         mint_capacity: match msg.epoch_mint_limit {
             None => Uint128(0),
-            Some(capacity) => capacity
+            Some(capacity) => capacity,
         },
         total_minted: Uint128(0),
         next_epoch: match msg.epoch_frequency {
@@ -66,16 +67,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&state)?;
     let token_info = token_info_query(
-                        &deps.querier, 1,
-                        msg.native_asset.code_hash.clone(),
-                        msg.native_asset.address.clone())?;
+        &deps.querier,
+        1,
+        msg.native_asset.code_hash.clone(),
+        msg.native_asset.address.clone(),
+    )?;
 
-    let token_config = token_config_query(&deps.querier,
-                                          msg.native_asset.clone())?;
+    let token_config = token_config_query(&deps.querier, msg.native_asset.clone())?;
 
     let peg = match msg.peg {
-        Some(p) => { p }
-        None => { token_info.symbol.clone() }
+        Some(p) => p,
+        None => token_info.symbol.clone(),
     };
     asset_peg_w(&mut deps.storage).save(&peg)?;
 
@@ -93,7 +95,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     Ok(InitResponse {
         messages: vec![],
-        log: vec![]
+        log: vec![],
     })
 }
 
@@ -114,19 +116,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             epoch_frequency,
             epoch_limit,
         } => handle::try_update_limit(deps, env, start_epoch, epoch_frequency, epoch_limit),
-        HandleMsg::RegisterAsset {
-            contract,
-            capture,
-        } => handle::try_register_asset(deps, &env, &contract, capture),
-        HandleMsg::RemoveAsset {
-            address
-        } => handle::try_remove_asset(deps, &env, address),
+        HandleMsg::RegisterAsset { contract, capture } => {
+            handle::try_register_asset(deps, &env, &contract, capture)
+        }
+        HandleMsg::RemoveAsset { address } => handle::try_remove_asset(deps, &env, address),
         HandleMsg::Receive {
             sender,
             from,
             amount,
             msg,
-            ..} => handle::try_burn(deps, env, sender, from, amount, msg),
+            ..
+        } => handle::try_burn(deps, env, sender, from, amount, msg),
     }
 }
 

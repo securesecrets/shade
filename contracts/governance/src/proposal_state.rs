@@ -1,10 +1,22 @@
 use cosmwasm_std::{Storage, Uint128};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
-use shade_protocol::{
-    governance::{proposal::{Proposal, ProposalStatus}, vote::VoteTally},
-    generic_response::ResponseStatus,
+use cosmwasm_storage::{
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
 };
 use secret_toolkit::snip20::batch::SendAction;
+use shade_protocol::{
+    generic_response::ResponseStatus,
+    governance::{
+        proposal::{Proposal, ProposalStatus},
+        vote::VoteTally,
+    },
+};
 
 // Proposals
 pub static PROPOSAL_KEY: &[u8] = b"proposals";
@@ -28,7 +40,7 @@ pub fn total_proposals_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint12
 }
 
 // Individual proposals
-pub fn proposal_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Proposal> {
+pub fn proposal_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Proposal> {
     bucket_read(PROPOSAL_KEY, storage)
 }
 
@@ -37,7 +49,7 @@ pub fn proposal_w<S: Storage>(storage: &mut S) -> Bucket<S, Proposal> {
 }
 
 // Proposal funding deadline
-pub fn proposal_funding_deadline_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, u64> {
+pub fn proposal_funding_deadline_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, u64> {
     bucket_read(PROPOSAL_FUNDING_DEADLINE_KEY, storage)
 }
 
@@ -46,7 +58,7 @@ pub fn proposal_funding_deadline_w<S: Storage>(storage: &mut S) -> Bucket<S, u64
 }
 
 // Proposal voting deadline
-pub fn proposal_voting_deadline_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, u64> {
+pub fn proposal_voting_deadline_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, u64> {
     bucket_read(PROPOSAL_VOTE_DEADLINE_KEY, storage)
 }
 
@@ -55,7 +67,7 @@ pub fn proposal_voting_deadline_w<S: Storage>(storage: &mut S) -> Bucket<S, u64>
 }
 
 // Proposal status
-pub fn proposal_status_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, ProposalStatus> {
+pub fn proposal_status_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, ProposalStatus> {
     bucket_read(PROPOSAL_STATUS_KEY, storage)
 }
 
@@ -64,7 +76,7 @@ pub fn proposal_status_w<S: Storage>(storage: &mut S) -> Bucket<S, ProposalStatu
 }
 
 // Proposal total funding
-pub fn proposal_funding_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Uint128> {
+pub fn proposal_funding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
     bucket_read(PROPOSAL_FUNDING_KEY, storage)
 }
 
@@ -73,7 +85,7 @@ pub fn proposal_funding_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
 }
 
 // Proposal funding batch
-pub fn proposal_funding_batch_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Vec<SendAction>> {
+pub fn proposal_funding_batch_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<SendAction>> {
     bucket_read(PROPOSAL_FUNDING_BATCH_KEY, storage)
 }
 
@@ -82,7 +94,7 @@ pub fn proposal_funding_batch_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<Se
 }
 
 // Proposal run status - will be available after proposal is run
-pub fn proposal_run_status_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, ResponseStatus> {
+pub fn proposal_run_status_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, ResponseStatus> {
     bucket_read(PROPOSAL_RUN_KEY, storage)
 }
 
@@ -91,16 +103,25 @@ pub fn proposal_run_status_w<S: Storage>(storage: &mut S) -> Bucket<S, ResponseS
 }
 
 // Individual proposal user votes
-pub fn proposal_votes_r<S: Storage>(storage: & S, proposal: Uint128) -> ReadonlyBucket<S, VoteTally> {
-    bucket_read((proposal.to_string() + PROPOSAL_VOTES_KEY).as_bytes(), storage)
+pub fn proposal_votes_r<S: Storage>(
+    storage: &S,
+    proposal: Uint128,
+) -> ReadonlyBucket<S, VoteTally> {
+    bucket_read(
+        (proposal.to_string() + PROPOSAL_VOTES_KEY).as_bytes(),
+        storage,
+    )
 }
 
 pub fn proposal_votes_w<S: Storage>(storage: &mut S, proposal: Uint128) -> Bucket<S, VoteTally> {
-    bucket((proposal.to_string() + PROPOSAL_VOTES_KEY).as_bytes(), storage)
+    bucket(
+        (proposal.to_string() + PROPOSAL_VOTES_KEY).as_bytes(),
+        storage,
+    )
 }
 
 // Total proposal votes
-pub fn total_proposal_votes_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, VoteTally> {
+pub fn total_proposal_votes_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, VoteTally> {
     bucket_read(TOTAL_PROPOSAL_VOTES_KEY, storage)
 }
 

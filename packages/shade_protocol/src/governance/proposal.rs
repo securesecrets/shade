@@ -1,7 +1,7 @@
+use crate::generic_response::ResponseStatus;
+use cosmwasm_std::{Binary, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{Binary, Uint128};
-use crate::generic_response::ResponseStatus;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

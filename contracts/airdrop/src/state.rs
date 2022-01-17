@@ -1,7 +1,18 @@
-use cosmwasm_std::{Storage, Uint128, StdResult, HumanAddr, StdError, Api, Querier, Extern};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton,
-                       bucket, Bucket, bucket_read, ReadonlyBucket};
-use shade_protocol::airdrop::{Config, account::{Account, AccountPermit, AddressProofPermit, authenticate_ownership}};
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use cosmwasm_storage::{
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
+};
+use shade_protocol::airdrop::{
+    account::{authenticate_ownership, Account, AccountPermit, AddressProofPermit},
+    Config,
+};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static DECAY_CLAIMED_KEY: &[u8] = b"decay_claimed";
@@ -29,7 +40,7 @@ pub fn decay_claimed_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, bool> {
 }
 
 // Is address added to an account
-pub fn address_in_account_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, bool> {
+pub fn address_in_account_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, bool> {
     bucket_read(REWARD_IN_ACCOUNT_KEY, storage)
 }
 
@@ -38,7 +49,7 @@ pub fn address_in_account_w<S: Storage>(storage: &mut S) -> Bucket<S, bool> {
 }
 
 // airdrop account
-pub fn account_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Account> {
+pub fn account_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Account> {
     bucket_read(ACCOUNTS_KEY, storage)
 }
 
@@ -47,7 +58,7 @@ pub fn account_w<S: Storage>(storage: &mut S) -> Bucket<S, Account> {
 }
 
 // If not found then its unrewarded; if true then claimed
-pub fn claim_status_r<S: Storage>(storage: & S, index: usize) -> ReadonlyBucket<S, bool> {
+pub fn claim_status_r<S: Storage>(storage: &S, index: usize) -> ReadonlyBucket<S, bool> {
     let mut key = CLAIM_STATUS_KEY.to_vec();
     key.push(index as u8);
     bucket_read(&key, storage)
@@ -69,7 +80,7 @@ pub fn total_claimed_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
 }
 
 // Total account claimed
-pub fn account_total_claimed_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, Uint128> {
+pub fn account_total_claimed_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
     bucket_read(USER_TOTAL_CLAIMED_KEY, storage)
 }
 
@@ -78,7 +89,7 @@ pub fn account_total_claimed_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128
 }
 
 // Account permit key
-pub fn account_permit_key_r<S: Storage>(storage: & S, account: String) -> ReadonlyBucket<S, bool> {
+pub fn account_permit_key_r<S: Storage>(storage: &S, account: String) -> ReadonlyBucket<S, bool> {
     let key = ACCOUNT_PERMIT_KEY.to_string() + &account;
     bucket_read(key.as_bytes(), storage)
 }
@@ -89,51 +100,69 @@ pub fn account_permit_key_w<S: Storage>(storage: &mut S, account: String) -> Buc
 }
 
 pub fn revoke_permit<S: Storage>(storage: &mut S, account: String, permit_key: String) {
-    account_permit_key_w(storage, account).save(permit_key.as_bytes(), &false).unwrap();
+    account_permit_key_w(storage, account)
+        .save(permit_key.as_bytes(), &false)
+        .unwrap();
 }
 
-pub fn is_permit_revoked<S: Storage>(storage: &S, account: String, permit_key: String) -> StdResult<bool> {
-    if account_permit_key_r(storage, account).may_load(permit_key.as_bytes())?.is_some() {
+pub fn is_permit_revoked<S: Storage>(
+    storage: &S,
+    account: String,
+    permit_key: String,
+) -> StdResult<bool> {
+    if account_permit_key_r(storage, account)
+        .may_load(permit_key.as_bytes())?
+        .is_some()
+    {
         Ok(true)
-    }
-    else {
+    } else {
         Ok(false)
     }
 }
 
 pub fn validate_address_permit<S: Storage>(
-    storage: &S, permit: &AddressProofPermit, contract: HumanAddr
+    storage: &S,
+    permit: &AddressProofPermit,
+    contract: HumanAddr,
 ) -> StdResult<HumanAddr> {
     // Check that contract matches
     if permit.params.contract != contract {
-        return Err(StdError::unauthorized())
+        return Err(StdError::unauthorized());
     }
 
     // Check that permit is not revoked
-    if is_permit_revoked(storage, permit.params.address.to_string(),
-                         permit.params.key.clone())? {
-        return Err(StdError::generic_err("permit key revoked"))
+    if is_permit_revoked(
+        storage,
+        permit.params.address.to_string(),
+        permit.params.key.clone(),
+    )? {
+        return Err(StdError::generic_err("permit key revoked"));
     }
 
     // Authenticate permit
-    authenticate_ownership(&permit)
+    authenticate_ownership(permit)
 }
 
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>, permit: &AccountPermit, contract: HumanAddr
+    deps: &Extern<S, A, Q>,
+    permit: &AccountPermit,
+    contract: HumanAddr,
 ) -> StdResult<HumanAddr> {
     // Check that contract matches
     if permit.params.contract != contract {
-        return Err(StdError::unauthorized())
+        return Err(StdError::unauthorized());
     }
 
     // Authenticate permit
     let address = permit.validate()?.as_humanaddr(&deps.api)?;
 
     // Check that permit is not revoked
-    if is_permit_revoked(&deps.storage, address.to_string(),
-                         permit.params.key.clone())? {
-        return Err(StdError::generic_err("permit key revoked"))
+    if is_permit_revoked(
+        &deps.storage,
+        address.to_string(),
+        permit.params.key.clone(),
+    )? {
+        return Err(StdError::generic_err("permit key revoked"));
     }
 
     Ok(address)

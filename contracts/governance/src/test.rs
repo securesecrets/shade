@@ -1,14 +1,23 @@
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_std::{HumanAddr, Uint128, coins, from_binary, Extern, Storage, Api, Querier};
-    use shade_protocol::{
-        generic_response::ResponseStatus, asset::Contract, governance,
-        governance::{
-           proposal::{ProposalStatus, QueriedProposal}
-        }
-    };
     use crate::contract;
+    use cosmwasm_std::{
+        coins,
+        from_binary,
+        testing::{mock_dependencies, mock_env},
+        Api,
+        Extern,
+        HumanAddr,
+        Querier,
+        Storage,
+        Uint128,
+    };
+    use shade_protocol::{
+        asset::Contract,
+        generic_response::ResponseStatus,
+        governance,
+        governance::proposal::{ProposalStatus, QueriedProposal},
+    };
 
     #[test]
     fn get_proposals_by_status() {
@@ -22,29 +31,32 @@ mod tests {
             staker: None,
             funding_token: Contract {
                 address: HumanAddr::from(""),
-                code_hash: String::from("")
+                code_hash: String::from(""),
             },
             funding_amount: Uint128(1000000),
             funding_deadline: 180,
             voting_deadline: 180,
             // 5 shade is the minimum
-            quorum: Uint128(5000000)
+            quorum: Uint128(5000000),
         };
-        let res =  contract::init(&mut deps, env, governance_init_msg).unwrap();
+        let res = contract::init(&mut deps, env, governance_init_msg).unwrap();
         assert_eq!(1, res.messages.len());
 
         // Initialized governance contract has no proposals.
         let res = contract::query(&deps, governance::QueryMsg::GetProposals {
             start: Uint128(0),
             end: Uint128(100),
-            status: Some(ProposalStatus::Funding)
-        }).unwrap();
+            status: Some(ProposalStatus::Funding),
+        })
+        .unwrap();
         let value: governance::QueryAnswer = from_binary(&res).unwrap();
         match value {
             governance::QueryAnswer::Proposals { proposals } => {
                 assert_eq!(0, proposals.len());
             }
-            _ => { panic!("Received wrong answer") }
+            _ => {
+                panic!("Received wrong answer")
+            }
         }
 
         // Create a proposal on governance contract.
@@ -53,49 +65,68 @@ mod tests {
             target_contract: String::from(governance::GOVERNANCE_SELF),
             proposal: serde_json::to_string(&governance::HandleMsg::AddAdminCommand {
                 name: "random data here".to_string(),
-                proposal: "{\"update_config\":{\"unbond_time\": {}, \"admin\": null}}".to_string()
-            }).unwrap(),
-            description: String::from("Proposal on governance contract")
-        }).unwrap();
+                proposal: "{\"update_config\":{\"unbond_time\": {}, \"admin\": null}}".to_string(),
+            })
+            .unwrap(),
+            description: String::from("Proposal on governance contract"),
+        })
+        .unwrap();
         let value: governance::HandleAnswer = from_binary(&res.data.unwrap()).unwrap();
         match value {
-            governance::HandleAnswer::CreateProposal { status, proposal_id } => {
+            governance::HandleAnswer::CreateProposal {
+                status,
+                proposal_id,
+            } => {
                 assert_eq!(ResponseStatus::Success, status);
                 assert!(!proposal_id.is_zero());
             }
-            _ => { panic!("Received wrong answer") }
+            _ => {
+                panic!("Received wrong answer")
+            }
         }
 
         // Now we should have single proposal in `funding`.
 
         // Should return this proposal when no specific status is specified.
-        assert_get_proposals(&deps, governance::QueryMsg::GetProposals {
-            start: Uint128(0),
-            end: Uint128(100),
-            status: None
-        }, |proposals| {
-            assert_eq!(1, proposals.len());
-            assert_eq!(proposals[0].status, ProposalStatus::Funding);
-        });
+        assert_get_proposals(
+            &deps,
+            governance::QueryMsg::GetProposals {
+                start: Uint128(0),
+                end: Uint128(100),
+                status: None,
+            },
+            |proposals| {
+                assert_eq!(1, proposals.len());
+                assert_eq!(proposals[0].status, ProposalStatus::Funding);
+            },
+        );
 
         // Should return this proposal when `funding` status is specified.
-        assert_get_proposals(&deps, governance::QueryMsg::GetProposals {
-            start: Uint128(0),
-            end: Uint128(100),
-            status: Some(ProposalStatus::Funding)
-        }, |proposals| {
-            assert_eq!(1, proposals.len());
-            assert_eq!(proposals[0].status, ProposalStatus::Funding);
-        });
+        assert_get_proposals(
+            &deps,
+            governance::QueryMsg::GetProposals {
+                start: Uint128(0),
+                end: Uint128(100),
+                status: Some(ProposalStatus::Funding),
+            },
+            |proposals| {
+                assert_eq!(1, proposals.len());
+                assert_eq!(proposals[0].status, ProposalStatus::Funding);
+            },
+        );
 
         // Shouldn't return this proposal when querying by status different from `funding`.
-        assert_get_proposals(&deps, governance::QueryMsg::GetProposals {
-            start: Uint128(0),
-            end: Uint128(100),
-            status: Some(ProposalStatus::Voting)
-        }, |proposals| {
-            assert_eq!(0, proposals.len());
-        });
+        assert_get_proposals(
+            &deps,
+            governance::QueryMsg::GetProposals {
+                start: Uint128(0),
+                end: Uint128(100),
+                status: Some(ProposalStatus::Voting),
+            },
+            |proposals| {
+                assert_eq!(0, proposals.len());
+            },
+        );
     }
 
     ///
@@ -110,15 +141,15 @@ mod tests {
     pub fn assert_get_proposals<S: Storage, A: Api, Q: Querier>(
         deps: &Extern<S, A, Q>,
         msg: governance::QueryMsg,
-        assert_fn: fn(result: Vec<QueriedProposal>)
+        assert_fn: fn(result: Vec<QueriedProposal>),
     ) {
         let res = contract::query(&deps, msg).unwrap();
         let value: governance::QueryAnswer = from_binary(&res).unwrap();
         match value {
-            governance::QueryAnswer::Proposals { proposals } => {
-                assert_fn(proposals)
+            governance::QueryAnswer::Proposals { proposals } => assert_fn(proposals),
+            _ => {
+                panic!("Received wrong answer")
             }
-            _ => { panic!("Received wrong answer") }
         }
     }
 }

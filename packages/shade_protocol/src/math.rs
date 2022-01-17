@@ -12,7 +12,7 @@ pub fn mult(a: Uint128, b: Uint128) -> Uint128 {
 
 pub fn div(nom: Uint128, den: Uint128) -> StdResult<Uint128> {
     if den == Uint128::zero() {
-        return Err(StdError::generic_err("Division by 0"))
+        return Err(StdError::generic_err("Division by 0"));
     }
 
     Ok(Uint128(nom.u128() / den.u128()))
@@ -20,8 +20,8 @@ pub fn div(nom: Uint128, den: Uint128) -> StdResult<Uint128> {
 
 #[cfg(test)]
 pub mod tests {
-    use cosmwasm_std::Uint128;
     use crate::math::{div, mult};
+    use cosmwasm_std::Uint128;
 
     #[test]
     fn multiply() {
