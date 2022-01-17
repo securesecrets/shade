@@ -1,20 +1,23 @@
+
 # Mint Contract
 * [Introduction](#Introduction)
 * [Sections](#Sections)
     * [Init](#Init)
     * [Admin](#Admin)
         * Messages
-            * [Migrate](#Migrate)
             * [UpdateConfig](#UpdateConfig)
+            * [UpdateMintLimit](#UpdateMintLimit)
             * [RegisterAsset](#RegisterAsset)
-        * Queries
-            * [GetNativeAsset](#GetNativeAsset)
-            * [GetConfig](#GetConfig)
-            * [SupportedAssets](#SupportedAssets)
-            * [GetAsset](#getAsset)
+            * [RemoveAsset](#RemoveAsset)
     * [User](#User)
         * Messages
             * [Receive](#Receive)
+        * Queries
+            * [GetNativeAsset](#GetNativeAsset)
+            * [GetConfig](#GetConfig)
+            * [GetMintLimit](#GetMintLimit)
+            * [GetSupportedAssets](#GetSupportedAssets)
+            * [GetAsset](#GetAsset)
 # Introduction
 Contract responsible to mint a paired snip20 asset
 
@@ -22,25 +25,29 @@ Contract responsible to mint a paired snip20 asset
 
 ## Init
 ##### Request
-|Name         |Type      |Description                                                                                                        | optional |
-|-------------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|admin        | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|native_asset | Contract |  Asset to mint                                                                                                    |  no      |
-|peg          | String   |  Symbol to peg to when querying oracle (defaults to native_asset symbol)                                          |  yes     |
-|treasury     | Contract |  Treasury contract                                                                                                |  yes     |
-|oracle       | Contract |  Oracle contract                                                                                                  |  no      |
-
+|Name             |Type        |Description                                                                    | optional |
+|-----------------|------------|-------------------------------------------------------------------------------|----------|
+|admin            | string     |  New contract owner; SHOULD be a valid bech32 address                         |  yes     |
+|native_asset     | Contract   |  Asset to mint                                                                |  no      |
+|oracle           | Contract   |  Oracle contract                                                              |  no      |
+|peg              | String     |  Symbol to peg to when querying oracle (defaults to native_asset symbol)      |  yes     |
+|treasury         | Contract   |  Treasury contract                                                            |  yes     |
+|secondary_burn   | HumanAddrr |  Where non-burnable assets will go                                            |  yes     |
+|start_epoch      | String     |  The starting epoch                                                           |  yes     |
+|epoch_frequency  | String     |  The frequency in which the mint limit resets, if 0 then no limit is enforced |  yes     |
+|epoch_mint_limit | String     |  The limit of uTokens to mint per epoch                                       |  yes     |
 ## Admin
 
 ### Messages
-### Migrate
-Migrates all the contracts state and data into a new contract
-#### Request
-| Name     | Type   | Description         | optional |
-|----------| -------|---------------------|----------|
-|label     | String | Contract label name | no       |
-|code_id   | u64    | Contract ID         | no       |
-|code_hash | String | Contract code hash  | no       |
+#### UpdateConfig
+Updates the given values
+##### Request
+|Name           |Type        |Description                                            | optional |
+|---------------|------------|-------------------------------------------------------|----------|
+|admin          | string     |  New contract admin; SHOULD be a valid bech32 address |  yes     |
+|oracle         | Contract   |  Oracle contract                                      |  yes     |
+|treasury       | Contract   |  Treasury contract                                    |  yes     |
+|secondary_burn | HumanAddrr |  Where non-burnable assets will go                    |  yes     |
 ##### Response
 ```json
 {
@@ -50,18 +57,18 @@ Migrates all the contracts state and data into a new contract
 }
 ```
 
-#### UpdateConfig
-Updates the given values
+#### UpdateMintLimit
+Updates the mint limit and epoch time
 ##### Request
-|Name      |Type      |Description                                                                                                        | optional |
-|----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|treasury  | Contract |  Treasury contract                                                                                                |  yes     |
-|oracle    | Contract |  Oracle contract                                                                                                  |  yes     |
+|Name             |Type      |Description                                                                     | optional |
+|-----------------|----------|--------------------------------------------------------------------------------|----------|
+|start_epoch      | String   |  The starting epoch                                                            |  yes     |
+|epoch_frequency  | String   |  The frequency in which the mint limit resets, if 0 then no limit is enforced  |  yes     |
+|epoch_mint_limit | String   |  The limit of uTokens to mint per epoch                                        |  yes     |
 ##### Response
 ```json
 {
-  "update_config": {
+  "update_mint_limit": {
     "status": "success"
   }
 }
@@ -70,11 +77,10 @@ Updates the given values
 #### RegisterAsset
 Registers a supported asset. The asset must be SNIP-20 compliant since [RegisterReceive](https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md#RegisterReceive) is called.
 
-Note: Will return an error if there's an asset with that address already registered.
 ##### Request
-|Name        |Type    |Description                                                                                                            | optional |
-|------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
-|contract    | Contract |  Type explained [here](#Contract)                                                                                     |  no      |
+|Name        |Type    |Description                          | optional |
+|------------|--------|-------------------------------------|----------|
+|contract    | Contract |  Type explained [here](#Contract) |  no      |
 ##### Response
 ```json
 {
@@ -82,6 +88,33 @@ Note: Will return an error if there's an asset with that address already registe
     "status": "success"
   }
 }
+```
+
+#### RemoveAsset
+Remove a registered asset.
+##### Request
+|Name        |Type    |Description                     | optional |
+|------------|--------|--------------------------------|----------|
+|address     | String |  The asset to remove's address |  no      |
+##### Response
+```json
+{
+  "remove_asset": {
+    "status": "success"
+  }
+}
+```
+
+##User
+
+### Messages
+
+#### Receive
+To mint the user must use a supported asset's send function and send the amount over to the contract's address. The contract will take care of the rest.
+
+In the msg field of a snip20 send command you must send a base64 encoded json like this one
+```json
+{"minimum_expected_amount": "Uint128" }
 ```
 
 ### Queries
@@ -105,7 +138,7 @@ Gets the contract's configuration variables
 {
   "config": {
     "config": {
-      "owner": "Owner address",
+      "admin": "Owner address",
       "oracle": {
         "address": "Asset contract address",
         "code_hash": "Asset callback code hash"
@@ -114,13 +147,30 @@ Gets the contract's configuration variables
         "address": "Asset contract address",
         "code_hash": "Asset callback code hash"
       },
+      "secondary_burn": "Optional burn address",
       "activated": "Boolean of contract's actviation status"
     }
   }
 }
 ```
 
-#### SupportedAssets
+#### GetMintLimit
+Gets the contract's configuration variables
+##### Response
+```json
+{
+  "limit": {
+    "mint_limit": {
+      "frequency": "Frequency per epoch reset",
+      "mint_capacity": "Mint capacity per epoch",
+      "total_minted": "Total minted in current epoch",
+      "next_epoch": "Timestamp for the next epoch"
+    }
+  }
+}
+```
+
+#### GetSupportedAssets
 Get all the contract's supported assets.
 ##### Response
 ```json
@@ -152,20 +202,6 @@ Get specific information on a supported asset.
   }
 }
 ```
-
-##User
-
-### Messages
-
-#### Receive
-To mint the user must use a supported asset's send function and send the amount over to the contract's address. The contract will take care of the rest.
-
-In the msg field of a snip20 send command you must send a base64 encoded json like this one
-```json
-{"minimum_expected_amount": "Uint128", "mint_type": { "coin_to_silk": { } } }
-```
-
-The currently supported mint types are ```coin_to_silk``` , ```coin_to_shade```, ```convert_to_silk``` and ```convert_to_shade```
 
 ## Contract
 Type used in many of the admin commands

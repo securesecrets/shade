@@ -1,11 +1,13 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use crate::asset::Contract;
-use secret_toolkit::{snip20::TokenInfo,
-                    utils::Query};
-
-use cosmwasm_std::{StdResult, StdError, Querier, HumanAddr, Uint128, Binary};
-use secret_toolkit::utils::InitCallback;
+use cosmwasm_std::{Binary, HumanAddr, Querier, StdResult, Uint128};
+use schemars::JsonSchema;
+use secret_toolkit::{
+    snip20::TokenInfo,
+    utils::{HandleCallback, InitCallback, Query},
+};
+#[cfg(test)]
+use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -41,13 +43,9 @@ pub struct TokenConfigResponse {
     pub token_config: TokenConfig,
 }
 
-pub fn token_config_query<Q: Querier>(
-    querier: &Q,
-    contract: Contract,
-) -> StdResult<TokenConfig> {
-    let answer: TokenConfigResponse = Snip20Query::TokenConfig{}.query(querier,
-                                                               contract.code_hash,
-                                                               contract.address)?;
+pub fn token_config_query<Q: Querier>(querier: &Q, contract: Contract) -> StdResult<TokenConfig> {
+    let answer: TokenConfigResponse =
+        Snip20Query::TokenConfig {}.query(querier, contract.code_hash, contract.address)?;
     Ok(answer.token_config)
 }
 
@@ -73,6 +71,9 @@ impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
+#[cfg(test)]
+impl TestInit for InitMsg {}
+
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Default, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct InitConfig {
@@ -82,3 +83,141 @@ pub struct InitConfig {
     pub enable_mint: Option<bool>,
     pub enable_burn: Option<bool>,
 }
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleMsg {
+    ChangeAdmin {
+        address: HumanAddr,
+        padding: Option<String>,
+    },
+    // Native coin interactions
+    Redeem {
+        amount: Uint128,
+        denom: Option<String>,
+        padding: Option<String>,
+    },
+    Deposit {
+        padding: Option<String>,
+    },
+
+    // Base ERC-20 stuff
+    Transfer {
+        recipient: HumanAddr,
+        amount: Uint128,
+        memo: Option<String>,
+        padding: Option<String>,
+    },
+    Send {
+        recipient: HumanAddr,
+        amount: Uint128,
+        msg: Option<Binary>,
+        memo: Option<String>,
+        padding: Option<String>,
+    },
+    Burn {
+        amount: Uint128,
+        memo: Option<String>,
+        padding: Option<String>,
+    },
+    RegisterReceive {
+        code_hash: String,
+        padding: Option<String>,
+    },
+    CreateViewingKey {
+        entropy: String,
+        padding: Option<String>,
+    },
+    SetViewingKey {
+        key: String,
+        padding: Option<String>,
+    },
+    // Mint
+    Mint {
+        recipient: HumanAddr,
+        amount: Uint128,
+        memo: Option<String>,
+        padding: Option<String>,
+    },
+    AddMinters {
+        minters: Vec<HumanAddr>,
+        padding: Option<String>,
+    },
+    RemoveMinters {
+        minters: Vec<HumanAddr>,
+        padding: Option<String>,
+    },
+    SetMinters {
+        minters: Vec<HumanAddr>,
+        padding: Option<String>,
+    },
+}
+
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[cfg(test)]
+impl TestHandle for HandleMsg {}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryMsg {
+    TokenInfo {},
+    TokenConfig {},
+    ExchangeRate {},
+    Allowance {
+        owner: HumanAddr,
+        spender: HumanAddr,
+        key: String,
+    },
+    Balance {
+        address: HumanAddr,
+        key: String,
+    },
+    Minters {},
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryAnswer {
+    TokenInfo {
+        name: String,
+        symbol: String,
+        decimals: u8,
+        total_supply: Option<Uint128>,
+    },
+    TokenConfig {
+        public_total_supply: bool,
+        deposit_enabled: bool,
+        redeem_enabled: bool,
+        mint_enabled: bool,
+        burn_enabled: bool,
+    },
+    ExchangeRate {
+        rate: Uint128,
+        denom: String,
+    },
+    Allowance {
+        spender: HumanAddr,
+        owner: HumanAddr,
+        allowance: Uint128,
+        expiration: Option<u64>,
+    },
+    Balance {
+        amount: Uint128,
+    },
+    ViewingKeyError {
+        msg: String,
+    },
+    Minters {
+        minters: Vec<HumanAddr>,
+    },
+}
+
+#[cfg(test)]
+impl TestQuery<QueryAnswer> for QueryMsg {}

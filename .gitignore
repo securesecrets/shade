@@ -22,3 +22,4 @@ contracts/hackatom/hash.txt
 __pycache__/
 compiled
 logs
+Cargo.lock

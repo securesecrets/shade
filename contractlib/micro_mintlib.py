@@ -36,26 +36,6 @@ class MicroMint(Contract):
         super().__init__(contract, init_msg, label, admin, uploader, backend,
                          instantiated_contract=instantiated_contract, code_id=code_id)
 
-    # def migrate(self, label, code_id, code_hash):
-    #     """
-    #     Instantiate another mint contract and migrate this contracts info into that one
-    #     :param label: Label name of the contract
-    #     :param code_id: Code id of the contract
-    #     :param code_hash: Code hash
-    #     :return: new Mint
-    #     """
-    #     msg = json.dumps(
-    #         {"migrate": {"label": label, "code_id": code_id, "code_hash": code_hash}})
-    #
-    #     new_mint = copy.deepcopy(self)
-    #     for attribute in self.execute(msg, compute=False)["logs"][0]["events"][0]["attributes"]:
-    #         if attribute["key"] == "contract_address":
-    #             new_mint.address = attribute["value"]
-    #             break
-    #     new_mint.contract_id = code_id
-    #     new_mint.code_hash = code_hash
-    #     return new_mint
-
     def update_config(self, owner=None, native_asset=None, oracle=None):
         """
         Updates the minting contract's config
@@ -67,12 +47,14 @@ class MicroMint(Contract):
         raw_msg = {"update_config": {}}
         if owner is not None:
             raw_msg["update_config"]["owner"] = owner
+
         if native_asset is not None:
             contract = {
                 "address": native_asset.address,
                 "code_hash": native_asset.code_hash
             }
             raw_msg["update_config"]["native_asset"] = contract
+
         if oracle is not None:
             contract = {
                 "address": oracle.address,
@@ -83,17 +65,17 @@ class MicroMint(Contract):
         msg = json.dumps(raw_msg)
         return self.execute(msg)
 
-    def register_asset(self, snip20, commission=None):
+    def register_asset(self, snip20, capture=None):
         """
         Registers a SNIP20 asset
         :param snip20: SNIP20 object to add
-        :param commission: Comission for the SNIP20
+        :param capture: Comission for the SNIP20
         :return: Result
         """
         msg = {"register_asset": {"contract": {"address": snip20.address, "code_hash": snip20.code_hash}}}
 
-        if commission:
-            msg['register_asset']['commission'] = str(commission)
+        if capture:
+            msg['register_asset']['capture'] = str(capture)
 
         return self.execute(json.dumps(msg))
 

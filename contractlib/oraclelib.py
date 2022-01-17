@@ -23,32 +23,31 @@ class Oracle(Contract):
         super().__init__(contract, init_msg, label, admin, uploader, backend,
                          instantiated_contract=instantiated_contract, code_id=code_id)
 
-    def get_price(self, symbol):
+    def price(self, symbol):
         """
         Get current coin price
         :param symbol: Coin ticker
         :return:
         """
-        msg = json.dumps({'get_price': {'symbol': symbol}})
-
-        return self.query(msg)
-
-    def get_prices(self, symbols):
-
-        msg = json.dumps({'get_prices': {'symbols': symbols}})
+        msg = json.dumps({'price': {'symbol': symbol}})
 
         return self.query(msg)
 
     def register_sswap_pair(self, pair):
-
-        msg = json.dumps({
-            'register_sswap_pair': {
-                'pair': { 
-                    'address': pair.address,
-                    'code_hash': pair.code_hash,
-                }
-            }
-        })
+        msg = json.dumps({'pair': {
+            'address': pair.address,
+            'code_hash': pair.code_hash,
+        }})
 
         return self.execute(msg)
 
+    def register_index(self, symbol, basket: list):
+        msg = json.dumps({
+            'register_index': {
+                'symbol': symbol,
+                'basket': basket,
+            }
+        })
+        print(msg)
+
+        return self.execute(msg)

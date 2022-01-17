@@ -1,12 +1,23 @@
-use cosmwasm_std::{Uint128};
-use serde::{Deserialize, Serialize};
+use cosmwasm_std::Uint128;
 use schemars::JsonSchema;
-use secret_toolkit::utils::Query;
+use secret_toolkit::utils::{InitCallback, Query};
+#[cfg(test)]
+use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct InitMsg {}
+
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[cfg(test)]
+impl TestInit for InitMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum BandQuery {
-
     GetReferenceData {
         base_symbol: String,
         quote_symbol: String,

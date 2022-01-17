@@ -1,7 +1,4 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use cosmwasm_std::{CanonicalAddr, Storage};
+use cosmwasm_std::Storage;
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use shade_protocol::initializer::InitializerConfig;
 

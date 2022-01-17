@@ -1,7 +1,9 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use crate::snip20::InitialBalance;
-use cosmwasm_std::{HumanAddr, Binary};
+use cosmwasm_std::{Binary, HumanAddr};
+use schemars::JsonSchema;
+#[cfg(test)]
+use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitializerConfig {
@@ -30,19 +32,24 @@ pub struct InitMsg {
     pub silk: Snip20ContractInfo,
 }
 
+#[cfg(test)]
+impl TestInit for InitMsg {}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
-}
+pub enum HandleMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Contracts {},
+    GetContracts {},
 }
+
+#[cfg(test)]
+impl TestQuery<QueryAnswer> for QueryMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct ContractsAnswer {
-    pub contracts: Vec<Snip20InitHistory>,
+pub enum QueryAnswer {
+    Contracts { contracts: Vec<Snip20InitHistory> },
 }
