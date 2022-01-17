@@ -27,10 +27,10 @@ debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
 bincode = "1.3.1"
+cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
+cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
-cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
-cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
-secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit", branch = "debug-print"}
+secret-toolkit = { version = "0.2" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
