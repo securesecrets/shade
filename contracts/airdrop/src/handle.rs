@@ -235,6 +235,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
             redeem_amount,
             None,
             None,
+            None,
             0,
             config.airdrop_snip20.code_hash,
             config.airdrop_snip20.address,
@@ -321,6 +322,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
         messages.push(send_msg(
             env.message.sender.clone(),
             redeem_amount,
+            None,
             None,
             None,
             0,
@@ -426,6 +428,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
             redeem_amount,
             None,
             None,
+            None,
             0,
             config.airdrop_snip20.code_hash,
             config.airdrop_snip20.address,
@@ -460,6 +463,7 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
                 let messages = vec![send_msg(
                     dump_address,
                     send_total,
+                    None,
                     None,
                     None,
                     1,
