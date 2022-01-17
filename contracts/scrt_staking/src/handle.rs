@@ -17,10 +17,6 @@ use secret_toolkit::{
 
 use shade_protocol::{
     treasury::Flag,
-    scrt_staking::{
-        HandleAnswer,
-        ValidatorBounds,
-    },
     generic_response::ResponseStatus,
     scrt_staking::{HandleAnswer, ValidatorBounds},
 };

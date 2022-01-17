@@ -2,7 +2,7 @@ use crate::asset::Contract;
 use cosmwasm_std::{Binary, HumanAddr, Querier, StdResult, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::{
-    snip20::TokenInfo,
+    snip20::{TokenInfo, token_info_query},
     utils::{HandleCallback, InitCallback, Query},
 };
 #[cfg(test)]

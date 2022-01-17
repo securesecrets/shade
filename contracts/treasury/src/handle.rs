@@ -6,18 +6,11 @@ use cosmwasm_std::{
     Uint128, HumanAddr,
     from_binary,
 };
-use secret_toolkit::{
-    snip20,
-    snip20::{
-        token_info_query,
-        register_receive_msg, 
-        set_viewing_key_msg,
-        send_msg,
-    },
+use secret_toolkit::snip20::{
+    register_receive_msg, set_viewing_key_msg, token_info_query,
+    send_msg,
 };
-use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg, token_info_query};
 
-use shade_protocol;
 use shade_protocol::{
     treasury::{
         HandleAnswer, 
@@ -368,5 +361,6 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
             &HandleAnswer::RegisterApp {
                 status: ResponseStatus::Success } 
             )? 
+        )
     })
 }

@@ -6,14 +6,7 @@ use cosmwasm_std::{
     BankQuery, BalanceResponse,
     Uint128, 
 };
-use shade_protocol::{
-    scrt_staking::QueryAnswer,
-};
 
-use crate::state::{
-    config_r, 
-    self_address_r,
-};
 use shade_protocol::scrt_staking::QueryAnswer;
 
 use crate::state::{config_r, self_address_r};
