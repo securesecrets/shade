@@ -1,8 +1,8 @@
 pub mod contract;
-pub mod state;
-pub mod proposal_state;
 pub mod handle;
+pub mod proposal_state;
 pub mod query;
+pub mod state;
 
 #[cfg(test)]
 mod test;
@@ -11,7 +11,12 @@ mod test;
 mod wasm {
     use super::contract;
     use cosmwasm_std::{
-        do_handle, do_init, do_query, ExternalApi, ExternalQuerier, ExternalStorage,
+        do_handle,
+        do_init,
+        do_query,
+        ExternalApi,
+        ExternalQuerier,
+        ExternalStorage,
     };
 
     #[no_mangle]

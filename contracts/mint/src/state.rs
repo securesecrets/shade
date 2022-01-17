@@ -1,8 +1,15 @@
-use cosmwasm_std::{Storage};
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton, bucket, Bucket, bucket_read, ReadonlyBucket};
-use shade_protocol::{
-    mint::{MintConfig, SupportedAsset},
+use cosmwasm_std::Storage;
+use cosmwasm_storage::{
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
 };
+use shade_protocol::mint::{MintConfig, SupportedAsset};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static NATIVE_COIN_KEY: &[u8] = b"native_coin";
@@ -25,7 +32,7 @@ pub fn asset_list_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Stri
     singleton_read(storage, ASSET_LIST_KEY)
 }
 
-pub fn assets_r<S: Storage>(storage: & S) -> ReadonlyBucket<S, SupportedAsset> {
+pub fn assets_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, SupportedAsset> {
     bucket_read(ASSET_KEY, storage)
 }
 

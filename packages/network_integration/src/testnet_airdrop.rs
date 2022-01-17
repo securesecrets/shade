@@ -1,15 +1,25 @@
-use std::fs;
-use std::env;
-use serde_json::Result;
-use serde::{Deserialize, Serialize};
-use cosmwasm_std::{Binary, to_binary, Uint128, HumanAddr};
+use cosmwasm_std::{Binary, HumanAddr, Uint128};
+use network_integration::utils::{
+    generate_label,
+    print_contract,
+    print_header,
+    AIRDROP_FILE,
+    GAS,
+    SNIP20_FILE,
+    STORE_GAS,
+};
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
-use network_integration::utils::{AIRDROP_FILE, GAS, generate_label, print_contract, print_header, SNIP20_FILE, STORE_GAS};
 use secretcli::secretcli::{account_address, test_contract_handle, test_inst_init};
-use shade_protocol::{airdrop, snip20};
-use shade_protocol::airdrop::claim_info::RequiredTask;
-use shade_protocol::asset::Contract;
-use shade_protocol::snip20::{InitConfig, InitialBalance};
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
+use shade_protocol::{
+    airdrop,
+    airdrop::claim_info::RequiredTask,
+    asset::Contract,
+    snip20,
+    snip20::{InitConfig, InitialBalance},
+};
+use std::{env, fs};
 
 #[derive(Serialize, Deserialize)]
 pub struct Reward {
@@ -30,8 +40,8 @@ pub struct Args {
 
 fn main() -> Result<()> {
     let bin_args: Vec<String> = env::args().collect();
-    let args_file = fs::read_to_string(&bin_args.get(1)
-        .expect("No argument provided")).expect("Unable to read args");
+    let args_file = fs::read_to_string(&bin_args.get(1).expect("No argument provided"))
+        .expect("Unable to read args");
     let args: Args = serde_json::from_str(&args_file)?;
 
     let account_addr = account_address(&args.admin)?;
@@ -41,8 +51,14 @@ fn main() -> Result<()> {
     let rewards: Vec<Reward> = serde_json::from_str(&file_data)?;
 
     print_header("Converting into merkle tree");
-    let raw_leaves: Vec<String> = rewards.iter().map(|x| x.address.clone() + &x.amount).collect();
-    let leaves: Vec<[u8; 32]> = raw_leaves.iter().map(|x| Sha256::hash(x.as_bytes())).collect();
+    let raw_leaves: Vec<String> = rewards
+        .iter()
+        .map(|x| x.address.clone() + &x.amount)
+        .collect();
+    let leaves: Vec<[u8; 32]> = raw_leaves
+        .iter()
+        .map(|x| Sha256::hash(x.as_bytes()))
+        .collect();
 
     let merkle_tree = MerkleTree::<Sha256>::from_leaves(&leaves);
     let root = merkle_tree.root().unwrap();
@@ -70,22 +86,29 @@ fn main() -> Result<()> {
         admin: None,
         symbol: "SHADE".to_string(),
         decimals: 6,
-        initial_balances: Some(vec![InitialBalance{
+        initial_balances: Some(vec![InitialBalance {
             address: HumanAddr::from(account_addr.clone()),
-            amount: args.initial_amount }]),
+            amount: args.initial_amount,
+        }]),
         prng_seed: Default::default(),
         config: Some(InitConfig {
             public_total_supply: Some(true),
             enable_deposit: Some(false),
             enable_redeem: Some(false),
             enable_mint: Some(true),
-            enable_burn: Some(true)
-        })
+            enable_burn: Some(true),
+        }),
     };
 
-    let snip = test_inst_init(&snip_init_msg, SNIP20_FILE,
-                              &*generate_label(8), &args.admin,
-                              Some(STORE_GAS), Some(GAS), None)?;
+    let snip = test_inst_init(
+        &snip_init_msg,
+        SNIP20_FILE,
+        &*generate_label(8),
+        &args.admin,
+        Some(STORE_GAS),
+        Some(GAS),
+        None,
+    )?;
     print_contract(&snip);
 
     // Initialize airdrop
@@ -96,7 +119,7 @@ fn main() -> Result<()> {
         dump_address: Some(HumanAddr::from(account_addr.clone())),
         airdrop_token: Contract {
             address: HumanAddr::from(snip.address.clone()),
-            code_hash: snip.code_hash.clone()
+            code_hash: snip.code_hash.clone(),
         },
         airdrop_amount: args.initial_amount,
         start_date: Some(args.start_date),
@@ -107,24 +130,39 @@ fn main() -> Result<()> {
         max_amount: args.max_amount,
         default_claim: Uint128(20),
         task_claim: vec![RequiredTask {
-            address: HumanAddr::from(account_addr.clone()),
-            percent: Uint128(50) }]
+            address: HumanAddr::from(account_addr),
+            percent: Uint128(50),
+        }],
+        query_rounding: Uint128(10000000000),
     };
 
-    let airdrop = test_inst_init(&airdrop_init_msg, AIRDROP_FILE,
-                                 &*generate_label(8), &args.admin,
-                                 Some(STORE_GAS), Some(GAS), None)?;
+    let airdrop = test_inst_init(
+        &airdrop_init_msg,
+        AIRDROP_FILE,
+        &*generate_label(8),
+        &args.admin,
+        Some(STORE_GAS),
+        Some(GAS),
+        None,
+    )?;
 
     print_contract(&airdrop);
 
     print_header("Funding airdrop");
-    test_contract_handle(&snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(airdrop.address.clone()),
-        amount: args.initial_amount,
-        msg: None,
-        memo: None,
-        padding: None
-    }, &snip, &args.admin, Some(GAS), None, None)?;
+    test_contract_handle(
+        &snip20::HandleMsg::Send {
+            recipient: HumanAddr::from(airdrop.address),
+            amount: args.initial_amount,
+            msg: None,
+            memo: None,
+            padding: None,
+        },
+        &snip,
+        &args.admin,
+        Some(GAS),
+        None,
+        None,
+    )?;
 
     Ok(())
 }

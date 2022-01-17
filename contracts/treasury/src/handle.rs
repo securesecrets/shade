@@ -15,6 +15,7 @@ use secret_toolkit::{
         send_msg,
     },
 };
+use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg, token_info_query};
 
 use shade_protocol;
 use shade_protocol::{
@@ -133,7 +134,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin {
@@ -157,7 +157,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     contract: &Contract,
     reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -369,6 +368,5 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
             &HandleAnswer::RegisterApp {
                 status: ResponseStatus::Success } 
             )? 
-        )
     })
 }

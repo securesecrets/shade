@@ -1,8 +1,5 @@
-use cosmwasm_std::{Storage, HumanAddr};
-use cosmwasm_storage::{
-    singleton, Singleton, 
-    singleton_read, ReadonlySingleton, 
-};
+use cosmwasm_std::{HumanAddr, Storage};
+use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use shade_protocol::scrt_staking;
 
 pub static CONFIG_KEY: &[u8] = b"config";

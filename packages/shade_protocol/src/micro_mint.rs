@@ -1,12 +1,8 @@
+use crate::{asset::Contract, generic_response::ResponseStatus, snip20::Snip20Asset};
+use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Binary};
-use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
-use crate::{
-    snip20::Snip20Asset,
-    asset::Contract,
-    generic_response::ResponseStatus,
-};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -17,7 +13,6 @@ pub struct Config {
     pub secondary_burn: Option<HumanAddr>,
     pub activated: bool,
 }
-
 
 /// Used to store the assets allowed to be burned
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -95,12 +90,26 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    Init { status: ResponseStatus, address: HumanAddr },
-    UpdateConfig { status: ResponseStatus },
-    UpdateMintLimit { status: ResponseStatus },
-    RegisterAsset { status: ResponseStatus },
-    RemoveAsset { status: ResponseStatus },
-    Burn { status: ResponseStatus, mint_amount: Uint128 }
+    Init {
+        status: ResponseStatus,
+        address: HumanAddr,
+    },
+    UpdateConfig {
+        status: ResponseStatus,
+    },
+    UpdateMintLimit {
+        status: ResponseStatus,
+    },
+    RegisterAsset {
+        status: ResponseStatus,
+    },
+    RemoveAsset {
+        status: ResponseStatus,
+    },
+    Burn {
+        status: ResponseStatus,
+        mint_amount: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -108,9 +117,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     GetNativeAsset {},
     GetSupportedAssets {},
-    GetAsset {
-        contract: String,
-    },
+    GetAsset { contract: String },
     GetConfig {},
     GetMintLimit {},
 }
@@ -122,9 +129,21 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    NativeAsset { asset: Snip20Asset, peg: String },
-    SupportedAssets { assets: Vec<String>, },
-    Asset { asset: SupportedAsset, burned: Uint128},
-    Config { config: Config },
-    MintLimit { limit: MintLimit },
+    NativeAsset {
+        asset: Snip20Asset,
+        peg: String,
+    },
+    SupportedAssets {
+        assets: Vec<String>,
+    },
+    Asset {
+        asset: SupportedAsset,
+        burned: Uint128,
+    },
+    Config {
+        config: Config,
+    },
+    MintLimit {
+        limit: MintLimit,
+    },
 }

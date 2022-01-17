@@ -1,11 +1,10 @@
+use crate::{asset::Contract, generic_response::ResponseStatus};
+use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use cosmwasm_std::{HumanAddr, Uint128, Binary};
-use crate::asset::Contract;
-use crate::generic_response::ResponseStatus;
-use secret_toolkit::utils::{InitCallback, HandleCallback, Query};
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 #[cfg(test)]
-use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
+use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MintConfig {
@@ -87,20 +86,30 @@ pub struct MintMsgHook {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    Init { status: ResponseStatus, address: HumanAddr },
-    Migrate { status: ResponseStatus },
-    UpdateConfig { status: ResponseStatus},
-    RegisterAsset { status: ResponseStatus},
-    Burn { status: ResponseStatus, mint_amount: Uint128 }
+    Init {
+        status: ResponseStatus,
+        address: HumanAddr,
+    },
+    Migrate {
+        status: ResponseStatus,
+    },
+    UpdateConfig {
+        status: ResponseStatus,
+    },
+    RegisterAsset {
+        status: ResponseStatus,
+    },
+    Burn {
+        status: ResponseStatus,
+        mint_amount: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetSupportedAssets {},
-    GetAsset {
-        contract: String,
-    },
+    GetAsset { contract: String },
     GetConfig {},
 }
 
@@ -114,7 +123,7 @@ impl TestQuery<QueryAnswer> for QueryMsg {}
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    SupportedAssets { assets: Vec<String>, },
+    SupportedAssets { assets: Vec<String> },
     Asset { asset: SupportedAsset },
     Config { config: MintConfig },
 }

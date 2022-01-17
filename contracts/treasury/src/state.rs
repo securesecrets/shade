@@ -3,10 +3,14 @@ use cosmwasm_std::{
     Uint128,
 };
 use cosmwasm_storage::{
-    singleton, singleton_read,
-    Singleton, ReadonlySingleton,
-    Bucket, ReadonlyBucket,
-    bucket, bucket_read,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
 };
 use shade_protocol::{
     treasury,

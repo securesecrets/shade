@@ -1,22 +1,13 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use crate::asset::Contract;
-use cosmwasm_std::{
-    StdResult, Querier, 
-    HumanAddr,
-    Uint128, Binary,
-};
+use cosmwasm_std::{Binary, HumanAddr, Querier, StdResult, Uint128};
+use schemars::JsonSchema;
 use secret_toolkit::{
-    snip20::{
-        TokenInfo, 
-        token_info_query,
-    },
-    utils::{
-        Query, InitCallback, HandleCallback,
-    },
+    snip20::TokenInfo,
+    utils::{HandleCallback, InitCallback, Query},
 };
 #[cfg(test)]
-use secretcli::secretcli::{TestInit, TestHandle, TestQuery};
+use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -66,14 +57,9 @@ pub struct TokenConfigResponse {
     pub token_config: TokenConfig,
 }
 
-pub fn token_config_query<Q: Querier>(
-    querier: &Q,
-    contract: Contract,
-) -> StdResult<TokenConfig> {
-
-    let answer: TokenConfigResponse = Snip20Query::TokenConfig {}.query(querier,
-                                                               contract.code_hash,
-                                                               contract.address)?;
+pub fn token_config_query<Q: Querier>(querier: &Q, contract: Contract) -> StdResult<TokenConfig> {
+    let answer: TokenConfigResponse =
+        Snip20Query::TokenConfig {}.query(querier, contract.code_hash, contract.address)?;
     Ok(answer.token_config)
 }
 

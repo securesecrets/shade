@@ -1,9 +1,9 @@
 #[cfg(test)]
 pub mod tests {
-    use binary_heap_plus::{BinaryHeap, MinComparator};
-    use shade_protocol::staking::stake::{Stake, Unbonding, UserStake};
-    use cosmwasm_std::{Uint128};
     use crate::handle::{calculate_shares, calculate_tokens, stake_weight};
+    use binary_heap_plus::{BinaryHeap, MinComparator};
+    use cosmwasm_std::Uint128;
+    use shade_protocol::staking::stake::{Stake, Unbonding, UserStake};
 
     #[test]
     fn test_weight_calculation() {
@@ -20,15 +20,15 @@ pub mod tests {
         // Add the three values in a non order fashion
         let val1 = Unbonding {
             amount: Default::default(),
-            unbond_time: 0
+            unbond_time: 0,
         };
         let val2 = Unbonding {
             amount: Default::default(),
-            unbond_time: 1
+            unbond_time: 1,
         };
         let val3 = Unbonding {
             amount: Default::default(),
-            unbond_time: 2
+            unbond_time: 2,
         };
 
         unbonding_heap.push(val2);
@@ -43,7 +43,7 @@ pub mod tests {
     fn init_user() -> UserStake {
         UserStake {
             shares: Uint128::zero(),
-            tokens_staked: Uint128::zero()
+            tokens_staked: Uint128::zero(),
         }
     }
 
@@ -71,7 +71,7 @@ pub mod tests {
     fn standard_staking() {
         let mut state = Stake {
             total_shares: Uint128::zero(),
-            total_tokens: Uint128::zero()
+            total_tokens: Uint128::zero(),
         };
 
         // User 1 stakes 100
@@ -103,7 +103,7 @@ pub mod tests {
     fn unbonding() {
         let mut state = Stake {
             total_shares: Uint128::zero(),
-            total_tokens: Uint128::zero()
+            total_tokens: Uint128::zero(),
         };
 
         // User 1 stakes 100
@@ -126,16 +126,18 @@ pub mod tests {
         unbond(&mut state, &mut u2, u2_unbond);
 
         assert_eq!(u1_stake, calculate_tokens(u1.shares, &state));
-        assert_eq!((u2_stake - u2_unbond).unwrap(), calculate_tokens(u2.shares, &state));
+        assert_eq!(
+            (u2_stake - u2_unbond).unwrap(),
+            calculate_tokens(u2.shares, &state)
+        );
         assert_eq!(u3_stake, calculate_tokens(u3.shares, &state));
-
     }
 
     #[test]
     fn rewards_distribution() {
         let mut state = Stake {
             total_shares: Uint128::zero(),
-            total_tokens: Uint128::zero()
+            total_tokens: Uint128::zero(),
         };
 
         // User 1 stakes 100
@@ -156,9 +158,17 @@ pub mod tests {
         // Add a 200 reward, (should double user amounts)
         state.total_tokens += Uint128(200);
 
-        assert_eq!(u1_stake.multiply_ratio(Uint128(2), Uint128(1)), calculate_tokens(u1.shares, &state));
-        assert_eq!(u2_stake.multiply_ratio(Uint128(2), Uint128(1)), calculate_tokens(u2.shares, &state));
-        assert_eq!(u3_stake.multiply_ratio(Uint128(2), Uint128(1)), calculate_tokens(u3.shares, &state));
+        assert_eq!(
+            u1_stake.multiply_ratio(Uint128(2), Uint128(1)),
+            calculate_tokens(u1.shares, &state)
+        );
+        assert_eq!(
+            u2_stake.multiply_ratio(Uint128(2), Uint128(1)),
+            calculate_tokens(u2.shares, &state)
+        );
+        assert_eq!(
+            u3_stake.multiply_ratio(Uint128(2), Uint128(1)),
+            calculate_tokens(u3.shares, &state)
+        );
     }
-
 }

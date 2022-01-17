@@ -17,27 +17,27 @@
 
 2. Pull the SN-testnet image
 ```shell
-docker pull floppydisck/sn-testnet:v0.2
+make server-download
 ```
 
 3. Open a terminal inside this repo and run:
 ```shell
-docker run -it --rm -p 26657:26657 -p 26656:26656 -p 1337:1337 -v $(pwd):/root/code --name shade-testnet floppydisck/sn-testnet:v0.2
+make server-start
 ```
 
 4. Inside another terminal run:
 ```shell
-docker exec -it shade-testnet /bin/bash
+make server-connect
 ```
 
 #### Testing the environment
-Inside the container, go to /root/code and compile all of the smart contracts:
+Inside the container, go to /root/code and compile all the smart contracts:
 ```
 make
 ```
 Then test run all the Protocol unit-tests and integration tests using the [tester](packages/network_integration):
-```
-cargo test -- --nocapture --test-threads=1
+```shell
+make integration-tests
 ```
 
 ### Unit Tests

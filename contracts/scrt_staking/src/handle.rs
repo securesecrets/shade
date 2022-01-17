@@ -22,6 +22,7 @@ use shade_protocol::{
         ValidatorBounds,
     },
     generic_response::ResponseStatus,
+    scrt_staking::{HandleAnswer, ValidatorBounds},
 };
 
 use crate::{
@@ -40,15 +41,14 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-
     debug_print!("Received {}", amount);
 
     let config = config_r(&deps.storage).load()?;
 
     if config.sscrt.address != env.message.sender {
-        return Err(StdError::GenericErr { 
-            msg: "Only accepts sSCRT".to_string(), 
-            backtrace: None 
+        return Err(StdError::GenericErr {
+            msg: "Only accepts sSCRT".to_string(),
+            backtrace: None,
         });
     }
 
@@ -73,12 +73,10 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             }),
         ],
         log: vec![],
-        data: Some( to_binary( 
-            &HandleAnswer::Receive {
-                status: ResponseStatus::Success,
-                validator,
-            } 
-        )?),
+        data: Some(to_binary(&HandleAnswer::Receive {
+            status: ResponseStatus::Success,
+            validator,
+        })?),
     })
 }
 
@@ -87,7 +85,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     admin: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin {
@@ -106,8 +103,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success } )? )
+        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -159,12 +157,10 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                 }),
             ],
             log: vec![],
-            data: Some( to_binary( 
-                &HandleAnswer::Unbond {
-                    status: ResponseStatus::Success,
-                    delegation,
-                }
-            )?),
+            data: Some(to_binary(&HandleAnswer::Unbond {
+                status: ResponseStatus::Success,
+                delegation,
+            })?),
         });
     }
     */
@@ -186,7 +182,6 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     _env: Env,
     validator: HumanAddr,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     //TODO: query scrt balance and deposit into sscrt
@@ -235,11 +230,9 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some( to_binary(
-            &HandleAnswer::Claim {
-                status: ResponseStatus::Success,
-            }
-        )?),
+        data: Some(to_binary(&HandleAnswer::Claim {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -247,7 +240,6 @@ pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     seed: u64,
 ) -> StdResult<Validator> {
-
     let mut validators = deps.querier.query_validators()?;
     let bounds = (config_r(&deps.storage).load()?).validator_bounds;
 
@@ -262,21 +254,17 @@ pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
         validators = candidates;
     }
 
-    if validators.len() == 0 {
+    if validators.is_empty() {
         return Err(StdError::GenericErr {
             msg: "No validators within bounds".to_string(),
-            backtrace: None
-        })
+            backtrace: None,
+        });
     }
 
     // seed will likely be env.block.time
     Ok(validators[(seed % validators.len() as u64) as usize].clone())
 }
 
-pub fn is_validator_inbounds(
-    validator: &Validator,
-    bounds: &ValidatorBounds,
-) -> bool {
-
+pub fn is_validator_inbounds(validator: &Validator, bounds: &ValidatorBounds) -> bool {
     validator.commission <= bounds.max_commission && validator.commission >= bounds.min_commission
 }

@@ -15,14 +15,10 @@ use shade_protocol::{
 };
 
 use crate::{
-    state::{
-        viewing_key_w,
-        config_w,
-        self_address_w,
-    },
-    handle, query,
+    handle,
+    query,
+    state::{config_w, self_address_w, viewing_key_w},
 };
-
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -46,7 +42,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     Ok(InitResponse {
         messages: vec![],
-        log: vec![]
+        log: vec![],
     })
 }
 

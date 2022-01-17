@@ -1,19 +1,18 @@
+use crate::{handle, query, state::config_w};
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, 
-    Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, Storage, Uint128,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
 };
-use shade_protocol::{
-    oracle::{
-        InitMsg, HandleMsg,
-        QueryMsg, OracleConfig,
-    },
-    band::ReferenceData,
-};
-use crate::{
-    state::{ config_w, hard_coded_w },
-    query, handle,
-};
+use shade_protocol::oracle::{HandleMsg, InitMsg, OracleConfig, QueryMsg};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -22,23 +21,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let state = OracleConfig {
         admin: match msg.admin {
-            None => { env.message.sender.clone() }
-            Some(admin) => { admin }
+            None => env.message.sender.clone(),
+            Some(admin) => admin,
         },
         band: msg.band,
         sscrt: msg.sscrt,
     };
 
     config_w(&mut deps.storage).save(&state)?;
-
-    /* Hard-coded SILK = $1.00
-     */
-    hard_coded_w(&mut deps.storage).save("SILK".as_bytes(), &ReferenceData {
-                //1$
-                rate: Uint128(1 * 10u128.pow(18)),
-                last_updated_base: 0,
-                last_updated_quote: 0
-            })?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -50,22 +40,15 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
-
     match msg {
-        HandleMsg::UpdateConfig {
-            admin,
-            band,
-        } => handle::try_update_config(deps, env, admin, band),
-        HandleMsg::RegisterSswapPair {
-            pair,
-        } => handle::register_sswap_pair(deps, env, pair),
-        HandleMsg::UnregisterSswapPair {
-            pair,
-        } => handle::unregister_sswap_pair(deps, env, pair),
-        HandleMsg::RegisterIndex {
-            symbol,
-            basket,
-        } => handle::register_index(deps, env, symbol, basket),
+        HandleMsg::UpdateConfig { admin, band } => {
+            handle::try_update_config(deps, env, admin, band)
+        }
+        HandleMsg::RegisterSswapPair { pair } => handle::register_sswap_pair(deps, env, pair),
+        HandleMsg::UnregisterSswapPair { pair } => handle::unregister_sswap_pair(deps, env, pair),
+        HandleMsg::RegisterIndex { symbol, basket } => {
+            handle::register_index(deps, env, symbol, basket)
+        }
     }
 }
 
