@@ -46,7 +46,7 @@ use cosmwasm_std::{
     Uint128,
     WasmMsg,
 };
-use secret_toolkit::snip20::{batch_send_msg, send_msg, SendAction};
+use secret_toolkit::snip20::{batch_send_msg, send_msg, batch::SendAction};
 use shade_protocol::{
     asset::Contract,
     generic_response::{
@@ -213,6 +213,7 @@ pub fn try_fund_proposal<S: Storage, A: Api, Q: Querier>(
             if let Some(mut amounts) = amounts {
                 amounts.push(SendAction {
                     recipient: sender.clone(),
+                    recipient_code_hash: None,
                     amount: adjusted_amount,
                     msg: None,
                     memo: None,

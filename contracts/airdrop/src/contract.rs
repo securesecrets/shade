@@ -27,6 +27,10 @@ use cosmwasm_std::{
     Uint128,
 };
 use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
+use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+
+// Used to pad up responses for better privacy.
+pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -119,7 +123,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
-    match msg {
+    pad_handle_result(match msg {
         HandleMsg::UpdateConfig {
             admin,
             dump_address,
@@ -127,6 +131,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             start_date,
             end_date,
             decay_start: start_decay,
+            ..
         } => try_update_config(
             deps,
             env,
@@ -137,27 +142,29 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             end_date,
             start_decay,
         ),
-        HandleMsg::AddTasks { tasks } => try_add_tasks(deps, &env, tasks),
-        HandleMsg::CompleteTask { address } => try_complete_task(deps, &env, address),
+        HandleMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, tasks),
+        HandleMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, address),
         HandleMsg::CreateAccount {
             addresses,
             partial_tree,
+            ..
         } => try_create_account(deps, &env, addresses, partial_tree),
         HandleMsg::UpdateAccount {
             addresses,
             partial_tree,
+            ..
         } => try_update_account(deps, &env, addresses, partial_tree),
-        HandleMsg::DisablePermitKey { key } => try_disable_permit_key(deps, &env, key),
-        HandleMsg::Claim {} => try_claim(deps, &env),
-        HandleMsg::ClaimDecay {} => try_claim_decay(deps, &env),
-    }
+        HandleMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
+        HandleMsg::Claim { .. } => try_claim(deps, &env),
+        HandleMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),
+    }, RESPONSE_BLOCK_SIZE)
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
-    match msg {
+    pad_query_result(match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Dates { current_date } => to_binary(&query::dates(deps, current_date)?),
         QueryMsg::TotalClaimed {} => to_binary(&query::total_claimed(deps)?),
@@ -165,5 +172,5 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             permit,
             current_date,
         } => to_binary(&query::account(deps, permit, current_date)?),
-    }
+    }, RESPONSE_BLOCK_SIZE)
 }

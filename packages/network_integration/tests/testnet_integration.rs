@@ -287,6 +287,7 @@ fn run_airdrop() -> Result<()> {
             &airdrop::HandleMsg::CreateAccount {
                 addresses: vec![b_permit, a_permit.clone()],
                 partial_tree: initial_proof,
+                padding: None,
             },
             &airdrop,
             ACCOUNT_KEY,
@@ -330,6 +331,7 @@ fn run_airdrop() -> Result<()> {
     test_contract_handle(
         &airdrop::HandleMsg::CompleteTask {
             address: HumanAddr::from(account_a.clone()),
+            padding: None,
         },
         &airdrop,
         ACCOUNT_KEY,
@@ -389,6 +391,7 @@ fn run_airdrop() -> Result<()> {
         &airdrop::HandleMsg::UpdateAccount {
             addresses: vec![c_permit],
             partial_tree: other_proof,
+            padding: None,
         },
         &airdrop,
         ACCOUNT_KEY,
@@ -427,6 +430,7 @@ fn run_airdrop() -> Result<()> {
     test_contract_handle(
         &airdrop::HandleMsg::DisablePermitKey {
             key: "key".to_string(),
+            padding: None,
         },
         &airdrop,
         ACCOUNT_KEY,
@@ -499,6 +503,7 @@ fn run_airdrop() -> Result<()> {
             &airdrop::HandleMsg::UpdateAccount {
                 addresses: vec![d_permit],
                 partial_tree: d_proof,
+                padding: None,
             },
             &airdrop,
             ACCOUNT_KEY,
@@ -524,7 +529,9 @@ fn run_airdrop() -> Result<()> {
     }
 
     test_contract_handle(
-        &airdrop::HandleMsg::ClaimDecay {},
+        &airdrop::HandleMsg::ClaimDecay {
+            padding: None,
+        },
         &airdrop,
         ACCOUNT_KEY,
         Some(GAS),

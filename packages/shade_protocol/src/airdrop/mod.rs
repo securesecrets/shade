@@ -85,27 +85,37 @@ pub enum HandleMsg {
         start_date: Option<u64>,
         end_date: Option<u64>,
         decay_start: Option<u64>,
+        padding: Option<String>,
     },
     AddTasks {
         tasks: Vec<RequiredTask>,
+        padding: Option<String>,
     },
     CompleteTask {
         address: HumanAddr,
+        padding: Option<String>,
     },
     CreateAccount {
         addresses: Vec<AddressProofPermit>,
         partial_tree: Vec<Binary>,
+        padding: Option<String>,
     },
     /// Adds more addresses to accounts
     UpdateAccount {
         addresses: Vec<AddressProofPermit>,
         partial_tree: Vec<Binary>,
+        padding: Option<String>,
     },
     DisablePermitKey {
         key: String,
+        padding: Option<String>,
     },
-    Claim {},
-    ClaimDecay {},
+    Claim {
+        padding: Option<String>,
+    },
+    ClaimDecay {
+        padding: Option<String>,
+    },
 }
 
 impl HandleCallback for HandleMsg {
@@ -148,7 +158,6 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config {
         config: Config,
-        total_claimed: Uint128,
     },
     Dates {
         start: u64,
