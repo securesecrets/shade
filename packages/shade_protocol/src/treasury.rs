@@ -1,8 +1,7 @@
 use crate::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_std::{Binary, Decimal, HumanAddr, Uint128};
+use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::{
-    snip20,
     utils::{HandleCallback, InitCallback, Query},
 };
 use serde::{Deserialize, Serialize};

@@ -4,21 +4,21 @@ use cosmwasm_std::{
     StdResult, Storage, Uint128,
 };
 use secret_toolkit::snip20::{
-    register_receive_msg, send_msg, set_viewing_key_msg, token_info_query,
+    register_receive_msg, send_msg, set_viewing_key_msg,
 };
 
 use shade_protocol::{
     asset::Contract,
     generic_response::ResponseStatus,
     //math::Uint128,
-    snip20::{fetch_snip20, token_config_query, Snip20Asset},
+    snip20::fetch_snip20,
     treasury::{Allocation, Config, Flag, HandleAnswer, QueryAnswer},
 };
 
 use crate::{
     query,
     state::{
-        allocations_r, allocations_w, assets_r, assets_w, config_r, config_w, reserves_r,
+        allocations_w, assets_r, assets_w, config_r, config_w,
         reserves_w, viewing_key_r,
     },
 };
@@ -61,7 +61,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
             for alloc in &mut alloc_list {
                 match alloc {
-                    Allocation::Reserves { allocation } => {}
+                    Allocation::Reserves { allocation: _ } => {}
                     Allocation::Rewards {
                         allocation,
                         contract,
@@ -96,17 +96,17 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                     }
 
                     Allocation::Application {
-                        contract,
-                        allocation,
-                        token,
+                        contract: _,
+                        allocation: _,
+                        token: _,
                     } => {
                         //debug_print!("Applications Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
                     }
                     Allocation::Pool {
-                        contract,
-                        allocation,
-                        secondary_asset,
-                        token,
+                        contract: _,
+                        allocation: _,
+                        secondary_asset: _,
+                        token: _,
                     } => {
                         //debug_print!("Pools Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
                     }
@@ -131,6 +131,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
+
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin {
@@ -175,7 +176,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    allocations_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &vec![])?;
+    allocations_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &allocs)?;
 
     reserves_w(&mut deps.storage).save(
         contract.address.to_string().as_bytes(),
@@ -248,41 +249,41 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     let alloc_portion = *match &alloc {
         Allocation::Reserves { allocation } => allocation,
         Allocation::Rewards {
-            contract,
+            contract: _,
             allocation,
         } => allocation,
         Allocation::Staking {
-            contract,
+            contract: _,
             allocation,
         } => allocation,
         Allocation::Application {
-            contract,
+            contract: _,
             allocation,
-            token,
+            token: _,
         } => allocation,
         Allocation::Pool {
-            contract,
+            contract: _,
             allocation,
-            secondary_asset,
-            token,
+            secondary_asset: _,
+            token: _,
         } => allocation,
     };
 
     let alloc_address = match &alloc {
         Allocation::Staking {
             contract,
-            allocation,
+            allocation: _,
         } => Some(contract.address.clone()),
         Allocation::Application {
             contract,
-            allocation,
-            token,
+            allocation: _,
+            token: _,
         } => Some(contract.address.clone()),
         Allocation::Pool {
             contract,
-            allocation,
-            secondary_asset,
-            token,
+            allocation: _,
+            secondary_asset: _,
+            token: _,
         } => Some(contract.address.clone()),
         _ => None,
     };
@@ -303,25 +304,25 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         let mut existing_index = None;
         for (i, app) in app_list.iter_mut().enumerate() {
             if let Some(address) = match app {
-                Allocation::Reserves { allocation } => None,
+                Allocation::Reserves { allocation: _ } => None,
                 Allocation::Rewards {
                     contract,
-                    allocation,
+                    allocation: _,
                 } => Some(contract.address.clone()),
                 Allocation::Staking {
                     contract,
-                    allocation,
+                    allocation: _,
                 } => Some(contract.address.clone()),
                 Allocation::Application {
                     contract,
-                    allocation,
-                    token,
+                    allocation: _,
+                    token: _,
                 } => Some(contract.address.clone()),
                 Allocation::Pool {
                     contract,
-                    allocation,
-                    secondary_asset,
-                    token,
+                    allocation: _,
+                    secondary_asset: _,
+                    token: _,
                 } => Some(contract.address.clone()),
             } {
                 match &alloc_address {
@@ -355,25 +356,25 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         for app in &app_list {
             allocated_portion = allocated_portion
                 + match app {
-                    Allocation::Reserves { allocation } => Uint128::zero(),
+                    Allocation::Reserves { allocation: _ } => Uint128::zero(),
                     Allocation::Rewards {
-                        contract,
+                        contract: _,
                         allocation,
                     } => *allocation,
                     Allocation::Staking {
-                        contract,
+                        contract: _,
                         allocation,
                     } => *allocation,
                     Allocation::Application {
-                        contract,
+                        contract: _,
                         allocation,
-                        token,
+                        token: _,
                     } => *allocation,
                     Allocation::Pool {
-                        contract,
+                        contract: _,
                         allocation,
-                        secondary_asset,
-                        token,
+                        secondary_asset: _,
+                        token: _,
                     } => *allocation,
                 };
         }

@@ -3,7 +3,6 @@ use cosmwasm_std::{
     StdResult, Storage,
 };
 
-use secret_toolkit;
 use shade_protocol::treasury::{Config, HandleMsg, InitMsg, QueryMsg};
 
 use crate::{

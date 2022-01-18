@@ -28,10 +28,10 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
             match resp {
                 snip20::QueryAnswer::Balance { amount } => {
-                    return Ok(treasury::QueryAnswer::Balance { amount })
+                    Ok(treasury::QueryAnswer::Balance { amount })
                 }
                 _ => {
-                    return Err(StdError::GenericErr {
+                    Err(StdError::GenericErr {
                         msg: "Unexpected Response".to_string(),
                         backtrace: None,
                     })
