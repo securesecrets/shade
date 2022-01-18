@@ -30,12 +30,10 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
                 snip20::QueryAnswer::Balance { amount } => {
                     Ok(treasury::QueryAnswer::Balance { amount })
                 }
-                _ => {
-                    Err(StdError::GenericErr {
-                        msg: "Unexpected Response".to_string(),
-                        backtrace: None,
-                    })
-                }
+                _ => Err(StdError::GenericErr {
+                    msg: "Unexpected Response".to_string(),
+                    backtrace: None,
+                }),
             }
         }
         None => Err(StdError::NotFound {

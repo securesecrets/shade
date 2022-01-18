@@ -52,11 +52,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         }
         HandleMsg::RegisterAllocation { asset, allocation } => {
             handle::register_allocation(deps, &env, asset, allocation)
-        }
-        /*
-        HandleMsg::Rebalance {
-        } => handle::rebalance(deps, &env),
-        */
+        } /*
+          HandleMsg::Rebalance {
+          } => handle::rebalance(deps, &env),
+          */
     }
 }
 

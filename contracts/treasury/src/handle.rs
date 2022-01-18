@@ -3,9 +3,7 @@ use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdError,
     StdResult, Storage, Uint128,
 };
-use secret_toolkit::snip20::{
-    register_receive_msg, send_msg, set_viewing_key_msg,
-};
+use secret_toolkit::snip20::{register_receive_msg, send_msg, set_viewing_key_msg};
 
 use shade_protocol::{
     asset::Contract,
@@ -17,10 +15,7 @@ use shade_protocol::{
 
 use crate::{
     query,
-    state::{
-        allocations_w, assets_r, assets_w, config_r, config_w,
-        reserves_w, viewing_key_r,
-    },
+    state::{allocations_w, assets_r, assets_w, config_r, config_w, reserves_w, viewing_key_r},
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -131,7 +126,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin {
