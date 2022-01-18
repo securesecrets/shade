@@ -16,8 +16,9 @@ The oracle contract is used to query the price of different currencies
 
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|band      | Contract |  Band protocol contract                                                                                           |  no      |
+|admin     | string   |  New contract admin; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
+|sscrt     | Contract |  sSCRT snip20 token contract |  no      |
+|band      | Contract |  Band protocol contract   |  no      |
 
 ## User
 
@@ -77,7 +78,7 @@ Registers a Secret Swap pair that can then be queried
 
 ### Queries
 
-#### GetPrice
+#### Price
 Get asset price according to band protocol or a registered SecretSwap pair
 
 ##### Request
@@ -104,14 +105,16 @@ Get asset price according to band protocol or a registered SecretSwap pair
 }
 ```
 
-#### GetConfig
+#### Config
 Get the current config
 
+#### Prices
+Get prices of list of assets
 ##### Request
 
 |Name        |Type    |Description                                                                                                            | optional |
 |------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
-
+|symbols      | list |  list of asset symbols e.g. BTC/ETH/SCRT;   |  no      |
 ##### Response
 
 |Name      |Type      |Description                                                                                                        | optional |
@@ -126,11 +129,14 @@ Addresses are fictional.
 
 ```json
 {
-  "config": {
-    "owner": "secret1k0jntykt7e4g3y88ltc60czgjhjsd74c9e8fzek",
-    "band": "secret1k0hdtykt7e4hs6588ltc60czgjhjsd78xse7bsgfe",
-    "sscrt": "secret1k0hdtyjs75fhs6588ltc60czgjhjsd78xse87hdk",
-  }
+  [
+    {
+      "rate": "1470000000000000000",
+      "last_updated_base": 1628569146,
+      "last_updated_quote": 3377610
+    },
+    ...
+  ]
 }
 ```
 

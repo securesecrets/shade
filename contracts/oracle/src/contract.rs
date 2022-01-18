@@ -1,22 +1,18 @@
+use crate::{handle, query, state::config_w};
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, 
-    Env, Extern, HandleResponse, InitResponse, 
-    Querier, StdResult, StdError, Storage, Uint128,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
 };
-use shade_protocol::{
-    oracle::{
-        InitMsg, HandleMsg,
-        QueryMsg, OracleConfig,
-    },
-    band::ReferenceData,
-};
-use crate::{
-    state::{
-        config_w, config_r,
-        hard_coded_r, hard_coded_w,
-    },
-    query, handle,
-};
+use shade_protocol::oracle::{HandleMsg, InitMsg, OracleConfig, QueryMsg};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -24,24 +20,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let state = OracleConfig {
-        owner: match msg.admin {
-            None => { env.message.sender.clone() }
-            Some(admin) => { admin }
+        admin: match msg.admin {
+            None => env.message.sender.clone(),
+            Some(admin) => admin,
         },
         band: msg.band,
         sscrt: msg.sscrt,
     };
 
     config_w(&mut deps.storage).save(&state)?;
-
-    /* Hard-coded SILK = $1.00
-     */
-    hard_coded_w(&mut deps.storage).save("SILK".as_bytes(), &ReferenceData {
-                //1$
-                rate: Uint128(1 * 10u128.pow(18)),
-                last_updated_base: 0,
-                last_updated_quote: 0
-            })?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -53,15 +40,15 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
-
     match msg {
-        HandleMsg::UpdateConfig {
-            owner,
-            band,
-        } => handle::try_update_config(deps, env, owner, band),
-        HandleMsg::RegisterSswapPair {
-            pair,
-        } => handle::register_sswap_pair(deps, env, pair),
+        HandleMsg::UpdateConfig { admin, band } => {
+            handle::try_update_config(deps, env, admin, band)
+        }
+        HandleMsg::RegisterSswapPair { pair } => handle::register_sswap_pair(deps, env, pair),
+        HandleMsg::UnregisterSswapPair { pair } => handle::unregister_sswap_pair(deps, env, pair),
+        HandleMsg::RegisterIndex { symbol, basket } => {
+            handle::register_index(deps, env, symbol, basket)
+        }
     }
 }
 
@@ -70,7 +57,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
-        QueryMsg::GetPrice { symbol } => to_binary(&query::get_price(deps, symbol)?),
+        QueryMsg::Config {} => to_binary(&query::config(deps)?),
+        QueryMsg::Price { symbol } => to_binary(&query::price(deps, symbol)?),
+        QueryMsg::Prices { symbols } => to_binary(&query::prices(deps, symbols)?),
     }
 }

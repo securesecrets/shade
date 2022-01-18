@@ -1,25 +1,18 @@
 #[cfg(test)]
 pub mod tests {
+    /*
     use cosmwasm_std::{
         testing::{
             mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier
         },
-        HumanAddr,
-        coins, from_binary, StdError, Uint128,
-        Extern,
+        HumanAddr, coins, Extern,
     };
     use shade_protocol::{
-        treasury::{
-            QueryAnswer, InitMsg, HandleMsg,
-            QueryMsg,
-        },
-        asset::Contract,
+        treasury::InitMsg,
     };
 
     use crate::{
-        contract::{
-            init, handle, query,
-        },
+        contract::init,
     };
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
@@ -41,4 +34,5 @@ pub mod tests {
 
         return deps
     }
+    */
 }

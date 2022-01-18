@@ -10,18 +10,6 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-
-[profile.release]
-opt-level = 3
-debug = false
-rpath = false
-lto = true
-debug-assertions = false
-codegen-units = 1
-panic = 'abort'
-incremental = false
-overflow-checks = true
-
 [features]
 default = []
 # for quicker tests, cargo test --lib
@@ -30,11 +18,18 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
-cosmwasm-schema = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
-cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
-cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
-secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit", branch = "debug-print"}
+cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
+cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
+cosmwasm-schema = "0.10.1"
+secret-toolkit = { version = "0.2" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
+# Needed for airdrop
+rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }
+# Needed for transactions
+flexible-permits = {git = "https://github.com/securesecrets/flexible-permits", tag = "v1.0.1"}
+remain = "0.2.2"
 
+[dev-dependencies]
+secretcli = { version = "0.1.0", path = "../secretcli" }

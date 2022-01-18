@@ -1,52 +1,42 @@
 #[cfg(test)]
 pub mod tests {
     use cosmwasm_std::{
-        testing::{
-            mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier
-        },
-        coins, from_binary, StdError, Uint128,
+        coins,
+        from_binary,
+        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
         Extern,
-    };
-    use shade_protocol::{
-        micro_mint::{
-            QueryAnswer, InitMsg, HandleMsg,
-            QueryMsg,
-        },
-        asset::Contract,
+        StdError,
+        Uint128,
     };
     use mockall_double::double;
+    use shade_protocol::{
+        asset::Contract,
+        micro_mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+    };
 
     use crate::{
-        contract::{
-            init, handle, query,
-        },
-        handle::{
-            calculate_commission,
-            calculate_mint,
-            try_burn,
-        }, 
+        contract::{handle, init, query},
+        handle::{calculate_capture, calculate_mint, try_burn},
     };
 
     mod mock_secret_toolkit {
 
+        use cosmwasm_std::{HumanAddr, Querier, StdResult, Uint128};
+        use secret_toolkit::snip20::TokenInfo;
 
-            use cosmwasm_std::{Querier, HumanAddr, StdResult, Uint128};
-            use secret_toolkit::snip20::TokenInfo;
-
-            pub fn mock_token_info_query<Q: Querier>(
-                _querier: &Q,
-                _block_size: usize,
-                _callback_code_hash: String,
-                _contract_addr: HumanAddr,
-            ) -> StdResult<TokenInfo> {
-                Ok(TokenInfo {
-                    name: "Token".to_string(),
-                    symbol: "TKN".to_string(),
-                    decimals: 6,
-                    total_supply: Option::from(Uint128(150)),
-                })
-            }
-
+        pub fn mock_token_info_query<Q: Querier>(
+            _querier: &Q,
+            _block_size: usize,
+            _callback_code_hash: String,
+            _contract_addr: HumanAddr,
+        ) -> StdResult<TokenInfo> {
+            Ok(TokenInfo {
+                name: "Token".to_string(),
+                symbol: "TKN".to_string(),
+                decimals: 6,
+                total_supply: Option::from(Uint128(150)),
+            })
+        }
     }
 
     #[double]
@@ -54,13 +44,20 @@ pub mod tests {
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);
-        return Contract{
+        return Contract {
             address: env.message.sender,
-            code_hash: code_hash.to_string()
-        }
+            code_hash: code_hash.to_string(),
+        };
     }
 
-    fn dummy_init(admin: String, native_asset: Contract,  oracle: Contract, peg: Option<String>, treasury: Option<Contract>, commission: Option<Uint128>) -> Extern<MockStorage, MockApi, MockQuerier> {
+    fn dummy_init(
+        admin: String,
+        native_asset: Contract,
+        oracle: Contract,
+        peg: Option<String>,
+        treasury: Option<Contract>,
+        capture: Option<Uint128>,
+    ) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
             admin: None,
@@ -68,11 +65,15 @@ pub mod tests {
             oracle,
             peg,
             treasury,
+            secondary_burn: None,
+            start_epoch: None,
+            epoch_frequency: None,
+            epoch_mint_limit: None,
         };
         let env = mock_env(admin, &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();
 
-        return deps
+        return deps;
     }
 
     #[test]
@@ -86,7 +87,7 @@ pub mod tests {
             peg: Option::from("TKN".to_string()),
             treasury: Option::from(create_contract("", "")),
             // 1%
-            commission: Option::from(Uint128(100)),
+            capture: Option::from(Uint128(100)),
         };
         let env = mock_env("creator", &coins(1000, "earth"));
 
@@ -102,7 +103,7 @@ pub mod tests {
         let native_asset = create_contract("snip20", "hash");
         let oracle = create_contract("oracle", "hash");
         let treasury = create_contract("treasury", "hash");
-        let commission = Uint128(100);
+        let capture = Uint128(100);
 
         let admin_env = mock_env("admin", &coins(1000, "earth"));
         let mut deps = dummy_init("admin".to_string(),
@@ -110,12 +111,12 @@ pub mod tests {
                                   oracle,
                                   None,
                                   Option::from(treasury),
-                                  Option::from(commission));
+                                  Option::from(capture));
 
         // new config vars
         let new_oracle = Option::from(create_contract("new_oracle", "hash"));
         let new_treasury = Option::from(create_contract("new_treasury", "hash"));
-        let new_commission = Option::from(Uint128(200));
+        let new_capture = Option::from(Uint128(200));
 
         // Update config
         let update_msg = HandleMsg::UpdateConfig {
@@ -123,7 +124,7 @@ pub mod tests {
             oracle: new_oracle.clone(),
             treasury: new_treasury.clone(),
             // 2%
-            commission: new_commission.clone(),
+            capture: new_capture.clone(),
         };
         let update_res = handle(&mut deps, admin_env, update_msg);
 
@@ -133,7 +134,7 @@ pub mod tests {
             QueryAnswer::Config { config } => {
                 assert_eq!(config.oracle, new_oracle.unwrap());
                 assert_eq!(config.treasury, new_treasury);
-                assert_eq!(config.commission, new_commission);
+                assert_eq!(config.capture, new_capture);
             }
             _ => { panic!("Received wrong answer") }
         }
@@ -175,7 +176,7 @@ pub mod tests {
                                   create_contract("", ""),
                                   create_contract("", ""),
                                   None,
-                                  None, 
+                                  None,
                                   None);
 
         // Admin should be allowed to add an item
@@ -365,14 +366,13 @@ pub mod tests {
         }
     }
     */
-
     #[test]
-    fn commission_calc() {
+    fn capture_calc() {
         let amount = Uint128(1_000_000_000_000_000_000);
         //10%
-        let commission = Uint128(1000);
+        let capture = Uint128(1000);
         let expected = Uint128(100_000_000_000_000_000);
-        let value = calculate_commission(amount, commission);
+        let value = calculate_capture(amount, capture);
         assert_eq!(value, expected);
     }
     #[test]

@@ -1,19 +1,43 @@
-use cosmwasm_std::{debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, CosmosMsg, HumanAddr, Uint128, from_binary};
-use crate::state::{config, config_read, assets_w, assets_r, asset_list, asset_list_read};
+use crate::state::{asset_list, asset_list_read, assets_r, assets_w, config, config_read};
+use cosmwasm_std::{
+    debug_print,
+    from_binary,
+    to_binary,
+    Api,
+    Binary,
+    CosmosMsg,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
+};
 use secret_toolkit::{
-    snip20::{mint_msg, burn_msg, register_receive_msg, token_info_query, minters_query},
-    utils::{InitCallback, Query}
+    snip20::{burn_msg, mint_msg, minters_query, register_receive_msg, token_info_query},
+    utils::{InitCallback, Query},
 };
 use shade_protocol::{
-    mint::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, MintConfig, SupportedAsset, SnipMsgHook},
-    oracle::{
-        QueryMsg::GetPrice,
-    },
+    asset::Contract,
     band::ReferenceData,
-    asset::{Contract},
     generic_response::ResponseStatus,
+    mint::{
+        HandleAnswer,
+        HandleMsg,
+        InitMsg,
+        MintConfig,
+        QueryAnswer,
+        QueryMsg,
+        SnipMsgHook,
+        SupportedAsset,
+    },
+    oracle::QueryMsg::Price,
 };
-use std::convert::TryFrom;
+use std::{cmp::Ordering, convert::TryFrom};
 
 // TODO: add remove asset
 // TODO: add spacepad padding
@@ -24,8 +48,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let state = MintConfig {
         owner: match msg.admin {
-            None => { env.message.sender.clone() }
-            Some(admin) => { admin }
+            None => env.message.sender.clone(),
+            Some(admin) => admin,
         },
         oracle: msg.oracle,
         activated: true,
@@ -46,7 +70,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     Ok(InitResponse {
         messages,
-        log: vec![]
+        log: vec![],
     })
 }
 
@@ -59,12 +83,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::Migrate {
             code_id,
             code_hash,
-            label
+            label,
         } => try_migrate(deps, env, label, code_id, code_hash),
-        HandleMsg::UpdateConfig {
-            owner,
-            oracle
-        } => try_update_config(deps, env, owner, oracle),
+        HandleMsg::UpdateConfig { owner, oracle } => try_update_config(deps, env, owner, oracle),
         HandleMsg::RegisterAsset {
             name,
             contract,
@@ -76,7 +97,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             from,
             amount,
             msg,
-            ..} => try_burn(deps, env, sender, from, amount, msg),
+            ..
+        } => try_burn(deps, env, sender, from, amount, msg),
     }
 }
 
@@ -106,20 +128,21 @@ pub fn try_migrate<S: Storage, A: Api, Q: Querier>(
         if let Some(item) = assets.may_load(asset_addr.as_bytes())? {
             initial_assets.push(item)
         }
-    };
+    }
 
     // Move config
     let init_msg = InitMsg {
         admin: Option::from(config_read.owner),
         oracle: config_read.oracle,
-        initial_assets: Some(initial_assets)
+        initial_assets: Some(initial_assets),
     };
 
     Ok(HandleResponse {
         messages: vec![init_msg.to_cosmos_msg(label, code_id, code_hash, None)?],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::Migrate {
-            status: ResponseStatus::Success } )? )
+        data: Some(to_binary(&HandleAnswer::Migrate {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -148,8 +171,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success } )? )
+        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -161,35 +185,39 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     burnable: Option<bool>,
     total_burned: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
-
     let asset = SupportedAsset {
         name: match name {
-            None => { token_info_query(&deps.querier, 1, contract.code_hash.clone(), contract.address.clone())?.symbol }
+            None => {
+                token_info_query(
+                    &deps.querier,
+                    1,
+                    contract.code_hash.clone(),
+                    contract.address.clone(),
+                )?
+                .symbol
+            }
             Some(x) => x,
         },
         contract,
-        burnable: match burnable {
-            None => false,
-            Some(x) => x
-        },
+        burnable: burnable.unwrap_or(false),
         total_burned: match total_burned {
             None => Uint128(0),
             Some(amount) => amount,
-        }
+        },
     };
 
-    if !authorized(deps, &env, AllowedAccess::Admin)? {
+    if !authorized(deps, env, AllowedAccess::Admin)? {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    let mut messages = vec![];
-    messages.push(save_asset(deps, env, asset)?);
+    let messages = vec![save_asset(deps, env, asset)?];
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::RegisterAsset {
-            status: ResponseStatus::Success } )? )
+        data: Some(to_binary(&HandleAnswer::RegisterAsset {
+            status: ResponseStatus::Success,
+        })?),
     })
 }
 
@@ -199,7 +227,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     _sender: HumanAddr,
     from: HumanAddr,
     amount: Uint128,
-    msg: Option<Binary>
+    msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
     if !authorized(deps, &env, AllowedAccess::User)? {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -216,48 +244,78 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let assets = assets_r(&deps.storage);
     let burning_asset = match assets.may_load(env.message.sender.to_string().as_bytes())? {
         Some(asset) => asset,
-        None => return Err(StdError::NotFound { kind: env.message.sender.to_string(), backtrace: None }),
+        None => {
+            return Err(StdError::NotFound {
+                kind: env.message.sender.to_string(),
+                backtrace: None,
+            });
+        }
     };
     let minting_asset = match assets.may_load(msgs.to_mint.to_string().as_bytes())? {
         Some(asset) => asset,
-        None => return Err(StdError::NotFound { kind: msgs.to_mint.to_string(), backtrace: None }),
+        None => {
+            return Err(StdError::NotFound {
+                kind: msgs.to_mint.to_string(),
+                backtrace: None,
+            });
+        }
     };
 
     // Check that requested snip20 is supported and mint address is inside the mintable array
-    let mintable = minters_query(&deps.querier, 1,
-                                 minting_asset.contract.code_hash.clone(),
-                                 minting_asset.contract.address.clone())?.minters;
+    let mintable = minters_query(
+        &deps.querier,
+        1,
+        minting_asset.contract.code_hash.clone(),
+        minting_asset.contract.address.clone(),
+    )?
+    .minters;
 
     if !mintable.contains(&env.contract.address) {
-        return Err(StdError::generic_err("Asset does allow mint contract to mint"))
+        return Err(StdError::generic_err(
+            "Asset does allow mint contract to mint",
+        ));
     }
 
     // Query prices
-    let in_price = call_oracle(&deps, burning_asset.name)?;
-    let target_price = call_oracle(&deps, minting_asset.name)?;
+    let in_price = call_oracle(deps, burning_asset.name)?;
+    let target_price = call_oracle(deps, minting_asset.name)?;
 
     // Get asset decimals
     // Load the decimal information for both coins
-    let in_decimals = token_info_query(&deps.querier, 1,
-                                       burning_asset.contract.code_hash.clone(),
-                                       burning_asset.contract.address.clone())?.decimals as u32;
-    let target_decimals = token_info_query(&deps.querier, 1,
-                                           minting_asset.contract.code_hash.clone(),
-                                           minting_asset.contract.address.clone())?.decimals as u32;
+    let in_decimals = token_info_query(
+        &deps.querier,
+        1,
+        burning_asset.contract.code_hash.clone(),
+        burning_asset.contract.address.clone(),
+    )?
+    .decimals as u32;
+    let target_decimals = token_info_query(
+        &deps.querier,
+        1,
+        minting_asset.contract.code_hash.clone(),
+        minting_asset.contract.address.clone(),
+    )?
+    .decimals as u32;
 
     // Calculate value to mint
-    let amount_to_mint = calculate_mint(in_price, target_price, amount, in_decimals, target_decimals);
+    let amount_to_mint =
+        calculate_mint(in_price, target_price, amount, in_decimals, target_decimals);
 
     // If minimum amount is greater then ignore the process
     if msgs.minimum_expected_amount > amount_to_mint {
-        return Err(StdError::generic_err("did not exceed expected amount"))
+        return Err(StdError::generic_err("did not exceed expected amount"));
     }
 
     // if burnable then burn if not ignore
     if burning_asset.burnable {
-        messages.push(burn_msg(amount, None, 256,
-                               burning_asset.contract.code_hash,
-                               burning_asset.contract.address)?);
+        messages.push(burn_msg(
+            amount,
+            None,
+            None,
+            256,
+            burning_asset.contract.code_hash,
+            burning_asset.contract.address,
+        )?);
     }
 
     // Set burned amount
@@ -269,24 +327,30 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     })?;
 
     // Mint
-    messages.push(mint_msg(from, amount_to_mint, None, 256,
-                           minting_asset.contract.code_hash,
-                           minting_asset.contract.address)?);
+    messages.push(mint_msg(
+        from,
+        amount_to_mint,
+        None,
+        None,
+        256,
+        minting_asset.contract.code_hash,
+        minting_asset.contract.address,
+    )?);
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some( to_binary( &HandleAnswer::Burn {
+        data: Some(to_binary(&HandleAnswer::Burn {
             status: ResponseStatus::Success,
-            mint_amount: amount_to_mint
-        } )? ),
+            mint_amount: amount_to_mint,
+        })?),
     })
 }
 
 // Helper functions
 
 #[derive(PartialEq)]
-pub enum AllowedAccess{
+pub enum AllowedAccess {
     Admin,
     User,
 }
@@ -299,34 +363,35 @@ fn authorized<S: Storage, A: Api, Q: Querier>(
     let config = config_read(&deps.storage).load()?;
     // Check if contract is still activated
     if !config.activated {
-        return Ok(false)
+        return Ok(false);
     }
 
     if access == AllowedAccess::Admin {
         // Check if admin
         if env.message.sender != config.owner {
-            return Ok(false)
+            return Ok(false);
         }
     }
-    return Ok(true)
+    Ok(true)
 }
 
-fn register_receive (
-    env: &Env,
-    contract: Contract
-) -> StdResult<CosmosMsg> {
-    let cosmos_msg = register_receive_msg(
+fn register_receive(env: &Env, contract: Contract) -> StdResult<CosmosMsg> {
+    register_receive_msg(
         env.contract_code_hash.clone(),
         None,
         256,
         contract.code_hash,
         contract.address,
-    );
-
-    cosmos_msg
+    )
 }
 
-fn calculate_mint(in_price: Uint128, target_price: Uint128, in_amount: Uint128, in_decimals: u32, target_decimals: u32) -> Uint128 {
+fn calculate_mint(
+    in_price: Uint128,
+    target_price: Uint128,
+    in_amount: Uint128,
+    in_decimals: u32,
+    target_decimals: u32,
+) -> Uint128 {
     // Math must only be made in integers
     // in_decimals  = x
     // target_decimals = y
@@ -347,23 +412,22 @@ fn calculate_mint(in_price: Uint128, target_price: Uint128, in_amount: Uint128, 
     let difference: i32 = target_decimals as i32 - in_decimals as i32;
 
     // To avoid a mess of different types doing math
-    if difference < 0 {
-        in_total.multiply_ratio(1u128, 10u128.pow(u32::try_from(difference.abs()).unwrap()))
-    }
-    else if difference > 0 {
-        Uint128(in_total.u128() * 10u128.pow(u32::try_from(difference).unwrap()))
-    }
-    else {
-        in_total
+    match difference.cmp(&0) {
+        Ordering::Greater => {
+            Uint128(in_total.u128() * 10u128.pow(u32::try_from(difference).unwrap()))
+        }
+        Ordering::Less => {
+            in_total.multiply_ratio(1u128, 10u128.pow(u32::try_from(difference.abs()).unwrap()))
+        }
+        Ordering::Equal => in_total,
     }
 }
 
-fn save_asset<S: Storage, A: Api, Q: Querier> (
+fn save_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     asset: SupportedAsset,
 ) -> StdResult<CosmosMsg> {
-
     let mut assets = assets_w(&mut deps.storage);
 
     // Save the asset
@@ -386,12 +450,13 @@ fn call_oracle<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbol: String,
 ) -> StdResult<Uint128> {
-    let block_size = 1; //update this later
     let config = config_read(&deps.storage).load()?;
-    let query_msg = GetPrice { symbol };
-    let answer: ReferenceData = query_msg.query(&deps.querier,
-                                 config.oracle.code_hash,
-                                 config.oracle.address)?;
+    let query_msg = Price { symbol };
+    let answer: ReferenceData = query_msg.query(
+        &deps.querier,
+        config.oracle.code_hash,
+        config.oracle.address,
+    )?;
     Ok(answer.rate)
 }
 
@@ -406,36 +471,52 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-fn query_supported_assets<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::SupportedAssets { assets: asset_list_read(&deps.storage).load()? })
+fn query_supported_assets<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::SupportedAssets {
+        assets: asset_list_read(&deps.storage).load()?,
+    })
 }
 
-fn query_asset<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, contract: String) -> StdResult<QueryAnswer> {
+fn query_asset<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    contract: String,
+) -> StdResult<QueryAnswer> {
     let assets = assets_r(&deps.storage);
 
     return match assets.may_load(contract.as_bytes())? {
         Some(asset) => Ok(QueryAnswer::Asset { asset }),
-        None => Err(StdError::NotFound { kind: contract, backtrace: None }),
+        None => Err(StdError::NotFound {
+            kind: contract,
+            backtrace: None,
+        }),
     };
 }
 
 fn query_config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::Config { config: config_read(&deps.storage).load()? })
+    Ok(QueryAnswer::Config {
+        config: config_read(&deps.storage).load()?,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier};
-    use cosmwasm_std::{coins, from_binary, StdError};
+    use cosmwasm_std::{
+        coins,
+        from_binary,
+        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
+        StdError,
+    };
     use shade_protocol::mint::QueryAnswer;
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);
-        return Contract{
+        return Contract {
             address: env.message.sender,
-            code_hash: code_hash.to_string()
-        }
+            code_hash: code_hash.to_string(),
+        };
     }
 
     fn dummy_init(admin: String, oracle: Contract) -> Extern<MockStorage, MockApi, MockQuerier> {
@@ -443,12 +524,12 @@ mod tests {
         let msg = InitMsg {
             admin: None,
             oracle,
-            initial_assets: None
+            initial_assets: None,
         };
         let env = mock_env(admin, &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();
 
-        return deps
+        return deps;
     }
 
     #[test]
@@ -458,12 +539,12 @@ mod tests {
         let msg = InitMsg {
             admin: None,
             oracle: create_contract("", ""),
-            initial_assets: Some(vec![SupportedAsset{
+            initial_assets: Some(vec![SupportedAsset {
                 name: "some_asset".to_string(),
                 contract: some_contract,
                 burnable: false,
-                total_burned: Uint128(0)
-            }])
+                total_burned: Uint128(0),
+            }]),
         };
         let env = mock_env("creator", &coins(1000, "earth"));
 
@@ -486,7 +567,9 @@ mod tests {
             QueryAnswer::Config { config } => {
                 assert_eq!(config.oracle, oracle_contract);
             }
-            _ => { panic!("Received wrong answer") }
+            _ => {
+                panic!("Received wrong answer")
+            }
         }
 
         // Update config
@@ -505,17 +588,16 @@ mod tests {
         match value {
             QueryAnswer::Config { config } => {
                 assert_eq!(config.oracle, new_oracle_contract);
-
             }
-            _ => { panic!("Received wrong answer") }
+            _ => {
+                panic!("Received wrong answer")
+            }
         }
-
     }
 
     #[test]
     fn user_register_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""));
+        let mut deps = dummy_init("admin".to_string(), create_contract("", ""));
 
         // User should not be allowed to add an item
         let user_env = mock_env("user", &coins(1000, "earth"));
@@ -524,7 +606,7 @@ mod tests {
             name: Some("asset".to_string()),
             contract: dummy_contract,
             burnable: None,
-            total_burned: None
+            total_burned: None,
         };
         let res = handle(&mut deps, user_env, msg);
         match res {
@@ -536,15 +618,18 @@ mod tests {
         let res = query(&deps, QueryMsg::GetSupportedAssets {}).unwrap();
         let value: QueryAnswer = from_binary(&res).unwrap();
         match value {
-            QueryAnswer::SupportedAssets { assets } => { assert_eq!(0, assets.len()) }
-            _ => { panic!("Expected empty array") }
+            QueryAnswer::SupportedAssets { assets } => {
+                assert_eq!(0, assets.len())
+            }
+            _ => {
+                panic!("Expected empty array")
+            }
         }
     }
 
     #[test]
     fn admin_register_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""));
+        let mut deps = dummy_init("admin".to_string(), create_contract("", ""));
 
         // Admin should be allowed to add an item
         let env = mock_env("admin", &coins(1000, "earth"));
@@ -553,7 +638,7 @@ mod tests {
             name: Some("asset".to_string()),
             contract: dummy_contract,
             burnable: None,
-            total_burned: None
+            total_burned: None,
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
@@ -561,15 +646,18 @@ mod tests {
         let res = query(&deps, QueryMsg::GetSupportedAssets {}).unwrap();
         let value: QueryAnswer = from_binary(&res).unwrap();
         match value {
-            QueryAnswer::SupportedAssets { assets } => { assert_eq!(1, assets.len()) }
-            _ => { panic!("Received wrong answer") }
+            QueryAnswer::SupportedAssets { assets } => {
+                assert_eq!(1, assets.len())
+            }
+            _ => {
+                panic!("Received wrong answer")
+            }
         }
     }
 
     #[test]
     fn admin_update_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""));
+        let mut deps = dummy_init("admin".to_string(), create_contract("", ""));
 
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
@@ -578,7 +666,7 @@ mod tests {
             name: Some("old_asset".to_string()),
             contract: dummy_contract,
             burnable: None,
-            total_burned: None
+            total_burned: None,
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
@@ -589,16 +677,23 @@ mod tests {
             name: Some("new_asset".to_string()),
             contract: dummy_contract,
             burnable: None,
-            total_burned: None
+            total_burned: None,
         };
         let _res = handle(&mut deps, env, msg).unwrap();
 
         // Response should be new dummy contract
-        let res = query(&deps, QueryMsg::GetAsset { contract: "some_contract".to_string() }).unwrap();
+        let res = query(&deps, QueryMsg::GetAsset {
+            contract: "some_contract".to_string(),
+        })
+        .unwrap();
         let value: QueryAnswer = from_binary(&res).unwrap();
         match value {
-            QueryAnswer::Asset { asset } => { assert_eq!("new_asset".to_string(), asset.name) }
-            _ => { panic!("Received wrong answer") }
+            QueryAnswer::Asset { asset } => {
+                assert_eq!("new_asset".to_string(), asset.name)
+            }
+            _ => {
+                panic!("Received wrong answer")
+            }
         };
     }
 
