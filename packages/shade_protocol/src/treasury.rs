@@ -48,7 +48,7 @@ pub enum Allocation {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Flag {
-    pub flag: String
+    pub flag: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -80,13 +80,12 @@ pub enum HandleMsg {
         reserves: Option<Uint128>,
     },
     /* List of contracts/users given an allowance based on a percentage of the asset balance
-    * e.g. governance, LP, SKY
-    */
+     * e.g. governance, LP, SKY
+     */
     RegisterAllocation {
         asset: HumanAddr,
         allocation: Allocation,
     },
-
     // Trigger to re-allocate asset (all if none)
     //Rebalance { asset: Option<HumanAddr> },
 }
@@ -98,11 +97,22 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    Init { status: ResponseStatus, address: HumanAddr },
-    UpdateConfig { status: ResponseStatus },
-    Receive { status: ResponseStatus },
-    RegisterAsset { status: ResponseStatus },
-    RegisterApp { status: ResponseStatus },
+    Init {
+        status: ResponseStatus,
+        address: HumanAddr,
+    },
+    UpdateConfig {
+        status: ResponseStatus,
+    },
+    Receive {
+        status: ResponseStatus,
+    },
+    RegisterAsset {
+        status: ResponseStatus,
+    },
+    RegisterApp {
+        status: ResponseStatus,
+    },
     //Rebalance { status: ResponseStatus },
 }
 

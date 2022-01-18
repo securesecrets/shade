@@ -6,20 +6,11 @@ use shade_protocol::governance::{
 
 use crate::{
     proposal_state::{
-        proposal_funding_deadline_r,
-        proposal_funding_r,
-        proposal_r,
-        proposal_run_status_r,
-        proposal_status_r,
-        proposal_voting_deadline_r,
-        total_proposal_votes_r,
-        total_proposals_r,
+        proposal_funding_deadline_r, proposal_funding_r, proposal_r, proposal_run_status_r,
+        proposal_status_r, proposal_voting_deadline_r, total_proposal_votes_r, total_proposals_r,
     },
     state::{
-        admin_commands_list_r,
-        admin_commands_r,
-        supported_contract_r,
-        supported_contracts_list_r,
+        admin_commands_list_r, admin_commands_r, supported_contract_r, supported_contracts_list_r,
     },
 };
 

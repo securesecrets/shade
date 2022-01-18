@@ -1,10 +1,6 @@
 use cosmwasm_std::{
-    Api, Extern, Querier, Storage,
-    StdResult, StdError,
-    HumanAddr, Delegation, FullDelegation,
-    DistQuery, RewardsResponse,
-    BankQuery, BalanceResponse,
-    Uint128, 
+    Api, BalanceResponse, BankQuery, Delegation, DistQuery, Extern, FullDelegation, HumanAddr,
+    Querier, RewardsResponse, StdError, StdResult, Storage, Uint128,
 };
 
 use shade_protocol::scrt_staking::QueryAnswer;
@@ -20,27 +16,32 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
 pub fn delegations<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<Vec<Delegation>> {
-    deps.querier.query_all_delegations(self_address_r(&deps.storage).load()?)
+    deps.querier
+        .query_all_delegations(self_address_r(&deps.storage).load()?)
 }
 
 // TODO: change to 'claimable'
-pub fn rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<Uint128> {
+pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Uint128> {
+    let scrt_balance: BalanceResponse = deps.querier.query(
+        &BankQuery::Balance {
+            address: self_address_r(&deps.storage).load()?,
+            denom: "uscrt".to_string(),
+        }
+        .into(),
+    )?;
 
-    let scrt_balance: BalanceResponse = deps.querier.query(&BankQuery::Balance {
-        address: self_address_r(&deps.storage).load()?,
-        denom: "uscrt".to_string(),
-    }.into())?;
-
-    let query_rewards: RewardsResponse = deps.querier
-        .query(&DistQuery::Rewards { 
-            delegator: self_address_r(&deps.storage).load()?,
-        }.into())
+    let query_rewards: RewardsResponse = deps
+        .querier
+        .query(
+            &DistQuery::Rewards {
+                delegator: self_address_r(&deps.storage).load()?,
+            }
+            .into(),
+        )
         .unwrap_or_else(|_| RewardsResponse {
-                rewards: vec![],
-                total: vec![],
-            });
+            rewards: vec![],
+            total: vec![],
+        });
 
     if query_rewards.total.is_empty() {
         return Ok(scrt_balance.amount.amount);
@@ -70,4 +71,3 @@ pub fn delegation<S: Storage, A: Api, Q: Querier>(
     deps.querier.query_delegation(address, validator)
 }
 */
-

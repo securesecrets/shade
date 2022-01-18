@@ -1,32 +1,20 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary,
-    Env, Extern, Storage, HandleResponse,
-    StdResult, StdError,
-    CosmosMsg, Uint128,
-    Coin, StakingMsg,
-    Validator, Querier, HumanAddr,
-    BankQuery, BalanceResponse,
+    debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, Extern,
+    HandleResponse, HumanAddr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
+    Validator,
 };
 
-use secret_toolkit::{
-    snip20::{
-        redeem_msg, deposit_msg,
-        send_msg,
-    },
-};
+use secret_toolkit::snip20::{deposit_msg, redeem_msg, send_msg};
 
 use shade_protocol::{
-    treasury::Flag,
     generic_response::ResponseStatus,
     scrt_staking::{HandleAnswer, ValidatorBounds},
+    treasury::Flag,
 };
 
 use crate::{
     query,
-    state::{
-        config_w, config_r, 
-        self_address_r,
-    },
+    state::{config_r, config_w, self_address_r},
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -65,7 +53,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                 amount: Coin {
                     amount,
                     denom: "uscrt".to_string(),
-                }
+                },
             }),
         ],
         log: vec![],
@@ -110,7 +98,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     env: Env,
     validator: HumanAddr,
 ) -> StdResult<HandleResponse> {
-
     /* Unbonding to the scrt staking contract
      * Once scrt is on balance sheet, treasury can claim
      * and this contract will take all scrt->sscrt and send
@@ -122,22 +109,21 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    for delegation in deps.querier.query_all_delegations(self_address_r(&deps.storage).load()?)? {
+    for delegation in deps
+        .querier
+        .query_all_delegations(self_address_r(&deps.storage).load()?)?
+    {
         if delegation.validator == validator {
             return Ok(HandleResponse {
-                messages: vec![
-                    CosmosMsg::Staking(StakingMsg::Undelegate {
-                        validator,
-                        amount: delegation.amount.clone(),
-                    }),
-                ],
+                messages: vec![CosmosMsg::Staking(StakingMsg::Undelegate {
+                    validator,
+                    amount: delegation.amount.clone(),
+                })],
                 log: vec![],
-                data: Some( to_binary( 
-                    &HandleAnswer::Unbond {
-                        status: ResponseStatus::Success,
-                        delegation,
-                    }
-                )?),
+                data: Some(to_binary(&HandleAnswer::Unbond {
+                    status: ResponseStatus::Success,
+                    delegation,
+                })?),
             });
         }
     }
@@ -161,9 +147,9 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     }
     */
 
-    Err(StdError::GenericErr { 
+    Err(StdError::GenericErr {
         msg: "No delegation to given validator".to_string(),
-        backtrace: None 
+        backtrace: None,
     })
 }
 
@@ -186,10 +172,13 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     let address = self_address_r(&deps.storage).load()?;
 
     // Get total scrt balance, to get recently claimed rewards + lingering unbonded scrt
-    let scrt_balance: BalanceResponse = deps.querier.query(&BankQuery::Balance {
-        address: address.clone(),
-        denom: "uscrt".to_string(),
-    }.into())?;
+    let scrt_balance: BalanceResponse = deps.querier.query(
+        &BankQuery::Balance {
+            address: address.clone(),
+            denom: "uscrt".to_string(),
+        }
+        .into(),
+    )?;
 
     let amount = query::rewards(&deps)? + scrt_balance.amount.amount;
 
@@ -210,13 +199,15 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
      *       would result in re-delegating a portion of the funds.
      *       This case will need to be tested and mitigated by either
      *       - accounting for it when rebalancing
-     *       - add a "unallocated" flag with funds to force treasury not to 
+     *       - add a "unallocated" flag with funds to force treasury not to
      *         allocate them, to then be allocated at rebalancing
      */
     messages.push(send_msg(
         config.treasury,
         amount,
-        Some(to_binary(&Flag { flag: "unallocated".to_string()})?),
+        Some(to_binary(&Flag {
+            flag: "unallocated".to_string(),
+        })?),
         None,
         None,
         1,

@@ -1,11 +1,5 @@
 use crate::cli_types::{
-    ListCodeResponse,
-    ListContractCode,
-    NetContract,
-    SignedTx,
-    TxCompute,
-    TxQuery,
-    TxResponse,
+    ListCodeResponse, ListContractCode, NetContract, SignedTx, TxCompute, TxQuery, TxResponse,
 };
 use serde_json::{Result, Value};
 use std::{fs::File, io::Write, process::Command, thread, time};

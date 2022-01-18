@@ -4,42 +4,22 @@ use flexible_permits::{permit::Permit, transaction::PermitSignature};
 use network_integration::{
     contract_helpers::{
         governance::{
-            add_contract,
-            create_and_trigger_proposal,
-            create_proposal,
-            get_contract,
-            get_latest_proposal,
-            init_contract,
-            trigger_latest_proposal,
+            add_contract, create_and_trigger_proposal, create_proposal, get_contract,
+            get_latest_proposal, init_contract, trigger_latest_proposal,
         },
         initializer::initialize_initializer,
         minter::{get_balance, initialize_minter, setup_minters},
         stake::setup_staker,
     },
     utils::{
-        generate_label,
-        print_contract,
-        print_header,
-        print_vec,
-        print_warning,
-        ACCOUNT_KEY,
-        AIRDROP_FILE,
-        GAS,
-        GOVERNANCE_FILE,
-        MOCK_BAND_FILE,
-        ORACLE_FILE,
-        SNIP20_FILE,
-        STORE_GAS,
+        generate_label, print_contract, print_header, print_vec, print_warning, ACCOUNT_KEY,
+        AIRDROP_FILE, GAS, GOVERNANCE_FILE, MOCK_BAND_FILE, ORACLE_FILE, SNIP20_FILE, STORE_GAS,
         VIEW_KEY,
     },
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use secretcli::secretcli::{
-    account_address,
-    create_permit,
-    query_contract,
-    test_contract_handle,
-    test_inst_init,
+    account_address, create_permit, query_contract, test_contract_handle, test_inst_init,
 };
 use serde::Serialize;
 use serde_json::Result;
@@ -529,9 +509,7 @@ fn run_airdrop() -> Result<()> {
     }
 
     test_contract_handle(
-        &airdrop::HandleMsg::ClaimDecay {
-            padding: None,
-        },
+        &airdrop::HandleMsg::ClaimDecay { padding: None },
         &airdrop,
         ACCOUNT_KEY,
         Some(GAS),
