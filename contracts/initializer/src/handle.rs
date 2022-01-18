@@ -62,14 +62,14 @@ pub fn init_silk<S: Storage, A: Api, Q: Querier>(
         decimals,
         initial_balances: silk.initial_balances.clone(),
         prng_seed: silk.prng_seed,
-        config: coin_config.clone(),
+        config: coin_config,
     };
     silk_w(&mut deps.storage).save(&Snip20InitHistory {
         label: silk.label.clone(),
         balances: silk.initial_balances.clone(),
     })?;
     let messages = vec![silk_init_msg.to_cosmos_msg(
-        silk.label.clone(),
+        silk.label,
         config.snip20_id,
         config.snip20_code_hash,
         None,

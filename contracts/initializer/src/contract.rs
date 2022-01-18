@@ -1,6 +1,5 @@
 use crate::{query, handle, state::{config_w, shade_w}};
 use cosmwasm_std::{
-    debug_print,
     to_binary,
     Api,
     Binary,

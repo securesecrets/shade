@@ -24,7 +24,6 @@ pub struct Snip20InitHistory {
 pub struct Snip20ContractInfo {
     pub label: String,
     pub admin: Option<HumanAddr>,
-    pub decimals: u8,
     pub prng_seed: Binary,
     pub initial_balances: Option<Vec<InitialBalance>>,
 }
