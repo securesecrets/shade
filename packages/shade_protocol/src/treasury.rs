@@ -26,7 +26,7 @@ pub enum Allocation {
         contract: Contract,
         allocation: Uint128,
     },
-    // SKY
+    // SKY / Derivative Staking
     Application {
         contract: Contract,
         allocation: Uint128,
@@ -40,7 +40,7 @@ pub enum Allocation {
         token: HumanAddr,
     },
 }
-//
+
 // Flag to be sent with funds
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

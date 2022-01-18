@@ -285,7 +285,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     let mut allocated_portion = Uint128::zero();
 
     allocations_w(&mut deps.storage).update(asset.to_string().as_bytes(), |apps| {
-        // initialize list if it doesn't exist
+        // Initialize list if it doesn't exist
         let mut app_list = match apps {
             None => {
                 vec![]
@@ -353,8 +353,8 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
                     Allocation::Reserves { allocation: _ } => Uint128::zero(),
                     Allocation::Rewards {
                         contract: _,
-                        allocation,
-                    } => *allocation,
+                        allocation: _,
+                    } => Uint128::zero(),
                     Allocation::Staking {
                         contract: _,
                         allocation,
