@@ -16,10 +16,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     config_w(&mut deps.storage).save(&Config {
-        admin: match msg.admin {
-            None => env.message.sender.clone(),
-            Some(admin) => admin,
-        },
+        admin: msg.admin.unwrap_or(env.message.sender.clone()),
     })?;
 
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;

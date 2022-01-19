@@ -121,10 +121,11 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+    
+    let cur_config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
+    if env.message.sender != cur_config.admin {
+        return Err(StdError::unauthorized());
     }
 
     config_w(&mut deps.storage).save(&config)?;
@@ -144,9 +145,10 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     contract: &Contract,
     reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
+
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::unauthorized());
     }
 
     let mut messages = vec![];
@@ -218,18 +220,15 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     let full_asset = match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => a,
         None => {
-            return Err(StdError::generic_err ("Unregistered asset"));
+            return Err(StdError::generic_err("Unregistered asset"));
         }
     };
 
     let liquid_balance: Uint128 = match query::balance(&deps, &asset)? {
         QueryAnswer::Balance { amount } => amount,
         _ => {
-            return Err(StdError::GenericErr {
-                msg: "Unexpected response for balance".to_string(),
-                backtrace: None,
-            });
-        }
+            return Err(StdError::generic_err("Unexpected response for balance"));
+       }
     };
 
     let alloc_portion = *match &alloc {
@@ -366,10 +365,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         }
 
         if (allocated_portion + alloc_portion) >= Uint128(10u128.pow(18)) {
-            return Err(StdError::GenericErr {
-                msg: "Invalid allocation total exceeding 100%".to_string(),
-                backtrace: None,
-            });
+            return Err(StdError::generic_err("Invalid allocation total exceeding 100%"));
         }
 
         app_list.push(alloc);
