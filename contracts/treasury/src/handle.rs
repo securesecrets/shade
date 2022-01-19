@@ -47,12 +47,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     allocations_w(&mut deps.storage).update(
         asset.contract.address.to_string().as_bytes(),
         |allocs| {
-            let mut alloc_list = match allocs {
-                None => {
-                    vec![]
-                }
-                Some(a) => a,
-            };
+            let mut alloc_list = allocs.unwrap_or(vec![]);
 
             for alloc in &mut alloc_list {
                 match alloc {
