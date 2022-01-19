@@ -212,7 +212,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
 
     /* ADMIN ONLY */
     if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::unauthorized());
     }
 
     let full_asset = match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
