@@ -172,5 +172,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             permit,
             current_date,
         } => to_binary(&query::account(deps, permit, current_date)?),
+        QueryMsg::VerifyClaimed { accounts } => to_binary(&query::verify_claimed(deps, accounts)?)
     }, RESPONSE_BLOCK_SIZE)
 }
