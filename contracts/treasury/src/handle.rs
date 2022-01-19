@@ -218,10 +218,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     let full_asset = match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => a,
         None => {
-            return Err(StdError::GenericErr {
-                msg: "Unregistered asset".to_string(),
-                backtrace: None,
-            });
+            return Err(StdError::generic_err ("Unregistered asset"));
         }
     };
 
