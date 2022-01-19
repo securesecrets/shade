@@ -35,7 +35,7 @@ Sets the contract admin
 ##### Request
 |Name  |Type   |Description                | optional |
 |------|-------|---------------------------|----------|
-|admin            | String             | Contract;s admin             | no       |
+|admin            | String             | Contracts admin             | no       |
 
 
 ##### Response
