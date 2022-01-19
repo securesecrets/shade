@@ -1,8 +1,7 @@
 use cosmwasm_std::{
-    debug_print,
-    to_binary,
     Api,
     Binary,
+    debug_print,
     Env,
     Extern,
     HandleResponse,
@@ -11,15 +10,16 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
 };
 use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg, token_info_query};
 
 use shade_protocol::{
-    asset::Contract,
-    generic_response::ResponseStatus,
     treasury::{Allocation, Asset, HandleAnswer},
 };
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 
 use crate::state::{assets_r, assets_w, config_r, config_w, viewing_key_r};
 

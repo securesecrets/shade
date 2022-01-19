@@ -14,8 +14,8 @@ pub mod tests {
         airdrop::{
             account::{AddressProofMsg, AddressProofPermit},
         },
-        math::{div, mult},
     };
+    use shade_protocol::utils::math::{div, mult};
 
     #[test]
     fn decay_factor() {

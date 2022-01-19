@@ -1,14 +1,14 @@
 use cosmwasm_std::{HumanAddr, Uint128};
 use serde_json::Result;
-use shade_protocol::{asset::Contract, governance, governance::GOVERNANCE_SELF};
+use shade_protocol::{governance, governance::GOVERNANCE_SELF};
 
 use crate::utils::{
+    ACCOUNT_KEY,
+    GAS,
     generate_label,
     print_contract,
     print_header,
     print_warning,
-    ACCOUNT_KEY,
-    GAS,
     STORE_GAS,
 };
 
@@ -16,6 +16,7 @@ use secretcli::{
     cli_types::NetContract,
     secretcli::{query_contract, test_contract_handle, test_inst_init},
 };
+use shade_protocol::utils::asset::Contract;
 
 pub fn init_contract<Init: serde::Serialize>(
     governance: &NetContract,

@@ -13,8 +13,8 @@ use crate::{
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use shade_protocol::{
     airdrop::{account::AccountPermit, claim_info::RequiredTask, QueryAnswer},
-    math::{div, mult},
 };
+use shade_protocol::utils::math::{div, mult};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {

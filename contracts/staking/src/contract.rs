@@ -13,7 +13,6 @@ use crate::{
 };
 use binary_heap_plus::BinaryHeap;
 use cosmwasm_std::{
-    to_binary,
     Api,
     Binary,
     Env,
@@ -23,13 +22,14 @@ use cosmwasm_std::{
     Querier,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
 };
 use secret_toolkit::snip20::register_receive_msg;
 use shade_protocol::{
-    asset::Contract,
-    staking::{stake::Stake, Config, HandleMsg, InitMsg, QueryMsg},
+    staking::{Config, HandleMsg, InitMsg, QueryMsg, stake::Stake},
 };
+use shade_protocol::utils::asset::Contract;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

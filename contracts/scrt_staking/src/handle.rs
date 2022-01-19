@@ -1,10 +1,9 @@
 use cosmwasm_std::{
-    debug_print,
-    to_binary,
     Api,
     Binary,
     Coin,
     CosmosMsg,
+    debug_print,
     Env,
     Extern,
     HandleResponse,
@@ -14,15 +13,16 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
     Validator,
 };
 use secret_toolkit::snip20::redeem_msg;
 
 use shade_protocol::{
-    generic_response::ResponseStatus,
     scrt_staking::{HandleAnswer, ValidatorBounds},
 };
+use shade_protocol::utils::generic_response::ResponseStatus;
 
 use crate::state::{config_r, config_w};
 

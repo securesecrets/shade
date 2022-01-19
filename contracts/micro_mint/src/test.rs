@@ -2,15 +2,14 @@
 pub mod tests {
     use cosmwasm_std::{
         coins,
-        from_binary,
-        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
         Extern,
+        from_binary,
         StdError,
+        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
         Uint128,
     };
     use mockall_double::double;
     use shade_protocol::{
-        asset::Contract,
         micro_mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
     };
 
@@ -41,6 +40,7 @@ pub mod tests {
 
     #[double]
     use mock_secret_toolkit::token_info_query;
+    use shade_protocol::utils::asset::Contract;
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);

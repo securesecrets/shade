@@ -1,8 +1,10 @@
-use crate::{asset::Contract, generic_response::ResponseStatus, snip20::Snip20Asset};
+use crate::snip20::Snip20Asset;
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
+use crate::utils::asset::Contract;
+use crate::utils::generic_response::ResponseStatus;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {

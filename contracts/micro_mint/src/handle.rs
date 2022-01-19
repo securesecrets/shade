@@ -1,18 +1,18 @@
 use cosmwasm_std::{
-    debug_print,
-    from_binary,
-    to_binary,
     Api,
     Binary,
     CosmosMsg,
+    debug_print,
     Env,
     Extern,
+    from_binary,
     HandleResponse,
     HumanAddr,
     Querier,
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
 };
 use secret_toolkit::{
@@ -20,15 +20,15 @@ use secret_toolkit::{
     utils::Query,
 };
 use shade_protocol::{
-    asset::Contract,
     band::ReferenceData,
-    generic_response::ResponseStatus,
     micro_mint::{Config, HandleAnswer, SupportedAsset},
     mint::MintMsgHook,
     oracle::QueryMsg::Price,
-    snip20::{token_config_query, Snip20Asset, TokenConfig},
+    snip20::{Snip20Asset, token_config_query, TokenConfig},
 };
 use std::{cmp::Ordering, convert::TryFrom};
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 
 use crate::state::{
     asset_list_w,

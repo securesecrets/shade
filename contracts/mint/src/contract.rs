@@ -1,13 +1,12 @@
 use crate::state::{asset_list, asset_list_read, assets_r, assets_w, config, config_read};
 use cosmwasm_std::{
-    debug_print,
-    from_binary,
-    to_binary,
     Api,
     Binary,
     CosmosMsg,
+    debug_print,
     Env,
     Extern,
+    from_binary,
     HandleResponse,
     HumanAddr,
     InitResponse,
@@ -15,6 +14,7 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
 };
 use secret_toolkit::{
@@ -22,9 +22,7 @@ use secret_toolkit::{
     utils::{InitCallback, Query},
 };
 use shade_protocol::{
-    asset::Contract,
     band::ReferenceData,
-    generic_response::ResponseStatus,
     mint::{
         HandleAnswer,
         HandleMsg,
@@ -38,6 +36,8 @@ use shade_protocol::{
     oracle::QueryMsg::Price,
 };
 use std::{cmp::Ordering, convert::TryFrom};
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 
 // TODO: add remove asset
 // TODO: add spacepad padding
@@ -506,8 +506,8 @@ mod tests {
     use cosmwasm_std::{
         coins,
         from_binary,
-        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
         StdError,
+        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
     };
     use shade_protocol::mint::QueryAnswer;
 

@@ -1,5 +1,5 @@
 use colored::*;
-use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
+use cosmwasm_std::{Binary, HumanAddr, to_binary, Uint128};
 use flexible_permits::{permit::Permit, transaction::PermitSignature};
 use network_integration::{
     contract_helpers::{
@@ -17,17 +17,17 @@ use network_integration::{
         stake::setup_staker,
     },
     utils::{
+        ACCOUNT_KEY,
+        AIRDROP_FILE,
+        GAS,
         generate_label,
+        GOVERNANCE_FILE,
+        MOCK_BAND_FILE,
+        ORACLE_FILE,
         print_contract,
         print_header,
         print_vec,
         print_warning,
-        ACCOUNT_KEY,
-        AIRDROP_FILE,
-        GAS,
-        GOVERNANCE_FILE,
-        MOCK_BAND_FILE,
-        ORACLE_FILE,
         SNIP20_FILE,
         STORE_GAS,
         VIEW_KEY,
@@ -49,9 +49,7 @@ use shade_protocol::{
         account::{AccountPermitMsg, AddressProofMsg},
         claim_info::RequiredTask,
     },
-    asset::Contract,
     band,
-    generic_response::ResponseStatus,
     governance,
     governance::{
         proposal::ProposalStatus,
@@ -62,6 +60,8 @@ use shade_protocol::{
     staking,
 };
 use std::{thread, time};
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 
 fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Permit<T> {
     let chain_id = Some("testnet".to_string());

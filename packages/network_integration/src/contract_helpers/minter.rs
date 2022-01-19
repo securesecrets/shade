@@ -1,22 +1,23 @@
 use crate::{
     contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_contract},
     utils::{
+        GAS,
+        MICRO_MINT_FILE,
         print_contract,
         print_epoch_info,
         print_header,
         print_vec,
-        GAS,
-        MICRO_MINT_FILE,
         VIEW_KEY,
     },
 };
-use cosmwasm_std::{to_binary, HumanAddr, Uint128};
+use cosmwasm_std::{HumanAddr, to_binary, Uint128};
 use secretcli::{
     cli_types::NetContract,
     secretcli::{query_contract, test_contract_handle},
 };
 use serde_json::Result;
-use shade_protocol::{asset::Contract, micro_mint, mint, snip20};
+use shade_protocol::{micro_mint, mint, snip20};
+use shade_protocol::utils::asset::Contract;
 
 pub fn initialize_minter(
     governance: &NetContract,

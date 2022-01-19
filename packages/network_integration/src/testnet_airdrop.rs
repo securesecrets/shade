@@ -1,10 +1,10 @@
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use network_integration::utils::{
+    AIRDROP_FILE,
+    GAS,
     generate_label,
     print_contract,
     print_header,
-    AIRDROP_FILE,
-    GAS,
     SNIP20_FILE,
     STORE_GAS,
 };
@@ -15,11 +15,11 @@ use serde_json::Result;
 use shade_protocol::{
     airdrop,
     airdrop::claim_info::RequiredTask,
-    asset::Contract,
     snip20,
     snip20::{InitConfig, InitialBalance},
 };
 use std::{env, fs};
+use shade_protocol::utils::asset::Contract;
 
 #[derive(Serialize, Deserialize)]
 pub struct Reward {

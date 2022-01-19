@@ -14,7 +14,6 @@ use crate::state::{
     validate_address_permit,
 };
 use cosmwasm_std::{
-    to_binary,
     Api,
     Binary,
     Decimal,
@@ -26,6 +25,7 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
@@ -37,8 +37,8 @@ use shade_protocol::{
         Config,
         HandleAnswer,
     },
-    generic_response::ResponseStatus,
 };
+use shade_protocol::utils::generic_response::ResponseStatus;
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(

@@ -2,22 +2,22 @@
 mod tests {
     use crate::contract;
     use cosmwasm_std::{
-        coins,
-        from_binary,
-        testing::{mock_dependencies, mock_env},
         Api,
+        coins,
         Extern,
+        from_binary,
         HumanAddr,
         Querier,
         Storage,
+        testing::{mock_dependencies, mock_env},
         Uint128,
     };
     use shade_protocol::{
-        asset::Contract,
-        generic_response::ResponseStatus,
         governance,
         governance::proposal::{ProposalStatus, QueriedProposal},
     };
+    use shade_protocol::utils::asset::Contract;
+    use shade_protocol::utils::generic_response::ResponseStatus;
 
     #[test]
     fn get_proposals_by_status() {

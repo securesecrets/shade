@@ -1,6 +1,5 @@
 use crate::state::{config_r, config_w, index_w, sswap_pairs_r, sswap_pairs_w};
 use cosmwasm_std::{
-    to_binary,
     Api,
     Env,
     Extern,
@@ -10,18 +9,19 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
+    to_binary,
 };
 use secret_toolkit::{
     snip20::{token_info_query, TokenInfo},
     utils::Query,
 };
 use shade_protocol::{
-    asset::Contract,
-    generic_response::ResponseStatus,
     oracle::{HandleAnswer, IndexElement, SswapPair},
     secretswap::{PairQuery, PairResponse},
     snip20::Snip20Asset,
 };
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 
 pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

@@ -11,7 +11,6 @@ use crate::state::{
 };
 use binary_heap_plus::BinaryHeap;
 use cosmwasm_std::{
-    to_binary,
     Api,
     Env,
     Extern,
@@ -21,18 +20,19 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
 };
 use secret_toolkit::{snip20::send_msg, utils::HandleCallback};
 use shade_protocol::{
-    asset::Contract,
-    generic_response::ResponseStatus::Success,
     governance::vote::{UserVote, Vote, VoteTally},
     staking::{
-        stake::{Stake, Unbonding, UserStake},
         HandleAnswer,
+        stake::{Stake, Unbonding, UserStake},
     },
 };
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus::Success;
 
 pub(crate) fn calculate_shares(tokens: Uint128, state: &Stake) -> Uint128 {
     if state.total_shares.is_zero() && state.total_tokens.is_zero() {

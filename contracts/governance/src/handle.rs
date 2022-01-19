@@ -30,37 +30,37 @@ use crate::{
     },
 };
 use cosmwasm_std::{
-    from_binary,
-    to_binary,
     Api,
     Binary,
     CosmosMsg,
     Env,
     Extern,
+    from_binary,
     HandleResponse,
     HumanAddr,
     Querier,
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
     WasmMsg,
 };
-use secret_toolkit::snip20::{batch_send_msg, send_msg, batch::SendAction};
+use secret_toolkit::snip20::{batch::SendAction, batch_send_msg, send_msg};
 use shade_protocol::{
-    asset::Contract,
-    generic_response::{
-        ResponseStatus,
-        ResponseStatus::{Failure, Success},
-    },
     governance::{
+        ADMIN_COMMAND_VARIABLE,
+        AdminCommand,
+        GOVERNANCE_SELF,
+        HandleAnswer,
         proposal::{Proposal, ProposalStatus},
         vote::VoteTally,
-        AdminCommand,
-        HandleAnswer,
-        ADMIN_COMMAND_VARIABLE,
-        GOVERNANCE_SELF,
     },
+};
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::{
+    ResponseStatus,
+    ResponseStatus::{Failure, Success},
 };
 
 pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
