@@ -1,13 +1,8 @@
 use crate::{
     handle::decay_factor,
     state::{
-        account_r,
-        account_total_claimed_r,
-        claim_status_r,
-        config_r,
-        decay_claimed_r,
-        total_claimed_r,
-        validate_account_permit,
+        account_r, account_total_claimed_r, claim_status_r, config_r, decay_claimed_r,
+        total_claimed_r, validate_account_permit,
     },
 };
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};

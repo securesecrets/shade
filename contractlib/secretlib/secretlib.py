@@ -18,7 +18,7 @@ def run_command(command):
     :param wait: Time to wait for command
     :return: Output string
     """
-    # print('CMD', command)
+    #print(' '.join(command))
     p = Popen(command, stdout=PIPE, stderr=PIPE, text=True)
     output, err = p.communicate()
     status = p.wait()

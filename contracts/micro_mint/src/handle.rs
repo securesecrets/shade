@@ -1,19 +1,6 @@
 use cosmwasm_std::{
-    debug_print,
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    CosmosMsg,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
+    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
 };
 use secret_toolkit::{
     snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
@@ -31,14 +18,7 @@ use shade_protocol::{
 use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::state::{
-    asset_list_w,
-    asset_peg_r,
-    assets_r,
-    assets_w,
-    config_r,
-    config_w,
-    limit_w,
-    native_asset_r,
+    asset_list_w, asset_peg_r, assets_r, assets_w, config_r, config_w, limit_w, native_asset_r,
     total_burned_w,
 };
 
@@ -383,18 +363,21 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         };
 
     debug_print!("Registering {}", asset_info.symbol);
-    assets.save(contract_str.as_bytes(), &SupportedAsset {
-        asset: Snip20Asset {
-            contract: contract.clone(),
-            token_info: asset_info,
-            token_config: asset_config,
+    assets.save(
+        contract_str.as_bytes(),
+        &SupportedAsset {
+            asset: Snip20Asset {
+                contract: contract.clone(),
+                token_info: asset_info,
+                token_config: asset_config,
+            },
+            // If capture is not set then default to 0
+            capture: match capture {
+                None => Uint128(0),
+                Some(value) => value,
+            },
         },
-        // If capture is not set then default to 0
-        capture: match capture {
-            None => Uint128(0),
-            Some(value) => value,
-        },
-    })?;
+    )?;
 
     total_burned_w(&mut deps.storage).save(contract_str.as_bytes(), &Uint128(0))?;
 

@@ -1,15 +1,8 @@
 use crate::{
     contract_helpers::minter::get_balance,
     utils::{
-        generate_label,
-        print_contract,
-        print_header,
-        print_warning,
-        ACCOUNT_KEY,
-        GAS,
-        INITIALIZER_FILE,
-        STORE_GAS,
-        VIEW_KEY,
+        generate_label, print_contract, print_header, print_warning, ACCOUNT_KEY, GAS,
+        INITIALIZER_FILE, STORE_GAS, VIEW_KEY,
     },
 };
 use cosmwasm_std::{HumanAddr, Uint128};
@@ -19,10 +12,7 @@ use secretcli::{
 };
 use serde_json::Result;
 use shade_protocol::{
-    initializer,
-    initializer::Snip20ContractInfo,
-    snip20,
-    snip20::InitialBalance,
+    initializer, initializer::Snip20ContractInfo, snip20, snip20::InitialBalance,
 };
 
 pub fn initialize_initializer(

@@ -1,26 +1,10 @@
 use crate::state::{
-    config_r,
-    config_w,
-    stake_state_r,
-    stake_state_w,
-    staker_r,
-    staker_w,
-    unbonding_w,
-    user_unbonding_w,
-    viewking_key_w,
+    config_r, config_w, stake_state_r, stake_state_w, staker_r, staker_w, unbonding_w,
+    user_unbonding_w, viewking_key_w,
 };
 use binary_heap_plus::BinaryHeap;
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
+    to_binary, Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage,
     Uint128,
 };
 use secret_toolkit::{snip20::send_msg, utils::HandleCallback};
@@ -253,14 +237,12 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
 
     // Admin is governance, send to governance
     let config = config_r(&deps.storage).load()?;
-    let messages = vec![
-        shade_protocol::governance::HandleMsg::MakeVote {
-            voter: env.message.sender.clone(),
-            proposal_id,
-            votes: total_votes,
-        }
-        .to_cosmos_msg(config.admin.code_hash, config.admin.address, None)?,
-    ];
+    let messages = vec![shade_protocol::governance::HandleMsg::MakeVote {
+        voter: env.message.sender.clone(),
+        proposal_id,
+        votes: total_votes,
+    }
+    .to_cosmos_msg(config.admin.code_hash, config.admin.address, None)?];
 
     Ok(HandleResponse {
         messages,
