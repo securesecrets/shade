@@ -487,16 +487,15 @@ mod tests {
         coins, from_binary,
         testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
         StdError,
-        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
     };
     use shade_protocol::mint::QueryAnswer;
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);
-        return Contract {
+        Contract {
             address: env.message.sender,
             code_hash: code_hash.to_string(),
-        };
+        }
     }
 
     fn dummy_init(admin: String, oracle: Contract) -> Extern<MockStorage, MockApi, MockQuerier> {

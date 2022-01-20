@@ -6,13 +6,11 @@ use cosmwasm_std::{
 use secret_toolkit::snip20::{register_receive_msg, send_msg, set_viewing_key_msg};
 
 use shade_protocol::{
-    asset::Contract,
-    generic_response::ResponseStatus,
+    utils::{asset::Contract,
+     generic_response::ResponseStatus},
     snip20::fetch_snip20,
     treasury::{Allocation, Config, Flag, HandleAnswer, QueryAnswer},
 };
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 use crate::{
     query,

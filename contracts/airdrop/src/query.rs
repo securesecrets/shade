@@ -8,7 +8,7 @@ use crate::{
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use shade_protocol::{
     airdrop::{account::AccountPermit, claim_info::RequiredTask, QueryAnswer},
-    math::{div, mult},
+    utils::math::{div, mult},
 };
 use shade_protocol::airdrop::account::AddressProofPermit;
 use shade_protocol::airdrop::AccountVerification;

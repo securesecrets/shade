@@ -1,9 +1,5 @@
 use cosmwasm_std::Storage;
-use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
-    Singleton,
-    singleton_read,
-};
+use cosmwasm_storage::{bucket, bucket_read, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton, Singleton, singleton};
 use shade_protocol::{
     governance::{AdminCommand, Config},
 };
