@@ -23,16 +23,15 @@ use secretcli::secretcli::{
 };
 use serde::Serialize;
 use serde_json::Result;
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     airdrop::{
         self,
         account::{AccountPermitMsg, AddressProofMsg},
         claim_info::RequiredTask,
     },
-    asset::Contract,
-    band,
-    generic_response::ResponseStatus,
-    governance,
+    band, governance,
     governance::{
         proposal::ProposalStatus,
         vote::{UserVote, Vote},
@@ -308,14 +307,13 @@ fn run_airdrop() -> Result<()> {
 
     /// verification query
     {
-        let msg = airdrop::QueryMsg::VerifyClaimed { accounts: vec![b_permit, a_permit] };
+        let msg = airdrop::QueryMsg::VerifyClaimed {
+            accounts: vec![b_permit, a_permit],
+        };
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
 
-        if let airdrop::QueryAnswer::VerifyClaimed {
-            results
-        } = query
-        {
+        if let airdrop::QueryAnswer::VerifyClaimed { results } = query {
             for result in results.iter() {
                 assert!(result.claimed);
             }

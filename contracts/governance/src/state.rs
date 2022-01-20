@@ -3,10 +3,8 @@ use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{
-    asset::Contract,
-    governance::{AdminCommand, Config},
-};
+use shade_protocol::governance::{AdminCommand, Config};
+use shade_protocol::utils::asset::Contract;
 
 pub static CONFIG_KEY: &[u8] = b"config";
 // Saved contracts

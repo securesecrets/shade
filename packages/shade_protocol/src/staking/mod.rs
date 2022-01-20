@@ -1,5 +1,7 @@
 pub mod stake;
-use crate::{asset::Contract, generic_response::ResponseStatus, governance::vote::UserVote};
+use crate::governance::vote::UserVote;
+use crate::utils::asset::Contract;
+use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, Query};

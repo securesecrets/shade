@@ -6,10 +6,10 @@ use secret_toolkit::{
     snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
     utils::Query,
 };
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    asset::Contract,
     band::ReferenceData,
-    generic_response::ResponseStatus,
     micro_mint::{Config, HandleAnswer, SupportedAsset},
     mint::MintMsgHook,
     oracle::QueryMsg::Price,

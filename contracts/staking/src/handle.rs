@@ -8,9 +8,9 @@ use cosmwasm_std::{
     Uint128,
 };
 use secret_toolkit::{snip20::send_msg, utils::HandleCallback};
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus::Success;
 use shade_protocol::{
-    asset::Contract,
-    generic_response::ResponseStatus::Success,
     governance::vote::{UserVote, Vote, VoteTally},
     staking::{
         stake::{Stake, Unbonding, UserStake},

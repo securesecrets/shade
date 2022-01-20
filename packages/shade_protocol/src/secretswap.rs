@@ -1,4 +1,4 @@
-use crate::asset::Contract;
+use crate::utils::asset::Contract;
 use cosmwasm_std::{HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;

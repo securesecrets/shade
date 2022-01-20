@@ -7,10 +7,10 @@ use secret_toolkit::{
     snip20::{burn_msg, mint_msg, minters_query, register_receive_msg, token_info_query},
     utils::{InitCallback, Query},
 };
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    asset::Contract,
     band::ReferenceData,
-    generic_response::ResponseStatus,
     mint::{
         HandleAnswer, HandleMsg, InitMsg, MintConfig, QueryAnswer, QueryMsg, SnipMsgHook,
         SupportedAsset,
@@ -492,10 +492,10 @@ mod tests {
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);
-        return Contract {
+        Contract {
             address: env.message.sender,
             code_hash: code_hash.to_string(),
-        };
+        }
     }
 
     fn dummy_init(admin: String, oracle: Contract) -> Extern<MockStorage, MockApi, MockQuerier> {
