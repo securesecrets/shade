@@ -151,14 +151,19 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
-    pad_query_result(match msg {
-        QueryMsg::Config {} => to_binary(&query::config(deps)?),
-        QueryMsg::Dates { current_date } => to_binary(&query::dates(deps, current_date)?),
-        QueryMsg::TotalClaimed {} => to_binary(&query::total_claimed(deps)?),
-        QueryMsg::Account {
-            permit,
-            current_date,
-        } => to_binary(&query::account(deps, permit, current_date)?),
-        QueryMsg::VerifyClaimed { accounts } => to_binary(&query::verify_claimed(deps, accounts)?)
-    }, RESPONSE_BLOCK_SIZE)
+    pad_query_result(
+        match msg {
+            QueryMsg::Config {} => to_binary(&query::config(deps)?),
+            QueryMsg::Dates { current_date } => to_binary(&query::dates(deps, current_date)?),
+            QueryMsg::TotalClaimed {} => to_binary(&query::total_claimed(deps)?),
+            QueryMsg::Account {
+                permit,
+                current_date,
+            } => to_binary(&query::account(deps, permit, current_date)?),
+            QueryMsg::VerifyClaimed { accounts } => {
+                to_binary(&query::verify_claimed(deps, accounts)?)
+            }
+        },
+        RESPONSE_BLOCK_SIZE,
+    )
 }

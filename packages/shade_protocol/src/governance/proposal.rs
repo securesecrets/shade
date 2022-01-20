@@ -1,4 +1,4 @@
-use crate::generic_response::ResponseStatus;
+use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{Binary, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
