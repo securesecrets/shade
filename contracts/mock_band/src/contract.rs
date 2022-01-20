@@ -1,16 +1,6 @@
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError,
+    StdResult, Storage, Uint128,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

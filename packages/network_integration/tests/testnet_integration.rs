@@ -4,42 +4,22 @@ use flexible_permits::{permit::Permit, transaction::PermitSignature};
 use network_integration::{
     contract_helpers::{
         governance::{
-            add_contract,
-            create_and_trigger_proposal,
-            create_proposal,
-            get_contract,
-            get_latest_proposal,
-            init_contract,
-            trigger_latest_proposal,
+            add_contract, create_and_trigger_proposal, create_proposal, get_contract,
+            get_latest_proposal, init_contract, trigger_latest_proposal,
         },
         initializer::initialize_initializer,
         minter::{get_balance, initialize_minter, setup_minters},
         stake::setup_staker,
     },
     utils::{
-        generate_label,
-        print_contract,
-        print_header,
-        print_vec,
-        print_warning,
-        ACCOUNT_KEY,
-        AIRDROP_FILE,
-        GAS,
-        GOVERNANCE_FILE,
-        MOCK_BAND_FILE,
-        ORACLE_FILE,
-        SNIP20_FILE,
-        STORE_GAS,
+        generate_label, print_contract, print_header, print_vec, print_warning, ACCOUNT_KEY,
+        AIRDROP_FILE, GAS, GOVERNANCE_FILE, MOCK_BAND_FILE, ORACLE_FILE, SNIP20_FILE, STORE_GAS,
         VIEW_KEY,
     },
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use secretcli::secretcli::{
-    account_address,
-    create_permit,
-    query_contract,
-    test_contract_handle,
-    test_inst_init,
+    account_address, create_permit, query_contract, test_contract_handle, test_inst_init,
 };
 use serde::Serialize;
 use serde_json::Result;
@@ -192,7 +172,7 @@ fn run_airdrop() -> Result<()> {
     print_header("Initializing airdrop");
 
     let now = chrono::offset::Utc::now().timestamp() as u64;
-    let duration = 200;
+    let duration = 300;
     let decay_date = now + duration;
     let end_date = decay_date + 60;
 
@@ -285,7 +265,7 @@ fn run_airdrop() -> Result<()> {
     {
         let tx_info = test_contract_handle(
             &airdrop::HandleMsg::CreateAccount {
-                addresses: vec![b_permit, a_permit.clone()],
+                addresses: vec![b_permit.clone(), a_permit.clone()],
                 partial_tree: initial_proof,
                 padding: None,
             },
@@ -325,6 +305,22 @@ fn run_airdrop() -> Result<()> {
 
     /// Assert that we claimed
     assert_eq!(ab_half_airdrop, get_balance(&snip, account_a.clone()));
+
+    /// verification query
+    {
+        let msg = airdrop::QueryMsg::VerifyClaimed { accounts: vec![b_permit, a_permit] };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::VerifyClaimed {
+            results
+        } = query
+        {
+            for result in results.iter() {
+                assert!(result.claimed);
+            }
+        }
+    }
 
     print_warning("Enabling the other half of the airdrop");
 
@@ -529,9 +525,7 @@ fn run_airdrop() -> Result<()> {
     }
 
     test_contract_handle(
-        &airdrop::HandleMsg::ClaimDecay {
-            padding: None,
-        },
+        &airdrop::HandleMsg::ClaimDecay { padding: None },
         &airdrop,
         ACCOUNT_KEY,
         Some(GAS),

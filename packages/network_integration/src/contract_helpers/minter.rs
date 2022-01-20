@@ -1,13 +1,7 @@
 use crate::{
     contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_contract},
     utils::{
-        print_contract,
-        print_epoch_info,
-        print_header,
-        print_vec,
-        GAS,
-        MICRO_MINT_FILE,
-        VIEW_KEY,
+        print_contract, print_epoch_info, print_header, print_vec, GAS, MICRO_MINT_FILE, VIEW_KEY,
     },
 };
 use cosmwasm_std::{to_binary, HumanAddr, Uint128};

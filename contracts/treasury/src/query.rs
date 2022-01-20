@@ -1,33 +1,66 @@
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
-use secret_toolkit::snip20;
-use shade_protocol::treasury::QueryAnswer;
+use secret_toolkit::utils::Query;
+use shade_protocol::{snip20, treasury};
 
-use crate::state::{assets_r, config_r, self_address_r, viewing_key_r};
+use crate::state::{allocations_r, assets_r, config_r, self_address_r, viewing_key_r};
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::Config {
+pub fn config<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<treasury::QueryAnswer> {
+    Ok(treasury::QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    contract: HumanAddr,
-) -> StdResult<QueryAnswer> {
+    asset: &HumanAddr,
+) -> StdResult<treasury::QueryAnswer> {
     //TODO: restrict to admin
 
-    return match assets_r(&deps.storage).may_load(contract.to_string().as_bytes())? {
-        Some(a) => Ok(snip20::QueryMsg::Balance {
-            address: self_address_r(&deps.storage).load()?,
-            key: viewing_key_r(&deps.storage).load()?,
+    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        Some(a) => {
+            let resp = snip20::QueryMsg::Balance {
+                address: self_address_r(&deps.storage).load()?,
+                key: viewing_key_r(&deps.storage).load()?,
+            }
+            .query(&deps.querier, a.contract.code_hash, a.contract.address)?;
+
+            match resp {
+                snip20::QueryAnswer::Balance { amount } => {
+                    Ok(treasury::QueryAnswer::Balance { amount })
+                }
+                _ => Err(StdError::GenericErr {
+                    msg: "Unexpected Response".to_string(),
+                    backtrace: None,
+                }),
+            }
         }
-        .query(&deps.querier, 1, a.contract.code_hash, contract)?),
-        None => Err(StdError::not_found(contract.to_string())),
-    };
+        None => Err(StdError::NotFound {
+            kind: asset.to_string(),
+            backtrace: None,
+        }),
+    }
 }
 
+pub fn allocations<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<treasury::QueryAnswer> {
+    Ok(treasury::QueryAnswer::Allocations {
+        allocations: match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+            None => {
+                vec![]
+            }
+            Some(a) => a,
+        },
+    })
+}
+
+/*
 pub fn can_rebalance<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::CanRebalance { possible: false })
 }
+*/

@@ -5,16 +5,7 @@ use crate::{
     state::{admin_commands_list_w, config_w, supported_contracts_list_w},
 };
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdResult,
-    Storage,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
     Uint128,
 };
 use secret_toolkit::snip20::register_receive_msg;

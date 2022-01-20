@@ -1,23 +1,11 @@
 use crate::{query, handle, state::{config_w, shade_w}};
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdResult,
-    Storage,
+    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
+    StdResult, Storage,
 };
 use secret_toolkit::utils::InitCallback;
 use shade_protocol::initializer::{
-    HandleMsg,
-    InitMsg,
-    Config,
-    QueryMsg,
-    Snip20InitHistory,
+    HandleMsg, InitMsg, InitializerConfig, QueryMsg, Snip20InitHistory,
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(

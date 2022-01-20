@@ -1,32 +1,11 @@
 use crate::state::{
-    account_r,
-    account_total_claimed_w,
-    account_w,
-    address_in_account_w,
-    claim_status_r,
-    claim_status_w,
-    config_r,
-    config_w,
-    decay_claimed_w,
-    revoke_permit,
-    total_claimed_r,
-    total_claimed_w,
-    validate_address_permit,
+    account_r, account_total_claimed_w, account_w, address_in_account_w, claim_status_r,
+    claim_status_w, config_r, config_w, decay_claimed_w, revoke_permit, total_claimed_r,
+    total_claimed_w, validate_address_permit,
 };
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    Binary,
-    Decimal,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
+    to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier, StdError,
+    StdResult, Storage, Uint128,
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use secret_toolkit::snip20::send_msg;
@@ -34,8 +13,7 @@ use shade_protocol::{
     airdrop::{
         account::{Account, AddressProofPermit},
         claim_info::RequiredTask,
-        Config,
-        HandleAnswer,
+        Config, HandleAnswer,
     },
     generic_response::ResponseStatus,
 };

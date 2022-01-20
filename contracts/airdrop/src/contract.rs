@@ -1,33 +1,17 @@
 use crate::{
     handle::{
-        try_add_tasks,
-        try_claim,
-        try_claim_decay,
-        try_complete_task,
-        try_create_account,
-        try_disable_permit_key,
-        try_update_account,
-        try_update_config,
+        try_add_tasks, try_claim, try_claim_decay, try_complete_task, try_create_account,
+        try_disable_permit_key, try_update_account, try_update_config,
     },
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
 };
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError,
+    StdResult, Storage, Uint128,
 };
-use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -123,41 +107,44 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
-    pad_handle_result(match msg {
-        HandleMsg::UpdateConfig {
-            admin,
-            dump_address,
-            query_rounding: redeem_step_size,
-            start_date,
-            end_date,
-            decay_start: start_decay,
-            ..
-        } => try_update_config(
-            deps,
-            env,
-            admin,
-            dump_address,
-            redeem_step_size,
-            start_date,
-            end_date,
-            start_decay,
-        ),
-        HandleMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, tasks),
-        HandleMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, address),
-        HandleMsg::CreateAccount {
-            addresses,
-            partial_tree,
-            ..
-        } => try_create_account(deps, &env, addresses, partial_tree),
-        HandleMsg::UpdateAccount {
-            addresses,
-            partial_tree,
-            ..
-        } => try_update_account(deps, &env, addresses, partial_tree),
-        HandleMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
-        HandleMsg::Claim { .. } => try_claim(deps, &env),
-        HandleMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),
-    }, RESPONSE_BLOCK_SIZE)
+    pad_handle_result(
+        match msg {
+            HandleMsg::UpdateConfig {
+                admin,
+                dump_address,
+                query_rounding: redeem_step_size,
+                start_date,
+                end_date,
+                decay_start: start_decay,
+                ..
+            } => try_update_config(
+                deps,
+                env,
+                admin,
+                dump_address,
+                redeem_step_size,
+                start_date,
+                end_date,
+                start_decay,
+            ),
+            HandleMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, tasks),
+            HandleMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, address),
+            HandleMsg::CreateAccount {
+                addresses,
+                partial_tree,
+                ..
+            } => try_create_account(deps, &env, addresses, partial_tree),
+            HandleMsg::UpdateAccount {
+                addresses,
+                partial_tree,
+                ..
+            } => try_update_account(deps, &env, addresses, partial_tree),
+            HandleMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
+            HandleMsg::Claim { .. } => try_claim(deps, &env),
+            HandleMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),
+        },
+        RESPONSE_BLOCK_SIZE,
+    )
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
@@ -172,5 +159,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             permit,
             current_date,
         } => to_binary(&query::account(deps, permit, current_date)?),
+        QueryMsg::VerifyClaimed { accounts } => to_binary(&query::verify_claimed(deps, accounts)?)
     }, RESPONSE_BLOCK_SIZE)
 }
