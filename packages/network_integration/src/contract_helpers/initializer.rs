@@ -60,16 +60,23 @@ pub fn initialize_initializer(
         Some("test"),
     )?;
 
-    test_contract_handle(&initializer::HandleMsg::InitSilk {
-        silk: Snip20ContractInfo {
-            label: silk.label.clone(),
-            admin: Some(HumanAddr::from(admin)),
-            prng_seed: Default::default(),
-            initial_balances: None
+    test_contract_handle(
+        &initializer::HandleMsg::InitSilk {
+            silk: Snip20ContractInfo {
+                label: silk.label.clone(),
+                admin: Some(HumanAddr::from(admin)),
+                prng_seed: Default::default(),
+                initial_balances: None,
+            },
+            ticker: "SILK".to_string(),
+            decimals: 6,
         },
-        ticker: "SILK".to_string(),
-        decimals: 6
-    }, &initializer, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+        &initializer,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+    )?;
 
     print_contract(&initializer);
 

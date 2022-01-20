@@ -1,8 +1,8 @@
 use crate::snip20::InitialBalance;
-use cosmwasm_std::{Binary, HumanAddr};
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 use crate::utils::generic_response::ResponseStatus;
+use cosmwasm_std::{Binary, HumanAddr};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
@@ -43,21 +43,21 @@ impl TestInit for InitMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     SetAdmin {
-        admin: HumanAddr
+        admin: HumanAddr,
     },
 
     InitSilk {
         silk: Snip20ContractInfo,
         ticker: String,
         decimals: u8,
-    }
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     SetAdmin { status: ResponseStatus },
-    InitSilk { status: ResponseStatus }
+    InitSilk { status: ResponseStatus },
 }
 
 #[cfg(test)]
@@ -67,7 +67,7 @@ impl TestHandle for HandleMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Contracts {},
-    Config {}
+    Config {},
 }
 
 #[cfg(test)]
@@ -78,10 +78,10 @@ impl TestQuery<QueryAnswer> for QueryMsg {}
 pub enum QueryAnswer {
     Contracts {
         shade: Snip20InitHistory,
-        silk: Option<Snip20InitHistory>
+        silk: Option<Snip20InitHistory>,
     },
 
     Config {
-        config: Config
-    }
+        config: Config,
+    },
 }

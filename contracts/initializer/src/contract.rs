@@ -1,10 +1,13 @@
-use crate::{query, handle, state::{config_w, shade_w}};
+use crate::{
+    handle, query,
+    state::{config_w, shade_w},
+};
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
     StdResult, Storage,
 };
 use secret_toolkit::utils::InitCallback;
-use shade_protocol::initializer::{HandleMsg, InitMsg, QueryMsg, Snip20InitHistory, Config};
+use shade_protocol::initializer::{Config, HandleMsg, InitMsg, QueryMsg, Snip20InitHistory};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -14,7 +17,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let state = Config {
         admin: msg.admin.unwrap_or(env.message.sender.clone()),
         snip20_id: msg.snip20_id,
-        snip20_code_hash: msg.snip20_code_hash.clone()
+        snip20_code_hash: msg.snip20_code_hash.clone(),
     };
     config_w(&mut deps.storage).save(&state)?;
 
@@ -30,7 +33,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     // Initialize Shade
     let shade_init_msg = shade_protocol::snip20::InitMsg {
         name: "Shade".to_string(),
-        admin: Some(msg.shade.admin.unwrap_or_else(|| env.message.sender.clone())),
+        admin: Some(
+            msg.shade
+                .admin
+                .unwrap_or_else(|| env.message.sender.clone()),
+        ),
         symbol: "SHD".to_string(),
         decimals: 8,
         initial_balances: msg.shade.initial_balances.clone(),
@@ -61,11 +68,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::SetAdmin { admin
-        } => handle::set_admin(deps, &env, admin),
+        HandleMsg::SetAdmin { admin } => handle::set_admin(deps, &env, admin),
 
-        HandleMsg::InitSilk { silk, ticker, decimals
-        } => handle::init_silk(deps, &env, silk, ticker, decimals)
+        HandleMsg::InitSilk {
+            silk,
+            ticker,
+            decimals,
+        } => handle::init_silk(deps, &env, silk, ticker, decimals),
     }
 }
 
