@@ -2,7 +2,7 @@ use crate::snip20::InitialBalance;
 use cosmwasm_std::{Binary, HumanAddr};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use crate::generic_response::ResponseStatus;
+use crate::utils::generic_response::ResponseStatus;
 
 #[cfg(test)]
 use secretcli::secretcli::{TestHandle, TestInit, TestQuery};

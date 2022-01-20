@@ -4,9 +4,7 @@ use cosmwasm_std::{
     StdResult, Storage,
 };
 use secret_toolkit::utils::InitCallback;
-use shade_protocol::initializer::{
-    HandleMsg, InitMsg, InitializerConfig, QueryMsg, Snip20InitHistory,
-};
+use shade_protocol::initializer::{HandleMsg, InitMsg, QueryMsg, Snip20InitHistory, Config};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

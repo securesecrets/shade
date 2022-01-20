@@ -1,6 +1,6 @@
 use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
 use secret_toolkit::utils::InitCallback;
-use shade_protocol::generic_response::ResponseStatus::Success;
+use shade_protocol::utils::generic_response::ResponseStatus::Success;
 use shade_protocol::initializer::{HandleAnswer, Snip20ContractInfo, Snip20InitHistory};
 use crate::state::{config_r, config_w, silk_r, silk_w};
 
