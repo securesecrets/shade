@@ -13,13 +13,20 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Allocation {
-    // To remain liquid
+    // To remain liquid at all times
     Reserves {
         allocation: Uint128,
     },
+    // Won't be counted in rebalancing
     Rewards {
         contract: Contract,
         allocation: Uint128,
+    },
+    // Monthly refresh, not counted in rebalance
+    Allowance {
+        contract: Contract,
+        // Unlike others, this is a direct number of uTKN to allow monthly
+        amount: Uint128,
     },
     // SCRT/ATOM/OSMO staking
     Staking {
@@ -108,6 +115,9 @@ pub enum HandleAnswer {
         status: ResponseStatus,
     },
     RegisterApp {
+        status: ResponseStatus,
+    },
+    RefreshAllowance {
         status: ResponseStatus,
     },
     //Rebalance { status: ResponseStatus },

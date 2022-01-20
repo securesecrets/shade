@@ -15,8 +15,14 @@ use shade_protocol::{
 
 use crate::{
     query,
-    state::{allocations_w, assets_r, assets_w, config_r, config_w, reserves_w, viewing_key_r},
+    state::{
+        allocations_w, assets_r, assets_w, 
+        config_r, config_w, viewing_key_r,
+        last_allowance_refresh_r,
+        last_allowance_refresh_w,
+    },
 };
+use chrono::prelude::*;
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -52,6 +58,8 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             for alloc in &mut alloc_list {
                 match alloc {
                     Allocation::Reserves { allocation: _ } => {}
+                    Allocation::Allowance { contract: _, amount: _ } => {}
+
                     Allocation::Rewards {
                         allocation,
                         contract,
@@ -139,6 +147,54 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn refresh_allowance<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+) -> StdResult<HandleResponse> {
+
+    let now = Utc::now();
+
+    let last_refresh_str = last_allowance_refresh_r(&mut deps.storage).load()?;
+    //let last_refresh = DateTime::parse_from_rfc3339(&last_refresh_str)?;
+    /*
+        .unwrap_or_else(|result| {
+            return Err(StdError::generic_err(format!("Failed to parse {}", last_refresh_str)));
+        }
+    */
+
+    let last_refresh_offset: Option<DateTime<FixedOffset>> = match DateTime::parse_from_rfc3339(&last_refresh_str) {
+        Ok(r) => Some(r),
+        Err(e) => None,
+    };
+
+    match last_refresh_offset {
+        Some(parsed) => {
+
+            let last_refresh: DateTime<Utc> = parsed.with_timezone(&Utc);//.utc(); //DateTime<Utc>::from(&last_refresh_offset)?;
+
+            if now.year() <= last_refresh.year() && now.month() <= last_refresh.month() {
+                return Err(StdError::generic_err(format!("Last refresh too recent: {}", last_refresh.to_rfc3339())));
+            }
+            
+        }
+        None => {
+            return Err(StdError::generic_err("Failed to parse from memory"))
+        }
+    };
+
+
+    last_allowance_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
+
+    // do refresh
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::RefreshAllowance {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -168,14 +224,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     };
 
     allocations_w(&mut deps.storage).save(contract.address.to_string().as_bytes(), &allocs)?;
-
-    reserves_w(&mut deps.storage).save(
-        contract.address.to_string().as_bytes(),
-        &match reserves {
-            None => Uint128::zero(),
-            Some(r) => r,
-        },
-    )?;
 
     // Register contract in asset
     messages.push(register_receive_msg(
@@ -231,30 +279,35 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
        }
     };
 
-    let alloc_portion = *match &alloc {
-        Allocation::Reserves { allocation } => allocation,
+    let alloc_portion = match &alloc {
+        Allocation::Reserves { allocation } => *allocation,
+
+        // TODO: Needs to be accounted for elsewhere
+        Allocation::Allowance { contract: _, amount: _ } => Uint128::zero(),
+
         Allocation::Rewards {
             contract: _,
             allocation,
-        } => allocation,
+        } => *allocation,
         Allocation::Staking {
             contract: _,
             allocation,
-        } => allocation,
+        } => *allocation,
         Allocation::Application {
             contract: _,
             allocation,
             token: _,
-        } => allocation,
+        } => *allocation,
         Allocation::Pool {
             contract: _,
             allocation,
             secondary_asset: _,
             token: _,
-        } => allocation,
+        } => *allocation,
     };
 
     let alloc_address = match &alloc {
+        Allocation::Allowance { contract, amount: _ } => Some(contract.address.clone()),
         Allocation::Staking {
             contract,
             allocation: _,
@@ -285,11 +338,10 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         };
 
         // Remove old instance of this contract
-        // TODO: need type comparison or something? gonna worry about it later
         let mut existing_index = None;
         for (i, app) in app_list.iter_mut().enumerate() {
             if let Some(address) = match app {
-                Allocation::Reserves { allocation: _ } => None,
+                //Allocation::Reserves { allocation: _ } => None,
                 Allocation::Rewards {
                     contract,
                     allocation: _,
@@ -309,9 +361,11 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
                     secondary_asset: _,
                     token: _,
                 } => Some(contract.address.clone()),
+                _ => None,
             } {
                 match &alloc_address {
                     Some(a) => {
+                        // Found the address, mark index and break from scan loop
                         if address == *a {
                             existing_index = Option::from(i);
                             break;
@@ -320,6 +374,8 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
                     None => {}
                 }
             } else {
+                /*
+                 * I think this is not needed, must have been a late night
                 match alloc_address {
                     Some(_) => {}
                     None => {
@@ -327,9 +383,11 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
                         break;
                     }
                 }
+                */
             }
         }
 
+        // If an element was marked, remove it from the list
         match existing_index {
             Some(i) => {
                 app_list.remove(i);
@@ -339,29 +397,30 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
 
         // Validate addition does not exceed 100%
         for app in &app_list {
-            allocated_portion = allocated_portion
-                + match app {
-                    Allocation::Reserves { allocation: _ } => Uint128::zero(),
-                    Allocation::Rewards {
-                        contract: _,
-                        allocation: _,
-                    } => Uint128::zero(),
-                    Allocation::Staking {
-                        contract: _,
-                        allocation,
-                    } => *allocation,
-                    Allocation::Application {
-                        contract: _,
-                        allocation,
-                        token: _,
-                    } => *allocation,
-                    Allocation::Pool {
-                        contract: _,
-                        allocation,
-                        secondary_asset: _,
-                        token: _,
-                    } => *allocation,
-                };
+
+            allocated_portion = allocated_portion + match app {
+                //Allocation::Reserves { allocation: _ } => Uint128::zero(),
+                Allocation::Rewards {
+                    contract: _,
+                    allocation: _,
+                } => Uint128::zero(),
+                Allocation::Staking {
+                    contract: _,
+                    allocation,
+                } => *allocation,
+                Allocation::Application {
+                    contract: _,
+                    allocation,
+                    token: _,
+                } => *allocation,
+                Allocation::Pool {
+                    contract: _,
+                    allocation,
+                    secondary_asset: _,
+                    token: _,
+                } => *allocation,
+                _ => Uint128::zero(),
+            };
         }
 
         if (allocated_portion + alloc_portion) >= Uint128(10u128.pow(18)) {
@@ -373,8 +432,11 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         Ok(app_list)
     })?;
 
-    //TODO: get Uint128 math functions to do these things (untested)
-    //TODO: re-add send_msg below
+    /*TODO: Need to re-allocate/re-balance funds based on the new addition
+     * get Uint128 math functions to do these things (untested)
+     * re-add send_msg below
+     */
+    
     /*
     let liquid_portion = (allocated_portion * liquid_balance) / allocated_portion;
 
@@ -386,7 +448,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         messages: vec![
             /*
             send_msg(
-                    full_asset.contract.address.clone(),
+                    alloc_address,
                     to_allocate,
                     None,
                     None,
@@ -402,3 +464,4 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         })?),
     })
 }
+
