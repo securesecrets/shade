@@ -8,8 +8,11 @@ use crate::{
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use shade_protocol::{
     airdrop::{account::AccountPermit, claim_info::RequiredTask, QueryAnswer},
+    math::{div, mult},
 };
-use shade_protocol::utils::math::{div, mult};
+use shade_protocol::airdrop::account::AddressProofPermit;
+use shade_protocol::airdrop::AccountVerification;
+use crate::state::{address_in_account_r, validate_address_permit};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -100,5 +103,24 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
             .load(account_address.to_string().as_bytes())?,
         unclaimed,
         finished_tasks,
+    })
+}
+
+pub fn verify_claimed<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, addresses: Vec<AddressProofPermit>) -> StdResult<QueryAnswer> {
+
+    let config = config_r(&deps.storage).load()?;
+    let mut results = vec![];
+
+    for account in addresses.iter() {
+        let address = validate_address_permit(&deps.storage, account, config.contract.clone())?;
+
+        results.push(AccountVerification {
+            account: address.clone(),
+            claimed: address_in_account_r(&deps.storage).may_load(address.to_string().as_bytes())?.is_some()
+        })
+    }
+
+    Ok(QueryAnswer::VerifyClaimed {
+        results,
     })
 }
