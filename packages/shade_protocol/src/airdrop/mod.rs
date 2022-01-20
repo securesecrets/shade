@@ -147,6 +147,9 @@ pub enum QueryMsg {
         permit: AccountPermit,
         current_date: Option<u64>,
     },
+    VerifyClaimed {
+        accounts: Vec<AddressProofPermit>
+    }
 }
 
 impl Query for QueryMsg {
@@ -177,4 +180,14 @@ pub enum QueryAnswer {
         unclaimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
     },
+    VerifyClaimed {
+        results: Vec<AccountVerification>
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccountVerification {
+    pub account: HumanAddr,
+    pub claimed: bool
 }

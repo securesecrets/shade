@@ -172,7 +172,7 @@ fn run_airdrop() -> Result<()> {
     print_header("Initializing airdrop");
 
     let now = chrono::offset::Utc::now().timestamp() as u64;
-    let duration = 200;
+    let duration = 300;
     let decay_date = now + duration;
     let end_date = decay_date + 60;
 
@@ -265,7 +265,7 @@ fn run_airdrop() -> Result<()> {
     {
         let tx_info = test_contract_handle(
             &airdrop::HandleMsg::CreateAccount {
-                addresses: vec![b_permit, a_permit.clone()],
+                addresses: vec![b_permit.clone(), a_permit.clone()],
                 partial_tree: initial_proof,
                 padding: None,
             },
@@ -305,6 +305,22 @@ fn run_airdrop() -> Result<()> {
 
     /// Assert that we claimed
     assert_eq!(ab_half_airdrop, get_balance(&snip, account_a.clone()));
+
+    /// verification query
+    {
+        let msg = airdrop::QueryMsg::VerifyClaimed { accounts: vec![b_permit, a_permit] };
+
+        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
+
+        if let airdrop::QueryAnswer::VerifyClaimed {
+            results
+        } = query
+        {
+            for result in results.iter() {
+                assert!(result.claimed);
+            }
+        }
+    }
 
     print_warning("Enabling the other half of the airdrop");
 

@@ -22,6 +22,7 @@
             * [Dates](#Dates)
             * [TotalClaimed](#TotalClaimed)
             * [Account](#Account)
+            * [VerifyClaimed](#VerifyClaimed)
     
 # Introduction
 Contract responsible to handle snip20 airdrop
@@ -30,21 +31,21 @@ Contract responsible to handle snip20 airdrop
 
 ## Init
 ##### Request
-|Name          |Type           |Description                                           | optional |
-|--------------|---------------|------------------------------------------------------|----------|
-|admin         | String        | New contract owner; SHOULD be a valid bech32 address |  yes     |
-|dump_address  | String        | Where the decay amount will be sent                  |  yes     |
-|airdrop_token | Contract      | The token that will be airdropped                    |  no      |
-|airdrop_amount | String      | Total airdrop amount to be claimed                   |  no      |
-|start_date    | u64           | When the airdrop starts in UNIX time                 |  yes     |
-|end_date      | u64           | When the airdrop ends in UNIX time                   |  yes     |
-|decay_start   | u64          | When the airdrop decay starts in UNIX time           | yes|
-|merkle_root  | String        | Base 64 encoded merkle root of the airdrop data tree |  no      |
-|total_accounts | String      | Total accounts in airdrop (needed for merkle proof)  |  no      |
-|max_amount   | String        | Used to limit the user permit amounts (lowers exploit possibility) |  no|
-|default_claim | String        | The default amount to be gifted regardless of tasks  |  no      |
-|task_claim    | RequiredTasks | The amounts per tasks to gift                        |  no      |
-|query_rounding | string       | To prevent leaking information, total claimed is rounded off to this value | no
+| Name           | Type          | Description                                                                | optional |
+|----------------|---------------|----------------------------------------------------------------------------|----------|
+| admin          | String        | New contract owner; SHOULD be a valid bech32 address                       | yes      |
+| dump_address   | String        | Where the decay amount will be sent                                        | yes      |
+| airdrop_token  | Contract      | The token that will be airdropped                                          | no       |
+| airdrop_amount | String        | Total airdrop amount to be claimed                                         | no       |
+| start_date     | u64           | When the airdrop starts in UNIX time                                       | yes      |
+| end_date       | u64           | When the airdrop ends in UNIX time                                         | yes      |
+| decay_start    | u64           | When the airdrop decay starts in UNIX time                                 | yes      |
+| merkle_root    | String        | Base 64 encoded merkle root of the airdrop data tree                       | no       |
+| total_accounts | String        | Total accounts in airdrop (needed for merkle proof)                        | no       |
+| max_amount     | String        | Used to limit the user permit amounts (lowers exploit possibility)         | no       |
+| default_claim  | String        | The default amount to be gifted regardless of tasks                        | no       |
+| task_claim     | RequiredTasks | The amounts per tasks to gift                                              | no       |
+| query_rounding | string        | To prevent leaking information, total claimed is rounded off to this value | no       |
 
 ##Admin
 
@@ -53,22 +54,22 @@ Contract responsible to handle snip20 airdrop
 #### UpdateConfig
 Updates the given values
 ##### Request
-|Name          |Type        |Description                                            | optional |
-|--------------|------------|-------------------------------------------------------|----------|
-|admin         | string     |  New contract admin; SHOULD be a valid bech32 address |  yes     |
-| dump_address | string     | Sets the dump address if there isnt any               |  yes     |
-|start_date    | u64        | When the airdrop starts in UNIX time                  |  yes     |
-|end_date      | u64        | When the airdrop ends in UNIX time                    |  yes     |
-|decay_start   | u64        | When the airdrop decay starts in UNIX time            |  yes |
-|padding       | string     | Allows for enforcing constant length messages         |  yes |
+| Name         | Type   | Description                                          | optional |
+|--------------|--------|------------------------------------------------------|----------|
+| admin        | string | New contract admin; SHOULD be a valid bech32 address | yes      |
+| dump_address | string | Sets the dump address if there isnt any              | yes      |
+| start_date   | u64    | When the airdrop starts in UNIX time                 | yes      |
+| end_date     | u64    | When the airdrop ends in UNIX time                   | yes      |
+| decay_start  | u64    | When the airdrop decay starts in UNIX time           | yes      |
+| padding      | string | Allows for enforcing constant length messages        | yes      |
 
 #### AddTasks
 Adds more tasks to complete
 ##### Request
-|Name  |Type   |Description                | optional |
-|------|-------|---------------------------|----------|
-|tasks | Tasks | The new tasks to be added | no       |
-|padding       | string     | Allows for enforcing constant length messages         |  yes |
+| Name    | Type   | Description                                   | optional |
+|---------|--------|-----------------------------------------------|----------|
+| tasks   | Tasks  | The new tasks to be added                     | no       |
+| padding | string | Allows for enforcing constant length messages | yes      |
 
 ##### Response
 ```json
@@ -98,10 +99,10 @@ Drains the decayed amount of airdrop into a dump address
 #### CompleteTask
 Complete that address' tasks for a given user
 ##### Request
-|Name    |Type    |Description                          | optional |
-|--------|--------|-------------------------------------|----------|
-|address | String | The address that completed the task | no       |
-|padding       | string     | Allows for enforcing constant length messages         |  yes |
+| Name    | Type   | Description                                   | optional |
+|---------|--------|-----------------------------------------------|----------|
+| address | String | The address that completed the task           | no       |
+| padding | string | Allows for enforcing constant length messages | yes      |
 
 ##### Response
 ```json
@@ -119,11 +120,11 @@ Complete that address' tasks for a given user
 ### CreateAccount
 Creates an account from which the user will claim all of his given addresses' rewards
 ##### Request
-| Name      | Type                             | Description                              | optional |
-|-----------|----------------------------------|------------------------------------------|----------|
-| addresses | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses | no       |
-| partial_tree | Array of string                  | An array of nodes that serve as a proof for the addresses | no |
-|padding       | string     | Allows for enforcing constant length messages         |  yes |
+| Name         | Type                                               | Description                                               | optional |
+|--------------|----------------------------------------------------|-----------------------------------------------------------|----------|
+| addresses    | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses                  | no       |
+| partial_tree | Array of string                                    | An array of nodes that serve as a proof for the addresses | no       |
+| padding      | string                                             | Allows for enforcing constant length messages             | yes      |
 
 ##### Response
 ```json
@@ -137,11 +138,11 @@ Creates an account from which the user will claim all of his given addresses' re
 ### UpdateAccount
 Updates a users accounts with more addresses
 ##### Request
-| Name      | Type                        | Description                              | optional |
-|-----------|-----------------------------|------------------------------------------|----------|
-| addresses | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses | no       |
-| partial_tree | Array of string          | An array of nodes that serve as a proof for the addresses | no |
-|padding       | string     | Allows for enforcing constant length messages         |  yes |
+| Name         | Type                                               | Description                                               | optional |
+|--------------|----------------------------------------------------|-----------------------------------------------------------|----------|
+| addresses    | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses                  | no       |
+| partial_tree | Array of string                                    | An array of nodes that serve as a proof for the addresses | no       |
+| padding      | string                                             | Allows for enforcing constant length messages             | yes      |
 
 ##### Response
 ```json
@@ -155,10 +156,10 @@ Updates a users accounts with more addresses
 ### DisablePermitKey
 Disables that permit's key. Any permit that has that key for that address will be declined.
 ##### Request
-| Name      | Type                        | Description                              | optional |
-|-----------|-----------------------------|------------------------------------------|----------|
-| key | string | Permit key | no       |
-|padding       | string     | Allows for enforcing constant length messages         |  yes |
+| Name    | Type   | Description                                   | optional |
+|---------|--------|-----------------------------------------------|----------|
+| key     | string | Permit key                                    | no       |
+| padding | string | Allows for enforcing constant length messages | yes      |
 
 ##### Response
 ```json
@@ -188,7 +189,7 @@ Gets the contract's config
 #### Response
 ```json
 {
-  "config": {
+  "config": {boolean
     "config": "Contract's config"
   }
 }
@@ -197,9 +198,9 @@ Gets the contract's config
 ## Dates
 Get the contracts airdrop timeframe, can calculate the decay factor if a time is given
 ##### Request
-|Name    |Type    |Description                          | optional |
-|--------|--------|-------------------------------------|----------|
-|current_date | u64 | The current time in UNIX format | yes       |
+| Name         | Type | Description                     | optional |
+|--------------|------|---------------------------------|----------|
+| current_date | u64  | The current time in UNIX format | yes      |
 ```json
 {
   "dates": {
@@ -225,10 +226,10 @@ Shows the total amount of the token that has been claimed. If airdrop hasn't end
 ## Account
 Get the account's information
 ##### Request
-|Name    |Type    |Description                          | optional |
-|--------|--------|-------------------------------------|----------|
-|permit  | [AccountProofPermit](#AccountProofMsg)|Address's permit | no |
-|current_date | u64 | Current time in UNIT format       | yes      |
+| Name         | Type                                   | Description                 | optional |
+|--------------|----------------------------------------|-----------------------------|----------|
+| permit       | [AccountProofPermit](#AccountProofMsg) | Address's permit            | no       |
+| current_date | u64                                    | Current time in UNIT format | yes      |
 ```json
 {
   "account": {
@@ -236,6 +237,26 @@ Get the account's information
     "claimed": "Claimed amount",
     "unclaimed": "Amount available to claim",
     "finished_tasks": "All of the finished tasks"
+  }
+}
+```
+
+## VerifyClaimed
+Check if the addresses have been claimed
+##### Request
+| Name         | Type                                               | Description                 | optional |
+|--------------|----------------------------------------------------|-----------------------------|----------|
+| permit       | array of [AddressProofPermit](#AddressProofPermit) | Address's permit            | no       |
+
+```json
+{
+  "verify_claimed": {
+    "results": [
+      {
+        "account": "account address",
+        "claimed": true
+      }
+    ]
   }
 }
 ```
