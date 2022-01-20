@@ -1,15 +1,6 @@
 use cosmwasm_std::{
-    debug_print,
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdResult,
-    Storage,
+    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
+    StdResult, Storage,
 };
 
 use shade_protocol::scrt_staking::{Config, HandleMsg, InitMsg, QueryMsg};
@@ -17,8 +8,7 @@ use shade_protocol::scrt_staking::{Config, HandleMsg, InitMsg, QueryMsg};
 use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
 
 use crate::{
-    handle,
-    query,
+    handle, query,
     state::{config_w, self_address_w, viewing_key_r, viewing_key_w},
 };
 
@@ -94,6 +84,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         // All delegations
         QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
-        QueryMsg::Delegation { validator } => to_binary(&query::delegation(deps, validator)?),
+        //QueryMsg::Delegation { validator } => to_binary(&query::delegation(deps, validator)?),
+        QueryMsg::Rewards {} => to_binary(&query::rewards(deps)?),
     }
 }

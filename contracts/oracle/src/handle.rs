@@ -1,15 +1,6 @@
 use crate::state::{config_r, config_w, index_w, sswap_pairs_r, sswap_pairs_w};
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
+    to_binary, Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage,
 };
 use secret_toolkit::{
     snip20::{token_info_query, TokenInfo},
@@ -36,14 +27,17 @@ pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
     let (token_contract, token_info) =
         fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
 
-    sswap_pairs_w(&mut deps.storage).save(token_info.symbol.as_bytes(), &SswapPair {
-        pair,
-        asset: Snip20Asset {
-            contract: token_contract,
-            token_info: token_info.clone(),
-            token_config: None,
+    sswap_pairs_w(&mut deps.storage).save(
+        token_info.symbol.as_bytes(),
+        &SswapPair {
+            pair,
+            asset: Snip20Asset {
+                contract: token_contract,
+                token_info: token_info.clone(),
+                token_config: None,
+            },
         },
-    })?;
+    )?;
 
     Ok(HandleResponse {
         messages: vec![],

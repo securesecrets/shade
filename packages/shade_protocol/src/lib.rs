@@ -6,6 +6,8 @@ pub mod math;
 pub mod secretswap;
 pub mod snip20;
 
+//pub mod math;
+
 // Protocol init libraries
 pub mod airdrop;
 pub mod initializer;
