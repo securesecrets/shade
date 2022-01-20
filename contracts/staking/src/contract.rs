@@ -12,9 +12,7 @@ use cosmwasm_std::{
     Uint128,
 };
 use secret_toolkit::snip20::register_receive_msg;
-use shade_protocol::{
-    staking::{Config, HandleMsg, InitMsg, QueryMsg, stake::Stake},
-};
+use shade_protocol::staking::{stake::Stake, Config, HandleMsg, InitMsg, QueryMsg};
 use shade_protocol::utils::asset::Contract;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(

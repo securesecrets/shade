@@ -1,5 +1,5 @@
 use colored::*;
-use cosmwasm_std::{Binary, HumanAddr, to_binary, Uint128};
+use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
 use flexible_permits::{permit::Permit, transaction::PermitSignature};
 use network_integration::{
     contract_helpers::{
@@ -23,14 +23,15 @@ use secretcli::secretcli::{
 };
 use serde::Serialize;
 use serde_json::Result;
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     airdrop::{
         self,
         account::{AccountPermitMsg, AddressProofMsg},
         claim_info::RequiredTask,
     },
-    band,
-    governance,
+    band, governance,
     governance::{
         proposal::ProposalStatus,
         vote::{UserVote, Vote},
@@ -40,8 +41,6 @@ use shade_protocol::{
     staking,
 };
 use std::{thread, time};
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 fn create_signed_permit<T: Clone + Serialize>(permit_msg: T, signer: &str) -> Permit<T> {
     let chain_id = Some("testnet".to_string());
@@ -308,14 +307,13 @@ fn run_airdrop() -> Result<()> {
 
     /// verification query
     {
-        let msg = airdrop::QueryMsg::VerifyClaimed { accounts: vec![b_permit, a_permit] };
+        let msg = airdrop::QueryMsg::VerifyClaimed {
+            accounts: vec![b_permit, a_permit],
+        };
 
         let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
 
-        if let airdrop::QueryAnswer::VerifyClaimed {
-            results
-        } = query
-        {
+        if let airdrop::QueryAnswer::VerifyClaimed { results } = query {
             for result in results.iter() {
                 assert!(result.claimed);
             }

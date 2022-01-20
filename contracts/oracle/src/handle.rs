@@ -6,13 +6,13 @@ use secret_toolkit::{
     snip20::{token_info_query, TokenInfo},
     utils::Query,
 };
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     oracle::{HandleAnswer, IndexElement, SswapPair},
     secretswap::{PairQuery, PairResponse},
     snip20::Snip20Asset,
 };
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

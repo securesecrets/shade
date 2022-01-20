@@ -6,16 +6,16 @@ use secret_toolkit::{
     snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
     utils::Query,
 };
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     band::ReferenceData,
     micro_mint::{Config, HandleAnswer, SupportedAsset},
     mint::MintMsgHook,
     oracle::QueryMsg::Price,
-    snip20::{Snip20Asset, token_config_query, TokenConfig},
+    snip20::{token_config_query, Snip20Asset, TokenConfig},
 };
 use std::{cmp::Ordering, convert::TryFrom};
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 use crate::state::{
     asset_list_w, asset_peg_r, assets_r, assets_w, config_r, config_w, limit_w, native_asset_r,

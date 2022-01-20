@@ -1,6 +1,6 @@
 use crate::{
     contract_helpers::{governance::init_contract, minter::get_balance},
-    utils::{ACCOUNT_KEY, GAS, print_contract, print_header, STAKING_FILE},
+    utils::{print_contract, print_header, ACCOUNT_KEY, GAS, STAKING_FILE},
 };
 use cosmwasm_std::{HumanAddr, Uint128};
 use secretcli::{
@@ -8,9 +8,9 @@ use secretcli::{
     secretcli::{query_contract, test_contract_handle},
 };
 use serde_json::Result;
+use shade_protocol::utils::asset::Contract;
 use shade_protocol::{snip20, staking};
 use std::{thread, time, time::UNIX_EPOCH};
-use shade_protocol::utils::asset::Contract;
 
 pub fn setup_staker(
     governance: &NetContract,

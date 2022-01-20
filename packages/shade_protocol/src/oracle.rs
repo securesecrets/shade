@@ -4,10 +4,10 @@ use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
-#[cfg(test)]
-use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
+#[cfg(test)]
+use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct SswapPair {

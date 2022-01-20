@@ -6,12 +6,12 @@ mod tests {
         testing::{mock_dependencies, mock_env},
         Api, Extern, HumanAddr, Querier, Storage, Uint128,
     };
+    use shade_protocol::utils::asset::Contract;
+    use shade_protocol::utils::generic_response::ResponseStatus;
     use shade_protocol::{
         governance,
         governance::proposal::{ProposalStatus, QueriedProposal},
     };
-    use shade_protocol::utils::asset::Contract;
-    use shade_protocol::utils::generic_response::ResponseStatus;
 
     #[test]
     fn get_proposals_by_status() {

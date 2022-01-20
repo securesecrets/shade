@@ -6,9 +6,7 @@ pub mod tests {
         permit::bech32_to_canonical,
         transaction::{PermitSignature, PubKey},
     };
-    use shade_protocol::{
-        airdrop::account::{AddressProofMsg, AddressProofPermit},
-    };
+    use shade_protocol::airdrop::account::{AddressProofMsg, AddressProofPermit};
     use shade_protocol::utils::math::{div, mult};
 
     #[test]

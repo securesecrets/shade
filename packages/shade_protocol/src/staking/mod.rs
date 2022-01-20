@@ -1,11 +1,11 @@
 pub mod stake;
 use crate::governance::vote::UserVote;
+use crate::utils::asset::Contract;
+use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, Query};
 use serde::{Deserialize, Serialize};
-use crate::utils::asset::Contract;
-use crate::utils::generic_response::ResponseStatus;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

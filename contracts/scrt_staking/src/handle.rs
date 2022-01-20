@@ -6,11 +6,11 @@ use cosmwasm_std::{
 
 use secret_toolkit::snip20::{deposit_msg, redeem_msg, send_msg};
 
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     scrt_staking::{HandleAnswer, ValidatorBounds},
     treasury::Flag,
 };
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 use crate::{
     query,

@@ -8,15 +8,15 @@ use cosmwasm_std::{
     Uint128,
 };
 use secret_toolkit::{snip20::send_msg, utils::HandleCallback};
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus::Success;
 use shade_protocol::{
     governance::vote::{UserVote, Vote, VoteTally},
     staking::{
-        HandleAnswer,
         stake::{Stake, Unbonding, UserStake},
+        HandleAnswer,
     },
 };
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus::Success;
 
 pub(crate) fn calculate_shares(tokens: Uint128, state: &Stake) -> Uint128 {
     if state.total_shares.is_zero() && state.total_tokens.is_zero() {

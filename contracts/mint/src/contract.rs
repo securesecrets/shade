@@ -7,6 +7,8 @@ use secret_toolkit::{
     snip20::{burn_msg, mint_msg, minters_query, register_receive_msg, token_info_query},
     utils::{InitCallback, Query},
 };
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     band::ReferenceData,
     mint::{
@@ -16,8 +18,6 @@ use shade_protocol::{
     oracle::QueryMsg::Price,
 };
 use std::{cmp::Ordering, convert::TryFrom};
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 // TODO: add remove asset
 // TODO: add spacepad padding
