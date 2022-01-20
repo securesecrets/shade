@@ -1,60 +1,26 @@
 use crate::{
     proposal_state::{
-        proposal_funding_batch_w,
-        proposal_funding_deadline_r,
-        proposal_funding_deadline_w,
-        proposal_funding_r,
-        proposal_funding_w,
-        proposal_r,
-        proposal_run_status_w,
-        proposal_status_r,
-        proposal_status_w,
-        proposal_votes_r,
-        proposal_votes_w,
-        proposal_voting_deadline_r,
-        proposal_voting_deadline_w,
-        proposal_w,
-        total_proposal_votes_r,
-        total_proposal_votes_w,
-        total_proposals_w,
+        proposal_funding_batch_w, proposal_funding_deadline_r, proposal_funding_deadline_w,
+        proposal_funding_r, proposal_funding_w, proposal_r, proposal_run_status_w,
+        proposal_status_r, proposal_status_w, proposal_votes_r, proposal_votes_w,
+        proposal_voting_deadline_r, proposal_voting_deadline_w, proposal_w, total_proposal_votes_r,
+        total_proposal_votes_w, total_proposals_w,
     },
     state::{
-        admin_commands_list_w,
-        admin_commands_r,
-        admin_commands_w,
-        config_r,
-        config_w,
-        supported_contract_r,
-        supported_contract_w,
-        supported_contracts_list_w,
+        admin_commands_list_w, admin_commands_r, admin_commands_w, config_r, config_w,
+        supported_contract_r, supported_contract_w, supported_contracts_list_w,
     },
 };
 use cosmwasm_std::{
-    Api,
-    Binary,
-    CosmosMsg,
-    Env,
-    Extern,
-    from_binary,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    to_binary,
-    Uint128,
-    WasmMsg,
+    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
+    Querier, StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use secret_toolkit::snip20::{batch::SendAction, batch_send_msg, send_msg};
 use shade_protocol::{
     governance::{
-        ADMIN_COMMAND_VARIABLE,
-        AdminCommand,
-        GOVERNANCE_SELF,
-        HandleAnswer,
         proposal::{Proposal, ProposalStatus},
         vote::VoteTally,
+        AdminCommand, HandleAnswer, ADMIN_COMMAND_VARIABLE, GOVERNANCE_SELF,
     },
 };
 use shade_protocol::utils::asset::Contract;
@@ -718,10 +684,13 @@ pub fn try_add_admin_command<S: Storage, A: Api, Q: Querier>(
     }
 
     // Save command
-    admin_commands_w(&mut deps.storage).save(name.as_bytes(), &AdminCommand {
-        msg: proposal.clone(),
-        total_arguments: proposal.matches(ADMIN_COMMAND_VARIABLE).count() as u16,
-    })?;
+    admin_commands_w(&mut deps.storage).save(
+        name.as_bytes(),
+        &AdminCommand {
+            msg: proposal.clone(),
+            total_arguments: proposal.matches(ADMIN_COMMAND_VARIABLE).count() as u16,
+        },
+    )?;
 
     // Update command list
     admin_commands_list_w(&mut deps.storage).update(|mut arr| {

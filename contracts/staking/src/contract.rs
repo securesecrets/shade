@@ -1,28 +1,14 @@
 use crate::{
     handle::{
-        try_claim_rewards,
-        try_claim_unbond,
-        try_set_viewing_key,
-        try_stake,
-        try_unbond,
-        try_update_config,
-        try_vote,
+        try_claim_rewards, try_claim_unbond, try_set_viewing_key, try_stake, try_unbond,
+        try_update_config, try_vote,
     },
     query,
     state::{config_w, stake_state_w, unbonding_w},
 };
 use binary_heap_plus::BinaryHeap;
 use cosmwasm_std::{
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdResult,
-    Storage,
-    to_binary,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
     Uint128,
 };
 use secret_toolkit::snip20::register_receive_msg;

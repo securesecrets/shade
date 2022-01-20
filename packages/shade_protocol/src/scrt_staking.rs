@@ -1,5 +1,5 @@
-use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, Decimal, FullDelegation, HumanAddr, Uint128, Validator};
+use crate::{asset::Contract, generic_response::ResponseStatus};
+use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
@@ -85,7 +85,7 @@ pub enum HandleAnswer {
     },
     Unbond {
         status: ResponseStatus,
-        delegation: FullDelegation,
+        delegation: Delegation,
     },
 }
 
@@ -96,7 +96,8 @@ pub enum QueryMsg {
     //TODO: find a way to query this and return
     //Unbondings {},
     Delegations {},
-    Delegation { validator: HumanAddr },
+    //Delegation { validator: HumanAddr },
+    Rewards {},
 }
 
 impl Query for QueryMsg {

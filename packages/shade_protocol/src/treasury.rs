@@ -1,37 +1,59 @@
-use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, Decimal, HumanAddr, Uint128};
+use crate::{asset::Contract, generic_response::ResponseStatus};
+use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
-use secret_toolkit::{
-    snip20,
-    utils::{HandleCallback, InitCallback, Query},
-};
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 use crate::utils::asset::Contract;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
-    pub owner: HumanAddr,
+    pub admin: HumanAddr,
+    //pub account_holders: Vec<HumanAddr>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Asset {
-    pub contract: Contract,
-    pub token_info: snip20::TokenInfo,
-    pub allocations: Option<Vec<Allocation>>,
+pub enum Allocation {
+    // To remain liquid
+    Reserves {
+        allocation: Uint128,
+    },
+    Rewards {
+        contract: Contract,
+        allocation: Uint128,
+    },
+    // SCRT/ATOM/OSMO staking
+    Staking {
+        contract: Contract,
+        allocation: Uint128,
+    },
+    // SKY / Derivative Staking
+    Application {
+        contract: Contract,
+        allocation: Uint128,
+        token: HumanAddr,
+    },
+    // Liquidity Providing
+    Pool {
+        contract: Contract,
+        allocation: Uint128,
+        secondary_asset: HumanAddr,
+        token: HumanAddr,
+    },
 }
 
+// Flag to be sent with funds
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Allocation {
-    pub contract: Contract,
-    pub portion: Decimal,
+pub struct Flag {
+    pub flag: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
+    //pub account_holders: Option<Vec<HumanAddr>>,
 }
 
 impl InitCallback for InitMsg {
@@ -49,18 +71,21 @@ pub enum HandleMsg {
         msg: Option<Binary>,
     },
     UpdateConfig {
-        owner: Option<HumanAddr>,
+        config: Config,
     },
     RegisterAsset {
         contract: Contract,
-        /* List of contracts/users given an allowance based on a percentage of the asset balance
-         * e.g. governance, LP, SKY
-         */
-        allocations: Option<Vec<Allocation>>,
+        reserves: Option<Uint128>,
     },
-
-    // Trigger to re-calc asset allocations
-    Rebalance {},
+    /* List of contracts/users given an allowance based on a percentage of the asset balance
+     * e.g. governance, LP, SKY
+     */
+    RegisterAllocation {
+        asset: HumanAddr,
+        allocation: Allocation,
+    },
+    // Trigger to re-allocate asset (all if none)
+    //Rebalance { asset: Option<HumanAddr> },
 }
 
 impl HandleCallback for HandleMsg {
@@ -77,23 +102,24 @@ pub enum HandleAnswer {
     UpdateConfig {
         status: ResponseStatus,
     },
-    RegisterAsset {
-        status: ResponseStatus,
-    },
     Receive {
         status: ResponseStatus,
     },
-    Rebalance {
+    RegisterAsset {
         status: ResponseStatus,
     },
+    RegisterApp {
+        status: ResponseStatus,
+    },
+    //Rebalance { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetConfig {},
-    GetBalance { contract: HumanAddr },
-    CanRebalance {},
+    Config {},
+    Allocations { asset: HumanAddr },
+    Balance { asset: HumanAddr },
 }
 
 impl Query for QueryMsg {
@@ -104,6 +130,6 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
+    Allocations { allocations: Vec<Allocation> },
     Balance { amount: Uint128 },
-    CanRebalance { possible: bool },
 }

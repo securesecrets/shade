@@ -1,19 +1,13 @@
 #[cfg(test)]
 pub mod tests {
     use crate::handle::inverse_normalizer;
-    use cosmwasm_std::{
-        Binary,
-        HumanAddr,
-        Uint128,
-    };
+    use cosmwasm_std::{Binary, HumanAddr, Uint128};
     use flexible_permits::{
         permit::bech32_to_canonical,
         transaction::{PermitSignature, PubKey},
     };
     use shade_protocol::{
-        airdrop::{
-            account::{AddressProofMsg, AddressProofPermit},
-        },
+        airdrop::account::{AddressProofMsg, AddressProofPermit},
     };
     use shade_protocol::utils::math::{div, mult};
 

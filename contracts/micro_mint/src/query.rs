@@ -1,11 +1,5 @@
 use crate::state::{
-    asset_list_r,
-    asset_peg_r,
-    assets_r,
-    config_r,
-    limit_r,
-    native_asset_r,
-    total_burned_r,
+    asset_list_r, asset_peg_r, assets_r, config_r, limit_r, native_asset_r, total_burned_r,
 };
 use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage};
 use shade_protocol::micro_mint::QueryAnswer;

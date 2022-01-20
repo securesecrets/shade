@@ -3,13 +3,7 @@ use serde_json::Result;
 use shade_protocol::{governance, governance::GOVERNANCE_SELF};
 
 use crate::utils::{
-    ACCOUNT_KEY,
-    GAS,
-    generate_label,
-    print_contract,
-    print_header,
-    print_warning,
-    STORE_GAS,
+    generate_label, print_contract, print_header, print_warning, ACCOUNT_KEY, GAS, STORE_GAS,
 };
 
 use secretcli::{

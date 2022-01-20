@@ -1,21 +1,7 @@
 use crate::state::{asset_list, asset_list_read, assets_r, assets_w, config, config_read};
 use cosmwasm_std::{
-    Api,
-    Binary,
-    CosmosMsg,
-    debug_print,
-    Env,
-    Extern,
-    from_binary,
-    HandleResponse,
-    HumanAddr,
-    InitResponse,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    to_binary,
-    Uint128,
+    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    HumanAddr, InitResponse, Querier, StdError, StdResult, Storage, Uint128,
 };
 use secret_toolkit::{
     snip20::{burn_msg, mint_msg, minters_query, register_receive_msg, token_info_query},
@@ -24,13 +10,7 @@ use secret_toolkit::{
 use shade_protocol::{
     band::ReferenceData,
     mint::{
-        HandleAnswer,
-        HandleMsg,
-        InitMsg,
-        MintConfig,
-        QueryAnswer,
-        QueryMsg,
-        SnipMsgHook,
+        HandleAnswer, HandleMsg, InitMsg, MintConfig, QueryAnswer, QueryMsg, SnipMsgHook,
         SupportedAsset,
     },
     oracle::QueryMsg::Price,
@@ -504,8 +484,8 @@ fn query_config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRe
 mod tests {
     use super::*;
     use cosmwasm_std::{
-        coins,
-        from_binary,
+        coins, from_binary,
+        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
         StdError,
         testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
     };
@@ -682,9 +662,12 @@ mod tests {
         let _res = handle(&mut deps, env, msg).unwrap();
 
         // Response should be new dummy contract
-        let res = query(&deps, QueryMsg::GetAsset {
-            contract: "some_contract".to_string(),
-        })
+        let res = query(
+            &deps,
+            QueryMsg::GetAsset {
+                contract: "some_contract".to_string(),
+            },
+        )
         .unwrap();
         let value: QueryAnswer = from_binary(&res).unwrap();
         match value {

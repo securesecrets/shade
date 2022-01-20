@@ -1,12 +1,6 @@
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use network_integration::utils::{
-    AIRDROP_FILE,
-    GAS,
-    generate_label,
-    print_contract,
-    print_header,
-    SNIP20_FILE,
-    STORE_GAS,
+    generate_label, print_contract, print_header, AIRDROP_FILE, GAS, SNIP20_FILE, STORE_GAS,
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use secretcli::secretcli::{account_address, test_contract_handle, test_inst_init};

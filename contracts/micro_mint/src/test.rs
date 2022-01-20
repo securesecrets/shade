@@ -1,12 +1,9 @@
 #[cfg(test)]
 pub mod tests {
     use cosmwasm_std::{
-        coins,
-        Extern,
-        from_binary,
-        StdError,
+        coins, from_binary,
         testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-        Uint128,
+        Extern, StdError, Uint128,
     };
     use mockall_double::double;
     use shade_protocol::{
