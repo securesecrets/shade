@@ -3,10 +3,7 @@ use crate::state::{
     claim_status_w, config_r, config_w, decay_claimed_w, revoke_permit, total_claimed_r,
     total_claimed_w, validate_address_permit,
 };
-use cosmwasm_std::{
-    to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier, StdError,
-    StdResult, Storage, Uint128,
-};
+use cosmwasm_std::{to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, Uint128, from_binary};
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use secret_toolkit::snip20::send_msg;
 use shade_protocol::airdrop::{
@@ -14,6 +11,7 @@ use shade_protocol::airdrop::{
     claim_info::RequiredTask,
     Config, HandleAnswer,
 };
+use shade_protocol::airdrop::account::AddressProofMsg;
 use shade_protocol::utils::generic_response::ResponseStatus;
 
 #[allow(clippy::too_many_arguments)]
@@ -543,45 +541,52 @@ pub fn try_add_account_addresses<S: Storage>(
 
     // Iterate addresses
     for permit in addresses.iter() {
-        let address: HumanAddr;
-        // Avoid verifying sender
-        if &permit.params.address != sender {
-            // Check permit legitimacy
-            address = validate_address_permit(storage, permit, config.contract.clone())?;
-            if address != permit.params.address {
-                return Err(StdError::generic_err(
-                    "Signer address is not the same as the permit address",
-                ));
-            }
-        } else {
-            address = sender.clone();
-        }
+        if let Some(memo) = permit.memo.clone() {
+            let params: AddressProofMsg = from_binary(&Binary::from_base64(&memo)?)?;
 
-        // Check that airdrop amount does not exceed maximum
-        if permit.params.amount > config.max_amount {
-            return Err(StdError::generic_err("Amount exceeds maximum amount"));
-        }
-
-        // Update address if its not in an account
-        address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
-            if state.is_some() {
-                return Err(StdError::generic_err(format!(
-                    "{:?} already in an account",
-                    address.to_string()
-                )));
+            let address: HumanAddr;
+            // Avoid verifying sender
+            if &params.address != sender {
+                // Check permit legitimacy
+                address = validate_address_permit(storage, permit, config.contract.clone())?;
+                if address != params.address {
+                    return Err(StdError::generic_err(
+                        "Signer address is not the same as the permit address",
+                    ));
+                }
+            } else {
+                address = sender.clone();
             }
 
-            Ok(true)
-        })?;
+            // Check that airdrop amount does not exceed maximum
+            if params.amount > config.max_amount {
+                return Err(StdError::generic_err("Amount exceeds maximum amount"));
+            }
 
-        // Add account as a leaf
-        let leaf_hash =
-            Sha256::hash((address.to_string() + &permit.params.amount.to_string()).as_bytes());
-        leaves_to_validate.push((permit.params.index as usize, leaf_hash));
+            // Update address if its not in an account
+            address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
+                if state.is_some() {
+                    return Err(StdError::generic_err(format!(
+                        "{:?} already in an account",
+                        address.to_string()
+                    )));
+                }
 
-        // If valid then add to account array and sum total amount
-        account.addresses.push(address);
-        account.total_claimable += permit.params.amount;
+                Ok(true)
+            })?;
+
+            // Add account as a leaf
+            let leaf_hash =
+                Sha256::hash((address.to_string() + &params.amount.to_string()).as_bytes());
+            leaves_to_validate.push((params.index as usize, leaf_hash));
+
+            // If valid then add to account array and sum total amount
+            account.addresses.push(address);
+            account.total_claimable += params.amount;
+        }
+        else {
+            return Err(StdError::generic_err(format!("Expected a memo")))
+        }
     }
 
     // Need to sort by index in order for the proof to work

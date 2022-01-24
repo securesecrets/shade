@@ -110,6 +110,7 @@ pub fn verify_claimed<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     addresses: Vec<AddressProofPermit>,
 ) -> StdResult<QueryAnswer> {
+    // TODO: replace this with an array of claimed addresses for better UX
     let config = config_r(&deps.storage).load()?;
     let mut results = vec![];
 

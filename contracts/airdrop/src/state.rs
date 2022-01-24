@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{Api, Binary, Extern, from_binary, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
@@ -7,6 +7,7 @@ use shade_protocol::airdrop::{
     account::{authenticate_ownership, Account, AccountPermit, AddressProofPermit},
     Config,
 };
+use shade_protocol::airdrop::account::AddressProofMsg;
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static DECAY_CLAIMED_KEY: &[u8] = b"decay_claimed";
@@ -119,22 +120,27 @@ pub fn validate_address_permit<S: Storage>(
     permit: &AddressProofPermit,
     contract: HumanAddr,
 ) -> StdResult<HumanAddr> {
-    // Check that contract matches
-    if permit.params.contract != contract {
-        return Err(StdError::unauthorized());
-    }
+    if let Some(memo) = permit.memo.clone() {
+        let params: AddressProofMsg = from_binary(&Binary::from_base64(&memo)?)?;
 
-    // Check that permit is not revoked
-    if is_permit_revoked(
-        storage,
-        permit.params.address.to_string(),
-        permit.params.key.clone(),
-    )? {
-        return Err(StdError::generic_err("permit key revoked"));
-    }
+        // Check that contract matches
+        if params.contract != contract {
+            return Err(StdError::unauthorized());
+        }
 
-    // Authenticate permit
-    authenticate_ownership(permit)
+        // Check that permit is not revoked
+        if is_permit_revoked(
+            storage,
+            params.address.to_string(),
+            params.key.clone(),
+        )? {
+            return Err(StdError::generic_err("permit key revoked"));
+        }
+
+        // Authenticate permit
+        return authenticate_ownership(permit)
+    }
+    Err(StdError::generic_err("Expected a memo"))
 }
 
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
@@ -148,7 +154,7 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Authenticate permit
-    let address = permit.validate()?.as_humanaddr(&deps.api)?;
+    let address = permit.validate(None)?.as_humanaddr(&deps.api)?;
 
     // Check that permit is not revoked
     if is_permit_revoked(
@@ -159,5 +165,6 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("permit key revoked"));
     }
 
-    Ok(address)
+    return Ok(address)
+
 }

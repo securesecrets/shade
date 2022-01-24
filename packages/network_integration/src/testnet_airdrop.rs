@@ -79,7 +79,7 @@ fn main() -> Result<()> {
         name: "SHD".to_string(),
         admin: None,
         symbol: "SHADE".to_string(),
-        decimals: 6,
+        decimals: 8,
         initial_balances: Some(vec![InitialBalance {
             address: HumanAddr::from(account_addr.clone()),
             amount: args.initial_amount,
