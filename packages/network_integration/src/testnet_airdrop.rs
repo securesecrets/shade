@@ -76,10 +76,10 @@ fn main() -> Result<()> {
     print_header("Initializing Snip20");
 
     let snip_init_msg = snip20::InitMsg {
-        name: "SHD".to_string(),
+        name: "Shade".to_string(),
         admin: None,
-        symbol: "SHADE".to_string(),
-        decimals: 6,
+        symbol: "SHD".to_string(),
+        decimals: 8,
         initial_balances: Some(vec![InitialBalance {
             address: HumanAddr::from(account_addr.clone()),
             amount: args.initial_amount,

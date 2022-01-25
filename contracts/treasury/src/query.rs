@@ -2,7 +2,7 @@ use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage
 use secret_toolkit::utils::Query;
 use shade_protocol::{snip20, treasury};
 
-use crate::state::{allocations_r, assets_r, config_r, self_address_r, viewing_key_r};
+use crate::state::{allocations_r, assets_r, config_r, self_address_r, viewing_key_r, last_allowance_refresh_r};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -54,6 +54,15 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
             }
             Some(a) => a,
         },
+    })
+}
+
+pub fn last_allowance_refresh<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<treasury::QueryAnswer> {
+
+    Ok(treasury::QueryAnswer::LastAllowanceRefresh {
+        datetime: last_allowance_refresh_r(&deps.storage).load()?,
     })
 }
 

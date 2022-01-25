@@ -24,7 +24,7 @@ pub enum Allocation {
     },
     // Monthly refresh, not counted in rebalance
     Allowance {
-        contract: Contract,
+        address: HumanAddr,
         // Unlike others, this is a direct number of uTKN to allow monthly
         amount: Uint128,
     },
@@ -90,6 +90,7 @@ pub enum HandleMsg {
         asset: HumanAddr,
         allocation: Allocation,
     },
+    RefreshAllowance { },
     // Trigger to re-allocate asset (all if none)
     //Rebalance { asset: Option<HumanAddr> },
 }
@@ -129,6 +130,7 @@ pub enum QueryMsg {
     Config {},
     Allocations { asset: HumanAddr },
     Balance { asset: HumanAddr },
+    LastAllowanceRefresh {},
 }
 
 impl Query for QueryMsg {
@@ -141,4 +143,5 @@ pub enum QueryAnswer {
     Config { config: Config },
     Allocations { allocations: Vec<Allocation> },
     Balance { amount: Uint128 },
+    LastAllowanceRefresh { datetime: String },
 }

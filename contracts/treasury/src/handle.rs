@@ -1,22 +1,27 @@
 use cosmwasm_std;
 use cosmwasm_std::{
+    CosmosMsg,
     from_binary, to_binary, Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdError,
     StdResult, Storage, Uint128,
 };
-use secret_toolkit::snip20::{register_receive_msg, send_msg, set_viewing_key_msg};
+use secret_toolkit;
+use secret_toolkit::utils::Query;
+use secret_toolkit::snip20::{register_receive_msg, send_msg, set_viewing_key_msg, increase_allowance_msg, decrease_allowance_msg };
 
 use shade_protocol::{
     asset::Contract,
     generic_response::ResponseStatus,
     //math::Uint128,
-    snip20::fetch_snip20,
+    snip20,
     treasury::{Allocation, Config, Flag, HandleAnswer, QueryAnswer},
 };
 
 use crate::{
     query,
     state::{
-        allocations_w, assets_r, assets_w, 
+        allocations_r, allocations_w, 
+        assets_r, assets_w, 
+        asset_list_r, asset_list_w,
         config_r, config_w, viewing_key_r,
         last_allowance_refresh_r,
         last_allowance_refresh_w,
@@ -32,6 +37,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
+
     let asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     //debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
     // skip the rest if the send the "unallocated" flag
@@ -58,7 +64,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             for alloc in &mut alloc_list {
                 match alloc {
                     Allocation::Reserves { allocation: _ } => {}
-                    Allocation::Allowance { contract: _, amount: _ } => {}
+                    Allocation::Allowance { address: _, amount: _ } => {}
 
                     Allocation::Rewards {
                         allocation,
@@ -154,13 +160,8 @@ pub fn refresh_allowance<S: Storage, A: Api, Q: Querier>(
 
     let now = Utc::now();
 
-    let last_refresh_str = last_allowance_refresh_r(&mut deps.storage).load()?;
-    //let last_refresh = DateTime::parse_from_rfc3339(&last_refresh_str)?;
     /*
-        .unwrap_or_else(|result| {
-            return Err(StdError::generic_err(format!("Failed to parse {}", last_refresh_str)));
-        }
-    */
+    let last_refresh_str = last_allowance_refresh_r(&mut deps.storage).load()?;
 
     let last_refresh_offset: Option<DateTime<FixedOffset>> = match DateTime::parse_from_rfc3339(&last_refresh_str) {
         Ok(r) => Some(r),
@@ -181,18 +182,86 @@ pub fn refresh_allowance<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::generic_err("Failed to parse from memory"))
         }
     };
+    */
 
+    //last_allowance_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
+    last_allowance_refresh_w(&mut deps.storage).save(&"OOFTA".to_string())?;
 
-    last_allowance_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
-
-    // do refresh
     Ok(HandleResponse {
-        messages: vec![],
+        messages: vec![], //do_allowance_refresh(&deps, &env)?,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RefreshAllowance {
             status: ResponseStatus::Success,
         })?),
     })
+}
+
+/* Not exposed as a tx
+ */
+pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    env: &Env,
+) -> StdResult<Vec<CosmosMsg>> {
+
+    let mut messages = vec![];
+
+    // could be from env (might be faster)?
+    let key = viewing_key_r(&deps.storage).load()?;
+
+    for asset in asset_list_r(&deps.storage).load()? {
+        for alloc in allocations_r(&deps.storage).load(&asset.to_string().as_bytes())? {
+            match alloc {
+                Allocation::Allowance { address, amount }=> {
+
+                    let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
+                    // Determine current allowance
+                    let cur_allowance: secret_toolkit::snip20::Allowance = snip20::QueryMsg::Allowance {
+                        owner: env.contract.address.clone(),
+                        spender: address.clone(),
+                        key: key.clone()
+                    }.query(&deps.querier,
+                            full_asset.contract.code_hash.clone(),
+                            full_asset.contract.address.clone())?;
+
+                    if amount > cur_allowance.allowance {
+
+                        // Increase to monthly allowance amount
+                        messages.push(
+                            increase_allowance_msg(
+                                address.clone(),
+                                (amount - cur_allowance.allowance)?,
+                                None,
+                                None,
+                                1,
+                                full_asset.contract.code_hash.clone(),
+                                full_asset.contract.address.clone(),
+                            )?
+                        );
+                    }
+                    else if amount < cur_allowance.allowance {
+
+                        // Decrease to monthly allowance
+                        messages.push(
+                            decrease_allowance_msg(
+                                address.clone(),
+                                (cur_allowance.allowance - amount)?,
+                                None,
+                                None,
+                                1,
+                                full_asset.contract.code_hash.clone(),
+                                full_asset.contract.address.clone(),
+                            )?
+                        );
+                    }
+
+                }
+                _ => { }
+            }
+        }
+
+    }
+
+    Ok(messages)
 }
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
@@ -209,9 +278,13 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
     let mut messages = vec![];
 
+    asset_list_w(&mut deps.storage).update(|mut list| {
+        list.push(contract.address.clone());
+        Ok(list)
+    })?;
     assets_w(&mut deps.storage).save(
         contract.address.to_string().as_bytes(),
-        &fetch_snip20(&contract, &deps.querier)?,
+        &snip20::fetch_snip20(&contract, &deps.querier)?,
     )?;
 
     let allocs = match reserves {
@@ -283,7 +356,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         Allocation::Reserves { allocation } => *allocation,
 
         // TODO: Needs to be accounted for elsewhere
-        Allocation::Allowance { contract: _, amount: _ } => Uint128::zero(),
+        Allocation::Allowance { address: _, amount: _ } => Uint128::zero(),
 
         Allocation::Rewards {
             contract: _,
@@ -307,7 +380,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     };
 
     let alloc_address = match &alloc {
-        Allocation::Allowance { contract, amount: _ } => Some(contract.address.clone()),
+        Allocation::Allowance { address, amount: _ } => Some(address.clone()),
         Allocation::Staking {
             contract,
             allocation: _,
@@ -341,7 +414,6 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         let mut existing_index = None;
         for (i, app) in app_list.iter_mut().enumerate() {
             if let Some(address) = match app {
-                //Allocation::Reserves { allocation: _ } => None,
                 Allocation::Rewards {
                     contract,
                     allocation: _,
@@ -399,7 +471,6 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         for app in &app_list {
 
             allocated_portion = allocated_portion + match app {
-                //Allocation::Reserves { allocation: _ } => Uint128::zero(),
                 Allocation::Rewards {
                     contract: _,
                     allocation: _,
