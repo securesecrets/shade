@@ -32,6 +32,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let timestamp = "0".parse::<i64>().unwrap();
     let naive = NaiveDateTime::from_timestamp(timestamp, 0);
     let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+
     last_allowance_refresh_w(&mut deps.storage).save(&datetime.to_rfc3339())?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);

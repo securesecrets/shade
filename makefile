@@ -3,8 +3,8 @@ compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
 # Compresses the wasm file, args: compressed_file_name, built_file_name
-define compress_wasm =
-(cd $(contracts_dir)/$(1); cargo unit-test)
+define build =
+(cd $(contracts_dir)/$(1); RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked --features="debug-print")
 wasm-opt -Oz ./target/wasm32-unknown-unknown/release/$(2).wasm -o ./$(1).wasm
 echo $(md5sum $(1).wasm | cut -f 1 -d " ") >> ${checksum_dir}/$(1).txt
 cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
@@ -23,10 +23,13 @@ build_release:
 build_debug:
 	(cd ${contracts_dir}; RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked --features="debug-print")
 
-compress: setup $(CONTRACTS); $(call compress_wasm,snip20,snip20_reference_impl)
+compress: setup snip20 $(CONTRACTS)
 
-$(CONTRACTS):
-	$(call compress_wasm,$@,$@)
+$(CONTRACTS): setup
+	$(call build,$@,$@)
+
+snip20: setup build_debug
+	$(call build,snip20,snip20_reference_impl)
 
 setup: $(compiled_dir) $(checksum_dir)
 

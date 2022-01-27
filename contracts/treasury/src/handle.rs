@@ -6,7 +6,7 @@ use cosmwasm_std::{
 };
 use secret_toolkit;
 use secret_toolkit::utils::Query;
-use secret_toolkit::snip20::{register_receive_msg, send_msg, set_viewing_key_msg, increase_allowance_msg, decrease_allowance_msg };
+use secret_toolkit::snip20::{register_receive_msg, send_msg, set_viewing_key_msg, increase_allowance_msg, decrease_allowance_msg, allowance_query};
 
 use shade_protocol::{
     asset::Contract,
@@ -158,9 +158,9 @@ pub fn refresh_allowance<S: Storage, A: Api, Q: Querier>(
     env: &Env,
 ) -> StdResult<HandleResponse> {
 
-    let now = Utc::now();
+    let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
+    let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
-    /*
     let last_refresh_str = last_allowance_refresh_r(&mut deps.storage).load()?;
 
     let last_refresh_offset: Option<DateTime<FixedOffset>> = match DateTime::parse_from_rfc3339(&last_refresh_str) {
@@ -182,13 +182,11 @@ pub fn refresh_allowance<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::generic_err("Failed to parse from memory"))
         }
     };
-    */
 
-    //last_allowance_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
-    last_allowance_refresh_w(&mut deps.storage).save(&"OOFTA".to_string())?;
+    last_allowance_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
 
     Ok(HandleResponse {
-        messages: vec![], //do_allowance_refresh(&deps, &env)?,
+        messages: do_allowance_refresh(&deps, &env)?,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RefreshAllowance {
             status: ResponseStatus::Success,
@@ -215,13 +213,15 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
 
                     let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
                     // Determine current allowance
-                    let cur_allowance: secret_toolkit::snip20::Allowance = snip20::QueryMsg::Allowance {
-                        owner: env.contract.address.clone(),
-                        spender: address.clone(),
-                        key: key.clone()
-                    }.query(&deps.querier,
-                            full_asset.contract.code_hash.clone(),
-                            full_asset.contract.address.clone())?;
+                    let cur_allowance = allowance_query(
+                        &deps.querier,
+                        env.contract.address.clone(),
+                        address.clone(),
+                        key.clone(),
+                        1,
+                        full_asset.contract.code_hash.clone(),
+                        full_asset.contract.address.clone()
+                    )?;
 
                     if amount > cur_allowance.allowance {
 
