@@ -90,69 +90,28 @@ pub mod tests {
     // }
 
     #[test]
-    fn terra_signature() {
-        let permit = AddressProofPermit {
-            params: FillerMsg::default(),
-            chain_id: Some("columbus-5".to_string()),
-            sequence: None,
-            signature: PermitSignature {
-                pub_key: PubKey {
-                    r#type: "tendermint/PubKeySecp256k1".to_string(),
-                    value: Binary::from_base64(
-                        "A2e8CyzyxoKltim5NxwoQn6b7/KGOudo81t8EyFyw9JD")
-                        .expect("Base 64 invalid")
-                },
-                signature: Binary::from_base64(
-                    "p2jPJpLk8DMfox7tkHCq9rYtYkyHkVchRe3kis6Rx+IULSInNQYBw2INHdjqAk+o6gBU6/MVQnZKrMlIZSkdCw==")
-                    .expect("Base 64 invalid")
-            },
-            account_number: None,
-            memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5Ijoic2lnbmF0dXJlX3Byb29mIn0=".to_string())
-        };
-
-        let permit_addr = permit.validate(
-            Some("wasm/MsgExecuteContract".to_string())).expect("Signature validation failed");
-        assert_eq!(
-            permit_addr.as_canonical(),
-            bech32_to_canonical("terra1jw04jhy0wyth44zvspt8h5d2dv3uwjvh4mezfj")
-        );
-        assert_ne!(
-            permit_addr.as_canonical(),
-            bech32_to_canonical("terra19m2zgdyuq0crpww00jc2a9k70ut944dum53p7x")
-        );
-    }
-
-    #[test]
     fn ledger_terra_signature() {
-        let permit = AddressProofPermit {
+        let mut permit = AddressProofPermit {
             params: FillerMsg::default(),
-            chain_id: Some("columbus-5".to_string()),
+            chain_id: Some("bombay-12".to_string()),
             sequence: Some(Uint128(0)),
             signature: PermitSignature {
-                pub_key: PubKey {
-                    r#type: "tendermint/PubKeySecp256k1".to_string(),
-                    value: Binary::from_base64(
-                        "A8r22cTiywZYSoWR5DnmAeP1jPDF3CLVKJe1QGorv9cM")
-                        .expect("Base 64 invalid")
-                },
+                pub_key: PubKey::new(Binary::from_base64(
+                    "A50CTeVnMYyZGh7K4x4NtdfG1H1oicog6lEoPMi65IK2").unwrap()),
                 signature: Binary::from_base64(
-                    "Mpxa6XjJ9dvSWlbR6D6mpNWdpdzLuE3KspBnyf9VkR4z8RdAH4B6bVu6TmG0jeK+WqTKNwPbWZ+B1UxIehy2AQ==")
-                    .expect("Base 64 invalid")
+                    "75RcVHa/SW1WyjcFMkhZ63+D4ccxffchLvJPyURmtaskA8CPj+y6JSrpuRhxMC+1hdjSJC3c0IeJVbDIRapxPg==").unwrap(),
             },
-            account_number: Some(Uint128(3319970)),
-            memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5Ijoic2lnbmF0dXJlX3Byb29mIn0=".to_string())
+            account_number: Some(Uint128(203289)),
+            memo: Some("b64Encoded".to_string())
         };
 
-        let permit_addr = permit.validate(
-            Some("wasm/MsgExecuteContract".to_string())).expect("Signature validation failed");
-        assert_eq!(
-            permit_addr.as_canonical(),
-            bech32_to_canonical("terra1j8wupj3kpclp98dgg4j5am44kjykx6uztjttyr")
-        );
-        assert_ne!(
-            permit_addr.as_canonical(),
-            bech32_to_canonical("terra19m2zgdyuq0crpww00jc2a9k70ut944dum53p7x")
-        );
+        let addr = permit.validate(Some("wasm/MsgExecuteContract".to_string())).expect("Signature validation failed");;
+        assert_eq!(addr.as_canonical(), bech32_to_canonical("terra1m79yd3jh97vz4tqu0m8g49gfl7qmknhh23kac5"));
+        assert_ne!(addr.as_canonical(), bech32_to_canonical("terra19m2zgdyuq0crpww00jc2a9k70ut944dum53p7x"));
+
+        permit.memo = Some("OtherMemo".to_string());
+
+        assert!(permit.validate(Some("wasm/MsgExecuteContract".to_string())).is_err())
     }
 
     #[test]

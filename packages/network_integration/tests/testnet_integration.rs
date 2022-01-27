@@ -250,7 +250,7 @@ fn run_airdrop() -> Result<()> {
 
     // TODO: change these into the requires msg type
     let b_permit = create_signed_permit(
-        FillerMsg{}, Some(to_binary(&b_address_proof).unwrap().to_base64()), None,"b");
+        FillerMsg::default(), Some(to_binary(&b_address_proof).unwrap().to_base64()), Some("wasm/MsgExecuteContract".to_string()),"b");
 
     let a_address_proof = AddressProofMsg {
         address: HumanAddr(account_a.clone()),
@@ -264,7 +264,7 @@ fn run_airdrop() -> Result<()> {
     let initial_proof = proof_from_tree(&vec![0, 1], &merlke_tree.layers());
 
     let a_permit = create_signed_permit(
-        FillerMsg{}, Some(to_binary(&a_address_proof).unwrap().to_base64()), None, ACCOUNT_KEY);
+        FillerMsg::default(), Some(to_binary(&a_address_proof).unwrap().to_base64()), Some("wasm/MsgExecuteContract".to_string()), ACCOUNT_KEY);
     let account_permit = create_signed_permit(
         AccountPermitMsg {
             contract: HumanAddr(airdrop.address.clone()),
@@ -305,7 +305,7 @@ fn run_airdrop() -> Result<()> {
             total,
             claimed,
             unclaimed,
-            finished_tasks,
+            finished_tasks, ..
         } = query
         {
             assert_eq!(total, a_airdrop + b_airdrop);
@@ -317,21 +317,6 @@ fn run_airdrop() -> Result<()> {
 
     /// Assert that we claimed
     assert_eq!(ab_half_airdrop, get_balance(&snip, account_a.clone()));
-
-    /// verification query
-    {
-        let msg = airdrop::QueryMsg::VerifyClaimed {
-            accounts: vec![b_permit, a_permit],
-        };
-
-        let query: airdrop::QueryAnswer = query_contract(&airdrop, msg)?;
-
-        if let airdrop::QueryAnswer::VerifyClaimed { results } = query {
-            for result in results.iter() {
-                assert!(result.claimed);
-            }
-        }
-    }
 
     print_warning("Enabling the other half of the airdrop");
 
@@ -359,7 +344,7 @@ fn run_airdrop() -> Result<()> {
             total,
             claimed,
             unclaimed,
-            finished_tasks,
+            finished_tasks, ..
         } = query
         {
             assert_eq!(total, a_airdrop + b_airdrop);
@@ -391,7 +376,7 @@ fn run_airdrop() -> Result<()> {
         key: "key".to_string(),
     };
 
-    let c_permit = create_signed_permit(FillerMsg{}, Some(to_binary(&c_address_proof).unwrap().to_base64()), None, "c");
+    let c_permit = create_signed_permit(FillerMsg::default(), Some(to_binary(&c_address_proof).unwrap().to_base64()), Some("wasm/MsgExecuteContract".to_string()), "c");
     let other_proof = proof_from_tree(&vec![2], &merlke_tree.layers());
 
     test_contract_handle(
@@ -423,7 +408,7 @@ fn run_airdrop() -> Result<()> {
             total,
             claimed,
             unclaimed,
-            finished_tasks,
+            finished_tasks, ..
         } = query
         {
             assert_eq!(total, total_airdrop);
@@ -476,7 +461,7 @@ fn run_airdrop() -> Result<()> {
             total,
             claimed,
             unclaimed,
-            finished_tasks,
+            finished_tasks, ..
         } = query
         {
             assert_eq!(total, total_airdrop);
@@ -502,7 +487,7 @@ fn run_airdrop() -> Result<()> {
             key: "key".to_string(),
         };
 
-        let d_permit = create_signed_permit(FillerMsg{}, Some(to_binary(&d_address_proof).unwrap().to_base64()), None, "d");
+        let d_permit = create_signed_permit(FillerMsg::default(), Some(to_binary(&d_address_proof).unwrap().to_base64()), Some("wasm/MsgExecuteContract".to_string()), "d");
         let d_proof = proof_from_tree(&vec![3], &merlke_tree.layers());
 
         test_contract_handle(

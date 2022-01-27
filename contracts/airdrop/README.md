@@ -22,7 +22,6 @@
             * [Dates](#Dates)
             * [TotalClaimed](#TotalClaimed)
             * [Account](#Account)
-            * [VerifyClaimed](#VerifyClaimed)
     
 # Introduction
 Contract responsible to handle snip20 airdrop
@@ -189,7 +188,7 @@ Gets the contract's config
 #### Response
 ```json
 {
-  "config": {boolean
+  "config": {
     "config": "Contract's config"
   }
 }
@@ -236,27 +235,8 @@ Get the account's information
     "total": "Total airdrop amount",
     "claimed": "Claimed amount",
     "unclaimed": "Amount available to claim",
-    "finished_tasks": "All of the finished tasks"
-  }
-}
-```
-
-## VerifyClaimed
-Check if the addresses have been claimed
-##### Request
-| Name         | Type                                               | Description                 | optional |
-|--------------|----------------------------------------------------|-----------------------------|----------|
-| permit       | array of [AddressProofPermit](#AddressProofPermit) | Address's permit            | no       |
-
-```json
-{
-  "verify_claimed": {
-    "results": [
-      {
-        "account": "account address",
-        "claimed": true
-      }
-    ]
+    "finished_tasks": "All of the finished tasks",
+    "addresses": ["claimed addresses"]
   }
 }
 ```
@@ -264,27 +244,29 @@ Check if the addresses have been claimed
 ## AddressProofPermit
 This is a structure used to prove that the user has permission to query that address's information (when querying account info).
 This is also used to prove that the user owns that address (when creating/updating accounts) and the given amount is in the airdrop.
+This permit is written differently from the rest since its made taking into consideration many of Terra's limitations compared to Keplr's flexibility.
 
 NOTE: The parameters must be in order
 
 [How to sign](https://github.com/securesecrets/shade/blob/77abdc70bc645d97aee7de5eb9a2347d22da425f/packages/shade_protocol/src/signature/mod.rs#L100)
 #### Structure
-| Name       | Type            | Description                                        | optional |
-|------------|-----------------|----------------------------------------------------|----------|
-| params     | AddressProofMsg | Information relevant to the airdrop information    | no       |
-| chain_id   | String          | Chain ID of the network this proof will be used in | no       |
-| signature  | PermitSignature | Signature of the permit                            | no       |
+| Name       | Type            | Description                                            | optional |
+|------------|-----------------|--------------------------------------------------------|----------|
+| params     | FillerMsg       | Filler params accounting for Terra Ledgers limitations | no       |
+| memo       | String          | Base64Encoded AddressProofMsg                          | no       |
+| chain_id   | String          | Chain ID of the network this proof will be used in     | no       |
+| signature  | PermitSignature | Signature of the permit                                | no       |
 
-## AccountProofMsg
-The information inside permits that validate account ownership
+## FillerMsg
 
-NOTE: The parameters must be in order
-### Structure
-| Name     | Type    | Description                                             | optional |
-|----------|---------|---------------------------------------------------------|----------|
-| contract | String  | Airdrop contract                                        | no       |
-| key      | String  | Some permit key                                         | no       |
-
+```json
+{
+  "coins": [],
+  "contract": "",
+  "execute_msg": "",
+  "sender": ""
+}
+```
 
 ## AddressProofMsg
 The information inside permits that validate the airdrop eligibility and validate the account holder's key.
@@ -298,6 +280,17 @@ NOTE: The parameters must be in order
 | contract | String  | Airdrop contract                                        | no       |
 | index    | Integer | Index of airdrop data in reference to the original tree | no       |
 | key      | String  | Some permit key                                         | no       |
+
+## AccountProofMsg
+The information inside permits that validate account ownership
+
+NOTE: The parameters must be in order
+### Structure
+| Name     | Type    | Description                                             | optional |
+|----------|---------|---------------------------------------------------------|----------|
+| contract | String  | Airdrop contract                                        | no       |
+| key      | String  | Some permit key                                         | no       |
+
 
 ## PermitSignature
 The signature that proves the validity of the data

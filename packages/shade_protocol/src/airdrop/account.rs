@@ -25,17 +25,19 @@ pub struct AccountPermitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct FillerMsg {
+    pub coins: Vec<String>,
     pub contract: String,
-    pub msg: EmptyMsg,
-    pub sender: String
+    pub execute_msg: EmptyMsg,
+    pub sender: String,
 }
 
 impl Default for FillerMsg {
     fn default() -> Self {
         Self {
+            coins: vec![],
             contract: "".to_string(),
-            msg: EmptyMsg {},
-            sender: "".to_string()
+            sender: "".to_string(),
+            execute_msg: EmptyMsg {}
         }
     }
 }
@@ -56,7 +58,7 @@ pub fn authenticate_ownership(permit: &AddressProofPermit) -> StdResult<HumanAdd
         let permit_address = params.address.clone();
 
         let signer_address = permit.validate(
-            Some("MsgExecuteContract".to_string()))?.as_canonical();
+            Some("wasm/MsgExecuteContract".to_string()))?.as_canonical();
 
         if signer_address != bech32_to_canonical(permit_address.as_str()) {
             return Err(StdError::generic_err(format!(
