@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod tests {
     use crate::handle::inverse_normalizer;
-    use cosmwasm_std::{Binary, HumanAddr, Uint128};
+    use cosmwasm_std::{from_binary, Binary, HumanAddr, Uint128};
     use flexible_permits::{
         permit::bech32_to_canonical,
         transaction::{PermitSignature, PubKey},
@@ -285,6 +285,24 @@ pub mod tests {
         permit.memo = Some("OtherMemo".to_string());
 
         assert!(permit.validate(Some(MSGTYPE.to_string())).is_err())
+    }
+
+    #[test]
+    fn memo_deserialization() {
+        let expected_memo = AddressProofMsg {
+            address: HumanAddr("secret19q7h2zy8mgesy3r39el5fcm986nxqjd7cgylrz".to_string()),
+            amount: Uint128(1000000),
+            contract: HumanAddr("secret1sr62lehajgwhdzpmnl65u35rugjrgznh2572mv".to_string()),
+            index: 10,
+            key: "account-creation-permit".to_string(),
+        };
+
+        let deserialized_memo: AddressProofMsg = from_binary(
+            &Binary::from_base64(
+                &"eyJhZGRyZXNzIjoic2VjcmV0MTlxN2gyenk4bWdlc3kzcjM5ZWw1ZmNtOTg2bnhxamQ3Y2d5bHJ6IiwiYW1vdW50IjoiMTAwMDAwMCIsImNvbnRyYWN0Ijoic2VjcmV0MXNyNjJsZWhhamd3aGR6cG1ubDY1dTM1cnVnanJnem5oMjU3Mm12IiwiaW5kZXgiOjEwLCJrZXkiOiJhY2NvdW50LWNyZWF0aW9uLXBlcm1pdCJ9"
+                    .to_string()).unwrap()).unwrap();
+
+        assert_eq!(deserialized_memo, expected_memo)
     }
 
     #[test]
