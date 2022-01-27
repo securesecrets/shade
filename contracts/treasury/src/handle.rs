@@ -9,8 +9,6 @@ use secret_toolkit::utils::Query;
 use secret_toolkit::snip20::{register_receive_msg, send_msg, set_viewing_key_msg, increase_allowance_msg, decrease_allowance_msg, allowance_query};
 
 use shade_protocol::{
-    asset::Contract,
-    generic_response::ResponseStatus,
     snip20,
     snip20::fetch_snip20,
     treasury::{Allocation, Config, Flag, HandleAnswer, QueryAnswer},
