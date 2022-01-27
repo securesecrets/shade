@@ -161,25 +161,22 @@ pub fn refresh_allowance<S: Storage, A: Api, Q: Querier>(
     let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
-    let last_refresh_str = last_allowance_refresh_r(&mut deps.storage).load()?;
+    // Parse previous refresh datetime
+    match DateTime::parse_from_rfc3339(&last_allowance_refresh_r(&mut deps.storage).load()?) {
+        Ok(parsed) => {
 
-    let last_refresh_offset: Option<DateTime<FixedOffset>> = match DateTime::parse_from_rfc3339(&last_refresh_str) {
-        Ok(r) => Some(r),
-        Err(e) => None,
-    };
+            // Parse into UTC
+            let last_refresh: DateTime<Utc> = parsed.with_timezone(&Utc);
 
-    match last_refresh_offset {
-        Some(parsed) => {
-
-            let last_refresh: DateTime<Utc> = parsed.with_timezone(&Utc);//.utc(); //DateTime<Utc>::from(&last_refresh_offset)?;
-
+            // Fail if we have already refreshed this month
             if now.year() <= last_refresh.year() && now.month() <= last_refresh.month() {
                 return Err(StdError::generic_err(format!("Last refresh too recent: {}", last_refresh.to_rfc3339())));
             }
             
         }
-        None => {
-            return Err(StdError::generic_err("Failed to parse from memory"))
+
+        Err(e) => {
+            return Err(StdError::generic_err("Failed to parse previous datetime"))
         }
     };
 
@@ -203,7 +200,6 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
 
     let mut messages = vec![];
 
-    // could be from env (might be faster)?
     let key = viewing_key_r(&deps.storage).load()?;
 
     for asset in asset_list_r(&deps.storage).load()? {
