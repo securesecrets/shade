@@ -16,17 +16,15 @@ use cosmwasm_std::{
     Querier, StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use secret_toolkit::snip20::{batch::SendAction, batch_send_msg, send_msg};
-use shade_protocol::{
-    asset::Contract,
-    generic_response::{
-        ResponseStatus,
-        ResponseStatus::{Failure, Success},
-    },
-    governance::{
-        proposal::{Proposal, ProposalStatus},
-        vote::VoteTally,
-        AdminCommand, HandleAnswer, ADMIN_COMMAND_VARIABLE, GOVERNANCE_SELF,
-    },
+use shade_protocol::governance::{
+    proposal::{Proposal, ProposalStatus},
+    vote::VoteTally,
+    AdminCommand, HandleAnswer, ADMIN_COMMAND_VARIABLE, GOVERNANCE_SELF,
+};
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::{
+    ResponseStatus,
+    ResponseStatus::{Failure, Success},
 };
 
 pub fn create_proposal<S: Storage, A: Api, Q: Querier>(

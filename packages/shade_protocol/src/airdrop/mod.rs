@@ -1,13 +1,11 @@
 pub mod account;
 pub mod claim_info;
-use crate::{
-    airdrop::{
-        account::{AccountPermit, AddressProofPermit},
-        claim_info::RequiredTask,
-    },
-    asset::Contract,
-    generic_response::ResponseStatus,
+use crate::airdrop::{
+    account::{AccountPermit, AddressProofPermit},
+    claim_info::RequiredTask,
 };
+use crate::utils::asset::Contract;
+use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -147,6 +145,9 @@ pub enum QueryMsg {
         permit: AccountPermit,
         current_date: Option<u64>,
     },
+    VerifyClaimed {
+        accounts: Vec<AddressProofPermit>,
+    },
 }
 
 impl Query for QueryMsg {
@@ -177,4 +178,14 @@ pub enum QueryAnswer {
         unclaimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
     },
+    VerifyClaimed {
+        results: Vec<AccountVerification>,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccountVerification {
+    pub account: HumanAddr,
+    pub claimed: bool,
 }

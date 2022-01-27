@@ -8,7 +8,8 @@ use secretcli::{
     secretcli::{query_contract, test_contract_handle},
 };
 use serde_json::Result;
-use shade_protocol::{asset::Contract, snip20, staking};
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::{snip20, staking};
 use std::{thread, time, time::UNIX_EPOCH};
 
 pub fn setup_staker(

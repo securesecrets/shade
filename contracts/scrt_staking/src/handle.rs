@@ -6,8 +6,8 @@ use cosmwasm_std::{
 
 use secret_toolkit::snip20::{deposit_msg, redeem_msg, send_msg};
 
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    generic_response::ResponseStatus,
     scrt_staking::{HandleAnswer, ValidatorBounds},
     treasury::Flag,
 };

@@ -4,13 +4,11 @@ use cosmwasm_storage::{
     Singleton,
 };
 use secret_toolkit::snip20::batch::SendAction;
-use shade_protocol::{
-    generic_response::ResponseStatus,
-    governance::{
-        proposal::{Proposal, ProposalStatus},
-        vote::VoteTally,
-    },
+use shade_protocol::governance::{
+    proposal::{Proposal, ProposalStatus},
+    vote::VoteTally,
 };
+use shade_protocol::utils::generic_response::ResponseStatus;
 
 // Proposals
 pub static PROPOSAL_KEY: &[u8] = b"proposals";

@@ -1,4 +1,4 @@
-use crate::{asset::Contract, generic_response::ResponseStatus};
+use crate::utils::{asset::Contract, generic_response::ResponseStatus};
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};

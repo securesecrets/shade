@@ -6,9 +6,9 @@ mod tests {
         testing::{mock_dependencies, mock_env},
         Api, Extern, HumanAddr, Querier, Storage, Uint128,
     };
+    use shade_protocol::utils::asset::Contract;
+    use shade_protocol::utils::generic_response::ResponseStatus;
     use shade_protocol::{
-        asset::Contract,
-        generic_response::ResponseStatus,
         governance,
         governance::proposal::{ProposalStatus, QueriedProposal},
     };

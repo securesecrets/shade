@@ -20,7 +20,7 @@ pub fn div(nom: Uint128, den: Uint128) -> StdResult<Uint128> {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::math::{div, mult};
+    use crate::utils::math::{div, mult};
     use cosmwasm_std::Uint128;
 
     #[test]

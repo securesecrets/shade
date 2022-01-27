@@ -6,10 +6,10 @@ use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use secretcli::secretcli::{account_address, test_contract_handle, test_inst_init};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
+use shade_protocol::utils::asset::Contract;
 use shade_protocol::{
     airdrop,
     airdrop::claim_info::RequiredTask,
-    asset::Contract,
     snip20,
     snip20::{InitConfig, InitialBalance},
 };

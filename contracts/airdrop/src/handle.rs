@@ -9,14 +9,12 @@ use cosmwasm_std::{
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::{
-    airdrop::{
-        account::{Account, AddressProofPermit},
-        claim_info::RequiredTask,
-        Config, HandleAnswer,
-    },
-    generic_response::ResponseStatus,
+use shade_protocol::airdrop::{
+    account::{Account, AddressProofPermit},
+    claim_info::RequiredTask,
+    Config, HandleAnswer,
 };
+use shade_protocol::utils::generic_response::ResponseStatus;
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(

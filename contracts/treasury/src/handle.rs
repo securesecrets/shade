@@ -11,9 +11,10 @@ use secret_toolkit::snip20::{register_receive_msg, send_msg, set_viewing_key_msg
 use shade_protocol::{
     asset::Contract,
     generic_response::ResponseStatus,
-    //math::Uint128,
     snip20,
+    snip20::fetch_snip20,
     treasury::{Allocation, Config, Flag, HandleAnswer, QueryAnswer},
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
 use crate::{
@@ -135,7 +136,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
-    
     let cur_config = config_r(&deps.storage).load()?;
 
     if env.message.sender != cur_config.admin {
@@ -266,7 +266,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     contract: &Contract,
     reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
@@ -345,7 +344,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         QueryAnswer::Balance { amount } => amount,
         _ => {
             return Err(StdError::generic_err("Unexpected response for balance"));
-       }
+        }
     };
 
     let alloc_portion = match &alloc {
@@ -491,7 +490,9 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         }
 
         if (allocated_portion + alloc_portion) >= Uint128(10u128.pow(18)) {
-            return Err(StdError::generic_err("Invalid allocation total exceeding 100%"));
+            return Err(StdError::generic_err(
+                "Invalid allocation total exceeding 100%",
+            ));
         }
 
         app_list.push(alloc);
