@@ -3,15 +3,18 @@ use crate::state::{
     claim_status_w, config_r, config_w, decay_claimed_w, revoke_permit, total_claimed_r,
     total_claimed_w, validate_address_permit,
 };
-use cosmwasm_std::{to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, Uint128, from_binary};
+use cosmwasm_std::{
+    from_binary, to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier,
+    StdError, StdResult, Storage, Uint128,
+};
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use secret_toolkit::snip20::send_msg;
+use shade_protocol::airdrop::account::AddressProofMsg;
 use shade_protocol::airdrop::{
     account::{Account, AddressProofPermit},
     claim_info::RequiredTask,
     Config, HandleAnswer,
 };
-use shade_protocol::airdrop::account::AddressProofMsg;
 use shade_protocol::utils::generic_response::ResponseStatus;
 
 #[allow(clippy::too_many_arguments)]
@@ -583,9 +586,8 @@ pub fn try_add_account_addresses<S: Storage>(
             // If valid then add to account array and sum total amount
             account.addresses.push(address);
             account.total_claimable += params.amount;
-        }
-        else {
-            return Err(StdError::generic_err(format!("Expected a memo")))
+        } else {
+            return Err(StdError::generic_err(format!("Expected a memo")));
         }
     }
 

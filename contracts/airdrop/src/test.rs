@@ -37,13 +37,23 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let addr = permit.validate(Some(MSGTYPE.to_string())).expect("Signature validation failed");
-        assert_eq!(addr.as_canonical(), bech32_to_canonical("terra17dhvxnwzazszgtuc498qsudh7zq945qh29gj4e"));
-        assert_ne!(addr.as_canonical(), bech32_to_canonical("terra19m2zgdyuq0crpww00jc2a9k70ut944dum53p7x"));
+        let addr = permit
+            .validate(Some(MSGTYPE.to_string()))
+            .expect("Signature validation failed");
+        assert_eq!(
+            addr.as_canonical(),
+            bech32_to_canonical("terra17dhvxnwzazszgtuc498qsudh7zq945qh29gj4e")
+        );
+        assert_ne!(
+            addr.as_canonical(),
+            bech32_to_canonical("terra19m2zgdyuq0crpww00jc2a9k70ut944dum53p7x")
+        );
 
         permit.memo = Some("OtherMemo".to_string());
 
-        assert!(permit.validate(Some("wasm/MsgExecuteContract".to_string())).is_err())
+        assert!(permit
+            .validate(Some("wasm/MsgExecuteContract".to_string()))
+            .is_err())
     }
 
     #[test]
@@ -62,9 +72,17 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let addr = permit.validate(Some(MSGTYPE.to_string())).expect("Signature validation failed");
-        assert_eq!(addr.as_canonical(), bech32_to_canonical("terra1j8wupj3kpclp98dgg4j5am44kjykx6uztjttyr"));
-        assert_ne!(addr.as_canonical(), bech32_to_canonical("terra1ns69jhkjg5wmcgf8w8ecewnpca7sezyhvg0a29"));
+        let addr = permit
+            .validate(Some(MSGTYPE.to_string()))
+            .expect("Signature validation failed");
+        assert_eq!(
+            addr.as_canonical(),
+            bech32_to_canonical("terra1j8wupj3kpclp98dgg4j5am44kjykx6uztjttyr")
+        );
+        assert_ne!(
+            addr.as_canonical(),
+            bech32_to_canonical("terra1ns69jhkjg5wmcgf8w8ecewnpca7sezyhvg0a29")
+        );
 
         permit.memo = Some("OtherMemo".to_string());
 
@@ -87,9 +105,17 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let addr = permit.validate(Some(MSGTYPE.to_string())).expect("Signature validation failed");
-        assert_eq!(addr.as_canonical(), bech32_to_canonical("terra18xg6g5yfzflnt8v45r2yndnydhg2vndvzsv3rn"));
-        assert_ne!(addr.as_canonical(), bech32_to_canonical("terra1ns69jhkjg5wmcgf8w8ecewnpca7sezyhvg0a29"));
+        let addr = permit
+            .validate(Some(MSGTYPE.to_string()))
+            .expect("Signature validation failed");
+        assert_eq!(
+            addr.as_canonical(),
+            bech32_to_canonical("terra18xg6g5yfzflnt8v45r2yndnydhg2vndvzsv3rn")
+        );
+        assert_ne!(
+            addr.as_canonical(),
+            bech32_to_canonical("terra1ns69jhkjg5wmcgf8w8ecewnpca7sezyhvg0a29")
+        );
 
         permit.memo = Some("OtherMemo".to_string());
 
@@ -112,9 +138,17 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let addr = permit.validate(Some(MSGTYPE.to_string())).expect("Signature validation failed");
-        assert_eq!(addr.as_canonical(), bech32_to_canonical("terra1ns69jhkjg5wmcgf8w8ecewnpca7sezyhvg0a29"));
-        assert_ne!(addr.as_canonical(), bech32_to_canonical("terra18xg6g5yfzflnt8v45r2yndnydhg2vndvzsv3rn"));
+        let addr = permit
+            .validate(Some(MSGTYPE.to_string()))
+            .expect("Signature validation failed");
+        assert_eq!(
+            addr.as_canonical(),
+            bech32_to_canonical("terra1ns69jhkjg5wmcgf8w8ecewnpca7sezyhvg0a29")
+        );
+        assert_ne!(
+            addr.as_canonical(),
+            bech32_to_canonical("terra18xg6g5yfzflnt8v45r2yndnydhg2vndvzsv3rn")
+        );
 
         permit.memo = Some("OtherMemo".to_string());
 
@@ -137,9 +171,17 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let addr = permit.validate(Some(MSGTYPE.to_string())).expect("Signature validation failed");
-        assert_eq!(addr.as_canonical(), bech32_to_canonical("secret19q7h2zy8mgesy3r39el5fcm986nxqjd7cgylrz"));
-        assert_ne!(addr.as_canonical(), bech32_to_canonical("secret1ns69jhkjg5wmcgf8w8ecewnpca7sezyhgfp54e"));
+        let addr = permit
+            .validate(Some(MSGTYPE.to_string()))
+            .expect("Signature validation failed");
+        assert_eq!(
+            addr.as_canonical(),
+            bech32_to_canonical("secret19q7h2zy8mgesy3r39el5fcm986nxqjd7cgylrz")
+        );
+        assert_ne!(
+            addr.as_canonical(),
+            bech32_to_canonical("secret1ns69jhkjg5wmcgf8w8ecewnpca7sezyhgfp54e")
+        );
 
         permit.memo = Some("OtherMemo".to_string());
 
@@ -162,9 +204,17 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let addr = permit.validate(Some(MSGTYPE.to_string())).expect("Signature validation failed");
-        assert_eq!(addr.as_canonical(), bech32_to_canonical("secret1ns69jhkjg5wmcgf8w8ecewnpca7sezyhgfp54e"));
-        assert_ne!(addr.as_canonical(), bech32_to_canonical("secret19q7h2zy8mgesy3r39el5fcm986nxqjd7cgylrz"));
+        let addr = permit
+            .validate(Some(MSGTYPE.to_string()))
+            .expect("Signature validation failed");
+        assert_eq!(
+            addr.as_canonical(),
+            bech32_to_canonical("secret1ns69jhkjg5wmcgf8w8ecewnpca7sezyhgfp54e")
+        );
+        assert_ne!(
+            addr.as_canonical(),
+            bech32_to_canonical("secret19q7h2zy8mgesy3r39el5fcm986nxqjd7cgylrz")
+        );
 
         permit.memo = Some("OtherMemo".to_string());
 
@@ -187,9 +237,17 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let addr = permit.validate(Some(MSGTYPE.to_string())).expect("Signature validation failed");
-        assert_eq!(addr.as_canonical(), bech32_to_canonical("cosmos1lj5vh5y8yp4a97jmfwpd98lsg0tf5lsqgnnhq3"));
-        assert_ne!(addr.as_canonical(), bech32_to_canonical("cosmos1ns69jhkjg5wmcgf8w8ecewnpca7sezyh2v4ag9"));
+        let addr = permit
+            .validate(Some(MSGTYPE.to_string()))
+            .expect("Signature validation failed");
+        assert_eq!(
+            addr.as_canonical(),
+            bech32_to_canonical("cosmos1lj5vh5y8yp4a97jmfwpd98lsg0tf5lsqgnnhq3")
+        );
+        assert_ne!(
+            addr.as_canonical(),
+            bech32_to_canonical("cosmos1ns69jhkjg5wmcgf8w8ecewnpca7sezyh2v4ag9")
+        );
 
         permit.memo = Some("OtherMemo".to_string());
 
@@ -212,9 +270,17 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let addr = permit.validate(Some(MSGTYPE.to_string())).expect("Signature validation failed");
-        assert_eq!(addr.as_canonical(), bech32_to_canonical("cosmos1ns69jhkjg5wmcgf8w8ecewnpca7sezyh2v4ag9"));
-        assert_ne!(addr.as_canonical(), bech32_to_canonical("cosmos1lj5vh5y8yp4a97jmfwpd98lsg0tf5lsqgnnhq3"));
+        let addr = permit
+            .validate(Some(MSGTYPE.to_string()))
+            .expect("Signature validation failed");
+        assert_eq!(
+            addr.as_canonical(),
+            bech32_to_canonical("cosmos1ns69jhkjg5wmcgf8w8ecewnpca7sezyh2v4ag9")
+        );
+        assert_ne!(
+            addr.as_canonical(),
+            bech32_to_canonical("cosmos1lj5vh5y8yp4a97jmfwpd98lsg0tf5lsqgnnhq3")
+        );
 
         permit.memo = Some("OtherMemo".to_string());
 

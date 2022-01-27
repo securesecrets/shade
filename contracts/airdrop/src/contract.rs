@@ -159,7 +159,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::Account {
                 permit,
                 current_date,
-            } => to_binary(&query::account(deps, permit, current_date)?)
+            } => to_binary(&query::account(deps, permit, current_date)?),
         },
         RESPONSE_BLOCK_SIZE,
     )

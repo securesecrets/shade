@@ -1,13 +1,15 @@
-use cosmwasm_std::{Api, Binary, Extern, from_binary, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{
+    from_binary, Api, Binary, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
+};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
+use shade_protocol::airdrop::account::AddressProofMsg;
 use shade_protocol::airdrop::{
     account::{authenticate_ownership, Account, AccountPermit, AddressProofPermit},
     Config,
 };
-use shade_protocol::airdrop::account::AddressProofMsg;
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static DECAY_CLAIMED_KEY: &[u8] = b"decay_claimed";
@@ -129,16 +131,12 @@ pub fn validate_address_permit<S: Storage>(
         }
 
         // Check that permit is not revoked
-        if is_permit_revoked(
-            storage,
-            params.address.to_string(),
-            params.key.clone(),
-        )? {
+        if is_permit_revoked(storage, params.address.to_string(), params.key.clone())? {
             return Err(StdError::generic_err("permit key revoked"));
         }
 
         // Authenticate permit
-        return authenticate_ownership(permit)
+        return authenticate_ownership(permit);
     }
     Err(StdError::generic_err("Expected a memo"))
 }
@@ -165,6 +163,5 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("permit key revoked"));
     }
 
-    return Ok(address)
-
+    return Ok(address);
 }

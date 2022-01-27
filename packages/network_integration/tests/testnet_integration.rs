@@ -1,5 +1,6 @@
 use colored::*;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
+use flexible_permits::transaction::PubKey;
 use flexible_permits::{permit::Permit, transaction::PermitSignature};
 use network_integration::{
     contract_helpers::{
@@ -23,6 +24,7 @@ use secretcli::secretcli::{
 };
 use serde::Serialize;
 use serde_json::Result;
+use shade_protocol::airdrop::account::FillerMsg;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
@@ -41,28 +43,26 @@ use shade_protocol::{
     staking,
 };
 use std::{thread, time};
-use flexible_permits::transaction::PubKey;
-use shade_protocol::airdrop::account::FillerMsg;
 
 fn create_signed_permit<T: Clone + Serialize>(
     params: T,
     memo: Option<String>,
     msg_type: Option<String>,
-    signer: &str
+    signer: &str,
 ) -> Permit<T> {
     let mut permit = Permit {
         params,
         signature: PermitSignature {
             pub_key: PubKey {
                 r#type: "".to_string(),
-                value: Default::default()
+                value: Default::default(),
             },
-            signature: Default::default()
+            signature: Default::default(),
         },
         account_number: None,
         chain_id: Some("testnet".to_string()),
         sequence: None,
-        memo
+        memo,
     };
 
     let unsigned_msg = permit.create_signed_tx(msg_type);
@@ -70,11 +70,11 @@ fn create_signed_permit<T: Clone + Serialize>(
     let signed_info = create_permit(unsigned_msg, signer).unwrap();
 
     permit.signature = PermitSignature {
-            pub_key: flexible_permits::transaction::PubKey {
-                r#type: signed_info.pub_key.msg_type,
-                value: Binary::from_base64(&signed_info.pub_key.value).unwrap(),
-            },
-            signature: Binary::from_base64(&signed_info.signature).unwrap(),
+        pub_key: flexible_permits::transaction::PubKey {
+            r#type: signed_info.pub_key.msg_type,
+            value: Binary::from_base64(&signed_info.pub_key.value).unwrap(),
+        },
+        signature: Binary::from_base64(&signed_info.signature).unwrap(),
     };
 
     permit
@@ -250,7 +250,11 @@ fn run_airdrop() -> Result<()> {
 
     // TODO: change these into the requires msg type
     let b_permit = create_signed_permit(
-        FillerMsg::default(), Some(to_binary(&b_address_proof).unwrap().to_base64()), Some("wasm/MsgExecuteContract".to_string()),"b");
+        FillerMsg::default(),
+        Some(to_binary(&b_address_proof).unwrap().to_base64()),
+        Some("wasm/MsgExecuteContract".to_string()),
+        "b",
+    );
 
     let a_address_proof = AddressProofMsg {
         address: HumanAddr(account_a.clone()),
@@ -264,12 +268,19 @@ fn run_airdrop() -> Result<()> {
     let initial_proof = proof_from_tree(&vec![0, 1], &merlke_tree.layers());
 
     let a_permit = create_signed_permit(
-        FillerMsg::default(), Some(to_binary(&a_address_proof).unwrap().to_base64()), Some("wasm/MsgExecuteContract".to_string()), ACCOUNT_KEY);
+        FillerMsg::default(),
+        Some(to_binary(&a_address_proof).unwrap().to_base64()),
+        Some("wasm/MsgExecuteContract".to_string()),
+        ACCOUNT_KEY,
+    );
     let account_permit = create_signed_permit(
         AccountPermitMsg {
             contract: HumanAddr(airdrop.address.clone()),
             key: "key".to_string(),
-        }, None, None, ACCOUNT_KEY,
+        },
+        None,
+        None,
+        ACCOUNT_KEY,
     );
 
     /// Create an account which will also claim whatever amount is available
@@ -305,7 +316,8 @@ fn run_airdrop() -> Result<()> {
             total,
             claimed,
             unclaimed,
-            finished_tasks, ..
+            finished_tasks,
+            ..
         } = query
         {
             assert_eq!(total, a_airdrop + b_airdrop);
@@ -344,7 +356,8 @@ fn run_airdrop() -> Result<()> {
             total,
             claimed,
             unclaimed,
-            finished_tasks, ..
+            finished_tasks,
+            ..
         } = query
         {
             assert_eq!(total, a_airdrop + b_airdrop);
@@ -376,7 +389,12 @@ fn run_airdrop() -> Result<()> {
         key: "key".to_string(),
     };
 
-    let c_permit = create_signed_permit(FillerMsg::default(), Some(to_binary(&c_address_proof).unwrap().to_base64()), Some("wasm/MsgExecuteContract".to_string()), "c");
+    let c_permit = create_signed_permit(
+        FillerMsg::default(),
+        Some(to_binary(&c_address_proof).unwrap().to_base64()),
+        Some("wasm/MsgExecuteContract".to_string()),
+        "c",
+    );
     let other_proof = proof_from_tree(&vec![2], &merlke_tree.layers());
 
     test_contract_handle(
@@ -408,7 +426,8 @@ fn run_airdrop() -> Result<()> {
             total,
             claimed,
             unclaimed,
-            finished_tasks, ..
+            finished_tasks,
+            ..
         } = query
         {
             assert_eq!(total, total_airdrop);
@@ -446,7 +465,10 @@ fn run_airdrop() -> Result<()> {
         AccountPermitMsg {
             contract: HumanAddr(airdrop.address.clone()),
             key: "new_key".to_string(),
-        }, None, None, ACCOUNT_KEY,
+        },
+        None,
+        None,
+        ACCOUNT_KEY,
     );
 
     {
@@ -461,7 +483,8 @@ fn run_airdrop() -> Result<()> {
             total,
             claimed,
             unclaimed,
-            finished_tasks, ..
+            finished_tasks,
+            ..
         } = query
         {
             assert_eq!(total, total_airdrop);
@@ -487,7 +510,12 @@ fn run_airdrop() -> Result<()> {
             key: "key".to_string(),
         };
 
-        let d_permit = create_signed_permit(FillerMsg::default(), Some(to_binary(&d_address_proof).unwrap().to_base64()), Some("wasm/MsgExecuteContract".to_string()), "d");
+        let d_permit = create_signed_permit(
+            FillerMsg::default(),
+            Some(to_binary(&d_address_proof).unwrap().to_base64()),
+            Some("wasm/MsgExecuteContract".to_string()),
+            "d",
+        );
         let d_proof = proof_from_tree(&vec![3], &merlke_tree.layers());
 
         test_contract_handle(

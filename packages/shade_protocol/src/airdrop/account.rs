@@ -1,5 +1,8 @@
-use cosmwasm_std::{Binary, from_binary, HumanAddr, StdError, StdResult, Uint128};
-use flexible_permits::{permit::{bech32_to_canonical, Permit}, transaction::SignedTx};
+use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Uint128};
+use flexible_permits::{
+    permit::{bech32_to_canonical, Permit},
+    transaction::SignedTx,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -37,7 +40,7 @@ impl Default for FillerMsg {
             coins: vec![],
             contract: "".to_string(),
             sender: "".to_string(),
-            execute_msg: EmptyMsg {}
+            execute_msg: EmptyMsg {},
         }
     }
 }
@@ -55,8 +58,9 @@ pub fn authenticate_ownership(permit: &AddressProofPermit) -> StdResult<HumanAdd
         let params: AddressProofMsg = from_binary(&Binary::from_base64(&memo)?)?;
         let permit_address = params.address.clone();
 
-        let signer_address = permit.validate(
-            Some("wasm/MsgExecuteContract".to_string()))?.as_canonical();
+        let signer_address = permit
+            .validate(Some("wasm/MsgExecuteContract".to_string()))?
+            .as_canonical();
 
         if signer_address != bech32_to_canonical(permit_address.as_str()) {
             return Err(StdError::generic_err(format!(
@@ -64,10 +68,9 @@ pub fn authenticate_ownership(permit: &AddressProofPermit) -> StdResult<HumanAdd
                 permit_address.as_str()
             )));
         }
-        return Ok(permit_address)
+        return Ok(permit_address);
     }
     Err(StdError::generic_err("Expected a memo"))
-
 }
 
 #[remain::sorted]

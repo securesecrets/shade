@@ -3,6 +3,7 @@ use network_integration::utils::{
     generate_label, print_contract, print_header, AIRDROP_FILE, GAS, SNIP20_FILE, STORE_GAS,
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
+use secretcli::cli_types::NetContract;
 use secretcli::secretcli::{account_address, test_contract_handle, test_inst_init};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
@@ -14,7 +15,6 @@ use shade_protocol::{
     snip20::{InitConfig, InitialBalance},
 };
 use std::{env, fs};
-use secretcli::cli_types::NetContract;
 
 #[derive(Serialize, Deserialize)]
 pub struct Reward {
@@ -32,7 +32,7 @@ pub struct Args {
     end_date: u64,
     decay_start: u64,
     fund_airdrop: bool,
-    shade: Option<Contract>
+    shade: Option<Contract>,
 }
 
 fn main() -> Result<()> {
@@ -110,14 +110,13 @@ fn main() -> Result<()> {
             Some(GAS),
             None,
         )?;
-    }
-    else {
+    } else {
         print_header("Using Shade");
         snip = NetContract {
             label: "".to_string(),
             id: "".to_string(),
             address: args.shade.clone().unwrap().address.to_string(),
-            code_hash: args.shade.clone().unwrap().code_hash
+            code_hash: args.shade.clone().unwrap().code_hash,
         }
     }
 

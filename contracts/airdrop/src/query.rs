@@ -103,6 +103,6 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
             .load(account_address.to_string().as_bytes())?,
         unclaimed,
         finished_tasks,
-        addresses: account.addresses
+        addresses: account.addresses,
     })
 }

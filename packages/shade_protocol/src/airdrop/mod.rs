@@ -175,8 +175,8 @@ pub enum QueryAnswer {
         unclaimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
         // Addresses claimed
-        addresses: Vec<HumanAddr>
-    }
+        addresses: Vec<HumanAddr>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
