@@ -128,6 +128,7 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
+    Assets {},
     Allocations { asset: HumanAddr },
     Balance { asset: HumanAddr },
     LastAllowanceRefresh {},
@@ -141,6 +142,7 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
+    Assets { assets: Vec<HumanAddr> },
     Allocations { allocations: Vec<Allocation> },
     Balance { amount: Uint128 },
     LastAllowanceRefresh { datetime: String },

@@ -79,6 +79,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
+        QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
         QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
         QueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
         QueryMsg::LastAllowanceRefresh { } => to_binary(&query::last_allowance_refresh(&deps)?),
