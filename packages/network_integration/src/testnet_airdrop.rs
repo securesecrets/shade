@@ -3,6 +3,7 @@ use network_integration::utils::{
     generate_label, print_contract, print_header, AIRDROP_FILE, GAS, SNIP20_FILE, STORE_GAS,
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
+use secretcli::cli_types::NetContract;
 use secretcli::secretcli::{account_address, test_contract_handle, test_inst_init};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
@@ -30,11 +31,14 @@ pub struct Args {
     start_date: u64,
     end_date: u64,
     decay_start: u64,
+    fund_airdrop: bool,
+    shade: Option<Contract>,
 }
 
 fn main() -> Result<()> {
     let bin_args: Vec<String> = env::args().collect();
-    let args_file = fs::read_to_string(&bin_args.get(1).expect("No argument provided"))
+    //println!("ARGUMENT: {}", bin_args.get(2).expect("No argument provided"));
+    let args_file = fs::read_to_string(&bin_args.get(2).expect("No argument provided"))
         .expect("Unable to read args");
     let args: Args = serde_json::from_str(&args_file)?;
 
@@ -72,37 +76,50 @@ fn main() -> Result<()> {
     fs::write("merkle_tree.json", serde_json::to_string(&stored_tree)?)
         .expect("Could not store merkle tree");
 
-    // Initialize snip20
-    print_header("Initializing Snip20");
+    let snip: NetContract;
 
-    let snip_init_msg = snip20::InitMsg {
-        name: "SHD".to_string(),
-        admin: None,
-        symbol: "SHADE".to_string(),
-        decimals: 6,
-        initial_balances: Some(vec![InitialBalance {
-            address: HumanAddr::from(account_addr.clone()),
-            amount: args.initial_amount,
-        }]),
-        prng_seed: Default::default(),
-        config: Some(InitConfig {
-            public_total_supply: Some(true),
-            enable_deposit: Some(false),
-            enable_redeem: Some(false),
-            enable_mint: Some(true),
-            enable_burn: Some(true),
-        }),
-    };
+    if args.shade.is_none() {
+        // Initialize snip20
+        print_header("Initializing Snip20");
 
-    let snip = test_inst_init(
-        &snip_init_msg,
-        SNIP20_FILE,
-        &*generate_label(8),
-        &args.admin,
-        Some(STORE_GAS),
-        Some(GAS),
-        None,
-    )?;
+        let snip_init_msg = snip20::InitMsg {
+            name: "SHD".to_string(),
+            admin: None,
+            symbol: "SHADE".to_string(),
+            decimals: 8,
+            initial_balances: Some(vec![InitialBalance {
+                address: HumanAddr::from(account_addr.clone()),
+                amount: args.initial_amount,
+            }]),
+            prng_seed: Default::default(),
+            config: Some(InitConfig {
+                public_total_supply: Some(true),
+                enable_deposit: Some(false),
+                enable_redeem: Some(false),
+                enable_mint: Some(true),
+                enable_burn: Some(true),
+            }),
+        };
+
+        snip = test_inst_init(
+            &snip_init_msg,
+            SNIP20_FILE,
+            &*generate_label(8),
+            &args.admin,
+            Some(STORE_GAS),
+            Some(GAS),
+            None,
+        )?;
+    } else {
+        print_header("Using Shade");
+        snip = NetContract {
+            label: "".to_string(),
+            id: "".to_string(),
+            address: args.shade.clone().unwrap().address.to_string(),
+            code_hash: args.shade.clone().unwrap().code_hash,
+        }
+    }
+
     print_contract(&snip);
 
     // Initialize airdrop
@@ -142,21 +159,23 @@ fn main() -> Result<()> {
 
     print_contract(&airdrop);
 
-    print_header("Funding airdrop");
-    test_contract_handle(
-        &snip20::HandleMsg::Send {
-            recipient: HumanAddr::from(airdrop.address),
-            amount: args.initial_amount,
-            msg: None,
-            memo: None,
-            padding: None,
-        },
-        &snip,
-        &args.admin,
-        Some(GAS),
-        None,
-        None,
-    )?;
+    if args.fund_airdrop {
+        print_header("Funding airdrop");
+        test_contract_handle(
+            &snip20::HandleMsg::Send {
+                recipient: HumanAddr::from(airdrop.address),
+                amount: args.initial_amount,
+                msg: None,
+                memo: None,
+                padding: None,
+            },
+            &snip,
+            &args.admin,
+            Some(GAS),
+            None,
+            None,
+        )?;
+    }
 
     Ok(())
 }
