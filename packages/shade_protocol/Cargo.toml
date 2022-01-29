@@ -28,7 +28,7 @@ snafu = { version = "0.6.3" }
 # Needed for airdrop
 rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }
 # Needed for transactions
-flexible-permits = {git = "https://github.com/securesecrets/flexible-permits", branch = "optional-permit-alternative"}
+flexible-permits = {git = "https://github.com/securesecrets/flexible-permits", tag = "v1.1.0"}
 remain = "0.2.2"
 
 [dev-dependencies]
