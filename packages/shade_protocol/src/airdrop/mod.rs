@@ -145,9 +145,6 @@ pub enum QueryMsg {
         permit: AccountPermit,
         current_date: Option<u64>,
     },
-    VerifyClaimed {
-        accounts: Vec<AddressProofPermit>,
-    },
 }
 
 impl Query for QueryMsg {
@@ -177,9 +174,8 @@ pub enum QueryAnswer {
         // Total unclaimed but available
         unclaimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
-    },
-    VerifyClaimed {
-        results: Vec<AccountVerification>,
+        // Addresses claimed
+        addresses: Vec<HumanAddr>,
     },
 }
 

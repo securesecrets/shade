@@ -509,7 +509,7 @@ pub fn calculate_capture(amount: Uint128, capture: Uint128) -> Uint128 {
      * capture_amount = amount * capture / 10000
      */
 
-    amount.multiply_ratio(capture, 10000u128)
+    amount.multiply_ratio(capture, 10u128.pow(18))
 }
 
 fn oracle<S: Storage, A: Api, Q: Querier>(
