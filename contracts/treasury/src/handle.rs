@@ -104,6 +104,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                         token: _,
                     } => {
                         //debug_print!("Applications Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
+                        //TODO: implement
                     }
                     Allocation::Pool {
                         contract: _,
@@ -112,6 +113,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                         token: _,
                     } => {
                         //debug_print!("Pools Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
+                        //TODO: implement
                     }
                 };
             }
@@ -258,12 +260,55 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
     Ok(messages)
 }
 
+pub fn one_time_allowance<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    asset: HumanAddr,
+    spender: HumanAddr,
+    amount: Uint128,
+    expiration: Option<u64>,
+) -> StdResult<HandleResponse> {
+
+    let cur_config = config_r(&deps.storage).load()?;
+
+    if env.message.sender != cur_config.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    let mut messages = vec![];
+
+    if let Some(full_asset) = assets_r(&deps.storage).may_load(&asset.to_string().as_bytes())? {
+
+        messages.push(increase_allowance_msg(
+            spender,
+            amount,
+            expiration,
+            None,
+            1,
+            full_asset.contract.code_hash.clone(),
+            full_asset.contract.address.clone(),
+        )?);
+
+        return Ok(HandleResponse {
+            messages,
+            log: vec![],
+            data: Some(to_binary(&HandleAnswer::OneTimeAllowance {
+                status: ResponseStatus::Success,
+            })?),
+        });
+    }
+
+    Err(StdError::generic_err(format!("Unknown Asset: {}", asset)))
+}
+
+
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
     reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
+
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
@@ -403,8 +448,10 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
             Some(a) => a,
         };
 
-        // Remove old instance of this contract
+        // Search for old instance of this contract
+        // A given contract can only have 1 allocation per asset
         let mut existing_index = None;
+
         for (i, app) in app_list.iter_mut().enumerate() {
             if let Some(address) = match app {
                 Allocation::Rewards {

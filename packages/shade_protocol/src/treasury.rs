@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub admin: HumanAddr,
     //pub account_holders: Vec<HumanAddr>,
+    pub sscrt: Contract,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -56,9 +57,16 @@ pub struct Flag {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct AllowanceData {
+    pub spender: HumanAddr,
+    pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
+    pub sscrt: Contract,
     //pub account_holders: Option<Vec<HumanAddr>>,
 }
 
@@ -75,6 +83,12 @@ pub enum HandleMsg {
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
+    },
+    OneTimeAllowance {
+        asset: HumanAddr,
+        spender: HumanAddr,
+        amount: Uint128,
+        expiration: Option<u64>,
     },
     UpdateConfig {
         config: Config,
@@ -121,6 +135,9 @@ pub enum HandleAnswer {
     RefreshAllowance {
         status: ResponseStatus,
     },
+    OneTimeAllowance {
+        status: ResponseStatus,
+    },
     //Rebalance { status: ResponseStatus },
 }
 
@@ -129,8 +146,9 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Allocations { asset: HumanAddr },
     Balance { asset: HumanAddr },
+    Allocations { asset: HumanAddr },
+    Allowances { asset: HumanAddr, spender: HumanAddr },
     LastAllowanceRefresh {},
 }
 
@@ -145,5 +163,6 @@ pub enum QueryAnswer {
     Assets { assets: Vec<HumanAddr> },
     Allocations { allocations: Vec<Allocation> },
     Balance { amount: Uint128 },
+    Allowances { allowances: Vec<AllowanceData> },
     LastAllowanceRefresh { datetime: String },
 }
