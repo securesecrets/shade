@@ -52,6 +52,10 @@ treasury = Contract(
     json.dumps({
         'admin': account,
         'viewing_key': viewing_key,
+        'sscrt': {
+            'address': sscrt.address,
+            'code_hash': sscrt.code_hash,
+        },
     }),
     gen_label(8),
 )
@@ -67,6 +71,7 @@ print(treasury.execute({
     }
 }))
 
+print('Allocating allowance to self')
 print(treasury.execute({
     'register_allocation': {
         'asset': sscrt.address,
@@ -79,13 +84,13 @@ print(treasury.execute({
     }
 }))
 
-print('Last refresh')
+print('Last Refresh')
 print(treasury.query({'last_allowance_refresh': {}}))
 
-print('Refreshing allowance')
+print('Refreshing Allowance')
 print(treasury.execute({'refresh_allowance': {}}))
 
-print('Last refresh')
+print('Last Refresh')
 print(treasury.query({'last_allowance_refresh': {}}))
 
 print('Treasury sSCRT Balance')
@@ -93,6 +98,24 @@ print(treasury.query({'balance': {'asset': sscrt.address}}))
 
 print('Refreshing allowance (should fail/do nothing)')
 print(treasury.execute({'refresh_allowance': {}}))
+
+print('sSCRT Allowance')
+print(sscrt.query({
+    'allowance': {
+        'owner': treasury.address,
+        'spender': account,
+        'key': viewing_key,
+    }
+}))
+
+print('One-time allowance to self')
+print(treasury.execute({
+    'one_time_allowance': {
+        'asset': sscrt.address,
+        'spender': account,
+        'amount': '1000000', # (uscrt) = 1 SCRT
+    }
+}))
 
 print('sSCRT Allowance')
 print(sscrt.query({
