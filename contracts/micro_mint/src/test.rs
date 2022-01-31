@@ -365,7 +365,7 @@ pub mod tests {
     fn capture_calc() {
         let amount = Uint128(1_000_000_000_000_000_000);
         //10%
-        let capture = Uint128(1000);
+        let capture = Uint128(100_000_000_000_000_000);
         let expected = Uint128(100_000_000_000_000_000);
         let value = calculate_capture(amount, capture);
         assert_eq!(value, expected);
