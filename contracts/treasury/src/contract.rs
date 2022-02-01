@@ -30,7 +30,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     asset_list_w(&mut deps.storage).save(&Vec::new())?;
 
     //init last refresh with epoch 0 so first refresh always goes
-    let timestamp = "0".parse::<i64>().unwrap();
+    let timestamp = 0;
     let naive = NaiveDateTime::from_timestamp(timestamp, 0);
     let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
