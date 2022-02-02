@@ -178,6 +178,30 @@ pub fn account_address(acc: &str) -> Result<String> {
     Ok(s)
 }
 
+pub fn create_key_account(name: &str) -> Result<()> {
+    let command = vec_str_to_vec_string(vec!["keys", "add", name]);
+
+    let retry = 20;
+    let mut cli = Command::new("secretd".to_string());
+    if !command.is_empty() {
+        cli.args(command);
+    }
+
+    let mut result = cli.output().expect("Unexpected error");
+
+    // We wait cause sometimes the query/action takes a while
+    for _ in 0..retry {
+        if !result.stderr.is_empty() {
+            thread::sleep(time::Duration::from_secs(1));
+        } else {
+            break;
+        }
+        result = cli.output().expect("Unexpected error");
+    }
+
+    Ok(())
+}
+
 ///
 /// Instantiate a contract
 ///
