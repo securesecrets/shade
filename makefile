@@ -2,9 +2,11 @@ contracts_dir=contracts
 compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
-# Compresses the wasm file, args: compressed_file_name, built_file_name
-define build =
-(cd $(contracts_dir)/$(1); RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked --features="debug-print")
+build-release=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+build-debug=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked --features="debug-print"
+
+# args (no extensions): wasm_name, contract_dir_name
+define opt_and_compress = 
 wasm-opt -Oz ./target/wasm32-unknown-unknown/release/$(2).wasm -o ./$(1).wasm
 echo $(md5sum $(1).wasm | cut -f 1 -d " ") >> ${checksum_dir}/$(1).txt
 cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
@@ -13,23 +15,30 @@ endef
 
 CONTRACTS = airdrop governance staking mint treasury micro_mint oracle mock_band initializer scrt_staking
 
-release: build_release compress
+release:
+	(cd ${contracts_dir}; ${build-release})
+	@$(MAKE) compress_all
 
-debug: build_debug compress
+debug:
+	(cd ${contracts_dir}; ${build-debug})
+	@$(MAKE) compress_all
 
-build_release:
-	(cd ${contracts_dir}; RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked)
+compress_all:
+	@$(MAKE) $(addprefix compress-,$(CONTRACTS))
 
-build_debug:
-	(cd ${contracts_dir}; RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked --features="debug-print")
+compress-snip20:
+	$(call opt_and_compress,snip20,snip20_reference_impl)
 
-compress: setup snip20 $(CONTRACTS)
+compress-%:
+	$(call opt_and_compress,$*,$*)
 
 $(CONTRACTS): setup
-	$(call build,$@,$@)
+	(cd ${contracts_dir}/$@; ${build-debug})
+	@$(MAKE) $(addprefix compress-,$(@))
 
-snip20: setup build_debug
-	$(call build,snip20,snip20_reference_impl)
+snip20: setup
+	(cd ${contracts_dir}/snip20; ${build-release})
+	@$(MAKE) $(addprefix compress-,snip20)
 
 setup: $(compiled_dir) $(checksum_dir)
 
