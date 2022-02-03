@@ -10,12 +10,21 @@ use crate::utils::generic_response::ResponseStatus;
 use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct SswapPair {
+pub struct Pair {
     // secretswap_pair contract
     pub pair: Contract,
     // non-sscrt asset, other asset on pair should be sscrt
     pub asset: Snip20Asset,
 }
+
+/*
+pub struct SiennaPair {
+    // secretswap_pair contract
+    pub pair: Contract,
+    // non-sscrt asset, other asset on pair should be sscrt
+    pub asset: Snip20Asset,
+}
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct IndexElement {
@@ -52,14 +61,15 @@ pub enum HandleMsg {
         admin: Option<HumanAddr>,
         band: Option<Contract>,
     },
-    // Register Secret Swap Pair (should be */sSCRT or sSCRT/*)
-    RegisterSswapPair {
+    // Register Secret Swap or Sienna Pair (should be */sSCRT or sSCRT/*)
+    RegisterPair {
         pair: Contract,
     },
     // Unregister Secret Swap Pair (opposite action to RegisterSswapPair)
-    UnregisterSswapPair {
+    UnregisterPair {
         pair: Contract,
     },
+
     RegisterIndex {
         symbol: String,
         basket: Vec<IndexElement>,
@@ -77,8 +87,13 @@ impl TestHandle for HandleMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
-    RegisterSswapPair { status: ResponseStatus },
-    UnregisterSswapPair { status: ResponseStatus },
+
+    RegisterPair {
+        status: ResponseStatus,
+        dex: String,
+        symbol: String,
+    },
+    UnregisterPair { status: ResponseStatus },
     RegisterIndex { status: ResponseStatus },
 }
 

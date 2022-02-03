@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct Token {
     pub contract_addr: HumanAddr,
     pub token_code_hash: String,
-    pub viewing_key: String,
+    //pub viewing_key: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -22,23 +22,26 @@ pub struct AssetInfo {
 #[serde(rename_all = "snake_case")]
 pub struct Asset {
     pub amount: Uint128,
-    pub info: AssetInfo,
+    pub token: AssetInfo,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Simulation {
-    pub offer_asset: Asset,
+pub struct SwapSimulation {
+    pub offer: Asset,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PairQuery {
+    /*
     Pair {},
     Pool {},
     Simulation { offer_asset: Asset },
-    //ReverseSimulation {},
+    */
+    PairInfo { swap_simulation: SwapSimulation },
 }
+
 
 impl Query for PairQuery {
     const BLOCK_SIZE: usize = 256;

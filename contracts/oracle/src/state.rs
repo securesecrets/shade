@@ -7,6 +7,7 @@ use shade_protocol::oracle::{IndexElement, OracleConfig, SswapPair};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SSWAP_PAIRS: &[u8] = b"sswap_pairs";
+pub static SIENNA_PAIRS: &[u8] = b"sienna_pairs";
 pub static INDEX: &[u8] = b"index";
 
 pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, OracleConfig> {
@@ -23,6 +24,14 @@ pub fn sswap_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, SswapPair> {
 
 pub fn sswap_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, SswapPair> {
     bucket(SSWAP_PAIRS, storage)
+}
+
+pub fn sienna_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, SswapPair> {
+    bucket_read(SIENNA_PAIRS, storage)
+}
+
+pub fn sienna_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, SswapPair> {
+    bucket(SIENNA_PAIRS, storage)
 }
 
 pub fn index_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<IndexElement>> {

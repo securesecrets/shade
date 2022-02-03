@@ -1,4 +1,4 @@
-use crate::state::{config_r, config_w, index_w, sswap_pairs_r, sswap_pairs_w};
+use crate::state::{config_r, config_w, index_w, sswap_pairs_r, sswap_pairs_w, sienna_pairs_r, sienna_pairs_w };
 use cosmwasm_std::{
     to_binary, Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage,
 };
@@ -10,62 +10,100 @@ use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     oracle::{HandleAnswer, IndexElement, SswapPair},
-    secretswap::{PairQuery, PairResponse},
     snip20::Snip20Asset,
+    secretswap,
+    sienna,
 };
 
-pub fn register_sswap_pair<S: Storage, A: Api, Q: Querier>(
+pub fn register_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     pair: Contract,
 ) -> StdResult<HandleResponse> {
+
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::unauthorized());
     }
 
-    let (token_contract, token_info) =
-        fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
+    if secretswap::is_pair()? {
 
-    sswap_pairs_w(&mut deps.storage).save(
-        token_info.symbol.as_bytes(),
-        &SswapPair {
-            pair,
-            asset: Snip20Asset {
-                contract: token_contract,
-                token_info: token_info.clone(),
-                token_config: None,
+        let (token_contract, token_info) =
+            fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
+
+        sswap_pairs_w(&mut deps.storage).save(
+            token_info.symbol.as_bytes(),
+            &Pair {
+                pair,
+                asset: Snip20Asset {
+                    contract: token_contract,
+                    token_info: token_info.clone(),
+                    token_config: None,
+                },
             },
-        },
-    )?;
+        )?;
+        Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(to_binary(&HandleAnswer::RegisterPair {
+                status: ResponseStatus::Success,
+                dex: "SecretSwap".to_string(),
+                symbol: token_info.symbol,
+            })?),
+        })
+    }
+    else if sienna::is_pair()? {
+        let (token_contract, token_info) =
+            fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterSswapPair {
-            status: ResponseStatus::Success,
-        })?),
-    })
+        sienna_pairs_w(&mut deps.storage).save(
+            token_info.symbol.as_bytes(),
+            &Pair {
+                pair,
+                asset: Snip20Asset {
+                    contract: token_contract,
+                    token_info: token_info.clone(),
+                    token_config: None,
+                },
+            },
+        )?;
+        Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(to_binary(&HandleAnswer::RegisterPair {
+                status: ResponseStatus::Success,
+                dex: "Sienna".to_string(),
+                symbol: token_info.symbol,
+            })?),
+        })
+    }
+
+    Err(StdError::generic_err("Not a recognizable pair"))
 }
 
-pub fn unregister_sswap_pair<S: Storage, A: Api, Q: Querier>(
+pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     pair: Contract,
 ) -> StdResult<HandleResponse> {
+
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    let (_, token_info) = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
-
-    sswap_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
+    if secretswap::is_pair(pair)? {
+        let (_, token_info) = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
+        sswap_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
+    }
+    else if sienna::is_pair(pair)? {
+        sienna_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
+    }
 
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::UnregisterSswapPair {
+        data: Some(to_binary(&HandleAnswer::UnregisterPair {
             status: ResponseStatus::Success,
         })?),
     })
@@ -80,14 +118,55 @@ fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
     sscrt_addr: HumanAddr,
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
+
     // Query for snip20's in the pair
-    let response: PairResponse =
-        PairQuery::Pair {}.query(&deps.querier, pair.code_hash.clone(), pair.address.clone())?;
+    let response: secretswap::PairResponse =
+        secretswap::PairQuery::Pair {}.query(&deps.querier, pair.code_hash.clone(), pair.address.clone())?;
 
     let mut token_contract = Contract {
         address: response.asset_infos[0].token.contract_addr.clone(),
         code_hash: response.asset_infos[0].token.token_code_hash.clone(),
     };
+
+    // if thats sscrt, switch it
+    if token_contract.address == sscrt_addr {
+        token_contract = Contract {
+            address: response.asset_infos[1].token.contract_addr.clone(),
+            code_hash: response.asset_infos[1].token.token_code_hash.clone(),
+        }
+    }
+    // if neither is sscrt
+    else if response.asset_infos[1].token.contract_addr != sscrt_addr {
+        return Err(StdError::NotFound {
+            kind: "Not an sSCRT Pair".to_string(),
+            backtrace: None,
+        });
+    }
+
+    let token_info = token_info_query(
+        &deps.querier,
+        1,
+        token_contract.code_hash.clone(),
+        token_contract.address.clone(),
+    )?;
+
+    Ok((token_contract, token_info))
+}
+
+fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    sscrt_addr: HumanAddr,
+    pair: &Contract,
+) -> StdResult<(Contract, TokenInfo)> {
+    // Query for snip20's in the pair
+    let response: secretswap::PairResponse =
+        secretswap::PairQuery::Pair {}.query(&deps.querier, pair.code_hash.clone(), pair.address.clone())?;
+
+    let mut token_contract = Contract {
+        address: response.asset_infos[0].token.contract_addr.clone(),
+        code_hash: response.asset_infos[0].token.token_code_hash.clone(),
+    };
+
     // if thats sscrt, switch it
     if token_contract.address == sscrt_addr {
         token_contract = Contract {
