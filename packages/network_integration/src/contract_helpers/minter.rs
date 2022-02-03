@@ -29,9 +29,11 @@ pub fn initialize_minter(
             peg: None,
             treasury: None,
             secondary_burn: None,
+            /*
             start_epoch: None,
             epoch_frequency: Some(Uint128(120)),
             epoch_mint_limit: Some(Uint128(1000000000)),
+            */
         },
     )?;
 

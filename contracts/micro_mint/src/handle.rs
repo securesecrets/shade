@@ -10,16 +10,17 @@ use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     band::ReferenceData,
-    micro_mint::{Config, HandleAnswer, SupportedAsset},
+    micro_mint::{Config, HandleAnswer, SupportedAsset, Limit},
     mint::MintMsgHook,
     oracle::QueryMsg::Price,
     snip20::{token_config_query, Snip20Asset, TokenConfig},
 };
 use std::{cmp::Ordering, convert::TryFrom};
+use chrono::prelude::*;
 
 use crate::state::{
     asset_list_w, asset_peg_r, assets_r, assets_w, config_r, config_w, limit_w, native_asset_r,
-    total_burned_w,
+    total_burned_w, limit_r, minted_r, minted_w, limit_refresh_w, limit_refresh_r,
 };
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
@@ -30,6 +31,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
+
     let config = config_r(&deps.storage).load()?;
     // Check if contract enabled
     if !config.activated {
@@ -46,8 +48,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check that sender is a supported snip20 asset
-    let assets = assets_r(&deps.storage);
-    let burn_asset = match assets.may_load(env.message.sender.to_string().as_bytes())? {
+    let burn_asset = match assets_r(&deps.storage).may_load(env.message.sender.to_string().as_bytes())? {
         Some(supported_asset) => {
             debug_print!(
                 "Found Burn Asset: {} {}",
@@ -68,44 +69,26 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
 
     let mut messages = vec![];
-    let msgs: MintMsgHook = match msg {
-        Some(x) => from_binary(&x)?,
-        None => return Err(StdError::generic_err("data cannot be empty")),
-    };
 
-    // Check against slippage amount
-    if amount_to_mint < msgs.minimum_expected_amount {
-        return Err(StdError::generic_err(
-            "Mint amount is less than the minimum expected.",
-        ));
-    }
+    if let Some(limit) = config.limit {
 
-    // Check against mint cap
-    let mut limit_storage = limit_w(&mut deps.storage);
-    let mut limit = limit_storage.load()?;
+        // Limit Refresh Check
+        try_limit_refresh(deps, env, limit)?;
 
-    // When frequency is 0 it means that mint limits are disabled
-    if limit.frequency != 0 {
-        // Reset total and next epoch
-        if limit.next_epoch <= env.block.time {
-            limit.next_epoch = env.block.time + limit.frequency;
-            limit.total_minted = Uint128(0);
+        // Check & adjust limit if a limited asset
+        if !burn_asset.unlimited {
+
+            let minted = minted_r(&deps.storage).load()?;
+            if (amount_to_mint + minted) > limit_r(&deps.storage).load()? {
+                return Err(StdError::generic_err("Limit Exceeded"))
+            }
+
+            minted_w(&mut deps.storage).save(&(amount_to_mint + minted))?;
         }
-
-        let new_total = limit.total_minted + amount_to_mint;
-
-        if new_total > limit.mint_capacity {
-            return Err(StdError::generic_err(
-                "Amount to be minted exceeds mint capacity",
-            ));
-        }
-
-        limit.total_minted = new_total;
-
-        limit_storage.save(&limit)?;
     }
 
     let mut burn_amount = amount;
+
     if let Some(treasury) = config.treasury {
         // Ignore capture if the set capture is 0
         if burn_asset.capture != Uint128(0) {
@@ -148,7 +131,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                 1,
                 burn_asset.asset.contract.code_hash.clone(),
                 burn_asset.asset.contract.address.clone(),
-            )?)
+            )?);
         }
     } else if let Some(recipient) = config.secondary_burn {
         messages.push(send_msg(
@@ -160,7 +143,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
             1,
             burn_asset.asset.contract.code_hash.clone(),
             burn_asset.asset.contract.address.clone(),
-        )?)
+        )?);
     }
 
     // Update burned amount
@@ -177,36 +160,16 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     // This will calculate the total mint value
     let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
 
+    let msgs: MintMsgHook = match msg {
+        Some(x) => from_binary(&x)?,
+        None => return Err(StdError::generic_err("data cannot be empty")),
+    };
+
     // Check against slippage amount
     if amount_to_mint < msgs.minimum_expected_amount {
         return Err(StdError::generic_err(
             "Mint amount is less than the minimum expected.",
         ));
-    }
-
-    // Check against mint cap
-    let mut limit_storage = limit_w(&mut deps.storage);
-    let mut limit = limit_storage.load()?;
-
-    // When frequency is 0 it means that mint limits are disabled
-    if limit.frequency != 0 {
-        // Reset total and next epoch
-        if limit.next_epoch <= env.block.time {
-            limit.next_epoch = env.block.time + limit.frequency;
-            limit.total_minted = Uint128(0);
-        }
-
-        let new_total = limit.total_minted + amount_to_mint;
-
-        if new_total > limit.mint_capacity {
-            return Err(StdError::generic_err(
-                "Amount to be minted exceeds mint capacity",
-            ));
-        }
-
-        limit.total_minted = new_total;
-
-        limit_storage.save(&limit)?;
     }
 
     debug_print!(
@@ -228,48 +191,88 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::Burn {
+        data: Some(to_binary(&HandleAnswer::Mint {
             status: ResponseStatus::Success,
-            mint_amount: amount_to_mint,
+            amount: amount_to_mint,
         })?),
     })
+}
+
+pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    limit: Limit,
+) -> StdResult<()> {
+
+    match DateTime::parse_from_rfc3339(&limit_refresh_r(&deps.storage).load()?) {
+        Ok(parsed) => {
+
+            let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
+            let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+            let last_refresh: DateTime<Utc> = parsed.with_timezone(&Utc);
+
+            let mut fresh_amount = Uint128(0);
+
+            // get amount to add, 0 if not in need of refresh
+            match limit {
+
+                Limit::Daily { annual_limit, days } => {
+
+                    // Slight error in annual limit if (days / 365) is not a whole number
+                    if now.num_days_from_ce() as u128 - days.u128() >= last_refresh.num_days_from_ce() as u128 {
+                        fresh_amount = annual_limit.multiply_ratio(days, 365u128);
+                    }
+                },
+                Limit::Monthly { annual_limit, months } => {
+
+                    if now.year() > last_refresh.year() || now.month() > last_refresh.month() {
+                        /* If its a new year or new month, add (year_diff * 12) to the later (now) month
+                         * 12-2021 <-> 1-2022 becomes a comparison between 12 <-> (1 + 12)
+                         * resulting in a difference of 1 month
+                         */
+                        let year_diff = now.year() - last_refresh.year();
+
+                        if (now.month() + (year_diff * 12) as u32) - last_refresh.month() >= months.u128() as u32 {
+                            fresh_amount = annual_limit.multiply_ratio(months, 12u128);
+                        }
+                    }
+                },
+            }
+
+            if fresh_amount > Uint128(0) {
+
+                let minted = minted_r(&deps.storage).load()?;
+
+                limit_w(&mut deps.storage).update(|state| {
+                    // Compound with unminted previous limit
+                    Ok((state - minted)? + fresh_amount)
+                })?;
+                limit_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
+                minted_w(&mut deps.storage).save(&Uint128(0))?;
+            }
+        }
+        Err(e) => {
+            return Err(StdError::generic_err("Failed to parse previous datetime"))
+        }
+    }
+
+    Ok(())
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: Option<HumanAddr>,
-    oracle: Option<Contract>,
-    treasury: Option<Contract>,
-    secondary_burn: Option<HumanAddr>,
+    config: Config,
 ) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-    // Check if admin
-    if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-    // Check if contract enabled
-    if !config.activated {
-        return Err(StdError::Unauthorized { backtrace: None });
+
+    let cur_config = config_r(&deps.storage).load()?;
+    
+    // Admin-only
+    if env.message.sender != cur_config.admin {
+        return Err(StdError::unauthorized());
     }
 
-    // Save new info
-    let mut config = config_w(&mut deps.storage);
-    config.update(|mut state| {
-        if let Some(owner) = owner {
-            state.admin = owner;
-        }
-        if let Some(oracle) = oracle {
-            state.oracle = oracle;
-        }
-        if let Some(treasury) = treasury {
-            state.treasury = Some(treasury);
-        }
-        if let Some(secondary_burn) = secondary_burn {
-            state.secondary_burn = Some(secondary_burn)
-        }
-        Ok(state)
-    })?;
+    config_w(&mut deps.storage).save(&config);
 
     Ok(HandleResponse {
         messages: vec![],
@@ -280,6 +283,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+/*
 pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -328,12 +332,14 @@ pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
         })?),
     })
 }
+*/
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
     capture: Option<Uint128>,
+    unlimited: Option<bool>,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
@@ -345,7 +351,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    let mut assets = assets_w(&mut deps.storage);
     let contract_str = contract.address.to_string();
 
     // Add the new asset
@@ -363,7 +368,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         };
 
     debug_print!("Registering {}", asset_info.symbol);
-    assets.save(
+    assets_w(&mut deps.storage).save(
         contract_str.as_bytes(),
         &SupportedAsset {
             asset: Snip20Asset {
@@ -375,6 +380,10 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             capture: match capture {
                 None => Uint128(0),
                 Some(value) => value,
+            },
+            unlimited: match unlimited {
+                None => false,
+                Some(u) => u,
             },
         },
     )?;

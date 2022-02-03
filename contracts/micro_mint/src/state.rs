@@ -4,12 +4,14 @@ use cosmwasm_storage::{
     Singleton,
 };
 use shade_protocol::{
-    micro_mint::{Config, MintLimit, SupportedAsset},
+    micro_mint::{Config, SupportedAsset},
     snip20::Snip20Asset,
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";
-pub static MINT_LIMIT: &[u8] = b"mint_limit";
+pub static LIMIT: &[u8] = b"mint_limit";
+pub static LIMIT_REFRESH: &[u8] = b"limit_refresh";
+pub static MINTED: &[u8] = b"minted";
 pub static NATIVE_ASSET: &[u8] = b"native_asset";
 pub static ASSET_PEG: &[u8] = b"asset_peg";
 pub static ASSET_KEY: &[u8] = b"assets";
@@ -24,12 +26,34 @@ pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn limit_w<S: Storage>(storage: &mut S) -> Singleton<S, MintLimit> {
-    singleton(storage, MINT_LIMIT)
+/* Daily limit as (limit * total_supply) at the time of refresh
+ */
+pub fn limit_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
+    singleton(storage, LIMIT)
 }
 
-pub fn limit_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, MintLimit> {
-    singleton_read(storage, MINT_LIMIT)
+pub fn limit_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
+    singleton_read(storage, LIMIT)
+}
+
+/* RFC-3339 datetime str, last time limit was refreshed
+ */
+pub fn limit_refresh_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
+    singleton(storage, LIMIT_REFRESH)
+}
+
+pub fn limit_refresh_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
+    singleton_read(storage, LIMIT_REFRESH)
+}
+
+/* Amount minted this cycle (daily)
+ */
+pub fn minted_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
+    singleton(storage, MINTED)
+}
+
+pub fn minted_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
+    singleton_read(storage, MINTED)
 }
 
 pub fn native_asset_w<S: Storage>(storage: &mut S) -> Singleton<S, Snip20Asset> {

@@ -61,9 +61,12 @@ pub mod tests {
             peg,
             treasury,
             secondary_burn: None,
+            limit: None,
+            /*
             start_epoch: None,
             epoch_frequency: None,
             epoch_mint_limit: None,
+            */
         };
         let env = mock_env(admin, &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();
