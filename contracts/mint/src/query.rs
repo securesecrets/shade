@@ -4,7 +4,7 @@ use crate::state::{
 };
 use secret_toolkit::snip20::token_info_query;
 use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::micro_mint::QueryAnswer;
+use shade_protocol::mint::QueryAnswer;
 use chrono::prelude::*;
 
 pub fn native_asset<S: Storage, A: Api, Q: Querier>(

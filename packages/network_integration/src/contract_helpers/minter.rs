@@ -11,7 +11,7 @@ use secretcli::{
 };
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
-use shade_protocol::{micro_mint, mint, snip20};
+use shade_protocol::{mint, mint, snip20};
 
 pub fn initialize_minter(
     governance: &NetContract,
@@ -22,7 +22,7 @@ pub fn initialize_minter(
         governance,
         contract_name,
         MICRO_MINT_FILE,
-        micro_mint::InitMsg {
+        mint::InitMsg {
             admin: Some(HumanAddr::from(governance.address.clone())),
             native_asset: native_asset.clone(),
             oracle: get_contract(governance, "oracle".to_string())?,
@@ -56,7 +56,7 @@ pub fn setup_minters(
     create_and_trigger_proposal(
         governance,
         "shade_minter".to_string(),
-        micro_mint::HandleMsg::RegisterAsset {
+        mint::HandleMsg::RegisterAsset {
             contract: Contract {
                 address: HumanAddr::from(sscrt.address.clone()),
                 code_hash: sscrt.code_hash.clone(),
@@ -68,7 +68,7 @@ pub fn setup_minters(
     create_and_trigger_proposal(
         governance,
         "shade_minter".to_string(),
-        micro_mint::HandleMsg::RegisterAsset {
+        mint::HandleMsg::RegisterAsset {
             contract: silk.clone(),
             capture: Some(Uint128(1000)),
         },
@@ -77,7 +77,7 @@ pub fn setup_minters(
     create_and_trigger_proposal(
         governance,
         "silk_minter".to_string(),
-        micro_mint::HandleMsg::RegisterAsset {
+        mint::HandleMsg::RegisterAsset {
             contract: shade.clone(),
             capture: Some(Uint128(1000)),
         },

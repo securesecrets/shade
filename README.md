@@ -5,7 +5,7 @@
 | [`shade_staking`](./contracts/staking)  | [doc](./contracts/staking/README.md) | Snip20 staker |
 | [`scrt_staking`](./contracts/scrt_staking)  | [doc](./contracts/scrt_staking/README.md) | SCRT staker |
 | [`treasury`](./contracts/treasury)  | [doc](./contracts/treasury/README.md) | Protocol's asset manager |
-| [`mint`](./contracts/micro_mint)  | [doc](./contracts/micro_mint/README.md) | Asset burner and minter |
+| [`mint`](./contracts/mint)  | [doc](./contracts/mint/README.md) | Asset burner and minter |
 | [`oracle`](./contracts/oracle)  | [doc](./contracts/oracle/README.md) | Asset price querier |
 | [`airdrop`](./contracts/airdrop)  | [doc](./contracts/airdrop/README.md) | Task based, multichain snip20 airdropper  |
 

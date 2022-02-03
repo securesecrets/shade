@@ -10,8 +10,7 @@ use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     band::ReferenceData,
-    micro_mint::{Config, HandleAnswer, SupportedAsset, Limit},
-    mint::MintMsgHook,
+    mint::{Config, HandleAnswer, SupportedAsset, Limit, MintMsgHook},
     oracle::QueryMsg::Price,
     snip20::{token_config_query, Snip20Asset, TokenConfig},
 };
