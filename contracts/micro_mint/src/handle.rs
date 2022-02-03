@@ -283,57 +283,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-/*
-pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    start_epoch: Option<Uint128>,
-    epoch_frequency: Option<Uint128>,
-    epoch_limit: Option<Uint128>,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-    // Check if admin
-    if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-    // Check if contract enabled
-    if !config.activated {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-
-    // Reset limit and set new limits
-    let mut limit = limit_w(&mut deps.storage);
-    limit.update(|mut state| {
-        if let Some(frequency) = epoch_frequency {
-            state.frequency = frequency.u128() as u64;
-        }
-        if let Some(limit) = epoch_limit {
-            state.mint_capacity = limit
-        }
-        // Reset total minted
-        state.total_minted = Uint128(0);
-
-        // Reset next epoch
-        if state.frequency == 0 {
-            state.next_epoch = 0;
-        } else if let Some(next_epoch) = start_epoch {
-            state.next_epoch = next_epoch.u128() as u64;
-        } else {
-            state.next_epoch = env.block.time + state.frequency;
-        }
-        Ok(state)
-    })?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateMintLimit {
-            status: ResponseStatus::Success,
-        })?),
-    })
-}
-*/
-
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,

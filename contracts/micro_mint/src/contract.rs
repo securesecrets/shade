@@ -33,31 +33,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         activated: true,
     };
 
-    /*
-    // Set the minting limit
-    let mut limit = MintLimit {
-        frequency: match msg.epoch_frequency {
-            None => 0,
-            Some(frequency) => frequency.u128() as u64,
-        },
-        mint_capacity: match msg.epoch_mint_limit {
-            None => Uint128(0),
-            Some(capacity) => capacity,
-        },
-        total_minted: Uint128(0),
-        next_epoch: match msg.epoch_frequency {
-            None => 0,
-            Some(frequency) => env.block.time + frequency.u128() as u64,
-        },
-    };
-    // Override the next epoch
-    if let Some(next_epoch) = msg.start_epoch {
-        limit.next_epoch = next_epoch.u128() as u64;
-    }
-
-    limit_w(&mut deps.storage).save(&limit)?;
-    */
-
     config_w(&mut deps.storage).save(&state)?;
 
     let token_info = token_info_query(
