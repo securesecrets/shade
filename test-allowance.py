@@ -27,7 +27,6 @@ account_key = 'a' #if chain_config['chain-id'] == 'holodeck-2' else 'a'
 backend = 'test' #None if chain_config['chain-id'] == 'holodeck-2' else 'test'
 account = run_command(['secretd', 'keys', 'show', '-a', account_key]).rstrip()
 
-
 print('ACCOUNT', account)
 
 print('Configuring sSCRT')
@@ -53,22 +52,16 @@ treasury = Contract(
     json.dumps({
         'admin': account,
         'viewing_key': viewing_key,
+        'sscrt': {
+            'address': sscrt.address,
+            'code_hash': sscrt.code_hash,
+        },
     }),
     gen_label(8),
 )
 print('TREASURY', treasury.address)
 
-staking_init = {
-    'admin': account,
-    'treasury': treasury.address,
-    'sscrt': {
-        'address': sscrt.address,
-        'code_hash': sscrt.code_hash,
-    },
-    'viewing_key': viewing_key,
-}
-
-print('Registering sSCRT w/ treasury')
+print('Configuring treasury')
 print(treasury.execute({
     'register_asset': {
         'contract': {
@@ -78,66 +71,57 @@ print(treasury.execute({
     }
 }))
 
-scrt_staking = Contract(
-    '../compiled/scrt_staking.wasm.gz',
-    json.dumps(staking_init),
-    gen_label(8),
-)
-print('STAKING', scrt_staking.address)
-
-print('Allocating 90% sSCRT to staking')
-allocation = .9
+print('Allocating allowance to self')
 print(treasury.execute({
     'register_allocation': {
         'asset': sscrt.address,
         'allocation': {
-            'staking': {
-                'contract': {
-                    'address': scrt_staking.address, 
-                    'code_hash': scrt_staking.code_hash,
-                },
-                'allocation': str(int(allocation * 10**18)),
+            'allowance': {
+                'address': account,
+                'amount': '1000000', # (uscrt) = 1 SCRT
             },
         }
     }
 }))
 
+print('Last Refresh')
+print(treasury.query({'last_allowance_refresh': {}}))
 
-print('Treasury Assets')
-print(treasury.query({'assets': {}}))
+print('Refreshing Allowance')
+print(treasury.execute({'refresh_allowance': {}}))
 
-print('Treasury sSCRT Balance')
-print(treasury.query({'balance': {'asset': sscrt.address}}))
-
-print('Treasury sSCRT Applications')
-print(treasury.query({'allocations': {'asset': sscrt.address}}))
-
-print('Sending 100000000 usscrt to treasury')
-sscrt.execute({
-        "send": {
-            "recipient": treasury.address,
-            "amount": str(100000000),
-        },
-    },
-    account,
-)
-print('Treasury sSCRT Balance')
-print(treasury.query({'balance': {'asset': sscrt.address}}))
-
-print('DELEGATIONS')
-delegations = scrt_staking.query({'delegations': {}})
-print(delegations)
-
-print('Waiting for rewards',)
-while scrt_staking.query({'rewards': {}}) == '0':
-    print('.',)
-print()
-    
-print('REWARDS', scrt_staking.query({'rewards': {}}))
-
-print('CLAIMING')
-for delegation in delegations:
-    print(scrt_staking.execute({'claim': {'validator': delegation['validator']}}))
+print('Last Refresh')
+print(treasury.query({'last_allowance_refresh': {}}))
 
 print('Treasury sSCRT Balance')
 print(treasury.query({'balance': {'asset': sscrt.address}}))
+
+print('Refreshing allowance (should fail/do nothing)')
+print(treasury.execute({'refresh_allowance': {}}))
+
+print('sSCRT Allowance')
+print(sscrt.query({
+    'allowance': {
+        'owner': treasury.address,
+        'spender': account,
+        'key': viewing_key,
+    }
+}))
+
+print('One-time allowance to self')
+print(treasury.execute({
+    'one_time_allowance': {
+        'asset': sscrt.address,
+        'spender': account,
+        'amount': '1000000', # (uscrt) = 1 SCRT
+    }
+}))
+
+print('sSCRT Allowance')
+print(sscrt.query({
+    'allowance': {
+        'owner': treasury.address,
+        'spender': account,
+        'key': viewing_key,
+    }
+}))
