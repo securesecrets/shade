@@ -1,59 +1,88 @@
+use crate::snip20::Snip20Asset;
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-#[cfg(test)]
-use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MintConfig {
-    pub owner: HumanAddr,
+pub struct Config {
+    pub admin: HumanAddr,
     pub oracle: Contract,
+    // Both treasury & Commission must be set to function
+    pub treasury: Option<Contract>,
+    pub secondary_burn: Option<HumanAddr>,
     pub activated: bool,
+    pub limit: Option<Limit>,
+}
+
+/// Used to store the assets allowed to be burned
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct SupportedAsset {
+    pub asset: Snip20Asset,
+    // Commission percentage * 100 e.g. 5 == .05 == 5%
+    pub capture: Uint128,
+    pub unlimited: bool,
+}
+
+// Used to keep track of the cap
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum Limit {
+    Daily {
+        annual_limit: Uint128,
+        days: Uint128,
+    },
+    Monthly {
+        annual_limit: Uint128,
+        months: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct SupportedAsset {
-    pub name: String,
-    pub contract: Contract,
-    pub burnable: bool,
-    pub total_burned: Uint128,
+pub struct MintMsgHook {
+    pub minimum_expected_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub oracle: Contract,
-    pub initial_assets: Option<Vec<SupportedAsset>>,
+
+    // Asset that is minted
+    pub native_asset: Contract,
+
+    //Symbol to peg to, default to snip20 symbol
+    pub peg: Option<String>,
+
+    // Both treasury & asset capture must be set to function properly
+    pub treasury: Option<Contract>,
+
+    // This is where the non-burnable assets will go, if not defined they will stay in this contract
+    pub secondary_burn: Option<HumanAddr>,
+
+    pub limit: Option<Limit>,
 }
 
 impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[cfg(test)]
-impl TestInit for InitMsg {}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    Migrate {
-        label: String,
-        code_id: u64,
-        code_hash: String,
-    },
     UpdateConfig {
-        owner: Option<HumanAddr>,
-        oracle: Option<Contract>,
+        config: Config,
     },
     RegisterAsset {
-        name: Option<String>,
         contract: Contract,
-        burnable: Option<bool>,
-        total_burned: Option<Uint128>,
+        // Commission * 100 e.g. 5 == .05 == 5%
+        capture: Option<Uint128>,
+        unlimited: Option<bool>
+    },
+    RemoveAsset {
+        address: HumanAddr,
     },
     Receive {
         sender: HumanAddr,
@@ -68,22 +97,6 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[cfg(test)]
-impl TestHandle for HandleMsg {}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct SnipMsgHook {
-    pub minimum_expected_amount: Uint128,
-    pub to_mint: HumanAddr,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct MintMsgHook {
-    pub minimum_expected_amount: Uint128,
-}
-
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
@@ -91,40 +104,55 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         address: HumanAddr,
     },
-    Migrate {
-        status: ResponseStatus,
-    },
     UpdateConfig {
         status: ResponseStatus,
     },
     RegisterAsset {
         status: ResponseStatus,
     },
-    Burn {
+    RemoveAsset {
         status: ResponseStatus,
-        mint_amount: Uint128,
+    },
+    Mint {
+        status: ResponseStatus,
+        amount: Uint128,
     },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetSupportedAssets {},
-    GetAsset { contract: String },
-    GetConfig {},
+    NativeAsset {},
+    SupportedAssets {},
+    Asset { contract: String },
+    Config {},
+    Limit {},
 }
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[cfg(test)]
-impl TestQuery<QueryAnswer> for QueryMsg {}
-
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    SupportedAssets { assets: Vec<String> },
-    Asset { asset: SupportedAsset },
-    Config { config: MintConfig },
+    NativeAsset {
+        asset: Snip20Asset,
+        peg: String,
+    },
+    SupportedAssets {
+        assets: Vec<String>,
+    },
+    Asset {
+        asset: SupportedAsset,
+        burned: Uint128,
+    },
+    Config {
+        config: Config,
+    },
+    Limit {
+        minted: Uint128,
+        limit: Uint128,
+        last_refresh: String,
+    },
 }

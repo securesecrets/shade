@@ -6,9 +6,9 @@ use rand::{distributions::Alphanumeric, Rng};
 use secretcli::{cli_types::NetContract,
                 secretcli::{account_address, TestInit, TestHandle,
                             TestQuery, list_contracts_by_code}};
-use shade_protocol::{initializer::{Snip20ContractInfo}, micro_mint,
+use shade_protocol::{initializer::{Snip20ContractInfo}, mint,
                      snip20::{InitConfig, InitialBalance}, oracle,
-                     band, snip20, initializer, mint, asset::Contract, micro_mint::MintLimit};
+                     band, snip20, initializer, mint, asset::Contract, mint::MintLimit};
 use cosmwasm_std::{HumanAddr, Uint128, to_binary};
 
 const STORE_GAS: &str = "10000000";
@@ -150,7 +150,7 @@ fn main() -> Result<()> {
     print_contract(&oracle);
 
     print_header("Initializing Mint-Shade");
-    let mint_shade = micro_mint::InitMsg {
+    let mint_shade = mint::InitMsg {
         admin: None,
         native_asset: Contract { address: HumanAddr::from(shade.address.clone()),
             code_hash: shade.code_hash.clone() },
@@ -160,7 +160,7 @@ fn main() -> Result<()> {
         treasury: None,
         epoch_frequency: Some(Uint128(120)),
         epoch_mint_limit: Some(Uint128(1000000000)),
-    }.inst_init("../../compiled/micro_mint.wasm.gz", &*generate_label(8),
+    }.inst_init("../../compiled/mint.wasm.gz", &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
 
@@ -169,7 +169,7 @@ fn main() -> Result<()> {
     print_epoch_info(&mint_shade);
 
     print_header("Initializing Mint-Silk");
-    let mint_silk = micro_mint::InitMsg {
+    let mint_silk = mint::InitMsg {
         admin: None,
         native_asset: Contract { address: HumanAddr::from(silk.address.clone()),
             code_hash: silk.code_hash.clone() },
@@ -179,7 +179,7 @@ fn main() -> Result<()> {
         treasury: None,
         epoch_frequency: Some(Uint128(120)),
         epoch_mint_limit: Some(Uint128(1000000000)),
-    }.inst_init("../../compiled/micro_mint.wasm.gz", &*generate_label(8),
+    }.inst_init("../../compiled/mint.wasm.gz", &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
 
@@ -188,31 +188,31 @@ fn main() -> Result<()> {
     print_epoch_info(&mint_silk);
 
     print_header("Registering allowed tokens");
-    micro_mint::HandleMsg::RegisterAsset { contract: Contract {
+    mint::HandleMsg::RegisterAsset { contract: Contract {
         address: HumanAddr::from(sSCRT.address.clone()),
         code_hash: sSCRT.code_hash.clone() }, commission: Some(Uint128(1000)) }.t_handle(
         &mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
-    micro_mint::HandleMsg::RegisterAsset { contract: Contract {
+    mint::HandleMsg::RegisterAsset { contract: Contract {
         address: HumanAddr::from(silk.address.clone()),
         code_hash: silk.code_hash.clone() }, commission: Some(Uint128(1000)) }.t_handle(
         &mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
-    micro_mint::HandleMsg::RegisterAsset { contract: Contract {
+    mint::HandleMsg::RegisterAsset { contract: Contract {
         address: HumanAddr::from(shade.address.clone()),
         code_hash: shade.code_hash.clone() }, commission: Some(Uint128(1000)) }.t_handle(
         &mint_silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
     {
-        let query: micro_mint::QueryAnswer = micro_mint::QueryMsg::GetSupportedAssets {}.t_query(
+        let query: mint::QueryAnswer = mint::QueryMsg::GetSupportedAssets {}.t_query(
             &mint_shade)?;
-        if let micro_mint::QueryAnswer::SupportedAssets { assets } = query {
+        if let mint::QueryAnswer::SupportedAssets { assets } = query {
             print_vec("Shade allowed tokens: ", assets);
         }
     }
 
     {
-        let query: micro_mint::QueryAnswer = micro_mint::QueryMsg::GetSupportedAssets {}.t_query(
+        let query: mint::QueryAnswer = mint::QueryMsg::GetSupportedAssets {}.t_query(
             &mint_silk)?;
-        if let micro_mint::QueryAnswer::SupportedAssets { assets } = query {
+        if let mint::QueryAnswer::SupportedAssets { assets } = query {
             print_vec("Silk allowed tokens: ", assets);
         }
     }
@@ -297,9 +297,9 @@ fn print_contract(contract: &NetContract) {
 
 fn print_epoch_info(minter: &NetContract) {
     println!("\tEpoch information");
-    let query = micro_mint::QueryMsg::GetMintLimit {}.t_query(minter).unwrap();
+    let query = mint::QueryMsg::GetMintLimit {}.t_query(minter).unwrap();
 
-    if let micro_mint::QueryAnswer::MintLimit { limit } = query {
+    if let mint::QueryAnswer::MintLimit { limit } = query {
         println!("\tFrequency: {}\n\tCapacity: {}\n\tTotal Minted: {}\n\tNext Epoch: {}",
                  limit.frequency, limit.mint_capacity, limit.total_minted, limit.next_epoch);
     }

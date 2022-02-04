@@ -6,7 +6,7 @@ pub mod tests {
         Extern, StdError, Uint128,
     };
     use mockall_double::double;
-    use shade_protocol::micro_mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg};
+    use shade_protocol::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg};
 
     use crate::{
         contract::{handle, init, query},
@@ -61,9 +61,12 @@ pub mod tests {
             peg,
             treasury,
             secondary_burn: None,
+            limit: None,
+            /*
             start_epoch: None,
             epoch_frequency: None,
             epoch_mint_limit: None,
+            */
         };
         let env = mock_env(admin, &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();
