@@ -3,15 +3,18 @@ use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{snip20::Snip20Asset, treasury};
+use shade_protocol::{
+    snip20::Snip20Asset,
+    treasury,
+};
 
 pub static CONFIG_KEY: &[u8] = b"config";
-pub static ASSET_KEY: &[u8] = b"assets";
-pub static ASSET_LIST_KEY: &[u8] = b"asset_list";
+pub static ASSETS: &[u8] = b"assets";
+pub static ASSET_LIST: &[u8] = b"asset_list";
 pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static ALLOCATIONS: &[u8] = b"allocations";
-pub static RESERVES: &[u8] = b"reserves";
+pub static ALLOWANCE_REFRESH: &[u8] = b"allowance_refresh";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury::Config> {
     singleton(storage, CONFIG_KEY)
@@ -21,20 +24,20 @@ pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, treasury::Confi
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn asset_list<S: Storage>(storage: &mut S) -> Singleton<S, Vec<String>> {
-    singleton(storage, ASSET_LIST_KEY)
+pub fn asset_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<HumanAddr>> {
+    singleton_read(storage, ASSET_LIST)
 }
 
-pub fn asset_list_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<String>> {
-    singleton_read(storage, ASSET_LIST_KEY)
+pub fn asset_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<HumanAddr>> {
+    singleton(storage, ASSET_LIST)
 }
 
 pub fn assets_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Snip20Asset> {
-    bucket_read(ASSET_KEY, storage)
+    bucket_read(ASSETS, storage)
 }
 
 pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
-    bucket(ASSET_KEY, storage)
+    bucket(ASSETS, storage)
 }
 
 pub fn viewing_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
@@ -61,10 +64,10 @@ pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::All
     bucket(ALLOCATIONS, storage)
 }
 
-pub fn reserves_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
-    bucket_read(RESERVES, storage)
+pub fn last_allowance_refresh_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
+    singleton_read(storage, ALLOWANCE_REFRESH)
 }
 
-pub fn reserves_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
-    bucket(RESERVES, storage)
+pub fn last_allowance_refresh_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
+    singleton(storage, ALLOWANCE_REFRESH)
 }

@@ -2,7 +2,7 @@ use crate::utils::asset::Contract;
 use cosmwasm_std::{Binary, HumanAddr, Querier, StdResult, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::{
-    snip20::{token_info_query, TokenInfo},
+    snip20::{token_info_query, TokenInfo, Allowance},
     utils::{HandleCallback, InitCallback, Query},
 };
 use serde::{Deserialize, Serialize};
@@ -159,6 +159,16 @@ pub enum HandleMsg {
         minters: Vec<HumanAddr>,
         padding: Option<String>,
     },
+    IncreaseAllowance {
+        owner: HumanAddr,
+        spender: HumanAddr,
+        amount: Uint128,
+    },
+    DecreaseAllowance {
+        owner: HumanAddr,
+        spender: HumanAddr,
+        amount: Uint128,
+    },
 }
 
 impl HandleCallback for HandleMsg {
@@ -208,10 +218,13 @@ pub enum QueryAnswer {
         denom: String,
     },
     Allowance {
+        allowance: Allowance,
+        /*
         spender: HumanAddr,
         owner: HumanAddr,
         allowance: Uint128,
         expiration: Option<u64>,
+        */
     },
     Balance {
         amount: Uint128,
