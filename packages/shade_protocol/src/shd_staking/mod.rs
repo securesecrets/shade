@@ -88,11 +88,11 @@ pub enum HandleMsg {
 
     // Distributors
     AddDistributors {
-        distributors: Vec<String>,
+        distributors: Vec<HumanAddr>,
         padding: String
     },
     SetDistributors {
-        distributors: Vec<String>,
+        distributors: Vec<HumanAddr>,
         padding: String
     },
 
