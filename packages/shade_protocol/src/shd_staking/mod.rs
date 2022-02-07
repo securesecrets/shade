@@ -1,5 +1,6 @@
 pub mod stake;
 use crate::{utils::{asset::Contract, generic_response::ResponseStatus}};
+use crate::snip20::permit::Snip20Permit;
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, Query};
@@ -139,10 +140,10 @@ pub enum QueryMsg {
 
     // Distributors
     Distributors {},
-    // WithPermit {
-    //     permit: Permit,
-    //     query: QueryWithPermit,
-    // },
+    WithPermit {
+        permit: Snip20Permit,
+        query: QueryWithPermit,
+    },
 }
 
 impl Query for QueryMsg {

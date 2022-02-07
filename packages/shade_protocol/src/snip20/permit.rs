@@ -6,25 +6,25 @@ use flexible_permits::{
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 
-#[serde(rename_all = "snake_case")]
 pub type Snip20Permit = Permit<Params>;
 
-impl Snip20Permit {
-    pub fn check_token(&self, token: &HumanAddr) -> bool {
-        self.params.allowed_tokens.contains(token)
-    }
-
-    pub fn check_permission(&self, permission: &Permission) -> bool {
-        self.params.permissions.contains(permission)
-    }
-}
-
+#[remain::sorted]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Params {
     pub allowed_tokens: Vec<HumanAddr>,
-    pub permit_name: String,
     pub permissions: Vec<Permission>,
+    pub permit_name: String,
+}
+
+impl Params {
+    pub fn check_token(&self, token: &HumanAddr) -> bool {
+        self.allowed_tokens.contains(token)
+    }
+
+    pub fn check_permission(&self, permission: &Permission) -> bool {
+        self.permissions.contains(permission)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
