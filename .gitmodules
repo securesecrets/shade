@@ -3,6 +3,6 @@
 	url = https://github.com/scrtlabs/snip20-reference-impl.git
   branch = master
 [submodule "contracts/shd_staking"]
-    path = contracts/shd_staking
-    url = https://github.com/securesecrets/SPIP-STKN-0.git
+	path = contracts/shd_staking
+	url = https://github.com/securesecrets/SPIP-STKN-0
     branch = main
