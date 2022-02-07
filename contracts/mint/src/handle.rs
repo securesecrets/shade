@@ -271,7 +271,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    config_w(&mut deps.storage).save(&config);
+    config_w(&mut deps.storage).save(&config)?;
 
     Ok(HandleResponse {
         messages: vec![],

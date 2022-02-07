@@ -10,7 +10,8 @@ use shade_protocol::{
 };
 
 use crate::{
-    handle, query,
+    handle,
+    query,
     state::{asset_list_w, asset_peg_w, config_w, limit_w, native_asset_w},
 };
 
@@ -99,5 +100,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Asset { contract } => to_binary(&query::asset(deps, contract)?),
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Limit {} => to_binary(&query::limit(deps)?),
+        QueryMsg::Mint { offer_asset, amount } => to_binary(&query::mint(deps, offer_asset, amount)?),
     }
 }

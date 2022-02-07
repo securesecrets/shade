@@ -9,12 +9,15 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub admin: HumanAddr,
+    pub path: Vec<Contract>,
+    /*
     pub oracle: Contract,
     // Both treasury & Commission must be set to function
     pub treasury: Option<Contract>,
     pub secondary_burn: Option<HumanAddr>,
     pub activated: bool,
     pub limit: Option<Limit>,
+    */
 }
 
 /// Used to store the assets allowed to be burned
@@ -26,19 +29,6 @@ pub struct SupportedAsset {
     pub unlimited: bool,
 }
 
-// Used to keep track of the cap
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub enum Limit {
-    Daily {
-        annual_limit: Uint128,
-        days: Uint128,
-    },
-    Monthly {
-        annual_limit: Uint128,
-        months: Uint128,
-    },
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct MintMsgHook {
@@ -48,6 +38,7 @@ pub struct MintMsgHook {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
+    /*
     pub oracle: Contract,
 
     // Asset that is minted
@@ -63,6 +54,7 @@ pub struct InitMsg {
     pub secondary_burn: Option<HumanAddr>,
 
     pub limit: Option<Limit>,
+    */
 }
 
 impl InitCallback for InitMsg {
@@ -75,11 +67,12 @@ pub enum HandleMsg {
     UpdateConfig {
         config: Config,
     },
-    RegisterAsset {
-        contract: Contract,
+    RegisterPath {
+        input: Contract,
+        output: Contract,
         // Commission * 100 e.g. 5 == .05 == 5%
-        capture: Option<Uint128>,
-        unlimited: Option<bool>
+        // capture: Option<Uint128>,
+        // unlimited: Option<bool>
     },
     RemoveAsset {
         address: HumanAddr,
@@ -127,10 +120,6 @@ pub enum QueryMsg {
     Asset { contract: String },
     Config {},
     Limit {},
-    Mint {
-        offer_asset: HumanAddr,
-        amount: Uint128,
-    },
 }
 
 impl Query for QueryMsg {
@@ -158,9 +147,5 @@ pub enum QueryAnswer {
         minted: Uint128,
         limit: Uint128,
         last_refresh: String,
-    },
-    Mint {
-        asset: HumanAddr,
-        amount: Uint128,
     },
 }
