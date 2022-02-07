@@ -10,23 +10,6 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub admin: HumanAddr,
     pub path: Vec<Contract>,
-    /*
-    pub oracle: Contract,
-    // Both treasury & Commission must be set to function
-    pub treasury: Option<Contract>,
-    pub secondary_burn: Option<HumanAddr>,
-    pub activated: bool,
-    pub limit: Option<Limit>,
-    */
-}
-
-/// Used to store the assets allowed to be burned
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct SupportedAsset {
-    pub asset: Snip20Asset,
-    // Commission percentage * 100 e.g. 5 == .05 == 5%
-    pub capture: Uint128,
-    pub unlimited: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -38,23 +21,7 @@ pub struct MintMsgHook {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
-    /*
-    pub oracle: Contract,
-
-    // Asset that is minted
-    pub native_asset: Contract,
-
-    //Symbol to peg to, default to snip20 symbol
-    pub peg: Option<String>,
-
-    // Both treasury & asset capture must be set to function properly
-    pub treasury: Option<Contract>,
-
-    // This is where the non-burnable assets will go, if not defined they will stay in this contract
-    pub secondary_burn: Option<HumanAddr>,
-
-    pub limit: Option<Limit>,
-    */
+    pub path: Vec<Contract>,
 }
 
 impl InitCallback for InitMsg {
@@ -66,16 +33,6 @@ impl InitCallback for InitMsg {
 pub enum HandleMsg {
     UpdateConfig {
         config: Config,
-    },
-    RegisterPath {
-        input: Contract,
-        output: Contract,
-        // Commission * 100 e.g. 5 == .05 == 5%
-        // capture: Option<Uint128>,
-        // unlimited: Option<bool>
-    },
-    RemoveAsset {
-        address: HumanAddr,
     },
     Receive {
         sender: HumanAddr,
@@ -100,12 +57,6 @@ pub enum HandleAnswer {
     UpdateConfig {
         status: ResponseStatus,
     },
-    RegisterAsset {
-        status: ResponseStatus,
-    },
-    RemoveAsset {
-        status: ResponseStatus,
-    },
     Mint {
         status: ResponseStatus,
         amount: Uint128,
@@ -115,11 +66,7 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    NativeAsset {},
-    SupportedAssets {},
-    Asset { contract: String },
     Config {},
-    Limit {},
 }
 
 impl Query for QueryMsg {
@@ -129,23 +76,7 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    NativeAsset {
-        asset: Snip20Asset,
-        peg: String,
-    },
-    SupportedAssets {
-        assets: Vec<String>,
-    },
-    Asset {
-        asset: SupportedAsset,
-        burned: Uint128,
-    },
     Config {
         config: Config,
-    },
-    Limit {
-        minted: Uint128,
-        limit: Uint128,
-        last_refresh: String,
     },
 }
