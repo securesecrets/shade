@@ -547,18 +547,10 @@ pub fn try_add_account_addresses<S: Storage>(
         if let Some(memo) = permit.memo.clone() {
             let params: AddressProofMsg = from_binary(&Binary::from_base64(&memo)?)?;
 
-            let address: HumanAddr;
             // Avoid verifying sender
             if &params.address != sender {
                 // Check permit legitimacy
-                address = validate_address_permit(storage, permit, config.contract.clone())?;
-                if address != params.address {
-                    return Err(StdError::generic_err(
-                        "Signer address is not the same as the permit address",
-                    ));
-                }
-            } else {
-                address = sender.clone();
+                validate_address_permit(storage, permit, &params,config.contract.clone())?;
             }
 
             // Check that airdrop amount does not exceed maximum
@@ -567,11 +559,11 @@ pub fn try_add_account_addresses<S: Storage>(
             }
 
             // Update address if its not in an account
-            address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
+            address_in_account_w(storage).update(params.address.to_string().as_bytes(), |state| {
                 if state.is_some() {
                     return Err(StdError::generic_err(format!(
                         "{:?} already in an account",
-                        address.to_string()
+                        params.address.to_string()
                     )));
                 }
 
@@ -580,11 +572,11 @@ pub fn try_add_account_addresses<S: Storage>(
 
             // Add account as a leaf
             let leaf_hash =
-                Sha256::hash((address.to_string() + &params.amount.to_string()).as_bytes());
+                Sha256::hash((params.address.to_string() + &params.amount.to_string()).as_bytes());
             leaves_to_validate.push((params.index as usize, leaf_hash));
 
             // If valid then add to account array and sum total amount
-            account.addresses.push(address);
+            account.addresses.push(params.address);
             account.total_claimable += params.amount;
         } else {
             return Err(StdError::generic_err(format!("Expected a memo")));

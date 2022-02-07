@@ -120,25 +120,22 @@ pub fn is_permit_revoked<S: Storage>(
 pub fn validate_address_permit<S: Storage>(
     storage: &S,
     permit: &AddressProofPermit,
+    params: &AddressProofMsg,
     contract: HumanAddr,
-) -> StdResult<HumanAddr> {
-    if let Some(memo) = permit.memo.clone() {
-        let params: AddressProofMsg = from_binary(&Binary::from_base64(&memo)?)?;
+) -> StdResult<()> {
 
-        // Check that contract matches
-        if params.contract != contract {
-            return Err(StdError::unauthorized());
-        }
-
-        // Check that permit is not revoked
-        if is_permit_revoked(storage, params.address.to_string(), params.key.clone())? {
-            return Err(StdError::generic_err("permit key revoked"));
-        }
-
-        // Authenticate permit
-        return authenticate_ownership(permit);
+    // Check that contract matches
+    if params.contract != contract {
+        return Err(StdError::unauthorized());
     }
-    Err(StdError::generic_err("Expected a memo"))
+
+    // Check that permit is not revoked
+    if is_permit_revoked(storage, params.address.to_string(), params.key.clone())? {
+        return Err(StdError::generic_err("permit key revoked"));
+    }
+
+    // Authenticate permit
+    authenticate_ownership(permit, params.address.as_str())
 }
 
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
