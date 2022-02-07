@@ -48,7 +48,7 @@ pub fn print_epoch_info(minter: &NetContract) {
     println!("\tEpoch information");
     let msg = mint::QueryMsg::GetMintLimit {};
 
-    let query: mint::QueryAnswer = query(minter, &msg).unwrap();
+    let query: mint::QueryAnswer = query(minter, &msg, None).unwrap();
 
     if let mint::QueryAnswer::MintLimit { limit } = query {
         println!(
