@@ -1,5 +1,3 @@
-pub mod bucket_queue;
-
 use cosmwasm_std::{StdResult, Storage};
 use cosmwasm_storage::{Bucket, bucket, bucket_read, ReadonlyBucket, ReadonlySingleton, Singleton, singleton, singleton_read};
 use serde::de::DeserializeOwned;
