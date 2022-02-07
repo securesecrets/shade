@@ -15,4 +15,5 @@ pub mod mint;
 pub mod oracle;
 pub mod scrt_staking;
 pub mod staking;
+pub mod shd_staking;
 pub mod treasury;
