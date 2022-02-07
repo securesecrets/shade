@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use cosmwasm_std::{HumanAddr, Uint128};
+use crate::storage::{BucketStorage, SingletonStorage};
 use crate::utils::asset::Contract;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -10,6 +11,46 @@ pub struct StakeConfig {
     pub unbond_time: u64,
     pub staked_token: Contract,
     pub treasury: Option<HumanAddr>
+}
+
+impl SingletonStorage for StakeConfig {
+    const NAMESPACE: &'static [u8] = b"stake_config";
+}
+
+// Stake amount wrappers
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct TotalStaked(u128);
+
+impl SingletonStorage for TotalStaked {
+    const NAMESPACE: &'static [u8] = b"total_Staked";
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct UserStake(u128);
+
+impl BucketStorage for TotalStaked {
+    const NAMESPACE: &'static [u8] = b"user_Staked";
+}
+
+// Distributors wrappers
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Distributors(Vec<HumanAddr>);
+
+impl SingletonStorage for Distributors {
+    const NAMESPACE: &'static [u8] = b"distributors";
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct DistributorsEnabled(bool);
+
+impl SingletonStorage for DistributorsEnabled {
+    const NAMESPACE: &'static [u8] = b"distributors_transfer";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
