@@ -11,7 +11,7 @@ use secretcli::{
 };
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
-use shade_protocol::{mint, mint, snip20};
+use shade_protocol::{mint, snip20};
 
 pub fn initialize_minter(
     governance: &NetContract,
@@ -29,11 +29,7 @@ pub fn initialize_minter(
             peg: None,
             treasury: None,
             secondary_burn: None,
-            /*
-            start_epoch: None,
-            epoch_frequency: Some(Uint128(120)),
-            epoch_mint_limit: Some(Uint128(1000000000)),
-            */
+            limit: None
         },
     )?;
 
@@ -62,6 +58,7 @@ pub fn setup_minters(
                 code_hash: sscrt.code_hash.clone(),
             },
             capture: Some(Uint128(1000)),
+            unlimited: None
         },
         Some("Register asset"),
     )?;
@@ -71,6 +68,7 @@ pub fn setup_minters(
         mint::HandleMsg::RegisterAsset {
             contract: silk.clone(),
             capture: Some(Uint128(1000)),
+            unlimited: None
         },
         Some("Register asset"),
     )?;
@@ -80,6 +78,7 @@ pub fn setup_minters(
         mint::HandleMsg::RegisterAsset {
             contract: shade.clone(),
             capture: Some(Uint128(1000)),
+            unlimited: None
         },
         Some("Register asset"),
     )?;
