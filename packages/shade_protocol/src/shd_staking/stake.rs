@@ -21,7 +21,7 @@ impl SingletonStorage for StakeConfig {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct TotalStaked(u128);
+pub struct TotalStaked(pub u128);
 
 impl SingletonStorage for TotalStaked {
     const NAMESPACE: &'static [u8] = b"total_Staked";
@@ -29,7 +29,7 @@ impl SingletonStorage for TotalStaked {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct UserStake(u128);
+pub struct UserStake(pub u128);
 
 impl BucketStorage for TotalStaked {
     const NAMESPACE: &'static [u8] = b"user_Staked";
@@ -39,7 +39,7 @@ impl BucketStorage for TotalStaked {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Distributors(Vec<HumanAddr>);
+pub struct Distributors(pub Vec<HumanAddr>);
 
 impl SingletonStorage for Distributors {
     const NAMESPACE: &'static [u8] = b"distributors";
@@ -47,7 +47,7 @@ impl SingletonStorage for Distributors {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct DistributorsEnabled(bool);
+pub struct DistributorsEnabled(pub bool);
 
 impl SingletonStorage for DistributorsEnabled {
     const NAMESPACE: &'static [u8] = b"distributors_transfer";
