@@ -47,8 +47,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::UpdateConfig {
             config,
         } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset {
-        } => handle::register_asset(deps, env, asset),
         HandleMsg::Receive {
             sender,
             from,

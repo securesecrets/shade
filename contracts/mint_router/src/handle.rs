@@ -25,7 +25,7 @@ use crate::state::{
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    _sender: HumanAddr,
+    sender: HumanAddr,
     from: HumanAddr,
     amount: Uint128,
     msg: Option<Binary>,
@@ -35,43 +35,72 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let mut messages = vec![];
 
-    let mut input_asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
+    let supported = match (mint::QueryMsg::SupportedAssets {}.query(
+        &deps.querier,
+        config.path[0].code_hash.clone(),
+        config.path[0].address.clone(),
+    )?) {
+        mint::QueryAnswer::SupportedAssets { assets } => assets,
+        _ => {
+            return Err(StdError::generic_err("Failed to get supported assets"));
+        }
+    };
+
+    let mut input_asset: Contract = match supported.into_iter().find(|asset| asset.address == sender) {
+        Some(a) => a,
+        None => {
+            return Err(StdError::NotFound {
+                kind: sender.to_string(),
+                backtrace: None,
+            });
+        }
+    };
+
     let mut input_amount = amount;
 
-    let mut output_asset: Snip20Asset;
-    let mut output_amount: Uint128; 
+    let mut output_asset = Contract { address: HumanAddr("".to_string()), code_hash: "".to_string() };
+    let mut output_amount = Uint128::zero();
 
     for mint in config.path {
 
-        // Get amount/denom received
-        let mint_asset: mint::QueryAnswer::NativeAsset = mint::QueryMsg::NativeAsset {};
-        let mint_amount: mint::QueryAnswer::Mint = mint::QueryMsg::Mint {
-            offer_asset: input_asset.contract.address.clone(),
+        let (mint_asset, mint_amount) = match (mint::QueryMsg::Mint {
+            offer_asset: input_asset.address.clone(),
             amount: input_amount,
+        }.query(
+            &deps.querier,
+            mint.code_hash.clone(),
+            mint.address.clone(),
+        )?) {
+            mint::QueryAnswer::Mint { asset, amount } => (asset, amount),
+            _ => {
+                return Err(StdError::generic_err("Failed to get mint query"));
+            }
+
         };
 
-        // carry these and they will be set properly after last iteration
-        output_asset = mint_asset.asset;
-        output_amount = mint_amount.amount;
 
         // send input_asset to mint for mint_asset
         messages.push(send_msg(
-            mint.address,
+            mint.address.clone(),
             input_amount,
             None,
             None,
             None,
             1,
-            input_asset.contract.code_hash.clone(),
-            input_asset.contract.address.clone(),
+            input_asset.code_hash.clone(),
+            input_asset.address.clone(),
         )?);
 
-        // rotate output->input for next iteration
-        input_asset = mint_asset.asset;
-        input_amount = mint_amount.amount;
+        // rotate minted->input for next iteration
+        input_asset = mint_asset.clone();
+        input_amount = mint_amount;
+
+        // carry last out of the loop
+        output_asset = mint_asset;
+        output_amount = mint_amount;
     }
 
-    // send final funds to user
+    // send final output funds to user
     messages.push(send_msg(
         from,
         output_amount,
@@ -79,8 +108,8 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
         None,
         None,
         1,
-        output_asset.contract.code_hash.clone(),
-        output_asset.contract.address.clone(),
+        output_asset.code_hash.clone(),
+        output_asset.address.clone(),
     )?);
 
     Ok(HandleResponse {
@@ -106,7 +135,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    config_w(&mut deps.storage).save(&config);
+    config_w(&mut deps.storage).save(&config)?;
 
     Ok(HandleResponse {
         messages: vec![],

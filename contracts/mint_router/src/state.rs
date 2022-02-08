@@ -11,8 +11,6 @@ use shade_protocol::{
 
 pub static CONFIG: &[u8] = b"config";
 pub static ASSET: &[u8] = b"assets";
-pub static ASSET_LIST: &[u8] = b"asset_list";
-pub static MINT: &[u8] = b"mint";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG)

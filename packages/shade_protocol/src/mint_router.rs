@@ -41,6 +41,11 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
+    /*
+    RegisterAsset {
+        contract: Contract,
+    },
+    */
 }
 
 impl HandleCallback for HandleMsg {
