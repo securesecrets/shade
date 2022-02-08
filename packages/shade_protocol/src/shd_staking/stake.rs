@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{CanonicalAddr, HumanAddr, Uint128};
 use crate::storage::{BucketStorage, SingletonStorage};
 use crate::utils::asset::Contract;
 
@@ -39,7 +39,7 @@ impl BucketStorage for TotalStaked {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Distributors(pub Vec<HumanAddr>);
+pub struct Distributors(pub Vec<CanonicalAddr>);
 
 impl SingletonStorage for Distributors {
     const NAMESPACE: &'static [u8] = b"distributors";
