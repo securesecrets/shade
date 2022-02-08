@@ -145,7 +145,7 @@ pub enum QueryAnswer {
         peg: String,
     },
     SupportedAssets {
-        assets: Vec<String>,
+        assets: Vec<Contract>,
     },
     Asset {
         asset: SupportedAsset,

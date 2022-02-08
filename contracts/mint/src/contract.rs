@@ -57,8 +57,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         token_config: Option::from(token_config),
     })?;
 
-    let empty_assets_list: Vec<String> = Vec::new();
-    asset_list_w(&mut deps.storage).save(&empty_assets_list)?;
+    asset_list_w(&mut deps.storage).save(&vec![])?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 

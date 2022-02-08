@@ -340,7 +340,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
     // Add the asset to list
     asset_list_w(&mut deps.storage).update(|mut state| {
-        state.push(contract_str);
+        state.push(contract.clone());
         Ok(state)
     })?;
 
@@ -365,7 +365,7 @@ pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
 
     // Remove asset from the array
     asset_list_w(&mut deps.storage).update(|mut state| {
-        state.retain(|value| *value != address_str);
+        state.retain(|value| value.address != address);
         Ok(state)
     })?;
 
