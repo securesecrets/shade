@@ -160,7 +160,7 @@ pub enum QueryAnswer {
         last_refresh: String,
     },
     Mint {
-        asset: HumanAddr,
+        asset: Contract,
         amount: Uint128,
     },
 }

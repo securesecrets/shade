@@ -66,7 +66,7 @@ pub fn mint<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, offer_asset:
     match assets_r(&deps.storage).may_load(offer_asset.to_string().as_bytes())? {
         Some(asset) => {
             Ok(QueryAnswer::Mint {
-                asset: native_asset.contract.address.clone(),
+                asset: native_asset.contract.clone(),
                 amount: mint_amount(deps, amount, &asset, &native_asset)?,
             })
         }
