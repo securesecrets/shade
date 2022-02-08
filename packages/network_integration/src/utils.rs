@@ -12,7 +12,7 @@ pub const GOVERNANCE_FILE: &str = "../../compiled/governance.wasm.gz";
 pub const MOCK_BAND_FILE: &str = "../../compiled/mock_band.wasm.gz";
 pub const ORACLE_FILE: &str = "../../compiled/oracle.wasm.gz";
 pub const INITIALIZER_FILE: &str = "../../compiled/initializer.wasm.gz";
-pub const MICRO_MINT_FILE: &str = "../../compiled/mint.wasm.gz";
+pub const MINT_FILE: &str = "../../compiled/mint.wasm.gz";
 pub const STAKING_FILE: &str = "../../compiled/staking.wasm.gz";
 
 pub const STORE_GAS: &str = "10000000";

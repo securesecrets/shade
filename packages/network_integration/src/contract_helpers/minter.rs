@@ -1,7 +1,7 @@
 use crate::{
     contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_contract},
     utils::{
-        print_contract, print_epoch_info, print_header, print_vec, GAS, MICRO_MINT_FILE, VIEW_KEY,
+        print_contract, print_epoch_info, print_header, print_vec, GAS, MINT_FILE, VIEW_KEY,
     },
 };
 use cosmwasm_std::{to_binary, HumanAddr, Uint128};
@@ -18,10 +18,11 @@ pub fn initialize_minter(
     contract_name: String,
     native_asset: &Contract,
 ) -> Result<NetContract> {
+
     let minter = init_contract(
         governance,
         contract_name,
-        MICRO_MINT_FILE,
+        MINT_FILE,
         mint::InitMsg {
             admin: Some(HumanAddr::from(governance.address.clone())),
             native_asset: native_asset.clone(),
@@ -33,11 +34,6 @@ pub fn initialize_minter(
                 annual_limit: Uint128(1_000_000_000_000),
                 days: Uint128(1),
             }),
-            /*
-            start_epoch: None,
-            epoch_frequency: Some(Uint128(120)),
-            epoch_mint_limit: Some(Uint128(1000000000)),
-            */
         },
     )?;
 
