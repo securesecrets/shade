@@ -50,7 +50,6 @@ pub enum HandleMsg {
     // Staking
     UpdateStakeConfig {
         unbond_time: Option<u64>,
-        staked_token: Option<Contract>,
         disable_treasury: bool,
         treasury: Option<HumanAddr>,
         treasury_code_hash: Option<String>,
@@ -99,8 +98,9 @@ pub enum HandleMsg {
     // Implement this to receive balance information
     // ReceiveBalance {
     //      sender: HumanAddr,
-    //      msg: Option<String>,
+    //      msg: Option<Binary>,
     //      balance: Uint128
+    //      memo: Option<String>
     // }
 }
 

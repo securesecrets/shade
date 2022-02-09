@@ -9,16 +9,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Config {
-    pub admin: Contract,
-    // Time to unbond
-    pub unbond_time: u64,
-    // Supported staking token
-    pub staked_token: Contract,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct InitMsg {
     pub admin: Option<Contract>,
     pub unbond_time: u64,

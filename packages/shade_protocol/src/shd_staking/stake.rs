@@ -10,6 +10,7 @@ use crate::utils::asset::Contract;
 pub struct StakeConfig {
     pub unbond_time: u64,
     pub staked_token: Contract,
+    pub staked_token_decimals: u8,
     pub treasury: Option<HumanAddr>
 }
 
@@ -17,7 +18,7 @@ impl SingletonStorage for StakeConfig {
     const NAMESPACE: &'static [u8] = b"stake_config";
 }
 
-// Stake amount wrappers
+// uint wrappers
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -31,8 +32,24 @@ impl SingletonStorage for TotalStaked {
 #[serde(rename_all = "snake_case")]
 pub struct UserStake(pub u128);
 
-impl BucketStorage for TotalStaked {
+impl BucketStorage for UserStake {
     const NAMESPACE: &'static [u8] = b"user_Staked";
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct TotalUnbonding(pub u128);
+
+impl SingletonStorage for TotalUnbonding {
+    const NAMESPACE: &'static [u8] = b"total_unbonding";
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct DailyUnbonding(pub u128);
+
+impl BucketStorage for DailyUnbonding {
+    const NAMESPACE: &'static [u8] = b"daily_unbonding";
 }
 
 // Distributors wrappers
