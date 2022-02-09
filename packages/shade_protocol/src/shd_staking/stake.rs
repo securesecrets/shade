@@ -38,6 +38,14 @@ impl BucketStorage for UserStake {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct UnsentStakedTokens(pub u128);
+
+impl SingletonStorage for UnsentStakedTokens {
+    const NAMESPACE: &'static [u8] = b"total_Staked";
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct TotalUnbonding(pub u128);
 
 impl SingletonStorage for TotalUnbonding {
