@@ -40,8 +40,12 @@ pub struct InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ReceiveType {
+    // User staking
     Bond,
-    Reward
+    // Adding staker rewards
+    Reward,
+    // Funding unbonds
+    Unbond
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
