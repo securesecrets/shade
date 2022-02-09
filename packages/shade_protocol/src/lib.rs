@@ -2,6 +2,7 @@ pub mod band;
 pub mod secretswap;
 pub mod snip20;
 pub mod utils;
+pub mod storage;
 
 //pub mod math;
 
