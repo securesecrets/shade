@@ -30,6 +30,8 @@ rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_e
 # Needed for transactions
 flexible-permits = {git = "https://github.com/securesecrets/flexible-permits", tag = "v1.1.0"}
 remain = "0.2.2"
+# Needed for staking
+binary-heap-plus = { version = "0.4.1", features = ["serde"] }
 
 [dev-dependencies]
 secretcli = { version = "0.1.0", path = "../secretcli" }

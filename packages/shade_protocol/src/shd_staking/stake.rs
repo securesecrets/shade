@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use cosmwasm_std::{HumanAddr, Uint128};
@@ -54,7 +55,41 @@ impl SingletonStorage for TotalUnbonding {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct DailyUnbonding(pub u128);
+pub struct DailyUnbonding {
+    pub unbonding: u128,
+    pub funded: u128
+}
+
+impl DailyUnbonding {
+    pub fn new(unbonding: u128) -> Self {
+        Self {
+            unbonding,
+            funded: 0
+        }
+    }
+
+    pub fn is_funded(&self) -> bool {
+        self.unbonding == self.funded
+    }
+
+    ///
+    /// Attempts to fund, will return whatever amount wasnt used
+    ///
+    pub fn fund(&mut self, amount: u128) -> u128 {
+        if self.is_funded() {
+            return amount
+        }
+
+        let to_fund = &self.unbonding - &self.funded;
+        if to_fund < amount {
+            self.funded = self.unbonding.into();
+            return amount - to_fund
+        }
+
+        self.funded += amount;
+        return 0
+    }
+}
 
 impl BucketStorage for DailyUnbonding {
     const NAMESPACE: &'static [u8] = b"daily_unbonding";
@@ -78,6 +113,15 @@ impl SingletonStorage for DistributorsEnabled {
     const NAMESPACE: &'static [u8] = b"distributors_transfer";
 }
 
+// Unbonding Queue
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct UnbondingQueue(pub BinaryHeap<Unbonding>);
+
+impl BucketStorage for UnbondingQueue {
+    const NAMESPACE: &'static [u8] = b"unbonding_queue";
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Unbonding {
@@ -94,5 +138,37 @@ impl Ord for Unbonding {
 impl PartialOrd for Unbonding {
     fn partial_cmp(&self, other: &Unbonding) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::shd_staking::stake::DailyUnbonding;
+
+    #[test]
+    fn is_funded() {
+        assert!(DailyUnbonding{ unbonding: 100, funded: 100 }.is_funded());
+        assert!(!DailyUnbonding{ unbonding: 150, funded: 100 }.is_funded());
+    }
+
+    #[test]
+    fn fund() {
+        // Initialize new unbond
+        let mut unbond = DailyUnbonding::new(500);
+        assert!(!unbond.is_funded());
+
+        // Add small fund
+        let residue = unbond.fund(250);
+        assert_eq!(unbond.funded, 250);
+        assert_eq!(residue, 0);
+
+        // Add overflowing fund
+        let residue = unbond.fund(500);
+        assert!(unbond.is_funded());
+        assert_eq!(residue, 250);
+
+        // Add to funded fund
+        let residue = unbond.fund(300);
+        assert_eq!(residue, 300);
     }
 }
