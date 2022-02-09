@@ -23,18 +23,18 @@ impl SingletonStorage for StakeConfig {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct TotalStaked(pub u128);
+pub struct TotalShares(pub u128);
 
-impl SingletonStorage for TotalStaked {
-    const NAMESPACE: &'static [u8] = b"total_Staked";
+impl SingletonStorage for TotalShares {
+    const NAMESPACE: &'static [u8] = b"total_shares";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct UserStake(pub u128);
+pub struct UserShares(pub u128);
 
-impl BucketStorage for UserStake {
-    const NAMESPACE: &'static [u8] = b"user_Staked";
+impl BucketStorage for UserShares {
+    const NAMESPACE: &'static [u8] = b"user_shares";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -42,7 +42,7 @@ impl BucketStorage for UserStake {
 pub struct UnsentStakedTokens(pub u128);
 
 impl SingletonStorage for UnsentStakedTokens {
-    const NAMESPACE: &'static [u8] = b"total_Staked";
+    const NAMESPACE: &'static [u8] = b"unsent_staked_tokens";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
