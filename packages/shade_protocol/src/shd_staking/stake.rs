@@ -29,6 +29,15 @@ impl SingletonStorage for TotalShares {
     const NAMESPACE: &'static [u8] = b"total_shares";
 }
 
+// used to separate tokens minted from total tokens (includes rewards)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct TotalTokens(pub u128);
+
+impl SingletonStorage for TotalTokens {
+    const NAMESPACE: &'static [u8] = b"total_tokens";
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct UserShares(pub u128);
