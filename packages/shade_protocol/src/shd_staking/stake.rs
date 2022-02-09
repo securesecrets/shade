@@ -10,7 +10,7 @@ use crate::utils::asset::Contract;
 pub struct StakeConfig {
     pub unbond_time: u64,
     pub staked_token: Contract,
-    pub staked_token_decimals: u8,
+    pub decimal_difference: u8,
     pub treasury: Option<HumanAddr>
 }
 
