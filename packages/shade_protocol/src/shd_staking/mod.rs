@@ -11,6 +11,7 @@ use crate::snip20::{InitConfig, InitialBalance};
 #[serde(rename_all = "snake_case")]
 pub struct StakeConfig {
     pub unbond_time: u64,
+    pub shares_decimals: u8,
     pub staked_token: Contract,
     pub treasury: Option<HumanAddr>
 }
@@ -22,6 +23,7 @@ pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub symbol: String,
     pub decimals: u8,
+    pub shares_decimals: u8,
     pub initial_balances: Option<Vec<InitialBalance>>,
     pub prng_seed: Binary,
     pub config: Option<InitConfig>,
