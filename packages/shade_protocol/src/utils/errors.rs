@@ -61,7 +61,7 @@ pub mod tests {
     use schemars::JsonSchema;
     use crate::utils::errors::{Error, CodeType};
 
-    #[derive(Serialize, Deserialize, Copy, Clone, Debug, JsonSchema)]
+    #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, JsonSchema)]
     #[repr(u8)]
     #[serde(rename_all = "snake_case")]
     enum TestCode {
@@ -115,27 +115,86 @@ pub mod tests {
 
     #[test]
     fn to_verbose() {
-
+        assert_eq!(TestCode::Error1.to_verbose(&vec![]),
+                   "Error".to_string());
+        assert_eq!(TestCode::Error2.to_verbose( &vec!["function"]),
+                   "Broke in function".to_string());
+        assert_eq!(TestCode::Error3.to_verbose(&vec!["address", "amount"]),
+                   "Expecting address but got amount".to_string());
     }
 
     #[test]
     fn from_code() {
+        let err1 = Error::from_code(TestCode::Error1, vec![]);
+        assert_eq!(err1.code, 0);
+        assert_eq!(err1.r#type, TestCode::Error1);
+        let empty: Vec<String> = vec![];
+        assert_eq!(err1.context, empty);
+        assert_eq!(err1.verbose, "Error".to_string());
 
+        let err2 = Error::from_code(TestCode::Error2, vec!["function"]);
+        assert_eq!(err2.code, 1);
+        assert_eq!(err2.r#type, TestCode::Error2);
+        assert_eq!(err2.context, vec!["function".to_string()]);
+        assert_eq!(err2.verbose, "Broke in function".to_string());
+
+        let err3 = Error::from_code(TestCode::Error3, vec!["address", "amount"]);
+        assert_eq!(err3.code, 2);
+        assert_eq!(err3.r#type, TestCode::Error3);
+        assert_eq!(err3.context, vec!["address".to_string(), "amount".to_string()]);
+        assert_eq!(err3.verbose, "Expecting address but got amount".to_string());
     }
 
     #[test]
     fn to_string() {
-
+        assert_eq!(Error::from_code(TestCode::Error1, vec![]).to_string(),
+                   "{\"code\":0,\"type\":\"error1\",\"context\":[],\"verbose\":\"Error\"}".to_string());
+        assert_eq!(Error::from_code(TestCode::Error2, vec!["function"]).to_string(),
+                   "{\"code\":1,\"type\":\"error2\",\"context\":[\"function\"],\"verbose\":\"Broke in function\"}".to_string());
+        assert_eq!(Error::from_code(TestCode::Error3, vec!["address", "amount"]).to_string(),
+                   "{\"code\":2,\"type\":\"error3\",\"context\":[\"address\",\"amount\"],\"verbose\":\"Expecting address but got amount\"}".to_string());
     }
 
     #[test]
     fn to_error() {
+        let err1 = Error::from_code(TestCode::Error1, vec![]).to_error();
+        match err1 {
+            StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"code\":0,\"type\":\"error1\",\"context\":[],\"verbose\":\"Error\"}".to_string()),
+            _ => assert!(false)
+        }
 
+        let err2 = Error::from_code(TestCode::Error2, vec!["function"]).to_error();
+        match err2 {
+            StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"code\":1,\"type\":\"error2\",\"context\":[\"function\"],\"verbose\":\"Broke in function\"}".to_string()),
+            _ => assert!(false)
+        }
+
+        let err3 = Error::from_code(TestCode::Error3, vec!["address", "amount"]).to_error();
+        match err3 {
+            StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"code\":2,\"type\":\"error3\",\"context\":[\"address\",\"amount\"],\"verbose\":\"Expecting address but got amount\"}".to_string()),
+            _ => assert!(false)
+        }
     }
 
     #[test]
     fn helpers() {
+        let err1 = error_1();
+        match err1 {
+            StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"code\":0,\"type\":\"error1\",\"context\":[],\"verbose\":\"Error\"}".to_string()),
+                _ => assert!(false)
+        }
 
+        let err2 = error_2(&["function"]);
+        match err2 {
+            StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"code\":1,\"type\":\"error2\",\"context\":[\"function\"],\"verbose\":\"Broke in function\"}".to_string()),
+            _ => assert!(false)
+        }
+
+        let err3 = error_3(&["address", "amount"]);
+        match err3 {
+            StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"code\":2,\"type\":\"error3\",\"context\":[\"address\",\"amount\"],\"verbose\":\"Expecting address but got amount\"}".to_string()),
+            _ => assert!(false)
+        }
     }
 
 }
