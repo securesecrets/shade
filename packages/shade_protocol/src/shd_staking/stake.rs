@@ -19,61 +19,20 @@ impl SingletonStorage for StakeConfig {
     const NAMESPACE: &'static [u8] = b"stake_config";
 }
 
-// uint wrappers
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct TotalShares(pub u128);
-
-impl SingletonStorage for TotalShares {
-    const NAMESPACE: &'static [u8] = b"total_shares";
-}
-
-// used to separate tokens minted from total tokens (includes rewards)
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct TotalTokens(pub u128);
-
-impl SingletonStorage for TotalTokens {
-    const NAMESPACE: &'static [u8] = b"total_tokens";
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct UserShares(pub u128);
-
-impl BucketStorage for UserShares {
-    const NAMESPACE: &'static [u8] = b"user_shares";
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct UnsentStakedTokens(pub u128);
-
-impl SingletonStorage for UnsentStakedTokens {
-    const NAMESPACE: &'static [u8] = b"unsent_staked_tokens";
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct TotalUnbonding(pub u128);
-
-impl SingletonStorage for TotalUnbonding {
-    const NAMESPACE: &'static [u8] = b"total_unbonding";
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct DailyUnbonding {
     pub unbonding: u128,
-    pub funded: u128
+    pub funded: u128,
+    pub release: u64
 }
 
 impl DailyUnbonding {
-    pub fn new(unbonding: u128) -> Self {
+    pub fn new(unbonding: u128, release: u64) -> Self {
         Self {
             unbonding,
-            funded: 0
+            funded: 0,
+            release
         }
     }
 
@@ -100,35 +59,16 @@ impl DailyUnbonding {
     }
 }
 
-impl BucketStorage for DailyUnbonding {
-    const NAMESPACE: &'static [u8] = b"daily_unbonding";
+impl Ord for DailyUnbonding {
+    fn cmp(&self, other: &Unbonding) -> Ordering {
+        self.release.cmp(&other.release)
+    }
 }
 
-// Distributors wrappers
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Distributors(pub Vec<HumanAddr>);
-
-impl SingletonStorage for Distributors {
-    const NAMESPACE: &'static [u8] = b"distributors";
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct DistributorsEnabled(pub bool);
-
-impl SingletonStorage for DistributorsEnabled {
-    const NAMESPACE: &'static [u8] = b"distributors_transfer";
-}
-
-// Unbonding Queue
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct UnbondingQueue(pub BinaryHeap<Unbonding>);
-
-impl BucketStorage for UnbondingQueue {
-    const NAMESPACE: &'static [u8] = b"unbonding_queue";
+impl PartialOrd for DailyUnbonding {
+    fn partial_cmp(&self, other: &Unbonding) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
@@ -156,14 +96,14 @@ mod tests {
 
     #[test]
     fn is_funded() {
-        assert!(DailyUnbonding{ unbonding: 100, funded: 100 }.is_funded());
-        assert!(!DailyUnbonding{ unbonding: 150, funded: 100 }.is_funded());
+        assert!(DailyUnbonding{ unbonding: 100, funded: 100, release: 0 }.is_funded());
+        assert!(!DailyUnbonding{ unbonding: 150, funded: 100, release: 0 }.is_funded());
     }
 
     #[test]
     fn fund() {
         // Initialize new unbond
-        let mut unbond = DailyUnbonding::new(500);
+        let mut unbond = DailyUnbonding::new(500, 0);
         assert!(!unbond.is_funded());
 
         // Add small fund

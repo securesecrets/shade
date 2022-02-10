@@ -5,16 +5,8 @@ use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, Query};
 use serde::{Deserialize, Serialize};
+use crate::shd_staking::stake::StakeConfig;
 use crate::snip20::{InitConfig, InitialBalance};
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct StakeConfig {
-    pub unbond_time: u64,
-    pub shares_decimals: u8,
-    pub staked_token: Contract,
-    pub treasury: Option<HumanAddr>
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
