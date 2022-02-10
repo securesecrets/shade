@@ -40,9 +40,9 @@ impl<T: CodeType + Serialize> Error<T> {
     }
 }
 
-pub trait CodeType: Into<u8> {
+pub trait CodeType: Into<u8> + Clone {
     fn to_code(&self) -> u8 {
-        self.into()
+        self.clone().into()
     }
     fn to_verbose(&self, context: &Vec<&str>) -> String;
     fn build_string(verbose: &str, context: &Vec<&str>) -> String {
