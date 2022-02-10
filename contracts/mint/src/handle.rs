@@ -159,17 +159,21 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     // This will calculate the total mint value
     let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
 
-    let msgs: MintMsgHook = match msg {
-        Some(x) => from_binary(&x)?,
-        None => return Err(StdError::generic_err("data cannot be empty")),
+    match msg {
+        Some(x) => {
+            let msg: MintMsgHook = from_binary(&x)?;
+
+            // Check against slippage amount
+            if amount_to_mint < msgs.minimum_expected_amount {
+                return Err(StdError::generic_err(
+                    "Mint amount is less than the minimum expected.",
+                ));
+            }
+        }
+        None => {}
+        //None => return Err(StdError::generic_err("data cannot be empty")),
     };
 
-    // Check against slippage amount
-    if amount_to_mint < msgs.minimum_expected_amount {
-        return Err(StdError::generic_err(
-            "Mint amount is less than the minimum expected.",
-        ));
-    }
 
     debug_print!(
         "Minting: {} {}",
