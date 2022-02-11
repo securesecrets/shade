@@ -229,7 +229,7 @@ fn create_account(
 ) -> Result<()> {
     print_warning("Creating an account");
 
-    let msg = airdrop::HandleMsg::CreateAccount {
+    let msg = airdrop::HandleMsg::Account {
         addresses: permits,
         partial_tree,
         padding: None,
@@ -250,7 +250,7 @@ fn update_account(
     airdrop: &NetContract
 ) -> Result<()> {
     print_warning("Updating account");
-    let msg = airdrop::HandleMsg::UpdateAccount {
+    let msg = airdrop::HandleMsg::Account {
         addresses: permits,
         partial_tree,
         padding: None,

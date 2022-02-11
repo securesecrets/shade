@@ -95,13 +95,7 @@ pub enum HandleMsg {
         address: HumanAddr,
         padding: Option<String>,
     },
-    CreateAccount {
-        addresses: Vec<AddressProofPermit>,
-        partial_tree: Vec<Binary>,
-        padding: Option<String>,
-    },
-    /// Adds more addresses to accounts
-    UpdateAccount {
+    Account {
         addresses: Vec<AddressProofPermit>,
         partial_tree: Vec<Binary>,
         padding: Option<String>,
@@ -128,8 +122,7 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     AddTask { status: ResponseStatus },
     CompleteTask { status: ResponseStatus },
-    CreateAccount { status: ResponseStatus },
-    UpdateAccount { status: ResponseStatus },
+    Account { status: ResponseStatus },
     DisablePermitKey { status: ResponseStatus },
     Claim { status: ResponseStatus },
     ClaimDecay { status: ResponseStatus },
