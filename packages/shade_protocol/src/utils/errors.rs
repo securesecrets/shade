@@ -99,8 +99,8 @@ pub mod tests {
     }
 
     #[test]
-    fn build_string() {
-        assert_eq!(TestCode::build_string("Test string {}", &vec!["arg"]), "Test string arg".to_string())
+    fn string_builder() {
+        assert_eq!(build_string("Test string {}", &vec!["arg"]), "Test string arg".to_string())
     }
 
     #[test]
