@@ -15,6 +15,7 @@ use shade_protocol::airdrop::{
     claim_info::RequiredTask,
     Config, HandleAnswer,
 };
+use shade_protocol::airdrop::errors::{account_already_created, account_does_not_exist, address_already_in_account, airdrop_ended, airdrop_not_started, claim_too_high, decay_claimed, decay_not_set, expected_memo, invalid_dates, invalid_partial_tree, invalid_task_percentage, not_admin, nothing_to_claim, permit_rejected, unexpected_error};
 use shade_protocol::utils::generic_response::ResponseStatus;
 
 #[allow(clippy::too_many_arguments)]
@@ -31,7 +32,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
     // Check if admin
     if env.message.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(not_admin(config.admin.as_str()));
     }
 
     // Save new info
@@ -50,27 +51,43 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             // Avoid date collisions
             if let Some(end_date) = end_date {
                 if start_date > end_date {
-                    return Err(StdError::generic_err(
-                        "New start date is greater than end date",
+                    return Err(invalid_dates(
+                        "EndDate",
+                        end_date.to_string().as_str(),
+                        "before",
+                        "StartDate",
+                        start_date.to_string().as_str()
                     ));
                 }
             } else if let Some(end_date) = state.end_date {
                 if start_date > end_date {
-                    return Err(StdError::generic_err(
-                        "New start date is greater than the current end date",
+                    return Err(invalid_dates(
+                        "EndDate",
+                        end_date.to_string().as_str(),
+                        "before",
+                        "StartDate",
+                        start_date.to_string().as_str()
                     ));
                 }
             }
             if let Some(start_decay) = decay_start {
                 if start_date > start_decay {
-                    return Err(StdError::generic_err(
-                        "New start date is greater than start of decay",
+                    return Err(invalid_dates(
+                        "Decay",
+                        start_decay.to_string().as_str(),
+                        "before",
+                        "StartDate",
+                        start_date.to_string().as_str()
                     ));
                 }
             } else if let Some(start_decay) = state.decay_start {
                 if start_date > start_decay {
-                    return Err(StdError::generic_err(
-                        "New start date is greater than the current start of decay",
+                    return Err(invalid_dates(
+                        "Decay",
+                        start_decay.to_string().as_str(),
+                        "before",
+                        "StartDate",
+                        start_date.to_string().as_str()
                     ));
                 }
             }
@@ -81,14 +98,22 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             // Avoid date collisions
             if let Some(decay_start) = decay_start {
                 if decay_start > end_date {
-                    return Err(StdError::generic_err(
-                        "New end date is before start of decay",
+                    return Err(invalid_dates(
+                        "EndDate",
+                        end_date.to_string().as_str(),
+                        "before",
+                        "Decay",
+                        decay_start.to_string().as_str()
                     ));
                 }
             } else if let Some(decay_start) = state.decay_start {
                 if decay_start > end_date {
-                    return Err(StdError::generic_err(
-                        "New end date is before current start of decay",
+                    return Err(invalid_dates(
+                        "EndDate",
+                        end_date.to_string().as_str(),
+                        "before",
+                        "Decay",
+                        decay_start.to_string().as_str()
                     ));
                 }
             }
@@ -119,7 +144,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
     // Check if admin
     if env.message.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(not_admin(config.admin.as_str()));
     }
 
     config_w(&mut deps.storage).update(|mut config| {
@@ -133,7 +158,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
         }
 
         if count > Uint128(100) {
-            return Err(StdError::generic_err("tasks above 100%"));
+            return Err(invalid_task_percentage(count.to_string().as_str()));
         }
 
         Ok(config)
@@ -165,7 +190,7 @@ pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
         .may_load(sender.as_bytes())?
         .is_some()
     {
-        return Err(StdError::generic_err("Account already made"));
+        return Err(account_already_created());
     }
 
     let mut account = Account {
@@ -242,7 +267,10 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
 
     // Get account
     let sender = env.message.sender.clone().to_string();
-    let mut account = account_r(&deps.storage).load(sender.as_bytes())?;
+    let mut account = match account_r(&deps.storage).load(sender.as_bytes()) {
+        Ok(acc) => acc,
+        Err(_) => return Err(account_does_not_exist())
+    };
 
     // Run the claim function if theres something to claim
     let old_claim_amount = account.total_claimable;
@@ -290,7 +318,7 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
                 redeem_amount += new_redeem;
                 Ok(claimed + new_redeem)
             } else {
-                Err(StdError::generic_err("Account total claimed not set"))
+                Err(unexpected_error())
             }
         })?;
 
@@ -385,7 +413,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         update_tasks(&mut deps.storage, &config, sender.to_string())?;
 
     if unclaimed_percentage == Uint128::zero() {
-        return Err(StdError::generic_err("No claimable amount available"));
+        return Err(nothing_to_claim());
     }
 
     let redeem_amount = claim_tokens(
@@ -429,7 +457,7 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
             if env.block.time > end_date {
                 decay_claimed_w(&mut deps.storage).update(|claimed| {
                     if claimed {
-                        Err(StdError::generic_err("Decay already claimed"))
+                        Err(decay_claimed())
                     } else {
                         Ok(true)
                     }
@@ -459,7 +487,7 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Err(StdError::unauthorized())
+    Err(decay_not_set())
 }
 
 /// Gets task information and sets them
@@ -523,7 +551,7 @@ pub fn claim_tokens<S: Storage>(
 
             Ok(claimed + redeem_amount)
         } else {
-            Err(StdError::generic_err("Account total claimed not set"))
+            Err(account_does_not_exist())
         }
     })?;
 
@@ -555,16 +583,14 @@ pub fn try_add_account_addresses<S: Storage>(
 
             // Check that airdrop amount does not exceed maximum
             if params.amount > config.max_amount {
-                return Err(StdError::generic_err("Amount exceeds maximum amount"));
+                return Err(claim_too_high(params.amount.to_string().as_str(),
+                                          config.max_amount.to_string().as_str()));
             }
 
             // Update address if its not in an account
             address_in_account_w(storage).update(params.address.to_string().as_bytes(), |state| {
                 if state.is_some() {
-                    return Err(StdError::generic_err(format!(
-                        "{:?} already in an account",
-                        params.address.to_string()
-                    )));
+                    return Err(address_already_in_account(params.address.as_str()));
                 }
 
                 Ok(true)
@@ -579,7 +605,7 @@ pub fn try_add_account_addresses<S: Storage>(
             account.addresses.push(params.address);
             account.total_claimable += params.amount;
         } else {
-            return Err(StdError::generic_err(format!("Expected a memo")));
+            return Err(expected_memo());
         }
     }
 
@@ -608,7 +634,7 @@ pub fn try_add_account_addresses<S: Storage>(
     let mut root: [u8; 32] = Default::default();
     root.clone_from_slice(config.merkle_root.as_slice());
     if !proof.verify(root, &indices, &leaves, config.total_accounts as usize) {
-        return Err(StdError::generic_err("Invalid proof"));
+        return Err(invalid_partial_tree());
     }
 
     Ok(())
@@ -619,17 +645,13 @@ pub fn available(config: &Config, env: &Env) -> StdResult<()> {
 
     // Check if airdrop started
     if current_time < config.start_date {
-        return Err(StdError::generic_err(format!(
-            "Airdrop starts on {}",
-            config.start_date
-        )));
+        return Err(airdrop_not_started(config.start_date.to_string().as_str(),
+                                       current_time.to_string().as_str()));
     }
     if let Some(end_date) = config.end_date {
         if current_time > end_date {
-            return Err(StdError::generic_err(format!(
-                "Airdrop ended on {}",
-                end_date
-            )));
+            return Err(airdrop_ended(end_date.to_string().as_str(),
+                                     current_time.to_string().as_str()));
         }
     }
 

@@ -46,15 +46,15 @@ pub fn print_contract(contract: &NetContract) {
 
 pub fn print_epoch_info(minter: &NetContract) {
     println!("\tEpoch information");
-    let msg = mint::QueryMsg::GetMintLimit {};
+    let msg = mint::QueryMsg::Limit {};
 
     let query: mint::QueryAnswer = query(minter, &msg, None).unwrap();
 
-    if let mint::QueryAnswer::MintLimit { limit } = query {
-        println!(
-            "\tFrequency: {}\n\tCapacity: {}\n\tTotal Minted: {}\n\tNext Epoch: {}",
-            limit.frequency, limit.mint_capacity, limit.total_minted, limit.next_epoch
-        );
+    if let mint::QueryAnswer::Limit { limit, minted, last_refresh} = query {
+        // println!(
+        //     "\tFrequency: {}\n\tCapacity: {}\n\tTotal Minted: {}\n\tNext Epoch: {}",
+        //     limit.frequency, limit.mint_capacity, limit.total_minted, limit.next_epoch
+        // );
     }
 }
 

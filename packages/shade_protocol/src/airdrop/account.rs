@@ -5,6 +5,7 @@ use flexible_permits::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::airdrop::errors::permit_rejected;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -60,9 +61,7 @@ pub fn authenticate_ownership(permit: &AddressProofPermit, permit_address: &str)
         .as_canonical();
 
     if signer_address != bech32_to_canonical(permit_address) {
-        return Err(StdError::generic_err(format!(
-            "{:?} is not the message signer", permit_address
-        )));
+        return Err(permit_rejected());
     }
 
     Ok(())

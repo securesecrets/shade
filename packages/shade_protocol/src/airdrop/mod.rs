@@ -1,5 +1,7 @@
 pub mod account;
 pub mod claim_info;
+pub mod errors;
+
 use crate::airdrop::{
     account::{AccountPermit, AddressProofPermit},
     claim_info::RequiredTask,
