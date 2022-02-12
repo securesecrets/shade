@@ -255,29 +255,29 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    if unclaimed_percentage > Uint128::zero() {
-        if updating_account {
-            // Calculate the total new address amount
-            let added_address_total = (account.total_claimable - old_claim_amount)?;
-            account_total_claimed_w(&mut deps.storage).update(sender.as_bytes(), |claimed| {
-                if let Some(claimed) = claimed {
-                    let new_redeem: Uint128;
-                    if completed_percentage == Uint128(100) {
-                        new_redeem = added_address_total * decay_factor(env.block.time, &config);
-                    } else {
-                        new_redeem = completed_percentage
-                            .multiply_ratio(added_address_total, Uint128(100))
-                            * decay_factor(env.block.time, &config);
-                    }
-
-                    redeem_amount += new_redeem;
-                    Ok(claimed + new_redeem)
+    if updating_account && completed_percentage > Uint128::zero() {
+        // Calculate the total new address amount
+        let added_address_total = (account.total_claimable - old_claim_amount)?;
+        account_total_claimed_w(&mut deps.storage).update(sender.as_bytes(), |claimed| {
+            if let Some(claimed) = claimed {
+                let new_redeem: Uint128;
+                if completed_percentage == Uint128(100) {
+                    new_redeem = added_address_total * decay_factor(env.block.time, &config);
                 } else {
-                    Err(unexpected_error())
+                    new_redeem = completed_percentage
+                        .multiply_ratio(added_address_total, Uint128(100))
+                        * decay_factor(env.block.time, &config);
                 }
-            })?;
-        }
 
+                redeem_amount += new_redeem;
+                Ok(claimed + new_redeem)
+            } else {
+                Err(unexpected_error())
+            }
+        })?;
+    }
+
+    if redeem_amount > Uint128::zero() {
         total_claimed_w(&mut deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
 
         messages.push(send_msg(
