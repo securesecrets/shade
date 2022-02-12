@@ -1,7 +1,7 @@
 use crate::{
     handle::{
-        try_add_tasks, try_claim, try_claim_decay, try_complete_task, try_create_account,
-        try_disable_permit_key, try_update_account, try_update_config,
+        try_add_tasks, try_claim, try_claim_decay, try_complete_task,
+        try_disable_permit_key, try_update_config,
     },
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
