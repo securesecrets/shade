@@ -10,6 +10,7 @@ use shade_protocol::airdrop::{
     account::{authenticate_ownership, Account, AccountPermit, AddressProofPermit},
     Config,
 };
+use shade_protocol::airdrop::errors::{permit_contract_mismatch, permit_key_revoked};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static DECAY_CLAIMED_KEY: &[u8] = b"decay_claimed";
@@ -126,12 +127,12 @@ pub fn validate_address_permit<S: Storage>(
 
     // Check that contract matches
     if params.contract != contract {
-        return Err(StdError::unauthorized());
+        return Err(permit_contract_mismatch(params.contract.as_str(), contract.as_str()));
     }
 
     // Check that permit is not revoked
     if is_permit_revoked(storage, params.address.to_string(), params.key.clone())? {
-        return Err(StdError::generic_err("permit key revoked"));
+        return Err(permit_key_revoked(params.key.as_str()));
     }
 
     // Authenticate permit
@@ -145,7 +146,7 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HumanAddr> {
     // Check that contract matches
     if permit.params.contract != contract {
-        return Err(StdError::unauthorized());
+        return Err(permit_contract_mismatch(permit.params.contract.as_str(), contract.as_str()));
     }
 
     // Authenticate permit
@@ -157,7 +158,7 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
         address.to_string(),
         permit.params.key.clone(),
     )? {
-        return Err(StdError::generic_err("permit key revoked"));
+        return Err(permit_key_revoked(permit.params.key.as_str()));
     }
 
     return Ok(address);
