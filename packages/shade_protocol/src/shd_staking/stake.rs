@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+use std::ptr::eq;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use cosmwasm_std::{HumanAddr, Uint128};
@@ -56,6 +57,12 @@ impl DailyUnbonding {
 
         self.funded += amount;
         return 0
+    }
+}
+
+impl PartialEq<Unbonding> for DailyUnbonding {
+    fn eq(&self, other: &Unbonding) -> bool {
+        self.release == other.release
     }
 }
 
