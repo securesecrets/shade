@@ -12,10 +12,23 @@ pub struct Config {
     pub path: Vec<Contract>,
 }
 
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct MintMsgHook {
-    pub minimum_expected_amount: Uint128,
+    pub minimum_expected_amount: Option<Uint128>,
+    pub routing_flag: Option<bool>,
+}
+*/
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct PathNode {
+    pub input_asset: HumanAddr,
+    pub input_amount: Uint128,
+    pub mint: HumanAddr,
+    pub output_asset: HumanAddr,
+    pub output_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -41,11 +54,6 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    /*
-    RegisterAsset {
-        contract: Contract,
-    },
-    */
 }
 
 impl HandleCallback for HandleMsg {
@@ -72,6 +80,8 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
+    Assets {},
+    Route { asset: HumanAddr, amount: Uint128 },
 }
 
 impl Query for QueryMsg {
@@ -84,4 +94,10 @@ pub enum QueryAnswer {
     Config {
         config: Config,
     },
+    Assets {
+        assets: Vec<Contract>,
+    },
+    Route {
+        path: Vec<PathNode>,
+    }
 }

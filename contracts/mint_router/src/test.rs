@@ -6,7 +6,7 @@ pub mod tests {
         Extern, StdError, Uint128,
     };
     use mockall_double::double;
-    use shade_protocol::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg};
+    use shade_protocol::mint_router::{HandleMsg, InitMsg, QueryAnswer, QueryMsg};
 
     use crate::{
         contract::{handle, init, query},

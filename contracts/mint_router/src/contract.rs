@@ -2,7 +2,7 @@ use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
     StdResult, Storage, Uint128,
 };
-use secret_toolkit::snip20::token_info_query;
+use secret_toolkit::snip20::{token_info_query, register_receive_msg};
 
 use shade_protocol::{
     mint_router::{Config, HandleMsg, InitMsg, QueryMsg},
@@ -11,7 +11,9 @@ use shade_protocol::{
 
 use crate::{
     handle, query,
-    state::config_w,
+    state::{
+        config_w, current_assets_w,
+    },
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -20,7 +22,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
 
-    let state = Config {
+    let config = Config {
         admin: match msg.admin {
             None => env.message.sender.clone(),
             Some(admin) => admin,
@@ -28,12 +30,18 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         path: msg.path,
     };
 
-    config_w(&mut deps.storage).save(&state)?;
+    config_w(&mut deps.storage).save(&config)?;
+    //current_assets_w(&mut deps.storage).save(&vec![])?;
 
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    let mut messages = vec![];
+
+    if config.path.len() > 0 {
+        //messages.append(&mut handle::update_entry_assets(deps, env, config.path[0].clone())?);
+        messages.append(&mut handle::build_path(deps, env, config.path.clone())?);
+    }
 
     Ok(InitResponse {
-        messages: vec![],
+        messages,
         log: vec![],
     })
 }
@@ -63,5 +71,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
+        QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
+        QueryMsg::Route { asset, amount } => to_binary(&query::route(deps, asset, amount)?),
     }
 }
