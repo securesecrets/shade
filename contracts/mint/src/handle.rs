@@ -159,21 +159,16 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     // This will calculate the total mint value
     let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
 
-    match msg {
-        Some(x) => {
-            let msg: MintMsgHook = from_binary(&x)?;
+    if let Some(message) = msg {
+        let msg: MintMsgHook = from_binary(&message)?;
 
-            // Check against slippage amount
-            if amount_to_mint < msgs.minimum_expected_amount {
-                return Err(StdError::generic_err(
-                    "Mint amount is less than the minimum expected.",
-                ));
-            }
+        // Check Slippage
+        if amount_to_mint < msg.minimum_expected_amount {
+            return Err(StdError::generic_err(
+                "Mint amount is less than the minimum expected.",
+            ));
         }
-        None => {}
-        //None => return Err(StdError::generic_err("data cannot be empty")),
     };
-
 
     debug_print!(
         "Minting: {} {}",
@@ -465,9 +460,9 @@ pub fn calculate_mint(
 
 pub fn calculate_capture(amount: Uint128, capture: Uint128) -> Uint128 {
     /* amount: total amount sent to burn (uSSCRT/uSILK/uSHD)
-     * capture: capture_percent * 10,000 e.g. 532 = 5.32% = .0532
+     * capture: capture_percent * 10^18 e.g. 5_320_000_000_000_000_000 = 5.32% = .0532
      *
-     * capture_amount = amount * capture / 10000
+     * capture_amount = amount * capture / 10^18
      */
 
     amount.multiply_ratio(capture, 10u128.pow(18))
