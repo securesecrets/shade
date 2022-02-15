@@ -60,13 +60,13 @@ impl DailyUnbonding {
 }
 
 impl Ord for DailyUnbonding {
-    fn cmp(&self, other: &Unbonding) -> Ordering {
+    fn cmp(&self, other: &DailyUnbonding) -> Ordering {
         self.release.cmp(&other.release)
     }
 }
 
 impl PartialOrd for DailyUnbonding {
-    fn partial_cmp(&self, other: &Unbonding) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &DailyUnbonding) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
