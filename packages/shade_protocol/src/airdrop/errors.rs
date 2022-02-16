@@ -25,6 +25,7 @@ pub enum Error {
     InvalidPartialTree,
     AirdropNotStarted,
     AirdropEnded,
+    InvalidViewingKey,
     UnexpectedError,
 }
 
@@ -50,6 +51,7 @@ impl CodeType for Error {
             Error::InvalidPartialTree => build_string("Partial tree is not valid", context),
             Error::AirdropNotStarted => build_string("Airdrop starts in {}, its currently {}", context),
             Error::AirdropEnded => build_string("Airdrop ended on {}, its currently {}", context),
+            Error::InvalidViewingKey => build_string("Provided viewing key is invalid", context),
             Error::UnexpectedError => build_string("Something unexpected happened", context),
         }
     }
@@ -121,6 +123,10 @@ pub fn airdrop_not_started(start: &str, current: &str) -> StdError {
 
 pub fn airdrop_ended(end: &str, current: &str) -> StdError {
     DetailedError::from_code(Error::AirdropEnded, vec![end, current]).to_error()
+}
+
+pub fn invalid_viewing_key() -> StdError {
+    DetailedError::from_code(Error::InvalidViewingKey, vec![]).to_error()
 }
 
 pub fn unexpected_error() -> StdError {

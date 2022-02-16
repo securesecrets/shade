@@ -20,6 +20,7 @@ pub static ACCOUNTS_KEY: &[u8] = b"accounts";
 pub static TOTAL_CLAIMED_KEY: &[u8] = b"total_claimed";
 pub static USER_TOTAL_CLAIMED_KEY: &[u8] = b"user_total_claimed";
 pub static ACCOUNT_PERMIT_KEY: &str = "account_permit_key";
+pub static ACCOUNT_VIEWING_KEY: &[u8] = b"account_viewing_key";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG_KEY)
@@ -84,6 +85,15 @@ pub fn account_total_claimed_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uin
 
 pub fn account_total_claimed_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
     bucket(USER_TOTAL_CLAIMED_KEY, storage)
+}
+
+// Account viewing key
+pub fn account_viewkey_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, [u8; 32]> {
+    bucket_read(ACCOUNT_VIEWING_KEY, storage)
+}
+
+pub fn account_viewkey_w<S: Storage>(storage: &mut S) -> Bucket<S, [u8; 32]> {
+    bucket(ACCOUNT_VIEWING_KEY, storage)
 }
 
 // Account permit key

@@ -1,11 +1,12 @@
-use crate::state::{account_r, account_total_claimed_r, account_total_claimed_w, account_w, address_in_account_w, claim_status_r, claim_status_w, config_r, config_w, decay_claimed_w, revoke_permit, total_claimed_r, total_claimed_w, validate_address_permit};
+use crate::state::{account_r, account_total_claimed_r, account_total_claimed_w, account_viewkey_w, account_w, address_in_account_w, claim_status_r, claim_status_w, config_r, config_w, decay_claimed_w, revoke_permit, total_claimed_r, total_claimed_w, validate_address_permit};
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier,
     StdError, StdResult, Storage, Uint128,
 };
+use query_authentication::viewing_keys::ViewingKey;
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::airdrop::account::AddressProofMsg;
+use shade_protocol::airdrop::account::{AccountKey, AddressProofMsg};
 use shade_protocol::airdrop::{
     account::{Account, AddressProofPermit},
     claim_info::RequiredTask,
@@ -319,6 +320,25 @@ pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::DisablePermitKey {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    key: String,
+) -> StdResult<HandleResponse> {
+    account_viewkey_w(&mut deps.storage).save(
+        &env.message.sender.to_string().as_bytes(),
+        &AccountKey(key).hash()
+    )?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::SetViewingKey {
             status: ResponseStatus::Success,
         })?),
     })

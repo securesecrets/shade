@@ -1,7 +1,7 @@
 use colored::*;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
-use flexible_permits::transaction::PubKey;
-use flexible_permits::{permit::Permit, transaction::PermitSignature};
+use query_authentication::transaction::PubKey;
+use query_authentication::{permit::Permit, transaction::PermitSignature};
 use network_integration::{
     contract_helpers::{
         governance::{
