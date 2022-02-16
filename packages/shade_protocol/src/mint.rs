@@ -11,7 +11,7 @@ pub struct Config {
     pub admin: HumanAddr,
     pub oracle: Contract,
     // Both treasury & Commission must be set to function
-    pub treasury: Option<Contract>,
+    pub treasury: HumanAddr,
     pub secondary_burn: Option<HumanAddr>,
     pub activated: bool,
     pub limit: Option<Limit>,
@@ -52,7 +52,7 @@ pub struct InitMsg {
     pub peg: Option<String>,
 
     // Both treasury & asset capture must be set to function properly
-    pub treasury: Option<Contract>,
+    pub treasury: HumanAddr,
 
     // This is where the non-burnable assets will go, if not defined they will stay in this contract
     pub secondary_burn: Option<HumanAddr>,

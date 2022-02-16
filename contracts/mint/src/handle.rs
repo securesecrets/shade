@@ -67,14 +67,15 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let mut input_amount = amount;
     let mut messages = vec![];
 
-    if let Some(ref treasury) = config.treasury {
+    if burn_asset.fee > Uint128(0) {
+
         let fee_amount = calculate_portion(input_amount, burn_asset.fee);
         // Reduce input by fee
         input_amount = (input_amount - fee_amount)?;
 
         // Fee to treasury
         messages.push(send_msg(
-            treasury.address.clone(),
+            config.treasury.clone(),
             fee_amount,
             None,
             None,
@@ -107,25 +108,23 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     let mut burn_amount = input_amount;
 
-    if let Some(treasury) = config.treasury {
-        // Ignore capture if the set capture is 0
-        if burn_asset.capture != Uint128(0) {
-            let capture_amount = calculate_portion(amount, burn_asset.capture);
+    // Ignore capture if the set capture is 0
+    if burn_asset.capture > Uint128(0) {
+        let capture_amount = calculate_portion(amount, burn_asset.capture);
 
-            // Commission to treasury
-            messages.push(send_msg(
-                treasury.address,
-                capture_amount,
-                None,
-                None,
-                None,
-                1,
-                burn_asset.asset.contract.code_hash.clone(),
-                burn_asset.asset.contract.address.clone(),
-            )?);
+        // Commission to treasury
+        messages.push(send_msg(
+            config.treasury,
+            capture_amount,
+            None,
+            None,
+            None,
+            1,
+            burn_asset.asset.contract.code_hash.clone(),
+            burn_asset.asset.contract.address.clone(),
+        )?);
 
-            burn_amount = (input_amount - capture_amount)?;
-        }
+        burn_amount = (input_amount - capture_amount)?;
     }
 
     // Try to burn
