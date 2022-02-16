@@ -76,8 +76,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::UpdateConfig {
             config,
         } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { contract, capture, unlimited } => 
-            handle::try_register_asset(deps, &env, &contract, capture, unlimited),
+        HandleMsg::RegisterAsset { contract, capture, fee, unlimited } => 
+            handle::try_register_asset(deps, &env, &contract, capture, fee, unlimited),
         HandleMsg::RemoveAsset { address } => handle::try_remove_asset(deps, &env, address),
         HandleMsg::Receive {
             sender,

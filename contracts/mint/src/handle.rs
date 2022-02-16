@@ -64,10 +64,29 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
-
+    let mut input_amount = amount;
     let mut messages = vec![];
+
+    if let Some(ref treasury) = config.treasury {
+        let fee_amount = calculate_portion(input_amount, burn_asset.fee);
+        // Reduce input by fee
+        input_amount = (input_amount - fee_amount)?;
+
+        // Fee to treasury
+        messages.push(send_msg(
+            treasury.address.clone(),
+            fee_amount,
+            None,
+            None,
+            None,
+            1,
+            burn_asset.asset.contract.code_hash.clone(),
+            burn_asset.asset.contract.address.clone(),
+        )?);
+    }
+
+    // This will calculate the total mint value
+    let amount_to_mint: Uint128 = mint_amount(deps, input_amount, &burn_asset, &mint_asset)?;
 
     if let Some(limit) = config.limit {
 
@@ -86,12 +105,12 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let mut burn_amount = amount;
+    let mut burn_amount = input_amount;
 
     if let Some(treasury) = config.treasury {
         // Ignore capture if the set capture is 0
         if burn_asset.capture != Uint128(0) {
-            let capture_amount = calculate_capture(amount, burn_asset.capture);
+            let capture_amount = calculate_portion(amount, burn_asset.capture);
 
             // Commission to treasury
             messages.push(send_msg(
@@ -105,7 +124,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                 burn_asset.asset.contract.address.clone(),
             )?);
 
-            burn_amount = (amount - capture_amount)?;
+            burn_amount = (input_amount - capture_amount)?;
         }
     }
 
@@ -157,7 +176,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let mint_asset = native_asset_r(&deps.storage).load()?;
 
     // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
+    let amount_to_mint: Uint128 = mint_amount(deps, input_amount, &burn_asset, &mint_asset)?;
 
     if let Some(message) = msg {
         let msg: MintMsgHook = from_binary(&message)?;
@@ -286,6 +305,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     contract: &Contract,
     capture: Option<Uint128>,
+    fee: Option<Uint128>,
     unlimited: Option<bool>,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
@@ -325,6 +345,10 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             },
             // If capture is not set then default to 0
             capture: match capture {
+                None => Uint128(0),
+                Some(value) => value,
+            },
+            fee: match fee {
                 None => Uint128(0),
                 Some(value) => value,
             },
@@ -458,14 +482,14 @@ pub fn calculate_mint(
     }
 }
 
-pub fn calculate_capture(amount: Uint128, capture: Uint128) -> Uint128 {
+pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
     /* amount: total amount sent to burn (uSSCRT/uSILK/uSHD)
-     * capture: capture_percent * 10^18 e.g. 5_320_000_000_000_000_000 = 5.32% = .0532
+     * portion: percent * 10^18 e.g. 5_320_000_000_000_000_000 = 5.32% = .0532
      *
-     * capture_amount = amount * capture / 10^18
+     * return portion = amount * portion / 10^18
      */
 
-    amount.multiply_ratio(capture, 10u128.pow(18))
+    amount.multiply_ratio(portion, 10u128.pow(18))
 }
 
 fn oracle<S: Storage, A: Api, Q: Querier>(

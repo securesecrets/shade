@@ -21,12 +21,13 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct SupportedAsset {
     pub asset: Snip20Asset,
-    // Commission percentage * 100 e.g. 5 == .05 == 5%
+    // Capture a percentage of burned assets
     pub capture: Uint128,
+    // Fee taken off the top of a given burned asset
+    pub fee: Uint128,
     pub unlimited: bool,
 }
 
-// Used to keep track of the cap
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum Limit {
     Daily {
@@ -79,6 +80,7 @@ pub enum HandleMsg {
         contract: Contract,
         // Commission * 100 e.g. 5 == .05 == 5%
         capture: Option<Uint128>,
+        fee: Option<Uint128>,
         unlimited: Option<bool>
     },
     RemoveAsset {
