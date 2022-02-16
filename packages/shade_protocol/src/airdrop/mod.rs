@@ -122,9 +122,31 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     AddTask { status: ResponseStatus },
     CompleteTask { status: ResponseStatus },
-    Account { status: ResponseStatus },
+    Account {
+        status: ResponseStatus,
+        // Total eligible
+        total: Uint128,
+        // Total claimed
+        claimed: Uint128,
+        // Total unclaimed but available
+        unclaimed: Uint128,
+        finished_tasks: Vec<RequiredTask>,
+        // Addresses claimed
+        addresses: Vec<HumanAddr>,
+    },
     DisablePermitKey { status: ResponseStatus },
-    Claim { status: ResponseStatus },
+    Claim {
+        status: ResponseStatus,
+        // Total eligible
+        total: Uint128,
+        // Total claimed
+        claimed: Uint128,
+        // Total unclaimed but available
+        unclaimed: Uint128,
+        finished_tasks: Vec<RequiredTask>,
+        // Addresses claimed
+        addresses: Vec<HumanAddr>,
+    },
     ClaimDecay { status: ResponseStatus },
 }
 

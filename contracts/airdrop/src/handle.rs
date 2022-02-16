@@ -1,8 +1,4 @@
-use crate::state::{
-    account_r, account_total_claimed_w, account_w, address_in_account_w, claim_status_r,
-    claim_status_w, config_r, config_w, decay_claimed_w, revoke_permit, total_claimed_r,
-    total_claimed_w, validate_address_permit,
-};
+use crate::state::{account_r, account_total_claimed_r, account_total_claimed_w, account_w, address_in_account_w, claim_status_r, claim_status_w, config_r, config_w, decay_claimed_w, revoke_permit, total_claimed_r, total_claimed_w, validate_address_permit};
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier,
     StdError, StdResult, Storage, Uint128,
@@ -255,6 +251,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
+    let mut user_claimed = Uint128::zero();
     if updating_account && completed_percentage > Uint128::zero() {
         // Calculate the total new address amount
         let added_address_total = (account.total_claimable - old_claim_amount)?;
@@ -270,7 +267,8 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
                 }
 
                 redeem_amount += new_redeem;
-                Ok(claimed + new_redeem)
+                user_claimed = claimed + new_redeem;
+                Ok(user_claimed)
             } else {
                 Err(unexpected_error())
             }
@@ -300,6 +298,12 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Account {
             status: ResponseStatus::Success,
+            total: account.total_claimable,
+            claimed: user_claimed,
+            // Will always be 0 since rewards are automatically claimed here
+            unclaimed: Uint128::zero(),
+            finished_tasks: finished_tasks(&deps.storage, sender.clone())?,
+            addresses: account.addresses
         })?),
     })
 }
@@ -346,7 +350,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::Claim {
+        data: Some(to_binary(&HandleAnswer::CompleteTask {
             status: ResponseStatus::Success,
         })?),
     })
@@ -398,6 +402,11 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Claim {
             status: ResponseStatus::Success,
+            total: account.total_claimable,
+            claimed: account_total_claimed_r(&deps.storage).load(sender.to_string().as_bytes())?,
+            unclaimed: Uint128::zero(),
+            finished_tasks: finished_tasks(&deps.storage, sender.to_string())?,
+            addresses: account.addresses
         })?),
     })
 }
@@ -445,6 +454,26 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
     }
 
     Err(decay_not_set())
+}
+
+pub fn finished_tasks<S: Storage>(
+    storage: & S,
+    account: String
+) -> StdResult<Vec<RequiredTask>> {
+    let mut finished_tasks = vec![];
+    let config = config_r(&deps.storage).load()?;
+
+    for (index, task) in config.task_claim.iter().enumerate() {
+        match claim_status_r(&storage, index)
+            .may_load(account.as_bytes())? {
+            None => {}
+            Some(_) => {
+                finished_tasks.push(task.clone());
+            }
+        }
+    }
+
+    Ok(finished_tasks)
 }
 
 /// Gets task information and sets them
