@@ -5,6 +5,7 @@ use flexible_permits::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::airdrop::errors::permit_rejected;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -53,24 +54,17 @@ pub struct EmptyMsg {}
 // Used to prove ownership over IBC addresses
 pub type AddressProofPermit = Permit<FillerMsg>;
 
-pub fn authenticate_ownership(permit: &AddressProofPermit) -> StdResult<HumanAddr> {
-    if let Some(memo) = permit.memo.clone() {
-        let params: AddressProofMsg = from_binary(&Binary::from_base64(&memo)?)?;
-        let permit_address = params.address.clone();
+pub fn authenticate_ownership(permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
 
-        let signer_address = permit
-            .validate(Some("wasm/MsgExecuteContract".to_string()))?
-            .as_canonical();
+    let signer_address = permit
+        .validate(Some("wasm/MsgExecuteContract".to_string()))?
+        .as_canonical();
 
-        if signer_address != bech32_to_canonical(permit_address.as_str()) {
-            return Err(StdError::generic_err(format!(
-                "{:?} is not the message signer",
-                permit_address.as_str()
-            )));
-        }
-        return Ok(permit_address);
+    if signer_address != bech32_to_canonical(permit_address) {
+        return Err(permit_rejected());
     }
-    Err(StdError::generic_err("Expected a memo"))
+
+    Ok(())
 }
 
 #[remain::sorted]

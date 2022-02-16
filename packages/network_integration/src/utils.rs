@@ -1,9 +1,10 @@
 use colored::*;
 use rand::{distributions::Alphanumeric, Rng};
-use secretcli::{cli_types::NetContract, secretcli::query_contract};
+use secretcli::{cli_types::NetContract, secretcli::query};
 use serde::Serialize;
 use shade_protocol::mint;
 use std::fmt::Display;
+use std::fs;
 
 // Smart contracts
 pub const SNIP20_FILE: &str = "../../compiled/snip20.wasm.gz";
@@ -47,7 +48,7 @@ pub fn print_epoch_info(minter: &NetContract) {
     println!("\tEpoch information");
     let msg = mint::QueryMsg::Limit {};
 
-    let query: mint::QueryAnswer = query_contract(minter, &msg).unwrap();
+    let query: mint::QueryAnswer = query(minter, &msg, None).unwrap();
 
     if let mint::QueryAnswer::Limit { minted, limit, last_refresh } = query {
         println!(
@@ -69,4 +70,10 @@ pub fn print_vec<Type: Display>(prefix: &str, vec: Vec<Type>) {
         print!(", {}", e);
     }
     println!();
+}
+
+pub fn store_struct<T: serde::Serialize>(path: &str, data: &T){
+    fs::write(path, serde_json::to_string_pretty(data)
+        .expect("Could not serialize data"))
+        .expect(&format!("Could not store {}", path));
 }
