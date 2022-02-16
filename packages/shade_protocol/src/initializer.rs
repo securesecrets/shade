@@ -3,9 +3,7 @@ use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-#[cfg(test)]
-use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -36,8 +34,9 @@ pub struct InitMsg {
     pub shade: Snip20ContractInfo,
 }
 
-#[cfg(test)]
-impl TestInit for InitMsg {}
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -53,15 +52,16 @@ pub enum HandleMsg {
     },
 }
 
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     SetAdmin { status: ResponseStatus },
     InitSilk { status: ResponseStatus },
 }
-
-#[cfg(test)]
-impl TestHandle for HandleMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -70,8 +70,9 @@ pub enum QueryMsg {
     Config {},
 }
 
-#[cfg(test)]
-impl TestQuery<QueryAnswer> for QueryMsg {}
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

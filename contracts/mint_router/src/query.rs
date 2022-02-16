@@ -34,7 +34,7 @@ pub fn route<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, asset: Huma
 
     let final_asset = final_asset_r(&deps.storage).load()?;
 
-    while input_asset != final_asset {
+    while input_asset.address != final_asset {
 
         let mint = asset_path_r(&deps.storage).load(&input_asset.address.to_string().as_bytes())?;
         let (output_asset, output_amount) = match (

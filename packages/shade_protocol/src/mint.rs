@@ -41,12 +41,6 @@ pub enum Limit {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct MintMsgHook {
-    pub minimum_expected_amount: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub oracle: Contract,
@@ -97,6 +91,19 @@ pub enum HandleMsg {
 
 impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct SnipMsgHook {
+    pub minimum_expected_amount: Uint128,
+    pub to_mint: HumanAddr,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct MintMsgHook {
+    pub minimum_expected_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]

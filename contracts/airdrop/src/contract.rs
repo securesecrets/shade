@@ -12,6 +12,7 @@ use cosmwasm_std::{
 };
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
+use shade_protocol::airdrop::errors::{invalid_dates, invalid_task_percentage};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -36,10 +37,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }
 
     if count > Uint128(100) {
-        return Err(StdError::GenericErr {
-            msg: "tasks above 100%".to_string(),
-            backtrace: None,
-        });
+        return Err(invalid_task_percentage(count.to_string().as_str()));
     }
 
     let start_date = match msg.start_date {
@@ -49,8 +47,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     if let Some(end_date) = msg.end_date {
         if end_date < start_date {
-            return Err(StdError::generic_err(
-                "Start date must come before end date",
+            return Err(invalid_dates(
+                "EndDate",
+                end_date.to_string().as_str(),
+                "before",
+                "StartDate",
+                start_date.to_string().as_str()
             ));
         }
     }
@@ -58,14 +60,22 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     // Avoid decay collisions
     if let Some(start_decay) = msg.decay_start {
         if start_decay < start_date {
-            return Err(StdError::generic_err(
-                "Decay cannot start before start date",
+            return Err(invalid_dates(
+                "Decay",
+                start_decay.to_string().as_str(),
+                "before",
+                "StartDate",
+                start_date.to_string().as_str()
             ));
         }
         if let Some(end_date) = msg.end_date {
             if start_decay > end_date {
-                return Err(StdError::generic_err(
-                    "Decay cannot start after the end date",
+                return Err(invalid_dates(
+                    "EndDate",
+                    end_date.to_string().as_str(),
+                    "before",
+                    "Decay",
+                    start_decay.to_string().as_str()
                 ));
             }
         } else {

@@ -36,21 +36,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
 
-    /*
-    if let Some(message) = msg.clone() {
-        let msg: mint::MintMsgHook = from_binary(&message)?;
-
-        // If routing, ignore this handle
-        if let Some(routing) = msg.routing_flag {
-            if routing {
-                return Err(StdError::generic_err(
-                    "In the middle of routing!",
-                ));
-            }
-        }
-    };
-    */
-
     let mut messages = vec![];
     let asset_paths = asset_path_r(&deps.storage);
 
@@ -58,7 +43,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     let mut input_amount = amount;
 
     let final_asset = final_asset_r(&deps.storage).load()?;
-
 
     while input_asset.address != final_asset {
 
