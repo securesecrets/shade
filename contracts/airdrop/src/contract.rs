@@ -1,7 +1,7 @@
 use crate::{
     handle::{
-        try_add_tasks, try_claim, try_claim_decay, try_complete_task, try_create_account,
-        try_disable_permit_key, try_update_account, try_update_config,
+        try_add_tasks, try_claim, try_claim_decay, try_complete_task,
+        try_disable_permit_key, try_update_config,
     },
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
@@ -13,6 +13,7 @@ use cosmwasm_std::{
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
 use shade_protocol::airdrop::errors::{invalid_dates, invalid_task_percentage};
+use crate::handle::try_account;
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -139,16 +140,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ),
             HandleMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, tasks),
             HandleMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, address),
-            HandleMsg::CreateAccount {
+            HandleMsg::Account {
                 addresses,
                 partial_tree,
                 ..
-            } => try_create_account(deps, &env, addresses, partial_tree),
-            HandleMsg::UpdateAccount {
-                addresses,
-                partial_tree,
-                ..
-            } => try_update_account(deps, &env, addresses, partial_tree),
+            } => try_account(deps, &env, addresses, partial_tree),
             HandleMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
             HandleMsg::Claim { .. } => try_claim(deps, &env),
             HandleMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),

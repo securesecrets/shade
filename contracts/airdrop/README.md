@@ -13,8 +13,7 @@
             * [CompleteTask](#CompleteTask)
     * [User](#User)
         * Messages
-            * [CreateAccount](#CreateAccount)
-            * [UpdateAccount](#UpdateAccount)
+            * [Account](#Account)
             * [DisablePermitKey](#DisablePermitKey)
             * [Claim](#Claim)
         * Queries
@@ -116,8 +115,8 @@ Complete that address' tasks for a given user
 
 ### Messages
 
-### CreateAccount
-Creates an account from which the user will claim all of his given addresses' rewards
+### Account
+(Creates / Updates) an account from which the user will claim all of his given addresses' rewards
 ##### Request
 | Name         | Type                                               | Description                                               | optional |
 |--------------|----------------------------------------------------|-----------------------------------------------------------|----------|
@@ -128,25 +127,7 @@ Creates an account from which the user will claim all of his given addresses' re
 ##### Response
 ```json
 {
-  "create_account": {
-    "status": "success"
-  }
-}
-```
-
-### UpdateAccount
-Updates a users accounts with more addresses
-##### Request
-| Name         | Type                                               | Description                                               | optional |
-|--------------|----------------------------------------------------|-----------------------------------------------------------|----------|
-| addresses    | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses                  | no       |
-| partial_tree | Array of string                                    | An array of nodes that serve as a proof for the addresses | no       |
-| padding      | string                                             | Allows for enforcing constant length messages             | yes      |
-
-##### Response
-```json
-{
-  "update_account": {
+  "account": {
     "status": "success"
   }
 }

@@ -14,6 +14,15 @@ pub struct Account {
     pub total_claimable: Uint128,
 }
 
+impl Default for Account {
+    fn default() -> Self {
+        Self {
+            addresses: vec![],
+            total_claimable: Uint128::zero(),
+        }
+    }
+}
+
 // Used for querying account information
 pub type AccountPermit = Permit<AccountPermitMsg>;
 

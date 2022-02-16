@@ -23,7 +23,7 @@ pub struct Reward {
 #[derive(Serialize, Deserialize)]
 pub struct Args {
     db_path: String,
-    initial_amount: Uint128,
+    total_amount: Uint128,
     max_amount: Uint128,
     admin: String,
     start_date: u64,
@@ -83,13 +83,13 @@ fn main() -> Result<()> {
         print_header("Initializing Snip20");
 
         let snip_init_msg = snip20::InitMsg {
-            name: "SHD".to_string(),
+            name: "Shade".to_string(),
             admin: None,
-            symbol: "SHADE".to_string(),
+            symbol: "SHD".to_string(),
             decimals: 8,
             initial_balances: Some(vec![InitialBalance {
                 address: HumanAddr::from(account_addr.clone()),
-                amount: args.initial_amount,
+                amount: args.total_amount,
             }]),
             prng_seed: Default::default(),
             config: Some(InitConfig {
@@ -133,7 +133,7 @@ fn main() -> Result<()> {
             address: HumanAddr::from(snip.address.clone()),
             code_hash: snip.code_hash.clone(),
         },
-        airdrop_amount: args.initial_amount,
+        airdrop_amount: args.total_amount,
         start_date: Some(args.start_date),
         end_date: Some(args.end_date),
         decay_start: Some(args.decay_start),
@@ -166,7 +166,7 @@ fn main() -> Result<()> {
         handle(
             &snip20::HandleMsg::Send {
                 recipient: HumanAddr::from(airdrop.address),
-                amount: args.initial_amount,
+                amount: args.total_amount,
                 msg: None,
                 memo: None,
                 padding: None,
