@@ -30,7 +30,7 @@ pub fn initialize_minter(
             native_asset: native_asset.clone(),
             oracle: get_contract(governance, "oracle".to_string())?,
             peg: None,
-            treasury: None,
+            treasury: HumanAddr("".to_string()),
             secondary_burn: None,
             limit: Some(mint::Limit::Daily {
                 annual_limit: Uint128(1_000_000_000_000),
@@ -66,6 +66,7 @@ pub fn setup_minters(
                 code_hash: sscrt.code_hash.clone(),
             },
             capture: Some(Uint128(1000)),
+            fee: Some(Uint128(0)),
             unlimited: Some(false),
         },
         Some("Register asset"),
@@ -77,6 +78,7 @@ pub fn setup_minters(
         mint::HandleMsg::RegisterAsset {
             contract: silk.clone(),
             capture: Some(Uint128(1000)),
+            fee: Some(Uint128(0)),
             unlimited: Some(true),
         },
         Some("Register asset"),
@@ -88,6 +90,7 @@ pub fn setup_minters(
         mint::HandleMsg::RegisterAsset {
             contract: shade.clone(),
             capture: Some(Uint128(1000)),
+            fee: Some(Uint128(0)),
             unlimited: Some(true),
         },
         Some("Register asset"),

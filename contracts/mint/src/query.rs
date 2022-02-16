@@ -3,7 +3,7 @@ use crate::{
         asset_list_r, asset_peg_r, assets_r, config_r, limit_r, native_asset_r, total_burned_r,
         minted_r, limit_refresh_r,
     },
-    handle::mint_amount,
+    handle::{mint_amount, calculate_portion},
 };
 use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage, Uint128, HumanAddr};
 use shade_protocol::mint::QueryAnswer;
@@ -65,9 +65,10 @@ pub fn mint<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, offer_asset:
 
     match assets_r(&deps.storage).may_load(offer_asset.to_string().as_bytes())? {
         Some(asset) => {
+            let fee_amount = calculate_portion(amount, asset.fee);
             Ok(QueryAnswer::Mint {
                 asset: native_asset.contract.clone(),
-                amount: mint_amount(deps, amount, &asset, &native_asset)?,
+                amount: mint_amount(deps, (amount - fee_amount)?, &asset, &native_asset)?,
             })
         }
         None => {
