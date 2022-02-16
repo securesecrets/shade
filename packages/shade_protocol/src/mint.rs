@@ -31,11 +31,11 @@ pub struct SupportedAsset {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum Limit {
     Daily {
-        annual_limit: Uint128,
+        supply_portion: Uint128,
         days: Uint128,
     },
     Monthly {
-        annual_limit: Uint128,
+        supply_portion: Uint128,
         months: Uint128,
     },
 }

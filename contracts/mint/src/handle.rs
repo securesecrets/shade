@@ -229,17 +229,33 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
 
             let mut fresh_amount = Uint128(0);
 
+            let native_asset = native_asset_r(&deps.storage).load()?;
+
+            let token_info = token_info_query(
+                &deps.querier,
+                1,
+                native_asset.contract.code_hash.clone(),
+                native_asset.contract.address.clone(),
+            )?;
+
+            let supply = match token_info.total_supply {
+                Some(s) => s,
+                None => {
+                    return Err(StdError::generic_err("Could not get native token supply")) 
+                }
+            };
+
             // get amount to add, 0 if not in need of refresh
             match limit {
 
-                Limit::Daily { annual_limit, days } => {
+                Limit::Daily { supply_portion, days } => {
 
                     // Slight error in annual limit if (days / 365) is not a whole number
                     if now.num_days_from_ce() as u128 - days.u128() >= last_refresh.num_days_from_ce() as u128 {
-                        fresh_amount = annual_limit.multiply_ratio(days, 365u128);
+                        fresh_amount = calculate_portion(supply, supply_portion);
                     }
                 },
-                Limit::Monthly { annual_limit, months } => {
+                Limit::Monthly { supply_portion, months } => {
 
                     if now.year() > last_refresh.year() || now.month() > last_refresh.month() {
                         /* If its a new year or new month, add (year_diff * 12) to the later (now) month
@@ -249,7 +265,7 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
                         let year_diff = now.year() - last_refresh.year();
 
                         if (now.month() + (year_diff * 12) as u32) - last_refresh.month() >= months.u128() as u32 {
-                            fresh_amount = annual_limit.multiply_ratio(months, 12u128);
+                            fresh_amount = calculate_portion(supply, supply_portion);
                         }
                     }
                 },
@@ -260,7 +276,7 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
                 let minted = minted_r(&deps.storage).load()?;
 
                 limit_w(&mut deps.storage).update(|state| {
-                    // Compound with unminted previous limit
+                    // Stack with previous unminted limit
                     Ok((state - minted)? + fresh_amount)
                 })?;
                 limit_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
