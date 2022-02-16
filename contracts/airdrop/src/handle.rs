@@ -390,7 +390,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![send_msg(
-            sender,
+            sender.clone(),
             redeem_amount,
             None,
             None,
@@ -461,11 +461,10 @@ pub fn finished_tasks<S: Storage>(
     account: String
 ) -> StdResult<Vec<RequiredTask>> {
     let mut finished_tasks = vec![];
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(storage).load()?;
 
     for (index, task) in config.task_claim.iter().enumerate() {
-        match claim_status_r(&storage, index)
-            .may_load(account.as_bytes())? {
+        match claim_status_r(storage, index).may_load(account.as_bytes())? {
             None => {}
             Some(_) => {
                 finished_tasks.push(task.clone());
