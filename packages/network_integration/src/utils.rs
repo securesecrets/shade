@@ -13,7 +13,7 @@ pub const GOVERNANCE_FILE: &str = "../../compiled/governance.wasm.gz";
 pub const MOCK_BAND_FILE: &str = "../../compiled/mock_band.wasm.gz";
 pub const ORACLE_FILE: &str = "../../compiled/oracle.wasm.gz";
 pub const INITIALIZER_FILE: &str = "../../compiled/initializer.wasm.gz";
-pub const MICRO_MINT_FILE: &str = "../../compiled/mint.wasm.gz";
+pub const MINT_FILE: &str = "../../compiled/mint.wasm.gz";
 pub const STAKING_FILE: &str = "../../compiled/staking.wasm.gz";
 
 pub const STORE_GAS: &str = "10000000";
@@ -50,11 +50,11 @@ pub fn print_epoch_info(minter: &NetContract) {
 
     let query: mint::QueryAnswer = query(minter, &msg, None).unwrap();
 
-    if let mint::QueryAnswer::Limit { limit, minted, last_refresh} = query {
-        // println!(
-        //     "\tFrequency: {}\n\tCapacity: {}\n\tTotal Minted: {}\n\tNext Epoch: {}",
-        //     limit.frequency, limit.mint_capacity, limit.total_minted, limit.next_epoch
-        // );
+    if let mint::QueryAnswer::Limit { minted, limit, last_refresh } = query {
+        println!(
+            "\tLast Refresh: {}\n\tMinted/Limit: {}/{}",
+            last_refresh, minted, limit
+        );
     }
 }
 

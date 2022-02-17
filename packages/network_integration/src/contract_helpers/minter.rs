@@ -1,7 +1,7 @@
 use crate::{
     contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_with_gov},
     utils::{
-        print_contract, print_epoch_info, print_header, print_vec, GAS, MICRO_MINT_FILE, VIEW_KEY,
+        print_contract, print_epoch_info, print_header, print_vec, GAS, MINT_FILE, VIEW_KEY,
     },
 };
 use cosmwasm_std::{to_binary, HumanAddr, Uint128};
@@ -20,23 +20,22 @@ pub fn initialize_minter(
     native_asset: &Contract,
     report: &mut Vec<Report>
 ) -> Result<NetContract> {
+
     let minter = init_with_gov(
         governance,
         contract_name,
-        MICRO_MINT_FILE,
+        MINT_FILE,
         mint::InitMsg {
             admin: Some(HumanAddr::from(governance.address.clone())),
             native_asset: native_asset.clone(),
             oracle: get_contract(governance, "oracle".to_string())?,
             peg: None,
-            treasury: None,
+            treasury: HumanAddr("".to_string()),
             secondary_burn: None,
-            /*
-            start_epoch: None,
-            epoch_frequency: Some(Uint128(120)),
-            epoch_mint_limit: Some(Uint128(1000000000)),
-            */
-            limit: None
+            limit: Some(mint::Limit::Daily {
+                annual_limit: Uint128(1_000_000_000_000),
+                days: Uint128(1),
+            }),
         },
         report
     )?;
@@ -67,7 +66,8 @@ pub fn setup_minters(
                 code_hash: sscrt.code_hash.clone(),
             },
             capture: Some(Uint128(1000)),
-            unlimited: None
+            fee: Some(Uint128(0)),
+            unlimited: Some(false),
         },
         Some("Register asset"),
         report
@@ -78,7 +78,8 @@ pub fn setup_minters(
         mint::HandleMsg::RegisterAsset {
             contract: silk.clone(),
             capture: Some(Uint128(1000)),
-            unlimited: None
+            fee: Some(Uint128(0)),
+            unlimited: Some(true),
         },
         Some("Register asset"),
         report
@@ -89,7 +90,8 @@ pub fn setup_minters(
         mint::HandleMsg::RegisterAsset {
             contract: shade.clone(),
             capture: Some(Uint128(1000)),
-            unlimited: None
+            fee: Some(Uint128(0)),
+            unlimited: Some(true),
         },
         Some("Register asset"),
         report

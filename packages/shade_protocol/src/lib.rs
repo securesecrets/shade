@@ -10,6 +10,7 @@ pub mod initializer;
 // Protocol libraries
 pub mod governance;
 pub mod mint;
+pub mod mint_router;
 pub mod oracle;
 pub mod scrt_staking;
 pub mod staking;
