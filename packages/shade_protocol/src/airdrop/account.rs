@@ -1,8 +1,9 @@
 use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Uint128};
-use flexible_permits::{
+use query_authentication::{
     permit::{bech32_to_canonical, Permit},
     transaction::SignedTx,
 };
+use query_authentication::viewing_keys::ViewingKey;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::airdrop::errors::permit_rejected;
@@ -91,3 +92,15 @@ pub struct AddressProofMsg {
     // Used to identify permits
     pub key: String,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccountKey(pub String);
+
+impl ToString for AccountKey {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl ViewingKey<32> for AccountKey {}

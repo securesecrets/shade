@@ -13,7 +13,7 @@ use cosmwasm_std::{
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
 use shade_protocol::airdrop::errors::{invalid_dates, invalid_task_percentage};
-use crate::handle::try_account;
+use crate::handle::{try_account, try_set_viewing_key};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -146,6 +146,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 ..
             } => try_account(deps, &env, addresses, partial_tree),
             HandleMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
+            HandleMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, &env, key),
             HandleMsg::Claim { .. } => try_claim(deps, &env),
             HandleMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),
         },
@@ -166,6 +167,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 permit,
                 current_date,
             } => to_binary(&query::account(deps, permit, current_date)?),
+            QueryMsg::AccountWithKey { account, key, current_date
+            } => to_binary(&query::account_with_key(deps, account, key, current_date)?),
         },
         RESPONSE_BLOCK_SIZE,
     )

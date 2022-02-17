@@ -104,6 +104,10 @@ pub enum HandleMsg {
         key: String,
         padding: Option<String>,
     },
+    SetViewingKey {
+        key: String,
+        padding: Option<String>
+    },
     Claim {
         padding: Option<String>,
     },
@@ -135,6 +139,7 @@ pub enum HandleAnswer {
         addresses: Vec<HumanAddr>,
     },
     DisablePermitKey { status: ResponseStatus },
+    SetViewingKey { status: ResponseStatus },
     Claim {
         status: ResponseStatus,
         // Total eligible
@@ -160,6 +165,11 @@ pub enum QueryMsg {
     TotalClaimed {},
     Account {
         permit: AccountPermit,
+        current_date: Option<u64>,
+    },
+    AccountWithKey {
+        account: HumanAddr,
+        key: String,
         current_date: Option<u64>,
     },
 }

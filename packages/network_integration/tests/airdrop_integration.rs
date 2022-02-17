@@ -1,7 +1,7 @@
 use colored::*;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
-use flexible_permits::transaction::PubKey;
-use flexible_permits::{permit::Permit, transaction::PermitSignature};
+use query_authentication::transaction::PubKey;
+use query_authentication::{permit::Permit, transaction::PermitSignature};
 use network_integration::{
     contract_helpers::{
         governance::{
@@ -70,7 +70,7 @@ fn create_signed_permit<T: Clone + Serialize>(
     let signed_info = create_permit(unsigned_msg, signer).unwrap();
 
     permit.signature = PermitSignature {
-        pub_key: flexible_permits::transaction::PubKey {
+        pub_key: query_authentication::transaction::PubKey {
             r#type: signed_info.pub_key.msg_type,
             value: Binary::from_base64(&signed_info.pub_key.value).unwrap(),
         },
@@ -527,6 +527,59 @@ fn run_airdrop() -> Result<()> {
             assert_eq!(unclaimed, Uint128::zero());
             assert_eq!(finished_tasks.len(), 2);
         }
+    }
+
+    print_warning("Creating Viewing Key");
+    {
+        let msg = airdrop::QueryMsg::AccountWithKey {
+            account: HumanAddr(account_a.clone()),
+            current_date: None,
+            key: "key".to_string()
+        };
+
+        let query: Result<airdrop::QueryAnswer> = query(&airdrop, msg, Some(3));
+
+        assert!(query.is_err());
+    }
+
+    handle(&airdrop::HandleMsg::SetViewingKey {
+        key: "key".to_string(),
+        padding: None,
+    }, &airdrop, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+
+    {
+        let msg = airdrop::QueryMsg::AccountWithKey {
+            account: HumanAddr(account_a.clone()),
+            current_date: None,
+            key: "key".to_string()
+        };
+
+        let query: airdrop::QueryAnswer = query(&airdrop, msg, None)?;
+
+        if let airdrop::QueryAnswer::Account {
+            total,
+            claimed,
+            unclaimed,
+            finished_tasks,
+            ..
+        } = query
+        {
+            assert_eq!(total, total_airdrop);
+            assert_eq!(claimed, total_airdrop);
+            assert_eq!(unclaimed, Uint128::zero());
+            assert_eq!(finished_tasks.len(), 2);
+        }
+    }
+    {
+        let msg = airdrop::QueryMsg::AccountWithKey {
+            account: HumanAddr(account_a.clone()),
+            current_date: None,
+            key: "wrong".to_string()
+        };
+
+        let query: Result<airdrop::QueryAnswer> = query(&airdrop, msg, Some(3));
+
+        assert!(query.is_err());
     }
 
     print_warning("Claiming partially decayed tokens");
