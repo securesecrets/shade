@@ -5,8 +5,12 @@ authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
 edition = "2018"
 
 [[bin]]
-name = "testnet_airdrop"
-path = "src/testnet_airdrop.rs"
+name = "launch_shade"
+path = "src/launch/shade.rs"
+
+[[bin]]
+name = "launch_airdrop"
+path = "src/launch/airdrop.rs"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
