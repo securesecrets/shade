@@ -3,14 +3,14 @@ pub mod tests {
     use cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-        Extern, StdError, Uint128,
+        Extern, StdError, Uint128, HumanAddr,
     };
     use mockall_double::double;
     use shade_protocol::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg};
 
     use crate::{
         contract::{handle, init, query},
-        handle::{calculate_capture, calculate_mint, try_burn},
+        handle::{calculate_portion, calculate_mint, try_burn},
     };
 
     mod mock_secret_toolkit {
@@ -50,7 +50,7 @@ pub mod tests {
         native_asset: Contract,
         oracle: Contract,
         peg: Option<String>,
-        treasury: Option<Contract>,
+        treasury: HumanAddr,
         capture: Option<Uint128>,
     ) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
@@ -62,11 +62,6 @@ pub mod tests {
             treasury,
             secondary_burn: None,
             limit: None,
-            /*
-            start_epoch: None,
-            epoch_frequency: None,
-            epoch_mint_limit: None,
-            */
         };
         let env = mock_env(admin, &coins(1000, "earth"));
         let _res = init(&mut deps, env, msg).unwrap();
@@ -370,7 +365,7 @@ pub mod tests {
         //10%
         let capture = Uint128(100_000_000_000_000_000);
         let expected = Uint128(100_000_000_000_000_000);
-        let value = calculate_capture(amount, capture);
+        let value = calculate_portion(amount, capture);
         assert_eq!(value, expected);
     }
     #[test]
