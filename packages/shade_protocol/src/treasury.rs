@@ -104,7 +104,7 @@ pub enum HandleMsg {
         asset: HumanAddr,
         allocation: Allocation,
     },
-    RefreshAllowance { },
+    RefreshAllowance {},
     // Trigger to re-allocate asset (all if none)
     //Rebalance { asset: Option<HumanAddr> },
 }
@@ -146,9 +146,16 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Balance { asset: HumanAddr },
-    Allocations { asset: HumanAddr },
-    Allowances { asset: HumanAddr, spender: HumanAddr },
+    Balance {
+        asset: HumanAddr,
+    },
+    Allocations {
+        asset: HumanAddr,
+    },
+    Allowances {
+        asset: HumanAddr,
+        spender: HumanAddr,
+    },
     LastAllowanceRefresh {},
 }
 

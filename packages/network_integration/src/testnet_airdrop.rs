@@ -1,5 +1,8 @@
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
-use network_integration::utils::{generate_label, print_contract, print_header, AIRDROP_FILE, GAS, SNIP20_FILE, STORE_GAS, store_struct};
+use network_integration::utils::{
+    generate_label, print_contract, print_header, store_struct, AIRDROP_FILE, GAS, SNIP20_FILE,
+    STORE_GAS,
+};
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use secretcli::cli_types::NetContract;
 use secretcli::secretcli::{account_address, handle, init};
@@ -109,7 +112,7 @@ fn main() -> Result<()> {
             Some(STORE_GAS),
             Some(GAS),
             None,
-            &mut reports
+            &mut reports,
         )?;
     } else {
         print_header("Using Shade");
@@ -156,7 +159,7 @@ fn main() -> Result<()> {
         Some(STORE_GAS),
         Some(GAS),
         None,
-        &mut reports
+        &mut reports,
     )?;
 
     print_contract(&airdrop);
@@ -177,7 +180,7 @@ fn main() -> Result<()> {
             None,
             None,
             &mut reports,
-            None
+            None,
         )?;
     }
 

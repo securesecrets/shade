@@ -3,21 +3,21 @@ use crate::{
     utils::{print_contract, print_header, ACCOUNT_KEY, GAS, STAKING_FILE},
 };
 use cosmwasm_std::{HumanAddr, Uint128};
+use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
-    secretcli::{query, handle},
+    secretcli::{handle, query},
 };
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::{snip20, staking};
 use std::{thread, time, time::UNIX_EPOCH};
-use secretcli::secretcli::Report;
 
 pub fn setup_staker(
     governance: &NetContract,
     shade: &Contract,
     staking_account: String,
-    report: &mut Vec<Report>
+    report: &mut Vec<Report>,
 ) -> Result<NetContract> {
     let staker = init_with_gov(
         governance,
@@ -34,7 +34,7 @@ pub fn setup_staker(
                 code_hash: shade.code_hash.clone(),
             },
         },
-        report
+        report,
     )?;
 
     print_contract(&staker);
@@ -60,7 +60,16 @@ pub fn setup_staker(
             key: "password".to_string(),
         };
 
-        handle(&msg, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
+        handle(
+            &msg,
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Stake some Shade on it
@@ -73,7 +82,16 @@ pub fn setup_staker(
             padding: None,
         };
 
-        handle(&msg, &shade_net, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
+        handle(
+            &msg,
+            &shade_net,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Check total stake
@@ -98,7 +116,16 @@ pub fn setup_staker(
             amount: unbond_amount,
         };
 
-        handle(&msg, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
+        handle(
+            &msg,
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Check if unstaking
@@ -120,7 +147,16 @@ pub fn setup_staker(
     {
         let msg = staking::HandleMsg::ClaimUnbond {};
 
-        handle(&msg, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
+        handle(
+            &msg,
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Query total Shade now
@@ -144,7 +180,16 @@ pub fn setup_staker(
     {
         let msg = staking::HandleMsg::ClaimUnbond {};
 
-        handle(&msg, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
+        handle(
+            &msg,
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Query total Shade now

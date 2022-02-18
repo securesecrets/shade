@@ -1,7 +1,8 @@
+use crate::handle::{try_account, try_set_viewing_key};
 use crate::{
     handle::{
-        try_add_tasks, try_claim, try_claim_decay, try_complete_task,
-        try_disable_permit_key, try_update_config,
+        try_add_tasks, try_claim, try_claim_decay, try_complete_task, try_disable_permit_key,
+        try_update_config,
     },
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
@@ -11,9 +12,8 @@ use cosmwasm_std::{
     StdResult, Storage, Uint128,
 };
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
-use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
 use shade_protocol::airdrop::errors::{invalid_dates, invalid_task_percentage};
-use crate::handle::{try_account, try_set_viewing_key};
+use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -53,7 +53,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 end_date.to_string().as_str(),
                 "before",
                 "StartDate",
-                start_date.to_string().as_str()
+                start_date.to_string().as_str(),
             ));
         }
     }
@@ -66,7 +66,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 start_decay.to_string().as_str(),
                 "before",
                 "StartDate",
-                start_date.to_string().as_str()
+                start_date.to_string().as_str(),
             ));
         }
         if let Some(end_date) = msg.end_date {
@@ -76,7 +76,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                     end_date.to_string().as_str(),
                     "before",
                     "Decay",
-                    start_decay.to_string().as_str()
+                    start_decay.to_string().as_str(),
                 ));
             }
         } else {
@@ -167,7 +167,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 permit,
                 current_date,
             } => to_binary(&query::account(deps, permit, current_date)?),
-            QueryMsg::AccountWithKey { account, key, current_date
+            QueryMsg::AccountWithKey {
+                account,
+                key,
+                current_date,
             } => to_binary(&query::account_with_key(deps, account, key, current_date)?),
         },
         RESPONSE_BLOCK_SIZE,

@@ -6,11 +6,11 @@ use cosmwasm_storage::{
     Singleton,
 };
 use shade_protocol::airdrop::account::AddressProofMsg;
+use shade_protocol::airdrop::errors::{permit_contract_mismatch, permit_key_revoked};
 use shade_protocol::airdrop::{
     account::{authenticate_ownership, Account, AccountPermit, AddressProofPermit},
     Config,
 };
-use shade_protocol::airdrop::errors::{permit_contract_mismatch, permit_key_revoked};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static DECAY_CLAIMED_KEY: &[u8] = b"decay_claimed";
@@ -134,10 +134,12 @@ pub fn validate_address_permit<S: Storage>(
     params: &AddressProofMsg,
     contract: HumanAddr,
 ) -> StdResult<()> {
-
     // Check that contract matches
     if params.contract != contract {
-        return Err(permit_contract_mismatch(params.contract.as_str(), contract.as_str()));
+        return Err(permit_contract_mismatch(
+            params.contract.as_str(),
+            contract.as_str(),
+        ));
     }
 
     // Check that permit is not revoked
@@ -156,7 +158,10 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HumanAddr> {
     // Check that contract matches
     if permit.params.contract != contract {
-        return Err(permit_contract_mismatch(permit.params.contract.as_str(), contract.as_str()));
+        return Err(permit_contract_mismatch(
+            permit.params.contract.as_str(),
+            contract.as_str(),
+        ));
     }
 
     // Authenticate permit

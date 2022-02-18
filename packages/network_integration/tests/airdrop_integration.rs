@@ -1,7 +1,6 @@
 use colored::*;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
-use query_authentication::transaction::PubKey;
-use query_authentication::{permit::Permit, transaction::PermitSignature};
+use network_integration::utils::store_struct;
 use network_integration::{
     contract_helpers::{
         governance::{
@@ -18,8 +17,13 @@ use network_integration::{
         VIEW_KEY,
     },
 };
+use query_authentication::transaction::PubKey;
+use query_authentication::{permit::Permit, transaction::PermitSignature};
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
-use secretcli::secretcli::{account_address, create_permit, query, handle, init, Report, create_key_account};
+use secretcli::cli_types::NetContract;
+use secretcli::secretcli::{
+    account_address, create_key_account, create_permit, handle, init, query, Report,
+};
 use serde::Serialize;
 use serde_json::Result;
 use shade_protocol::airdrop::account::{AddressProofPermit, FillerMsg};
@@ -41,8 +45,6 @@ use shade_protocol::{
     staking,
 };
 use std::{thread, time};
-use network_integration::utils::store_struct;
-use secretcli::cli_types::NetContract;
 
 fn create_signed_permit<T: Clone + Serialize>(
     params: T,
@@ -125,7 +127,7 @@ fn setup_contracts(
     task_claim: Vec<RequiredTask>,
     query_rounding: Uint128,
     airdrop_total: Uint128,
-    reports: &mut Vec<Report>
+    reports: &mut Vec<Report>,
 ) -> Result<(NetContract, NetContract)> {
     let account_a = account_address(ACCOUNT_KEY)?;
 
@@ -156,7 +158,7 @@ fn setup_contracts(
         Some(STORE_GAS),
         Some(GAS),
         Some("test"),
-        reports
+        reports,
     )?;
 
     let airdrop_init_msg = airdrop::InitMsg {
@@ -186,7 +188,7 @@ fn setup_contracts(
         Some(STORE_GAS),
         Some(GAS),
         Some("test"),
-        reports
+        reports,
     )?;
 
     {
@@ -195,8 +197,16 @@ fn setup_contracts(
             padding: None,
         };
 
-        handle(&msg, &snip, ACCOUNT_KEY,
-               Some(GAS), Some("test"), None, reports, None)?;
+        handle(
+            &msg,
+            &snip,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            reports,
+            None,
+        )?;
     }
 
     /// Assert that we start with nothing
@@ -214,18 +224,17 @@ fn setup_contracts(
         Some("test"),
         None,
         reports,
-        None
+        None,
     )?;
 
     Ok((airdrop, snip))
-
 }
 
 fn create_account(
     permits: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,
     reports: &mut Vec<Report>,
-    airdrop: &NetContract
+    airdrop: &NetContract,
 ) -> Result<()> {
     print_warning("Creating an account");
 
@@ -235,8 +244,17 @@ fn create_account(
         padding: None,
     };
 
-    let tx_info = handle(&msg, airdrop, ACCOUNT_KEY, Some("10000000"),
-                         Some("test"), None, reports, None)?.1;
+    let tx_info = handle(
+        &msg,
+        airdrop,
+        ACCOUNT_KEY,
+        Some("10000000"),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?
+    .1;
 
     println!("Gas used: {}", tx_info.gas_used);
 
@@ -247,7 +265,7 @@ fn update_account(
     permits: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,
     reports: &mut Vec<Report>,
-    airdrop: &NetContract
+    airdrop: &NetContract,
 ) -> Result<()> {
     print_warning("Updating account");
     let msg = airdrop::HandleMsg::Account {
@@ -256,8 +274,17 @@ fn update_account(
         padding: None,
     };
 
-    let tx_info = handle(&msg, airdrop, ACCOUNT_KEY, Some("10000000"),
-                         Some("test"), None, reports, None)?.1;
+    let tx_info = handle(
+        &msg,
+        airdrop,
+        ACCOUNT_KEY,
+        Some("10000000"),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?
+    .1;
 
     println!("Gas used: {}", tx_info.gas_used);
 
@@ -299,16 +326,21 @@ fn run_airdrop() -> Result<()> {
 
     let (airdrop, snip) = setup_contracts(
         Some(HumanAddr::from(account_a.clone())),
-        None, Some(end_date), Some(decay_date),
+        None,
+        Some(end_date),
+        Some(decay_date),
         Binary(merlke_tree.root().unwrap().to_vec()),
         leaves.len() as u32,
-        a_airdrop, Uint128(50),
+        a_airdrop,
+        Uint128(50),
         vec![RequiredTask {
             address: HumanAddr::from(account_a.clone()),
             percent: Uint128(50),
         }],
         Uint128(30000000),
-        total_airdrop + decay_amount, &mut reports)?;
+        total_airdrop + decay_amount,
+        &mut reports,
+    )?;
 
     print_contract(&airdrop);
     print_contract(&snip);
@@ -360,8 +392,12 @@ fn run_airdrop() -> Result<()> {
     );
 
     /// Create an account which will also claim whatever amount is available
-    create_account(vec![b_permit.clone(), a_permit.clone()],
-                   initial_proof, &mut reports, &airdrop)?;
+    create_account(
+        vec![b_permit.clone(), a_permit.clone()],
+        initial_proof,
+        &mut reports,
+        &airdrop,
+    )?;
 
     print_warning("Getting initial account information");
     {
@@ -392,10 +428,19 @@ fn run_airdrop() -> Result<()> {
 
     print_warning("Enabling the other half of the airdrop");
 
-    handle(&airdrop::HandleMsg::CompleteTask {
-        address: HumanAddr::from(account_a.clone()),
-        padding: None,
-    }, &airdrop, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+    handle(
+        &airdrop::HandleMsg::CompleteTask {
+            address: HumanAddr::from(account_a.clone()),
+            padding: None,
+        },
+        &airdrop,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        &mut reports,
+        None,
+    )?;
 
     {
         let msg = airdrop::QueryMsg::Account {
@@ -480,10 +525,19 @@ fn run_airdrop() -> Result<()> {
     }
 
     print_warning("Disabling permit");
-    handle(&airdrop::HandleMsg::DisablePermitKey {
-        key: "key".to_string(),
-        padding: None,
-    }, &airdrop, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+    handle(
+        &airdrop::HandleMsg::DisablePermitKey {
+            key: "key".to_string(),
+            padding: None,
+        },
+        &airdrop,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        &mut reports,
+        None,
+    )?;
 
     {
         let msg = airdrop::QueryMsg::Account {
@@ -534,7 +588,7 @@ fn run_airdrop() -> Result<()> {
         let msg = airdrop::QueryMsg::AccountWithKey {
             account: HumanAddr(account_a.clone()),
             current_date: None,
-            key: "key".to_string()
+            key: "key".to_string(),
         };
 
         let query: Result<airdrop::QueryAnswer> = query(&airdrop, msg, Some(3));
@@ -542,16 +596,25 @@ fn run_airdrop() -> Result<()> {
         assert!(query.is_err());
     }
 
-    handle(&airdrop::HandleMsg::SetViewingKey {
-        key: "key".to_string(),
-        padding: None,
-    }, &airdrop, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+    handle(
+        &airdrop::HandleMsg::SetViewingKey {
+            key: "key".to_string(),
+            padding: None,
+        },
+        &airdrop,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        &mut reports,
+        None,
+    )?;
 
     {
         let msg = airdrop::QueryMsg::AccountWithKey {
             account: HumanAddr(account_a.clone()),
             current_date: None,
-            key: "key".to_string()
+            key: "key".to_string(),
         };
 
         let query: airdrop::QueryAnswer = query(&airdrop, msg, None)?;
@@ -574,7 +637,7 @@ fn run_airdrop() -> Result<()> {
         let msg = airdrop::QueryMsg::AccountWithKey {
             account: HumanAddr(account_a.clone()),
             current_date: None,
-            key: "wrong".to_string()
+            key: "wrong".to_string(),
         };
 
         let query: Result<airdrop::QueryAnswer> = query(&airdrop, msg, Some(3));
@@ -624,9 +687,16 @@ fn run_airdrop() -> Result<()> {
         thread::sleep(time::Duration::from_secs(end_date - current + 20));
     }
 
-    handle(&airdrop::HandleMsg::ClaimDecay { padding: None }, &airdrop,
-           ACCOUNT_KEY, Some(GAS), Some("test"), None,
-           &mut reports, None)?;
+    handle(
+        &airdrop::HandleMsg::ClaimDecay { padding: None },
+        &airdrop,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        &mut reports,
+        None,
+    )?;
 
     assert_eq!(
         total_airdrop + decay_amount,
@@ -662,9 +732,17 @@ fn generate_memo(airdrop: &NetContract, address: String, index: u32) -> String {
     to_binary(&memo_content).unwrap().to_base64()
 }
 
-fn generate_permits(airdrop: &NetContract
-) -> Result<(Permit<FillerMsg>, Permit<FillerMsg>, Permit<FillerMsg>,
-             Permit<FillerMsg>, Permit<FillerMsg>, Permit<FillerMsg>, Permit<FillerMsg>)> {
+fn generate_permits(
+    airdrop: &NetContract,
+) -> Result<(
+    Permit<FillerMsg>,
+    Permit<FillerMsg>,
+    Permit<FillerMsg>,
+    Permit<FillerMsg>,
+    Permit<FillerMsg>,
+    Permit<FillerMsg>,
+    Permit<FillerMsg>,
+)> {
     let account_a = account_address(ACCOUNT_KEY)?;
     let account_b = account_address("b")?;
     let account_c = account_address("c")?;
@@ -722,7 +800,9 @@ fn generate_permits(airdrop: &NetContract
         "g",
     );
 
-    Ok((a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit))
+    Ok((
+        a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit,
+    ))
 }
 
 //#[test]
@@ -761,51 +841,68 @@ fn airdrop_gas_prices() -> Result<()> {
         {
             let (airdrop, snip) = setup_contracts(
                 Some(HumanAddr::from(account_a.clone())),
-                None, None, None,
+                None,
+                None,
+                None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001), Uint128(20),
+                Uint128(1001),
+                Uint128(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
                     percent: Uint128(80),
                 }],
                 Uint128(30000000),
-                Uint128(7000), &mut vec![])?;
+                Uint128(7000),
+                &mut vec![],
+            )?;
 
-            let (a_permit, b_permit, c_permit,
-                d_permit, e_permit, f_permit,
-                g_permit) = generate_permits(&airdrop)?;
+            let (a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit) =
+                generate_permits(&airdrop)?;
 
-            create_account(vec![a_permit.clone()],
-                           proof_from_tree(&vec![0], &merlke_tree.layers()),
-                           &mut reports_0, &airdrop)?;
+            create_account(
+                vec![a_permit.clone()],
+                proof_from_tree(&vec![0], &merlke_tree.layers()),
+                &mut reports_0,
+                &airdrop,
+            )?;
         }
 
         {
             let (airdrop, snip) = setup_contracts(
                 Some(HumanAddr::from(account_a.clone())),
-                None, None, None,
+                None,
+                None,
+                None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001), Uint128(20),
+                Uint128(1001),
+                Uint128(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
                     percent: Uint128(80),
                 }],
                 Uint128(30000000),
-                Uint128(7000), &mut vec![])?;
+                Uint128(7000),
+                &mut vec![],
+            )?;
 
-            let (a_permit, b_permit, c_permit,
-                d_permit, e_permit, f_permit,
-                g_permit) = generate_permits(&airdrop)?;
+            let (a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit) =
+                generate_permits(&airdrop)?;
 
-            create_account(vec![b_permit.clone()],
-                           proof_from_tree(&vec![1], &merlke_tree.layers()),
-                           &mut vec![], &airdrop)?;
+            create_account(
+                vec![b_permit.clone()],
+                proof_from_tree(&vec![1], &merlke_tree.layers()),
+                &mut vec![],
+                &airdrop,
+            )?;
 
-            update_account(vec![a_permit],
-                           proof_from_tree(&vec![0],
-                                           &merlke_tree.layers()), &mut reports_0, &airdrop)?;
+            update_account(
+                vec![a_permit],
+                proof_from_tree(&vec![0], &merlke_tree.layers()),
+                &mut reports_0,
+                &airdrop,
+            )?;
         }
     }
     store_struct("airdrop_0_permit.json", &reports_0);
@@ -815,28 +912,38 @@ fn airdrop_gas_prices() -> Result<()> {
     for _ in 0..loops {
         let (airdrop, snip) = setup_contracts(
             Some(HumanAddr::from(account_a.clone())),
-            None, None, None,
+            None,
+            None,
+            None,
             Binary(merlke_tree.root().unwrap().to_vec()),
             leaves.len() as u32,
-            Uint128(1001), Uint128(20),
+            Uint128(1001),
+            Uint128(20),
             vec![RequiredTask {
                 address: HumanAddr::from(account_a.clone()),
                 percent: Uint128(80),
             }],
             Uint128(30000000),
-            Uint128(7000), &mut vec![])?;
+            Uint128(7000),
+            &mut vec![],
+        )?;
 
-        let (a_permit, b_permit, c_permit,
-            d_permit, e_permit, f_permit,
-            g_permit) = generate_permits(&airdrop)?;
+        let (a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit) =
+            generate_permits(&airdrop)?;
 
-        create_account(vec![b_permit.clone()],
-                       proof_from_tree(&vec![1], &merlke_tree.layers()),
-                       &mut reports_1, &airdrop)?;
+        create_account(
+            vec![b_permit.clone()],
+            proof_from_tree(&vec![1], &merlke_tree.layers()),
+            &mut reports_1,
+            &airdrop,
+        )?;
 
-        update_account(vec![c_permit.clone()],
-                       proof_from_tree(&vec![2], &merlke_tree.layers()),
-                       &mut reports_1, &airdrop)?;
+        update_account(
+            vec![c_permit.clone()],
+            proof_from_tree(&vec![2], &merlke_tree.layers()),
+            &mut reports_1,
+            &airdrop,
+        )?;
     }
     store_struct("airdrop_1_permit.json", &reports_1);
     // 2 Permits
@@ -845,28 +952,38 @@ fn airdrop_gas_prices() -> Result<()> {
     for _ in 0..loops {
         let (airdrop, snip) = setup_contracts(
             Some(HumanAddr::from(account_a.clone())),
-            None, None, None,
+            None,
+            None,
+            None,
             Binary(merlke_tree.root().unwrap().to_vec()),
             leaves.len() as u32,
-            Uint128(1001), Uint128(20),
+            Uint128(1001),
+            Uint128(20),
             vec![RequiredTask {
                 address: HumanAddr::from(account_a.clone()),
                 percent: Uint128(80),
             }],
             Uint128(30000000),
-            Uint128(7000), &mut vec![])?;
+            Uint128(7000),
+            &mut vec![],
+        )?;
 
-        let (a_permit, b_permit, c_permit,
-            d_permit, e_permit, f_permit,
-            g_permit) = generate_permits(&airdrop)?;
+        let (a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit) =
+            generate_permits(&airdrop)?;
 
-        create_account(vec![b_permit.clone(), c_permit.clone()],
-                       proof_from_tree(&vec![1, 2], &merlke_tree.layers()),
-                       &mut reports_2, &airdrop)?;
+        create_account(
+            vec![b_permit.clone(), c_permit.clone()],
+            proof_from_tree(&vec![1, 2], &merlke_tree.layers()),
+            &mut reports_2,
+            &airdrop,
+        )?;
 
-        update_account(vec![d_permit.clone(), e_permit.clone()],
-                       proof_from_tree(&vec![3, 4], &merlke_tree.layers()),
-                       &mut reports_2, &airdrop)?;
+        update_account(
+            vec![d_permit.clone(), e_permit.clone()],
+            proof_from_tree(&vec![3, 4], &merlke_tree.layers()),
+            &mut reports_2,
+            &airdrop,
+        )?;
     }
     store_struct("airdrop_2_permit.json", &reports_2);
     // 3 Permits
@@ -875,28 +992,38 @@ fn airdrop_gas_prices() -> Result<()> {
     for _ in 0..loops {
         let (airdrop, snip) = setup_contracts(
             Some(HumanAddr::from(account_a.clone())),
-            None, None, None,
+            None,
+            None,
+            None,
             Binary(merlke_tree.root().unwrap().to_vec()),
             leaves.len() as u32,
-            Uint128(1001), Uint128(20),
+            Uint128(1001),
+            Uint128(20),
             vec![RequiredTask {
                 address: HumanAddr::from(account_a.clone()),
                 percent: Uint128(80),
             }],
             Uint128(30000000),
-            Uint128(7000), &mut vec![])?;
+            Uint128(7000),
+            &mut vec![],
+        )?;
 
-        let (a_permit, b_permit, c_permit,
-            d_permit, e_permit, f_permit,
-            g_permit) = generate_permits(&airdrop)?;
+        let (a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit) =
+            generate_permits(&airdrop)?;
 
-        create_account(vec![b_permit.clone(), c_permit.clone(), d_permit.clone()],
-                       proof_from_tree(&vec![1, 2, 3], &merlke_tree.layers()),
-                       &mut reports_3, &airdrop)?;
+        create_account(
+            vec![b_permit.clone(), c_permit.clone(), d_permit.clone()],
+            proof_from_tree(&vec![1, 2, 3], &merlke_tree.layers()),
+            &mut reports_3,
+            &airdrop,
+        )?;
 
-        update_account(vec![e_permit.clone(), f_permit.clone(), g_permit.clone()],
-                       proof_from_tree(&vec![4, 5, 6], &merlke_tree.layers()),
-                       &mut reports_3, &airdrop)?;
+        update_account(
+            vec![e_permit.clone(), f_permit.clone(), g_permit.clone()],
+            proof_from_tree(&vec![4, 5, 6], &merlke_tree.layers()),
+            &mut reports_3,
+            &airdrop,
+        )?;
     }
     store_struct("airdrop_3_permit.json", &reports_3);
     // 4 Permits
@@ -906,51 +1033,78 @@ fn airdrop_gas_prices() -> Result<()> {
         {
             let (airdrop, snip) = setup_contracts(
                 Some(HumanAddr::from(account_a.clone())),
-                None, None, None,
+                None,
+                None,
+                None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001), Uint128(20),
+                Uint128(1001),
+                Uint128(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
                     percent: Uint128(80),
                 }],
                 Uint128(30000000),
-                Uint128(7000), &mut vec![])?;
+                Uint128(7000),
+                &mut vec![],
+            )?;
 
-            let (a_permit, b_permit, c_permit,
-                d_permit, e_permit, f_permit,
-                g_permit) = generate_permits(&airdrop)?;
+            let (a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit) =
+                generate_permits(&airdrop)?;
 
-            create_account(vec![b_permit.clone(), c_permit.clone(), d_permit.clone(), e_permit.clone()],
-                           proof_from_tree(&vec![1,2,3,4], &merlke_tree.layers()),
-                           &mut reports_4, &airdrop)?;
+            create_account(
+                vec![
+                    b_permit.clone(),
+                    c_permit.clone(),
+                    d_permit.clone(),
+                    e_permit.clone(),
+                ],
+                proof_from_tree(&vec![1, 2, 3, 4], &merlke_tree.layers()),
+                &mut reports_4,
+                &airdrop,
+            )?;
         }
 
         {
             let (airdrop, snip) = setup_contracts(
                 Some(HumanAddr::from(account_a.clone())),
-                None, None, None,
+                None,
+                None,
+                None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001), Uint128(20),
+                Uint128(1001),
+                Uint128(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
                     percent: Uint128(80),
                 }],
                 Uint128(30000000),
-                Uint128(7000), &mut vec![])?;
+                Uint128(7000),
+                &mut vec![],
+            )?;
 
-            let (a_permit, b_permit, c_permit,
-                d_permit, e_permit, f_permit,
-                g_permit) = generate_permits(&airdrop)?;
+            let (a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit) =
+                generate_permits(&airdrop)?;
 
-            create_account(vec![a_permit.clone()],
-                           proof_from_tree(&vec![0], &merlke_tree.layers()),
-                           &mut vec![], &airdrop)?;
+            create_account(
+                vec![a_permit.clone()],
+                proof_from_tree(&vec![0], &merlke_tree.layers()),
+                &mut vec![],
+                &airdrop,
+            )?;
 
-            update_account(vec![b_permit.clone(), c_permit.clone(), d_permit.clone(), e_permit.clone()],
-                           proof_from_tree(&vec![1,2,3,4],
-                                           &merlke_tree.layers()), &mut reports_4, &airdrop)?;
+            update_account(
+                vec![
+                    b_permit.clone(),
+                    c_permit.clone(),
+                    d_permit.clone(),
+                    e_permit.clone(),
+                ],
+                proof_from_tree(&vec![1, 2, 3, 4], &merlke_tree.layers()),
+                &mut reports_4,
+                &airdrop,
+            )?;
         }
     }
     store_struct("airdrop_4_permit.json", &reports_4);
@@ -961,53 +1115,80 @@ fn airdrop_gas_prices() -> Result<()> {
         {
             let (airdrop, snip) = setup_contracts(
                 Some(HumanAddr::from(account_a.clone())),
-                None, None, None,
+                None,
+                None,
+                None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001), Uint128(20),
+                Uint128(1001),
+                Uint128(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
                     percent: Uint128(80),
                 }],
                 Uint128(30000000),
-                Uint128(7000), &mut vec![])?;
+                Uint128(7000),
+                &mut vec![],
+            )?;
 
-            let (a_permit, b_permit, c_permit,
-                d_permit, e_permit, f_permit,
-                g_permit) = generate_permits(&airdrop)?;
+            let (a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit) =
+                generate_permits(&airdrop)?;
 
-            create_account(vec![b_permit.clone(), c_permit.clone(), d_permit.clone(),
-                                e_permit.clone(), f_permit.clone()],
-                           proof_from_tree(&vec![1,2,3,4,5], &merlke_tree.layers()),
-                           &mut reports_5, &airdrop)?;
+            create_account(
+                vec![
+                    b_permit.clone(),
+                    c_permit.clone(),
+                    d_permit.clone(),
+                    e_permit.clone(),
+                    f_permit.clone(),
+                ],
+                proof_from_tree(&vec![1, 2, 3, 4, 5], &merlke_tree.layers()),
+                &mut reports_5,
+                &airdrop,
+            )?;
         }
 
         {
             let (airdrop, snip) = setup_contracts(
                 Some(HumanAddr::from(account_a.clone())),
-                None, None, None,
+                None,
+                None,
+                None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001), Uint128(20),
+                Uint128(1001),
+                Uint128(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
                     percent: Uint128(80),
                 }],
                 Uint128(30000000),
-                Uint128(7000), &mut vec![])?;
+                Uint128(7000),
+                &mut vec![],
+            )?;
 
-            let (a_permit, b_permit, c_permit,
-                d_permit, e_permit, f_permit,
-                g_permit) = generate_permits(&airdrop)?;
+            let (a_permit, b_permit, c_permit, d_permit, e_permit, f_permit, g_permit) =
+                generate_permits(&airdrop)?;
 
-            create_account(vec![a_permit.clone()],
-                           proof_from_tree(&vec![0], &merlke_tree.layers()),
-                           &mut vec![], &airdrop)?;
+            create_account(
+                vec![a_permit.clone()],
+                proof_from_tree(&vec![0], &merlke_tree.layers()),
+                &mut vec![],
+                &airdrop,
+            )?;
 
-            update_account(vec![b_permit.clone(), c_permit.clone(), d_permit.clone(),
-                                e_permit.clone(), f_permit.clone()],
-                           proof_from_tree(&vec![1,2,3,4,5],
-                                           &merlke_tree.layers()), &mut reports_5, &airdrop)?;
+            update_account(
+                vec![
+                    b_permit.clone(),
+                    c_permit.clone(),
+                    d_permit.clone(),
+                    e_permit.clone(),
+                    f_permit.clone(),
+                ],
+                proof_from_tree(&vec![1, 2, 3, 4, 5], &merlke_tree.layers()),
+                &mut reports_5,
+                &airdrop,
+            )?;
         }
     }
     store_struct("airdrop_5_permit.json", &reports_5);
