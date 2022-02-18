@@ -40,6 +40,12 @@ snip20: setup
 	(cd ${contracts_dir}/snip20; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20)
 
+test:
+	@$(MAKE) $(addprefix test-,$(CONTRACTS))
+
+test-%:
+	(cd ${contracts_dir}/$*; cargo unit-test)
+
 setup: $(compiled_dir) $(checksum_dir)
 
 $(compiled_dir) $(checksum_dir):
