@@ -16,7 +16,7 @@ use cosmwasm_std::{HumanAddr, Uint128, to_binary};
 use shade_protocol::asset::Contract;
 use std::fmt::Display;
 use serde::Serialize;
-use shade_protocol::micro_mint::MintLimit;
+use shade_protocol::mint::MintLimit;
 use shade_protocol::governance::Proposal;
 
 const STORE_GAS: &str = "10000000";
@@ -184,7 +184,7 @@ fn main() -> Result<()> {
     print_contract(&governance);
 
     print_header("Initializing Mint-Shade");
-    let mint_shade = micro_mint::InitMsg {
+    let mint_shade = mint::InitMsg {
         admin: Some(HumanAddr::from(governance.address.clone())),
         native_asset: Contract { address: HumanAddr::from(shade.address.clone()),
             code_hash: shade.code_hash.clone() },
@@ -196,7 +196,7 @@ fn main() -> Result<()> {
         start_epoch: None,
         epoch_frequency: Some(Uint128(120)),
         epoch_mint_limit: Some(Uint128(1000000000)),
-    }.inst_init("../../compiled/micro_mint.wasm.gz", &*generate_label(8),
+    }.inst_init("../../compiled/mint.wasm.gz", &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
 
@@ -247,17 +247,17 @@ fn main() -> Result<()> {
     print_header("Request a mint limit change");
     // Print mint config
     {
-        let query: micro_mint::QueryAnswer = micro_mint::QueryMsg::GetMintLimit {
+        let query: mint::QueryAnswer = mint::QueryMsg::GetMintLimit {
         }.t_query(&mint_shade)?;
 
-        if let micro_mint::QueryAnswer::MintLimit { limit } = query {
+        if let mint::QueryAnswer::MintLimit { limit } = query {
             println!("Mint limit before change request");
             print_struct(limit);
         }
     }
     // Request mint config update
     {
-        let msg = serde_json::to_string(&micro_mint::HandleMsg::UpdateMintLimit {
+        let msg = serde_json::to_string(&mint::HandleMsg::UpdateMintLimit {
             start_epoch: None,
             epoch_frequency: None,
             epoch_limit: Some(Uint128(2000000000)),
@@ -277,10 +277,10 @@ fn main() -> Result<()> {
 
     // Print mint config
     {
-        let query: micro_mint::QueryAnswer = micro_mint::QueryMsg::GetMintLimit {
+        let query: mint::QueryAnswer = mint::QueryMsg::GetMintLimit {
         }.t_query(&mint_shade)?;
 
-        if let micro_mint::QueryAnswer::MintLimit { limit } = query {
+        if let mint::QueryAnswer::MintLimit { limit } = query {
             println!("Mint limit after change request");
             print_struct(limit);
         }
@@ -313,10 +313,10 @@ fn main() -> Result<()> {
     print_header("Run admin command");
     // Print mint config
     {
-        let query: micro_mint::QueryAnswer = micro_mint::QueryMsg::GetMintLimit {
+        let query: mint::QueryAnswer = mint::QueryMsg::GetMintLimit {
         }.t_query(&mint_shade)?;
 
-        if let micro_mint::QueryAnswer::MintLimit { limit } = query {
+        if let mint::QueryAnswer::MintLimit { limit } = query {
             println!("Mint limit before change request");
             print_struct(limit);
         }
@@ -331,10 +331,10 @@ fn main() -> Result<()> {
     }
     // Print mint config
     {
-        let query: micro_mint::QueryAnswer = micro_mint::QueryMsg::GetMintLimit {
+        let query: mint::QueryAnswer = mint::QueryMsg::GetMintLimit {
         }.t_query(&mint_shade)?;
 
-        if let micro_mint::QueryAnswer::MintLimit { limit } = query {
+        if let mint::QueryAnswer::MintLimit { limit } = query {
             println!("Mint limit after change request");
             print_struct(limit);
         }
@@ -364,9 +364,9 @@ fn print_proposal(proposal: &Proposal) {
 
 fn print_epoch_info(minter: &NetContract) {
     println!("\tEpoch information");
-    let query = micro_mint::QueryMsg::GetMintLimit {}.t_query(minter).unwrap();
+    let query = mint::QueryMsg::GetMintLimit {}.t_query(minter).unwrap();
 
-    if let micro_mint::QueryAnswer::MintLimit { limit } = query {
+    if let mint::QueryAnswer::MintLimit { limit } = query {
         println!("\tFrequency: {}\n\tCapacity: {}\n\tTotal Minted: {}\n\tNext Epoch: {}",
                  limit.frequency, limit.mint_capacity, limit.total_minted, limit.next_epoch);
     }

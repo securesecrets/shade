@@ -5,8 +5,6 @@ use secret_toolkit::{
     snip20::{token_info_query, TokenInfo, Allowance},
     utils::{HandleCallback, InitCallback, Query},
 };
-#[cfg(test)]
-use secretcli::secretcli::{TestHandle, TestInit, TestQuery};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -83,9 +81,6 @@ pub struct InitMsg {
 impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
-
-#[cfg(test)]
-impl TestInit for InitMsg {}
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Default, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -180,9 +175,6 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[cfg(test)]
-impl TestHandle for HandleMsg {}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
@@ -244,6 +236,3 @@ pub enum QueryAnswer {
         minters: Vec<HumanAddr>,
     },
 }
-
-#[cfg(test)]
-impl TestQuery<QueryAnswer> for QueryMsg {}

@@ -1,5 +1,7 @@
 pub mod account;
 pub mod claim_info;
+pub mod errors;
+
 use crate::airdrop::{
     account::{AccountPermit, AddressProofPermit},
     claim_info::RequiredTask,
@@ -8,8 +10,8 @@ use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -93,13 +95,7 @@ pub enum HandleMsg {
         address: HumanAddr,
         padding: Option<String>,
     },
-    CreateAccount {
-        addresses: Vec<AddressProofPermit>,
-        partial_tree: Vec<Binary>,
-        padding: Option<String>,
-    },
-    /// Adds more addresses to accounts
-    UpdateAccount {
+    Account {
         addresses: Vec<AddressProofPermit>,
         partial_tree: Vec<Binary>,
         padding: Option<String>,
@@ -107,6 +103,10 @@ pub enum HandleMsg {
     DisablePermitKey {
         key: String,
         padding: Option<String>,
+    },
+    SetViewingKey {
+        key: String,
+        padding: Option<String>
     },
     Claim {
         padding: Option<String>,
@@ -126,10 +126,32 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     AddTask { status: ResponseStatus },
     CompleteTask { status: ResponseStatus },
-    CreateAccount { status: ResponseStatus },
-    UpdateAccount { status: ResponseStatus },
+    Account {
+        status: ResponseStatus,
+        // Total eligible
+        total: Uint128,
+        // Total claimed
+        claimed: Uint128,
+        // Total unclaimed but available
+        unclaimed: Uint128,
+        finished_tasks: Vec<RequiredTask>,
+        // Addresses claimed
+        addresses: Vec<HumanAddr>,
+    },
     DisablePermitKey { status: ResponseStatus },
-    Claim { status: ResponseStatus },
+    SetViewingKey { status: ResponseStatus },
+    Claim {
+        status: ResponseStatus,
+        // Total eligible
+        total: Uint128,
+        // Total claimed
+        claimed: Uint128,
+        // Total unclaimed but available
+        unclaimed: Uint128,
+        finished_tasks: Vec<RequiredTask>,
+        // Addresses claimed
+        addresses: Vec<HumanAddr>,
+    },
     ClaimDecay { status: ResponseStatus },
 }
 
@@ -143,6 +165,11 @@ pub enum QueryMsg {
     TotalClaimed {},
     Account {
         permit: AccountPermit,
+        current_date: Option<u64>,
+    },
+    AccountWithKey {
+        account: HumanAddr,
+        key: String,
         current_date: Option<u64>,
     },
 }

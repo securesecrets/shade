@@ -1,10 +1,8 @@
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
-use network_integration::utils::{
-    generate_label, print_contract, print_header, AIRDROP_FILE, GAS, SNIP20_FILE, STORE_GAS,
-};
+use network_integration::utils::{generate_label, print_contract, print_header, AIRDROP_FILE, GAS, SNIP20_FILE, STORE_GAS, store_struct};
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use secretcli::cli_types::NetContract;
-use secretcli::secretcli::{account_address, test_contract_handle, test_inst_init};
+use secretcli::secretcli::{account_address, handle, init};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
@@ -25,7 +23,7 @@ pub struct Reward {
 #[derive(Serialize, Deserialize)]
 pub struct Args {
     db_path: String,
-    initial_amount: Uint128,
+    total_amount: Uint128,
     max_amount: Uint128,
     admin: String,
     start_date: u64,
@@ -72,9 +70,11 @@ fn main() -> Result<()> {
         stored_tree.push(new_layer);
     }
     println!("Merkle tree height: {}", merkle_tree.layers().len());
-    //let serialized = to_binary(&stored_tree).unwrap();
+    store_struct("merkle_tree.json", &stored_tree);
     fs::write("merkle_tree.json", serde_json::to_string(&stored_tree)?)
         .expect("Could not store merkle tree");
+
+    let mut reports = vec![];
 
     let snip: NetContract;
 
@@ -83,13 +83,13 @@ fn main() -> Result<()> {
         print_header("Initializing Snip20");
 
         let snip_init_msg = snip20::InitMsg {
-            name: "SHD".to_string(),
+            name: "Shade".to_string(),
             admin: None,
-            symbol: "SHADE".to_string(),
+            symbol: "SHD".to_string(),
             decimals: 8,
             initial_balances: Some(vec![InitialBalance {
                 address: HumanAddr::from(account_addr.clone()),
-                amount: args.initial_amount,
+                amount: args.total_amount,
             }]),
             prng_seed: Default::default(),
             config: Some(InitConfig {
@@ -101,7 +101,7 @@ fn main() -> Result<()> {
             }),
         };
 
-        snip = test_inst_init(
+        snip = init(
             &snip_init_msg,
             SNIP20_FILE,
             &*generate_label(8),
@@ -109,6 +109,7 @@ fn main() -> Result<()> {
             Some(STORE_GAS),
             Some(GAS),
             None,
+            &mut reports
         )?;
     } else {
         print_header("Using Shade");
@@ -132,7 +133,7 @@ fn main() -> Result<()> {
             address: HumanAddr::from(snip.address.clone()),
             code_hash: snip.code_hash.clone(),
         },
-        airdrop_amount: args.initial_amount,
+        airdrop_amount: args.total_amount,
         start_date: Some(args.start_date),
         end_date: Some(args.end_date),
         decay_start: Some(args.decay_start),
@@ -147,7 +148,7 @@ fn main() -> Result<()> {
         query_rounding: Uint128(10000000000),
     };
 
-    let airdrop = test_inst_init(
+    let airdrop = init(
         &airdrop_init_msg,
         AIRDROP_FILE,
         &*generate_label(8),
@@ -155,16 +156,17 @@ fn main() -> Result<()> {
         Some(STORE_GAS),
         Some(GAS),
         None,
+        &mut reports
     )?;
 
     print_contract(&airdrop);
 
     if args.fund_airdrop {
         print_header("Funding airdrop");
-        test_contract_handle(
+        handle(
             &snip20::HandleMsg::Send {
                 recipient: HumanAddr::from(airdrop.address),
-                amount: args.initial_amount,
+                amount: args.total_amount,
                 msg: None,
                 memo: None,
                 padding: None,
@@ -174,8 +176,12 @@ fn main() -> Result<()> {
             Some(GAS),
             None,
             None,
+            &mut reports,
+            None
         )?;
     }
+
+    store_struct("testnet_airdrop.json", &reports);
 
     Ok(())
 }

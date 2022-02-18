@@ -1,38 +1,43 @@
 use crate::{
-    contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_contract},
+    contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_with_gov},
     utils::{
-        print_contract, print_epoch_info, print_header, print_vec, GAS, MICRO_MINT_FILE, VIEW_KEY,
+        print_contract, print_epoch_info, print_header, print_vec, GAS, MINT_FILE, VIEW_KEY,
     },
 };
 use cosmwasm_std::{to_binary, HumanAddr, Uint128};
 use secretcli::{
     cli_types::NetContract,
-    secretcli::{query_contract, test_contract_handle},
+    secretcli::{query, handle},
 };
 use serde_json::Result;
+use secretcli::secretcli::Report;
 use shade_protocol::utils::asset::Contract;
-use shade_protocol::{micro_mint, mint, snip20};
+use shade_protocol::{mint, snip20};
 
 pub fn initialize_minter(
     governance: &NetContract,
     contract_name: String,
     native_asset: &Contract,
+    report: &mut Vec<Report>
 ) -> Result<NetContract> {
-    let minter = init_contract(
+
+    let minter = init_with_gov(
         governance,
         contract_name,
-        MICRO_MINT_FILE,
-        micro_mint::InitMsg {
+        MINT_FILE,
+        mint::InitMsg {
             admin: Some(HumanAddr::from(governance.address.clone())),
             native_asset: native_asset.clone(),
             oracle: get_contract(governance, "oracle".to_string())?,
             peg: None,
-            treasury: None,
+            treasury: HumanAddr("".to_string()),
             secondary_burn: None,
-            start_epoch: None,
-            epoch_frequency: Some(Uint128(120)),
-            epoch_mint_limit: Some(Uint128(1000000000)),
+            limit: Some(mint::Limit::Daily {
+                annual_limit: Uint128(1_000_000_000_000),
+                days: Uint128(1),
+            }),
         },
+        report
     )?;
 
     print_contract(&minter);
@@ -49,37 +54,47 @@ pub fn setup_minters(
     shade: &Contract,
     silk: &Contract,
     sscrt: &NetContract,
+    report: &mut Vec<Report>
 ) -> Result<()> {
     print_header("Registering allowed tokens in mint contracts");
     create_and_trigger_proposal(
         governance,
         "shade_minter".to_string(),
-        micro_mint::HandleMsg::RegisterAsset {
+        mint::HandleMsg::RegisterAsset {
             contract: Contract {
                 address: HumanAddr::from(sscrt.address.clone()),
                 code_hash: sscrt.code_hash.clone(),
             },
             capture: Some(Uint128(1000)),
+            fee: Some(Uint128(0)),
+            unlimited: Some(false),
         },
         Some("Register asset"),
+        report
     )?;
     create_and_trigger_proposal(
         governance,
         "shade_minter".to_string(),
-        micro_mint::HandleMsg::RegisterAsset {
+        mint::HandleMsg::RegisterAsset {
             contract: silk.clone(),
             capture: Some(Uint128(1000)),
+            fee: Some(Uint128(0)),
+            unlimited: Some(true),
         },
         Some("Register asset"),
+        report
     )?;
     create_and_trigger_proposal(
         governance,
         "silk_minter".to_string(),
-        micro_mint::HandleMsg::RegisterAsset {
+        mint::HandleMsg::RegisterAsset {
             contract: shade.clone(),
             capture: Some(Uint128(1000)),
+            fee: Some(Uint128(0)),
+            unlimited: Some(true),
         },
         Some("Register asset"),
+        report
     )?;
 
     print_header("Adding allowed minters in Snip20s");
@@ -92,20 +107,18 @@ pub fn setup_minters(
             padding: None,
         },
         Some("Set minters"),
+        report
     )?;
 
     {
         let msg = snip20::QueryMsg::Minters {};
 
-        let query: snip20::QueryAnswer = query_contract(
-            &NetContract {
-                label: "".to_string(),
-                id: "".to_string(),
-                address: shade.address.clone().to_string(),
-                code_hash: shade.code_hash.clone(),
-            },
-            &msg,
-        )?;
+        let query: snip20::QueryAnswer = query(&NetContract {
+            label: "".to_string(),
+            id: "".to_string(),
+            address: shade.address.clone().to_string(),
+            code_hash: shade.code_hash.clone(),
+        }, &msg, None)?;
 
         if let snip20::QueryAnswer::Minters { minters } = query {
             print_vec("Shade minters: ", minters);
@@ -120,20 +133,18 @@ pub fn setup_minters(
             padding: None,
         },
         Some("Set minters"),
+        report
     )?;
 
     {
         let msg = snip20::QueryMsg::Minters {};
 
-        let query: snip20::QueryAnswer = query_contract(
-            &NetContract {
-                label: "".to_string(),
-                id: "".to_string(),
-                address: silk.address.clone().to_string(),
-                code_hash: silk.code_hash.clone(),
-            },
-            &msg,
-        )?;
+        let query: snip20::QueryAnswer = query(&NetContract {
+            label: "".to_string(),
+            id: "".to_string(),
+            address: silk.address.clone().to_string(),
+            code_hash: silk.code_hash.clone(),
+        }, &msg, None)?;
         if let snip20::QueryAnswer::Minters { minters } = query {
             print_vec("Silk minters: ", minters);
         }
@@ -148,7 +159,7 @@ pub fn get_balance(contract: &NetContract, from: String) -> Uint128 {
         key: String::from(VIEW_KEY),
     };
 
-    let balance: snip20::QueryAnswer = query_contract(contract, &msg).unwrap();
+    let balance: snip20::QueryAnswer = query(contract, &msg, None).unwrap();
 
     if let snip20::QueryAnswer::Balance { amount } = balance {
         return amount;
@@ -164,6 +175,7 @@ pub fn mint(
     amount: Uint128,
     minimum_expected: Uint128,
     backend: &str,
+    report: &mut Vec<Report>
 ) {
     let msg = snip20::HandleMsg::Send {
         recipient: HumanAddr::from(minter),
@@ -178,5 +190,5 @@ pub fn mint(
         padding: None,
     };
 
-    test_contract_handle(&msg, snip, sender, Some(GAS), Some(backend), None).unwrap();
+    handle(&msg, snip, sender, Some(GAS), Some(backend), None, report, None).unwrap();
 }
