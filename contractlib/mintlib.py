@@ -30,7 +30,7 @@ class Mint(Contract):
         if asset_peg:
             init_msg['peg'] = asset_peg
 
-        print(json.dumps(init_msg, indent=2))
+        # print(json.dumps(init_msg, indent=2))
         init_msg = json.dumps(init_msg)
 
         super().__init__(contract, init_msg, label, admin, uploader, backend,

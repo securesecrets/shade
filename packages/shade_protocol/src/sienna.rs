@@ -6,10 +6,15 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Token {
+pub struct CustomToken {
     pub contract_addr: HumanAddr,
     pub token_code_hash: String,
-    //pub viewing_key: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Token {
+    pub custom_token: CustomToken,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -39,7 +44,8 @@ pub enum PairQuery {
     Pool {},
     Simulation { offer_asset: Asset },
     */
-    PairInfo { swap_simulation: SwapSimulation },
+    PairInfo,
+    SwapSimulation { offer_asset: Asset },
 }
 
 
@@ -57,8 +63,26 @@ pub struct SimulationResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct PairResponse {
-    pub asset_infos: Vec<AssetInfo>,
+pub struct Pair {
+    pub token_0: CustomToken,
+    pub token_1: CustomToken,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct PairInfo {
+    pub liquidity_token: Contract,
+    pub factory: Contract,
+    pub pair: Pair,
+    pub amount_0: Uint128,
+    pub amount_1: Uint128,
+    pub total_liquidity: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct PairInfoResponse {
+    pub pair_info: Vec<AssetInfo>,
     pub contract_addr: HumanAddr,
     pub liquidity_token: HumanAddr,
     pub token_code_hash: String,
@@ -79,6 +103,9 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     env: Env,
     pair: Contract,
 ) -> StdResult<bool> {
+    
 
-    Ok()
+
+
+    Ok(true)
 }

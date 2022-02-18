@@ -26,7 +26,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    if secretswap::is_pair()? {
+    if secretswap::is_pair(pair)? {
 
         let (token_contract, token_info) =
             fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
@@ -52,7 +52,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
             })?),
         })
     }
-    else if sienna::is_pair()? {
+    else if sienna::is_pair(pair)? {
         let (token_contract, token_info) =
             fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
 

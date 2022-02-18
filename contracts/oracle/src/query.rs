@@ -24,8 +24,33 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
 
     // secret swap pair
     // TODO: sienna pair
+
+    let total_pool_value = Uint128(0);
+    let price_sum = Uint128(0);
+    let pool_values = vec![];
+
+    // Gather data from registered pools if they exist
     if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-        return sswap_price(deps, sswap_pair);
+        let pool_value = sswap_pool_value(sswap_pair)?;
+        total_pool_value = total_pool_value + pool_value;
+        pool_values.push((sswap_price(deps, sswap_pair), pool_value));
+    }
+
+    if let Some(sienna_pair) = sienna_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+        let pool_value = sienna_pool_value(sswap_pair)?;
+        total_pool_value = total_pool_value + pool_value;
+        pool_values.push((sienna_price(deps, sienna_pair), pool_value));
+    }
+
+    // Weighted avg with pool depth as weight
+    if pool_values.len() > 0 {
+        let price_sum = Uint128(0);
+
+        for (price, pool) in pool_values {
+            price_sum = price_sum + (price * pool);
+        }
+
+        return price_sum / total_pool_value;
     }
 
     // Index
@@ -60,6 +85,7 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    // Query all the band prices
     let ref_data = reference_data_bulk(deps, band_symbols.clone(), band_quotes)?;
 
     for (data, sym) in ref_data.iter().zip(band_symbols.iter()) {

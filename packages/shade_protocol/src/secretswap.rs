@@ -77,5 +77,5 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     pair: Contract,
 ) -> StdResult<bool> {
 
-    Ok()
+    Ok(true)
 }

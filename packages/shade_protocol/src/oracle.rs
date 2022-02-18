@@ -15,15 +15,6 @@ pub struct Pair {
     pub asset: Snip20Asset,
 }
 
-/*
-pub struct SiennaPair {
-    // secretswap_pair contract
-    pub pair: Contract,
-    // non-sscrt asset, other asset on pair should be sscrt
-    pub asset: Snip20Asset,
-}
-*/
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct IndexElement {
     pub symbol: String,

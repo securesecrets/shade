@@ -74,3 +74,7 @@ class Contract:
               f"Address: {self.address}\n"
               f"Id:      {self.code_id}\n"
               f"Hash:    {self.code_hash}")
+
+    def as_dict(self):
+        return {'address': self.address, 'code_hash': self.code_hash }
+
