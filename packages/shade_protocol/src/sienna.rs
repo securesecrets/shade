@@ -1,5 +1,5 @@
 use crate::utils::asset::Contract;
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{HumanAddr, Uint128, StdResult, StdError, Extern, Querier, Api, Storage};
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
@@ -13,27 +13,42 @@ pub struct CustomToken {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Token {
-    pub custom_token: CustomToken,
+pub enum TokenType {
+    CustomToken {
+        custom_token: CustomToken,
+    },
+    NativeToken {
+        denom: String,
+    },
 }
 
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Pair {
+    pub token_0: CustomToken,
+    pub token_1: CustomToken,
+}
+
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AssetInfo {
     pub token: Token,
 }
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Asset {
-    pub token: AssetInfo,
+pub struct TokenTypeAmount {
     pub amount: Uint128,
+    pub token: TokenType,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct SwapSimulation {
-    pub offer: Asset,
+    pub offer: TokenType,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -45,7 +60,7 @@ pub enum PairQuery {
     Simulation { offer_asset: Asset },
     */
     PairInfo,
-    SwapSimulation { offer_asset: Asset },
+    SwapSimulation { offer: TokenTypeAmount },
 }
 
 
@@ -63,13 +78,6 @@ pub struct SimulationResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Pair {
-    pub token_0: CustomToken,
-    pub token_1: CustomToken,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct PairInfo {
     pub liquidity_token: Contract,
     pub factory: Contract,
@@ -82,30 +90,29 @@ pub struct PairInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct PairInfoResponse {
-    pub pair_info: Vec<AssetInfo>,
-    pub contract_addr: HumanAddr,
-    pub liquidity_token: HumanAddr,
-    pub token_code_hash: String,
-    pub asset0_volume: Uint128,
-    pub asset1_volume: Uint128,
-    pub factory: Contract,
+    pub pair_info: PairInfo,
 }
 
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct PoolResponse {
     pub assets: Vec<Asset>,
     pub total_share: Uint128,
 }
+*/
 
 pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
     pair: Contract,
 ) -> StdResult<bool> {
     
-
-
-
-    Ok(true)
+    Ok(match PairQuery::PairInfo.query::<Q, Result<PairInfoResponse, StdError>>(
+        &deps.querier,
+        pair.code_hash,
+        pair.address,
+    )? {
+        Ok(_) => true,
+        Err(_) => false,
+    })
 }

@@ -9,8 +9,7 @@ use crate::utils::generic_response::ResponseStatus;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Pair {
-    // secretswap_pair contract
-    pub pair: Contract,
+    pub contract: Contract,
     // non-sscrt asset, other asset on pair should be sscrt
     pub asset: Snip20Asset,
 }

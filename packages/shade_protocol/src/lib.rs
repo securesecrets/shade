@@ -1,5 +1,6 @@
 pub mod band;
 pub mod secretswap;
+pub mod sienna;
 pub mod snip20;
 pub mod utils;
 

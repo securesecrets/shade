@@ -3,7 +3,7 @@ use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::oracle::{IndexElement, OracleConfig, SswapPair};
+use shade_protocol::oracle::{IndexElement, OracleConfig, Pair};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SSWAP_PAIRS: &[u8] = b"sswap_pairs";
@@ -18,19 +18,19 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, OracleConfig> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn sswap_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, SswapPair> {
+pub fn sswap_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Pair> {
     bucket_read(SSWAP_PAIRS, storage)
 }
 
-pub fn sswap_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, SswapPair> {
+pub fn sswap_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, Pair> {
     bucket(SSWAP_PAIRS, storage)
 }
 
-pub fn sienna_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, SswapPair> {
+pub fn sienna_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Pair> {
     bucket_read(SIENNA_PAIRS, storage)
 }
 
-pub fn sienna_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, SswapPair> {
+pub fn sienna_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, Pair> {
     bucket(SIENNA_PAIRS, storage)
 }
 

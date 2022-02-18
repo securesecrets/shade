@@ -1,5 +1,5 @@
 use crate::utils::asset::Contract;
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{HumanAddr, Uint128, StdResult, StdError, Extern, Querier, Api, Storage};
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
@@ -73,9 +73,15 @@ pub struct PoolResponse {
 
 pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
     pair: Contract,
 ) -> StdResult<bool> {
 
-    Ok(true)
+    Ok(match (PairQuery::Pair {}).query::<Q, Result<PairResponse, StdError>>(
+        &deps.querier,
+        pair.code_hash,
+        pair.address,
+    ) {
+        Ok(_) => true,
+        Err(_) => false,
+    })
 }
