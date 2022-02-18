@@ -1,4 +1,8 @@
-use crate::state::{account_r, account_total_claimed_r, account_total_claimed_w, account_viewkey_w, account_w, address_in_account_w, claim_status_r, claim_status_w, config_r, config_w, decay_claimed_w, revoke_permit, total_claimed_r, total_claimed_w, validate_address_permit};
+use crate::state::{
+    account_r, account_total_claimed_r, account_total_claimed_w, account_viewkey_w, account_w,
+    address_in_account_w, claim_status_r, claim_status_w, config_r, config_w, decay_claimed_w,
+    revoke_permit, total_claimed_r, total_claimed_w, validate_address_permit,
+};
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier,
     StdError, StdResult, Storage, Uint128,
@@ -7,12 +11,17 @@ use query_authentication::viewing_keys::ViewingKey;
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use secret_toolkit::snip20::send_msg;
 use shade_protocol::airdrop::account::{AccountKey, AddressProofMsg};
+use shade_protocol::airdrop::errors::{
+    account_already_created, account_does_not_exist, address_already_in_account, airdrop_ended,
+    airdrop_not_started, claim_too_high, decay_claimed, decay_not_set, expected_memo,
+    invalid_dates, invalid_partial_tree, invalid_task_percentage, not_admin, nothing_to_claim,
+    permit_rejected, unexpected_error,
+};
 use shade_protocol::airdrop::{
     account::{Account, AddressProofPermit},
     claim_info::RequiredTask,
     Config, HandleAnswer,
 };
-use shade_protocol::airdrop::errors::{account_already_created, account_does_not_exist, address_already_in_account, airdrop_ended, airdrop_not_started, claim_too_high, decay_claimed, decay_not_set, expected_memo, invalid_dates, invalid_partial_tree, invalid_task_percentage, not_admin, nothing_to_claim, permit_rejected, unexpected_error};
 use shade_protocol::utils::generic_response::ResponseStatus;
 
 #[allow(clippy::too_many_arguments)]
@@ -53,7 +62,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
                         end_date.to_string().as_str(),
                         "before",
                         "StartDate",
-                        start_date.to_string().as_str()
+                        start_date.to_string().as_str(),
                     ));
                 }
             } else if let Some(end_date) = state.end_date {
@@ -63,7 +72,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
                         end_date.to_string().as_str(),
                         "before",
                         "StartDate",
-                        start_date.to_string().as_str()
+                        start_date.to_string().as_str(),
                     ));
                 }
             }
@@ -74,7 +83,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
                         start_decay.to_string().as_str(),
                         "before",
                         "StartDate",
-                        start_date.to_string().as_str()
+                        start_date.to_string().as_str(),
                     ));
                 }
             } else if let Some(start_decay) = state.decay_start {
@@ -84,7 +93,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
                         start_decay.to_string().as_str(),
                         "before",
                         "StartDate",
-                        start_date.to_string().as_str()
+                        start_date.to_string().as_str(),
                     ));
                 }
             }
@@ -100,7 +109,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
                         end_date.to_string().as_str(),
                         "before",
                         "Decay",
-                        decay_start.to_string().as_str()
+                        decay_start.to_string().as_str(),
                     ));
                 }
             } else if let Some(decay_start) = state.decay_start {
@@ -110,7 +119,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
                         end_date.to_string().as_str(),
                         "before",
                         "Decay",
-                        decay_start.to_string().as_str()
+                        decay_start.to_string().as_str(),
                     ));
                 }
             }
@@ -176,7 +185,6 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     addresses: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,
 ) -> StdResult<HandleResponse> {
-
     // Check if airdrop active
     let config = config_r(&deps.storage).load()?;
 
@@ -190,8 +198,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     let updating_account: bool;
     let old_claim_amount: Uint128;
 
-    let mut account = match account_r(&deps.storage)
-        .may_load(sender.as_bytes())? {
+    let mut account = match account_r(&deps.storage).may_load(sender.as_bytes())? {
         None => {
             updating_account = false;
             old_claim_amount = Uint128::zero();
@@ -304,7 +311,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
             // Will always be 0 since rewards are automatically claimed here
             unclaimed: Uint128::zero(),
             finished_tasks: finished_tasks(&deps.storage, sender.clone())?,
-            addresses: account.addresses
+            addresses: account.addresses,
         })?),
     })
 }
@@ -332,7 +339,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     account_viewkey_w(&mut deps.storage).save(
         &env.message.sender.to_string().as_bytes(),
-        &AccountKey(key).hash()
+        &AccountKey(key).hash(),
     )?;
 
     Ok(HandleResponse {
@@ -426,7 +433,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
             claimed: account_total_claimed_r(&deps.storage).load(sender.to_string().as_bytes())?,
             unclaimed: Uint128::zero(),
             finished_tasks: finished_tasks(&deps.storage, sender.to_string())?,
-            addresses: account.addresses
+            addresses: account.addresses,
         })?),
     })
 }
@@ -476,10 +483,7 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
     Err(decay_not_set())
 }
 
-pub fn finished_tasks<S: Storage>(
-    storage: & S,
-    account: String
-) -> StdResult<Vec<RequiredTask>> {
+pub fn finished_tasks<S: Storage>(storage: &S, account: String) -> StdResult<Vec<RequiredTask>> {
     let mut finished_tasks = vec![];
     let config = config_r(storage).load()?;
 
@@ -583,23 +587,28 @@ pub fn try_add_account_addresses<S: Storage>(
             // Avoid verifying sender
             if &params.address != sender {
                 // Check permit legitimacy
-                validate_address_permit(storage, permit, &params,config.contract.clone())?;
+                validate_address_permit(storage, permit, &params, config.contract.clone())?;
             }
 
             // Check that airdrop amount does not exceed maximum
             if params.amount > config.max_amount {
-                return Err(claim_too_high(params.amount.to_string().as_str(),
-                                          config.max_amount.to_string().as_str()));
+                return Err(claim_too_high(
+                    params.amount.to_string().as_str(),
+                    config.max_amount.to_string().as_str(),
+                ));
             }
 
             // Update address if its not in an account
-            address_in_account_w(storage).update(params.address.to_string().as_bytes(), |state| {
-                if state.is_some() {
-                    return Err(address_already_in_account(params.address.as_str()));
-                }
+            address_in_account_w(storage).update(
+                params.address.to_string().as_bytes(),
+                |state| {
+                    if state.is_some() {
+                        return Err(address_already_in_account(params.address.as_str()));
+                    }
 
-                Ok(true)
-            })?;
+                    Ok(true)
+                },
+            )?;
 
             // Add account as a leaf
             let leaf_hash =
@@ -650,13 +659,17 @@ pub fn available(config: &Config, env: &Env) -> StdResult<()> {
 
     // Check if airdrop started
     if current_time < config.start_date {
-        return Err(airdrop_not_started(config.start_date.to_string().as_str(),
-                                       current_time.to_string().as_str()));
+        return Err(airdrop_not_started(
+            config.start_date.to_string().as_str(),
+            current_time.to_string().as_str(),
+        ));
     }
     if let Some(end_date) = config.end_date {
         if current_time > end_date {
-            return Err(airdrop_ended(end_date.to_string().as_str(),
-                                     current_time.to_string().as_str()));
+            return Err(airdrop_ended(
+                end_date.to_string().as_str(),
+                current_time.to_string().as_str(),
+            ));
         }
     }
 

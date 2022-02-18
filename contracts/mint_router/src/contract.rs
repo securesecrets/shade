@@ -2,7 +2,7 @@ use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
     StdResult, Storage, Uint128,
 };
-use secret_toolkit::snip20::{token_info_query, register_receive_msg};
+use secret_toolkit::snip20::{register_receive_msg, token_info_query};
 
 use shade_protocol::{
     mint_router::{Config, HandleMsg, InitMsg, QueryMsg},
@@ -11,9 +11,7 @@ use shade_protocol::{
 
 use crate::{
     handle, query,
-    state::{
-        config_w, current_assets_w,
-    },
+    state::{config_w, current_assets_w},
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -21,7 +19,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
     let config = Config {
         admin: match msg.admin {
             None => env.message.sender.clone(),
@@ -52,9 +49,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::UpdateConfig {
-            config,
-        } => handle::try_update_config(deps, env, config),
+        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
         HandleMsg::Receive {
             sender,
             from,

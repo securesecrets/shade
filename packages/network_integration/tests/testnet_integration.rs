@@ -1,7 +1,6 @@
 use colored::*;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
-use query_authentication::transaction::PubKey;
-use query_authentication::{permit::Permit, transaction::PermitSignature};
+use network_integration::utils::store_struct;
 use network_integration::{
     contract_helpers::{
         governance::{
@@ -18,10 +17,10 @@ use network_integration::{
         VIEW_KEY,
     },
 };
+use query_authentication::transaction::PubKey;
+use query_authentication::{permit::Permit, transaction::PermitSignature};
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
-use secretcli::secretcli::{
-    account_address, create_permit, query, handle, init,
-};
+use secretcli::secretcli::{account_address, create_permit, handle, init, query};
 use serde::Serialize;
 use serde_json::Result;
 use shade_protocol::airdrop::account::FillerMsg;
@@ -43,7 +42,6 @@ use shade_protocol::{
     staking,
 };
 use std::{thread, time};
-use network_integration::utils::store_struct;
 
 #[test]
 fn run_testnet() -> Result<()> {
@@ -51,7 +49,7 @@ fn run_testnet() -> Result<()> {
 
     println!("Using Account: {}", account.blue());
 
-    let mut reports= vec![];
+    let mut reports = vec![];
 
     /// Initialize sSCRT
     print_header("Initializing sSCRT");
@@ -80,7 +78,7 @@ fn run_testnet() -> Result<()> {
         Some(STORE_GAS),
         Some(GAS),
         Some("test"),
-        &mut reports
+        &mut reports,
     )?;
     print_contract(&s_sCRT);
 
@@ -90,7 +88,16 @@ fn run_testnet() -> Result<()> {
             padding: None,
         };
 
-        handle(&msg, &s_sCRT, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+        handle(
+            &msg,
+            &s_sCRT,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            &mut reports,
+            None,
+        )?;
     }
 
     println!("\n\tDepositing 1000000000uscrt");
@@ -98,7 +105,16 @@ fn run_testnet() -> Result<()> {
     {
         let msg = snip20::HandleMsg::Deposit { padding: None };
 
-        handle(&msg, &s_sCRT, ACCOUNT_KEY, Some(GAS), Some("test"), Some("1000000000uscrt"), &mut reports, None)?;
+        handle(
+            &msg,
+            &s_sCRT,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            Some("1000000000uscrt"),
+            &mut reports,
+            None,
+        )?;
     }
 
     // Initialize initializer and snip20s
@@ -131,13 +147,18 @@ fn run_testnet() -> Result<()> {
         Some(STORE_GAS),
         Some(GAS),
         Some("test"),
-        &mut reports
+        &mut reports,
     )?;
 
     print_contract(&governance);
 
     // Add contracts
-    add_contract("initializer".to_string(), &initializer, &governance, &mut reports)?;
+    add_contract(
+        "initializer".to_string(),
+        &initializer,
+        &governance,
+        &mut reports,
+    )?;
     add_contract("shade".to_string(), &shade, &governance, &mut reports)?;
     add_contract("silk".to_string(), &silk, &governance, &mut reports)?;
 
@@ -148,8 +169,26 @@ fn run_testnet() -> Result<()> {
             padding: None,
         };
 
-        handle(&msg, &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
-        handle(&msg, &silk, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+        handle(
+            &msg,
+            &shade,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            &mut reports,
+            None,
+        )?;
+        handle(
+            &msg,
+            &silk,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            &mut reports,
+            None,
+        )?;
     }
 
     // Print Contracts so far
@@ -175,7 +214,7 @@ fn run_testnet() -> Result<()> {
         "band_mock".to_string(),
         MOCK_BAND_FILE,
         band::InitMsg {},
-        &mut reports
+        &mut reports,
     )?;
 
     // Initialize Oracle
@@ -194,16 +233,24 @@ fn run_testnet() -> Result<()> {
                 code_hash: s_sCRT.code_hash.clone(),
             },
         },
-        &mut reports
+        &mut reports,
     )?;
 
     // Initialize Mint-Shade
-    let mint_shade = initialize_minter(&governance, "shade_minter".to_string(),
-                                       &shade_contract, &mut reports)?;
+    let mint_shade = initialize_minter(
+        &governance,
+        "shade_minter".to_string(),
+        &shade_contract,
+        &mut reports,
+    )?;
 
     // Initialize Mint-Silk
-    let mint_silk = initialize_minter(&governance, "silk_minter".to_string(),
-                                      &silk_contract, &mut reports)?;
+    let mint_silk = initialize_minter(
+        &governance,
+        "silk_minter".to_string(),
+        &silk_contract,
+        &mut reports,
+    )?;
 
     // Setup mint contracts
     // This also tests that governance can update allowed contracts
@@ -214,7 +261,7 @@ fn run_testnet() -> Result<()> {
         &shade_contract,
         &silk_contract,
         &s_sCRT,
-        &mut reports
+        &mut reports,
     )?;
 
     // Initialize staking
@@ -237,7 +284,7 @@ fn run_testnet() -> Result<()> {
             minimum_votes: None,
         },
         Some("Remove control from admin and initialize governance"),
-        &mut reports
+        &mut reports,
     )?;
 
     // Proposal admin command
@@ -253,7 +300,7 @@ fn run_testnet() -> Result<()> {
             proposal: admin_command.to_string(),
         },
         Some("Staker unbond time can be updated by admin whenever"),
-        &mut reports
+        &mut reports,
     )?;
 
     // Fund the proposal
@@ -278,13 +325,22 @@ fn run_testnet() -> Result<()> {
 
         let balance = get_balance(&shade, account.clone());
 
-        handle(&snip20::HandleMsg::Send {
-            recipient: HumanAddr::from(governance.address.clone()),
-            amount: Uint128(1000000),
-            msg: Some(to_binary(&proposal).unwrap()),
-            memo: None,
-            padding: None,
-        }, &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+        handle(
+            &snip20::HandleMsg::Send {
+                recipient: HumanAddr::from(governance.address.clone()),
+                amount: Uint128(1000000),
+                msg: Some(to_binary(&proposal).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            &shade,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            &mut reports,
+            None,
+        )?;
 
         // Check that its in a voting period
         {
@@ -311,13 +367,22 @@ fn run_testnet() -> Result<()> {
         let proposal = get_latest_proposal(&governance)?;
 
         // Vote on proposal
-        handle(&staking::HandleMsg::Vote {
-            proposal_id: proposal,
-            votes: vec![UserVote {
-                vote: Vote::Yes,
-                weight: 50,
-            }],
-        }, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+        handle(
+            &staking::HandleMsg::Vote {
+                proposal_id: proposal,
+                votes: vec![UserVote {
+                    vote: Vote::Yes,
+                    weight: 50,
+                }],
+            },
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            &mut reports,
+            None,
+        )?;
 
         // Verify that the proposal votes were properly done
         {
@@ -385,7 +450,7 @@ fn run_testnet() -> Result<()> {
             proposal: admin_command.to_string(),
         },
         Some("Staker unbond time can be updated by admin whenever"),
-        &mut reports
+        &mut reports,
     )?;
 
     {
@@ -393,33 +458,51 @@ fn run_testnet() -> Result<()> {
         let proposal = get_latest_proposal(&governance)?;
 
         print_warning("Funding proposal");
-        handle(&snip20::HandleMsg::Send {
-            recipient: HumanAddr::from(governance.address.clone()),
-            amount: Uint128(1000000),
-            msg: Some(to_binary(&proposal).unwrap()),
-            memo: None,
-            padding: None,
-        }, &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+        handle(
+            &snip20::HandleMsg::Send {
+                recipient: HumanAddr::from(governance.address.clone()),
+                amount: Uint128(1000000),
+                msg: Some(to_binary(&proposal).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            &shade,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            &mut reports,
+            None,
+        )?;
 
         // Vote on proposal
         print_warning("Voting on proposal");
-        handle(&staking::HandleMsg::Vote {
-            proposal_id: proposal,
-            votes: vec![
-                UserVote {
-                    vote: Vote::Yes,
-                    weight: 50,
-                },
-                UserVote {
-                    vote: Vote::No,
-                    weight: 25,
-                },
-                UserVote {
-                    vote: Vote::Abstain,
-                    weight: 25,
-                },
-            ],
-        }, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+        handle(
+            &staking::HandleMsg::Vote {
+                proposal_id: proposal,
+                votes: vec![
+                    UserVote {
+                        vote: Vote::Yes,
+                        weight: 50,
+                    },
+                    UserVote {
+                        vote: Vote::No,
+                        weight: 25,
+                    },
+                    UserVote {
+                        vote: Vote::Abstain,
+                        weight: 25,
+                    },
+                ],
+            },
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            &mut reports,
+            None,
+        )?;
 
         // Wait for the time limit and try to trigger it
         let now = chrono::offset::Utc::now().timestamp() as u64;
@@ -445,12 +528,21 @@ fn run_testnet() -> Result<()> {
 
     // Trigger the admin command
     print_warning("Triggering admin command");
-    handle(&governance::HandleMsg::TriggerAdminCommand {
-        target: "staking".to_string(),
-        command: "stake_unbond_time".to_string(),
-        variables: vec!["240".to_string()],
-        description: "Extending unbond time for staking contract".to_string(),
-    }, &governance, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+    handle(
+        &governance::HandleMsg::TriggerAdminCommand {
+            target: "staking".to_string(),
+            command: "stake_unbond_time".to_string(),
+            variables: vec!["240".to_string()],
+            description: "Extending unbond time for staking contract".to_string(),
+        },
+        &governance,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        &mut reports,
+        None,
+    )?;
 
     // Check that admin command did something
     {
@@ -475,7 +567,7 @@ fn run_testnet() -> Result<()> {
             proposal: admin_command.to_string(),
         },
         Some("This wont be funded :("),
-        &mut reports
+        &mut reports,
     )?;
 
     {
@@ -486,13 +578,22 @@ fn run_testnet() -> Result<()> {
         let lost_amount = Uint128(500000);
         let balance_before = get_balance(&shade, account.clone());
 
-        handle(&snip20::HandleMsg::Send {
-            recipient: HumanAddr::from(governance.address.clone()),
-            amount: lost_amount,
-            msg: Some(to_binary(&proposal).unwrap()),
-            memo: None,
-            padding: None,
-        }, &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+        handle(
+            &snip20::HandleMsg::Send {
+                recipient: HumanAddr::from(governance.address.clone()),
+                amount: lost_amount,
+                msg: Some(to_binary(&proposal).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            &shade,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            &mut reports,
+            None,
+        )?;
 
         let balance_after = get_balance(&shade, account.clone());
 
@@ -503,13 +604,22 @@ fn run_testnet() -> Result<()> {
         thread::sleep(time::Duration::from_secs(proposal_time + 184 - now));
 
         // Trigger funding
-        handle(&snip20::HandleMsg::Send {
-            recipient: HumanAddr::from(governance.address.clone()),
-            amount: lost_amount,
-            msg: Some(to_binary(&proposal).unwrap()),
-            memo: None,
-            padding: None,
-        }, &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None, &mut reports, None)?;
+        handle(
+            &snip20::HandleMsg::Send {
+                recipient: HumanAddr::from(governance.address.clone()),
+                amount: lost_amount,
+                msg: Some(to_binary(&proposal).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            &shade,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            &mut reports,
+            None,
+        )?;
 
         assert_eq!(get_balance(&shade, account.clone()), balance_after);
 

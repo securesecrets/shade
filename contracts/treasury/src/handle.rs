@@ -1,12 +1,14 @@
 use cosmwasm_std;
 use cosmwasm_std::{
-    CosmosMsg,
-    from_binary, to_binary, Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdError,
-    StdResult, Storage, Uint128,
+    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
+    Querier, StdError, StdResult, Storage, Uint128,
 };
 use secret_toolkit;
+use secret_toolkit::snip20::{
+    allowance_query, decrease_allowance_msg, increase_allowance_msg, register_receive_msg,
+    send_msg, set_viewing_key_msg,
+};
 use secret_toolkit::utils::Query;
-use secret_toolkit::snip20::{register_receive_msg, send_msg, set_viewing_key_msg, increase_allowance_msg, decrease_allowance_msg, allowance_query};
 
 use shade_protocol::{
     snip20,
@@ -18,12 +20,8 @@ use shade_protocol::{
 use crate::{
     query,
     state::{
-        allocations_r, allocations_w, 
-        assets_r, assets_w, 
-        asset_list_r, asset_list_w,
-        config_r, config_w, viewing_key_r,
-        last_allowance_refresh_r,
-        last_allowance_refresh_w,
+        allocations_r, allocations_w, asset_list_r, asset_list_w, assets_r, assets_w, config_r,
+        config_w, last_allowance_refresh_r, last_allowance_refresh_w, viewing_key_r,
     },
 };
 use chrono::prelude::*;
@@ -36,7 +34,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-
     let asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     //debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
     // skip the rest if the send the "unallocated" flag
@@ -63,7 +60,10 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             for alloc in &mut alloc_list {
                 match alloc {
                     Allocation::Reserves { allocation: _ } => {}
-                    Allocation::Allowance { address: _, amount: _ } => {}
+                    Allocation::Allowance {
+                        address: _,
+                        amount: _,
+                    } => {}
 
                     Allocation::Rewards {
                         allocation,
@@ -157,27 +157,25 @@ pub fn refresh_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
 ) -> StdResult<HandleResponse> {
-
     let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
     // Parse previous refresh datetime
     match DateTime::parse_from_rfc3339(&last_allowance_refresh_r(&mut deps.storage).load()?) {
         Ok(parsed) => {
-
             // Parse into UTC
             let last_refresh: DateTime<Utc> = parsed.with_timezone(&Utc);
 
             // Fail if we have already refreshed this month
             if now.year() <= last_refresh.year() && now.month() <= last_refresh.month() {
-                return Err(StdError::generic_err(format!("Last refresh too recent: {}", last_refresh.to_rfc3339())));
+                return Err(StdError::generic_err(format!(
+                    "Last refresh too recent: {}",
+                    last_refresh.to_rfc3339()
+                )));
             }
-            
         }
 
-        Err(e) => {
-            return Err(StdError::generic_err("Failed to parse previous datetime"))
-        }
+        Err(e) => return Err(StdError::generic_err("Failed to parse previous datetime")),
     };
 
     last_allowance_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
@@ -197,7 +195,6 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     env: &Env,
 ) -> StdResult<Vec<CosmosMsg>> {
-
     let mut messages = vec![];
 
     let key = viewing_key_r(&deps.storage).load()?;
@@ -205,8 +202,7 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
     for asset in asset_list_r(&deps.storage).load()? {
         for alloc in allocations_r(&deps.storage).load(&asset.to_string().as_bytes())? {
             match alloc {
-                Allocation::Allowance { address, amount }=> {
-
+                Allocation::Allowance { address, amount } => {
                     let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
                     // Determine current allowance
                     let cur_allowance = allowance_query(
@@ -216,45 +212,36 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
                         key.clone(),
                         1,
                         full_asset.contract.code_hash.clone(),
-                        full_asset.contract.address.clone()
+                        full_asset.contract.address.clone(),
                     )?;
 
                     if amount > cur_allowance.allowance {
-
                         // Increase to monthly allowance amount
-                        messages.push(
-                            increase_allowance_msg(
-                                address.clone(),
-                                (amount - cur_allowance.allowance)?,
-                                None,
-                                None,
-                                1,
-                                full_asset.contract.code_hash.clone(),
-                                full_asset.contract.address.clone(),
-                            )?
-                        );
-                    }
-                    else if amount < cur_allowance.allowance {
-
+                        messages.push(increase_allowance_msg(
+                            address.clone(),
+                            (amount - cur_allowance.allowance)?,
+                            None,
+                            None,
+                            1,
+                            full_asset.contract.code_hash.clone(),
+                            full_asset.contract.address.clone(),
+                        )?);
+                    } else if amount < cur_allowance.allowance {
                         // Decrease to monthly allowance
-                        messages.push(
-                            decrease_allowance_msg(
-                                address.clone(),
-                                (cur_allowance.allowance - amount)?,
-                                None,
-                                None,
-                                1,
-                                full_asset.contract.code_hash.clone(),
-                                full_asset.contract.address.clone(),
-                            )?
-                        );
+                        messages.push(decrease_allowance_msg(
+                            address.clone(),
+                            (cur_allowance.allowance - amount)?,
+                            None,
+                            None,
+                            1,
+                            full_asset.contract.code_hash.clone(),
+                            full_asset.contract.address.clone(),
+                        )?);
                     }
-
                 }
-                _ => { }
+                _ => {}
             }
         }
-
     }
 
     Ok(messages)
@@ -268,7 +255,6 @@ pub fn one_time_allowance<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     expiration: Option<u64>,
 ) -> StdResult<HandleResponse> {
-
     let cur_config = config_r(&deps.storage).load()?;
 
     if env.message.sender != cur_config.admin {
@@ -278,7 +264,6 @@ pub fn one_time_allowance<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     if let Some(full_asset) = assets_r(&deps.storage).may_load(&asset.to_string().as_bytes())? {
-
         messages.push(increase_allowance_msg(
             spender,
             amount,
@@ -301,14 +286,12 @@ pub fn one_time_allowance<S: Storage, A: Api, Q: Querier>(
     Err(StdError::generic_err(format!("Unknown Asset: {}", asset)))
 }
 
-
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
     reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
@@ -394,7 +377,10 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         Allocation::Reserves { allocation } => *allocation,
 
         // TODO: Needs to be accounted for elsewhere
-        Allocation::Allowance { address: _, amount: _ } => Uint128::zero(),
+        Allocation::Allowance {
+            address: _,
+            amount: _,
+        } => Uint128::zero(),
 
         Allocation::Rewards {
             contract: _,
@@ -509,29 +495,29 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
 
         // Validate addition does not exceed 100%
         for app in &app_list {
-
-            allocated_portion = allocated_portion + match app {
-                Allocation::Rewards {
-                    contract: _,
-                    allocation: _,
-                } => Uint128::zero(),
-                Allocation::Staking {
-                    contract: _,
-                    allocation,
-                } => *allocation,
-                Allocation::Application {
-                    contract: _,
-                    allocation,
-                    token: _,
-                } => *allocation,
-                Allocation::Pool {
-                    contract: _,
-                    allocation,
-                    secondary_asset: _,
-                    token: _,
-                } => *allocation,
-                _ => Uint128::zero(),
-            };
+            allocated_portion = allocated_portion
+                + match app {
+                    Allocation::Rewards {
+                        contract: _,
+                        allocation: _,
+                    } => Uint128::zero(),
+                    Allocation::Staking {
+                        contract: _,
+                        allocation,
+                    } => *allocation,
+                    Allocation::Application {
+                        contract: _,
+                        allocation,
+                        token: _,
+                    } => *allocation,
+                    Allocation::Pool {
+                        contract: _,
+                        allocation,
+                        secondary_asset: _,
+                        token: _,
+                    } => *allocation,
+                    _ => Uint128::zero(),
+                };
         }
 
         if (allocated_portion + alloc_portion) >= Uint128(10u128.pow(18)) {
@@ -549,7 +535,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
      * get Uint128 math functions to do these things (untested)
      * re-add send_msg below
      */
-    
+
     /*
     let liquid_portion = (allocated_portion * liquid_balance) / allocated_portion;
 
@@ -577,4 +563,3 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         })?),
     })
 }
-

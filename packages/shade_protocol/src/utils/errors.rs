@@ -1,7 +1,7 @@
 use cosmwasm_std::StdError;
+use schemars::JsonSchema;
 use schemars::_serde_json::to_string;
 use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 
 #[macro_export]
 macro_rules! impl_into_u8 {
@@ -21,7 +21,7 @@ pub struct DetailedError<T: CodeType> {
     pub code: u8,
     pub r#type: T,
     pub context: Vec<String>,
-    pub verbose: String
+    pub verbose: String,
 }
 
 impl<T: CodeType + Serialize> DetailedError<T> {
@@ -38,7 +38,7 @@ impl<T: CodeType + Serialize> DetailedError<T> {
             code: code.to_code(),
             r#type: code,
             context: context.iter().map(|s| s.to_string()).collect(),
-            verbose
+            verbose,
         }
     }
 }
@@ -60,10 +60,10 @@ pub trait CodeType: Into<u8> + Clone {
 
 #[cfg(test)]
 pub mod tests {
+    use crate::utils::errors::{build_string, CodeType, DetailedError};
     use cosmwasm_std::StdError;
-    use serde::{Deserialize, Serialize};
     use schemars::JsonSchema;
-    use crate::utils::errors::{DetailedError, CodeType, build_string};
+    use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, JsonSchema)]
     #[repr(u8)]
@@ -71,7 +71,7 @@ pub mod tests {
     enum TestCode {
         Error1,
         Error2,
-        Error3
+        Error3,
     }
 
     impl_into_u8!(TestCode);
@@ -102,7 +102,10 @@ pub mod tests {
 
     #[test]
     fn string_builder() {
-        assert_eq!(build_string("Test string {}", &vec!["arg"]), "Test string arg".to_string())
+        assert_eq!(
+            build_string("Test string {}", &vec!["arg"]),
+            "Test string arg".to_string()
+        )
     }
 
     #[test]
@@ -119,12 +122,15 @@ pub mod tests {
 
     #[test]
     fn to_verbose() {
-        assert_eq!(TestCode::Error1.to_verbose(&vec![]),
-                   "Error".to_string());
-        assert_eq!(TestCode::Error2.to_verbose( &vec!["function"]),
-                   "Broke in function".to_string());
-        assert_eq!(TestCode::Error3.to_verbose(&vec!["address", "amount"]),
-                   "Expecting address but got amount".to_string());
+        assert_eq!(TestCode::Error1.to_verbose(&vec![]), "Error".to_string());
+        assert_eq!(
+            TestCode::Error2.to_verbose(&vec!["function"]),
+            "Broke in function".to_string()
+        );
+        assert_eq!(
+            TestCode::Error3.to_verbose(&vec!["address", "amount"]),
+            "Expecting address but got amount".to_string()
+        );
     }
 
     #[test]
@@ -142,10 +148,14 @@ pub mod tests {
         assert_eq!(err2.context, vec!["function".to_string()]);
         assert_eq!(err2.verbose, "Broke in function".to_string());
 
-        let err3 = DetailedError::from_code("contract", TestCode::Error3, vec!["address", "amount"]);
+        let err3 =
+            DetailedError::from_code("contract", TestCode::Error3, vec!["address", "amount"]);
         assert_eq!(err3.code, 2);
         assert_eq!(err3.r#type, TestCode::Error3);
-        assert_eq!(err3.context, vec!["address".to_string(), "amount".to_string()]);
+        assert_eq!(
+            err3.context,
+            vec!["address".to_string(), "amount".to_string()]
+        );
         assert_eq!(err3.verbose, "Expecting address but got amount".to_string());
     }
 
@@ -167,13 +177,16 @@ pub mod tests {
             _ => assert!(false)
         }
 
-        let err2 = DetailedError::from_code("contract", TestCode::Error2, vec!["function"]).to_error();
+        let err2 =
+            DetailedError::from_code("contract", TestCode::Error2, vec!["function"]).to_error();
         match err2 {
             StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"target\":\"contract\",\"code\":1,\"type\":\"error2\",\"context\":[\"function\"],\"verbose\":\"Broke in function\"}".to_string()),
             _ => assert!(false)
         }
 
-        let err3 = DetailedError::from_code("contract", TestCode::Error3, vec!["address", "amount"]).to_error();
+        let err3 =
+            DetailedError::from_code("contract", TestCode::Error3, vec!["address", "amount"])
+                .to_error();
         match err3 {
             StdError::GenericErr { msg, .. } => assert_eq!(msg, "{\"target\":\"contract\",\"code\":2,\"type\":\"error3\",\"context\":[\"address\",\"amount\"],\"verbose\":\"Expecting address but got amount\"}".to_string()),
             _ => assert!(false)
@@ -200,5 +213,4 @@ pub mod tests {
             _ => assert!(false)
         }
     }
-
 }

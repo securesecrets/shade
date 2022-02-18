@@ -9,12 +9,12 @@ use crate::{
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage, Uint128};
 use query_authentication::viewing_keys::ViewingKey;
 use shade_protocol::airdrop::account::{AccountKey, AddressProofPermit};
+use shade_protocol::airdrop::errors::invalid_viewing_key;
 use shade_protocol::airdrop::AccountVerification;
 use shade_protocol::{
     airdrop::{account::AccountPermit, claim_info::RequiredTask, QueryAnswer},
     utils::math::{div, mult},
 };
-use shade_protocol::airdrop::errors::invalid_viewing_key;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -110,12 +110,11 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
     permit: AccountPermit,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
-
     let config = config_r(&deps.storage).load()?;
     account_information(
         deps,
         validate_account_permit(deps, &permit, config.contract)?,
-        current_date
+        current_date,
     )
 }
 
@@ -125,18 +124,12 @@ pub fn account_with_key<S: Storage, A: Api, Q: Querier>(
     key: String,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
-
     // Validate address
-    let stored_hash = account_viewkey_r(&deps.storage).load(
-        account.to_string().as_bytes())?;
+    let stored_hash = account_viewkey_r(&deps.storage).load(account.to_string().as_bytes())?;
 
     if !AccountKey(key).compare(&stored_hash) {
-        return Err(invalid_viewing_key())
+        return Err(invalid_viewing_key());
     }
 
-    account_information(
-        deps,
-        account,
-        current_date
-    )
+    account_information(deps, account, current_date)
 }

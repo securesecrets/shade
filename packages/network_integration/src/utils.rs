@@ -50,7 +50,12 @@ pub fn print_epoch_info(minter: &NetContract) {
 
     let query: mint::QueryAnswer = query(minter, &msg, None).unwrap();
 
-    if let mint::QueryAnswer::Limit { minted, limit, last_refresh } = query {
+    if let mint::QueryAnswer::Limit {
+        minted,
+        limit,
+        last_refresh,
+    } = query
+    {
         println!(
             "\tLast Refresh: {}\n\tMinted/Limit: {}/{}",
             last_refresh, minted, limit
@@ -72,8 +77,10 @@ pub fn print_vec<Type: Display>(prefix: &str, vec: Vec<Type>) {
     println!();
 }
 
-pub fn store_struct<T: serde::Serialize>(path: &str, data: &T){
-    fs::write(path, serde_json::to_string_pretty(data)
-        .expect("Could not serialize data"))
-        .expect(&format!("Could not store {}", path));
+pub fn store_struct<T: serde::Serialize>(path: &str, data: &T) {
+    fs::write(
+        path,
+        serde_json::to_string_pretty(data).expect("Could not serialize data"),
+    )
+    .expect(&format!("Could not store {}", path));
 }

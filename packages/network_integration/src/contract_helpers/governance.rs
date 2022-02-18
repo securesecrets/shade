@@ -6,11 +6,11 @@ use crate::utils::{
     generate_label, print_contract, print_header, print_warning, ACCOUNT_KEY, GAS, STORE_GAS,
 };
 
+use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
-    secretcli::{query, handle, init},
+    secretcli::{handle, init, query},
 };
-use secretcli::secretcli::Report;
 use shade_protocol::utils::asset::Contract;
 
 pub fn init_with_gov<Init: serde::Serialize>(
@@ -18,7 +18,7 @@ pub fn init_with_gov<Init: serde::Serialize>(
     contract_name: String,
     contract_path: &str,
     contract_init: Init,
-    report: &mut Vec<Report>
+    report: &mut Vec<Report>,
 ) -> Result<NetContract> {
     print_header(&format!("{}{}", "Initializing ", contract_name));
 
@@ -30,7 +30,7 @@ pub fn init_with_gov<Init: serde::Serialize>(
         Some(STORE_GAS),
         Some(GAS),
         Some("test"),
-        report
+        report,
     )?;
 
     print_contract(&contract);
@@ -57,7 +57,12 @@ pub fn get_contract(governance: &NetContract, target: String) -> Result<Contract
     Ok(ctrc)
 }
 
-pub fn add_contract(name: String, target: &NetContract, governance: &NetContract, report: &mut Vec<Report>) -> Result<()> {
+pub fn add_contract(
+    name: String,
+    target: &NetContract,
+    governance: &NetContract,
+    report: &mut Vec<Report>,
+) -> Result<()> {
     print_warning(&format!("{}{}", "Adding ", name));
 
     let msg = governance::HandleMsg::AddSupportedContract {
@@ -73,7 +78,7 @@ pub fn add_contract(name: String, target: &NetContract, governance: &NetContract
         GOVERNANCE_SELF.to_string(),
         &msg,
         Some("Add a contract"),
-        report
+        report,
     )?;
 
     {
@@ -98,7 +103,7 @@ pub fn create_and_trigger_proposal<Handle: serde::Serialize>(
     target: String,
     handle: Handle,
     desc: Option<&str>,
-    report: &mut Vec<Report>
+    report: &mut Vec<Report>,
 ) -> Result<Uint128> {
     create_proposal(governance, target, handle, desc, report)?;
 
@@ -126,9 +131,8 @@ pub fn create_proposal<Handle: serde::Serialize>(
     target: String,
     msg: Handle,
     desc: Option<&str>,
-    report: &mut Vec<Report>
+    report: &mut Vec<Report>,
 ) -> Result<()> {
-
     let proposal_msg = governance::HandleMsg::CreateProposal {
         target_contract: target,
         proposal: serde_json::to_string(&msg)?,
@@ -140,21 +144,42 @@ pub fn create_proposal<Handle: serde::Serialize>(
 
     //let proposals = get_latest_proposal(governance)?;
 
-    handle(&proposal_msg, governance, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
+    handle(
+        &proposal_msg,
+        governance,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        report,
+        None,
+    )?;
 
     //assert_eq!(proposals, get_latest_proposal(governance)?);
 
     Ok(())
 }
 
-pub fn trigger_latest_proposal(governance: &NetContract, report: &mut Vec<Report>) -> Result<Uint128> {
+pub fn trigger_latest_proposal(
+    governance: &NetContract,
+    report: &mut Vec<Report>,
+) -> Result<Uint128> {
     let proposals = get_latest_proposal(governance)?;
 
     let handle_msg = governance::HandleMsg::TriggerProposal {
         proposal_id: proposals,
     };
 
-    handle(&handle_msg, governance, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
+    handle(
+        &handle_msg,
+        governance,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        report,
+        None,
+    )?;
 
     Ok(proposals)
 }

@@ -1,8 +1,8 @@
-use cosmwasm_std::StdError;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 use crate::impl_into_u8;
 use crate::utils::errors::{build_string, CodeType, DetailedError};
+use cosmwasm_std::StdError;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, JsonSchema)]
 #[repr(u8)]
@@ -34,9 +34,13 @@ impl_into_u8!(Error);
 impl CodeType for Error {
     fn to_verbose(&self, context: &Vec<&str>) -> String {
         match self {
-            Error::InvalidTaskPercentage => build_string("Task total exceeds maximum of 100%, got {}", context),
+            Error::InvalidTaskPercentage => {
+                build_string("Task total exceeds maximum of 100%, got {}", context)
+            }
             Error::InvalidDates => build_string("{} ({}) cannot happen {} {} ({})", context),
-            Error::PermitContractMismatch => build_string("Permit is valid for {}, expected {}", context),
+            Error::PermitContractMismatch => {
+                build_string("Permit is valid for {}, expected {}", context)
+            }
             Error::PermitKeyRevoked => build_string("Permit key {} revoked", context),
             Error::PermitRejected => build_string("Permit was rejected", context),
             Error::NotAdmin => build_string("Can only be accessed by {}", context),
@@ -45,11 +49,15 @@ impl CodeType for Error {
             Error::NothingToClaim => build_string("Amount to claim is 0", context),
             Error::DecayClaimed => build_string("Decay already claimed", context),
             Error::NoDecaySet => build_string("Decay has not been set", context),
-            Error::ClaimAmountTooHigh => build_string("Claim {} is higher than the maximum claim of {}", context),
+            Error::ClaimAmountTooHigh => {
+                build_string("Claim {} is higher than the maximum claim of {}", context)
+            }
             Error::AddressInAccount => build_string("{} has already been claimed", context),
             Error::ExpectedMemo => build_string("Expected a memo", context),
             Error::InvalidPartialTree => build_string("Partial tree is not valid", context),
-            Error::AirdropNotStarted => build_string("Airdrop starts in {}, its currently {}", context),
+            Error::AirdropNotStarted => {
+                build_string("Airdrop starts in {}, its currently {}", context)
+            }
             Error::AirdropEnded => build_string("Airdrop ended on {}, its currently {}", context),
             Error::InvalidViewingKey => build_string("Provided viewing key is invalid", context),
             Error::UnexpectedError => build_string("Something unexpected happened", context),
@@ -60,15 +68,36 @@ impl CodeType for Error {
 const airdrop_target: &str = "airdrop";
 
 pub fn invalid_task_percentage(percentage: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::InvalidTaskPercentage, vec![percentage]).to_error()
+    DetailedError::from_code(
+        airdrop_target,
+        Error::InvalidTaskPercentage,
+        vec![percentage],
+    )
+    .to_error()
 }
 
-pub fn invalid_dates(item_a: &str, item_a_amount: &str, precedence: &str, item_b: &str, item_b_amount: &str, ) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::InvalidDates, vec![item_a, item_a_amount, precedence, item_b, item_b_amount]).to_error()
+pub fn invalid_dates(
+    item_a: &str,
+    item_a_amount: &str,
+    precedence: &str,
+    item_b: &str,
+    item_b_amount: &str,
+) -> StdError {
+    DetailedError::from_code(
+        airdrop_target,
+        Error::InvalidDates,
+        vec![item_a, item_a_amount, precedence, item_b, item_b_amount],
+    )
+    .to_error()
 }
 
 pub fn permit_contract_mismatch(contract: &str, expected: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::PermitContractMismatch, vec![contract, expected]).to_error()
+    DetailedError::from_code(
+        airdrop_target,
+        Error::PermitContractMismatch,
+        vec![contract, expected],
+    )
+    .to_error()
 }
 
 pub fn permit_key_revoked(key: &str) -> StdError {
@@ -120,7 +149,12 @@ pub fn invalid_partial_tree() -> StdError {
 }
 
 pub fn airdrop_not_started(start: &str, current: &str) -> StdError {
-    DetailedError::from_code(airdrop_target, Error::AirdropNotStarted, vec![start, current]).to_error()
+    DetailedError::from_code(
+        airdrop_target,
+        Error::AirdropNotStarted,
+        vec![start, current],
+    )
+    .to_error()
 }
 
 pub fn airdrop_ended(end: &str, current: &str) -> StdError {

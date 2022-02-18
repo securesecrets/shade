@@ -1,16 +1,14 @@
 use crate::{
     contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_with_gov},
-    utils::{
-        print_contract, print_epoch_info, print_header, print_vec, GAS, MINT_FILE, VIEW_KEY,
-    },
+    utils::{print_contract, print_epoch_info, print_header, print_vec, GAS, MINT_FILE, VIEW_KEY},
 };
 use cosmwasm_std::{to_binary, HumanAddr, Uint128};
+use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
-    secretcli::{query, handle},
+    secretcli::{handle, query},
 };
 use serde_json::Result;
-use secretcli::secretcli::Report;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::{mint, snip20};
 
@@ -18,9 +16,8 @@ pub fn initialize_minter(
     governance: &NetContract,
     contract_name: String,
     native_asset: &Contract,
-    report: &mut Vec<Report>
+    report: &mut Vec<Report>,
 ) -> Result<NetContract> {
-
     let minter = init_with_gov(
         governance,
         contract_name,
@@ -37,7 +34,7 @@ pub fn initialize_minter(
                 days: Uint128(1),
             }),
         },
-        report
+        report,
     )?;
 
     print_contract(&minter);
@@ -54,7 +51,7 @@ pub fn setup_minters(
     shade: &Contract,
     silk: &Contract,
     sscrt: &NetContract,
-    report: &mut Vec<Report>
+    report: &mut Vec<Report>,
 ) -> Result<()> {
     print_header("Registering allowed tokens in mint contracts");
     create_and_trigger_proposal(
@@ -70,7 +67,7 @@ pub fn setup_minters(
             unlimited: Some(false),
         },
         Some("Register asset"),
-        report
+        report,
     )?;
     create_and_trigger_proposal(
         governance,
@@ -82,7 +79,7 @@ pub fn setup_minters(
             unlimited: Some(true),
         },
         Some("Register asset"),
-        report
+        report,
     )?;
     create_and_trigger_proposal(
         governance,
@@ -94,7 +91,7 @@ pub fn setup_minters(
             unlimited: Some(true),
         },
         Some("Register asset"),
-        report
+        report,
     )?;
 
     print_header("Adding allowed minters in Snip20s");
@@ -107,18 +104,22 @@ pub fn setup_minters(
             padding: None,
         },
         Some("Set minters"),
-        report
+        report,
     )?;
 
     {
         let msg = snip20::QueryMsg::Minters {};
 
-        let query: snip20::QueryAnswer = query(&NetContract {
-            label: "".to_string(),
-            id: "".to_string(),
-            address: shade.address.clone().to_string(),
-            code_hash: shade.code_hash.clone(),
-        }, &msg, None)?;
+        let query: snip20::QueryAnswer = query(
+            &NetContract {
+                label: "".to_string(),
+                id: "".to_string(),
+                address: shade.address.clone().to_string(),
+                code_hash: shade.code_hash.clone(),
+            },
+            &msg,
+            None,
+        )?;
 
         if let snip20::QueryAnswer::Minters { minters } = query {
             print_vec("Shade minters: ", minters);
@@ -133,18 +134,22 @@ pub fn setup_minters(
             padding: None,
         },
         Some("Set minters"),
-        report
+        report,
     )?;
 
     {
         let msg = snip20::QueryMsg::Minters {};
 
-        let query: snip20::QueryAnswer = query(&NetContract {
-            label: "".to_string(),
-            id: "".to_string(),
-            address: silk.address.clone().to_string(),
-            code_hash: silk.code_hash.clone(),
-        }, &msg, None)?;
+        let query: snip20::QueryAnswer = query(
+            &NetContract {
+                label: "".to_string(),
+                id: "".to_string(),
+                address: silk.address.clone().to_string(),
+                code_hash: silk.code_hash.clone(),
+            },
+            &msg,
+            None,
+        )?;
         if let snip20::QueryAnswer::Minters { minters } = query {
             print_vec("Silk minters: ", minters);
         }
@@ -175,7 +180,7 @@ pub fn mint(
     amount: Uint128,
     minimum_expected: Uint128,
     backend: &str,
-    report: &mut Vec<Report>
+    report: &mut Vec<Report>,
 ) {
     let msg = snip20::HandleMsg::Send {
         recipient: HumanAddr::from(minter),
@@ -190,5 +195,15 @@ pub fn mint(
         padding: None,
     };
 
-    handle(&msg, snip, sender, Some(GAS), Some(backend), None, report, None).unwrap();
+    handle(
+        &msg,
+        snip,
+        sender,
+        Some(GAS),
+        Some(backend),
+        None,
+        report,
+        None,
+    )
+    .unwrap();
 }

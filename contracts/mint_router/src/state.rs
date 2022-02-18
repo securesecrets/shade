@@ -1,13 +1,9 @@
-use cosmwasm_std::{Storage, Uint128, HumanAddr};
+use cosmwasm_std::{HumanAddr, Storage, Uint128};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{
-    mint_router::Config,
-    snip20::Snip20Asset,
-    utils::asset::Contract,
-};
+use shade_protocol::{mint_router::Config, snip20::Snip20Asset, utils::asset::Contract};
 
 pub static CONFIG: &[u8] = b"config";
 pub static REGISTERED_ASSETS: &[u8] = b"registered_assets";
@@ -32,7 +28,7 @@ pub fn registered_asset_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Contract
     bucket_read(REGISTERED_ASSETS, storage)
 }
 
-/* Given a snip20 asset, gives the mint contract 
+/* Given a snip20 asset, gives the mint contract
  * furthest down the path
  */
 pub fn asset_path_w<S: Storage>(storage: &mut S) -> Bucket<S, Contract> {

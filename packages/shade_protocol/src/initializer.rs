@@ -2,8 +2,8 @@ use crate::snip20::InitialBalance;
 use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {

@@ -91,13 +91,7 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    Config {
-        config: Config,
-    },
-    Assets {
-        assets: Vec<Contract>,
-    },
-    Route {
-        path: Vec<PathNode>,
-    }
+    Config { config: Config },
+    Assets { assets: Vec<Contract> },
+    Route { path: Vec<PathNode> },
 }
