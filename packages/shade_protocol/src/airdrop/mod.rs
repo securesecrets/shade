@@ -138,8 +138,6 @@ pub enum HandleAnswer {
         total: Uint128,
         // Total claimed
         claimed: Uint128,
-        // Total unclaimed but available
-        unclaimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
         // Addresses claimed
         addresses: Vec<HumanAddr>,
@@ -156,8 +154,6 @@ pub enum HandleAnswer {
         total: Uint128,
         // Total claimed
         claimed: Uint128,
-        // Total unclaimed but available
-        unclaimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
         // Addresses claimed
         addresses: Vec<HumanAddr>,
