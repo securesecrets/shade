@@ -259,7 +259,6 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    let mut user_claimed = Uint128::zero();
     if updating_account && completed_percentage > Uint128::zero() {
         // Calculate the total new address amount
         let added_address_total = (account.total_claimable - old_claim_amount)?;
@@ -275,8 +274,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
                 }
 
                 redeem_amount += new_redeem;
-                user_claimed = claimed + new_redeem;
-                Ok(user_claimed)
+                Ok(claimed + new_redeem)
             } else {
                 Err(unexpected_error())
             }
@@ -307,9 +305,8 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
         data: Some(to_binary(&HandleAnswer::Account {
             status: ResponseStatus::Success,
             total: account.total_claimable,
-            claimed: user_claimed,
+            claimed: account_total_claimed_r(&deps.storage).load(sender.to_string().as_bytes())?,
             // Will always be 0 since rewards are automatically claimed here
-            unclaimed: Uint128::zero(),
             finished_tasks: finished_tasks(&deps.storage, sender.clone())?,
             addresses: account.addresses,
         })?),
@@ -431,7 +428,6 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success,
             total: account.total_claimable,
             claimed: account_total_claimed_r(&deps.storage).load(sender.to_string().as_bytes())?,
-            unclaimed: Uint128::zero(),
             finished_tasks: finished_tasks(&deps.storage, sender.to_string())?,
             addresses: account.addresses,
         })?),
