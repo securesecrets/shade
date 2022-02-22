@@ -1,34 +1,26 @@
 use crate::{
     contract_helpers::minter::get_balance,
     utils::{
-        generate_label,
-        print_contract,
-        print_header,
-        print_warning,
-        ACCOUNT_KEY,
-        GAS,
-        INITIALIZER_FILE,
-        STORE_GAS,
-        VIEW_KEY,
+        generate_label, print_contract, print_header, print_warning, ACCOUNT_KEY, GAS,
+        INITIALIZER_FILE, STORE_GAS, VIEW_KEY,
     },
 };
 use cosmwasm_std::{HumanAddr, Uint128};
+use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
-    secretcli::{list_contracts_by_code, test_contract_handle, test_inst_init},
+    secretcli::{handle, init, list_contracts_by_code},
 };
 use serde_json::Result;
 use shade_protocol::{
-    initializer,
-    initializer::Snip20ContractInfo,
-    snip20,
-    snip20::InitialBalance,
+    initializer, initializer::Snip20ContractInfo, snip20, snip20::InitialBalance,
 };
 
 pub fn initialize_initializer(
     admin: String,
     sscrt: &NetContract,
     account: String,
+    report: &mut Vec<Report>,
 ) -> Result<(NetContract, NetContract, NetContract)> {
     print_header("Initializing Initializer");
     let mut shade = NetContract {
@@ -46,6 +38,7 @@ pub fn initialize_initializer(
     };
 
     let init_msg = initializer::InitMsg {
+        admin: None,
         snip20_id: sscrt.id.parse::<u64>().unwrap(),
         snip20_code_hash: sscrt.code_hash.clone(),
         shade: Snip20ContractInfo {
@@ -57,15 +50,9 @@ pub fn initialize_initializer(
                 amount: Uint128(10000000),
             }]),
         },
-        silk: Snip20ContractInfo {
-            label: silk.label.clone(),
-            admin: Some(HumanAddr::from(admin)),
-            prng_seed: Default::default(),
-            initial_balances: None,
-        },
     };
 
-    let initializer = test_inst_init(
+    let initializer = init(
         &init_msg,
         INITIALIZER_FILE,
         &*generate_label(8),
@@ -73,7 +60,29 @@ pub fn initialize_initializer(
         Some(STORE_GAS),
         Some(GAS),
         Some("test"),
+        report,
     )?;
+
+    handle(
+        &initializer::HandleMsg::InitSilk {
+            silk: Snip20ContractInfo {
+                label: silk.label.clone(),
+                admin: Some(HumanAddr::from(admin)),
+                prng_seed: Default::default(),
+                initial_balances: None,
+            },
+            ticker: "SILK".to_string(),
+            decimals: 6,
+        },
+        &initializer,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        report,
+        None,
+    )?;
+
     print_contract(&initializer);
 
     print_header("Getting uploaded Snip20s");
@@ -101,20 +110,29 @@ pub fn initialize_initializer(
             padding: None,
         };
 
-        test_contract_handle(&msg, &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+        handle(
+            &msg,
+            &shade,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
+        handle(
+            &msg,
+            &silk,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     println!("\n\tTotal shade: {}", get_balance(&shade, account.clone()));
-
-    {
-        let msg = snip20::HandleMsg::SetViewingKey {
-            key: String::from(VIEW_KEY),
-            padding: None,
-        };
-
-        test_contract_handle(&msg, &silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
-    }
-
     println!("\tTotal silk: {}", get_balance(&silk, account));
 
     Ok((initializer, shade, silk))

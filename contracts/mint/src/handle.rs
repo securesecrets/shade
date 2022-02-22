@@ -1,45 +1,25 @@
+use chrono::prelude::*;
 use cosmwasm_std::{
-    debug_print,
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    CosmosMsg,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
+    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
 };
 use secret_toolkit::{
     snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
     utils::Query,
 };
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    asset::Contract,
     band::ReferenceData,
-    generic_response::ResponseStatus,
-    micro_mint::{Config, HandleAnswer, SupportedAsset},
-    mint::MintMsgHook,
+    mint::{Config, HandleAnswer, Limit, MintMsgHook, SupportedAsset},
     oracle::QueryMsg::Price,
     snip20::{token_config_query, Snip20Asset, TokenConfig},
 };
 use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::state::{
-    asset_list_w,
-    asset_peg_r,
-    assets_r,
-    assets_w,
-    config_r,
-    config_w,
-    limit_w,
-    native_asset_r,
-    total_burned_w,
+    asset_list_w, asset_peg_r, assets_r, assets_w, config_r, config_w, limit_r, limit_refresh_r,
+    limit_refresh_w, limit_w, minted_r, minted_w, native_asset_r, total_burned_w,
 };
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
@@ -66,85 +46,82 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check that sender is a supported snip20 asset
-    let assets = assets_r(&deps.storage);
-    let burn_asset = match assets.may_load(env.message.sender.to_string().as_bytes())? {
-        Some(supported_asset) => {
-            debug_print!(
-                "Found Burn Asset: {} {}",
-                &supported_asset.asset.token_info.symbol,
-                env.message.sender.to_string()
-            );
-            supported_asset
-        }
-        None => {
-            return Err(StdError::NotFound {
-                kind: env.message.sender.to_string(),
-                backtrace: None,
-            });
-        }
-    };
+    let burn_asset =
+        match assets_r(&deps.storage).may_load(env.message.sender.to_string().as_bytes())? {
+            Some(supported_asset) => {
+                debug_print!(
+                    "Found Burn Asset: {} {}",
+                    &supported_asset.asset.token_info.symbol,
+                    env.message.sender.to_string()
+                );
+                supported_asset
+            }
+            None => {
+                return Err(StdError::NotFound {
+                    kind: env.message.sender.to_string(),
+                    backtrace: None,
+                });
+            }
+        };
+
+    let mut input_amount = amount;
+    let mut messages = vec![];
+
+    if burn_asset.fee > Uint128(0) {
+        let fee_amount = calculate_portion(input_amount, burn_asset.fee);
+        // Reduce input by fee
+        input_amount = (input_amount - fee_amount)?;
+
+        // Fee to treasury
+        messages.push(send_msg(
+            config.treasury.clone(),
+            fee_amount,
+            None,
+            None,
+            None,
+            1,
+            burn_asset.asset.contract.code_hash.clone(),
+            burn_asset.asset.contract.address.clone(),
+        )?);
+    }
 
     // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
+    let amount_to_mint: Uint128 = mint_amount(deps, input_amount, &burn_asset, &mint_asset)?;
 
-    let mut messages = vec![];
-    let msgs: MintMsgHook = match msg {
-        Some(x) => from_binary(&x)?,
-        None => return Err(StdError::generic_err("data cannot be empty")),
-    };
+    if let Some(limit) = config.limit {
+        // Limit Refresh Check
+        try_limit_refresh(deps, env, limit)?;
 
-    // Check against slippage amount
-    if amount_to_mint < msgs.minimum_expected_amount {
-        return Err(StdError::generic_err(
-            "Mint amount is less than the minimum expected.",
-        ));
+        // Check & adjust limit if a limited asset
+        if !burn_asset.unlimited {
+            let minted = minted_r(&deps.storage).load()?;
+            if (amount_to_mint + minted) > limit_r(&deps.storage).load()? {
+                return Err(StdError::generic_err("Limit Exceeded"));
+            }
+
+            minted_w(&mut deps.storage).save(&(amount_to_mint + minted))?;
+        }
     }
 
-    // Check against mint cap
-    let mut limit_storage = limit_w(&mut deps.storage);
-    let mut limit = limit_storage.load()?;
+    let mut burn_amount = input_amount;
 
-    // When frequency is 0 it means that mint limits are disabled
-    if limit.frequency != 0 {
-        // Reset total and next epoch
-        if limit.next_epoch <= env.block.time {
-            limit.next_epoch = env.block.time + limit.frequency;
-            limit.total_minted = Uint128(0);
-        }
+    // Ignore capture if the set capture is 0
+    if burn_asset.capture > Uint128(0) {
+        let capture_amount = calculate_portion(amount, burn_asset.capture);
 
-        let new_total = limit.total_minted + amount_to_mint;
+        // Commission to treasury
+        messages.push(send_msg(
+            config.treasury,
+            capture_amount,
+            None,
+            None,
+            None,
+            1,
+            burn_asset.asset.contract.code_hash.clone(),
+            burn_asset.asset.contract.address.clone(),
+        )?);
 
-        if new_total > limit.mint_capacity {
-            return Err(StdError::generic_err(
-                "Amount to be minted exceeds mint capacity",
-            ));
-        }
-
-        limit.total_minted = new_total;
-
-        limit_storage.save(&limit)?;
-    }
-
-    let mut burn_amount = amount;
-    if let Some(treasury) = config.treasury {
-        // Ignore capture if the set capture is 0
-        if burn_asset.capture != Uint128(0) {
-            let capture_amount = calculate_capture(amount, burn_asset.capture);
-
-            // Commission to treasury
-            messages.push(send_msg(
-                treasury.address,
-                capture_amount,
-                None,
-                None,
-                None,
-                1,
-                burn_asset.asset.contract.code_hash.clone(),
-                burn_asset.asset.contract.address.clone(),
-            )?);
-
-            burn_amount = (amount - capture_amount)?;
-        }
+        burn_amount = (input_amount - capture_amount)?;
     }
 
     // Try to burn
@@ -168,7 +145,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                 1,
                 burn_asset.asset.contract.code_hash.clone(),
                 burn_asset.asset.contract.address.clone(),
-            )?)
+            )?);
         }
     } else if let Some(recipient) = config.secondary_burn {
         messages.push(send_msg(
@@ -180,7 +157,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
             1,
             burn_asset.asset.contract.code_hash.clone(),
             burn_asset.asset.contract.address.clone(),
-        )?)
+        )?);
     }
 
     // Update burned amount
@@ -195,39 +172,18 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let mint_asset = native_asset_r(&deps.storage).load()?;
 
     // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(deps, amount, &burn_asset, &mint_asset)?;
+    let amount_to_mint: Uint128 = mint_amount(deps, input_amount, &burn_asset, &mint_asset)?;
 
-    // Check against slippage amount
-    if amount_to_mint < msgs.minimum_expected_amount {
-        return Err(StdError::generic_err(
-            "Mint amount is less than the minimum expected.",
-        ));
-    }
+    if let Some(message) = msg {
+        let msg: MintMsgHook = from_binary(&message)?;
 
-    // Check against mint cap
-    let mut limit_storage = limit_w(&mut deps.storage);
-    let mut limit = limit_storage.load()?;
-
-    // When frequency is 0 it means that mint limits are disabled
-    if limit.frequency != 0 {
-        // Reset total and next epoch
-        if limit.next_epoch <= env.block.time {
-            limit.next_epoch = env.block.time + limit.frequency;
-            limit.total_minted = Uint128(0);
-        }
-
-        let new_total = limit.total_minted + amount_to_mint;
-
-        if new_total > limit.mint_capacity {
+        // Check Slippage
+        if amount_to_mint < msg.minimum_expected_amount {
             return Err(StdError::generic_err(
-                "Amount to be minted exceeds mint capacity",
+                "Mint amount is less than the minimum expected.",
             ));
         }
-
-        limit.total_minted = new_total;
-
-        limit_storage.save(&limit)?;
-    }
+    };
 
     debug_print!(
         "Minting: {} {}",
@@ -248,48 +204,103 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::Burn {
+        data: Some(to_binary(&HandleAnswer::Mint {
             status: ResponseStatus::Success,
-            mint_amount: amount_to_mint,
+            amount: amount_to_mint,
         })?),
     })
+}
+
+pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    limit: Limit,
+) -> StdResult<()> {
+    match DateTime::parse_from_rfc3339(&limit_refresh_r(&deps.storage).load()?) {
+        Ok(parsed) => {
+            let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
+            let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+            let last_refresh: DateTime<Utc> = parsed.with_timezone(&Utc);
+
+            let mut fresh_amount = Uint128(0);
+
+            let native_asset = native_asset_r(&deps.storage).load()?;
+
+            let token_info = token_info_query(
+                &deps.querier,
+                1,
+                native_asset.contract.code_hash.clone(),
+                native_asset.contract.address.clone(),
+            )?;
+
+            let supply = match token_info.total_supply {
+                Some(s) => s,
+                None => return Err(StdError::generic_err("Could not get native token supply")),
+            };
+
+            // get amount to add, 0 if not in need of refresh
+            match limit {
+                Limit::Daily {
+                    supply_portion,
+                    days,
+                } => {
+                    // Slight error in annual limit if (days / 365) is not a whole number
+                    if now.num_days_from_ce() as u128 - days.u128()
+                        >= last_refresh.num_days_from_ce() as u128
+                    {
+                        fresh_amount = calculate_portion(supply, supply_portion);
+                    }
+                }
+                Limit::Monthly {
+                    supply_portion,
+                    months,
+                } => {
+                    if now.year() > last_refresh.year() || now.month() > last_refresh.month() {
+                        /* If its a new year or new month, add (year_diff * 12) to the later (now) month
+                         * 12-2021 <-> 1-2022 becomes a comparison between 12 <-> (1 + 12)
+                         * resulting in a difference of 1 month
+                         */
+                        let year_diff = now.year() - last_refresh.year();
+
+                        if (now.month() + (year_diff * 12) as u32) - last_refresh.month()
+                            >= months.u128() as u32
+                        {
+                            fresh_amount = calculate_portion(supply, supply_portion);
+                        }
+                    }
+                }
+            }
+
+            if fresh_amount > Uint128(0) {
+                let minted = minted_r(&deps.storage).load()?;
+
+                limit_w(&mut deps.storage).update(|state| {
+                    // Stack with previous unminted limit
+                    Ok((state - minted)? + fresh_amount)
+                })?;
+                limit_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
+                minted_w(&mut deps.storage).save(&Uint128(0))?;
+            }
+        }
+        Err(e) => return Err(StdError::generic_err("Failed to parse previous datetime")),
+    }
+
+    Ok(())
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: Option<HumanAddr>,
-    oracle: Option<Contract>,
-    treasury: Option<Contract>,
-    secondary_burn: Option<HumanAddr>,
+    config: Config,
 ) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-    // Check if admin
-    if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-    // Check if contract enabled
-    if !config.activated {
-        return Err(StdError::Unauthorized { backtrace: None });
+    let cur_config = config_r(&deps.storage).load()?;
+
+    // Admin-only
+    if env.message.sender != cur_config.admin {
+        return Err(StdError::unauthorized());
     }
 
-    // Save new info
-    let mut config = config_w(&mut deps.storage);
-    config.update(|mut state| {
-        if let Some(owner) = owner {
-            state.admin = owner;
-        }
-        if let Some(oracle) = oracle {
-            state.oracle = oracle;
-        }
-        if let Some(treasury) = treasury {
-            state.treasury = Some(treasury);
-        }
-        if let Some(secondary_burn) = secondary_burn {
-            state.secondary_burn = Some(secondary_burn)
-        }
-        Ok(state)
-    })?;
+    config_w(&mut deps.storage).save(&config)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -300,60 +311,13 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_limit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    start_epoch: Option<Uint128>,
-    epoch_frequency: Option<Uint128>,
-    epoch_limit: Option<Uint128>,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-    // Check if admin
-    if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-    // Check if contract enabled
-    if !config.activated {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-
-    // Reset limit and set new limits
-    let mut limit = limit_w(&mut deps.storage);
-    limit.update(|mut state| {
-        if let Some(frequency) = epoch_frequency {
-            state.frequency = frequency.u128() as u64;
-        }
-        if let Some(limit) = epoch_limit {
-            state.mint_capacity = limit
-        }
-        // Reset total minted
-        state.total_minted = Uint128(0);
-
-        // Reset next epoch
-        if state.frequency == 0 {
-            state.next_epoch = 0;
-        } else if let Some(next_epoch) = start_epoch {
-            state.next_epoch = next_epoch.u128() as u64;
-        } else {
-            state.next_epoch = env.block.time + state.frequency;
-        }
-        Ok(state)
-    })?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateMintLimit {
-            status: ResponseStatus::Success,
-        })?),
-    })
-}
-
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
     capture: Option<Uint128>,
+    fee: Option<Uint128>,
+    unlimited: Option<bool>,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
@@ -365,7 +329,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    let mut assets = assets_w(&mut deps.storage);
     let contract_str = contract.address.to_string();
 
     // Add the new asset
@@ -383,24 +346,35 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         };
 
     debug_print!("Registering {}", asset_info.symbol);
-    assets.save(contract_str.as_bytes(), &SupportedAsset {
-        asset: Snip20Asset {
-            contract: contract.clone(),
-            token_info: asset_info,
-            token_config: asset_config,
+    assets_w(&mut deps.storage).save(
+        contract_str.as_bytes(),
+        &SupportedAsset {
+            asset: Snip20Asset {
+                contract: contract.clone(),
+                token_info: asset_info,
+                token_config: asset_config,
+            },
+            // If capture is not set then default to 0
+            capture: match capture {
+                None => Uint128(0),
+                Some(value) => value,
+            },
+            fee: match fee {
+                None => Uint128(0),
+                Some(value) => value,
+            },
+            unlimited: match unlimited {
+                None => false,
+                Some(u) => u,
+            },
         },
-        // If capture is not set then default to 0
-        capture: match capture {
-            None => Uint128(0),
-            Some(value) => value,
-        },
-    })?;
+    )?;
 
     total_burned_w(&mut deps.storage).save(contract_str.as_bytes(), &Uint128(0))?;
 
     // Add the asset to list
     asset_list_w(&mut deps.storage).update(|mut state| {
-        state.push(contract_str);
+        state.push(contract.clone());
         Ok(state)
     })?;
 
@@ -425,7 +399,7 @@ pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
 
     // Remove asset from the array
     asset_list_w(&mut deps.storage).update(|mut state| {
-        state.retain(|value| *value != address_str);
+        state.retain(|value| value.address != address);
         Ok(state)
     })?;
 
@@ -519,14 +493,14 @@ pub fn calculate_mint(
     }
 }
 
-pub fn calculate_capture(amount: Uint128, capture: Uint128) -> Uint128 {
+pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
     /* amount: total amount sent to burn (uSSCRT/uSILK/uSHD)
-     * capture: capture_percent * 10,000 e.g. 532 = 5.32% = .0532
+     * portion: percent * 10^18 e.g. 5_320_000_000_000_000_000 = 5.32% = .0532
      *
-     * capture_amount = amount * capture / 10000
+     * return portion = amount * portion / 10^18
      */
 
-    amount.multiply_ratio(capture, 10000u128)
+    amount.multiply_ratio(portion, 10u128.pow(18))
 }
 
 fn oracle<S: Storage, A: Api, Q: Querier>(

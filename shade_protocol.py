@@ -8,7 +8,7 @@ from collections import defaultdict
 from contractlib.contractlib import PreInstantiatedContract
 from contractlib.contractlib import Contract
 from contractlib.snip20lib import SNIP20
-from contractlib.micro_mintlib import MicroMint
+from contractlib.mintlib import Mint
 from contractlib.oraclelib import Oracle
 from contractlib.treasurylib import Treasury
 from contractlib.utils import gen_label
@@ -221,7 +221,7 @@ def deploy():
     core_pairs = []
     for snip in core_snips:
         print('Configuring', snip.symbol, 'Mint')
-        mint = MicroMint(gen_label(8), snip, oracle, treasury,
+        mint = Mint(gen_label(8), snip, oracle, treasury,
                         # initial_assets=initial_assets,
                         admin=account_key, uploader=account_key, backend=backend,
                         code_id=mint_id)
@@ -278,7 +278,7 @@ def deploy():
     for snip in synthetic_snips:
 
         print('Configuring', snip.symbol, 'Mint')
-        mint = MicroMint(gen_label(8), snip, oracle, treasury,
+        mint = Mint(gen_label(8), snip, oracle, treasury,
                         # initial_assets=initial_assets,
                         admin=account_key, uploader=account_key, backend=backend,
                         code_id=mint_id)

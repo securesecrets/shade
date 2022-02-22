@@ -8,7 +8,6 @@ from contractlib.contractlib import Contract
 from contractlib.secretlib import secretlib
 from contractlib.snip20lib import SNIP20
 from contractlib.mintlib import Mint
-from contractlib.micro_mintlib import MicroMint
 from contractlib.oraclelib import Oracle
 from contractlib.utils import gen_label, to_base64
 from contractlib.initializerlib import  Initializer
@@ -126,13 +125,13 @@ if args.testnet == "private":
     assert 3 == len(assets), f"Got {len(assets)}; expected {3}"
 
     print("Configuring Silk-Mint Contract")
-    silk_mint = MicroMint(gen_label(8), native_asset=silk, oracle=oracle)
+    silk_mint = Mint(gen_label(8), native_asset=silk, oracle=oracle)
     silk_mint.register_asset(sscrt, "1000")
     silk_mint.register_asset(shade, "1000")
     print(mint.get_asset(shade))
 
     print("Configuring Shade-Mint Contract")
-    shade_mint = MicroMint(gen_label(8), native_asset=shade, oracle=oracle)
+    shade_mint = Mint(gen_label(8), native_asset=shade, oracle=oracle)
     shade_mint.register_asset(sscrt, "1000")
     shade_mint.register_asset(silk, "1000")
 

@@ -1,35 +1,19 @@
 use crate::{
     handle::{
-        try_claim_rewards,
-        try_claim_unbond,
-        try_set_viewing_key,
-        try_stake,
-        try_unbond,
-        try_update_config,
-        try_vote,
+        try_claim_rewards, try_claim_unbond, try_set_viewing_key, try_stake, try_unbond,
+        try_update_config, try_vote,
     },
     query,
     state::{config_w, stake_state_w, unbonding_w},
 };
 use binary_heap_plus::BinaryHeap;
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdResult,
-    Storage,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
     Uint128,
 };
 use secret_toolkit::snip20::register_receive_msg;
-use shade_protocol::{
-    asset::Contract,
-    staking::{stake::Stake, Config, HandleMsg, InitMsg, QueryMsg},
-};
+use shade_protocol::staking::{stake::Stake, Config, HandleMsg, InitMsg, QueryMsg};
+use shade_protocol::utils::asset::Contract;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

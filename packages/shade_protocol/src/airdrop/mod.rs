@@ -1,13 +1,13 @@
 pub mod account;
 pub mod claim_info;
-use crate::{
-    airdrop::{
-        account::{AccountPermit, AddressProofPermit},
-        claim_info::RequiredTask,
-    },
-    asset::Contract,
-    generic_response::ResponseStatus,
+pub mod errors;
+
+use crate::airdrop::{
+    account::{AccountPermit, AddressProofPermit},
+    claim_info::RequiredTask,
 };
+use crate::utils::asset::Contract;
+use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -95,18 +95,16 @@ pub enum HandleMsg {
         address: HumanAddr,
         padding: Option<String>,
     },
-    CreateAccount {
-        addresses: Vec<AddressProofPermit>,
-        partial_tree: Vec<Binary>,
-        padding: Option<String>,
-    },
-    /// Adds more addresses to accounts
-    UpdateAccount {
+    Account {
         addresses: Vec<AddressProofPermit>,
         partial_tree: Vec<Binary>,
         padding: Option<String>,
     },
     DisablePermitKey {
+        key: String,
+        padding: Option<String>,
+    },
+    SetViewingKey {
         key: String,
         padding: Option<String>,
     },
@@ -125,14 +123,44 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    UpdateConfig { status: ResponseStatus },
-    AddTask { status: ResponseStatus },
-    CompleteTask { status: ResponseStatus },
-    CreateAccount { status: ResponseStatus },
-    UpdateAccount { status: ResponseStatus },
-    DisablePermitKey { status: ResponseStatus },
-    Claim { status: ResponseStatus },
-    ClaimDecay { status: ResponseStatus },
+    UpdateConfig {
+        status: ResponseStatus,
+    },
+    AddTask {
+        status: ResponseStatus,
+    },
+    CompleteTask {
+        status: ResponseStatus,
+    },
+    Account {
+        status: ResponseStatus,
+        // Total eligible
+        total: Uint128,
+        // Total claimed
+        claimed: Uint128,
+        finished_tasks: Vec<RequiredTask>,
+        // Addresses claimed
+        addresses: Vec<HumanAddr>,
+    },
+    DisablePermitKey {
+        status: ResponseStatus,
+    },
+    SetViewingKey {
+        status: ResponseStatus,
+    },
+    Claim {
+        status: ResponseStatus,
+        // Total eligible
+        total: Uint128,
+        // Total claimed
+        claimed: Uint128,
+        finished_tasks: Vec<RequiredTask>,
+        // Addresses claimed
+        addresses: Vec<HumanAddr>,
+    },
+    ClaimDecay {
+        status: ResponseStatus,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -145,6 +173,11 @@ pub enum QueryMsg {
     TotalClaimed {},
     Account {
         permit: AccountPermit,
+        current_date: Option<u64>,
+    },
+    AccountWithKey {
+        account: HumanAddr,
+        key: String,
         current_date: Option<u64>,
     },
 }
@@ -176,5 +209,14 @@ pub enum QueryAnswer {
         // Total unclaimed but available
         unclaimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
+        // Addresses claimed
+        addresses: Vec<HumanAddr>,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccountVerification {
+    pub account: HumanAddr,
+    pub claimed: bool,
 }

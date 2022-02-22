@@ -1,14 +1,12 @@
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{
+    from_binary, Api, Binary, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
+};
 use cosmwasm_storage::{
-    bucket,
-    bucket_read,
-    singleton,
-    singleton_read,
-    Bucket,
-    ReadonlyBucket,
-    ReadonlySingleton,
+    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
+use shade_protocol::airdrop::account::AddressProofMsg;
+use shade_protocol::airdrop::errors::{permit_contract_mismatch, permit_key_revoked};
 use shade_protocol::airdrop::{
     account::{authenticate_ownership, Account, AccountPermit, AddressProofPermit},
     Config,
@@ -22,6 +20,7 @@ pub static ACCOUNTS_KEY: &[u8] = b"accounts";
 pub static TOTAL_CLAIMED_KEY: &[u8] = b"total_claimed";
 pub static USER_TOTAL_CLAIMED_KEY: &[u8] = b"user_total_claimed";
 pub static ACCOUNT_PERMIT_KEY: &str = "account_permit_key";
+pub static ACCOUNT_VIEWING_KEY: &[u8] = b"account_viewing_key";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG_KEY)
@@ -88,6 +87,15 @@ pub fn account_total_claimed_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128
     bucket(USER_TOTAL_CLAIMED_KEY, storage)
 }
 
+// Account viewing key
+pub fn account_viewkey_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, [u8; 32]> {
+    bucket_read(ACCOUNT_VIEWING_KEY, storage)
+}
+
+pub fn account_viewkey_w<S: Storage>(storage: &mut S) -> Bucket<S, [u8; 32]> {
+    bucket(ACCOUNT_VIEWING_KEY, storage)
+}
+
 // Account permit key
 pub fn account_permit_key_r<S: Storage>(storage: &S, account: String) -> ReadonlyBucket<S, bool> {
     let key = ACCOUNT_PERMIT_KEY.to_string() + &account;
@@ -123,24 +131,24 @@ pub fn is_permit_revoked<S: Storage>(
 pub fn validate_address_permit<S: Storage>(
     storage: &S,
     permit: &AddressProofPermit,
+    params: &AddressProofMsg,
     contract: HumanAddr,
-) -> StdResult<HumanAddr> {
+) -> StdResult<()> {
     // Check that contract matches
-    if permit.params.contract != contract {
-        return Err(StdError::unauthorized());
+    if params.contract != contract {
+        return Err(permit_contract_mismatch(
+            params.contract.as_str(),
+            contract.as_str(),
+        ));
     }
 
     // Check that permit is not revoked
-    if is_permit_revoked(
-        storage,
-        permit.params.address.to_string(),
-        permit.params.key.clone(),
-    )? {
-        return Err(StdError::generic_err("permit key revoked"));
+    if is_permit_revoked(storage, params.address.to_string(), params.key.clone())? {
+        return Err(permit_key_revoked(params.key.as_str()));
     }
 
     // Authenticate permit
-    authenticate_ownership(permit)
+    authenticate_ownership(permit, params.address.as_str())
 }
 
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
@@ -150,11 +158,14 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HumanAddr> {
     // Check that contract matches
     if permit.params.contract != contract {
-        return Err(StdError::unauthorized());
+        return Err(permit_contract_mismatch(
+            permit.params.contract.as_str(),
+            contract.as_str(),
+        ));
     }
 
     // Authenticate permit
-    let address = permit.validate()?.as_humanaddr(&deps.api)?;
+    let address = permit.validate(None)?.as_humanaddr(&deps.api)?;
 
     // Check that permit is not revoked
     if is_permit_revoked(
@@ -162,8 +173,8 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
         address.to_string(),
         permit.params.key.clone(),
     )? {
-        return Err(StdError::generic_err("permit key revoked"));
+        return Err(permit_key_revoked(permit.params.key.as_str()));
     }
 
-    Ok(address)
+    return Ok(address);
 }

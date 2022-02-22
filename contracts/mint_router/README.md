@@ -1,5 +1,5 @@
 
-# Mint Contract
+# Mint Router Contract
 * [Introduction](#Introduction)
 * [Sections](#Sections)
     * [Init](#Init)
@@ -13,11 +13,10 @@
         * Messages
             * [Receive](#Receive)
         * Queries
-            * [GetNativeAsset](#GetNativeAsset)
-            * [GetConfig](#GetConfig)
-            * [GetMintLimit](#GetMintLimit)
-            * [GetSupportedAssets](#GetSupportedAssets)
-            * [GetAsset](#GetAsset)
+            * [NativeAsset](#GetNativeAsset)
+            * [Config](#GetConfig)
+            * [SupportedAssets](#GetSupportedAssets)
+            * [Asset](#GetAsset)
 # Introduction
 Contract responsible to mint a paired snip20 asset
 
@@ -28,14 +27,10 @@ Contract responsible to mint a paired snip20 asset
 |Name             |Type        |Description                                                                    | optional |
 |-----------------|------------|-------------------------------------------------------------------------------|----------|
 |admin            | string     |  New contract owner; SHOULD be a valid bech32 address                         |  yes     |
-|native_asset     | Contract   |  Asset to mint                                                                |  no      |
 |oracle           | Contract   |  Oracle contract                                                              |  no      |
 |peg              | String     |  Symbol to peg to when querying oracle (defaults to native_asset symbol)      |  yes     |
 |treasury         | Contract   |  Treasury contract                                                            |  yes     |
 |secondary_burn   | HumanAddrr |  Where non-burnable assets will go                                            |  yes     |
-|start_epoch      | String     |  The starting epoch                                                           |  yes     |
-|epoch_frequency  | String     |  The frequency in which the mint limit resets, if 0 then no limit is enforced |  yes     |
-|epoch_mint_limit | String     |  The limit of uTokens to mint per epoch                                       |  yes     |
 ## Admin
 
 ### Messages

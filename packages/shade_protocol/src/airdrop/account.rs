@@ -1,5 +1,10 @@
-use cosmwasm_std::{HumanAddr, StdError, StdResult, Uint128};
-use flexible_permits::permit::{bech32_to_canonical, Permit};
+use crate::airdrop::errors::permit_rejected;
+use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Uint128};
+use query_authentication::viewing_keys::ViewingKey;
+use query_authentication::{
+    permit::{bech32_to_canonical, Permit},
+    transaction::SignedTx,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +13,15 @@ use serde::{Deserialize, Serialize};
 pub struct Account {
     pub addresses: Vec<HumanAddr>,
     pub total_claimable: Uint128,
+}
+
+impl Default for Account {
+    fn default() -> Self {
+        Self {
+            addresses: vec![],
+            total_claimable: Uint128::zero(),
+        }
+    }
 }
 
 // Used for querying account information
@@ -21,19 +35,45 @@ pub struct AccountPermitMsg {
     pub key: String,
 }
 
-// Used to prove ownership over IBC addresses
-pub type AddressProofPermit = Permit<AddressProofMsg>;
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct FillerMsg {
+    pub coins: Vec<String>,
+    pub contract: String,
+    pub execute_msg: EmptyMsg,
+    pub sender: String,
+}
 
-pub fn authenticate_ownership(permit: &AddressProofPermit) -> StdResult<HumanAddr> {
-    let permit_address = permit.params.address.clone();
-    let signer_address = permit.validate()?.as_canonical();
-    if signer_address != bech32_to_canonical(permit_address.as_str()) {
-        return Err(StdError::generic_err(format!(
-            "{:?} is not the message signer",
-            permit_address.as_str()
-        )));
+impl Default for FillerMsg {
+    fn default() -> Self {
+        Self {
+            coins: vec![],
+            contract: "".to_string(),
+            sender: "".to_string(),
+            execute_msg: EmptyMsg {},
+        }
     }
-    Ok(permit_address)
+}
+
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EmptyMsg {}
+
+// Used to prove ownership over IBC addresses
+pub type AddressProofPermit = Permit<FillerMsg>;
+
+pub fn authenticate_ownership(permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
+    let signer_address = permit
+        .validate(Some("wasm/MsgExecuteContract".to_string()))?
+        .as_canonical();
+
+    if signer_address != bech32_to_canonical(permit_address) {
+        return Err(permit_rejected());
+    }
+
+    Ok(())
 }
 
 #[remain::sorted]
@@ -51,3 +91,15 @@ pub struct AddressProofMsg {
     // Used to identify permits
     pub key: String,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccountKey(pub String);
+
+impl ToString for AccountKey {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl ViewingKey<32> for AccountKey {}

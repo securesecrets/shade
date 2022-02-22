@@ -2,19 +2,13 @@
 mod tests {
     use crate::contract;
     use cosmwasm_std::{
-        coins,
-        from_binary,
+        coins, from_binary,
         testing::{mock_dependencies, mock_env},
-        Api,
-        Extern,
-        HumanAddr,
-        Querier,
-        Storage,
-        Uint128,
+        Api, Extern, HumanAddr, Querier, Storage, Uint128,
     };
+    use shade_protocol::utils::asset::Contract;
+    use shade_protocol::utils::generic_response::ResponseStatus;
     use shade_protocol::{
-        asset::Contract,
-        generic_response::ResponseStatus,
         governance,
         governance::proposal::{ProposalStatus, QueriedProposal},
     };
@@ -43,11 +37,14 @@ mod tests {
         assert_eq!(1, res.messages.len());
 
         // Initialized governance contract has no proposals.
-        let res = contract::query(&deps, governance::QueryMsg::GetProposals {
-            start: Uint128(0),
-            end: Uint128(100),
-            status: Some(ProposalStatus::Funding),
-        })
+        let res = contract::query(
+            &deps,
+            governance::QueryMsg::GetProposals {
+                start: Uint128(0),
+                end: Uint128(100),
+                status: Some(ProposalStatus::Funding),
+            },
+        )
         .unwrap();
         let value: governance::QueryAnswer = from_binary(&res).unwrap();
         match value {
@@ -61,15 +58,20 @@ mod tests {
 
         // Create a proposal on governance contract.
         let env = mock_env("creator", &coins(0, ""));
-        let res = contract::handle(&mut deps, env, governance::HandleMsg::CreateProposal {
-            target_contract: String::from(governance::GOVERNANCE_SELF),
-            proposal: serde_json::to_string(&governance::HandleMsg::AddAdminCommand {
-                name: "random data here".to_string(),
-                proposal: "{\"update_config\":{\"unbond_time\": {}, \"admin\": null}}".to_string(),
-            })
-            .unwrap(),
-            description: String::from("Proposal on governance contract"),
-        })
+        let res = contract::handle(
+            &mut deps,
+            env,
+            governance::HandleMsg::CreateProposal {
+                target_contract: String::from(governance::GOVERNANCE_SELF),
+                proposal: serde_json::to_string(&governance::HandleMsg::AddAdminCommand {
+                    name: "random data here".to_string(),
+                    proposal: "{\"update_config\":{\"unbond_time\": {}, \"admin\": null}}"
+                        .to_string(),
+                })
+                .unwrap(),
+                description: String::from("Proposal on governance contract"),
+            },
+        )
         .unwrap();
         let value: governance::HandleAnswer = from_binary(&res.data.unwrap()).unwrap();
         match value {
