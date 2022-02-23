@@ -1,9 +1,10 @@
-use crate::state::{config_r, index_r, sswap_pairs_r};
+use crate::state::{config_r, index_r, sswap_pairs_r, sienna_pairs_r};
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use secret_toolkit::utils::Query;
 use shade_protocol::{
-    band::{BandQuery, ReferenceData},
-    oracle::{IndexElement, QueryAnswer, Pair},
+    band,
+    dex,
+    oracle::{IndexElement, QueryAnswer},
     secretswap,
     sienna,
 };
@@ -18,41 +19,32 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
 pub fn price<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbol: String,
-) -> StdResult<ReferenceData> {
+) -> StdResult<band::ReferenceData> {
+
+    let config = config_r(&deps.storage).load()?;
     if symbol == "SSCRT" {
-        return reference_data(deps, "SCRT".to_string(), "USD".to_string());
+        return band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), config.band);
     }
 
     // secret swap pair
     // TODO: sienna pair
 
-    let total_pool_value = Uint128(0);
-    let price_sum = Uint128(0);
-    let pool_values = vec![];
-
-    // Gather data from registered pools if they exist
+    let mut dex_pairs = vec![];
     if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-        let pool_value = sswap_pool_value(sswap_pair)?;
-        total_pool_value = total_pool_value + pool_value;
-        pool_values.push((sswap_price(deps, sswap_pair)?, pool_value));
+        dex_pairs.push(sswap_pair);
     }
-
     if let Some(sienna_pair) = sienna_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-        let pool_value = sienna_pool_value(sswap_pair)?;
-        total_pool_value = total_pool_value + pool_value;
-        pool_values.push((sienna_price(deps, sienna_pair)?, pool_value));
+        dex_pairs.push(sienna_pair);
     }
 
-    // Weighted avg with pool depth as weight
-    if pool_values.len() > 0 {
-        let price_sum = Uint128(0);
-
-        for (price, pool) in pool_values {
-            price_sum = price_sum + Uint128(price.u128() * pool.u128());
-        }
-
-        return Ok(ReferenceData {
-            rate: Uint128(price_sum.u128() / total_pool_value.u128()),
+    if dex_pairs.len() > 0 {
+        
+        return Ok(band::ReferenceData {
+            rate: dex::aggregate_price(&deps, 
+                                       dex_pairs, 
+                                       config.sscrt, 
+                                       config.band
+            )?,
             last_updated_base: 0,
             last_updated_quote: 0,
         });
@@ -60,7 +52,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
 
     // Index
     if let Some(index) = index_r(&deps.storage).may_load(symbol.as_bytes())? {
-        return Ok(ReferenceData {
+        return Ok(band::ReferenceData {
             rate: eval_index(deps, &symbol, index)?,
             last_updated_base: 0,
             last_updated_quote: 0,
@@ -68,7 +60,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     }
 
     // symbol/USD price from BAND
-    reference_data(deps, symbol, "USD".to_string())
+    band::reference_data(deps, symbol, "USD".to_string(), config.band)
 }
 
 pub fn prices<S: Storage, A: Api, Q: Querier>(
@@ -79,11 +71,17 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
     let mut band_quotes = vec![];
     let mut results = vec![Uint128(0); symbols.len()];
 
+    let config = config_r(&deps.storage).load()?;
+
     for (i, sym) in symbols.iter().enumerate() {
         if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(sym.as_bytes())? {
-            results[i] = sswap_price(deps, sswap_pair)?;
+
+            results[i] = secretswap::price(deps, sswap_pair, config.sscrt.clone(), config.band.clone())?;
+
         } else if let Some(index) = index_r(&deps.storage).may_load(sym.as_bytes())? {
+
             results[i] = eval_index(deps, sym, index)?;
+
         } else {
             band_symbols.push(sym.clone());
             band_quotes.push("USD".to_string());
@@ -91,7 +89,7 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
     }
 
     // Query all the band prices
-    let ref_data = reference_data_bulk(deps, band_symbols.clone(), band_quotes)?;
+    let ref_data = band::reference_data_bulk(deps, band_symbols.clone(), band_quotes, config_r(&deps.storage).load()?.band)?;
 
     for (data, sym) in ref_data.iter().zip(band_symbols.iter()) {
         let result_index = symbols
@@ -117,12 +115,13 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     let mut band_bases = vec![];
     let mut band_quotes = vec![];
     let mut band_weights = vec![];
+    let config = config_r(&deps.storage).load()?;
 
     for element in index {
         weight_total += element.weight;
 
         if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-            price += sswap_price(deps, sswap_pair)?.multiply_ratio(element.weight, 10u128.pow(18));
+            price += secretswap::price(deps, sswap_pair, config.sscrt.clone(), config.band.clone())?.multiply_ratio(element.weight, 10u128.pow(18));
         } else {
             band_weights.push(element.weight);
             band_bases.push(element.symbol.clone());
@@ -130,157 +129,11 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let ref_data = reference_data_bulk(deps, band_bases, band_quotes)?;
+    let ref_data = band::reference_data_bulk(deps, band_bases, band_quotes, config_r(&deps.storage).load()?.band)?;
 
     for (reference, weight) in ref_data.iter().zip(band_weights.iter()) {
         price += reference.rate.multiply_ratio(*weight, 10u128.pow(18));
     }
 
     Ok(price.multiply_ratio(10u128.pow(18), weight_total))
-}
-
-/* Translate price from symbol/sSCRT -> symbol/USD
- *
- * scrt_price: SCRT/USD price from BAND
- * trade_price: SCRT/token trade amount from 1 sSCRT (normalized to price * 10^18)
- * return: token/USD price
- */
-pub fn translate_price(scrt_price: Uint128, trade_price: Uint128) -> Uint128 {
-    scrt_price.multiply_ratio(10u128.pow(18), trade_price)
-}
-
-/* Normalize the price from snip20 amount with decimals to BAND rate
- * amount: unsigned quantity received in trade for 1sSCRT
- * decimals: number of decimals for received snip20
- */
-pub fn normalize_price(amount: Uint128, decimals: u8) -> Uint128 {
-    (amount.u128() * 10u128.pow(18u32 - u32::try_from(decimals).unwrap())).into()
-}
-
-// Secret Swap interactions
-
-pub fn sswap_price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    sswap_pair: Pair,
-) -> StdResult<Uint128> {
-    let trade_price = sswap_simulate(deps, sswap_pair)?;
-
-    let scrt_result = reference_data(deps, "SCRT".to_string(), "USD".to_string())?;
-
-    //return Err(StdError::NotFound { kind: translate_price(scrt_result.rate, trade_price).to_string(), backtrace: None });
-
-    // SCRT-USD / SCRT-symbol
-    Ok(translate_price(scrt_result.rate, trade_price))
-}
-
-pub fn sswap_simulate<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    pair: Pair,
-) -> StdResult<Uint128> {
-    let config = config_r(&deps.storage).load()?;
-
-    let response: secretswap::SimulationResponse = secretswap::PairQuery::Simulation {
-        offer_asset: secretswap::Asset {
-            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
-            info: secretswap::AssetInfo {
-                token: secretswap::Token {
-                    contract_addr: config.sscrt.address,
-                    token_code_hash: config.sscrt.code_hash,
-                    viewing_key: "SecretSwap".to_string(),
-                },
-            },
-        },
-    }
-    .query(
-        &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
-    )?;
-
-    Ok(normalize_price(
-        response.return_amount,
-        pair.asset.token_info.decimals,
-    ))
-}
-
-// Sienna Interactions
-pub fn sienna_price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    pair: Pair,
-) -> StdResult<Uint128> {
-    let trade_price = sienna_simulate(deps, pair)?;
-
-    let scrt_result = reference_data(deps, "SCRT".to_string(), "USD".to_string())?;
-
-    //return Err(StdError::NotFound { kind: translate_price(scrt_result.rate, trade_price).to_string(), backtrace: None });
-
-    // SCRT-USD / SCRT-symbol
-    Ok(translate_price(scrt_result.rate, trade_price))
-}
-
-pub fn sienna_simulate<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    pair: Pair,
-) -> StdResult<Uint128> {
-    let config = config_r(&deps.storage).load()?;
-
-    let response: sienna::SimulationResponse = sienna::PairQuery::SwapSimulation {
-        offer: sienna::TokenTypeAmount{
-            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
-            token: TokenType::CustomToken {
-                custom_token: {
-                    contract_addr: config.sscrt.address,
-                    token_code_hash: config.sscrt.code_hash,
-                },
-            }
-        },
-    }
-    .query(
-        &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
-    )?;
-
-    Ok(normalize_price(
-        response.return_amount,
-        pair.asset.token_info.decimals,
-    ))
-}
-
-// BAND interactions
-
-pub fn reference_data<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    base_symbol: String,
-    quote_symbol: String,
-) -> StdResult<ReferenceData> {
-    let config_r = config_r(&deps.storage).load()?;
-
-    BandQuery::GetReferenceData {
-        base_symbol,
-        quote_symbol,
-    }
-    .query(
-        &deps.querier,
-        config_r.band.code_hash,
-        config_r.band.address,
-    )
-}
-
-pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    base_symbols: Vec<String>,
-    quote_symbols: Vec<String>,
-) -> StdResult<Vec<ReferenceData>> {
-    let config_r = config_r(&deps.storage).load()?;
-
-    BandQuery::GetReferenceDataBulk {
-        base_symbols,
-        quote_symbols,
-    }
-    .query(
-        &deps.querier,
-        config_r.band.code_hash,
-        config_r.band.address,
-    )
 }

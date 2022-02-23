@@ -7,12 +7,14 @@ use serde::{Deserialize, Serialize};
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
 
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Pair {
     pub contract: Contract,
     // non-sscrt asset, other asset on pair should be sscrt
     pub asset: Snip20Asset,
 }
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct IndexElement {

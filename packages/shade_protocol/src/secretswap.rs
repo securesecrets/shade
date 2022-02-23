@@ -1,4 +1,9 @@
-use crate::utils::asset::Contract;
+use crate::{
+    utils::asset::Contract,
+    mint,
+    dex,
+    band,
+};
 use cosmwasm_std::{HumanAddr, Uint128, StdResult, StdError, Extern, Querier, Api, Storage};
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
@@ -84,4 +89,64 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
         Ok(_) => true,
         Err(_) => false,
     })
+}
+
+pub fn price<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    sswap_pair: dex::TradingPair,
+    sscrt: Contract,
+    band: Contract,
+) -> StdResult<Uint128> {
+
+    let scrt_result = band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), band)?;
+
+    //return Err(StdError::NotFound { kind: translate_price(scrt_result.rate, trade_price).to_string(), backtrace: None });
+
+    // SCRT-USD / SCRT-symbol
+    Ok(mint::translate_price(scrt_result.rate, simulate(deps, sswap_pair, sscrt)?))
+}
+
+pub fn simulate<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    pair: dex::TradingPair,
+    sscrt: Contract,
+) -> StdResult<Uint128> {
+
+    let response: SimulationResponse = PairQuery::Simulation {
+        offer_asset: Asset {
+            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
+            info: AssetInfo {
+                token: Token {
+                    contract_addr: sscrt.address,
+                    token_code_hash: sscrt.code_hash,
+                    viewing_key: "SecretSwap".to_string(),
+                },
+            },
+        },
+    }
+    .query(
+        &deps.querier,
+        pair.contract.code_hash,
+        pair.contract.address,
+    )?;
+
+    Ok(mint::normalize_price(
+        response.return_amount,
+        pair.asset.token_info.decimals,
+    ))
+}
+
+pub fn pool_size<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    pair: dex::TradingPair,
+) -> StdResult<Uint128> {
+
+    let pool: PoolResponse = PairQuery::Pool {}.query(
+        &deps.querier,
+        pair.contract.code_hash,
+        pair.contract.address,
+    )?;
+
+    // Constant Product
+    Ok(Uint128(pool.assets[0].amount.u128() * pool.assets[1].amount.u128()))
 }

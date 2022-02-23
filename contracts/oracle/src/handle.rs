@@ -9,10 +9,11 @@ use secret_toolkit::{
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    oracle::{HandleAnswer, IndexElement, Pair},
+    oracle::{HandleAnswer, IndexElement},
     snip20::Snip20Asset,
     secretswap,
     sienna,
+    dex,
 };
 
 pub fn register_pair<S: Storage, A: Api, Q: Querier>(
@@ -26,20 +27,21 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    if secretswap::is_pair(deps, pair)? {
+    if secretswap::is_pair(deps, pair.clone())? {
 
         let (token_contract, token_info) =
-            fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
+            fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
 
         sswap_pairs_w(&mut deps.storage).save(
             token_info.symbol.as_bytes(),
-            &Pair {
-                contract: pair,
+            &dex::TradingPair {
+                contract: pair.clone(),
                 asset: Snip20Asset {
                     contract: token_contract,
                     token_info: token_info.clone(),
                     token_config: None,
                 },
+                dex: dex::Dex::SecretSwap,
             },
         )?;
         return Ok(HandleResponse {
@@ -52,19 +54,20 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
             })?),
         });
     }
-    else if sienna::is_pair(deps, pair)? {
+    else if sienna::is_pair(deps, pair.clone())? {
         let (token_contract, token_info) =
             fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
 
         sienna_pairs_w(&mut deps.storage).save(
             token_info.symbol.as_bytes(),
-            &Pair {
-                contract: pair,
+            &dex::TradingPair {
+                contract: pair.clone(),
                 asset: Snip20Asset {
                     contract: token_contract,
                     token_info: token_info.clone(),
                     token_config: None,
                 },
+                dex: dex::Dex::SiennaSwap,
             },
         )?;
         return Ok(HandleResponse {
@@ -92,12 +95,12 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    if secretswap::is_pair(deps, pair)? {
-        let (_, token_info) = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair)?;
+    if secretswap::is_pair(deps, pair.clone())? {
+        let (_, token_info) = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
         sswap_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
     }
-    else if sienna::is_pair(deps, pair)? {
-        let (_, token_info) = fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
+    else if sienna::is_pair(deps, pair.clone())? {
+        let (_, token_info) = fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair.clone())?;
         sienna_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
     }
 
