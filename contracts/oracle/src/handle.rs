@@ -32,25 +32,28 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
         let (token_contract, token_info) =
             fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
 
+        let trading_pair = dex::TradingPair {
+            contract: pair.clone(),
+            asset: Snip20Asset {
+                contract: token_contract,
+                token_info: token_info.clone(),
+                token_config: None,
+            },
+            dex: dex::Dex::SecretSwap,
+        };
+
         sswap_pairs_w(&mut deps.storage).save(
             token_info.symbol.as_bytes(),
-            &dex::TradingPair {
-                contract: pair.clone(),
-                asset: Snip20Asset {
-                    contract: token_contract,
-                    token_info: token_info.clone(),
-                    token_config: None,
-                },
-                dex: dex::Dex::SecretSwap,
-            },
+            &trading_pair,
         )?;
+
         return Ok(HandleResponse {
             messages: vec![],
             log: vec![],
             data: Some(to_binary(&HandleAnswer::RegisterPair {
                 status: ResponseStatus::Success,
-                dex: "SecretSwap".to_string(),
                 symbol: token_info.symbol,
+                pair: trading_pair,
             })?),
         });
     }
@@ -58,25 +61,26 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
         let (token_contract, token_info) =
             fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
 
+        let trading_pair = dex::TradingPair {
+            contract: pair.clone(),
+            asset: Snip20Asset {
+                contract: token_contract,
+                token_info: token_info.clone(),
+                token_config: None,
+            },
+            dex: dex::Dex::SiennaSwap,
+        };
         sienna_pairs_w(&mut deps.storage).save(
             token_info.symbol.as_bytes(),
-            &dex::TradingPair {
-                contract: pair.clone(),
-                asset: Snip20Asset {
-                    contract: token_contract,
-                    token_info: token_info.clone(),
-                    token_config: None,
-                },
-                dex: dex::Dex::SiennaSwap,
-            },
+            &trading_pair,
         )?;
         return Ok(HandleResponse {
             messages: vec![],
             log: vec![],
             data: Some(to_binary(&HandleAnswer::RegisterPair {
                 status: ResponseStatus::Success,
-                dex: "Sienna".to_string(),
                 symbol: token_info.symbol,
+                pair: trading_pair,
             })?),
         });
     }
@@ -216,14 +220,15 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
             });
         }
     }
-
-    //Dont need this, can just use may_load
-    /*
-    indices_w(&mut deps.storage).update(|mut symbols| {
-        symbols.push(symbol.clone());
-        Ok(symbols)
-    })?;
-    */
+    match sienna_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+        None => {}
+        Some(_) => {
+            return Err(StdError::GenericErr {
+                msg: "Symbol collides with an existing Sienna Pair".to_string(),
+                backtrace: None,
+            });
+        }
+    }
 
     index_w(&mut deps.storage).save(symbol.as_bytes(), &basket)?;
 

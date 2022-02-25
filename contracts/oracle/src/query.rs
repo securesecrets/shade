@@ -1,14 +1,11 @@
 use crate::state::{config_r, index_r, sswap_pairs_r, sienna_pairs_r};
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
-use secret_toolkit::utils::Query;
 use shade_protocol::{
     band,
     dex,
     oracle::{IndexElement, QueryAnswer},
     secretswap,
-    sienna,
 };
-use std::convert::TryFrom;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -26,13 +23,13 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
         return band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), config.band);
     }
 
-    // secret swap pair
-    // TODO: sienna pair
 
+    // Find registered paired for this asset & sSCRT
     let mut dex_pairs = vec![];
     if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
         dex_pairs.push(sswap_pair);
     }
+
     if let Some(sienna_pair) = sienna_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
         dex_pairs.push(sienna_pair);
     }
@@ -74,15 +71,29 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     for (i, sym) in symbols.iter().enumerate() {
+
+        let mut dex_pairs = vec![];
+
         if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(sym.as_bytes())? {
+            dex_pairs.push(sswap_pair);
+        }
+        if let Some(sienna_pair) = sienna_pairs_r(&deps.storage).may_load(sym.as_bytes())? {
+            dex_pairs.push(sienna_pair);
+        }
 
-            results[i] = secretswap::price(deps, sswap_pair, config.sscrt.clone(), config.band.clone())?;
-
-        } else if let Some(index) = index_r(&deps.storage).may_load(sym.as_bytes())? {
+        // Aggregate DEX pair prices
+        if dex_pairs.len() > 0 {
+            results[i] = dex::aggregate_price(&deps, dex_pairs, 
+                                           config.sscrt.clone(), config.band.clone())?;
+        }
+        // Index
+        else if let Some(index) = index_r(&deps.storage).may_load(sym.as_bytes())? {
 
             results[i] = eval_index(deps, sym, index)?;
 
-        } else {
+        } 
+        // BAND
+        else {
             band_symbols.push(sym.clone());
             band_quotes.push("USD".to_string());
         }

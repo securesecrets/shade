@@ -1,20 +1,15 @@
-use crate::snip20::Snip20Asset;
 use cosmwasm_std::{HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
-use crate::utils::asset::Contract;
-use crate::utils::generic_response::ResponseStatus;
-
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Pair {
-    pub contract: Contract,
-    // non-sscrt asset, other asset on pair should be sscrt
-    pub asset: Snip20Asset,
-}
-*/
+use crate::{
+    utils::{
+        asset::Contract,
+        generic_response::ResponseStatus,
+    },
+    dex::TradingPair,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct IndexElement {
@@ -74,8 +69,8 @@ pub enum HandleAnswer {
 
     RegisterPair {
         status: ResponseStatus,
-        dex: String,
         symbol: String,
+        pair: TradingPair,
     },
     UnregisterPair { status: ResponseStatus },
     RegisterIndex { status: ResponseStatus },

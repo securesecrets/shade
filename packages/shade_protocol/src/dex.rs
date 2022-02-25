@@ -7,13 +7,11 @@ use crate::{
     band,
     //shadeswap,
 };
-use cosmwasm_std::{HumanAddr, Uint128, StdResult, StdError, Extern, Querier, Api, Storage};
+use cosmwasm_std::{Uint128, StdResult, Extern, Querier, Api, Storage};
 use schemars::JsonSchema;
-use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub enum Dex {
     SecretSwap,
     SiennaSwap,
@@ -37,35 +35,36 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
 
     // indices will align with <pairs>
     let mut prices = vec![];
-    let mut weights = vec![];
-    let weight_sum = Uint128(0);
+    let mut pool_sizes = vec![];
 
     for pair in pairs {
         match &pair.dex {
-            SecretSwap => {
+            Dex::SecretSwap => {
                 prices.push(secretswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
-                weights.push(secretswap::pool_size(&deps, pair)?);
+                pool_sizes.push(secretswap::pool_size(&deps, pair)?);
             },
-            SiennaSwap => {
+            Dex::SiennaSwap => {
                 prices.push(sienna::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
-                weights.push(sienna::pool_size(&deps, pair)?);
+                pool_sizes.push(sienna::pool_size(&deps, pair)?);
             },
             /*
             ShadeSwap => {
+                prices.push(shadeswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
+                pool_sizes.push(shadeswap::pool_size(&deps, pair)?);
                 return Err(StdErr::generic_err("ShadeSwap Unavailable"));
             },
             */
         }
     }
 
-    let weight_sum = Uint128(weights.iter().map(|i| i.u128()).sum());
-    let mut weighted_sum = Uint128(0);
+    let combined_cp: u128 = pool_sizes.iter().map(|i| i.u128()).sum();
+    let mut weighted_sum = 0u128;
 
-    for (p, w) in prices.iter().zip(weights.iter()) {
-        weighted_sum = weighted_sum + (p.multiply_ratio(*w, weight_sum));
+    for (price, pool_size) in prices.iter().zip(pool_sizes.iter()) {
+        weighted_sum = weighted_sum + price.multiply_ratio(*pool_size, combined_cp).u128();
     }
 
-    Ok(weighted_sum)
+    Ok(Uint128(weighted_sum / combined_cp))
 }
 
 pub fn best_price<S: Storage, A: Api, Q: Querier>(
@@ -80,10 +79,10 @@ pub fn best_price<S: Storage, A: Api, Q: Querier>(
 
     for pair in &pairs {
         match pair.clone().dex {
-            SecretSwap => {
+            Dex::SecretSwap => {
                 results.push(secretswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
             },
-            SiennaSwap => {
+            Dex::SiennaSwap => {
                 results.push(sienna::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
             },
             /*
