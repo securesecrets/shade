@@ -64,7 +64,7 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
         weighted_sum = weighted_sum + price.multiply_ratio(*pool_size, combined_cp).u128();
     }
 
-    Ok(Uint128(weighted_sum / combined_cp))
+    Ok(Uint128(weighted_sum / prices.len() as u128))
 }
 
 pub fn best_price<S: Storage, A: Api, Q: Querier>(
