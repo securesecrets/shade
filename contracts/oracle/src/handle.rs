@@ -1,4 +1,4 @@
-use crate::state::{config_r, config_w, index_w, sswap_pairs_r, sswap_pairs_w, sienna_pairs_r, sienna_pairs_w };
+use crate::state::{config_r, config_w, index_w, dex_pairs_r, dex_pairs_w, sswap_pairs_r, sswap_pairs_w, sienna_pairs_r, sienna_pairs_w };
 use cosmwasm_std::{
     to_binary, Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage,
 };
@@ -27,65 +27,81 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
+    let mut trading_pair: Option<dex::TradingPair> = None;
+    let mut token_data: Option<(Contract, TokenInfo)> = None;
+
     if secretswap::is_pair(deps, pair.clone())? {
 
-        let (token_contract, token_info) =
-            fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
+         let td = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
+        token_data = Some(td.clone());
 
-        let trading_pair = dex::TradingPair {
+        trading_pair = Some(dex::TradingPair {
             contract: pair.clone(),
             asset: Snip20Asset {
-                contract: token_contract,
-                token_info: token_info.clone(),
+                contract: td.clone().0,
+                token_info: td.clone().1,
                 token_config: None,
             },
             dex: dex::Dex::SecretSwap,
-        };
-
-        sswap_pairs_w(&mut deps.storage).save(
-            token_info.symbol.as_bytes(),
-            &trading_pair,
-        )?;
-
-        return Ok(HandleResponse {
-            messages: vec![],
-            log: vec![],
-            data: Some(to_binary(&HandleAnswer::RegisterPair {
-                status: ResponseStatus::Success,
-                symbol: token_info.symbol,
-                pair: trading_pair,
-            })?),
         });
+
     }
     else if sienna::is_pair(deps, pair.clone())? {
-        let (token_contract, token_info) =
-            fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
+        let td = fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
+        token_data = Some(td.clone());
 
-        let trading_pair = dex::TradingPair {
+        trading_pair = Some(dex::TradingPair {
             contract: pair.clone(),
             asset: Snip20Asset {
-                contract: token_contract,
-                token_info: token_info.clone(),
+                contract: td.clone().0,
+                token_info: td.1,
                 token_config: None,
             },
             dex: dex::Dex::SiennaSwap,
-        };
-        sienna_pairs_w(&mut deps.storage).save(
-            token_info.symbol.as_bytes(),
-            &trading_pair,
-        )?;
-        return Ok(HandleResponse {
-            messages: vec![],
-            log: vec![],
-            data: Some(to_binary(&HandleAnswer::RegisterPair {
-                status: ResponseStatus::Success,
-                symbol: token_info.symbol,
-                pair: trading_pair,
-            })?),
         });
     }
 
-    Err(StdError::generic_err("Pair not recognized"))
+    match trading_pair {
+        Some(tp) => {
+
+            match token_data {
+
+                Some(td) => {
+                    if let Some(mut pairs) = dex_pairs_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
+                        pairs.push(tp.clone());
+                        dex_pairs_w(&mut deps.storage).save(
+                            td.1.symbol.as_bytes(), 
+                            &pairs
+                        )?;
+                    }
+                    else {
+                        dex_pairs_w(&mut deps.storage).save(
+                            td.1.symbol.as_bytes(), 
+                            &vec![tp.clone()]
+                        )?;
+                    }
+
+                    return Ok(HandleResponse {
+                        messages: vec![],
+                        log: vec![],
+                        data: Some(to_binary(&HandleAnswer::RegisterPair {
+                            status: ResponseStatus::Success,
+                            symbol: td.1.symbol,
+                            pair: tp,
+                        })?),
+                    });
+                }
+                None => {
+                    Err(StdError::generic_err("Failed to get token data"))
+                }
+            }
+        }
+        None => {
+            Err(StdError::generic_err("Pair not recognized"))
+        }
+    }
+
+
 }
 
 pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
@@ -99,6 +115,7 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
+    // TODO: Find token symbol, pull dex pairs, remove contract addr
     if secretswap::is_pair(deps, pair.clone())? {
         let (_, token_info) = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
         sswap_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
@@ -211,6 +228,17 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
+    if let Some(pairs) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+        if pairs.len() > 0 {
+            return Err(StdError::GenericErr {
+                msg: "Symbol collides with an existing Dex pair".to_string(),
+                backtrace: None,
+            });
+        }
+        
+    }
+
+    /*
     match sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
         None => {}
         Some(_) => {
@@ -229,6 +257,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
             });
         }
     }
+    */
 
     index_w(&mut deps.storage).save(symbol.as_bytes(), &basket)?;
 

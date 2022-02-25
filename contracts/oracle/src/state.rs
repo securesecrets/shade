@@ -11,6 +11,7 @@ use shade_protocol::{
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";
+pub static DEX_PAIRS: &[u8] = b"dex_pairs";
 pub static SSWAP_PAIRS: &[u8] = b"sswap_pairs";
 pub static SIENNA_PAIRS: &[u8] = b"sienna_pairs";
 pub static INDEX: &[u8] = b"index";
@@ -21,6 +22,16 @@ pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, OracleConfig> {
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, OracleConfig> {
     singleton(storage, CONFIG_KEY)
+}
+
+// TODO: Convert everything to use this, 
+//       then delete sswap/sienna specific storage
+pub fn dex_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<dex::TradingPair>> {
+    bucket_read(DEX_PAIRS, storage)
+}
+
+pub fn dex_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<dex::TradingPair>> {
+    bucket(DEX_PAIRS, storage)
 }
 
 pub fn sswap_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, dex::TradingPair> {
