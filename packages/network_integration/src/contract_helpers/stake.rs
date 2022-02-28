@@ -1,11 +1,12 @@
 use crate::{
-    contract_helpers::{governance::init_contract, minter::get_balance},
+    contract_helpers::{governance::init_with_gov, minter::get_balance},
     utils::{print_contract, print_header, ACCOUNT_KEY, GAS, STAKING_FILE},
 };
 use cosmwasm_std::{HumanAddr, Uint128};
+use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
-    secretcli::{query_contract, test_contract_handle},
+    secretcli::{handle, query},
 };
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
@@ -16,8 +17,9 @@ pub fn setup_staker(
     governance: &NetContract,
     shade: &Contract,
     staking_account: String,
+    report: &mut Vec<Report>,
 ) -> Result<NetContract> {
-    let staker = init_contract(
+    let staker = init_with_gov(
         governance,
         "staking".to_string(),
         STAKING_FILE,
@@ -32,6 +34,7 @@ pub fn setup_staker(
                 code_hash: shade.code_hash.clone(),
             },
         },
+        report,
     )?;
 
     print_contract(&staker);
@@ -57,7 +60,16 @@ pub fn setup_staker(
             key: "password".to_string(),
         };
 
-        test_contract_handle(&msg, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+        handle(
+            &msg,
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Stake some Shade on it
@@ -70,7 +82,16 @@ pub fn setup_staker(
             padding: None,
         };
 
-        test_contract_handle(&msg, &shade_net, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+        handle(
+            &msg,
+            &shade_net,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Check total stake
@@ -95,7 +116,16 @@ pub fn setup_staker(
             amount: unbond_amount,
         };
 
-        test_contract_handle(&msg, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+        handle(
+            &msg,
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Check if unstaking
@@ -117,7 +147,16 @@ pub fn setup_staker(
     {
         let msg = staking::HandleMsg::ClaimUnbond {};
 
-        test_contract_handle(&msg, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+        handle(
+            &msg,
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Query total Shade now
@@ -141,7 +180,16 @@ pub fn setup_staker(
     {
         let msg = staking::HandleMsg::ClaimUnbond {};
 
-        test_contract_handle(&msg, &staker, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+        handle(
+            &msg,
+            &staker,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     // Query total Shade now
@@ -156,7 +204,7 @@ pub fn setup_staker(
 pub fn get_total_staked(staker: &NetContract) -> Uint128 {
     let msg = staking::QueryMsg::TotalStaked {};
 
-    let total_stake: staking::QueryAnswer = query_contract(staker, &msg).unwrap();
+    let total_stake: staking::QueryAnswer = query(staker, &msg, None).unwrap();
 
     if let staking::QueryAnswer::TotalStaked { total } = total_stake {
         return total;
@@ -182,7 +230,7 @@ pub fn get_user_stake(staker: &NetContract, address: String, key: String) -> Tes
             .as_secs(),
     };
 
-    let query: staking::QueryAnswer = query_contract(staker, &msg).unwrap();
+    let query: staking::QueryAnswer = query(staker, &msg, None).unwrap();
 
     if let staking::QueryAnswer::UserStake {
         staked,

@@ -11,7 +11,7 @@ pub struct Config {
     pub admin: HumanAddr,
     pub oracle: Contract,
     // Both treasury & Commission must be set to function
-    pub treasury: Option<Contract>,
+    pub treasury: HumanAddr,
     pub secondary_burn: Option<HumanAddr>,
     pub activated: bool,
     pub limit: Option<Limit>,
@@ -21,28 +21,23 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct SupportedAsset {
     pub asset: Snip20Asset,
-    // Commission percentage * 100 e.g. 5 == .05 == 5%
+    // Capture a percentage of burned assets
     pub capture: Uint128,
+    // Fee taken off the top of a given burned asset
+    pub fee: Uint128,
     pub unlimited: bool,
 }
 
-// Used to keep track of the cap
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum Limit {
     Daily {
-        annual_limit: Uint128,
+        supply_portion: Uint128,
         days: Uint128,
     },
     Monthly {
-        annual_limit: Uint128,
+        supply_portion: Uint128,
         months: Uint128,
     },
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct MintMsgHook {
-    pub minimum_expected_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -57,7 +52,7 @@ pub struct InitMsg {
     pub peg: Option<String>,
 
     // Both treasury & asset capture must be set to function properly
-    pub treasury: Option<Contract>,
+    pub treasury: HumanAddr,
 
     // This is where the non-burnable assets will go, if not defined they will stay in this contract
     pub secondary_burn: Option<HumanAddr>,
@@ -79,7 +74,8 @@ pub enum HandleMsg {
         contract: Contract,
         // Commission * 100 e.g. 5 == .05 == 5%
         capture: Option<Uint128>,
-        unlimited: Option<bool>
+        fee: Option<Uint128>,
+        unlimited: Option<bool>,
     },
     RemoveAsset {
         address: HumanAddr,
@@ -95,6 +91,19 @@ pub enum HandleMsg {
 
 impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct SnipMsgHook {
+    pub minimum_expected_amount: Uint128,
+    pub to_mint: HumanAddr,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct MintMsgHook {
+    pub minimum_expected_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -124,9 +133,15 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     NativeAsset {},
     SupportedAssets {},
-    Asset { contract: String },
+    Asset {
+        contract: String,
+    },
     Config {},
     Limit {},
+    Mint {
+        offer_asset: HumanAddr,
+        amount: Uint128,
+    },
 }
 
 impl Query for QueryMsg {
@@ -141,7 +156,7 @@ pub enum QueryAnswer {
         peg: String,
     },
     SupportedAssets {
-        assets: Vec<String>,
+        assets: Vec<Contract>,
     },
     Asset {
         asset: SupportedAsset,
@@ -154,5 +169,9 @@ pub enum QueryAnswer {
         minted: Uint128,
         limit: Uint128,
         last_refresh: String,
+    },
+    Mint {
+        asset: Contract,
+        amount: Uint128,
     },
 }

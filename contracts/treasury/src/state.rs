@@ -3,10 +3,7 @@ use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{
-    snip20::Snip20Asset,
-    treasury,
-};
+use shade_protocol::{snip20::Snip20Asset, treasury};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static ASSETS: &[u8] = b"assets";

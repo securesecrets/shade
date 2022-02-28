@@ -36,3 +36,8 @@ jobs:
         with:
           command: build
           args: --release --target wasm32-unknown-unknown --manifest-path=${{matrix.dir}}
+          
+      - uses: actions-rs/cargo@v1.0.1
+        with:
+          command: test
+          args: --manifest-path=${{matrix.dir}}

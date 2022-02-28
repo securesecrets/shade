@@ -2,7 +2,7 @@
 pub mod tests {
     use crate::handle::inverse_normalizer;
     use cosmwasm_std::{from_binary, Binary, HumanAddr, Uint128};
-    use flexible_permits::{
+    use query_authentication::{
         permit::bech32_to_canonical,
         transaction::{PermitSignature, PubKey},
     };

@@ -6,9 +6,10 @@ use crate::{
     },
 };
 use cosmwasm_std::{HumanAddr, Uint128};
+use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
-    secretcli::{list_contracts_by_code, test_contract_handle, test_inst_init},
+    secretcli::{handle, init, list_contracts_by_code},
 };
 use serde_json::Result;
 use shade_protocol::{
@@ -19,6 +20,7 @@ pub fn initialize_initializer(
     admin: String,
     sscrt: &NetContract,
     account: String,
+    report: &mut Vec<Report>,
 ) -> Result<(NetContract, NetContract, NetContract)> {
     print_header("Initializing Initializer");
     let mut shade = NetContract {
@@ -50,7 +52,7 @@ pub fn initialize_initializer(
         },
     };
 
-    let initializer = test_inst_init(
+    let initializer = init(
         &init_msg,
         INITIALIZER_FILE,
         &*generate_label(8),
@@ -58,9 +60,10 @@ pub fn initialize_initializer(
         Some(STORE_GAS),
         Some(GAS),
         Some("test"),
+        report,
     )?;
 
-    test_contract_handle(
+    handle(
         &initializer::HandleMsg::InitSilk {
             silk: Snip20ContractInfo {
                 label: silk.label.clone(),
@@ -75,6 +78,8 @@ pub fn initialize_initializer(
         ACCOUNT_KEY,
         Some(GAS),
         Some("test"),
+        None,
+        report,
         None,
     )?;
 
@@ -105,8 +110,26 @@ pub fn initialize_initializer(
             padding: None,
         };
 
-        test_contract_handle(&msg, &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
-        test_contract_handle(&msg, &silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
+        handle(
+            &msg,
+            &shade,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
+        handle(
+            &msg,
+            &silk,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     println!("\n\tTotal shade: {}", get_balance(&shade, account.clone()));

@@ -5,15 +5,14 @@ use cosmwasm_std::{
 
 use shade_protocol::treasury::{Config, HandleMsg, InitMsg, QueryMsg};
 
-use chrono::prelude::*;
 use crate::{
     handle, query,
     state::{
-        config_w, self_address_w, viewing_key_w,
-        asset_list_w, allocations_w,
-        last_allowance_refresh_w,
+        allocations_w, asset_list_w, config_w, last_allowance_refresh_w, self_address_w,
+        viewing_key_w,
     },
 };
+use chrono::prelude::*;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -58,10 +57,19 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { contract, reserves } => handle::try_register_asset(deps, &env, &contract, reserves),
-        HandleMsg::RegisterAllocation { asset, allocation } => handle::register_allocation(deps, &env, asset, allocation),
-        HandleMsg::RefreshAllowance { } => handle::refresh_allowance(deps, &env),
-        HandleMsg::OneTimeAllowance { asset, spender, amount, expiration } => handle::one_time_allowance(deps, &env, asset, spender, amount, expiration),
+        HandleMsg::RegisterAsset { contract, reserves } => {
+            handle::try_register_asset(deps, &env, &contract, reserves)
+        }
+        HandleMsg::RegisterAllocation { asset, allocation } => {
+            handle::register_allocation(deps, &env, asset, allocation)
+        }
+        HandleMsg::RefreshAllowance {} => handle::refresh_allowance(deps, &env),
+        HandleMsg::OneTimeAllowance {
+            asset,
+            spender,
+            amount,
+            expiration,
+        } => handle::one_time_allowance(deps, &env, asset, spender, amount, expiration),
         /*
           HandleMsg::Rebalance {
           } => handle::rebalance(deps, &env),
@@ -78,7 +86,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
         QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
         QueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
-        QueryMsg::Allowances { asset, spender } => to_binary(&query::allowances(&deps, &asset, &spender)?),
-        QueryMsg::LastAllowanceRefresh { } => to_binary(&query::last_allowance_refresh(&deps)?),
+        QueryMsg::Allowances { asset, spender } => {
+            to_binary(&query::allowances(&deps, &asset, &spender)?)
+        }
+        QueryMsg::LastAllowanceRefresh {} => to_binary(&query::last_allowance_refresh(&deps)?),
     }
 }

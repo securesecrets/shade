@@ -13,6 +13,7 @@ members = [
   "contracts/governance",
   "contracts/staking",
   "contracts/mint",
+  "contracts/mint_router",
   "contracts/treasury",
   "contracts/oracle",
   "contracts/snip20",
