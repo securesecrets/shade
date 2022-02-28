@@ -86,3 +86,15 @@ pub struct PubKey {
     pub msg_type: String,
     pub value: String,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct ChainConfig {
+    #[serde(rename = "chain-id")]
+    pub chain_id: String,
+    #[serde(rename = "keyring-backend")]
+    pub keyring_backend: String,
+    pub output: String,
+    pub node: String,
+    #[serde(rename = "broadcast-mode")]
+    pub broadcast_mode: String,
+}
