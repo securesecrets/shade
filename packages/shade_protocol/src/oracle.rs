@@ -14,7 +14,7 @@ use crate::{
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct IndexElement {
     pub symbol: String,
-    //TODO: Decimal, when better implementation is available
+    //TODO: swap to an "amount", to be used as a percentage of the sum of all amounts
     pub weight: Uint128,
 }
 

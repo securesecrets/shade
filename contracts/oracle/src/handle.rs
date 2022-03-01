@@ -1,4 +1,4 @@
-use crate::state::{config_r, config_w, index_w, dex_pairs_r, dex_pairs_w };
+use crate::state::{config_r, config_w, index_w, index_r, dex_pairs_r, dex_pairs_w };
 use cosmwasm_std::{
     to_binary, Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage,
 };
@@ -29,6 +29,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
 
     let mut trading_pair: Option<dex::TradingPair> = None;
     let mut token_data: Option<(Contract, TokenInfo)> = None;
+
 
     if secretswap::is_pair(deps, pair.clone())? {
 
@@ -61,12 +62,19 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
         });
     }
 
+
     match trading_pair {
         Some(tp) => {
 
             match token_data {
 
                 Some(td) => {
+
+                    // Check if symbol would override an index
+                    if let Some(_) = index_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
+                        return Err(StdError::generic_err("Symbol already registered as an index"));
+                    }
+
                     if let Some(mut pairs) = dex_pairs_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
                         pairs.push(tp.clone());
                         dex_pairs_w(&mut deps.storage).save(
