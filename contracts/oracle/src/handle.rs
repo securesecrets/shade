@@ -30,7 +30,6 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
     let mut trading_pair: Option<dex::TradingPair> = None;
     let mut token_data: Option<(Contract, TokenInfo)> = None;
 
-
     if secretswap::is_pair(deps, pair.clone())? {
 
          let td = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
@@ -63,53 +62,41 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
     }
 
 
-    match trading_pair {
-        Some(tp) => {
+    if let Some(tp) = trading_pair {
+        if let Some(td) = token_data {
 
-            match token_data {
-
-                Some(td) => {
-
-                    // If symbol would override an index
-                    if let Some(_) = index_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
-                        return Err(StdError::generic_err("Symbol already registered as an index"));
-                    }
-
-                    if let Some(mut pairs) = dex_pairs_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
-                        pairs.push(tp.clone());
-                        dex_pairs_w(&mut deps.storage).save(
-                            td.1.symbol.as_bytes(), 
-                            &pairs
-                        )?;
-                    }
-                    else {
-                        dex_pairs_w(&mut deps.storage).save(
-                            td.1.symbol.as_bytes(), 
-                            &vec![tp.clone()]
-                        )?;
-                    }
-
-                    return Ok(HandleResponse {
-                        messages: vec![],
-                        log: vec![],
-                        data: Some(to_binary(&HandleAnswer::RegisterPair {
-                            status: ResponseStatus::Success,
-                            symbol: td.1.symbol,
-                            pair: tp,
-                        })?),
-                    });
-                }
-                None => {
-                    Err(StdError::generic_err("Failed to get token data"))
-                }
+            // If symbol would override an index
+            if let Some(_) = index_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
+                return Err(StdError::generic_err("Symbol already registered as an index"));
             }
-        }
-        None => {
-            Err(StdError::generic_err("Pair not recognized"))
+
+            if let Some(mut pairs) = dex_pairs_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
+                pairs.push(tp.clone());
+                dex_pairs_w(&mut deps.storage).save(
+                    td.1.symbol.as_bytes(), 
+                    &pairs
+                )?;
+            }
+            else {
+                dex_pairs_w(&mut deps.storage).save(
+                    td.1.symbol.as_bytes(), 
+                    &vec![tp.clone()]
+                )?;
+            }
+
+            return Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: Some(to_binary(&HandleAnswer::RegisterPair {
+                    status: ResponseStatus::Success,
+                    symbol: td.1.symbol,
+                    pair: tp,
+                })?),
+            });
         }
     }
 
-
+    Err(StdError::generic_err("Failed to extract token info"))
 }
 
 pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
