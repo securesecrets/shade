@@ -34,24 +34,6 @@ pub fn dex_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<dex::TradingPai
     bucket(DEX_PAIRS, storage)
 }
 
-/*
-pub fn sswap_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, dex::TradingPair> {
-    bucket_read(SSWAP_PAIRS, storage)
-}
-
-pub fn sswap_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, dex::TradingPair> {
-    bucket(SSWAP_PAIRS, storage)
-}
-
-pub fn sienna_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, dex::TradingPair> {
-    bucket_read(SIENNA_PAIRS, storage)
-}
-
-pub fn sienna_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, dex::TradingPair> {
-    bucket(SIENNA_PAIRS, storage)
-}
-*/
-
 pub fn index_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<IndexElement>> {
     bucket_read(INDEX, storage)
 }
