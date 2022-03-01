@@ -61,10 +61,11 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
     let mut weighted_sum = 0u128;
 
     for (price, pool_size) in prices.iter().zip(pool_sizes.iter()) {
-        weighted_sum = weighted_sum + price.multiply_ratio(*pool_size, combined_cp).u128();
+        //weighted_sum = weighted_sum + price.multiply_ratio(*pool_size, combined_cp).u128();
+        weighted_sum += price.u128() * pool_size.u128();
     }
 
-    Ok(Uint128(weighted_sum / prices.len() as u128))
+    Ok(Uint128(weighted_sum / combined_cp))
 }
 
 pub fn best_price<S: Storage, A: Api, Q: Querier>(

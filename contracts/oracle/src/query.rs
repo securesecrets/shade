@@ -41,7 +41,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     // Index
     if let Some(index) = index_r(&deps.storage).may_load(symbol.as_bytes())? {
         return Ok(band::ReferenceData {
-            rate: eval_index(deps, &symbol, index)?,
+            rate: eval_index(deps, index)?,
             last_updated_base: 0,
             last_updated_quote: 0,
         });
@@ -74,7 +74,7 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
         // Index
         else if let Some(index) = index_r(&deps.storage).may_load(sym.as_bytes())? {
 
-            results[i] = eval_index(deps, sym, index)?;
+            results[i] = eval_index(deps, index)?;
 
         } 
         // BAND
@@ -102,9 +102,9 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
 
 pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    symbol: &str,
     index: Vec<IndexElement>,
 ) -> StdResult<Uint128> {
+
     let mut weight_total = Uint128::zero();
     let mut price = Uint128::zero();
 
@@ -116,9 +116,18 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     for element in index {
         weight_total += element.weight;
 
-        if let Some(dex_pairs) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+        // Get dex prices
+        if let Some(dex_pairs) = dex_pairs_r(&deps.storage).may_load(element.symbol.as_bytes())? {
             price += dex::aggregate_price(deps, dex_pairs, config.sscrt.clone(), config.band.clone())?.multiply_ratio(element.weight, 10u128.pow(18));
-        } else {
+        }
+        // Nested index 
+        // TODO: make sure no circular deps
+        else if let Some(sub_index) = index_r(&deps.storage).may_load(element.symbol.as_bytes())? {
+            price += eval_index(&deps, sub_index)?.multiply_ratio(element.weight, 10u128.pow(18));
+
+        }
+        // Setup to query for all at once from BAND
+        else {
             band_weights.push(element.weight);
             band_bases.push(element.symbol.clone());
             band_quotes.push("USD".to_string());

@@ -70,7 +70,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
 
                 Some(td) => {
 
-                    // Check if symbol would override an index
+                    // If symbol would override an index
                     if let Some(_) = index_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
                         return Err(StdError::generic_err("Symbol already registered as an index"));
                     }
@@ -254,10 +254,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
 
     if let Some(pairs) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
         if pairs.len() > 0 {
-            return Err(StdError::GenericErr {
-                msg: "Symbol collides with an existing Dex pair".to_string(),
-                backtrace: None,
-            });
+            return Err(StdError::generic_err("Symbol collides with an existing Dex pair"));
         }
         
     }

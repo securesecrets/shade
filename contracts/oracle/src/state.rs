@@ -24,8 +24,6 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, OracleConfig> {
     singleton(storage, CONFIG_KEY)
 }
 
-// TODO: Convert everything to use this, 
-//       then delete sswap/sienna specific storage
 pub fn dex_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<dex::TradingPair>> {
     bucket_read(DEX_PAIRS, storage)
 }

@@ -24,13 +24,10 @@ print(oracle.address)
 band_prices = {
     # symbol: price
     'USD': 1,
-    'SCRT': 7.5,
-}
+    'SCRT': 10,
 
-index_basket = {
-    # symbol: weight
-    'USD': .2,
-    'SCRT': .5,
+    # TODO: Configure with DEX
+    'SHD': 5,
 }
 
 # normalize band prices
@@ -38,25 +35,40 @@ band_prices = [
     {'mock_price': {'symbol': s, 'price': str(int(p * 10**18))}}
     for s, p in band_prices.items()
 ]
+
+index_basket = {
+    # symbol: weight
+    'USD': .2,
+    'SCRT': .5,
+    'SHD': .1,
+}
+
 # normalize index basket
 index_basket = [
     {'symbol': s, 'weight': str(int(w * 10**18))}
     for s, w in index_basket.items()
 ]
+
 print(json.dumps(index_basket, indent=2))
 
 for b in band_prices:
     print('mocking', b)
     print(mock_band.execute(b))
 
+print('Registering SILK Index')
 print(oracle.execute({'register_index': {'symbol': 'SILK', 'basket': index_basket}}))
 
-print('\n'.join(oracle.query({'prices': {'symbols': ['USD', 'SCRT']}})))
+# print('\n'.join(oracle.query({'prices': {'symbols': ['USD', 'SCRT']}})))
 
-usd = int(oracle.query({'price': {'symbol': 'USD'}})['rate']) / 10**18
-scrt = int(oracle.query({'price': {'symbol': 'SCRT'}})['rate']) / 10**18
-silk = int(oracle.query({'price': {'symbol': 'SILK'}})['rate']) / 10**18
+symbols = ['USD', 'SCRT', 'SHD', 'SILK']
+print('Querying', symbols)
+print('\n'.join(oracle.query({
+    'prices': {
+        'symbols': symbols
+    }
+})))
 
-print('USD:', usd)
-print('SCRT:', scrt)
-print('SILK:', silk)
+print('Querying each')
+for symbol in symbols:
+    print(symbol, int(oracle.query({'price': {'symbol': symbol}})['rate']) / 10**18)
+
