@@ -22,16 +22,16 @@ impl SingletonStorage for StakeConfig {
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct DailyUnbonding {
-    pub unbonding: u128,
-    pub funded: u128,
+    pub unbonding: Uint128,
+    pub funded: Uint128,
     pub release: u64
 }
 
 impl DailyUnbonding {
-    pub fn new(unbonding: u128, release: u64) -> Self {
+    pub fn new(unbonding: Uint128, release: u64) -> Self {
         Self {
             unbonding,
-            funded: 0,
+            funded: Uint128::zero(),
             release
         }
     }
@@ -43,19 +43,19 @@ impl DailyUnbonding {
     ///
     /// Attempts to fund, will return whatever amount wasnt used
     ///
-    pub fn fund(&mut self, amount: u128) -> u128 {
+    pub fn fund(&mut self, amount: Uint128) -> Uint128 {
         if self.is_funded() {
             return amount
         }
 
-        let to_fund = &self.unbonding - &self.funded;
+        let to_fund = (self.unbonding - self.funded).unwrap();
         if to_fund < amount {
             self.funded = self.unbonding.into();
-            return amount - to_fund
+            return (amount - to_fund).unwrap()
         }
 
         self.funded += amount;
-        return 0
+        return Uint128::zero()
     }
 }
 
@@ -92,32 +92,33 @@ impl PartialOrd for Unbonding {
 
 #[cfg(test)]
 mod tests {
+    use cosmwasm_std::Uint128;
     use crate::shd_staking::stake::DailyUnbonding;
 
     #[test]
     fn is_funded() {
-        assert!(DailyUnbonding{ unbonding: 100, funded: 100, release: 0 }.is_funded());
-        assert!(!DailyUnbonding{ unbonding: 150, funded: 100, release: 0 }.is_funded());
+        assert!(DailyUnbonding{ unbonding: Uint128(100), funded: Uint128(100), release: 0 }.is_funded());
+        assert!(!DailyUnbonding{ unbonding: Uint128(150), funded: Uint128(100), release: 0 }.is_funded());
     }
 
     #[test]
     fn fund() {
         // Initialize new unbond
-        let mut unbond = DailyUnbonding::new(500, 0);
+        let mut unbond = DailyUnbonding::new(Uint128(500), 0);
         assert!(!unbond.is_funded());
 
         // Add small fund
-        let residue = unbond.fund(250);
-        assert_eq!(unbond.funded, 250);
-        assert_eq!(residue, 0);
+        let residue = unbond.fund(Uint128(250));
+        assert_eq!(unbond.funded, Uint128(250));
+        assert_eq!(residue, Uint128::zero());
 
         // Add overflowing fund
-        let residue = unbond.fund(500);
+        let residue = unbond.fund(Uint128(500));
         assert!(unbond.is_funded());
-        assert_eq!(residue, 250);
+        assert_eq!(residue, Uint128(250));
 
         // Add to funded fund
-        let residue = unbond.fund(300);
-        assert_eq!(residue, 300);
+        let residue = unbond.fund(Uint128(300));
+        assert_eq!(residue, Uint128(300));
     }
 }
