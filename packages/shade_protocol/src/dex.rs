@@ -99,6 +99,29 @@ pub fn best_price<S: Storage, A: Api, Q: Querier>(
     Ok((mint::translate_price(scrt_result.rate, *max_amount), pairs[index].clone()))
 }
 
+pub fn price<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    pair: TradingPair,
+    sscrt: Contract,
+    band: Contract,
+) -> StdResult<Uint128> {
+
+    match pair.clone().dex {
+        Dex::SecretSwap => {
+            Ok(secretswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?)
+        },
+        Dex::SiennaSwap => {
+            Ok(sienna::price(&deps, pair.clone(), sscrt.clone(), band.clone())?)
+        },
+        /*
+        ShadeSwap => {
+            return Err(StdErr::generic_err("ShadeSwap Unavailable"));
+        },
+        */
+    }
+}
+
+
 /*
 pub fn best_pair<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,

@@ -1,10 +1,9 @@
-use crate::state::{config_r, index_r, sswap_pairs_r, sienna_pairs_r};
+use crate::state::{config_r, index_r, dex_pairs_r};
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use shade_protocol::{
     band,
     dex,
     oracle::{IndexElement, QueryAnswer},
-    secretswap,
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
@@ -23,28 +22,20 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
         return band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), config.band);
     }
 
+    if let Some(dex_pairs) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
 
-    // Find registered paired for this asset & sSCRT
-    let mut dex_pairs = vec![];
-    if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-        dex_pairs.push(sswap_pair);
-    }
-
-    if let Some(sienna_pair) = sienna_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-        dex_pairs.push(sienna_pair);
-    }
-
-    if dex_pairs.len() > 0 {
-        
-        return Ok(band::ReferenceData {
-            rate: dex::aggregate_price(&deps, 
-                                       dex_pairs, 
-                                       config.sscrt, 
-                                       config.band
-            )?,
-            last_updated_base: 0,
-            last_updated_quote: 0,
-        });
+        if dex_pairs.len() > 0 {
+            
+            return Ok(band::ReferenceData {
+                rate: dex::aggregate_price(&deps, 
+                                           dex_pairs, 
+                                           config.sscrt, 
+                                           config.band
+                )?,
+                last_updated_base: 0,
+                last_updated_quote: 0,
+            });
+        }
     }
 
     // Index
@@ -72,20 +63,14 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
 
     for (i, sym) in symbols.iter().enumerate() {
 
-        let mut dex_pairs = vec![];
-
-        if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(sym.as_bytes())? {
-            dex_pairs.push(sswap_pair);
-        }
-        if let Some(sienna_pair) = sienna_pairs_r(&deps.storage).may_load(sym.as_bytes())? {
-            dex_pairs.push(sienna_pair);
-        }
-
         // Aggregate DEX pair prices
-        if dex_pairs.len() > 0 {
-            results[i] = dex::aggregate_price(&deps, dex_pairs, 
-                                           config.sscrt.clone(), config.band.clone())?;
+        if let Some(dex_pairs) = dex_pairs_r(&deps.storage).may_load(sym.as_bytes())? {
+            if dex_pairs.len() > 0 {
+                results[i] = dex::aggregate_price(&deps, dex_pairs, 
+                                               config.sscrt.clone(), config.band.clone())?;
+            }
         }
+
         // Index
         else if let Some(index) = index_r(&deps.storage).may_load(sym.as_bytes())? {
 
@@ -131,8 +116,8 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     for element in index {
         weight_total += element.weight;
 
-        if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-            price += secretswap::price(deps, sswap_pair, config.sscrt.clone(), config.band.clone())?.multiply_ratio(element.weight, 10u128.pow(18));
+        if let Some(dex_pairs) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+            price += dex::aggregate_price(deps, dex_pairs, config.sscrt.clone(), config.band.clone())?.multiply_ratio(element.weight, 10u128.pow(18));
         } else {
             band_weights.push(element.weight);
             band_bases.push(element.symbol.clone());

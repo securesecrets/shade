@@ -49,6 +49,7 @@ pub enum HandleMsg {
     },
     // Unregister Secret Swap Pair (opposite action to RegisterSswapPair)
     UnregisterPair {
+        symbol: String,
         pair: Contract,
     },
 

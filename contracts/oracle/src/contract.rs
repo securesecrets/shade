@@ -36,7 +36,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             handle::try_update_config(deps, env, admin, band)
         }
         HandleMsg::RegisterPair { pair } => handle::register_pair(deps, env, pair),
-        HandleMsg::UnregisterPair { pair } => handle::unregister_pair(deps, env, pair),
+        HandleMsg::UnregisterPair { symbol, pair } => handle::unregister_pair(deps, env, symbol, pair),
         HandleMsg::RegisterIndex { symbol, basket } => {
             handle::register_index(deps, env, symbol, basket)
         }

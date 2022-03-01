@@ -1,4 +1,4 @@
-use crate::state::{config_r, config_w, index_w, dex_pairs_r, dex_pairs_w, sswap_pairs_r, sswap_pairs_w, sienna_pairs_r, sienna_pairs_w };
+use crate::state::{config_r, config_w, index_w, dex_pairs_r, dex_pairs_w };
 use cosmwasm_std::{
     to_binary, Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage,
 };
@@ -107,6 +107,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
 pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
+    symbol: String,
     pair: Contract,
 ) -> StdResult<HandleResponse> {
 
@@ -116,6 +117,7 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
     }
 
     // TODO: Find token symbol, pull dex pairs, remove contract addr
+    /*
     if secretswap::is_pair(deps, pair.clone())? {
         let (_, token_info) = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
         sswap_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
@@ -124,14 +126,28 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
         let (_, token_info) = fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair.clone())?;
         sienna_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
     }
+    */
 
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UnregisterPair {
-            status: ResponseStatus::Success,
-        })?),
-    })
+    if let Some(mut pair_list) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+
+        if let Some(index) = pair_list.iter().position(|p| p.contract.address == pair.address) {
+            pair_list.remove(index);
+            
+            dex_pairs_w(&mut deps.storage).save(
+                    symbol.as_bytes(), &pair_list)?;
+
+            return Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: Some(to_binary(&HandleAnswer::UnregisterPair {
+                    status: ResponseStatus::Success,
+                })?),
+            });
+        }
+    }
+
+    Err(StdError::generic_err("Pair not found"))
+
 }
 
 ///
@@ -237,27 +253,6 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
         }
         
     }
-
-    /*
-    match sswap_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-        None => {}
-        Some(_) => {
-            return Err(StdError::GenericErr {
-                msg: "symbol collides with an existing SecretSwap Pair".to_string(),
-                backtrace: None,
-            });
-        }
-    }
-    match sienna_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-        None => {}
-        Some(_) => {
-            return Err(StdError::GenericErr {
-                msg: "Symbol collides with an existing Sienna Pair".to_string(),
-                backtrace: None,
-            });
-        }
-    }
-    */
 
     index_w(&mut deps.storage).save(symbol.as_bytes(), &basket)?;
 
