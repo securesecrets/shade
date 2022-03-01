@@ -58,8 +58,6 @@ for b in band_prices:
 print('Registering SILK Index')
 print(oracle.execute({'register_index': {'symbol': 'SILK', 'basket': index_basket}}))
 
-# print('\n'.join(oracle.query({'prices': {'symbols': ['USD', 'SCRT']}})))
-
 symbols = ['USD', 'SCRT', 'SHD', 'SILK']
 print('Querying', symbols)
 print('\n'.join(oracle.query({
