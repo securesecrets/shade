@@ -57,7 +57,7 @@ pub struct TokenTypeAmount {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct SwapSimulation {
-    pub offer: TokenType,
+    pub offer: TokenTypeAmount,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

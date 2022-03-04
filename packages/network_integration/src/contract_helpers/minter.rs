@@ -33,7 +33,7 @@ pub fn initialize_minter(
             treasury: HumanAddr("".to_string()),
             secondary_burn: None,
             limit: Some(mint::Limit::Daily {
-                annual_limit: Uint128(1_000_000_000_000),
+                supply_portion: Uint128(1_000_000_000_000),
                 days: Uint128(1),
             }),
         },
