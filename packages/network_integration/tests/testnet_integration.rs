@@ -1,5 +1,6 @@
 use colored::*;
-use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{to_binary, Binary, HumanAddr};
 use network_integration::utils::store_struct;
 use network_integration::{
     contract_helpers::{
@@ -132,11 +133,11 @@ fn run_testnet() -> Result<()> {
             address: HumanAddr::from(shade.address.clone()),
             code_hash: shade.code_hash.clone(),
         },
-        funding_amount: Uint128(1000000),
+        funding_amount: Uint128::new(1000000),
         funding_deadline: 180,
         voting_deadline: 180,
         // 5 shade is the minimum
-        quorum: Uint128(5000000),
+        quorum: Uint128::new(5000000),
     };
 
     let governance = init(
@@ -328,7 +329,7 @@ fn run_testnet() -> Result<()> {
         handle(
             &snip20::HandleMsg::Send {
                 recipient: HumanAddr::from(governance.address.clone()),
-                amount: Uint128(1000000),
+                amount: Uint128::new(1000000),
                 msg: Some(to_binary(&proposal).unwrap()),
                 memo: None,
                 padding: None,
@@ -393,9 +394,9 @@ fn run_testnet() -> Result<()> {
             let query: governance::QueryAnswer = query(&governance, msg, None)?;
 
             if let governance::QueryAnswer::ProposalVotes { status } = query {
-                assert_eq!(status.abstain, Uint128(0));
-                assert_eq!(status.no, Uint128(0));
-                assert_eq!(status.yes, Uint128(2500000));
+                assert_eq!(status.abstain, Uint128::zero());
+                assert_eq!(status.no, Uint128::zero());
+                assert_eq!(status.yes, Uint128::new(2500000));
             } else {
                 assert!(false, "Query returned unexpected response")
             }
@@ -461,7 +462,7 @@ fn run_testnet() -> Result<()> {
         handle(
             &snip20::HandleMsg::Send {
                 recipient: HumanAddr::from(governance.address.clone()),
-                amount: Uint128(1000000),
+                amount: Uint128::new(1000000),
                 msg: Some(to_binary(&proposal).unwrap()),
                 memo: None,
                 padding: None,
@@ -575,7 +576,7 @@ fn run_testnet() -> Result<()> {
         let proposal = get_latest_proposal(&governance)?;
         let proposal_time = chrono::offset::Utc::now().timestamp() as u64;
 
-        let lost_amount = Uint128(500000);
+        let lost_amount = Uint128::new(500000);
         let balance_before = get_balance(&shade, account.clone());
 
         handle(

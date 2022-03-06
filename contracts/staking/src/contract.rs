@@ -7,9 +7,9 @@ use crate::{
     state::{config_w, stake_state_w, unbonding_w},
 };
 use binary_heap_plus::BinaryHeap;
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
-    Uint128,
 };
 use secret_toolkit::snip20::register_receive_msg;
 use shade_protocol::staking::{stake::Stake, Config, HandleMsg, InitMsg, QueryMsg};

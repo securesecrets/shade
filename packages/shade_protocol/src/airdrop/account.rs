@@ -1,5 +1,6 @@
 use crate::airdrop::errors::permit_rejected;
-use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult};
 use query_authentication::viewing_keys::ViewingKey;
 use query_authentication::{
     permit::{bech32_to_canonical, Permit},

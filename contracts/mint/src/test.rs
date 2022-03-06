@@ -1,21 +1,23 @@
 #[cfg(test)]
 pub mod tests {
+    use cosmwasm_math_compat::Uint128;
     use cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-        Extern, StdError, Uint128, HumanAddr,
+        Extern, HumanAddr, StdError,
     };
     use mockall_double::double;
     use shade_protocol::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg};
 
     use crate::{
         contract::{handle, init, query},
-        handle::{calculate_portion, calculate_mint, try_burn},
+        handle::{calculate_mint, calculate_portion, try_burn},
     };
 
     mod mock_secret_toolkit {
 
-        use cosmwasm_std::{HumanAddr, Querier, StdResult, Uint128};
+        use cosmwasm_math_compat::Uint128;
+        use cosmwasm_std::{HumanAddr, Querier, StdResult};
         use secret_toolkit::snip20::TokenInfo;
 
         pub fn mock_token_info_query<Q: Querier>(
@@ -28,7 +30,7 @@ pub mod tests {
                 name: "Token".to_string(),
                 symbol: "TKN".to_string(),
                 decimals: 6,
-                total_supply: Option::from(Uint128(150)),
+                total_supply: Some(Uint128::new(150u128).into()),
             })
         }
     }
@@ -361,10 +363,10 @@ pub mod tests {
     */
     #[test]
     fn capture_calc() {
-        let amount = Uint128(1_000_000_000_000_000_000);
+        let amount = Uint128::new(1_000_000_000_000_000_000u128);
         //10%
-        let capture = Uint128(100_000_000_000_000_000);
-        let expected = Uint128(100_000_000_000_000_000);
+        let capture = Uint128::new(100_000_000_000_000_000u128);
+        let expected = Uint128::new(100_000_000_000_000_000u128);
         let value = calculate_portion(amount, capture);
         assert_eq!(value, expected);
     }
@@ -372,9 +374,9 @@ pub mod tests {
     fn mint_algorithm_simple() {
         // In this example the "sent" value is 1 with 6 decimal places
         // The mint value will be 1 with 3 decimal places
-        let price = Uint128(1_000_000_000_000_000_000);
-        let in_amount = Uint128(1_000_000);
-        let expected_value = Uint128(1_000);
+        let price = Uint128::new(1_000_000_000_000_000_000u128);
+        let in_amount = Uint128::new(1_000_000u128);
+        let expected_value = Uint128::new(1_000u128);
         let value = calculate_mint(price, in_amount, 6, price, 3);
 
         assert_eq!(value, expected_value);
@@ -384,10 +386,10 @@ pub mod tests {
     fn mint_algorithm_complex_1() {
         // In this example the "sent" value is 1.8 with 6 decimal places
         // The mint value will be 3.6 with 12 decimal places
-        let in_price = Uint128(2_000_000_000_000_000_000);
-        let target_price = Uint128(1_000_000_000_000_000_000);
-        let in_amount = Uint128(1_800_000);
-        let expected_value = Uint128(3_600_000_000_000);
+        let in_price = Uint128::new(2_000_000_000_000_000_000u128);
+        let target_price = Uint128::new(1_000_000_000_000_000_000u128);
+        let in_amount = Uint128::new(1_800_000u128);
+        let expected_value = Uint128::new(3_600_000_000_000u128);
         let value = calculate_mint(in_price, in_amount, 6, target_price, 12);
 
         assert_eq!(value, expected_value);
@@ -397,10 +399,10 @@ pub mod tests {
     fn mint_algorithm_complex_2() {
         // In amount is 50.000 valued at 20
         // target price is 100$ with 6 decimals
-        let in_price = Uint128(20_000_000_000_000_000_000);
-        let target_price = Uint128(100_000_000_000_000_000_000);
-        let in_amount = Uint128(50_000);
-        let expected_value = Uint128(10_000_000);
+        let in_price = Uint128::new(20_000_000_000_000_000_000u128);
+        let target_price = Uint128::new(100_000_000_000_000_000_000u128);
+        let in_amount = Uint128::new(50_000u128);
+        let expected_value = Uint128::new(10_000_000u128);
         let value = calculate_mint(in_price, in_amount, 3, target_price, 6);
 
         assert_eq!(value, expected_value);

@@ -3,9 +3,9 @@ use crate::state::{
     user_unbonding_w, viewking_key_w,
 };
 use binary_heap_plus::BinaryHeap;
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     to_binary, Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage,
-    Uint128,
 };
 use secret_toolkit::{snip20::send_msg, utils::HandleCallback};
 use shade_protocol::utils::asset::Contract;
@@ -35,7 +35,7 @@ pub(crate) fn calculate_tokens(shares: Uint128, state: &Stake) -> Uint128 {
 }
 
 pub(crate) fn calculate_rewards(user: &UserStake, state: &Stake) -> Uint128 {
-    (calculate_tokens(user.shares, state) - user.tokens_staked).unwrap()
+    calculate_tokens(user.shares, state) - user.tokens_staked
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
@@ -140,8 +140,8 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
             Some(user_state) => {
                 if user_state.tokens_staked >= amount {
                     UserStake {
-                        shares: (user_state.shares - shares)?,
-                        tokens_staked: (user_state.tokens_staked - amount)?,
+                        shares: user_state.shares.checked_sub(shares)?,
+                        tokens_staked: user_state.tokens_staked.checked_sub(amount)?,
                     }
                 } else {
                     return Err(StdError::GenericErr {
@@ -153,8 +153,8 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         };
 
         // Theres no pretty way of doing this
-        state.total_shares = (state.total_shares - shares)?;
-        state.total_tokens = (state.total_tokens - amount)?;
+        state.total_shares = state.total_shares.checked_sub(shares)?;
+        state.total_tokens = state.total_tokens.checked_sub(amount)?;
 
         Ok(new_state)
     })?;
@@ -206,9 +206,9 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
     let user_state = staker_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     // check that percentage is <= 100 and calculate distribution
     let mut total_votes = VoteTally {
-        yes: Uint128(0),
-        no: Uint128(0),
-        abstain: Uint128(0),
+        yes: Uint128::zero(),
+        no: Uint128::zero(),
+        abstain: Uint128::zero(),
     };
 
     let mut count = 0;
@@ -277,7 +277,7 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
 
             messages.push(send_msg(
                 env.message.sender.clone(),
-                total,
+                total.into(),
                 None,
                 None,
                 None,
@@ -316,13 +316,13 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
 
             let rewards = calculate_rewards(&user, &state);
             let shares = calculate_shares(rewards, &state);
-            user.shares = (user.shares - shares)?;
-            state.total_shares = (state.total_shares - shares)?;
-            state.total_tokens = (state.total_tokens - rewards)?;
+            user.shares = user.shares.checked_sub(shares)?;
+            state.total_shares = state.total_shares.checked_sub(shares)?;
+            state.total_tokens = state.total_tokens.checked_sub(rewards)?;
 
             messages.push(send_msg(
                 env.message.sender.clone(),
-                rewards,
+                rewards.into(),
                 None,
                 None,
                 None,

@@ -1,7 +1,8 @@
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std;
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage, Uint128,
+    Querier, StdError, StdResult, Storage,
 };
 use secret_toolkit;
 use secret_toolkit::snip20::{
@@ -71,7 +72,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                     } => {
                         messages.push(send_msg(
                             contract.address.clone(),
-                            amount.multiply_ratio(*allocation, 10u128.pow(18)),
+                            amount.multiply_ratio(*allocation, 10u128.pow(18)).into(),
                             None,
                             None,
                             None,
@@ -88,7 +89,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
                         messages.push(send_msg(
                             contract.address.clone(),
-                            amount.multiply_ratio(*allocation, 10u128.pow(18)),
+                            amount.multiply_ratio(*allocation, 10u128.pow(18)).into(),
                             None,
                             None,
                             None,
@@ -213,24 +214,26 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
                         1,
                         full_asset.contract.code_hash.clone(),
                         full_asset.contract.address.clone(),
-                    )?;
+                    )?
+                    .allowance
+                    .into();
 
-                    if amount > cur_allowance.allowance {
+                    if amount > cur_allowance {
                         // Increase to monthly allowance amount
                         messages.push(increase_allowance_msg(
                             address.clone(),
-                            (amount - cur_allowance.allowance)?,
+                            amount.checked_sub(cur_allowance)?.into(),
                             None,
                             None,
                             1,
                             full_asset.contract.code_hash.clone(),
                             full_asset.contract.address.clone(),
                         )?);
-                    } else if amount < cur_allowance.allowance {
+                    } else if amount < cur_allowance {
                         // Decrease to monthly allowance
                         messages.push(decrease_allowance_msg(
                             address.clone(),
-                            (cur_allowance.allowance - amount)?,
+                            amount.checked_sub(cur_allowance)?.into(),
                             None,
                             None,
                             1,
@@ -266,7 +269,7 @@ pub fn one_time_allowance<S: Storage, A: Api, Q: Querier>(
     if let Some(full_asset) = assets_r(&deps.storage).may_load(&asset.to_string().as_bytes())? {
         messages.push(increase_allowance_msg(
             spender,
-            amount,
+            amount.into(),
             expiration,
             None,
             1,
@@ -520,7 +523,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
                 };
         }
 
-        if (allocated_portion + alloc_portion) >= Uint128(10u128.pow(18)) {
+        if (allocated_portion + alloc_portion) >= Uint128::new(10u128.pow(18)) {
             return Err(StdError::generic_err(
                 "Invalid allocation total exceeding 100%",
             ));

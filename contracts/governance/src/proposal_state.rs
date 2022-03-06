@@ -1,4 +1,5 @@
-use cosmwasm_std::{Storage, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::Storage;
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,

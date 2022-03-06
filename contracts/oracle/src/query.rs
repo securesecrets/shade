@@ -1,5 +1,6 @@
 use crate::state::{config_r, index_r, sswap_pairs_r};
-use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage};
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     band::{BandQuery, ReferenceData},
@@ -47,7 +48,7 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Vec<Uint128>> {
     let mut band_symbols = vec![];
     let mut band_quotes = vec![];
-    let mut results = vec![Uint128(0); symbols.len()];
+    let mut results = vec![Uint128::zero(); symbols.len()];
 
     for (i, sym) in symbols.iter().enumerate() {
         if let Some(sswap_pair) = sswap_pairs_r(&deps.storage).may_load(sym.as_bytes())? {
@@ -156,7 +157,7 @@ pub fn sswap_simulate<S: Storage, A: Api, Q: Querier>(
 
     let response: SimulationResponse = PairQuery::Simulation {
         offer_asset: Asset {
-            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
+            amount: Uint128::new(1_000_000u128), // 1 sSCRT (6 decimals)
             info: AssetInfo {
                 token: Token {
                     contract_addr: config.sscrt.address,

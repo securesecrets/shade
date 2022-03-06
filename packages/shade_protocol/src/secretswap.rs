@@ -1,5 +1,6 @@
 use crate::utils::asset::Contract;
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::HumanAddr;
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};

@@ -2,7 +2,8 @@ use crate::{
     handle::calculate_rewards,
     state::{config_r, stake_state_r, staker_r, unbonding_r, user_unbonding_r, viewking_key_r},
 };
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
 use shade_protocol::staking::QueryAnswer;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {

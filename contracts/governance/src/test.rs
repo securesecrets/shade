@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod tests {
     use crate::contract;
+    use cosmwasm_math_compat::Uint128;
     use cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies, mock_env},
-        Api, Extern, HumanAddr, Querier, Storage, Uint128,
+        Api, Extern, HumanAddr, Querier, Storage,
     };
     use shade_protocol::utils::asset::Contract;
     use shade_protocol::utils::generic_response::ResponseStatus;
@@ -27,11 +28,11 @@ mod tests {
                 address: HumanAddr::from(""),
                 code_hash: String::from(""),
             },
-            funding_amount: Uint128(1000000),
+            funding_amount: Uint128::new(1000000u128),
             funding_deadline: 180,
             voting_deadline: 180,
             // 5 shade is the minimum
-            quorum: Uint128(5000000),
+            quorum: Uint128::new(5000000u128),
         };
         let res = contract::init(&mut deps, env, governance_init_msg).unwrap();
         assert_eq!(1, res.messages.len());
@@ -40,8 +41,8 @@ mod tests {
         let res = contract::query(
             &deps,
             governance::QueryMsg::GetProposals {
-                start: Uint128(0),
-                end: Uint128(100),
+                start: Uint128::new(0u128),
+                end: Uint128::new(100u128),
                 status: Some(ProposalStatus::Funding),
             },
         )
@@ -93,8 +94,8 @@ mod tests {
         assert_get_proposals(
             &deps,
             governance::QueryMsg::GetProposals {
-                start: Uint128(0),
-                end: Uint128(100),
+                start: Uint128::zero(),
+                end: Uint128::new(100u128),
                 status: None,
             },
             |proposals| {
@@ -107,8 +108,8 @@ mod tests {
         assert_get_proposals(
             &deps,
             governance::QueryMsg::GetProposals {
-                start: Uint128(0),
-                end: Uint128(100),
+                start: Uint128::zero(),
+                end: Uint128::new(100u128),
                 status: Some(ProposalStatus::Funding),
             },
             |proposals| {
@@ -121,8 +122,8 @@ mod tests {
         assert_get_proposals(
             &deps,
             governance::QueryMsg::GetProposals {
-                start: Uint128(0),
-                end: Uint128(100),
+                start: Uint128::zero(),
+                end: Uint128::new(100u128),
                 status: Some(ProposalStatus::Voting),
             },
             |proposals| {

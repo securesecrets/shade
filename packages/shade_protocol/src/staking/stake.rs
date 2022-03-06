@@ -1,4 +1,4 @@
-use cosmwasm_std::Uint128;
+use cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;

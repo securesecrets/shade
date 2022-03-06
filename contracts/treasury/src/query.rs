@@ -68,7 +68,7 @@ pub fn allowances<S: Storage, A: Api, Q: Querier>(
         return Ok(treasury::QueryAnswer::Allowances {
             allowances: vec![treasury::AllowanceData {
                 spender: spender.clone(),
-                amount: cur_allowance.allowance,
+                amount: cur_allowance.allowance.into(),
             }],
         });
     }

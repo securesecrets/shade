@@ -1,4 +1,5 @@
-use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage};
 use shade_protocol::governance::{
     proposal::{ProposalStatus, QueriedProposal},
     QueryAnswer,
@@ -54,10 +55,10 @@ pub fn proposals<S: Storage, A: Api, Q: Querier>(
         });
     }
 
-    let clamped_start = start.max(Uint128(1));
+    let clamped_start = start.max(Uint128::new(1u128));
 
     for i in clamped_start.u128()..((end + clamped_start).min(max).u128() + 1) {
-        let proposal = build_proposal(deps, Uint128(i))?;
+        let proposal = build_proposal(deps, Uint128::new(i))?;
 
         // Filter proposal by status if it was specified in fn params.
         if let Some(s) = &status {

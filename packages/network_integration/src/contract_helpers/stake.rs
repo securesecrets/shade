@@ -2,7 +2,8 @@ use crate::{
     contract_helpers::{governance::init_with_gov, minter::get_balance},
     utils::{print_contract, print_header, ACCOUNT_KEY, GAS, STAKING_FILE},
 };
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::HumanAddr;
 use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
@@ -50,9 +51,9 @@ pub fn setup_staker(
 
     // Query current balance
     let original_balance = get_balance(&shade_net, staking_account.clone());
-    let stake_amount = Uint128(7000000);
-    let unbond_amount = Uint128(2000000);
-    let balance_after_stake = (original_balance - stake_amount).unwrap();
+    let stake_amount = Uint128::new(7000000u128);
+    let unbond_amount = Uint128::new(2000000u128);
+    let balance_after_stake = original_balance - stake_amount;
 
     // Make a query key
     {
@@ -129,16 +130,13 @@ pub fn setup_staker(
     }
 
     // Check if unstaking
-    assert_eq!(
-        get_total_staked(&staker),
-        (stake_amount - unbond_amount).unwrap()
-    );
+    assert_eq!(get_total_staked(&staker), stake_amount - unbond_amount);
 
     // Check if user unstaking
     {
         let user_stake = get_user_stake(&staker, staking_account.clone(), "password".to_string());
 
-        assert_eq!(user_stake.staked, (stake_amount - unbond_amount).unwrap());
+        assert_eq!(user_stake.staked, stake_amount - unbond_amount);
         assert_eq!(user_stake.unbonding, unbond_amount);
     }
 
