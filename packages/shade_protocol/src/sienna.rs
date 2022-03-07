@@ -119,10 +119,15 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     Ok(match PairQuery::PairInfo.query::<Q, Result<PairInfoResponse, StdError>>(
         &deps.querier,
         pair.code_hash,
-        pair.address,
-    )? {
+        pair.address.clone(),
+    ) {
         Ok(_) => true,
-        Err(_) => false,
+        //Err(_) => false,
+        Err(_) => {
+            return Err(StdError::generic_err(
+                format!("NOT SIENNA PAIR {}", pair.address.clone())
+            ));
+        },
     })
 }
 

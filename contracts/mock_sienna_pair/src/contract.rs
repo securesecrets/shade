@@ -7,6 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use secret_toolkit::utils::{InitCallback, Query};
 use shade_protocol::{
+    dex::pool_take_amount,
     sienna::{
         PairInfo, Pair, TokenType, TokenTypeAmount, 
         PairQuery, PairInfoResponse, 
@@ -111,7 +112,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: PairQuery,
 ) -> StdResult<Binary> {
     match msg {
-        PairQuery::PairInfo { } => {
+        PairQuery::PairInfo => {
             to_binary(&PairInfoResponse {
                 pair_info: pair_info_r(&deps.storage).load()?,
             })
@@ -125,14 +126,14 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                     //TODO: check you dont exceed pool size
                     if custom_token == pair_info.pair.token_0 {
                         return to_binary(&SimulationResponse {
-                            return_amount: Uint128((pair_info.amount_0.u128() * pair_info.amount_1.u128()) / (pair_info.amount_0.u128() + offer.amount.u128()) - pair_info.amount_1.u128()),
+                            return_amount: pool_take_amount(offer.amount, pair_info.amount_0, pair_info.amount_1),
                             spread_amount: Uint128::zero(),
                             commission_amount: Uint128::zero(),
                         })
                     }
                     else if custom_token == pair_info.pair.token_1 {
                         return to_binary(&SimulationResponse {
-                            return_amount: Uint128((pair_info.amount_0.u128() * pair_info.amount_1.u128()) / (pair_info.amount_1.u128() + offer.amount.u128()) - pair_info.amount_0.u128()),
+                            return_amount: pool_take_amount(offer.amount, pair_info.amount_1, pair_info.amount_0),
                             spread_amount: Uint128::zero(),
                             commission_amount: Uint128::zero(),
                         })

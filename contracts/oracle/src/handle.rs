@@ -32,7 +32,9 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
 
     if secretswap::is_pair(deps, pair.clone())? {
 
-         let td = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
+        return Err(StdError::generic_err("SSWAP PAIR!!"));
+
+        let td = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
         token_data = Some(td.clone());
 
         trading_pair = Some(dex::TradingPair {
@@ -47,6 +49,9 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
 
     }
     else if sienna::is_pair(deps, pair.clone())? {
+
+        return Err(StdError::generic_err("SIENNA PAIR!!"));
+
         let td = fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
         token_data = Some(td.clone());
 

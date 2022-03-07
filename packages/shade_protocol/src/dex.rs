@@ -26,6 +26,20 @@ pub struct TradingPair{
     pub asset: Snip20Asset,
 }
 
+/* give_amount into give_pool
+ * returns how much to be received from take_pool
+ */
+pub fn pool_take_amount(
+    give_amount: Uint128,
+    give_pool: Uint128,
+    take_pool: Uint128,
+) -> Uint128 {
+    Uint128(
+        (give_pool.u128() * take_pool.u128()) 
+        / (give_pool.u128() + give_amount.u128()) 
+        - take_pool.u128())
+}
+
 pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     pairs: Vec<TradingPair>,

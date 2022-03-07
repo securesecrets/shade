@@ -84,10 +84,15 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     Ok(match (PairQuery::Pair {}).query::<Q, Result<PairResponse, StdError>>(
         &deps.querier,
         pair.code_hash,
-        pair.address,
+        pair.address.clone(),
     ) {
         Ok(_) => true,
-        Err(_) => false,
+        //Err(_) => false,
+        Err(_) => {
+            return Err(StdError::generic_err(
+                format!("NOT SSWAP PAIR {}", pair.address.clone())
+            ));
+        },
     })
 }
 
