@@ -32,8 +32,6 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
 
     if secretswap::is_pair(deps, pair.clone())? {
 
-        return Err(StdError::generic_err("SSWAP PAIR!!"));
-
         let td = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
         token_data = Some(td.clone());
 
@@ -49,8 +47,6 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
 
     }
     else if sienna::is_pair(deps, pair.clone())? {
-
-        return Err(StdError::generic_err("SIENNA PAIR!!"));
 
         let td = fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
         token_data = Some(td.clone());
@@ -200,23 +196,27 @@ fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
     // Query for snip20's in the pair
-    let response: secretswap::PairResponse =
-        secretswap::PairQuery::Pair {}.query(&deps.querier, pair.code_hash.clone(), pair.address.clone())?;
+    let response: sienna::PairInfoResponse =
+        (sienna::PairQuery::PairInfo).query(
+            &deps.querier, 
+            pair.code_hash.clone(), 
+            pair.address.clone()
+    )?;
 
     let mut token_contract = Contract {
-        address: response.asset_infos[0].token.contract_addr.clone(),
-        code_hash: response.asset_infos[0].token.token_code_hash.clone(),
+        address: response.pair_info.pair.token_0.contract_addr,
+        code_hash: response.pair_info.pair.token_0.token_code_hash,
     };
 
     // if thats sscrt, switch it
     if token_contract.address == sscrt_addr {
         token_contract = Contract {
-            address: response.asset_infos[1].token.contract_addr.clone(),
-            code_hash: response.asset_infos[1].token.token_code_hash.clone(),
+            address: response.pair_info.pair.token_1.contract_addr,
+            code_hash: response.pair_info.pair.token_1.token_code_hash,
         }
     }
     // if neither is sscrt
-    else if response.asset_infos[1].token.contract_addr != sscrt_addr {
+    else {
         return Err(StdError::NotFound {
             kind: "Not an SSCRT Pair".to_string(),
             backtrace: None,

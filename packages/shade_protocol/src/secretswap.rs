@@ -81,34 +81,35 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     pair: Contract,
 ) -> StdResult<bool> {
 
-    Ok(match (PairQuery::Pair {}).query::<Q, Result<PairResponse, StdError>>(
+    Ok(match (PairQuery::Pair {}).query::<Q, PairResponse>(
         &deps.querier,
         pair.code_hash,
         pair.address.clone(),
     ) {
         Ok(_) => true,
-        //Err(_) => false,
-        Err(_) => {
-            return Err(StdError::generic_err(
-                format!("NOT SSWAP PAIR {}", pair.address.clone())
-            ));
-        },
+        Err(_) => false,
     })
 }
 
 pub fn price<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    sswap_pair: dex::TradingPair,
+    pair: dex::TradingPair,
     sscrt: Contract,
     band: Contract,
 ) -> StdResult<Uint128> {
 
-    let scrt_result = band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), band)?;
-
-    //return Err(StdError::NotFound { kind: translate_price(scrt_result.rate, trade_price).to_string(), backtrace: None });
+    let scrt_result = band::reference_data(
+        deps, 
+        "SCRT".to_string(), 
+        "USD".to_string(), 
+        band
+    )?;
 
     // SCRT-USD / SCRT-symbol
-    Ok(mint::translate_price(scrt_result.rate, simulate(deps, sswap_pair, sscrt)?))
+    Ok(mint::translate_price(
+            scrt_result.rate, 
+            simulate(deps, pair, sscrt)?
+    ))
 }
 
 pub fn simulate<S: Storage, A: Api, Q: Querier>(

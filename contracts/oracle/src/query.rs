@@ -1,5 +1,5 @@
 use crate::state::{config_r, index_r, dex_pairs_r};
-use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
+use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128, StdError};
 use shade_protocol::{
     band,
     dex,

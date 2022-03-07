@@ -97,16 +97,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     // TODO: actual swap handle
 }
 
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum QueryMsg {
-    secretswap::PairQuery::Simulation,
-    secretswap::PairQuery::Pair,
-    secretswap::PairQuery::Pool,
-}
-*/
-
 pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: PairQuery,
@@ -123,17 +113,25 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 TokenType::CustomToken { custom_token } => {
 
                     let pair_info = pair_info_r(&deps.storage).load()?;
-                    //TODO: check you dont exceed pool size
+                    //TODO: check swap doesnt exceed pool size
                     if custom_token == pair_info.pair.token_0 {
                         return to_binary(&SimulationResponse {
-                            return_amount: pool_take_amount(offer.amount, pair_info.amount_0, pair_info.amount_1),
+                            return_amount: pool_take_amount(
+                                offer.amount, 
+                                pair_info.amount_0, 
+                                pair_info.amount_1
+                            ),
                             spread_amount: Uint128::zero(),
                             commission_amount: Uint128::zero(),
                         })
                     }
                     else if custom_token == pair_info.pair.token_1 {
                         return to_binary(&SimulationResponse {
-                            return_amount: pool_take_amount(offer.amount, pair_info.amount_1, pair_info.amount_0),
+                            return_amount: pool_take_amount(
+                                offer.amount, 
+                                pair_info.amount_1, 
+                                pair_info.amount_0
+                            ),
                             spread_amount: Uint128::zero(),
                             commission_amount: Uint128::zero(),
                         })

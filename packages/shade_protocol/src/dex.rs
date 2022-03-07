@@ -7,7 +7,7 @@ use crate::{
     band,
     //shadeswap,
 };
-use cosmwasm_std::{Uint128, StdResult, Extern, Querier, Api, Storage};
+use cosmwasm_std::{Uint128, StdResult, Extern, Querier, Api, Storage, StdError};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -35,9 +35,11 @@ pub fn pool_take_amount(
     take_pool: Uint128,
 ) -> Uint128 {
     Uint128(
-        (give_pool.u128() * take_pool.u128()) 
-        / (give_pool.u128() + give_amount.u128()) 
-        - take_pool.u128())
+        take_pool.u128() - (
+            (give_pool.u128() * take_pool.u128())
+            / (give_pool.u128() + give_amount.u128())
+        )
+    )
 }
 
 pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
@@ -71,8 +73,14 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    /*
+    return Err(StdError::generic_err(
+        format!("pool_sizes {}", pool_sizes.len())
+    ));
+    */
     let combined_cp: u128 = pool_sizes.iter().map(|i| i.u128()).sum();
     let mut weighted_sum = 0u128;
+
 
     for (price, pool_size) in prices.iter().zip(pool_sizes.iter()) {
         //weighted_sum = weighted_sum + price.multiply_ratio(*pool_size, combined_cp).u128();

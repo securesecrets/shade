@@ -64,9 +64,7 @@ pub struct SwapSimulation {
 #[serde(rename_all = "snake_case")]
 pub enum PairQuery {
     /*
-    Pair {},
     Pool {},
-    Simulation { offer_asset: Asset },
     */
     PairInfo,
     SwapSimulation { offer: TokenTypeAmount },
@@ -116,18 +114,18 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     pair: Contract,
 ) -> StdResult<bool> {
     
-    Ok(match PairQuery::PairInfo.query::<Q, Result<PairInfoResponse, StdError>>(
+    Ok(match (PairQuery::PairInfo).query::<Q, PairInfoResponse>(
         &deps.querier,
         pair.code_hash,
         pair.address.clone(),
     ) {
         Ok(_) => true,
-        //Err(_) => false,
+        Err(_) => false,
+        /*
         Err(_) => {
-            return Err(StdError::generic_err(
-                format!("NOT SIENNA PAIR {}", pair.address.clone())
-            ));
+            return Err(StdError::generic_err("FAILED SIENNA CHECK"));
         },
+        */
     })
 }
 

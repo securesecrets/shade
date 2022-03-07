@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use shade_protocol::{
     band::{InitMsg, ReferenceData},
     utils::asset::Contract,
+    dex,
     secretswap::{
         PairQuery, SimulationResponse,
         PoolResponse, PairResponse,
@@ -127,11 +128,48 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             to_binary(&pair_info_r(&deps.storage).load()?)
         },
         PairQuery::Simulation { offer_asset } => {
-            to_binary(&SimulationResponse {
-                return_amount: Uint128::zero(),
-                spread_amount: Uint128::zero(),
-                commission_amount: Uint128::zero(),
-            })
+            let pool = pool_r(&deps.storage).load()?;
+
+            if pool.assets[0].info == offer_asset.info {
+                /*
+                let take_amount = dex::pool_take_amount(
+                        offer_asset.amount,
+                        pool.assets[0].amount,
+                        pool.assets[1].amount,
+                    );
+
+                return Err(StdError::generic_err(
+                        format!("INPUT 0 pools input: {}, give: {}, take: {}", 
+                                offer_asset.amount,
+                                pool.assets[0].amount,
+                                pool.assets[1].amount
+                        )
+                ));
+                */
+                let resp = SimulationResponse {
+                    return_amount: dex::pool_take_amount(
+                        offer_asset.amount,
+                        pool.assets[0].amount,
+                        pool.assets[1].amount,
+                    ),
+                    spread_amount: Uint128::zero(),
+                    commission_amount: Uint128::zero(),
+                };
+                return to_binary(&resp);
+            }
+            else if pool.assets[1].info == offer_asset.info {
+                return to_binary(&SimulationResponse {
+                    return_amount: dex::pool_take_amount(
+                        offer_asset.amount,
+                        pool.assets[1].amount,
+                        pool.assets[0].amount,
+                    ),
+                    spread_amount: Uint128::zero(),
+                    commission_amount: Uint128::zero(),
+                })
+            }
+
+            return Err(StdError::generic_err("Not a token on this pair"))
         },
 
     }
