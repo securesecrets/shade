@@ -95,3 +95,21 @@ pub trait BucketStorage: Serialize + DeserializeOwned {
         Self::write(storage).save(key, self)
     }
 }
+
+/// Newtypes will be used extensively with this trait
+macro_rules! newtype_deref {
+    (() $(pub)* struct $name:ident(pub $t0:ty);) => {
+        impl ::std::ops::Deref for $name {
+            type Target = $t0;
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl ::std::ops::DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+    };
+    }
