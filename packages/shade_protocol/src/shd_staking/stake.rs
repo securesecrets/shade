@@ -106,8 +106,8 @@ impl VecQueueMerge for QueueItem {
 }
 
 // Queue item is used for both user unbonding and user vote cooldown
-use QueueItem as Unbonding;
-use QueueItem as Cooldown;
+pub use QueueItem as Unbonding;
+pub use QueueItem as Cooldown;
 
 // A flexible queue system
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
