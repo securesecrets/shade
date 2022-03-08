@@ -115,11 +115,11 @@ use QueueItem as Cooldown;
 pub struct VecQueue<T: Ord + Serialize + Clone + VecQueueMerge>(pub Vec<T>);
 
 impl<T: Ord + Serialize + Clone + VecQueueMerge> VecQueue<T> {
-    fn new(vec: Vec<T>) -> Self {
+    pub fn new(vec: Vec<T>) -> Self {
         Self(vec)
     }
 
-    fn push(&mut self, item: &T) {
+    pub fn push(&mut self, item: &T) {
         // Look if item is in list
         match self.0.binary_search(item) {
             Ok(index) => {
@@ -132,7 +132,7 @@ impl<T: Ord + Serialize + Clone + VecQueueMerge> VecQueue<T> {
         }
     }
 
-    fn pop(&mut self) -> T {
+    pub fn pop(&mut self) -> T {
         self.0.pop()
     }
 }
