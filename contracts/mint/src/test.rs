@@ -405,4 +405,35 @@ pub mod tests {
 
         assert_eq!(value, expected_value);
     }
+
+    macro_rules! mint_algorithm_tests {
+        ($($name:ident: $value:expr,)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    let (in_price, in_amount, in_decimals, target_price, target_decimals, expected_value) = $value;
+                    assert_eq!(calculate_mint(in_price, in_amount, in_decimals, target_price, target_decimals), expected_value);
+                }
+            )*
+        }
+    }
+
+    mint_algorithm_tests!{
+        mint_simple_0: (
+            Uint128(1_000_000_000_000_000_000), //Burn price
+            Uint128(1_000_000),                 //Burn amount
+            6u8,                                //Burn decimals
+            Uint128(1_000_000_000_000_000_000), //Mint price
+            3u8,                                //Mint decimals
+            Uint128(1_000),                     //Expected value
+        ),
+        mint_complex_0: (
+            Uint128(2_000_000_000_000_000_000),
+            Uint128(1_800_000),
+            6u8,
+            Uint128(1_000_000_000_000_000_000),
+            12u8,
+            Uint128(3_600_000_000_000),
+        ),
+    }
 }
