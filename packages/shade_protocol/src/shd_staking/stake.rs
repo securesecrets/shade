@@ -132,7 +132,7 @@ impl<T: Ord + Serialize + Clone + VecQueueMerge> VecQueue<T> {
         }
     }
 
-    pub fn pop(&mut self) -> T {
+    pub fn pop(&mut self) -> Option<T> {
         self.0.pop()
     }
 }
