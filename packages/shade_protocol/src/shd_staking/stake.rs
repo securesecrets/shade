@@ -149,7 +149,7 @@ pub struct UserCooldown {
     pub queue: VecQueue<Cooldown>
 }
 
-impl BucketStorage for StakeConfig {
+impl BucketStorage for UserCooldown {
     const NAMESPACE: &'static [u8] = b"user_cooldown";
 }
 
