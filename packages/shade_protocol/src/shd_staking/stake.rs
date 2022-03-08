@@ -6,6 +6,7 @@ use cosmwasm_std::{HumanAddr, Uint128};
 use crate::storage::{BucketStorage, SingletonStorage};
 use crate::utils::asset::Contract;
 
+// Configuration file for staking
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct StakeConfig {
@@ -19,6 +20,7 @@ impl SingletonStorage for StakeConfig {
     const NAMESPACE: &'static [u8] = b"stake_config";
 }
 
+// Unbonding information for the total accross users
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct DailyUnbonding {
@@ -71,22 +73,86 @@ impl PartialOrd for DailyUnbonding {
     }
 }
 
+impl VecQueueMerge for DailyUnbonding {
+    fn merge(&mut self, item: &Self) {
+        self.unbonding += item.unbonding;
+    }
+}
+
+// Queue item
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Unbonding {
+pub struct QueueItem {
     pub amount: Uint128,
     pub release: u64,
 }
 
-impl Ord for Unbonding {
-    fn cmp(&self, other: &Unbonding) -> Ordering {
+impl Ord for QueueItem {
+    fn cmp(&self, other: &QueueItem) -> Ordering {
         self.release.cmp(&other.release)
     }
 }
 
-impl PartialOrd for Unbonding {
-    fn partial_cmp(&self, other: &Unbonding) -> Option<Ordering> {
+impl PartialOrd for QueueItem {
+    fn partial_cmp(&self, other: &QueueItem) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl VecQueueMerge for QueueItem {
+    fn merge(&mut self, item: &Self) {
+        self.amount += item.amount;
+    }
+}
+
+// Queue item is used for both user unbonding and user vote cooldown
+use QueueItem as Unbonding;
+use QueueItem as Cooldown;
+
+// A flexible queue system
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct VecQueue<T: Ord + Serialize + Clone + VecQueueMerge>(pub Vec<T>);
+
+impl<T: Ord + Serialize + Clone + VecQueueMerge> VecQueue<T> {
+    fn push(&mut self, item: &T) {
+        // Look if item is in list
+        match self.0.binary_search(item) {
+            Ok(index) => {
+                // Item is found so we update it
+                self.0[index].merge(item);
+            }
+            Err(index) => {
+                self.0.insert(index, item);
+            }
+        }
+    }
+
+    fn pop(&mut self) -> T {
+        self.0.pop()
+    }
+}
+
+pub trait VecQueueMerge {
+    fn merge(&mut self, item: &Self);
+}
+
+// Used for vote cooldown after send
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct UserCooldown {
+    pub total: Uint128,
+    pub queue: VecQueue<Cooldown>
+}
+
+impl BucketStorage for StakeConfig {
+    const NAMESPACE: &'static [u8] = b"user_cooldown";
+}
+
+impl UserCooldown {
+    fn add_cooldown(&mut self, cooldown: Cooldown) {
+        self.total += cooldown.amount;
+        self.queue.push(&cooldown);
     }
 }
 
