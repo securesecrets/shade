@@ -127,7 +127,7 @@ impl<T: Ord + Serialize + Clone + VecQueueMerge> VecQueue<T> {
                 self.0[index].merge(item);
             }
             Err(index) => {
-                self.0.insert(index, item);
+                self.0.insert(index, item.clone());
             }
         }
     }
@@ -163,7 +163,7 @@ impl UserCooldown {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Uint128;
-    use crate::shd_staking::stake::DailyUnbonding;
+    use crate::shd_staking::stake::{DailyUnbonding, QueueItem, VecQueue};
 
     #[test]
     fn is_funded() {
@@ -190,5 +190,41 @@ mod tests {
         // Add to funded fund
         let residue = unbond.fund(Uint128(300));
         assert_eq!(residue, Uint128(300));
+    }
+
+    #[test]
+    fn vecqueue() {
+        let mut vec: VecQueue<QueueItem> = VecQueue::new(vec![]);
+        assert_eq!(vec.0.len(), 0);
+
+        vec.push(&QueueItem {
+            amount: Uint128(1),
+            release: 1
+        });
+        vec.push(&QueueItem {
+            amount: Uint128(1),
+            release: 2
+        });
+        vec.push(&QueueItem {
+            amount: Uint128(1),
+            release: 2
+        });
+        vec.push(&QueueItem {
+            amount: Uint128(1),
+            release: 3
+        });
+
+        assert_eq!(vec.0[0], QueueItem {
+            amount: Uint128(1),
+            release: 1
+        });
+        assert_eq!(vec.0[1], QueueItem {
+            amount: Uint128(2),
+            release: 2
+        });
+        assert_eq!(vec.0[2], QueueItem {
+            amount: Uint128(1),
+            release: 3
+        });
     }
 }
