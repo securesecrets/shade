@@ -3,9 +3,9 @@ use cosmwasm_std::{
     StdResult, Storage, Uint128,
 };
 
-use shade_protocol::{bonds::{Config, InitMsg}};
+use shade_protocol::{bonds::{Config, InitMsg, HandleMsg, QueryMsg}};
 
-use crate::{state::{config_w}};
+use crate::{handle, query, state::{config_w}};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -29,3 +29,23 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         log: vec![],
     })
 }
+
+pub fn handle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    msg: HandleMsg,
+) -> StdResult<HandleResponse> {
+    match msg{
+        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+    }
+}
+
+pub fn query<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    msg: QueryMsg,
+) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Config {} => to_binary(&query::config(deps)?),
+    }
+}
+
