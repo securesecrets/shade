@@ -11,7 +11,7 @@ use shade_protocol::{
     sienna::{
         PairInfo, Pair, TokenType, TokenTypeAmount, 
         PairQuery, PairInfoResponse, 
-        SimulationResponse, CustomToken,
+        SimulationResponse
     },
     utils::asset::Contract,
 };
@@ -74,11 +74,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     code_hash: "".to_string(),
                 },
                 pair: Pair {
-                    token_0: CustomToken {
+                    token_0: TokenType::CustomToken {
                         contract_addr: token_a.address,
                         token_code_hash: token_a.code_hash,
                     },
-                    token_1: CustomToken {
+                    token_1: TokenType::CustomToken {
                         contract_addr: token_b.address,
                         token_code_hash: token_b.code_hash,
                     },
@@ -86,6 +86,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 amount_0: amount_a,
                 amount_1: amount_b,
                 total_liquidity: Uint128(0), 
+                contract_version: 0,
             };
 
             pair_info_w(&mut deps.storage).save(&pair_info)?;
@@ -109,12 +110,23 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         },
         PairQuery::SwapSimulation { offer } => {
 
-            match offer.token {
-                TokenType::CustomToken { custom_token } => {
+            //TODO: check swap doesnt exceed pool size
 
-                    let pair_info = pair_info_r(&deps.storage).load()?;
-                    //TODO: check swap doesnt exceed pool size
-                    if custom_token == pair_info.pair.token_0 {
+            let mut in_token = match offer.token {
+                TokenType::CustomToken { contract_addr, token_code_hash } => Contract {
+                    address: contract_addr,
+                    code_hash: token_code_hash,
+                },
+                _ => {
+                    return Err(StdError::generic_err("Only CustomToken supported"));
+                },
+            };
+
+            let pair_info = pair_info_r(&deps.storage).load()?;
+
+            match pair_info.pair.token_0 {
+                TokenType::CustomToken { contract_addr, token_code_hash } => {
+                    if in_token.address == contract_addr {
                         return to_binary(&SimulationResponse {
                             return_amount: pool_take_amount(
                                 offer.amount, 
@@ -125,24 +137,32 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                             commission_amount: Uint128::zero(),
                         })
                     }
-                    else if custom_token == pair_info.pair.token_1 {
+                },
+                _ => {
+                    return Err(StdError::generic_err("Only CustomToken supported"));
+                },
+            };
+
+            match pair_info.pair.token_1 {
+                TokenType::CustomToken { contract_addr, token_code_hash } => {
+                    if in_token.address == contract_addr {
                         return to_binary(&SimulationResponse {
                             return_amount: pool_take_amount(
                                 offer.amount, 
-                                pair_info.amount_1, 
+                                pair_info.amount_1,
                                 pair_info.amount_0
                             ),
                             spread_amount: Uint128::zero(),
                             commission_amount: Uint128::zero(),
                         })
                     }
-                    return Err(StdError::generic_err("Failed to match offer token"))
-
                 },
                 _ => {
-                    Err(StdError::generic_err("Only CustomToken supported"))
+                    return Err(StdError::generic_err("Only CustomToken supported"));
                 },
-            }
+            };
+
+            return Err(StdError::generic_err("Failed to match offer token"))
         },
     }
 }
