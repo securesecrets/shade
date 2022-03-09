@@ -13,30 +13,32 @@ use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
 
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct CustomToken {
     pub contract_addr: HumanAddr,
     pub token_code_hash: String,
 }
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TokenType {
     CustomToken {
-        custom_token: CustomToken,
+        contract_addr: HumanAddr,
+        token_code_hash: String,
     },
     NativeToken {
         denom: String,
     },
 }
 
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Pair {
-    pub token_0: CustomToken,
-    pub token_1: CustomToken,
+    pub token_0: TokenType,
+    pub token_1: TokenType,
 }
 
 /*
@@ -92,6 +94,7 @@ pub struct PairInfo {
     pub amount_0: Uint128,
     pub amount_1: Uint128,
     pub total_liquidity: Uint128,
+    pub contract_version: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -99,15 +102,6 @@ pub struct PairInfo {
 pub struct PairInfoResponse {
     pub pair_info: PairInfo,
 }
-
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct PoolResponse {
-    pub assets: Vec<Asset>,
-    pub total_share: Uint128,
-}
-*/
 
 pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -121,11 +115,6 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     ) {
         Ok(_) => true,
         Err(_) => false,
-        /*
-        Err(_) => {
-            return Err(StdError::generic_err("FAILED SIENNA CHECK"));
-        },
-        */
     })
 }
 
@@ -135,25 +124,29 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     sscrt: Contract,
     band: Contract,
 ) -> StdResult<Uint128> {
+    // TODO: This should be passed in to avoid multipl BAND SCRT queries in one query
     let scrt_result = band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), band)?;
 
     // SCRT-USD / SCRT-symbol
-    Ok(mint::translate_price(scrt_result.rate, simulate(deps, pair, sscrt)?))
+    Ok(mint::translate_price(scrt_result.rate, 
+         mint::normalize_price(
+             amount_per_scrt(deps, pair.clone(), sscrt)?, 
+             pair.asset.token_info.decimals
+         )
+    ))
 }
 
-pub fn simulate<S: Storage, A: Api, Q: Querier>(
+pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     pair: dex::TradingPair,
     sscrt: Contract,
 ) -> StdResult<Uint128> {
     let response: SimulationResponse = PairQuery::SwapSimulation {
-        offer: TokenTypeAmount{
+        offer: TokenTypeAmount {
             amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
             token: TokenType::CustomToken {
-                custom_token: CustomToken {
-                    contract_addr: sscrt.address,
-                    token_code_hash: sscrt.code_hash,
-                },
+                contract_addr: sscrt.address,
+                token_code_hash: sscrt.code_hash,
             }
         },
     }
@@ -163,13 +156,16 @@ pub fn simulate<S: Storage, A: Api, Q: Querier>(
         pair.contract.address,
     )?;
 
+    /*
     Ok(mint::normalize_price(
         response.return_amount,
         pair.asset.token_info.decimals,
     ))
+    */
+    Ok(response.return_amount)
 }
 
-pub fn pool_size<S: Storage, A: Api, Q: Querier>(
+pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {

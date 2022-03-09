@@ -51,17 +51,17 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
 
     // indices will align with <pairs>
     let mut prices = vec![];
-    let mut pool_sizes = vec![];
+    //let mut pool_sizes = vec![];
 
-    for pair in pairs {
+    for pair in pairs.clone() {
         match &pair.dex {
             Dex::SecretSwap => {
                 prices.push(secretswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
-                pool_sizes.push(secretswap::pool_size(&deps, pair)?);
+                //pool_sizes.push(secretswap::pool_size(&deps, pair)?);
             },
             Dex::SiennaSwap => {
                 prices.push(sienna::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
-                pool_sizes.push(sienna::pool_size(&deps, pair)?);
+                //pool_sizes.push(sienna::pool_size(&deps, pair)?);
             },
             /*
             ShadeSwap => {
@@ -74,20 +74,27 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
     }
 
     /*
+    let combined_cp: u128 = pool_sizes.iter().map(|i| i.u128()).sum();
+    let normalized_weights: Vec<u128> = pool_sizes.iter()
+        .map(|i| (i.u128() * 10u128.pow(18)) / combined_cp).collect();
+    let weight_sum: u128 = normalized_weights.iter().sum();
+    let mut sum = 0u128;
+
+    //let mut price_sum: u128 = prices.iter().zip(pool_sizes.iter()).map(|(p, s)| p.u128() * s.u128()).sum();
+    for (price, weight) in prices.iter().zip(normalized_weights.iter()) {
+        sum += price.u128() * weight;
+    }
+    */
+
+    /*
     return Err(StdError::generic_err(
-        format!("pool_sizes {}", pool_sizes.len())
+        format!("AGG price average {}", price_sum / combined_cp)
     ));
     */
-    let combined_cp: u128 = pool_sizes.iter().map(|i| i.u128()).sum();
-    let mut weighted_sum = 0u128;
 
-
-    for (price, pool_size) in prices.iter().zip(pool_sizes.iter()) {
-        //weighted_sum = weighted_sum + price.multiply_ratio(*pool_size, combined_cp).u128();
-        weighted_sum += price.u128() * pool_size.u128();
-    }
-
-    Ok(Uint128(weighted_sum / combined_cp))
+    //Ok(Uint128(sum / weight_sum))
+    let sum: u128 = prices.iter().map(|p| p.u128()).sum();
+    Ok(Uint128(sum / prices.len() as u128))
 }
 
 pub fn best_price<S: Storage, A: Api, Q: Querier>(

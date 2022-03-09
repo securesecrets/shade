@@ -72,6 +72,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
             }
 
             if let Some(mut pairs) = dex_pairs_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
+                //TODO: Check pair already registered
                 pairs.push(tp.clone());
                 dex_pairs_w(&mut deps.storage).save(
                     td.1.symbol.as_bytes(), 
@@ -95,9 +96,10 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
                 })?),
             });
         }
+        return Err(StdError::generic_err("Failed to extract token data"));
     }
 
-    Err(StdError::generic_err("Failed to extract token info"))
+    Err(StdError::generic_err("Failed to extract Trading Pair"))
 }
 
 pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
@@ -203,24 +205,46 @@ fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
             pair.address.clone()
     )?;
 
-    let mut token_contract = Contract {
-        address: response.pair_info.pair.token_0.contract_addr,
-        code_hash: response.pair_info.pair.token_0.token_code_hash,
+    let mut token_contract = match response.pair_info.pair.token_0 {
+        sienna::TokenType::CustomToken { contract_addr, token_code_hash } => Contract {
+            address: contract_addr,
+            code_hash: token_code_hash,
+        },
+        sienna::TokenType::NativeToken { denom } => {
+            return Err(StdError::generic_err("Sienna Native Token pairs not supported"));
+        }
     };
 
     // if thats sscrt, switch it
     if token_contract.address == sscrt_addr {
-        token_contract = Contract {
-            address: response.pair_info.pair.token_1.contract_addr,
-            code_hash: response.pair_info.pair.token_1.token_code_hash,
-        }
+        token_contract = match response.pair_info.pair.token_1 {
+            sienna::TokenType::CustomToken { contract_addr, token_code_hash } => Contract {
+                address: contract_addr,
+                code_hash: token_code_hash,
+            },
+            sienna::TokenType::NativeToken { denom: _ } => {
+                return Err(StdError::generic_err("Sienna Native Token pairs not supported"));
+            }
+        };
+
+
     }
-    // if neither is sscrt
+    // if its not, make sure other is sscrt
     else {
-        return Err(StdError::NotFound {
-            kind: "Not an SSCRT Pair".to_string(),
-            backtrace: None,
-        });
+        match response.pair_info.pair.token_1 {
+            sienna::TokenType::CustomToken { contract_addr, token_code_hash } => {
+                if contract_addr != sscrt_addr {
+                    // if we get here, neither the first or second tokens were sscrt
+                    return Err(StdError::NotFound {
+                        kind: "Not an SSCRT Pair".to_string(),
+                        backtrace: None,
+                    });
+                }
+            },
+            sienna::TokenType::NativeToken { denom: _ } => {
+                return Err(StdError::generic_err("Sienna Native Token pairs not supported"));
+            }
+        }
     }
 
     let token_info = token_info_query(

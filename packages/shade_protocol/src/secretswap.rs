@@ -106,13 +106,15 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     )?;
 
     // SCRT-USD / SCRT-symbol
-    Ok(mint::translate_price(
-            scrt_result.rate, 
-            simulate(deps, pair, sscrt)?
+    Ok(mint::translate_price(scrt_result.rate, 
+         mint::normalize_price(
+             amount_per_scrt(deps, pair.clone(), sscrt)?, 
+             pair.asset.token_info.decimals
+         )
     ))
 }
 
-pub fn simulate<S: Storage, A: Api, Q: Querier>(
+pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     pair: dex::TradingPair,
     sscrt: Contract,
@@ -136,13 +138,10 @@ pub fn simulate<S: Storage, A: Api, Q: Querier>(
         pair.contract.address,
     )?;
 
-    Ok(mint::normalize_price(
-        response.return_amount,
-        pair.asset.token_info.decimals,
-    ))
+    Ok(response.return_amount)
 }
 
-pub fn pool_size<S: Storage, A: Api, Q: Querier>(
+pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {
