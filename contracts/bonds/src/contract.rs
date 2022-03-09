@@ -2,12 +2,10 @@ use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
     StdResult, Storage, Uint128,
 };
-use secret_toolkit::snip20::token_info_query;
 
-use shade_protocol::{
-    mint::{Config, HandleMsg, InitMsg, QueryMsg},
-    snip20::{token_config_query, Snip20Asset},
-};
+use shade_protocol::{bonds::{Config, InitMsg}};
+
+use crate::{state::{config_w}};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

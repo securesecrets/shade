@@ -4,7 +4,7 @@ use cosmwasm_storage::{
     Singleton,
 };
 use shade_protocol::{
-    mint::{Config, SupportedAsset},
+    bonds::{Config},
     snip20::Snip20Asset,
     utils::asset::Contract,
 };
