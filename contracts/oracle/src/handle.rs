@@ -114,25 +114,12 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    // TODO: Find token symbol, pull dex pairs, remove contract addr
-    /*
-    if secretswap::is_pair(deps, pair.clone())? {
-        let (_, token_info) = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
-        sswap_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
-    }
-    else if sienna::is_pair(deps, pair.clone())? {
-        let (_, token_info) = fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair.clone())?;
-        sienna_pairs_w(&mut deps.storage).remove(token_info.symbol.as_bytes());
-    }
-    */
-
     if let Some(mut pair_list) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
 
-        if let Some(index) = pair_list.iter().position(|p| p.contract.address == pair.address) {
-            pair_list.remove(index);
+        if let Some(i) = pair_list.iter().position(|p| p.contract.address == pair.address) {
+            pair_list.remove(i);
             
-            dex_pairs_w(&mut deps.storage).save(
-                    symbol.as_bytes(), &pair_list)?;
+            dex_pairs_w(&mut deps.storage).save(symbol.as_bytes(), &pair_list)?;
 
             return Ok(HandleResponse {
                 messages: vec![],
