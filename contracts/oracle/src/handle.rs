@@ -132,7 +132,6 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
     }
 
     Err(StdError::generic_err("Pair not found"))
-
 }
 
 ///

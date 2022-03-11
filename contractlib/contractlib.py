@@ -11,6 +11,27 @@ class PreInstantiatedContract:
         self.code_hash = code_hash
         self.code_id = code_id
 
+    def execute(self, msg, sender, amount=None, compute=True):
+        """
+        Execute said msg
+        :param msg: Execute msg
+        :param sender: Who will be sending the message, defaults to contract admin
+        :param amount: Optional string amount to send along with transaction
+        :return: Result
+        """
+        return secretlib.execute_contract(self.address, msg, sender, 'test',  amount, compute)
+
+    def query(self, msg):
+        """
+        Query said msg
+        :param msg: Query msg
+        :return: Query
+        """
+        return secretlib.query_contract(self.address, msg)
+
+    def as_dict(self):
+        return {'address': self.address, 'code_hash': self.code_hash }
+
 
 class Contract:
     def __init__(self, contract, initMsg, label, admin='a', uploader='a', backend='test',
