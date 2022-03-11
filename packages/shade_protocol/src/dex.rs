@@ -7,9 +7,13 @@ use crate::{
     band,
     //shadeswap,
 };
-use cosmwasm_std::{Uint128, StdResult, Extern, Querier, Api, Storage, StdError};
+use cosmwasm_std::{StdResult, Extern, Querier, Api, Storage, StdError};
+use cosmwasm_std;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use secret_cosmwasm_math_compat::{Uint128, Uint512};
+use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum Dex {
@@ -30,11 +34,11 @@ pub struct TradingPair{
  * returns how much to be received from take_pool
  */
 pub fn pool_take_amount(
-    give_amount: Uint128,
-    give_pool: Uint128,
-    take_pool: Uint128,
-) -> Uint128 {
-    Uint128(
+    give_amount: cosmwasm_std::Uint128,
+    give_pool: cosmwasm_std::Uint128,
+    take_pool: cosmwasm_std::Uint128,
+) -> cosmwasm_std::Uint128 {
+    cosmwasm_std::Uint128(
         take_pool.u128() - (
             (give_pool.u128() * take_pool.u128())
             / (give_pool.u128() + give_amount.u128())
@@ -47,21 +51,31 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
-) -> StdResult<Uint128> {
+) -> StdResult<cosmwasm_std::Uint128> {
 
     // indices will align with <pairs>
-    let mut prices = vec![];
-    //let mut pool_sizes = vec![];
+    let mut amounts_per_scrt = vec![];
+    let mut pool_sizes: Vec<Uint512> = vec![];
 
     for pair in pairs.clone() {
         match &pair.dex {
             Dex::SecretSwap => {
-                prices.push(secretswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
-                //pool_sizes.push(secretswap::pool_size(&deps, pair)?);
+                amounts_per_scrt.push(
+                    Uint512::from(mint::normalize_price(
+                        secretswap::amount_per_scrt(&deps, pair.clone(), sscrt.clone())?,
+                        pair.asset.token_info.decimals
+                    ).u128())
+                );
+                pool_sizes.push(Uint512::from(secretswap::pool_cp(&deps, pair)?.u128()));
             },
             Dex::SiennaSwap => {
-                prices.push(sienna::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
-                //pool_sizes.push(sienna::pool_size(&deps, pair)?);
+                amounts_per_scrt.push(
+                    Uint512::from(mint::normalize_price(
+                        sienna::amount_per_scrt(&deps, pair.clone(), sscrt.clone())?,
+                        pair.asset.token_info.decimals
+                    ).u128())
+                );
+                pool_sizes.push(Uint512::from(sienna::pool_cp(&deps, pair)?.u128()));
             },
             /*
             ShadeSwap => {
@@ -73,28 +87,25 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    /*
-    let combined_cp: u128 = pool_sizes.iter().map(|i| i.u128()).sum();
-    let normalized_weights: Vec<u128> = pool_sizes.iter()
-        .map(|i| (i.u128() * 10u128.pow(18)) / combined_cp).collect();
-    let weight_sum: u128 = normalized_weights.iter().sum();
-    let mut sum = 0u128;
+    let mut combined_cp: Uint512 = pool_sizes.iter().sum();
 
-    //let mut price_sum: u128 = prices.iter().zip(pool_sizes.iter()).map(|(p, s)| p.u128() * s.u128()).sum();
-    for (price, weight) in prices.iter().zip(normalized_weights.iter()) {
-        sum += price.u128() * weight;
-    }
-    */
+    let weighted_sum: Uint512 = amounts_per_scrt.into_iter().zip(pool_sizes.into_iter())
+        .map(|(a, s)| a * s / combined_cp).sum();
 
-    /*
-    return Err(StdError::generic_err(
-        format!("AGG price average {}", price_sum / combined_cp)
-    ));
-    */
+    // Translate price from SHD/SCRT -> SHD/USD 
+    // And normalize to <price> * 10^18
+    let price = mint::translate_price(
+                    band::reference_data(deps, 
+                        "SCRT".to_string(), 
+                        "USD".to_string(), 
+                        band
+                    )?.rate,
+                    cosmwasm_std::Uint128(
+                        Uint128::try_from(weighted_sum)?.u128()
+                    )
+                );
 
-    //Ok(Uint128(sum / weight_sum))
-    let sum: u128 = prices.iter().map(|p| p.u128()).sum();
-    Ok(Uint128(sum / prices.len() as u128))
+    Ok(price)
 }
 
 pub fn best_price<S: Storage, A: Api, Q: Querier>(
@@ -102,7 +113,7 @@ pub fn best_price<S: Storage, A: Api, Q: Querier>(
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
-) -> StdResult<(Uint128, TradingPair)> {
+) -> StdResult<(cosmwasm_std::Uint128, TradingPair)> {
 
     // indices will align with <pairs>
     let mut results = vec![];
@@ -134,7 +145,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     pair: TradingPair,
     sscrt: Contract,
     band: Contract,
-) -> StdResult<Uint128> {
+) -> StdResult<cosmwasm_std::Uint128> {
 
     match pair.clone().dex {
         Dex::SecretSwap => {
@@ -150,67 +161,3 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
         */
     }
 }
-
-
-/*
-pub fn best_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    pairs: Vec<AMMPair>,
-    input_asset: Contract,
-) -> StdResult<Uint128> {
-    let config = config_r(&deps.storage).load()?;
-
-    let response: SimulationResponse = PairQuery::Simulation {
-        offer_asset: Asset {
-            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
-            info: AssetInfo {
-                token: Token {
-                    contract_addr: config.sscrt.address,
-                    token_code_hash: config.sscrt.code_hash,
-                    viewing_key: "SecretSwap".to_string(),
-                },
-            },
-        },
-    }
-    .query(
-        &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
-    )?;
-
-    Ok(mint::normalize_price(
-        response.return_amount,
-        pair.asset.token_info.decimals,
-    ))
-}
-
-pub fn price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    pair: Pair,
-) -> StdResult<Uint128> {
-    let config = config_r(&deps.storage).load()?;
-
-    let response: SimulationResponse = PairQuery::Simulation {
-        offer_asset: Asset {
-            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
-            info: AssetInfo {
-                token: Token {
-                    contract_addr: config.sscrt.address,
-                    token_code_hash: config.sscrt.code_hash,
-                    viewing_key: "SecretSwap".to_string(),
-                },
-            },
-        },
-    }
-    .query(
-        &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
-    )?;
-
-    Ok(mint::normalize_price(
-        response.return_amount,
-        pair.asset.token_info.decimals,
-    ))
-}
-*/

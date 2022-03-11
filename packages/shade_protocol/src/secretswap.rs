@@ -4,10 +4,11 @@ use crate::{
     dex,
     band,
 };
-use cosmwasm_std::{HumanAddr, Uint128, StdResult, StdError, Extern, Querier, Api, Storage};
+use cosmwasm_std::{Uint128, HumanAddr, StdResult, StdError, Extern, Querier, Api, Storage};
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
+
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

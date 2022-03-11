@@ -5,7 +5,7 @@ use crate::{
     band,
 };
 use cosmwasm_std::{
-    HumanAddr, Uint128, 
+    HumanAddr, Uint128,
     StdResult, StdError, 
     Extern, Querier, Api, Storage,
 };
