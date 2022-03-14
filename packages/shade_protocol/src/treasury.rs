@@ -12,6 +12,14 @@ pub struct Config {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct RefreshTracker {
+    pub amount: Uint128,
+    pub limit: Uint128,
+    // RFC3339 datetime
+    pub last_refresh: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Allocation {
     // To remain liquid at all times
@@ -25,27 +33,24 @@ pub enum Allocation {
     },
     // Monthly refresh, not counted in rebalance
     Allowance {
-        address: HumanAddr,
+        spender: HumanAddr,
         // Unlike others, this is a direct number of uTKN to allow monthly
         amount: Uint128,
     },
-    // SCRT/ATOM/OSMO staking
-    Staking {
+    // SCRT/ATOM/OSMO/SKY/dStaking
+    SingleAsset {
+        //nick: Option<String>,
         contract: Contract,
         allocation: Uint128,
-    },
-    // SKY / Derivative Staking
-    Application {
-        contract: Contract,
-        allocation: Uint128,
-        token: HumanAddr,
+        token: Option<Contract>,
     },
     // Liquidity Providing
-    Pool {
+    MultiAsset {
+        //nick: Option<String>,
         contract: Contract,
         allocation: Uint128,
-        secondary_asset: HumanAddr,
-        token: HumanAddr,
+        secondary_assets: Vec<Contract>,
+        token: Option<Contract>,
     },
 }
 

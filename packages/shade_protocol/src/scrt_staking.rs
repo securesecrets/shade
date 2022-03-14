@@ -1,4 +1,10 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
+use crate::{
+    adapter,
+    utils::{
+        asset::Contract, 
+        generic_response::ResponseStatus
+    },
+};
 use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -41,24 +47,7 @@ pub enum HandleMsg {
     UpdateConfig {
         admin: Option<HumanAddr>,
     },
-    Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
-        amount: Uint128,
-        memo: Option<Binary>,
-        msg: Option<Binary>,
-    },
-    // Begin unbonding amount
-    Unbond {
-        validator: HumanAddr,
-    },
-    //TODO: switch to this interface for standardization
-    //Claim { amount: Uint128 },
-
-    // Claim all pending rewards & completed unbondings
-    Claim {
-        validator: HumanAddr,
-    },
+    Adapter(adapter::HandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -84,19 +73,16 @@ pub enum HandleAnswer {
     },
     Unbond {
         status: ResponseStatus,
-        delegation: Delegation,
+        delegations: Vec<HumanAddr>,
     },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetConfig {},
-    //TODO: find a way to query this and return
-    //Unbondings {},
+    Config {},
     Delegations {},
-    //Delegation { validator: HumanAddr },
-    Rewards {},
+    Adapter(adapter::QueryMsg),
 }
 
 impl Query for QueryMsg {

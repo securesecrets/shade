@@ -20,8 +20,8 @@ pub fn delegations<S: Storage, A: Api, Q: Querier>(
         .query_all_delegations(self_address_r(&deps.storage).load()?)
 }
 
-// TODO: change to 'claimable'
 pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Uint128> {
+
     let scrt_balance: BalanceResponse = deps.querier.query(
         &BankQuery::Balance {
             address: self_address_r(&deps.storage).load()?,
@@ -30,8 +30,7 @@ pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
         .into(),
     )?;
 
-    let query_rewards: RewardsResponse = deps
-        .querier
+    let query_rewards: RewardsResponse = deps.querier
         .query(
             &DistQuery::Rewards {
                 delegator: self_address_r(&deps.storage).load()?,
@@ -48,7 +47,7 @@ pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
     }
 
     let denom = query_rewards.total[0].denom.as_str();
-    query_rewards.total.iter().fold(Ok(Uint128(0)), |racc, d| {
+    query_rewards.total.iter().fold(Ok(Uint128::zero()), |racc, d| {
         let acc = racc?;
         if d.denom.as_str() != denom {
             Err(StdError::generic_err(format!(

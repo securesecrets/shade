@@ -12,6 +12,9 @@ pub mod governance;
 pub mod mint;
 pub mod mint_router;
 pub mod oracle;
-pub mod scrt_staking;
 pub mod staking;
 pub mod treasury;
+
+// Treasury Adapters
+pub mod adapter;
+pub mod scrt_staking;
