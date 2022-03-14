@@ -11,7 +11,7 @@ use secret_toolkit::snip20::{
 
 use shade_protocol::{
     snip20,
-    treasury::{Allocation, Config, Flag, HandleAnswer, QueryAnswer},
+    treasury::{Allocation, Config, Flag, HandleAnswer, QueryAnswer, RefreshTracker},
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
@@ -20,6 +20,7 @@ use crate::{
     state::{
         allocations_r, allocations_w, asset_list_r, asset_list_w, assets_r, assets_w, config_r,
         config_w, last_allowance_refresh_r, last_allowance_refresh_w, viewing_key_r,
+        rewards_tracking_r, rewards_tracking_w,
     },
 };
 use chrono::prelude::*;
@@ -51,6 +52,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let asset = assets_r(&deps.storage).load(env.message.sender.as_str().as_bytes())?;
 
+    // TODO: use snip20 batch send
     let messages = allocations_r(&deps.storage)
         .may_load(asset.contract.address.as_str().as_bytes())?
         .unwrap_or_default()
@@ -60,38 +62,75 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             Allocation::Rewards {
                 contract,
                 allocation,
-            } => Some(send_msg(
-                contract.address,
-                amount.multiply_ratio(allocation, 10u128.pow(18)),
-                None,
-                None,
-                None,
-                1,
-                asset.contract.code_hash.clone(),
-                asset.contract.address.clone(),
-            )),
-            Allocation::Staking {
+            } => {
+                let mut tracker = rewards_tracking_r(&deps.storage).load(&contract.address.to_string().as_bytes()).ok()?;
+
+                // TODO: Refresh rewards amount usnig datetime
+                // Check there are rewards still to send
+                if tracker.amount >= tracker.limit {
+                    return None;
+                }
+
+                let mut send_amount = amount.multiply_ratio(allocation, 10u128.pow(18));
+                if tracker.amount + send_amount > tracker.limit {
+                    send_amount = Uint128(tracker.limit.u128() - tracker.amount.u128());
+                }
+
+                tracker.amount += send_amount;
+
+                rewards_tracking_w(&mut deps.storage)
+                    .save(
+                        &contract.address.to_string().as_bytes(), 
+                        &tracker
+                    ).ok()?;
+
+                Some(
+                    send_msg(
+                        contract.address,
+                        send_amount,
+                        None,
+                        None,
+                        None,
+                        1,
+                        asset.contract.code_hash.clone(),
+                        asset.contract.address.clone(),
+                    )
+                )
+            }
+            Allocation::SingleAsset {
                 contract,
                 allocation,
-            } => Some(send_msg(
-                contract.address,
-                amount.multiply_ratio(allocation, 10u128.pow(18)),
-                None,
-                None,
-                None,
-                1,
-                asset.contract.code_hash.clone(),
-                asset.contract.address.clone(),
-            )),
-            Allocation::Application { .. } => {
-                //debug_print!("Applications Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
-                //TODO: implement
-                None
-            }
-            Allocation::Pool { .. } => {
-                //debug_print!("Pools Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
-                //TODO: implement
-                None
+                token: _,
+            } => Some(
+                send_msg(
+                    contract.address,
+                    amount.multiply_ratio(allocation, 10u128.pow(18)),
+                    None,
+                    None,
+                    None,
+                    1,
+                    asset.contract.code_hash.clone(),
+                    asset.contract.address.clone(),
+                )
+            ),
+            Allocation::MultiAsset { 
+                contract,
+                allocation,
+                secondary_assets: _,
+                token: _,
+            } => {
+                Some(
+                    send_msg(
+                        contract.address,
+                        amount.multiply_ratio(allocation, 10u128.pow(18)),
+                        None,
+                        None,
+                        None,
+                        1,
+                        asset.contract.code_hash.clone(),
+                        asset.contract.address.clone(),
+                    )
+                )
             }
         })
         .collect::<Result<_, _>>()?;
@@ -145,10 +184,9 @@ pub fn refresh_allowance<S: Storage, A: Api, Q: Querier>(
 
     // Fail if we have already refreshed this month
     if now.year() <= last_refresh.year() && now.month() <= last_refresh.month() {
-        return Err(StdError::generic_err(format!(
-            "Last refresh too recent: {}",
-            last_refresh.to_rfc3339()
-        )));
+        return Err(StdError::generic_err(
+            format!( "Last refresh too recent: {}", last_refresh.to_rfc3339())
+        ));
     }
 
     last_allowance_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
@@ -174,13 +212,13 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
 
     for asset in asset_list_r(&deps.storage).load()? {
         for alloc in allocations_r(&deps.storage).load(asset.as_str().as_bytes())? {
-            if let Allocation::Allowance { address, amount } = alloc {
+            if let Allocation::Allowance { spender, amount } = alloc {
                 let full_asset = assets_r(&deps.storage).load(asset.as_str().as_bytes())?;
                 // Determine current allowance
                 let cur_allowance = allowance_query(
                     &deps.querier,
                     env.contract.address.clone(),
-                    address.clone(),
+                    spender.clone(),
                     key.clone(),
                     1,
                     full_asset.contract.code_hash.clone(),
@@ -191,7 +229,7 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
                     // decrease allowance
                     std::cmp::Ordering::Less => {
                         messages.push(decrease_allowance_msg(
-                            address.clone(),
+                            spender.clone(),
                             (cur_allowance.allowance - amount)?,
                             None,
                             None,
@@ -203,7 +241,7 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
                     // increase allowance
                     std::cmp::Ordering::Greater => {
                         messages.push(increase_allowance_msg(
-                            address.clone(),
+                            spender.clone(),
                             (amount - cur_allowance.allowance)?,
                             None,
                             None,
@@ -239,18 +277,18 @@ pub fn one_time_allowance<S: Storage, A: Api, Q: Querier>(
         .may_load(asset.as_str().as_bytes())?
         .ok_or_else(|| StdError::generic_err(format!("Unknown Asset: {}", asset)))?;
 
-    let messages = vec![increase_allowance_msg(
-        spender,
-        amount,
-        expiration,
-        None,
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address,
-    )?];
-
     Ok(HandleResponse {
-        messages,
+        messages: vec![
+            increase_allowance_msg(
+                spender,
+                amount,
+                expiration,
+                None,
+                1,
+                full_asset.contract.code_hash.clone(),
+                full_asset.contract.address,
+            )?
+        ],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::OneTimeAllowance {
             status: ResponseStatus::Success,
@@ -317,10 +355,10 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 // extract contract address if any
 fn allocation_address(allocation: &Allocation) -> Option<&HumanAddr> {
     match allocation {
+        Allocation::Allowance { spender, .. } => Some(&spender),
         Allocation::Rewards { contract, .. }
-        | Allocation::Staking { contract, .. }
-        | Allocation::Application { contract, .. }
-        | Allocation::Pool { contract, .. } => Some(&contract.address),
+        | Allocation::SingleAsset { contract, .. }
+        | Allocation::MultiAsset { contract, .. } => Some(&contract.address),
         _ => None,
     }
 }
@@ -330,9 +368,8 @@ fn allocation_portion(allocation: &Allocation) -> u128 {
     match allocation {
         Allocation::Reserves { allocation }
         | Allocation::Rewards { allocation, .. }
-        | Allocation::Staking { allocation, .. }
-        | Allocation::Application { allocation, .. }
-        | Allocation::Pool { allocation, .. } => allocation.u128(),
+        | Allocation::SingleAsset { allocation, .. }
+        | Allocation::MultiAsset { allocation, .. } => allocation.u128(),
         Allocation::Allowance { .. } => 0,
     }
 }
@@ -375,6 +412,7 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
 
     // find any old allocations with the same contract address & sum current allocations in one loop.
     // saves looping twice in the worst case
+    // TODO: Remove Rewards/Reserves if this would be one of those
     let (stale_alloc, curr_alloc_portion) =
         apps.iter()
             .enumerate()
@@ -399,9 +437,25 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         ));
     }
 
-    apps.push(alloc);
+    apps.push(alloc.clone());
 
     allocations_w(&mut deps.storage).save(key, &apps)?;
+
+    // Init the rewards to 0, to be refreshed next opportunity
+    match alloc {
+        Allocation::Rewards { contract, allocation } => {
+            let timestamp = 0;
+            let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+            let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+            let tracker = RefreshTracker {
+               amount: Uint128(0),
+               limit: Uint128(0),
+               last_refresh: datetime.to_rfc3339(),
+            };
+            rewards_tracking_w(&mut deps.storage).save(key, &tracker)?;
+        },
+        _ => {}
+    }
 
     /*TODO: Need to re-allocate/re-balance funds based on the new addition
      * get Uint128 math functions to do these things (untested)

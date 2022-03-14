@@ -12,6 +12,7 @@ pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static ALLOCATIONS: &[u8] = b"allocations";
 pub static ALLOWANCE_REFRESH: &[u8] = b"allowance_refresh";
+pub static REWARDS: &[u8] = b"rewards_tracking";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury::Config> {
     singleton(storage, CONFIG_KEY)
@@ -59,6 +60,14 @@ pub fn allocations_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<treasury:
 
 pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::Allocation>> {
     bucket(ALLOCATIONS, storage)
+}
+
+pub fn rewards_tracking_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury::RefreshTracker> {
+    bucket_read(REWARDS, storage)
+}
+
+pub fn rewards_tracking_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury::RefreshTracker> {
+    bucket(REWARDS, storage)
 }
 
 pub fn last_allowance_refresh_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
