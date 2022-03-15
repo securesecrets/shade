@@ -8,14 +8,14 @@ use serde::{Deserialize, Serialize};
 use crate::shd_staking::stake::StakeConfig;
 use crate::snip20::{InitConfig, InitialBalance};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct InitMsg {
     pub name: String,
     pub admin: Option<HumanAddr>,
     pub symbol: String,
-    pub decimals: u8,
-    pub shares_decimals: u8,
+    // Will default to staked token decimals if not set
+    pub decimals: Option<u8>,
+    pub share_decimals: u8,
     pub initial_balances: Option<Vec<InitialBalance>>,
     pub prng_seed: Binary,
     pub config: Option<InitConfig>,
@@ -28,7 +28,7 @@ pub struct InitMsg {
 
     // Distributors
     pub limit_transfer: bool,
-    pub distributors: Option<HumanAddr>
+    pub distributors: Option<Vec<HumanAddr>>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

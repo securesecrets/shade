@@ -141,25 +141,6 @@ pub trait VecQueueMerge {
     fn merge(&mut self, item: &Self);
 }
 
-// Used for vote cooldown after send
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct UserCooldown {
-    pub total: Uint128,
-    pub queue: VecQueue<Cooldown>
-}
-
-impl BucketStorage for UserCooldown {
-    const NAMESPACE: &'static [u8] = b"user_cooldown";
-}
-
-impl UserCooldown {
-    fn add_cooldown(&mut self, cooldown: Cooldown) {
-        self.total += cooldown.amount;
-        self.queue.push(&cooldown);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Uint128;
