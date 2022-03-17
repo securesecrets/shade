@@ -29,7 +29,7 @@ pub enum Allocation {
     // Won't be counted in rebalancing
     Rewards {
         contract: Contract,
-        allocation: Uint128,
+        daily_amount: Uint128,
     },
     // Monthly refresh, not counted in rebalance
     Allowance {
@@ -45,6 +45,7 @@ pub enum Allocation {
         token: Option<Contract>,
     },
     // Liquidity Providing
+    /*
     MultiAsset {
         //nick: Option<String>,
         contract: Contract,
@@ -52,6 +53,7 @@ pub enum Allocation {
         secondary_assets: Vec<Contract>,
         token: Option<Contract>,
     },
+    */
 }
 
 // Flag to be sent with funds

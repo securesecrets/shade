@@ -44,6 +44,13 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    Receive {
+        sender: HumanAddr,
+        from: HumanAddr,
+        amount: Uint128,
+        memo: Option<Binary>,
+        msg: Option<Binary>,
+    },
     UpdateConfig {
         admin: Option<HumanAddr>,
     },

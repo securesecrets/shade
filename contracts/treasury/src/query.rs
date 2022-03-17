@@ -19,22 +19,20 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
 ) -> StdResult<treasury::QueryAnswer> {
-    //TODO: restrict to admin
+    //TODO: restrict to admin?
 
     match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => {
-            let resp = snip20::QueryMsg::Balance {
+            match (snip20::QueryMsg::Balance {
                 address: self_address_r(&deps.storage).load()?,
                 key: viewing_key_r(&deps.storage).load()?,
-            }
-            .query(&deps.querier, a.contract.code_hash, a.contract.address)?;
+            }.query(&deps.querier, a.contract.code_hash, a.contract.address)?) {
 
-            match resp {
                 snip20::QueryAnswer::Balance { amount } => {
                     Ok(treasury::QueryAnswer::Balance { amount })
                 }
                 _ => Err(StdError::GenericErr {
-                    msg: "Unexpected Response".to_string(),
+                    msg: "Unexpected Snip20 Response".to_string(),
                     backtrace: None,
                 }),
             }

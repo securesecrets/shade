@@ -29,11 +29,8 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    if config.sscrt.address != env.message.sender {
-        return Err(StdError::GenericErr {
-            msg: "Only accepts sSCRT".to_string(),
-            backtrace: None,
-        });
+    if env.message.sender != config.sscrt.address  {
+        return Err(StdError::generic_err("Only accepts sSCRT"));
     }
 
     let validator = choose_validator(&deps, env.block.time)?;
@@ -130,7 +127,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             }
         });
 
-        // No more funds to unbond
+        // No more delegated funds to unbond
         match max_delegation {
             None => {
                 break;
@@ -141,9 +138,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     || delegation.amount.amount.clone() == Uint128::zero() {
                     break;
                 }
-                undelegated.push(delegation.validator.clone());
 
-                // Check that there is enough delegation
+                // This delegation isn't enough to fully unbond
                 if delegation.amount.amount.clone() < unbond_amount {
                     messages.push(
                         CosmosMsg::Staking(
@@ -155,6 +151,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     );
                     unbond_amount = (unbond_amount - delegation.amount.amount.clone())?;
                 }
+                // Can fully unbond
                 else {
                     messages.push(
                         CosmosMsg::Staking(
@@ -169,25 +166,25 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     );
                     unbond_amount = Uint128::zero();
                 }
+
+                undelegated.push(delegation.validator.clone());
             }
         }
     }
 
-    return Ok(HandleResponse {
+    Ok(HandleResponse {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Unbond {
             status: ResponseStatus::Success,
             delegations: undelegated,
         })?),
-    });
+    })
 }
 
 /*
- * Claims rewards and collects completed unbondings
- * from a given validator and returns them directly to treasury
- *
- * TODO: convert to sSCRT first or rely on treasury to do so
+ * Claims rewards and completed unbondings, wraps them, 
+ * and returns them to treasury
  */
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -199,7 +196,6 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
     let address = self_address_r(&deps.storage).load()?;
 
-
     // Get total scrt balance, to get recently claimed rewards + lingering unbonded scrt
     let scrt_balance: BalanceResponse = deps.querier.query(
         &BankQuery::Balance {
@@ -209,23 +205,26 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         .into(),
     )?;
 
-    let amount = query::rewards(&deps)? + scrt_balance.amount.amount;
-
-    // Witdraw rewards from each delegator
-    for delegation in deps.querier.query_all_delegations(address.clone())? {
-        messages.push(
-            CosmosMsg::Staking(
-                StakingMsg::Withdraw {
-                    validator: delegation.validator,
-                    recipient: Some(address.clone()),
-                }
-            )
-        );
+    let rewards = query::rewards(&deps)?;
+    if rewards >= Uint128::zero() {
+        // Withdraw rewards from all delegators
+        for delegation in deps.querier.query_all_delegations(address.clone())? {
+            messages.push(
+                CosmosMsg::Staking(
+                    StakingMsg::Withdraw {
+                        validator: delegation.validator,
+                        recipient: Some(address.clone()),
+                    }
+                )
+            );
+        }
     }
+
+    let scrt_amount = scrt_balance.amount.amount;
 
     messages.push(
         deposit_msg(
-            amount,
+            scrt_amount,
             None,
             256,
             config.sscrt.code_hash.clone(),
@@ -233,17 +232,10 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         )?
     );
 
-    /* NOTE: This will likely trigger the receive callback which
-     *       would result in re-delegating a portion of the funds.
-     *       This case will need to be tested and mitigated by either
-     *       - accounting for it when rebalancing
-     *       - add a "unallocated" flag with funds to force treasury not to
-     *         allocate them, to then be allocated at rebalancing
-     */
     messages.push(
         send_msg(
             config.treasury,
-            amount,
+            scrt_amount,
             Some(to_binary(
                 &Flag {
                     flag: "unallocated".to_string(),
@@ -270,25 +262,26 @@ pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     seed: u64,
 ) -> StdResult<Validator> {
+
     let mut validators = deps.querier.query_validators()?;
-    let bounds = (config_r(&deps.storage).load()?).validator_bounds;
 
     // filter down to viable candidates
-    if let Some(bounds) = bounds {
+    if let Some(bounds) = (config_r(&deps.storage).load()?).validator_bounds {
+
         let mut candidates = vec![];
+
         for validator in validators {
+
             if is_validator_inbounds(&validator, &bounds) {
                 candidates.push(validator);
             }
         }
+
         validators = candidates;
     }
 
     if validators.is_empty() {
-        return Err(StdError::GenericErr {
-            msg: "No validators within bounds".to_string(),
-            backtrace: None,
-        });
+        return Err(StdError::generic_err("No validators within bounds"));
     }
 
     // seed will likely be env.block.time

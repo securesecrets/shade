@@ -37,65 +37,56 @@ sscrt = SNIP20(gen_label(8),
             enable_deposit=True, enable_burn=True,
             enable_redeem=True, admin=account, 
             uploader=account, backend=backend)
-print(sscrt.address)
+print('sSCRT', sscrt.address, sscrt.code_hash)
 sscrt.execute({'set_viewing_key': {'key': viewing_key}})
 
-deposit_amount = '200000000uscrt' 
+deposit_amount = '1000000000uscrt' 
 # lol
-half_amount = '100000000uscrt' 
+# half_amount = '100000000uscrt' 
 
 print('Depositing', deposit_amount)
 sscrt.execute({'deposit': {}}, account, deposit_amount)
-print('SSCRT', sscrt.get_balance(account, viewing_key))
+print('Wallet SSCRT', sscrt.get_balance(account, viewing_key))
 
 treasury = Contract(
     '../compiled/treasury.wasm.gz',
     json.dumps({
         'admin': account,
         'viewing_key': viewing_key,
+        'sscrt': sscrt.as_dict(),
     }),
     gen_label(8),
 )
 print('TREASURY', treasury.address)
 
-staking_init = {
-    'admin': account,
-    'treasury': treasury.address,
-    'sscrt': {
-        'address': sscrt.address,
-        'code_hash': sscrt.code_hash,
-    },
-    'viewing_key': viewing_key,
-}
-
 print('Registering sSCRT w/ treasury')
 print(treasury.execute({
     'register_asset': {
-        'contract': {
-            'address': sscrt.address, 
-            'code_hash': sscrt.code_hash,
-        }
+        'contract': sscrt.as_dict(),
     }
 }))
 
+print('Deploying SCRT Staking')
 scrt_staking = Contract(
     '../compiled/scrt_staking.wasm.gz',
-    json.dumps(staking_init),
+    json.dumps({
+        'admin': account,
+        'treasury': treasury.address,
+        'sscrt': sscrt.as_dict(),
+        'viewing_key': viewing_key,
+    }),
     gen_label(8),
 )
-print('STAKING', scrt_staking.address)
+print(scrt_staking.address)
 
-print('Allocating 90% sSCRT to staking')
-allocation = .9
+allocation = .01
+print(f'Allocating {allocation * 100}% sSCRT to staking')
 print(treasury.execute({
     'register_allocation': {
         'asset': sscrt.address,
         'allocation': {
-            'staking': {
-                'contract': {
-                    'address': scrt_staking.address, 
-                    'code_hash': scrt_staking.code_hash,
-                },
+            'single_asset': {
+                'contract': scrt_staking.as_dict(),
                 'allocation': str(int(allocation * 10**18)),
             },
         }
@@ -113,31 +104,43 @@ print('Treasury sSCRT Applications')
 print(treasury.query({'allocations': {'asset': sscrt.address}}))
 
 print('Sending 100000000 usscrt to treasury')
-sscrt.execute({
+print(sscrt.execute({
         "send": {
             "recipient": treasury.address,
             "amount": str(100000000),
         },
     },
     account,
-)
+))
 print('Treasury sSCRT Balance')
-print(treasury.query({'balance': {'asset': sscrt.address}}))
+treasury_balance = treasury.query({'balance': {'asset': sscrt.address}})
+print(treasury_balance)
+print('Wallet SSCRT', sscrt.get_balance(account, viewing_key))
+print('scrt_staking sscrt balance')
+print(sscrt.query({'balance': {'address': scrt_staking.address, 'key': viewing_key}}))
+print('scrt_staking L1 balance')
+print(run_command(['secretd', 'q', 'bank', 'balances', scrt_staking.address]))
 
 print('DELEGATIONS')
 delegations = scrt_staking.query({'delegations': {}})
 print(delegations)
 
-print('Waiting for rewards',)
-while scrt_staking.query({'rewards': {}}) == '0':
-    print('.',)
+if treasury_balance == '0':
+    print('No treasury balance!')
+
+print('Waiting for rewards', end='')
+while scrt_staking.query({'adapter': {'rewards': {}}}) == '0':
+    print('.', end='', flush=True)
 print()
     
-print('REWARDS', scrt_staking.query({'rewards': {}}))
+print('REWARDS', scrt_staking.query({
+    'adapter': {
+        'rewards': {}
+    }}))
 
 print('CLAIMING')
 for delegation in delegations:
-    print(scrt_staking.execute({'claim': {'validator': delegation['validator']}}))
+    print(scrt_staking.execute({'adapter': {'claim': {}}}))
 
 print('Treasury sSCRT Balance')
 print(treasury.query({'balance': {'asset': sscrt.address}}))

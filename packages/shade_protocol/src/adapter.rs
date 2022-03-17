@@ -24,14 +24,6 @@ pub struct Bond {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    // Deposit funds
-    Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
-        amount: Uint128,
-        memo: Option<Binary>,
-        msg: Option<Binary>,
-    },
     // Begin unbonding amount
     Unbond {
        amount: Uint128, 
