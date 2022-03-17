@@ -5,8 +5,15 @@ use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, Query};
 use serde::{Deserialize, Serialize};
-use crate::shd_staking::stake::StakeConfig;
-use crate::snip20::{InitConfig, InitialBalance};
+use crate::shd_staking::stake::{QueueItem, StakeConfig, VecQueue};
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone, Default, Debug)]
+#[serde(rename_all = "snake_case")]
+pub struct InitConfig {
+    /// Indicates whether the total supply is public or should be kept secret.
+    /// default: False
+    public_total_supply: Option<bool>,
+}
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct InitMsg {
@@ -16,7 +23,6 @@ pub struct InitMsg {
     // Will default to staked token decimals if not set
     pub decimals: Option<u8>,
     pub share_decimals: u8,
-    pub initial_balances: Option<Vec<InitialBalance>>,
     pub prng_seed: Binary,
     pub config: Option<InitConfig>,
 
@@ -34,12 +40,21 @@ pub struct InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ReceiveType {
-    // User staking
-    Bond,
+    // User staking, users can pick between using the sender or fund allower
+    Bond { useFrom: Option<bool> },
     // Adding staker rewards
     Reward,
     // Funding unbonds
     Unbond
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum ContractStatusLevel {
+    NormalRun,
+    StopBonding,
+    StopAllButUnbond, //Can set time to 0 for instant unbond
+    StopAll,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -50,47 +65,63 @@ pub enum HandleMsg {
         unbond_time: Option<u64>,
         disable_treasury: bool,
         treasury: Option<HumanAddr>,
-        treasury_code_hash: Option<String>,
-        padding: String
+        padding: Option<String>
     },
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
         amount: Uint128,
-        msg: Option<String>,
-        padding: String
+        msg: Option<Binary>,
+        memo: Option<String>,
+        padding: Option<String>
     },
     Unbond {
         amount: Uint128,
-        padding: String
+        padding: Option<String>
     },
     ClaimUnbond {
-        padding: String
+        padding: Option<String>
     },
     ClaimRewards {
-        padding: String
+        padding: Option<String>
     },
     StakeRewards {
-        padding: String
+        padding: Option<String>
     },
 
     // Balance
     ExposeBalance {
         recipient: HumanAddr,
-        code_hash: String,
+        code_hash: Option<String>,
         msg: Option<Binary>,
         memo: Option<String>,
-        padding: String
+        padding: Option<String>
+    },
+
+    ExposeBalanceWithCooldown {
+        recipient: HumanAddr,
+        code_hash: Option<String>,
+        msg: Option<Binary>,
+        memo: Option<String>,
+        padding: Option<String>
     },
 
     // Distributors
+    SetDistributorsStatus {
+        enabled: bool,
+        padding: Option<String>
+    },
     AddDistributors {
         distributors: Vec<HumanAddr>,
-        padding: String
+        padding: Option<String>
     },
     SetDistributors {
         distributors: Vec<HumanAddr>,
-        padding: String
+        padding: Option<String>
+    },
+
+    ContractStatus {
+        status: ContractStatusLevel,
     },
 
     // Implement this to receive balance information
@@ -116,6 +147,7 @@ pub enum HandleAnswer {
     ClaimRewards { status: ResponseStatus },
     StakeRewards { status: ResponseStatus },
     ExposeBalance { status: ResponseStatus },
+    SetDistributorsStatus { status: ResponseStatus },
     AddDistributors { status: ResponseStatus },
     SetDistributors { status: ResponseStatus },
 }
@@ -126,14 +158,17 @@ pub enum QueryMsg {
     // Staking
     StakeConfig {},
     TotalStaked {},
-    Unbonding {
+    // Total token shares per token
+    StakeRate {},
+    Unbonding {},
+    Unfunded {
         start: u64,
-        end: u64
+        total: u64
     },
     Staked {
         address: HumanAddr,
         key: String,
-        time: u64,
+        time: Option<u64>,
     },
 
     // Distributors
@@ -152,7 +187,7 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryWithPermit {
     Staked {
-        time: u64,
+        time: Option<u64>,
     },
 }
 
@@ -167,19 +202,27 @@ pub enum QueryAnswer {
         tokens: Uint128,
         shares: Uint128
     },
+    // Shares per token
+    StakeRate {
+        shares: Uint128
+    },
     Staked {
         tokens: Uint128,
         shares: Uint128,
         pending_rewards: Uint128,
         unbonding: Uint128,
-        unbonded: Uint128
+        unbonded: Option<Uint128>,
+        cooldown: VecQueue<QueueItem>
     },
     Unbonding {
+        total: Uint128
+    },
+    Unfunded {
         total: Uint128
     },
 
     // Distributors
     Distributors {
-        distributors: Vec<HumanAddr>
+        distributors: Option<Vec<HumanAddr>>
     },
 }
