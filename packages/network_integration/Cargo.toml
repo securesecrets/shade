@@ -8,6 +8,10 @@ edition = "2018"
 name = "testnet_airdrop"
 path = "src/testnet_airdrop.rs"
 
+[[bin]]
+name = "testnet_staking"
+path = "src/testnet_staking.rs"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
