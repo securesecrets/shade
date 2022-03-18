@@ -29,8 +29,8 @@ compress_all: setup
 compress-snip20: setup
 	$(call opt_and_compress,snip20,snip20_reference_impl)
 
-compress-stkd-snip20: setup
-	$(call opt_and_compress,shd_staking,spip_stkn_0)
+compress-shd_staking: setup
+	$(call opt_and_compress,shd_staking,spip_stkd_0)
 
 compress-%: setup
 	$(call opt_and_compress,$*,$*)
@@ -43,7 +43,7 @@ snip20: setup
 	(cd ${contracts_dir}/snip20; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20)
 
-stkd-snip20: setup
+shd_staking: setup
 	(cd ${contracts_dir}/shd_staking; ${build-release})
 	@$(MAKE) $(addprefix compress-,shd_staking)
 
