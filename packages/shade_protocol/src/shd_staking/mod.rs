@@ -12,7 +12,7 @@ use crate::shd_staking::stake::{QueueItem, StakeConfig, VecQueue};
 pub struct InitConfig {
     /// Indicates whether the total supply is public or should be kept secret.
     /// default: False
-    public_total_supply: Option<bool>,
+    pub public_total_supply: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
