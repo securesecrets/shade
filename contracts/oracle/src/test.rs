@@ -1,8 +1,17 @@
 #[cfg(test)]
 mod tests {
+    use crate::contract;
     use crate::query;
-
     use cosmwasm_math_compat::Uint128;
+    use cosmwasm_std::{
+        coins, from_binary,
+        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
+        Extern, HumanAddr, StdError,
+    };
+    use shade_protocol::{
+        oracle::{self, OracleConfig, QueryAnswer},
+        utils::asset::Contract,
+    };
 
     macro_rules! normalize_price_tests {
     ($($name:ident: $value:expr,)*) => {
@@ -85,5 +94,44 @@ mod tests {
             // 50 SHD per USD
             Uint128::new(50_000_000_000_000_000_000u128),
         ),
+    }
+
+    #[test]
+    fn test_config() {
+        let mut deps = mock_dependencies(20, &coins(0, ""));
+
+        // Initialize oracle contract
+        let env = mock_env("creator", &coins(0, ""));
+        let oracle_init_msg = oracle::InitMsg {
+            admin: None,
+            band: Contract {
+                address: HumanAddr::from(""),
+                code_hash: String::from(""),
+            },
+            sscrt: Contract {
+                address: HumanAddr::from(""),
+                code_hash: String::from(""),
+            },
+        };
+        let res = contract::init(&mut deps, env, oracle_init_msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        let check_state = OracleConfig {
+            admin: HumanAddr::from("creator"),
+            band: Contract {
+                address: HumanAddr::from(""),
+                code_hash: String::from(""),
+            },
+            sscrt: Contract {
+                address: HumanAddr::from(""),
+                code_hash: String::from(""),
+            },
+        };
+        let query_answer = query::config(&mut deps).unwrap();
+        let query_result = match query_answer {
+            QueryAnswer::Config { config } => config == check_state,
+            _ => false,
+        };
+        assert_eq!(true, query_result);
     }
 }
