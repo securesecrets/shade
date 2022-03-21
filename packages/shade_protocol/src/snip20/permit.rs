@@ -1,5 +1,5 @@
 use cosmwasm_std::HumanAddr;
-use flexible_permits::{
+use query_authentication::{
     permit::{bech32_to_canonical, Permit},
     transaction::SignedTx,
 };

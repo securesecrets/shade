@@ -4,7 +4,7 @@ use network_integration::utils::{
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use secretcli::cli_types::NetContract;
-use secretcli::secretcli::{account_address, test_contract_handle, test_inst_init};
+use secretcli::secretcli::{account_address, init};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
         }),
     };
 
-    let snip = test_inst_init(
+    let snip = init(
         &snip_init_msg,
         SNIP20_FILE,
         &*generate_label(8),
@@ -46,6 +46,7 @@ fn main() -> Result<()> {
         Some(STORE_GAS),
         Some(GAS),
         None,
+        &mut vec![],
     )?;
 
     print_contract(&snip);
@@ -70,7 +71,7 @@ fn main() -> Result<()> {
         distributors: None
     };
 
-    let stake = test_inst_init(
+    let stake = init(
         &init_msg,
         SHD_STAKING_FILE,
         &*generate_label(8),
@@ -78,6 +79,7 @@ fn main() -> Result<()> {
         Some(STORE_GAS),
         Some(GAS),
         None,
+        &mut vec![],
     )?;
 
     print_contract(&stake);

@@ -3,7 +3,7 @@ use std::collections::BinaryHeap;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use cosmwasm_std::{HumanAddr, Uint128};
-use crate::storage::{BucketStorage, SingletonStorage};
+use crate::utils::storage::{BucketStorage, SingletonStorage};
 use crate::utils::asset::Contract;
 
 // Configuration file for staking
