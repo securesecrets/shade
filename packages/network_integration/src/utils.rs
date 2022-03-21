@@ -1,9 +1,10 @@
 use colored::*;
 use rand::{distributions::Alphanumeric, Rng};
-use secretcli::{cli_types::NetContract, secretcli::query_contract};
+use secretcli::{cli_types::NetContract, secretcli::query};
 use serde::Serialize;
 use shade_protocol::mint;
 use std::fmt::Display;
+use std::fs;
 
 // Smart contracts
 pub const SNIP20_FILE: &str = "../../compiled/snip20.wasm.gz";
@@ -12,7 +13,7 @@ pub const GOVERNANCE_FILE: &str = "../../compiled/governance.wasm.gz";
 pub const MOCK_BAND_FILE: &str = "../../compiled/mock_band.wasm.gz";
 pub const ORACLE_FILE: &str = "../../compiled/oracle.wasm.gz";
 pub const INITIALIZER_FILE: &str = "../../compiled/initializer.wasm.gz";
-pub const MICRO_MINT_FILE: &str = "../../compiled/mint.wasm.gz";
+pub const MINT_FILE: &str = "../../compiled/mint.wasm.gz";
 pub const STAKING_FILE: &str = "../../compiled/staking.wasm.gz";
 pub const SHD_STAKING_FILE: &str = "../../compiled/shd_staking.wasm.gz";
 
@@ -48,12 +49,17 @@ pub fn print_epoch_info(minter: &NetContract) {
     println!("\tEpoch information");
     let msg = mint::QueryMsg::Limit {};
 
-    let query: mint::QueryAnswer = query_contract(minter, &msg).unwrap();
+    let query: mint::QueryAnswer = query(minter, &msg, None).unwrap();
 
-    if let mint::QueryAnswer::Limit { limit, minted, last_refresh } = query {
+    if let mint::QueryAnswer::Limit {
+        minted,
+        limit,
+        last_refresh,
+    } = query
+    {
         println!(
-            "\tLast Refresh: {}\n\tCapacity: {}\n\tTotal Minted: {}\n\t",
-            last_refresh, limit, minted
+            "\tLast Refresh: {}\n\tMinted/Limit: {}/{}",
+            last_refresh, minted, limit
         );
     }
 }
@@ -70,4 +76,12 @@ pub fn print_vec<Type: Display>(prefix: &str, vec: Vec<Type>) {
         print!(", {}", e);
     }
     println!();
+}
+
+pub fn store_struct<T: serde::Serialize>(path: &str, data: &T) {
+    fs::write(
+        path,
+        serde_json::to_string_pretty(data).expect("Could not serialize data"),
+    )
+    .expect(&format!("Could not store {}", path));
 }

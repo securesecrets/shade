@@ -1,8 +1,8 @@
 [submodule "contracts/snip20"]
 	path = contracts/snip20
 	url = https://github.com/scrtlabs/snip20-reference-impl.git
-  branch = master
+    branch = master
 [submodule "contracts/shd_staking"]
 	path = contracts/shd_staking
 	url = https://github.com/securesecrets/SPIP-STKN-0
-    branch = main
+    branch = staking-implementation

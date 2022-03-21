@@ -13,7 +13,7 @@ cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
 rm ./$(1).wasm
 endef
 
-CONTRACTS = airdrop governance mint treasury oracle mock_band initializer scrt_staking shd_staking snip20
+CONTRACTS = airdrop governance mint mint_router treasury oracle mock_band initializer scrt_staking shd_staking snip20
 
 debug: setup
 	(cd ${contracts_dir}; ${build-debug})
@@ -42,6 +42,12 @@ $(CONTRACTS): setup
 snip20: setup
 	(cd ${contracts_dir}/snip20; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20)
+
+test:
+	@$(MAKE) $(addprefix test-,$(CONTRACTS))
+
+test-%:
+	(cd ${contracts_dir}/$*; cargo unit-test)
 
 shd_staking: setup
 	(cd ${contracts_dir}/shd_staking; ${build-release})

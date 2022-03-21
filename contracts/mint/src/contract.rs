@@ -19,7 +19,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
     let state = Config {
         admin: match msg.admin {
             None => env.message.sender.clone(),
@@ -56,8 +55,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         token_config: Option::from(token_config),
     })?;
 
-    let empty_assets_list: Vec<String> = Vec::new();
-    asset_list_w(&mut deps.storage).save(&empty_assets_list)?;
+    asset_list_w(&mut deps.storage).save(&vec![])?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -73,11 +71,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::UpdateConfig {
-            config,
-        } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { contract, capture, unlimited } => 
-            handle::try_register_asset(deps, &env, &contract, capture, unlimited),
+        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        HandleMsg::RegisterAsset {
+            contract,
+            capture,
+            fee,
+            unlimited,
+        } => handle::try_register_asset(deps, &env, &contract, capture, fee, unlimited),
         HandleMsg::RemoveAsset { address } => handle::try_remove_asset(deps, &env, address),
         HandleMsg::Receive {
             sender,
@@ -99,5 +99,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Asset { contract } => to_binary(&query::asset(deps, contract)?),
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Limit {} => to_binary(&query::limit(deps)?),
+        QueryMsg::Mint {
+            offer_asset,
+            amount,
+        } => to_binary(&query::mint(deps, offer_asset, amount)?),
     }
 }

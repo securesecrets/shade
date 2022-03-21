@@ -1,7 +1,8 @@
+use crate::handle::{try_account, try_set_viewing_key};
 use crate::{
     handle::{
-        try_add_tasks, try_claim, try_claim_decay, try_complete_task, try_create_account,
-        try_disable_permit_key, try_update_account, try_update_config,
+        try_add_tasks, try_claim, try_claim_decay, try_complete_task, try_disable_permit_key,
+        try_update_config,
     },
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
@@ -11,6 +12,7 @@ use cosmwasm_std::{
     StdResult, Storage, Uint128,
 };
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::airdrop::errors::{invalid_dates, invalid_task_percentage};
 use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
 
 // Used to pad up responses for better privacy.
@@ -36,10 +38,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }
 
     if count > Uint128(100) {
-        return Err(StdError::GenericErr {
-            msg: "tasks above 100%".to_string(),
-            backtrace: None,
-        });
+        return Err(invalid_task_percentage(count.to_string().as_str()));
     }
 
     let start_date = match msg.start_date {
@@ -49,8 +48,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     if let Some(end_date) = msg.end_date {
         if end_date < start_date {
-            return Err(StdError::generic_err(
-                "Start date must come before end date",
+            return Err(invalid_dates(
+                "EndDate",
+                end_date.to_string().as_str(),
+                "before",
+                "StartDate",
+                start_date.to_string().as_str(),
             ));
         }
     }
@@ -58,14 +61,22 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     // Avoid decay collisions
     if let Some(start_decay) = msg.decay_start {
         if start_decay < start_date {
-            return Err(StdError::generic_err(
-                "Decay cannot start before start date",
+            return Err(invalid_dates(
+                "Decay",
+                start_decay.to_string().as_str(),
+                "before",
+                "StartDate",
+                start_date.to_string().as_str(),
             ));
         }
         if let Some(end_date) = msg.end_date {
             if start_decay > end_date {
-                return Err(StdError::generic_err(
-                    "Decay cannot start after the end date",
+                return Err(invalid_dates(
+                    "EndDate",
+                    end_date.to_string().as_str(),
+                    "before",
+                    "Decay",
+                    start_decay.to_string().as_str(),
                 ));
             }
         } else {
@@ -129,17 +140,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ),
             HandleMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, tasks),
             HandleMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, address),
-            HandleMsg::CreateAccount {
+            HandleMsg::Account {
                 addresses,
                 partial_tree,
                 ..
-            } => try_create_account(deps, &env, addresses, partial_tree),
-            HandleMsg::UpdateAccount {
-                addresses,
-                partial_tree,
-                ..
-            } => try_update_account(deps, &env, addresses, partial_tree),
+            } => try_account(deps, &env, addresses, partial_tree),
             HandleMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
+            HandleMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, &env, key),
             HandleMsg::Claim { .. } => try_claim(deps, &env),
             HandleMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),
         },
@@ -160,6 +167,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 permit,
                 current_date,
             } => to_binary(&query::account(deps, permit, current_date)?),
+            QueryMsg::AccountWithKey {
+                account,
+                key,
+                current_date,
+            } => to_binary(&query::account_with_key(deps, account, key, current_date)?),
         },
         RESPONSE_BLOCK_SIZE,
     )

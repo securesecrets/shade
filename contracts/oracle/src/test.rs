@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests {
+    use crate::contract;
+    use cosmwasm_std::{coins, from_binary, testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage}, Extern, StdError, Uint128, HumanAddr};
+    use shade_protocol::{utils::asset::Contract, oracle::{self, OracleConfig, QueryAnswer}};
     use crate::query;
 
-    use cosmwasm_std::Uint128;
 
     macro_rules! normalize_price_tests {
     ($($name:ident: $value:expr,)*) => {
@@ -33,10 +35,10 @@ mod tests {
         normalize_2: (
             // amount of TKN received for 1 sSCRT
             Uint128(1_000_000),
-            // TKN 6 decimals
-            6u8,
+            // TKN 8 decimals
+            8u8,
             // price * 10^18
-            Uint128(1_000_000_000_000_000_000)
+            Uint128(10_000_000_000_000_000)
         ),
     }
 
@@ -85,5 +87,44 @@ mod tests {
             // 50 SHD per USD
             Uint128(50_000_000_000_000_000_000),
         ),
+    }
+
+    #[test]
+    fn test_config(){
+        let mut deps = mock_dependencies(20, &coins(0, ""));
+
+        // Initialize oracle contract
+        let env = mock_env("creator", &coins(0, ""));
+        let oracle_init_msg = oracle::InitMsg{
+            admin: None,
+            band: Contract{
+                address: HumanAddr::from(""),
+                code_hash: String::from(""),
+            },
+            sscrt: Contract{
+                address: HumanAddr::from(""),
+                code_hash: String::from("")
+            },
+        };
+        let res = contract::init(&mut deps, env, oracle_init_msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        let check_state = OracleConfig{
+            admin: HumanAddr::from("creator"),
+            band: Contract{
+                address: HumanAddr::from(""),
+                code_hash: String::from("")
+            },
+            sscrt: Contract{
+                address: HumanAddr::from(""),
+                code_hash: String::from("")
+            }
+        };
+        let query_answer = query::config(&mut deps).unwrap();
+        let query_result = match query_answer{
+            QueryAnswer::Config{config} => config == check_state,
+            _ => false,
+        };
+        assert_eq!(true, query_result);
     }
 }

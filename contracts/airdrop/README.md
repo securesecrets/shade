@@ -13,20 +13,21 @@
             * [CompleteTask](#CompleteTask)
     * [User](#User)
         * Messages
-            * [CreateAccount](#CreateAccount)
-            * [UpdateAccount](#UpdateAccount)
+            * [Account](#Account)
             * [DisablePermitKey](#DisablePermitKey)
+            * [SetViewingKey](#SetViewingKey)
             * [Claim](#Claim)
         * Queries
             * [Config](#Config)
             * [Dates](#Dates)
             * [TotalClaimed](#TotalClaimed)
             * [Account](#Account)
-    
+            * [AccountWithKey](#AccountWithKey)
+
 # Introduction
 Contract responsible to handle snip20 airdrop
 
-# Sections 
+# Sections
 
 ## Init
 ##### Request
@@ -40,7 +41,7 @@ Contract responsible to handle snip20 airdrop
 | end_date       | u64           | When the airdrop ends in UNIX time                                         | yes      |
 | decay_start    | u64           | When the airdrop decay starts in UNIX time                                 | yes      |
 | merkle_root    | String        | Base 64 encoded merkle root of the airdrop data tree                       | no       |
-| total_accounts | String        | Total accounts in airdrop (needed for merkle proof)                        | no       |
+| total_accounts | u32           | Total accounts in airdrop (needed for merkle proof)                        | no       |
 | max_amount     | String        | Used to limit the user permit amounts (lowers exploit possibility)         | no       |
 | default_claim  | String        | The default amount to be gifted regardless of tasks                        | no       |
 | task_claim     | RequiredTasks | The amounts per tasks to gift                                              | no       |
@@ -53,17 +54,24 @@ Contract responsible to handle snip20 airdrop
 #### UpdateConfig
 Updates the given values
 ##### Request
-| Name         | Type   | Description                                          | optional |
-|--------------|--------|------------------------------------------------------|----------|
-| admin        | string | New contract admin; SHOULD be a valid bech32 address | yes      |
-| dump_address | string | Sets the dump address if there isnt any              | yes      |
-| start_date   | u64    | When the airdrop starts in UNIX time                 | yes      |
-| end_date     | u64    | When the airdrop ends in UNIX time                   | yes      |
-| decay_start  | u64    | When the airdrop decay starts in UNIX time           | yes      |
-| padding      | string | Allows for enforcing constant length messages        | yes      |
+| Name           | Type   | Description                                          | optional |
+|----------------|--------|------------------------------------------------------|----------|
+| admin          | string | New contract admin; SHOULD be a valid bech32 address | yes      |
+| dump_address   | string | Sets the dump address if there isnt any              | yes      |
+| query_rounding | String | To prevent leaking information                       | yes      |
+| start_date     | u64    | When the airdrop starts in UNIX time                 | yes      |
+| end_date       | u64    | When the airdrop ends in UNIX time                   | yes      |
+| decay_start    | u64    | When the airdrop decay starts in UNIX time           | yes      |
+| padding        | string | Allows for enforcing constant length messages        | yes      |
 
 #### AddTasks
-Adds more tasks to complete
+Adds another task that can unlock the users claim percentage, total task percentage cannot exceed 100%
+##### Task
+| Name    | Type   | Description                                      | optional |
+|---------|--------|--------------------------------------------------|----------|
+| address | String | The address that will grant the task to accounts | no       |
+| percent | string | The percent to be unlocked when completed        | no       |
+
 ##### Request
 | Name    | Type   | Description                                   | optional |
 |---------|--------|-----------------------------------------------|----------|
@@ -80,7 +88,7 @@ Adds more tasks to complete
 ```
 
 #### ClaimDecay
-Drains the decayed amount of airdrop into a dump address
+Drains the decayed amount of airdrop into the specified dump_address
 
 ##### Response
 ```json
@@ -116,8 +124,8 @@ Complete that address' tasks for a given user
 
 ### Messages
 
-### CreateAccount
-Creates an account from which the user will claim all of his given addresses' rewards
+### Account
+(Creates / Updates) an account from which the user will claim all of his given addresses' rewards
 ##### Request
 | Name         | Type                                               | Description                                               | optional |
 |--------------|----------------------------------------------------|-----------------------------------------------------------|----------|
@@ -128,26 +136,12 @@ Creates an account from which the user will claim all of his given addresses' re
 ##### Response
 ```json
 {
-  "create_account": {
-    "status": "success"
-  }
-}
-```
-
-### UpdateAccount
-Updates a users accounts with more addresses
-##### Request
-| Name         | Type                                               | Description                                               | optional |
-|--------------|----------------------------------------------------|-----------------------------------------------------------|----------|
-| addresses    | Array of [AddressProofPermit](#AddressProofPermit) | Proof that the user owns those addresses                  | no       |
-| partial_tree | Array of string                                    | An array of nodes that serve as a proof for the addresses | no       |
-| padding      | string                                             | Allows for enforcing constant length messages             | yes      |
-
-##### Response
-```json
-{
-  "update_account": {
-    "status": "success"
+  "account": {
+    "status": "success",
+    "total": "Total airdrop amount",
+    "claimed": "Claimed amount",
+    "finished_tasks": "All of the finished tasks",
+    "addresses": ["claimed addresses"]
   }
 }
 ```
@@ -169,6 +163,23 @@ Disables that permit's key. Any permit that has that key for that address will b
 }
 ```
 
+### SetViewingKey
+Sets a viewing key for the account, useful for when the network is congested because of permits.
+##### Request
+| Name    | Type   | Description                                   | optional |
+|---------|--------|-----------------------------------------------|----------|
+| key     | string | Viewing key                                   | no       |
+| padding | string | Allows for enforcing constant length messages | yes      |
+
+##### Response
+```json
+{
+  "set_viewing_key": {
+    "status": "success"
+  }
+}
+```
+
 #### Claim
 Claim the user's available claimable amount
 
@@ -176,7 +187,11 @@ Claim the user's available claimable amount
 ```json
 {
   "claim": {
-    "status": "success"
+    "status": "success",
+    "total": "Total airdrop amount",
+    "claimed": "Claimed amount",
+    "finished_tasks": "All of the finished tasks",
+    "addresses": ["claimed addresses"]
   }
 }
 ```
@@ -232,6 +247,26 @@ Get the account's information
 ```json
 {
   "account": {
+    "total": "Total airdrop amount",
+    "claimed": "Claimed amount",
+    "unclaimed": "Amount available to claim",
+    "finished_tasks": "All of the finished tasks",
+    "addresses": ["claimed addresses"]
+  }
+}
+```
+
+## AccountWithKey
+Get the account's information using a viewing key
+##### Request
+| Name         | Type   | Description                 | optional |
+|--------------|--------|-----------------------------|----------|
+| account      | String | Accounts address            | yes      |
+| key          | String | Address's viewing key       | no       |
+| current_date | u64    | Current time in UNIT format | yes      |
+```json
+{
+  "account_with_key": {
     "total": "Total airdrop amount",
     "claimed": "Claimed amount",
     "unclaimed": "Amount available to claim",

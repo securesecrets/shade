@@ -1,15 +1,22 @@
 use crate::state::{
-    account_r, account_total_claimed_w, account_w, address_in_account_w, claim_status_r,
-    claim_status_w, config_r, config_w, decay_claimed_w, revoke_permit, total_claimed_r,
-    total_claimed_w, validate_address_permit,
+    account_r, account_total_claimed_r, account_total_claimed_w, account_viewkey_w, account_w,
+    address_in_account_w, claim_status_r, claim_status_w, config_r, config_w, decay_claimed_w,
+    revoke_permit, total_claimed_r, total_claimed_w, validate_address_permit,
 };
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier,
     StdError, StdResult, Storage, Uint128,
 };
+use query_authentication::viewing_keys::ViewingKey;
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::airdrop::account::AddressProofMsg;
+use shade_protocol::airdrop::account::{AccountKey, AddressProofMsg};
+use shade_protocol::airdrop::errors::{
+    account_already_created, account_does_not_exist, address_already_in_account, airdrop_ended,
+    airdrop_not_started, claim_too_high, decay_claimed, decay_not_set, expected_memo,
+    invalid_dates, invalid_partial_tree, invalid_task_percentage, not_admin, nothing_to_claim,
+    permit_rejected, unexpected_error,
+};
 use shade_protocol::airdrop::{
     account::{Account, AddressProofPermit},
     claim_info::RequiredTask,
@@ -31,7 +38,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
     // Check if admin
     if env.message.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(not_admin(config.admin.as_str()));
     }
 
     // Save new info
@@ -50,27 +57,43 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             // Avoid date collisions
             if let Some(end_date) = end_date {
                 if start_date > end_date {
-                    return Err(StdError::generic_err(
-                        "New start date is greater than end date",
+                    return Err(invalid_dates(
+                        "EndDate",
+                        end_date.to_string().as_str(),
+                        "before",
+                        "StartDate",
+                        start_date.to_string().as_str(),
                     ));
                 }
             } else if let Some(end_date) = state.end_date {
                 if start_date > end_date {
-                    return Err(StdError::generic_err(
-                        "New start date is greater than the current end date",
+                    return Err(invalid_dates(
+                        "EndDate",
+                        end_date.to_string().as_str(),
+                        "before",
+                        "StartDate",
+                        start_date.to_string().as_str(),
                     ));
                 }
             }
             if let Some(start_decay) = decay_start {
                 if start_date > start_decay {
-                    return Err(StdError::generic_err(
-                        "New start date is greater than start of decay",
+                    return Err(invalid_dates(
+                        "Decay",
+                        start_decay.to_string().as_str(),
+                        "before",
+                        "StartDate",
+                        start_date.to_string().as_str(),
                     ));
                 }
             } else if let Some(start_decay) = state.decay_start {
                 if start_date > start_decay {
-                    return Err(StdError::generic_err(
-                        "New start date is greater than the current start of decay",
+                    return Err(invalid_dates(
+                        "Decay",
+                        start_decay.to_string().as_str(),
+                        "before",
+                        "StartDate",
+                        start_date.to_string().as_str(),
                     ));
                 }
             }
@@ -81,14 +104,22 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             // Avoid date collisions
             if let Some(decay_start) = decay_start {
                 if decay_start > end_date {
-                    return Err(StdError::generic_err(
-                        "New end date is before start of decay",
+                    return Err(invalid_dates(
+                        "EndDate",
+                        end_date.to_string().as_str(),
+                        "before",
+                        "Decay",
+                        decay_start.to_string().as_str(),
                     ));
                 }
             } else if let Some(decay_start) = state.decay_start {
                 if decay_start > end_date {
-                    return Err(StdError::generic_err(
-                        "New end date is before current start of decay",
+                    return Err(invalid_dates(
+                        "EndDate",
+                        end_date.to_string().as_str(),
+                        "before",
+                        "Decay",
+                        decay_start.to_string().as_str(),
                     ));
                 }
             }
@@ -119,7 +150,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
     // Check if admin
     if env.message.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(not_admin(config.admin.as_str()));
     }
 
     config_w(&mut deps.storage).update(|mut config| {
@@ -133,7 +164,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
         }
 
         if count > Uint128(100) {
-            return Err(StdError::generic_err("tasks above 100%"));
+            return Err(invalid_task_percentage(count.to_string().as_str()));
         }
 
         Ok(config)
@@ -148,87 +179,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_create_account<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    addresses: Vec<AddressProofPermit>,
-    partial_tree: Vec<Binary>,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-
-    // Check that airdrop hasn't ended
-    available(&config, env)?;
-
-    // Check that account doesnt exist
-    let sender = env.message.sender.to_string();
-    if account_r(&deps.storage)
-        .may_load(sender.as_bytes())?
-        .is_some()
-    {
-        return Err(StdError::generic_err("Account already made"));
-    }
-
-    let mut account = Account {
-        addresses: vec![],
-        total_claimable: Uint128::zero(),
-    };
-
-    // Validate permits
-    try_add_account_addresses(
-        &mut deps.storage,
-        &config,
-        &env.message.sender,
-        &mut account,
-        addresses,
-        partial_tree,
-    )?;
-
-    // Save account
-    account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
-
-    // Add default claim at index 0
-    account_total_claimed_w(&mut deps.storage).save(sender.as_bytes(), &Uint128::zero())?;
-    claim_status_w(&mut deps.storage, 0).save(sender.as_bytes(), &false)?;
-
-    // Claim the airdrop after account creation
-    let (completed_percentage, unclaimed_percentage) =
-        update_tasks(&mut deps.storage, &config, sender)?;
-    let mut messages = vec![];
-    // Avoid calculating if theres nothing to claim
-    if unclaimed_percentage > Uint128::zero() {
-        let redeem_amount = claim_tokens(
-            &mut deps.storage,
-            env,
-            &config,
-            &account,
-            completed_percentage,
-            unclaimed_percentage,
-        )?;
-
-        total_claimed_w(&mut deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
-
-        messages.push(send_msg(
-            env.message.sender.clone(),
-            redeem_amount,
-            None,
-            None,
-            None,
-            0,
-            config.airdrop_snip20.code_hash,
-            config.airdrop_snip20.address,
-        )?);
-    }
-
-    Ok(HandleResponse {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::CreateAccount {
-            status: ResponseStatus::Success,
-        })?),
-    })
-}
-
-pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
+pub fn try_account<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     addresses: Vec<AddressProofPermit>,
@@ -237,17 +188,50 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
     // Check if airdrop active
     let config = config_r(&deps.storage).load()?;
 
-    // Check that airdrop hasnt ended
+    // Check that airdrop hasn't ended
     available(&config, env)?;
 
-    // Get account
-    let sender = env.message.sender.clone().to_string();
-    let mut account = account_r(&deps.storage).load(sender.as_bytes())?;
+    // Setup account
+    let sender = env.message.sender.to_string();
 
-    // Run the claim function if theres something to claim
-    let old_claim_amount = account.total_claimable;
+    // These variables are setup to facilitate updating
+    let updating_account: bool;
+    let old_claim_amount: Uint128;
+
+    let mut account = match account_r(&deps.storage).may_load(sender.as_bytes())? {
+        None => {
+            updating_account = false;
+            old_claim_amount = Uint128::zero();
+            let mut account = Account::default();
+
+            // Validate permits
+            try_add_account_addresses(
+                &mut deps.storage,
+                &config,
+                &env.message.sender,
+                &mut account,
+                addresses.clone(),
+                partial_tree.clone(),
+            )?;
+
+            // Add default claim at index 0
+            account_total_claimed_w(&mut deps.storage).save(sender.as_bytes(), &Uint128::zero())?;
+            claim_status_w(&mut deps.storage, 0).save(sender.as_bytes(), &false)?;
+
+            account
+        }
+        Some(acc) => {
+            updating_account = true;
+            old_claim_amount = acc.total_claimable;
+            acc
+        }
+    };
+
+    // Claim airdrop
+    let mut messages = vec![];
+
     let (completed_percentage, unclaimed_percentage) =
-        update_tasks(&mut deps.storage, &config, sender.to_string())?;
+        update_tasks(&mut deps.storage, &config, sender.clone())?;
 
     let mut redeem_amount = Uint128::zero();
 
@@ -262,18 +246,20 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    // Setup the new addresses
-    try_add_account_addresses(
-        &mut deps.storage,
-        &config,
-        &env.message.sender,
-        &mut account,
-        addresses,
-        partial_tree,
-    )?;
+    // Update account after claim to calculate difference
+    if updating_account {
+        // Validate permits
+        try_add_account_addresses(
+            &mut deps.storage,
+            &config,
+            &env.message.sender,
+            &mut account,
+            addresses.clone(),
+            partial_tree.clone(),
+        )?;
+    }
 
-    let mut messages = vec![];
-    if completed_percentage > Uint128::zero() {
+    if updating_account && completed_percentage > Uint128::zero() {
         // Calculate the total new address amount
         let added_address_total = (account.total_claimable - old_claim_amount)?;
         account_total_claimed_w(&mut deps.storage).update(sender.as_bytes(), |claimed| {
@@ -290,10 +276,12 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
                 redeem_amount += new_redeem;
                 Ok(claimed + new_redeem)
             } else {
-                Err(StdError::generic_err("Account total claimed not set"))
+                Err(unexpected_error())
             }
         })?;
+    }
 
+    if redeem_amount > Uint128::zero() {
         total_claimed_w(&mut deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
 
         messages.push(send_msg(
@@ -308,13 +296,19 @@ pub fn try_update_account<S: Storage, A: Api, Q: Querier>(
         )?);
     }
 
+    // Save account
     account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateAccount {
+        data: Some(to_binary(&HandleAnswer::Account {
             status: ResponseStatus::Success,
+            total: account.total_claimable,
+            claimed: account_total_claimed_r(&deps.storage).load(sender.to_string().as_bytes())?,
+            // Will always be 0 since rewards are automatically claimed here
+            finished_tasks: finished_tasks(&deps.storage, sender.clone())?,
+            addresses: account.addresses,
         })?),
     })
 }
@@ -330,6 +324,25 @@ pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::DisablePermitKey {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    key: String,
+) -> StdResult<HandleResponse> {
+    account_viewkey_w(&mut deps.storage).save(
+        &env.message.sender.to_string().as_bytes(),
+        &AccountKey(key).hash(),
+    )?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::SetViewingKey {
             status: ResponseStatus::Success,
         })?),
     })
@@ -361,7 +374,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::Claim {
+        data: Some(to_binary(&HandleAnswer::CompleteTask {
             status: ResponseStatus::Success,
         })?),
     })
@@ -385,7 +398,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         update_tasks(&mut deps.storage, &config, sender.to_string())?;
 
     if unclaimed_percentage == Uint128::zero() {
-        return Err(StdError::generic_err("No claimable amount available"));
+        return Err(nothing_to_claim());
     }
 
     let redeem_amount = claim_tokens(
@@ -401,7 +414,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![send_msg(
-            sender,
+            sender.clone(),
             redeem_amount,
             None,
             None,
@@ -413,6 +426,10 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Claim {
             status: ResponseStatus::Success,
+            total: account.total_claimable,
+            claimed: account_total_claimed_r(&deps.storage).load(sender.to_string().as_bytes())?,
+            finished_tasks: finished_tasks(&deps.storage, sender.to_string())?,
+            addresses: account.addresses,
         })?),
     })
 }
@@ -429,7 +446,7 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
             if env.block.time > end_date {
                 decay_claimed_w(&mut deps.storage).update(|claimed| {
                     if claimed {
-                        Err(StdError::generic_err("Decay already claimed"))
+                        Err(decay_claimed())
                     } else {
                         Ok(true)
                     }
@@ -459,7 +476,23 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Err(StdError::unauthorized())
+    Err(decay_not_set())
+}
+
+pub fn finished_tasks<S: Storage>(storage: &S, account: String) -> StdResult<Vec<RequiredTask>> {
+    let mut finished_tasks = vec![];
+    let config = config_r(storage).load()?;
+
+    for (index, task) in config.task_claim.iter().enumerate() {
+        match claim_status_r(storage, index).may_load(account.as_bytes())? {
+            None => {}
+            Some(_) => {
+                finished_tasks.push(task.clone());
+            }
+        }
+    }
+
+    Ok(finished_tasks)
 }
 
 /// Gets task information and sets them
@@ -523,7 +556,7 @@ pub fn claim_tokens<S: Storage>(
 
             Ok(claimed + redeem_amount)
         } else {
-            Err(StdError::generic_err("Account total claimed not set"))
+            Err(account_does_not_exist())
         }
     })?;
 
@@ -547,47 +580,42 @@ pub fn try_add_account_addresses<S: Storage>(
         if let Some(memo) = permit.memo.clone() {
             let params: AddressProofMsg = from_binary(&Binary::from_base64(&memo)?)?;
 
-            let address: HumanAddr;
             // Avoid verifying sender
             if &params.address != sender {
                 // Check permit legitimacy
-                address = validate_address_permit(storage, permit, config.contract.clone())?;
-                if address != params.address {
-                    return Err(StdError::generic_err(
-                        "Signer address is not the same as the permit address",
-                    ));
-                }
-            } else {
-                address = sender.clone();
+                validate_address_permit(storage, permit, &params, config.contract.clone())?;
             }
 
             // Check that airdrop amount does not exceed maximum
             if params.amount > config.max_amount {
-                return Err(StdError::generic_err("Amount exceeds maximum amount"));
+                return Err(claim_too_high(
+                    params.amount.to_string().as_str(),
+                    config.max_amount.to_string().as_str(),
+                ));
             }
 
             // Update address if its not in an account
-            address_in_account_w(storage).update(address.to_string().as_bytes(), |state| {
-                if state.is_some() {
-                    return Err(StdError::generic_err(format!(
-                        "{:?} already in an account",
-                        address.to_string()
-                    )));
-                }
+            address_in_account_w(storage).update(
+                params.address.to_string().as_bytes(),
+                |state| {
+                    if state.is_some() {
+                        return Err(address_already_in_account(params.address.as_str()));
+                    }
 
-                Ok(true)
-            })?;
+                    Ok(true)
+                },
+            )?;
 
             // Add account as a leaf
             let leaf_hash =
-                Sha256::hash((address.to_string() + &params.amount.to_string()).as_bytes());
+                Sha256::hash((params.address.to_string() + &params.amount.to_string()).as_bytes());
             leaves_to_validate.push((params.index as usize, leaf_hash));
 
             // If valid then add to account array and sum total amount
-            account.addresses.push(address);
+            account.addresses.push(params.address);
             account.total_claimable += params.amount;
         } else {
-            return Err(StdError::generic_err(format!("Expected a memo")));
+            return Err(expected_memo());
         }
     }
 
@@ -616,7 +644,7 @@ pub fn try_add_account_addresses<S: Storage>(
     let mut root: [u8; 32] = Default::default();
     root.clone_from_slice(config.merkle_root.as_slice());
     if !proof.verify(root, &indices, &leaves, config.total_accounts as usize) {
-        return Err(StdError::generic_err("Invalid proof"));
+        return Err(invalid_partial_tree());
     }
 
     Ok(())
@@ -627,17 +655,17 @@ pub fn available(config: &Config, env: &Env) -> StdResult<()> {
 
     // Check if airdrop started
     if current_time < config.start_date {
-        return Err(StdError::generic_err(format!(
-            "Airdrop starts on {}",
-            config.start_date
-        )));
+        return Err(airdrop_not_started(
+            config.start_date.to_string().as_str(),
+            current_time.to_string().as_str(),
+        ));
     }
     if let Some(end_date) = config.end_date {
         if current_time > end_date {
-            return Err(StdError::generic_err(format!(
-                "Airdrop ended on {}",
-                end_date
-            )));
+            return Err(airdrop_ended(
+                end_date.to_string().as_str(),
+                current_time.to_string().as_str(),
+            ));
         }
     }
 

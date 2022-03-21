@@ -1,4 +1,4 @@
-use crate::state::{address_in_account_r, validate_address_permit};
+use crate::state::{account_viewkey_r, address_in_account_r, validate_address_permit};
 use crate::{
     handle::decay_factor,
     state::{
@@ -6,8 +6,10 @@ use crate::{
         total_claimed_r, validate_account_permit,
     },
 };
-use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
-use shade_protocol::airdrop::account::AddressProofPermit;
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage, Uint128};
+use query_authentication::viewing_keys::ViewingKey;
+use shade_protocol::airdrop::account::{AccountKey, AddressProofPermit};
+use shade_protocol::airdrop::errors::invalid_viewing_key;
 use shade_protocol::airdrop::AccountVerification;
 use shade_protocol::{
     airdrop::{account::AccountPermit, claim_info::RequiredTask, QueryAnswer},
@@ -50,15 +52,11 @@ pub fn total_claimed<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::TotalClaimed { claimed })
 }
 
-pub fn account<S: Storage, A: Api, Q: Querier>(
+fn account_information<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    permit: AccountPermit,
+    account_address: HumanAddr,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
-
-    let account_address = validate_account_permit(deps, &permit, config.contract)?;
-
     let account = account_r(&deps.storage).load(account_address.to_string().as_bytes())?;
 
     // Calculate eligible tasks
@@ -105,4 +103,33 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
         finished_tasks,
         addresses: account.addresses,
     })
+}
+
+pub fn account<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    permit: AccountPermit,
+    current_date: Option<u64>,
+) -> StdResult<QueryAnswer> {
+    let config = config_r(&deps.storage).load()?;
+    account_information(
+        deps,
+        validate_account_permit(deps, &permit, config.contract)?,
+        current_date,
+    )
+}
+
+pub fn account_with_key<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    account: HumanAddr,
+    key: String,
+    current_date: Option<u64>,
+) -> StdResult<QueryAnswer> {
+    // Validate address
+    let stored_hash = account_viewkey_r(&deps.storage).load(account.to_string().as_bytes())?;
+
+    if !AccountKey(key).compare(&stored_hash) {
+        return Err(invalid_viewing_key());
+    }
+
+    account_information(deps, account, current_date)
 }
