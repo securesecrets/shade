@@ -1,5 +1,8 @@
 use crate::{
-    utils::asset::Contract,
+    utils::{
+        price::{normalize_price, translate_price},
+        asset::Contract,
+    },
     snip20::Snip20Asset,
     mint,
     secretswap,
@@ -61,7 +64,7 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
         match &pair.dex {
             Dex::SecretSwap => {
                 amounts_per_scrt.push(
-                    Uint512::from(mint::normalize_price(
+                    Uint512::from(normalize_price(
                         secretswap::amount_per_scrt(&deps, pair.clone(), sscrt.clone())?,
                         pair.asset.token_info.decimals
                     ).u128())
@@ -70,7 +73,7 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
             },
             Dex::SiennaSwap => {
                 amounts_per_scrt.push(
-                    Uint512::from(mint::normalize_price(
+                    Uint512::from(normalize_price(
                         sienna::amount_per_scrt(&deps, pair.clone(), sscrt.clone())?,
                         pair.asset.token_info.decimals
                     ).u128())
@@ -94,7 +97,7 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
 
     // Translate price from SHD/SCRT -> SHD/USD 
     // And normalize to <price> * 10^18
-    let price = mint::translate_price(
+    let price = translate_price(
                     band::reference_data(deps, 
                         "SCRT".to_string(), 
                         "USD".to_string(), 
@@ -137,7 +140,7 @@ pub fn best_price<S: Storage, A: Api, Q: Querier>(
     let index = results.iter().position(|e| e == max_amount).unwrap();
     let scrt_result = band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), band)?;
 
-    Ok((mint::translate_price(scrt_result.rate, *max_amount), pairs[index].clone()))
+    Ok((translate_price(scrt_result.rate, *max_amount), pairs[index].clone()))
 }
 
 pub fn price<S: Storage, A: Api, Q: Querier>(

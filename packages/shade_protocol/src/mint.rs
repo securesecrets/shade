@@ -175,20 +175,3 @@ pub enum QueryAnswer {
     },
 }
 
-/* Translate price from symbol/sSCRT -> symbol/USD
- *
- * scrt_price: SCRT/USD price from BAND
- * trade_price: SCRT/token trade amount from 1 sSCRT (normalized to price * 10^18)
- * return: token/USD price
- */
-pub fn translate_price(scrt_price: Uint128, trade_price: Uint128) -> Uint128 {
-    scrt_price.multiply_ratio(10u128.pow(18), trade_price)
-}
-
-/* Normalize the price from snip20 amount with decimals to BAND rate
- * amount: unsigned quantity received in trade for 1sSCRT
- * decimals: number of decimals for received snip20
- */
-pub fn normalize_price(amount: Uint128, decimals: u8) -> Uint128 {
-    (amount.u128() * 10u128.pow(18u32 - u32::try_from(decimals).unwrap())).into()
-}

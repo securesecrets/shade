@@ -5,3 +5,4 @@ pub mod generic_response;
 pub mod math;
 pub mod storage;
 pub mod errors;
+pub mod price;

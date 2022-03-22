@@ -1,6 +1,8 @@
 use crate::{
-    utils::asset::Contract,
-    mint,
+    utils::{
+        asset::Contract,
+        price::{normalize_price, translate_price},
+    },
     dex,
     band,
 };
@@ -12,15 +14,6 @@ use cosmwasm_std::{
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
-
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct CustomToken {
-    pub contract_addr: HumanAddr,
-    pub token_code_hash: String,
-}
-*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -128,8 +121,8 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     let scrt_result = band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), band)?;
 
     // SCRT-USD / SCRT-symbol
-    Ok(mint::translate_price(scrt_result.rate, 
-         mint::normalize_price(
+    Ok(translate_price(scrt_result.rate, 
+         normalize_price(
              amount_per_scrt(deps, pair.clone(), sscrt)?, 
              pair.asset.token_info.decimals
          )
@@ -156,12 +149,6 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
         pair.contract.address,
     )?;
 
-    /*
-    Ok(mint::normalize_price(
-        response.return_amount,
-        pair.asset.token_info.decimals,
-    ))
-    */
     Ok(response.return_amount)
 }
 

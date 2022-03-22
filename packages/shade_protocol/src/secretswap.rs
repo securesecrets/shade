@@ -1,5 +1,8 @@
 use crate::{
-    utils::asset::Contract,
+    utils::{
+        asset::Contract,
+        price::{normalize_price, translate_price},
+    },
     mint,
     dex,
     band,
@@ -107,8 +110,8 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     )?;
 
     // SCRT-USD / SCRT-symbol
-    Ok(mint::translate_price(scrt_result.rate, 
-         mint::normalize_price(
+    Ok(translate_price(scrt_result.rate, 
+         normalize_price(
              amount_per_scrt(deps, pair.clone(), sscrt)?, 
              pair.asset.token_info.decimals
          )
