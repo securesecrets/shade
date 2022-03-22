@@ -7,14 +7,15 @@ pub mod utils;
 pub mod airdrop;
 pub mod initializer;
 
-// Protocol libraries
+// Core contracts
 pub mod governance;
 pub mod mint;
 pub mod mint_router;
 pub mod oracle;
 pub mod staking;
-pub mod treasury;
 
-// Treasury Adapters
+// DAO
+pub mod treasury;
 pub mod adapter;
+pub mod manager;
 pub mod scrt_staking;

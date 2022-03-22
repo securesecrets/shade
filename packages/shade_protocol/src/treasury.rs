@@ -20,40 +20,41 @@ pub struct RefreshTracker {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub enum Cycle {
+    Once,
+    Constant,
+    Daily {
+        days: Uint128,
+    },
+    Monthly {
+        months: Uint128,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Allocation {
     // To remain liquid at all times
     Reserves {
-        allocation: Uint128,
-    },
-    // Won't be counted in rebalancing
-    Rewards {
-        contract: Contract,
-        daily_amount: Uint128,
+        portion: Uint128,
     },
     // Monthly refresh, not counted in rebalance
-    Allowance {
+    Amount {
+        //nick: Option<String>,
         spender: HumanAddr,
         // Unlike others, this is a direct number of uTKN to allow monthly
+        cycle: Cycle,
         amount: Uint128,
+        last_refresh: String,
     },
-    // SCRT/ATOM/OSMO/SKY/dStaking
-    SingleAsset {
+    Portion {
         //nick: Option<String>,
-        contract: Contract,
-        allocation: Uint128,
-        token: Option<Contract>,
+        spender: HumanAddr,
+        // Unlike others, this is a direct number of uTKN to allow monthly
+        cycle: Cycle,
+        portion: Uint128,
+        last_refresh: String,
     },
-    // Liquidity Providing
-    /*
-    MultiAsset {
-        //nick: Option<String>,
-        contract: Contract,
-        allocation: Uint128,
-        secondary_assets: Vec<Contract>,
-        token: Option<Contract>,
-    },
-    */
 }
 
 // Flag to be sent with funds
@@ -63,11 +64,13 @@ pub struct Flag {
     pub flag: String,
 }
 
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct AllowanceData {
+pub struct AllocationData {
     pub spender: HumanAddr,
     pub amount: Uint128,
 }
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
@@ -91,12 +94,6 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    OneTimeAllowance {
-        asset: HumanAddr,
-        spender: HumanAddr,
-        amount: Uint128,
-        expiration: Option<u64>,
-    },
     UpdateConfig {
         config: Config,
     },
@@ -104,16 +101,13 @@ pub enum HandleMsg {
         contract: Contract,
         reserves: Option<Uint128>,
     },
-    /* List of contracts/users given an allowance based on a percentage of the asset balance
-     * e.g. governance, LP, SKY
-     */
     RegisterAllocation {
         asset: HumanAddr,
-        allocation: Allocation,
+        allowance: Allocation,
     },
-    RefreshAllowance {},
-    // Trigger to re-allocate asset (all if none)
-    //Rebalance { asset: Option<HumanAddr> },
+    Rebalance {
+        asset: Option<HumanAddr>,
+    },
 }
 
 impl HandleCallback for HandleMsg {
@@ -127,25 +121,11 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         address: HumanAddr,
     },
-    UpdateConfig {
-        status: ResponseStatus,
-    },
-    Receive {
-        status: ResponseStatus,
-    },
-    RegisterAsset {
-        status: ResponseStatus,
-    },
-    RegisterApp {
-        status: ResponseStatus,
-    },
-    RefreshAllowance {
-        status: ResponseStatus,
-    },
-    OneTimeAllowance {
-        status: ResponseStatus,
-    },
-    //Rebalance { status: ResponseStatus },
+    UpdateConfig { status: ResponseStatus },
+    Receive { status: ResponseStatus },
+    RegisterAsset { status: ResponseStatus },
+    RegisterAllocation { status: ResponseStatus },
+    Rebalance { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -153,17 +133,12 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Balance {
-        asset: HumanAddr,
-    },
-    Allocations {
-        asset: HumanAddr,
-    },
-    Allowances {
+    Balance { asset: HumanAddr },
+    Allocations { asset: HumanAddr },
+    Allowance {
         asset: HumanAddr,
         spender: HumanAddr,
     },
-    LastAllowanceRefresh {},
 }
 
 impl Query for QueryMsg {
@@ -177,6 +152,5 @@ pub enum QueryAnswer {
     Assets { assets: Vec<HumanAddr> },
     Allocations { allocations: Vec<Allocation> },
     Balance { amount: Uint128 },
-    Allowances { allowances: Vec<AllowanceData> },
-    LastAllowanceRefresh { datetime: String },
+    Allowance { allowance: Uint128 },
 }

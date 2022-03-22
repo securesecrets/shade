@@ -3,7 +3,7 @@ use secret_toolkit::{snip20::allowance_query, utils::Query};
 use shade_protocol::{snip20, treasury};
 
 use crate::state::{
-    allocations_r, asset_list_r, assets_r, config_r, last_allowance_refresh_r, self_address_r,
+    allocations_r, asset_list_r, assets_r, config_r, self_address_r,
     viewing_key_r,
 };
 
@@ -44,7 +44,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn allowances<S: Storage, A: Api, Q: Querier>(
+pub fn allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
     spender: &HumanAddr,
@@ -63,11 +63,8 @@ pub fn allowances<S: Storage, A: Api, Q: Querier>(
             full_asset.contract.address.clone(),
         )?;
 
-        return Ok(treasury::QueryAnswer::Allowances {
-            allowances: vec![treasury::AllowanceData {
-                spender: spender.clone(),
-                amount: cur_allowance.allowance,
-            }],
+        return Ok(treasury::QueryAnswer::Allowance {
+            allowance: cur_allowance.allowance,
         });
     }
 
@@ -96,11 +93,13 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+/*
 pub fn last_allowance_refresh<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Allowances { allowances: vec![] })
 }
+*/
 
 /*
 pub fn can_rebalance<S: Storage, A: Api, Q: Querier>(
