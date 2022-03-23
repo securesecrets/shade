@@ -7,14 +7,6 @@ use secret_toolkit::utils::{HandleCallback, Query};
 use serde::{Deserialize, Serialize};
 use crate::shd_staking::stake::{QueueItem, StakeConfig, VecQueue};
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Default, Debug)]
-#[serde(rename_all = "snake_case")]
-pub struct InitConfig {
-    /// Indicates whether the total supply is public or should be kept secret.
-    /// default: False
-    pub public_total_supply: Option<bool>,
-}
-
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct InitMsg {
     pub name: String,
@@ -24,7 +16,7 @@ pub struct InitMsg {
     pub decimals: Option<u8>,
     pub share_decimals: u8,
     pub prng_seed: Binary,
-    pub config: Option<InitConfig>,
+    pub public_total_supply: bool,
 
     // Stake
     pub unbond_time: u64,
