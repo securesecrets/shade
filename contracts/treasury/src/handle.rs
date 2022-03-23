@@ -30,7 +30,7 @@ use crate::{
     state::{
         allowances_r, allowances_w, asset_list_r, asset_list_w, assets_r, assets_w, config_r,
         config_w, viewing_key_r,
-        outstanding_allowances_r, outstanding_allowances_w,
+        current_allowances_r, current_allowances_w,
         self_address_r,
     },
 };
