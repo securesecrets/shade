@@ -15,8 +15,8 @@ use secret_toolkit::{
 use shade_protocol::{
     snip20,
     treasury::{
-        Allocation, Config, Flag, Cycle, 
-        HandleAnswer, QueryAnswer, RefreshTracker
+        Allowance, Config, Flag, Cycle, 
+        HandleAnswer, QueryAnswer,
     },
     manager,
     utils::{
@@ -28,10 +28,9 @@ use shade_protocol::{
 use crate::{
     query,
     state::{
-        allocations_r, allocations_w, asset_list_r, asset_list_w, assets_r, assets_w, config_r,
+        allowances_r, allowances_w, asset_list_r, asset_list_w, assets_r, assets_w, config_r,
         config_w, viewing_key_r,
         outstanding_allowances_r, outstanding_allowances_w,
-        rewards_tracking_r, rewards_tracking_w,
         self_address_r,
     },
 };
@@ -66,12 +65,12 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
     //let mut send_actions = vec![];
 
-    if let Some(allocs) = allocations_r(&deps.storage).may_load(asset.contract.address.as_str().as_bytes())? {
+    if let Some(allocs) = allowances_r(&deps.storage).may_load(asset.contract.address.as_str().as_bytes())? {
         for alloc in allocs {
             match alloc {
-                Allocation::Reserves { .. }  => {},
-                Allocation::Amount { .. } => { },
-                Allocation::Portion {
+                Allowance::Reserves { .. }  => {},
+                Allowance::Amount { .. } => { },
+                Allowance::Portion {
                     spender,
                     cycle,
                     portion,
@@ -136,20 +135,20 @@ pub fn parse_utc_datetime(
             )
         )
 }
-pub fn allocation_last_refresh<S: Storage, A: Api, Q: Querier>(
+pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     env: &Env,
-    allocation: &Allocation
+    allowance: &Allowance
 ) -> StdResult<Option<DateTime<Utc>>> {
 
     //let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     //let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
     // Parse previous refresh datetime
-    let rfc3339 = match allocation {
-        Allocation::Reserves { .. } => { return Ok(None); }
-        Allocation::Amount { last_refresh, .. } => last_refresh,
-        Allocation::Portion { last_refresh, .. } => last_refresh,
+    let rfc3339 = match allowance {
+        Allowance::Reserves { .. } => { return Ok(None); }
+        Allowance::Amount { last_refresh, .. } => last_refresh,
+        Allowance::Portion { last_refresh, .. } => last_refresh,
     };
 
     DateTime::parse_from_rfc3339(&rfc3339)
@@ -179,11 +178,11 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 
     for asset in asset_list {
 
-        for alloc in allocations_r(&deps.storage).load(asset.as_str().as_bytes())? {
+        for alloc in allowances_r(&deps.storage).load(asset.as_str().as_bytes())? {
 
             match alloc {
 
-                Allocation::Amount {
+                Allowance::Amount {
                     spender,
                     cycle,
                     amount,
@@ -201,7 +200,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                         }
                     }
                 },
-                Allocation::Portion {
+                Allowance::Portion {
                     spender,
                     cycle,
                     portion,
@@ -222,7 +221,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                     }
 
                 },
-                Allocation::Reserves { .. } => { },
+                Allowance::Reserves { .. } => { },
             }
         }
     };
@@ -244,6 +243,7 @@ pub fn needs_refresh(
 
     match cycle {
         Cycle::Once => false,
+        // NOTE: idk about this one
         Cycle::Constant => true,
         Cycle::Daily { days } => now.num_days_from_ce() - last_refresh.num_days_from_ce() > days.u128() as i32,
         Cycle::Monthly { months } => {
@@ -376,10 +376,10 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     )?;
 
     let allocs = reserves
-        .map(|r| vec![Allocation::Reserves { portion: r }])
+        .map(|r| vec![Allowance::Reserves { portion: r }])
         .unwrap_or_default();
 
-    allocations_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &allocs)?;
+    allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &allocs)?;
 
     Ok(HandleResponse {
         messages: vec![
@@ -408,28 +408,28 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 // extract contract address if any
-fn allocation_address(allocation: &Allocation) -> Option<&HumanAddr> {
-    match allocation {
-        Allocation::Amount { spender, .. } => Some(&spender),
-        Allocation::Portion { spender, .. } => Some(&spender),
+fn allowance_address(allowance: &Allowance) -> Option<&HumanAddr> {
+    match allowance {
+        Allowance::Amount { spender, .. } => Some(&spender),
+        Allowance::Portion { spender, .. } => Some(&spender),
         _ => None,
     }
 }
 
 // extract allocaiton portion
-fn allocation_portion(allocation: &Allocation) -> u128 {
-    match allocation {
-        Allocation::Reserves { portion } => portion.u128(),
-        Allocation::Portion { portion, .. } => portion.u128(),
-        Allocation::Amount { .. } => 0,
+fn allowance_portion(allowance: &Allowance) -> u128 {
+    match allowance {
+        Allowance::Reserves { portion } => portion.u128(),
+        Allowance::Portion { portion, .. } => portion.u128(),
+        Allowance::Amount { .. } => 0,
     }
 }
 
-pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
+pub fn allowance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     asset: HumanAddr,
-    allocation: Allocation,
+    allowance: Allowance,
 ) -> StdResult<HandleResponse> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
@@ -441,8 +441,8 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
     }
 
     // Disallow Portion with Cycle::Once
-    match &allocation {
-        Allocation::Portion {
+    match &allowance {
+        Allowance::Portion {
             cycle, ..
         } => {
             match cycle {
@@ -457,23 +457,23 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
 
     let key = asset.as_str().as_bytes();
 
-    let mut apps = allocations_r(&deps.storage)
+    let mut apps = allowances_r(&deps.storage)
         .may_load(key)?
         .unwrap_or_default();
 
-    let alloc_address = allocation_address(&allocation);
+    let alloc_address = allowance_address(&allowance);
 
-    // find any old allocations with the same contract address & sum current allocations in one loop.
+    // find any old allowances with the same contract address & sum current allowances in one loop.
     // saves looping twice in the worst case
     // TODO: Remove Reserves if this would be one of those
     let (stale_alloc, curr_alloc_portion) =
         apps.iter()
             .enumerate()
             .fold((None, 0u128), |(stale_alloc, curr_allocs), (idx, a)| {
-                if stale_alloc.is_none() && allocation_address(a) == alloc_address {
+                if stale_alloc.is_none() && allowance_address(a) == alloc_address {
                     (Some(idx), curr_allocs)
                 } else {
-                    (stale_alloc, curr_allocs + allocation_portion(a))
+                    (stale_alloc, curr_allocs + allowance_portion(a))
                 }
             });
 
@@ -481,11 +481,11 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         apps.remove(old_alloc_idx);
     }
 
-    let new_alloc_portion = allocation_portion(&allocation);
+    let new_alloc_portion = allowance_portion(&allowance);
 
     if curr_alloc_portion + new_alloc_portion > ONE_HUNDRED_PERCENT {
         return Err(StdError::generic_err(
-            "Invalid allocation total exceeding 100%",
+            "Invalid allowance total exceeding 100%",
         ));
     }
 
@@ -495,45 +495,45 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         Utc
     );
 
-    match allocation {
-        Allocation::Portion {
+    match allowance {
+        Allowance::Portion {
             spender, cycle, portion, last_refresh
         } => {
-            apps.push(Allocation::Portion {
+            apps.push(Allowance::Portion {
                 spender, 
                 cycle, 
                 portion, 
                 last_refresh: datetime.to_rfc3339()
             });
         },
-        Allocation::Amount {
+        Allowance::Amount {
             spender,
             cycle,
             amount,
             last_refresh,
         }=> {
-            apps.push(Allocation::Amount {
+            apps.push(Allowance::Amount {
                 spender, 
                 cycle, 
                 amount, 
                 last_refresh: datetime.to_rfc3339()
             });
         }
-        Allocation::Reserves {
+        Allowance::Reserves {
             portion,
         } => {
-            apps.push(Allocation::Reserves {
+            apps.push(Allowance::Reserves {
                 portion
             });
         }
     };
 
-    allocations_w(&mut deps.storage).save(key, &apps)?;
+    allowances_w(&mut deps.storage).save(key, &apps)?;
 
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterAllocation {
+        data: Some(to_binary(&HandleAnswer::Allowance {
             status: ResponseStatus::Success,
         })?),
     })

@@ -8,7 +8,7 @@ use shade_protocol::treasury::{Config, HandleMsg, InitMsg, QueryMsg};
 use crate::{
     handle, query,
     state::{
-        allowances_w, asset_list_w, config_w, self_address_w,
+        allocations_w, asset_list_w, config_w, last_allowance_refresh_w, self_address_w,
         viewing_key_w,
     },
 };
@@ -19,7 +19,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
     config_w(&mut deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(env.message.sender.clone()),
         sscrt: msg.sscrt,
@@ -28,6 +27,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     asset_list_w(&mut deps.storage).save(&Vec::new())?;
+
+    //init last refresh with epoch 0 so first refresh always goes
+    let timestamp = 0;
+    let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+    let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+
+    last_allowance_refresh_w(&mut deps.storage).save(&datetime.to_rfc3339())?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -51,9 +57,23 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { contract, reserves } => handle::try_register_asset(deps, &env, &contract, reserves),
-        HandleMsg::Allowance { asset, allowance } => handle::allowance(deps, &env, asset, allowance),
-        HandleMsg::Rebalance { asset } => handle::rebalance(deps, &env, asset),
+        HandleMsg::RegisterAsset { contract, reserves } => {
+            handle::try_register_asset(deps, &env, &contract, reserves)
+        }
+        HandleMsg::RegisterAllocation { asset, allocation } => {
+            handle::register_allocation(deps, &env, asset, allocation)
+        }
+        HandleMsg::RefreshAllowance {} => handle::refresh_allowance(deps, &env),
+        HandleMsg::OneTimeAllowance {
+            asset,
+            spender,
+            amount,
+            expiration,
+        } => handle::one_time_allowance(deps, &env, asset, spender, amount, expiration),
+        /*
+          HandleMsg::Rebalance {
+          } => handle::rebalance(deps, &env),
+        */
     }
 }
 
@@ -64,9 +84,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
-        QueryMsg::Allowances{ asset } => to_binary(&query::allowances(deps, asset)?),
-        QueryMsg::CurrentAllowances{ asset } => to_binary(&query::current_allowances(deps, asset)?),
+        QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
         QueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
-        QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, &asset, &spender)?)
+        QueryMsg::Allowances { asset, spender } => {
+            to_binary(&query::allowances(&deps, &asset, &spender)?)
+        }
+        QueryMsg::LastAllowanceRefresh {} => to_binary(&query::last_allowance_refresh(&deps)?),
     }
 }

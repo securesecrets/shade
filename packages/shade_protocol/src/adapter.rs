@@ -28,8 +28,8 @@ pub enum HandleMsg {
     Unbond {
        amount: Uint128, 
     },
-    // Claim pending rewards + completed unbondings
-    Claim { },
+    // Maintenance trigger e.g. claim rewards and restake
+    Update { },
 }
 
 impl HandleCallback for HandleMsg {
@@ -51,12 +51,7 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    //TODO: find a way to query this and return
-    //Unbondings {},
-    //Delegations {},
-    //Delegation { validator: HumanAddr },
-    Balance {},
-    Rewards {},
+    Balance { asset: Contract },
     Unbondings {},
 }
 
@@ -68,6 +63,5 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
-    Rewards { amount: Uint128 },
     Unbondings { unbondings: Vec<Bond> },
 }

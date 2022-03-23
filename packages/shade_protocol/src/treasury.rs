@@ -5,12 +5,14 @@ use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
     //pub account_holders: Vec<HumanAddr>,
     pub sscrt: Contract,
 }
 
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct RefreshTracker {
     pub amount: Uint128,
@@ -18,8 +20,10 @@ pub struct RefreshTracker {
     // RFC3339 datetime
     pub last_refresh: String,
 }
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum Cycle {
     Once,
     Constant,
@@ -31,9 +35,17 @@ pub enum Cycle {
     },
 }
 
+/* Examples:
+ * Constant-Portion -> Finance manager
+ * Constant-Amount -> Rewards, pre-set manually adjusted
+ * Monthly-Portion -> Rewards, self-scaling
+ * Monthly-Amount -> Governance grant or Committee funding
+ *
+ * Once-Portion -> Disallowed
+ */
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum Allocation {
+pub enum Allowance {
     // To remain liquid at all times
     Reserves {
         portion: Uint128,
@@ -64,14 +76,6 @@ pub struct Flag {
     pub flag: String,
 }
 
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct AllocationData {
-    pub spender: HumanAddr,
-    pub amount: Uint128,
-}
-*/
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
@@ -101,9 +105,10 @@ pub enum HandleMsg {
         contract: Contract,
         reserves: Option<Uint128>,
     },
-    RegisterAllocation {
+    // Setup a new allowance
+    Allowance {
         asset: HumanAddr,
-        allowance: Allocation,
+        allowance: Allowance,
     },
     Rebalance {
         asset: Option<HumanAddr>,
@@ -124,7 +129,7 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     Receive { status: ResponseStatus },
     RegisterAsset { status: ResponseStatus },
-    RegisterAllocation { status: ResponseStatus },
+    Allowance { status: ResponseStatus },
     Rebalance { status: ResponseStatus },
 }
 
@@ -133,12 +138,19 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
+    // Cumulative of on-treasury + manager outstanding
     Balance { asset: HumanAddr },
-    Allocations { asset: HumanAddr },
+    // List of recurring allowances configured
+    Allowances { asset: HumanAddr },
+    // List of actual current amounts
+    CurrentAllowances { asset: HumanAddr },
     Allowance {
         asset: HumanAddr,
         spender: HumanAddr,
     },
+    // TODO: Implement, asset could be optional to do all (doesn't scale well)
+    // NeedsRefresh { asset: HumanAddr },
+    // CanRebalance { asset: HumanAddr },
 }
 
 impl Query for QueryMsg {
@@ -150,7 +162,8 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config { config: Config },
     Assets { assets: Vec<HumanAddr> },
-    Allocations { allocations: Vec<Allocation> },
-    Balance { amount: Uint128 },
+    Allowances { allowances: Vec<Allowance> },
+    CurrentAllowances { allowances: Vec<Allowance> },
     Allowance { allowance: Uint128 },
+    Balance { amount: Uint128 },
 }

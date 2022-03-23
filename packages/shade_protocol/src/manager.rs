@@ -1,4 +1,8 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
+use crate::utils::{
+    asset::Contract, 
+    generic_response::ResponseStatus,
+    unbonding::{UnbondStatus, Unbonding},
+};
 use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -6,30 +10,15 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum BondStatus {
-    Active,
-    Unbonding,
-    UnbondComplete,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Bond {
-    pub amount: Uint128,
-    pub token: Contract,
-    pub address: HumanAddr,
-    pub status: BondStatus,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    // Begin unbonding amount
+    // unbond amount back to treasury
     Unbond {
        amount: Uint128, 
     },
-    // Claim pending rewards + completed unbondings
-    Claim { },
+    Balance { 
+        asset: Contract,
+    },
+    Update { },
 }
 
 impl HandleCallback for HandleMsg {
@@ -41,7 +30,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        //address: HumanAddr,
     },
     Response { 
         status: ResponseStatus, 
@@ -52,12 +41,8 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     //TODO: find a way to query this and return
-    //Unbondings {},
-    //Delegations {},
-    //Delegation { validator: HumanAddr },
     Balance { asset: HumanAddr },
-    //Rewards {},
-    //Unbondings {},
+    Unbondings {},
 }
 
 impl Query for QueryMsg {
@@ -68,6 +53,5 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
-    Rewards { amount: Uint128 },
-    Unbondings { unbondings: Vec<Bond> },
+    Unbondings { unbondings: Vec<Unbonding> },
 }
