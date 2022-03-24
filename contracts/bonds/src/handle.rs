@@ -1,25 +1,36 @@
 use cosmwasm_std::{
-    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    debug_print, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
     HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
 };
 
 use secret_toolkit::{
-    snip20::{token_info_query, register_receive_msg, send_msg}
+    snip20::{token_info_query, register_receive_msg, send_msg},
+    utils::Query,
 };
 
 use shade_protocol::bonds::{
-    errors::{bond_ended, bond_not_started},
+    errors::{bond_ended, bond_not_started, limit_reached, mint_exceeds_limit},
     {Config, HandleAnswer}};
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::utils::asset::Contract;
-use shade_protocol::snip20::{token_config_query, Snip20Asset, TokenConfig};
+use shade_protocol::{
+    snip20::{token_config_query, Snip20Asset, TokenConfig},
+    oracle::QueryMsg::Price,
+    band::ReferenceData,
+};
 
-use crate::state::{config_r, config_w, collateral_asset_r, collateral_asset_w};
+use crate::state::{config_r, config_w, collateral_asset_r, collateral_asset_w, issuance_cap_r, total_minted_r};
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    config: Config,
+    admin: Option<HumanAddr>,
+    oracle: Option<Contract>,
+    treasury: Option<HumanAddr>,
+    activated: Option<bool>,
+    issuance_cap: Option<Uint128>,
+    start_date: Option<u64>,
+    end_date: Option<u64>,
 ) -> StdResult<HandleResponse> {
     let cur_config = config_r(&deps.storage).load()?;
 
@@ -28,7 +39,31 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    config_w(&mut deps.storage).save(&config)?;
+    let mut config = config_w(&mut deps.storage);
+    config.update(|mut state| {
+        if let Some(admin) = admin {
+            state.admin = admin;
+        }
+        if let Some(oracle) = oracle {
+            state.oracle = oracle;
+        }
+        if let Some(treasury) = treasury {
+            state.treasury = treasury;
+        }
+        if let Some(activated) = activated {
+            state.activated = activated;
+        }
+        if let Some(issuance_cap) = issuance_cap {
+            state.issuance_cap = issuance_cap;
+        }
+        if let Some(start_date) = start_date {
+            state.start_date = Some(start_date);
+        }
+        if let Some(end_date) = end_date {
+            state.end_date = Some(end_date);
+        }
+        Ok(state)
+    })?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -40,7 +75,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 // Register an asset before receiving it as user deposit
-pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
+pub fn try_register_collateral_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
@@ -51,9 +86,8 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized {backtrace: None });
     }
     
-    let contract_str = contract.address.to_string();
-
-    // Add the new asset
+    // Adding the Snip20Asset to the contract's storage
+    // First acquiring TokenInfo
     let asset_info = token_info_query(
         &deps.querier,
         1,
@@ -61,12 +95,14 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         contract.address.clone(),
     )?;
 
+    // Acquiring TokenConfig
     let asset_config: Option<TokenConfig> = 
         match token_config_query(&deps.querier, contract.clone()) {
             Ok(c) => Option::from(c),
             Err(_) => None,
         };
 
+    // Saving Snip20Asset with contract, TokenInfo, and TokenConfig copies
     debug_print!("Registering {}", asset_info.symbol);
     collateral_asset_w(&mut deps.storage).save(
         &Snip20Asset {
@@ -76,7 +112,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         },
     )?;
 
-    // Register contract in asset
+    // Enact register receive so funds sent to Bonds will call Receive
     let messages = vec![register_receive(env, contract)?];
 
     Ok(HandleResponse {
@@ -106,8 +142,11 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         ));
     }
 
-    // Check that bond hasn't ended
-    available(&config, env)?;
+    // Check that bond date window hasn't ended and that the limit hasn't been reached
+    let total_minted = total_minted_r(&deps.storage).load()?;
+    let issuance_cap = issuance_cap_r(&deps.storage).load()?;
+    active(&config, env, &total_minted)?;
+    let available = (issuance_cap - total_minted).unwrap();
 
     // Check that sender is a supported snip20 asset
     let deposit_asset = 
@@ -129,7 +168,11 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         };
     
     let mut messages = vec![];
+
+    // Calculate conversion of collateral to SHD
+    let mint_amount = amount_to_mint(&deps, deposit_amount, available).unwrap();
     
+
     // Collateral to treasury
     messages.push(send_msg(
         config.treasury,
@@ -169,7 +212,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 
 
 
-pub fn available(config: &Config, env: &Env) -> StdResult<()> {
+pub fn active(config: &Config, env: &Env, total_minted: &Uint128) -> StdResult<()> {
     let current_time = env.block.time;
 
     // Check if bond has opened
@@ -192,10 +235,29 @@ pub fn available(config: &Config, env: &Env) -> StdResult<()> {
         }
     }
 
+    // Check whether mint limit has been reached
+    if total_minted >= &config.issuance_cap {
+        return Err(limit_reached(config.issuance_cap))
+    }
+
     Ok(())
 }
 
-pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmoMsg> {
+pub fn amount_to_mint<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    deposit_amount: Uint128,
+    available: Uint128
+) -> StdResult<Uint128> {
+    let oracle_ratio = Uint128(1u128); // Placeholder for Oracle lookup
+    let SHD_price
+    let mint_amount = deposit_amount.multiply_ratio(oracle_ratio, Uint128(1)); // Potential placeholder for mint calculation, depending on what oracle returns
+    if mint_amount > available {
+        return Err(mint_exceeds_limit(mint_amount, available))
+    }
+    Ok(mint_amount)
+}
+
+pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> {
     register_receive_msg(
         env.contract_code_hash.clone(),
         None,
@@ -203,4 +265,17 @@ pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmoMsg> {
         contract.code_hash.clone(),
         contract.address.clone(),
     )
+}
+
+fn oracle<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    symbol: String,
+) -> StdResult<Uint128> {
+    let config: Config = config_r(&deps.storage).load()?;
+    let answer: ReferenceData = Price { symbol }.query(
+        &deps.querier,
+        config.oracle.code_hash,
+        config.oracle.address,
+    )?;
+    Ok(answer.rate)
 }

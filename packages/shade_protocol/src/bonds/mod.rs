@@ -21,23 +21,30 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin: HumanAddr,
     pub oracle: Contract,
     pub treasury: HumanAddr,
     pub issuance_cap: Uint128,
-    pub minted_asset: Contract,
-    pub start_date: Option<u64>,
-    pub end_date: Option<u64>,
+    pub activated: bool,
+    pub start_date: u64,
+    pub end_date: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        config: Config,
+        admin: Option<HumanAddr>,
+        oracle: Option<Contract>,
+        treasury: Option<HumanAddr>,
+        issuance_cap: Option<Uint128>,
+        activated: Option<bool>,
+        start_date: Option<u64>,
+        end_date: Option<u64>,
     },
-    RegisterAsset {
-        contract: Contract,
+    RegisterAssets {
+        collateral_contract: Contract,
+        minting_contract: Contract,
     },
     Receive {
         sender: HumanAddr,

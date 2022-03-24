@@ -10,9 +10,8 @@ use shade_protocol::{
 };
 
 pub static CONFIG: &[u8] = b"config";
-pub static ISSUANCE_CAP: &[u8] = b"issuance_cap";
-pub static TOTAL_MINTED: &[u8] = b"total_minted";
-pub static LIFESPAN: &[u8] = b"lifespan";
+pub static GLOBAL_ISSUANCE_CAP: &[u8] = b"global_issuance_cap";
+pub static GLOBAL_TOTAL_MINTED: &[u8] = b"global_total_minted";
 pub static BONDING_PERIOD: &[u8] = b"bonding_period";
 pub static COLLATERAL_ASSET: &[u8] = b"collateral_asset";
 pub static MINTED_ASSET: &[u8] = b"minted_asset";

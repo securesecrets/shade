@@ -17,14 +17,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let state = Config {
-        admin: match msg.admin {
-            None => env.message.sender.clone(),
-            Some(admin) => admin,
-        },
+        admin: msg.admin,
         oracle: msg.oracle,
         treasury: msg.treasury,
         issuance_cap: msg.issuance_cap,
-        activated: true,
+        activated: msg.activated,
+        start_date: msg.start_date,
+        end_date: msg.end_date,
     };
 
     config_w(&mut deps.storage).save(&state)?;
@@ -59,7 +58,15 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg{
-        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        HandleMsg::UpdateConfig { 
+            admin,
+            oracle,
+            treasury,
+            issuance_cap,
+            activated,
+            start_date,
+            end_date,
+         } => handle::try_update_config(deps, env, admin, oracle, treasury, minted_asset, activated, issuance_cap, start_date),
         HandleMsg::Receive { 
             sender,
             from,
