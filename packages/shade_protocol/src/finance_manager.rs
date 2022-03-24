@@ -1,7 +1,9 @@
-use crate::utils::{
-    asset::Contract,
-    generic_response::ResponseStatus,
+use crate::{
     manager,
+    utils::{
+        asset::Contract,
+        generic_response::ResponseStatus,
+    }
 };
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
@@ -11,29 +13,40 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub admin: HumanAddr,
-    pub treasury: Contract,
+    pub treasury: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Allocation {
-    Portion {
-        //nick: Option<String>,
-        contract: Contract,
-        portion: Uint128,
-    },
-    Amount {
-        //nick: Option<String>,
-        contract: Contract,
-        amount: Uint128,
-    },
+    pub nick: Option<String>,
+    pub contract: Contract,
+    pub alloc_type: AllocationType,
+    pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AllocationType {
+    Portion,
+    Amount,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AllocationMeta {
+    pub nick: Option<String>,
+    pub contract: Contract,
+    pub amount: Uint128,
+    pub alloc_type: AllocationType,
+    pub balance: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
-    pub treasury: Contract,
+    pub treasury: HumanAddr,
 }
 
 impl InitCallback for InitMsg {
@@ -73,8 +86,9 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     Receive { status: ResponseStatus },
     RegisterAsset { status: ResponseStatus },
-    RegisterAllocation { status: ResponseStatus },
+    Allocate { status: ResponseStatus },
     Rebalance { status: ResponseStatus },
+    Manager(manager::HandleAnswer),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -82,8 +96,8 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Allocations { asset: Contract },
-    PendingAllowance { asset: Contract },
+    Allocations { asset: HumanAddr },
+    PendingAllowance { asset: HumanAddr },
     Manager(manager::QueryMsg),
 }
 
@@ -97,4 +111,5 @@ pub enum QueryAnswer {
     Config { config: Config },
     Assets { assets: Vec<HumanAddr> },
     Allocations { allocations: Vec<Allocation> },
+    Manager(manager::QueryAnswer),
 }

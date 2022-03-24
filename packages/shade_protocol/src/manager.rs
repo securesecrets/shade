@@ -13,12 +13,12 @@ use serde::{Deserialize, Serialize};
 pub enum HandleMsg {
     // unbond amount back to treasury
     Unbond {
-       amount: Uint128, 
+        asset: HumanAddr,
+        amount: Uint128, 
     },
-    Balance { 
-        asset: Contract,
+    Rebalance { 
+        asset: HumanAddr,
     },
-    Update { },
 }
 
 impl HandleCallback for HandleMsg {
@@ -40,7 +40,6 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    //TODO: find a way to query this and return
     Balance { asset: HumanAddr },
     Unbondings {},
 }

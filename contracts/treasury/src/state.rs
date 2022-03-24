@@ -3,7 +3,11 @@ use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{snip20::Snip20Asset, treasury};
+use shade_protocol::{
+    snip20::Snip20Asset,
+    utils::asset::Contract,
+    treasury
+};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static ASSETS: &[u8] = b"assets";
@@ -12,6 +16,7 @@ pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static ALLOWANCES: &[u8] = b"allowances";
 pub static CUR_ALLOWANCES: &[u8] = b"allowances";
+pub static MANAGERS: &[u8] = b"managers";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury::Config> {
     singleton(storage, CONFIG_KEY)
@@ -67,4 +72,12 @@ pub fn current_allowances_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, HumanA
 
 pub fn current_allowances_w<S: Storage>(storage: &mut S) -> Bucket<S, HumanAddr> {
     bucket(CUR_ALLOWANCES, storage)
+}
+
+pub fn managers_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Contract>> {
+    singleton_read(storage, MANAGERS)
+}
+
+pub fn managers_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Contract>> {
+    singleton(storage, MANAGERS)
 }

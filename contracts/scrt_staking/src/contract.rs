@@ -77,18 +77,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             adapter::HandleMsg::Unbond { amount } => handle::unbond(deps, env, amount),
             adapter::HandleMsg::Claim { } => handle::claim(deps, env),
         },
-
-        /*
-        HandleMsg::Adapter(adapter::Receive {
-            sender,
-            from,
-            amount,
-            msg,
-            ..
-        } => handle::receive(deps, env, sender, from, amount, msg)),
-        HandleMsg::Adapter(adapter::HandleMsg::Unbond { amount } => handle::unbond(deps, env, amount)),
-        HandleMsg::Adapter(adapter::HandleMsg::Claim { } => handle::claim(deps, env)),
-        */
     }
 }
 

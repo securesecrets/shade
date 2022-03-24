@@ -3,11 +3,11 @@ use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
     Querier, StdError, StdResult, Storage, Uint128,
 };
-use secret_toolkit;
 use secret_toolkit::{
     snip20::{
-        allowance_query, decrease_allowance_msg, increase_allowance_msg, register_receive_msg,
-        send_msg, set_viewing_key_msg, batch_send_msg,
+        register_receive_msg, allowance_query,
+        decrease_allowance_msg, increase_allowance_msg,
+        set_viewing_key_msg,
     },
     utils::Query,
 };
@@ -32,6 +32,7 @@ use crate::{
         config_w, viewing_key_r,
         current_allowances_r, current_allowances_w,
         self_address_r,
+        managers_r, managers_w,
     },
 };
 use chrono::prelude::*;
@@ -63,7 +64,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     let asset = assets_r(&deps.storage).load(env.message.sender.as_str().as_bytes())?;
 
     let mut messages = vec![];
-    //let mut send_actions = vec![];
 
     if let Some(allocs) = allowances_r(&deps.storage).may_load(asset.contract.address.as_str().as_bytes())? {
         for alloc in allocs {
@@ -178,7 +178,25 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 
     for asset in asset_list {
 
-        for alloc in allowances_r(&deps.storage).load(asset.as_str().as_bytes())? {
+        let full_asset = assets_r(&deps.storage).load(asset.as_str().as_bytes())?;
+        let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
+
+        let mut amount_total = Uint128::zero();
+        let mut portion_total = Uint128::zero();
+
+        //Build metadata
+        for alloc in &allowances {
+            match alloc {
+                Allowance::Amount { amount, .. } => {
+                    amount_total += *amount;
+                },
+                Allowance::Portion { portion, .. }
+                | Allowance::Reserves { portion, .. } => { portion_total += *portion; }
+            }
+        }
+
+        // Perform rebalance
+        for alloc in allowances {
 
             match alloc {
 
@@ -190,12 +208,11 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 } => {
                     let datetime = parse_utc_datetime(&last_refresh)?;
 
-                    let full_asset = assets_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
                     if needs_refresh(datetime, now, cycle) {
                         if let Some(msg) = set_allowance(&deps, env,
                                                   spender, amount,
-                                                  key.clone(), full_asset.contract)? {
+                                                  key.clone(), full_asset.contract.clone())? {
                             messages.push(msg);
                         }
                     }
@@ -206,20 +223,38 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                     portion,
                     last_refresh,
                 } => {
+                    let amount = portion.multiply_ratio(1u128, portion_total);
+
                     let datetime = parse_utc_datetime(&last_refresh)?;
-                    let full_asset = assets_r(&deps.storage).load(asset.as_str().as_bytes())?;
+                    let managers = managers_r(&deps.storage).load()?;
+                    let balance = match managers.into_iter().find(|m| m.address == spender) {
+                        Some(m) => manager_balance(&deps, m, full_asset.contract.clone())?,
+                        None => { 
+                            return Err(StdError::generic_err("Cannot portion to a non-manager"));
+                        }
+                    };
+
+                    if balance < amount {
+                        if let Some(msg) = set_allowance(&deps, env,
+                                                  spender, amount,
+                                                  key.clone(), full_asset.contract.clone())? {
+                            messages.push(msg);
+                        }
+                    }
+
                     // TODO: Calculate manager balances/portions to determine balance
+                    // Maybe we don't need a "refresh" cycle on managers?
+                    // Force portions to be registered managers?
+                    /*
                     if needs_refresh(datetime, now, cycle) {
                         // convert portion -> amount
-                        /*
                         if let Some(msg) = set_allowance(&deps, env,
                                                   spender, amount,
                                                   key, full_asset.contract)? {
                             messages.push(msg);
                         }
-                        */
                     }
-
+                    */
                 },
                 Allowance::Reserves { .. } => { },
             }
@@ -245,7 +280,7 @@ pub fn needs_refresh(
         Cycle::Once => false,
         // NOTE: idk about this one
         Cycle::Constant => true,
-        Cycle::Daily { days } => now.num_days_from_ce() - last_refresh.num_days_from_ce() > days.u128() as i32,
+        Cycle::Daily { days } => now.num_days_from_ce() - last_refresh.num_days_from_ce() >= days.u128() as i32,
         Cycle::Monthly { months } => {
             let mut month_diff = 0u32;
 
@@ -256,7 +291,7 @@ pub fn needs_refresh(
                 month_diff = now.month() - last_refresh.month();
             }
 
-            month_diff > months.u128() as u32
+            month_diff >= months.u128() as u32
         }
     }
 }
@@ -400,6 +435,35 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                 contract.address.clone(),
             )?,
         ],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::RegisterAsset {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn register_manager<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    contract: &mut Contract,
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    if env.message.sender != config.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    managers_w(&mut deps.storage).update(|mut managers| {
+        if managers.contains(&contract) {
+            return Err(StdError::generic_err("Manager already registered"));
+        }
+        managers.push(contract.clone());
+        Ok(managers)
+    })?;
+
+    Ok(HandleResponse {
+        messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RegisterAsset {
             status: ResponseStatus::Success,

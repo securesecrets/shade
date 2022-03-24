@@ -12,16 +12,6 @@ pub struct Config {
     pub sscrt: Contract,
 }
 
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct RefreshTracker {
-    pub amount: Uint128,
-    pub limit: Uint128,
-    // RFC3339 datetime
-    pub last_refresh: String,
-}
-*/
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cycle {
@@ -104,6 +94,9 @@ pub enum HandleMsg {
     RegisterAsset {
         contract: Contract,
         reserves: Option<Uint128>,
+    },
+    RegisterManager {
+        contract: Contract,
     },
     // Setup a new allowance
     Allowance {

@@ -1,3 +1,4 @@
+// Utility
 pub mod band;
 pub mod secretswap;
 pub mod snip20;
@@ -7,7 +8,7 @@ pub mod utils;
 pub mod airdrop;
 pub mod initializer;
 
-// Core contracts
+// Core
 pub mod governance;
 pub mod mint;
 pub mod mint_router;
@@ -18,4 +19,10 @@ pub mod staking;
 pub mod treasury;
 pub mod adapter;
 pub mod manager;
+
+// Managers
+pub mod finance_manager;
+//pub mod committee_manager;
+
+// Adapters
 pub mod scrt_staking;
