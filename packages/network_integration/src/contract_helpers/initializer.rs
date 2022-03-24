@@ -6,12 +6,12 @@ use crate::{
     },
 };
 use cosmwasm_std::{HumanAddr, Uint128};
+use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
-    secretcli::{list_contracts_by_code, handle, init},
+    secretcli::{handle, init, list_contracts_by_code},
 };
 use serde_json::Result;
-use secretcli::secretcli::Report;
 use shade_protocol::{
     initializer, initializer::Snip20ContractInfo, snip20, snip20::InitialBalance,
 };
@@ -20,7 +20,7 @@ pub fn initialize_initializer(
     admin: String,
     sscrt: &NetContract,
     account: String,
-    report: &mut Vec<Report>
+    report: &mut Vec<Report>,
 ) -> Result<(NetContract, NetContract, NetContract)> {
     print_header("Initializing Initializer");
     let mut shade = NetContract {
@@ -60,19 +60,28 @@ pub fn initialize_initializer(
         Some(STORE_GAS),
         Some(GAS),
         Some("test"),
-        report
+        report,
     )?;
 
-    handle(&initializer::HandleMsg::InitSilk {
-        silk: Snip20ContractInfo {
-            label: silk.label.clone(),
-            admin: Some(HumanAddr::from(admin)),
-            prng_seed: Default::default(),
-            initial_balances: None,
+    handle(
+        &initializer::HandleMsg::InitSilk {
+            silk: Snip20ContractInfo {
+                label: silk.label.clone(),
+                admin: Some(HumanAddr::from(admin)),
+                prng_seed: Default::default(),
+                initial_balances: None,
+            },
+            ticker: "SILK".to_string(),
+            decimals: 6,
         },
-        ticker: "SILK".to_string(),
-        decimals: 6,
-    }, &initializer, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
+        &initializer,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        report,
+        None,
+    )?;
 
     print_contract(&initializer);
 
@@ -101,8 +110,26 @@ pub fn initialize_initializer(
             padding: None,
         };
 
-        handle(&msg, &shade, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
-        handle(&msg, &silk, ACCOUNT_KEY, Some(GAS), Some("test"), None, report, None)?;
+        handle(
+            &msg,
+            &shade,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
+        handle(
+            &msg,
+            &silk,
+            ACCOUNT_KEY,
+            Some(GAS),
+            Some("test"),
+            None,
+            report,
+            None,
+        )?;
     }
 
     println!("\n\tTotal shade: {}", get_balance(&shade, account.clone()));

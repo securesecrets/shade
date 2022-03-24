@@ -76,7 +76,7 @@ pub enum HandleMsg {
         // Commission * 100 e.g. 5 == .05 == 5%
         capture: Option<Uint128>,
         fee: Option<Uint128>,
-        unlimited: Option<bool>
+        unlimited: Option<bool>,
     },
     RemoveAsset {
         address: HumanAddr,
@@ -134,7 +134,9 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     NativeAsset {},
     SupportedAssets {},
-    Asset { contract: String },
+    Asset {
+        contract: String,
+    },
     Config {},
     Limit {},
     Mint {

@@ -1,8 +1,8 @@
 use crate::cli_types::{
     ListCodeResponse, ListContractCode, NetContract, SignedTx, TxCompute, TxQuery, TxResponse,
 };
-use serde_json::{Result, Value};
 use serde::{Deserialize, Serialize};
+use serde_json::{Result, Value};
 use std::{fs::File, io::Write, process::Command, thread, time};
 
 //secretcli tx sign-doc tx_to_sign --from sign-test
@@ -277,7 +277,7 @@ pub fn init<Message: serde::Serialize>(
     store_gas: Option<&str>,
     init_gas: Option<&str>,
     backend: Option<&str>,
-    report: &mut Vec<Report>
+    report: &mut Vec<Report>,
 ) -> Result<NetContract> {
     let store_response = store_contract(contract_file, Option::from(&*sender), store_gas, backend)?;
     let store_query = query_hash(store_response.txhash)?;
@@ -304,7 +304,7 @@ pub fn init<Message: serde::Serialize>(
     report.push(Report {
         msg_type: "Instantiate".to_string(),
         message: serde_json::to_string(&msg)?,
-        gas_used: init_query.gas_used
+        gas_used: init_query.gas_used,
     });
 
     // Look for the contract's address
@@ -346,7 +346,7 @@ fn execute_contract<Handle: serde::Serialize>(
     gas: Option<&str>,
     backend: Option<&str>,
     amount: Option<&str>,
-    max_tries: Option<i32>
+    max_tries: Option<i32>,
 ) -> Result<TxResponse> {
     let message = serde_json::to_string(&msg)?;
 
@@ -384,7 +384,6 @@ fn execute_contract<Handle: serde::Serialize>(
     Ok(response)
 }
 
-
 ///
 /// Allows contract handle enums to be used in test scripts
 ///
@@ -406,7 +405,7 @@ pub fn handle<Message: serde::Serialize>(
     backend: Option<&str>,
     amount: Option<&str>,
     report: &mut Vec<Report>,
-    max_tries: Option<i32>
+    max_tries: Option<i32>,
 ) -> Result<(TxCompute, TxQuery)> {
     let tx = execute_contract(contract, msg, sender, gas, backend, amount, max_tries)?;
 
@@ -417,7 +416,7 @@ pub fn handle<Message: serde::Serialize>(
     report.push(Report {
         msg_type: "Handle".to_string(),
         message: serde_json::to_string(&msg)?,
-        gas_used: queried_response.gas_used.clone()
+        gas_used: queried_response.gas_used.clone(),
     });
 
     Ok((computed_response, queried_response))
@@ -434,7 +433,7 @@ pub fn handle<Message: serde::Serialize>(
 pub fn query<Query: serde::Serialize, Response: serde::de::DeserializeOwned>(
     contract: &NetContract,
     msg: Query,
-    max_tries: Option<i32>
+    max_tries: Option<i32>,
 ) -> Result<Response> {
     let command = vec_str_to_vec_string(vec![
         "query",

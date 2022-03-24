@@ -1,12 +1,12 @@
+use crate::airdrop::errors::permit_rejected;
 use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Uint128};
+use query_authentication::viewing_keys::ViewingKey;
 use query_authentication::{
     permit::{bech32_to_canonical, Permit},
     transaction::SignedTx,
 };
-use query_authentication::viewing_keys::ViewingKey;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::airdrop::errors::permit_rejected;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -65,7 +65,6 @@ pub struct EmptyMsg {}
 pub type AddressProofPermit = Permit<FillerMsg>;
 
 pub fn authenticate_ownership(permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
-
     let signer_address = permit
         .validate(Some("wasm/MsgExecuteContract".to_string()))?
         .as_canonical();

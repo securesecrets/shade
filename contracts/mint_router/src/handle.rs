@@ -1,3 +1,4 @@
+use chrono::prelude::*;
 use cosmwasm_std::{
     debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
     HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
@@ -10,21 +11,16 @@ use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     band::ReferenceData,
-    mint_router::{Config, HandleAnswer},
     mint,
+    mint_router::{Config, HandleAnswer},
     oracle::QueryMsg::Price,
     snip20::{token_config_query, Snip20Asset, TokenConfig},
 };
 use std::{cmp::Ordering, convert::TryFrom};
-use chrono::prelude::*;
 
 use crate::state::{
-    config_r, config_w,
-    current_assets_r, current_assets_w,
-    registered_asset_r, registered_asset_w,
-    final_asset_r, final_asset_w,
-    asset_path_r, asset_path_w,
-    user_r, user_w,
+    asset_path_r, asset_path_w, config_r, config_w, current_assets_r, current_assets_w,
+    final_asset_r, final_asset_w, registered_asset_r, registered_asset_w, user_r, user_w,
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -35,28 +31,23 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-
     let mut messages = vec![];
     let asset_paths = asset_path_r(&deps.storage);
 
-    let mut input_asset = registered_asset_r(&deps.storage).load(&env.message.sender.to_string().as_bytes())?;
+    let mut input_asset =
+        registered_asset_r(&deps.storage).load(&env.message.sender.to_string().as_bytes())?;
     let mut input_amount = amount;
 
     let final_asset = final_asset_r(&deps.storage).load()?;
 
     while input_asset.address != final_asset {
-
         let mint = asset_paths.load(input_asset.address.to_string().as_bytes())?;
-        let (output_asset, output_amount) = match (
-            mint::QueryMsg::Mint {
-                offer_asset: input_asset.address.clone(),
-                amount: input_amount,
-            }.query(
-                &deps.querier,
-                mint.code_hash.clone(),
-                mint.address.clone(),
-            )?
-        ) {
+        let (output_asset, output_amount) = match (mint::QueryMsg::Mint {
+            offer_asset: input_asset.address.clone(),
+            amount: input_amount,
+        }
+        .query(&deps.querier, mint.code_hash.clone(), mint.address.clone())?)
+        {
             mint::QueryAnswer::Mint { asset, amount } => (asset, amount),
             _ => {
                 return Err(StdError::generic_err("Failed to get mint asset/amount"));
@@ -75,8 +66,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                 input_asset.code_hash.clone(),
                 input_asset.address.clone(),
             )?);
-        }
-        else {
+        } else {
             // Send with the OG msg, to maintain slippage reqs
             messages.push(send_msg(
                 mint.address.clone(),
@@ -120,9 +110,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
-
     let cur_config = config_r(&deps.storage).load()?;
-    
+
     // Admin-only
     if env.message.sender != cur_config.admin {
         return Err(StdError::unauthorized());
@@ -150,19 +139,15 @@ pub fn build_path<S: Storage, A: Api, Q: Querier>(
     env: Env,
     path: Vec<Contract>,
 ) -> StdResult<Vec<CosmosMsg>> {
-
     let mut messages = vec![];
     let mut all_assets = vec![];
 
     for mint in path.clone() {
-
-        let entry_assets = match (
-            mint::QueryMsg::SupportedAssets {}.query(
-                &deps.querier,
-                mint.code_hash.clone(),
-                mint.address.clone(),
-            )?
-        ) {
+        let entry_assets = match (mint::QueryMsg::SupportedAssets {}.query(
+            &deps.querier,
+            mint.code_hash.clone(),
+            mint.address.clone(),
+        )?) {
             mint::QueryAnswer::SupportedAssets { assets } => assets,
             _ => {
                 return Err(StdError::generic_err("Failed to get entry assets"));
@@ -173,39 +158,33 @@ pub fn build_path<S: Storage, A: Api, Q: Querier>(
 
         // Make sure all new assets are registered
         for asset in entry_assets.clone() {
-
             // Register receive if it hasn't been before
-            if (registered_asset_r(&deps.storage).may_load(
-                &asset.address.to_string().as_bytes(),
-            )?).is_none() {
+            if (registered_asset_r(&deps.storage)
+                .may_load(&asset.address.to_string().as_bytes())?)
+            .is_none()
+            {
                 messages.push(register_receive_msg(
-                        env.contract_code_hash.clone(),
-                        None,
-                        1,
-                        asset.code_hash.clone(),
-                        asset.address.clone(),
+                    env.contract_code_hash.clone(),
+                    None,
+                    1,
+                    asset.code_hash.clone(),
+                    asset.address.clone(),
                 )?);
-                registered_asset_w(&mut deps.storage).save(
-                    &asset.address.to_string().as_bytes(),
-                    &asset)?;
+                registered_asset_w(&mut deps.storage)
+                    .save(&asset.address.to_string().as_bytes(), &asset)?;
             }
 
             // Set this assets node to the current mint contract
-            asset_path_w(&mut deps.storage).save(
-                &asset.address.to_string().as_bytes(),
-                &mint,
-            )?;
+            asset_path_w(&mut deps.storage).save(&asset.address.to_string().as_bytes(), &mint)?;
         }
     }
 
     let exit = path.last().unwrap();
-    let final_asset = match (
-        mint::QueryMsg::NativeAsset {}.query(
-            &deps.querier,
-            exit.code_hash.clone(),
-            exit.address.clone(),
-        )?
-    ) {
+    let final_asset = match (mint::QueryMsg::NativeAsset {}.query(
+        &deps.querier,
+        exit.code_hash.clone(),
+        exit.address.clone(),
+    )?) {
         mint::QueryAnswer::NativeAsset { asset, peg } => asset.contract,
         _ => {
             return Err(StdError::generic_err("Failed to get final asset"));
@@ -213,19 +192,18 @@ pub fn build_path<S: Storage, A: Api, Q: Querier>(
     };
 
     // Ensure final asset is registered
-    if (registered_asset_r(&deps.storage).may_load(
-        &final_asset.address.to_string().as_bytes(),
-    )?).is_none() {
+    if (registered_asset_r(&deps.storage).may_load(&final_asset.address.to_string().as_bytes())?)
+        .is_none()
+    {
         messages.push(register_receive_msg(
-                env.contract_code_hash.clone(),
-                None,
-                1,
-                final_asset.code_hash.clone(),
-                final_asset.address.clone(),
+            env.contract_code_hash.clone(),
+            None,
+            1,
+            final_asset.code_hash.clone(),
+            final_asset.address.clone(),
         )?);
-        registered_asset_w(&mut deps.storage).save(
-            &final_asset.address.to_string().as_bytes(),
-            &final_asset)?;
+        registered_asset_w(&mut deps.storage)
+            .save(&final_asset.address.to_string().as_bytes(), &final_asset)?;
     }
 
     // remove final asset to prevent circles

@@ -1,3 +1,4 @@
+use chrono::prelude::*;
 use cosmwasm_std::{
     debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
     HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
@@ -10,16 +11,15 @@ use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
     band::ReferenceData,
-    mint::{Config, HandleAnswer, SupportedAsset, Limit, MintMsgHook},
+    mint::{Config, HandleAnswer, Limit, MintMsgHook, SupportedAsset},
     oracle::QueryMsg::Price,
     snip20::{token_config_query, Snip20Asset, TokenConfig},
 };
 use std::{cmp::Ordering, convert::TryFrom};
-use chrono::prelude::*;
 
 use crate::state::{
-    asset_list_w, asset_peg_r, assets_r, assets_w, config_r, config_w, limit_w, native_asset_r,
-    total_burned_w, limit_r, minted_r, minted_w, limit_refresh_w, limit_refresh_r,
+    asset_list_w, asset_peg_r, assets_r, assets_w, config_r, config_w, limit_r, limit_refresh_r,
+    limit_refresh_w, limit_w, minted_r, minted_w, native_asset_r, total_burned_w,
 };
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
@@ -30,7 +30,6 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     // Check if contract enabled
     if !config.activated {
@@ -47,28 +46,28 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check that sender is a supported snip20 asset
-    let burn_asset = match assets_r(&deps.storage).may_load(env.message.sender.to_string().as_bytes())? {
-        Some(supported_asset) => {
-            debug_print!(
-                "Found Burn Asset: {} {}",
-                &supported_asset.asset.token_info.symbol,
-                env.message.sender.to_string()
-            );
-            supported_asset
-        }
-        None => {
-            return Err(StdError::NotFound {
-                kind: env.message.sender.to_string(),
-                backtrace: None,
-            });
-        }
-    };
+    let burn_asset =
+        match assets_r(&deps.storage).may_load(env.message.sender.to_string().as_bytes())? {
+            Some(supported_asset) => {
+                debug_print!(
+                    "Found Burn Asset: {} {}",
+                    &supported_asset.asset.token_info.symbol,
+                    env.message.sender.to_string()
+                );
+                supported_asset
+            }
+            None => {
+                return Err(StdError::NotFound {
+                    kind: env.message.sender.to_string(),
+                    backtrace: None,
+                });
+            }
+        };
 
     let mut input_amount = amount;
     let mut messages = vec![];
 
     if burn_asset.fee > Uint128(0) {
-
         let fee_amount = calculate_portion(input_amount, burn_asset.fee);
         // Reduce input by fee
         input_amount = (input_amount - fee_amount)?;
@@ -90,16 +89,14 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let amount_to_mint: Uint128 = mint_amount(deps, input_amount, &burn_asset, &mint_asset)?;
 
     if let Some(limit) = config.limit {
-
         // Limit Refresh Check
         try_limit_refresh(deps, env, limit)?;
 
         // Check & adjust limit if a limited asset
         if !burn_asset.unlimited {
-
             let minted = minted_r(&deps.storage).load()?;
             if (amount_to_mint + minted) > limit_r(&deps.storage).load()? {
-                return Err(StdError::generic_err("Limit Exceeded"))
+                return Err(StdError::generic_err("Limit Exceeded"));
             }
 
             minted_w(&mut deps.storage).save(&(amount_to_mint + minted))?;
@@ -219,10 +216,8 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
     env: Env,
     limit: Limit,
 ) -> StdResult<()> {
-
     match DateTime::parse_from_rfc3339(&limit_refresh_r(&deps.storage).load()?) {
         Ok(parsed) => {
-
             let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
             let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
             let last_refresh: DateTime<Utc> = parsed.with_timezone(&Utc);
@@ -240,23 +235,26 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
 
             let supply = match token_info.total_supply {
                 Some(s) => s,
-                None => {
-                    return Err(StdError::generic_err("Could not get native token supply")) 
-                }
+                None => return Err(StdError::generic_err("Could not get native token supply")),
             };
 
             // get amount to add, 0 if not in need of refresh
             match limit {
-
-                Limit::Daily { supply_portion, days } => {
-
+                Limit::Daily {
+                    supply_portion,
+                    days,
+                } => {
                     // Slight error in annual limit if (days / 365) is not a whole number
-                    if now.num_days_from_ce() as u128 - days.u128() >= last_refresh.num_days_from_ce() as u128 {
+                    if now.num_days_from_ce() as u128 - days.u128()
+                        >= last_refresh.num_days_from_ce() as u128
+                    {
                         fresh_amount = calculate_portion(supply, supply_portion);
                     }
-                },
-                Limit::Monthly { supply_portion, months } => {
-
+                }
+                Limit::Monthly {
+                    supply_portion,
+                    months,
+                } => {
                     if now.year() > last_refresh.year() || now.month() > last_refresh.month() {
                         /* If its a new year or new month, add (year_diff * 12) to the later (now) month
                          * 12-2021 <-> 1-2022 becomes a comparison between 12 <-> (1 + 12)
@@ -264,15 +262,16 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
                          */
                         let year_diff = now.year() - last_refresh.year();
 
-                        if (now.month() + (year_diff * 12) as u32) - last_refresh.month() >= months.u128() as u32 {
+                        if (now.month() + (year_diff * 12) as u32) - last_refresh.month()
+                            >= months.u128() as u32
+                        {
                             fresh_amount = calculate_portion(supply, supply_portion);
                         }
                     }
-                },
+                }
             }
 
             if fresh_amount > Uint128(0) {
-
                 let minted = minted_r(&deps.storage).load()?;
 
                 limit_w(&mut deps.storage).update(|state| {
@@ -283,9 +282,7 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
                 minted_w(&mut deps.storage).save(&Uint128(0))?;
             }
         }
-        Err(e) => {
-            return Err(StdError::generic_err("Failed to parse previous datetime"))
-        }
+        Err(e) => return Err(StdError::generic_err("Failed to parse previous datetime")),
     }
 
     Ok(())
@@ -296,9 +293,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
-
     let cur_config = config_r(&deps.storage).load()?;
-    
+
     // Admin-only
     if env.message.sender != cur_config.admin {
         return Err(StdError::unauthorized());

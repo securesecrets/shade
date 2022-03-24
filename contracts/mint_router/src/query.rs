@@ -1,18 +1,11 @@
-use crate::state::{ 
-    config_r, current_assets_r,
-    final_asset_r, registered_asset_r,
-    asset_path_r,
-};
-use secret_toolkit::{
-    snip20::token_info_query,
-    utils::Query,
-};
-use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage, Uint128, HumanAddr};
-use shade_protocol::{
-    mint_router::{ QueryAnswer, PathNode },
-    mint,
-};
+use crate::state::{asset_path_r, config_r, current_assets_r, final_asset_r, registered_asset_r};
 use chrono::prelude::*;
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use secret_toolkit::{snip20::token_info_query, utils::Query};
+use shade_protocol::{
+    mint,
+    mint_router::{PathNode, QueryAnswer},
+};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -26,8 +19,11 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
     })
 }
 
-pub fn route<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, asset: HumanAddr, amount: Uint128) -> StdResult<QueryAnswer> {
-
+pub fn route<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+    amount: Uint128,
+) -> StdResult<QueryAnswer> {
     let mut path = vec![];
     let mut input_asset = registered_asset_r(&deps.storage).load(&asset.to_string().as_bytes())?;
     let mut input_amount = amount;
@@ -35,18 +31,13 @@ pub fn route<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, asset: Huma
     let final_asset = final_asset_r(&deps.storage).load()?;
 
     while input_asset.address != final_asset {
-
         let mint = asset_path_r(&deps.storage).load(&input_asset.address.to_string().as_bytes())?;
-        let (output_asset, output_amount) = match (
-            mint::QueryMsg::Mint {
-                offer_asset: input_asset.address.clone(),
-                amount: input_amount,
-            }.query(
-                &deps.querier,
-                mint.code_hash.clone(),
-                mint.address.clone(),
-            )?
-        ) {
+        let (output_asset, output_amount) = match (mint::QueryMsg::Mint {
+            offer_asset: input_asset.address.clone(),
+            amount: input_amount,
+        }
+        .query(&deps.querier, mint.code_hash.clone(), mint.address.clone())?)
+        {
             mint::QueryAnswer::Mint { asset, amount } => (asset, amount),
             _ => {
                 return Err(StdError::generic_err("Failed to get native asset"));
@@ -67,7 +58,5 @@ pub fn route<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, asset: Huma
         input_amount = output_amount;
     }
 
-    Ok(QueryAnswer::Route {
-        path 
-    })
+    Ok(QueryAnswer::Route { path })
 }
