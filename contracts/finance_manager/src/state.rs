@@ -8,7 +8,7 @@ use shade_protocol::{snip20::Snip20Asset, finance_manager};
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static ASSETS: &[u8] = b"assets";
 pub static ASSET_LIST: &[u8] = b"asset_list";
-//pub static VIEWING_KEY: &[u8] = b"viewing_key";
+pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static ALLOCATIONS: &[u8] = b"allocations";
 //pub static ALLOWANCE_REFRESH: &[u8] = b"allowance_refresh";
@@ -38,7 +38,6 @@ pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
     bucket(ASSETS, storage)
 }
 
-/*
 pub fn viewing_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
     singleton_read(storage, VIEWING_KEY)
 }
@@ -46,7 +45,6 @@ pub fn viewing_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
 pub fn viewing_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
     singleton(storage, VIEWING_KEY)
 }
-*/
 
 pub fn self_address_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, HumanAddr> {
     singleton_read(storage, SELF_ADDRESS)
@@ -56,28 +54,10 @@ pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
     singleton(storage, SELF_ADDRESS)
 }
 
-pub fn allocations_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<treasury::Allocation>> {
+pub fn allocations_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<finance_manager::AllocationMeta>> {
     bucket_read(ALLOCATIONS, storage)
 }
 
-pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::Allocation>> {
+pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<finance_manager::AllocationMeta>> {
     bucket(ALLOCATIONS, storage)
 }
-
-/*
-pub fn rewards_tracking_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury::RefreshTracker> {
-    bucket_read(REWARDS, storage)
-}
-
-pub fn rewards_tracking_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury::RefreshTracker> {
-    bucket(REWARDS, storage)
-}
-
-pub fn last_allowance_refresh_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
-    singleton_read(storage, ALLOWANCE_REFRESH)
-}
-
-pub fn last_allowance_refresh_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
-    singleton(storage, ALLOWANCE_REFRESH)
-}
-*/

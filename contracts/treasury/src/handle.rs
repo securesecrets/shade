@@ -50,7 +50,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
         let flag: Flag = from_binary(&f)?;
         // NOTE: would this be better as a non-exhaustive enum?
         // https://doc.rust-lang.org/reference/attributes/type_system.html#the-non_exhaustive-attribute
-        if flag.flag == "unallocated" {
+        if flag.flag == "unallowanceated" {
             return Ok(HandleResponse {
                 messages: vec![],
                 log: vec![],
@@ -65,14 +65,13 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let mut messages = vec![];
 
-    if let Some(allocs) = allowances_r(&deps.storage).may_load(asset.contract.address.as_str().as_bytes())? {
-        for alloc in allocs {
-            match alloc {
+    if let Some(allowances) = allowances_r(&deps.storage).may_load(asset.contract.address.as_str().as_bytes())? {
+        for allowance in allowances {
+            match allowance {
                 Allowance::Reserves { .. }  => {},
                 Allowance::Amount { .. } => { },
                 Allowance::Portion {
                     spender,
-                    cycle,
                     portion,
                     last_refresh,
                 } => {
@@ -181,24 +180,19 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         let full_asset = assets_r(&deps.storage).load(asset.as_str().as_bytes())?;
         let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
-        let mut amount_total = Uint128::zero();
-        let mut portion_total = Uint128::zero();
+        let mut amount_total = 0u128;
+        let mut portion_total = 0u128;
 
         //Build metadata
-        for alloc in &allowances {
-            match alloc {
-                Allowance::Amount { amount, .. } => {
-                    amount_total += *amount;
-                },
-                Allowance::Portion { portion, .. }
-                | Allowance::Reserves { portion, .. } => { portion_total += *portion; }
-            }
+        for allowance in &allowances {
+            amount_total += allowance_amount(allowance);
+            portion_total += allowance_portion(allowance);
         }
 
         // Perform rebalance
-        for alloc in allowances {
+        for allowance in allowances {
 
-            match alloc {
+            match allowance {
 
                 Allowance::Amount {
                     spender,
@@ -219,7 +213,6 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 },
                 Allowance::Portion {
                     spender,
-                    cycle,
                     portion,
                     last_refresh,
                 } => {
@@ -410,11 +403,11 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         &snip20::fetch_snip20(contract, &deps.querier)?,
     )?;
 
-    let allocs = reserves
+    let allowances = reserves
         .map(|r| vec![Allowance::Reserves { portion: r }])
         .unwrap_or_default();
 
-    allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &allocs)?;
+    allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &allowances)?;
 
     Ok(HandleResponse {
         messages: vec![
@@ -480,12 +473,20 @@ fn allowance_address(allowance: &Allowance) -> Option<&HumanAddr> {
     }
 }
 
-// extract allocaiton portion
+// extract allowanceaiton portion
 fn allowance_portion(allowance: &Allowance) -> u128 {
     match allowance {
         Allowance::Reserves { portion } => portion.u128(),
         Allowance::Portion { portion, .. } => portion.u128(),
         Allowance::Amount { .. } => 0,
+    }
+}
+
+fn allowance_amount(allowance: &Allowance) -> u128 {
+    match allowance {
+        Allowance::Amount { amount, .. } => amount.u128(),
+        Allowance::Portion { .. }
+        | Allowance::Reserves { .. } => 0,
     }
 }
 
@@ -504,16 +505,15 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    // Disallow Portion with Cycle::Once
-    match &allowance {
+    let managers = managers_r(&deps.storage).load()?;
+
+    // Disallow Portion on non-managers
+    match allowance {
         Allowance::Portion {
-            cycle, ..
+            ref spender, ..
         } => {
-            match cycle {
-                Cycle::Once => {
-                    return Err(StdError::generic_err("Cannot give a one-time portion allowance"));
-                }
-                _ => {}
+            if managers.into_iter().find(|m| m.address == *spender).is_none() {
+                return Err(StdError::generic_err("Portion allowances to managers only"));
             }
         }
         _ => {}
@@ -525,29 +525,29 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         .may_load(key)?
         .unwrap_or_default();
 
-    let alloc_address = allowance_address(&allowance);
+    let allow_address = allowance_address(&allowance);
 
     // find any old allowances with the same contract address & sum current allowances in one loop.
     // saves looping twice in the worst case
     // TODO: Remove Reserves if this would be one of those
-    let (stale_alloc, curr_alloc_portion) =
+    let (stale_allowance, cur_allowance_portion) =
         apps.iter()
             .enumerate()
-            .fold((None, 0u128), |(stale_alloc, curr_allocs), (idx, a)| {
-                if stale_alloc.is_none() && allowance_address(a) == alloc_address {
-                    (Some(idx), curr_allocs)
+            .fold((None, 0u128), |(stale_allowance, cur_allowances), (idx, a)| {
+                if stale_allowance.is_none() && allowance_address(a) == allow_address {
+                    (Some(idx), cur_allowances)
                 } else {
-                    (stale_alloc, curr_allocs + allowance_portion(a))
+                    (stale_allowance, cur_allowances + allowance_portion(a))
                 }
             });
 
-    if let Some(old_alloc_idx) = stale_alloc {
-        apps.remove(old_alloc_idx);
+    if let Some(old_allowance_idx) = stale_allowance {
+        apps.remove(old_allowance_idx);
     }
 
-    let new_alloc_portion = allowance_portion(&allowance);
+    let new_allowance_portion = allowance_portion(&allowance);
 
-    if curr_alloc_portion + new_alloc_portion > ONE_HUNDRED_PERCENT {
+    if cur_allowance_portion + new_allowance_portion > ONE_HUNDRED_PERCENT {
         return Err(StdError::generic_err(
             "Invalid allowance total exceeding 100%",
         ));
@@ -561,12 +561,11 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 
     match allowance {
         Allowance::Portion {
-            spender, cycle, portion, last_refresh
+            spender, portion, last_refresh
         } => {
             apps.push(Allowance::Portion {
-                spender, 
-                cycle, 
-                portion, 
+                spender: spender.clone(),
+                portion: portion.clone(),
                 last_refresh: datetime.to_rfc3339()
             });
         },
@@ -577,9 +576,9 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
             last_refresh,
         }=> {
             apps.push(Allowance::Amount {
-                spender, 
-                cycle, 
-                amount, 
+                spender: spender.clone(),
+                cycle: cycle.clone(),
+                amount: amount.clone(),
                 last_refresh: datetime.to_rfc3339()
             });
         }

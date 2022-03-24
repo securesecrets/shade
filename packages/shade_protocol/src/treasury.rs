@@ -53,7 +53,7 @@ pub enum Allowance {
         //nick: Option<String>,
         spender: HumanAddr,
         // Unlike others, this is a direct number of uTKN to allow monthly
-        cycle: Cycle,
+        //cycle: Cycle,
         portion: Uint128,
         last_refresh: String,
     },

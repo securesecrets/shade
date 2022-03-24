@@ -28,6 +28,7 @@ pub struct Allocation {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AllocationType {
+    // amount becomes percent * 10^18
     Portion,
     Amount,
 }
@@ -56,6 +57,7 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    /*
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
@@ -63,6 +65,7 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
+    */
     UpdateConfig { config: Config },
     RegisterAsset { contract: Contract },
     Allocate {
@@ -83,8 +86,8 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         address: HumanAddr,
     },
-    UpdateConfig { status: ResponseStatus },
     Receive { status: ResponseStatus },
+    UpdateConfig { status: ResponseStatus },
     RegisterAsset { status: ResponseStatus },
     Allocate { status: ResponseStatus },
     Rebalance { status: ResponseStatus },
@@ -110,6 +113,6 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config { config: Config },
     Assets { assets: Vec<HumanAddr> },
-    Allocations { allocations: Vec<Allocation> },
+    Allocations { allocations: Vec<AllocationMeta> },
     Manager(manager::QueryAnswer),
 }
