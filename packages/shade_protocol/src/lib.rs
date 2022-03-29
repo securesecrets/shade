@@ -4,7 +4,10 @@ pub mod band;
 #[cfg(feature = "secretswap")]
 pub mod secretswap;
 
+#[cfg(feature = "sienna")]
 pub mod sienna;
+
+#[cfg(feature = "dex")]
 pub mod dex;
 
 #[cfg(feature = "snip20")]

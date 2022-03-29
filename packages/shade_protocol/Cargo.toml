@@ -15,6 +15,8 @@ default = ["utils"]
 # Templates
 band = []
 secretswap = ["utils"]
+sienna = ["utils", "math"]
+dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
 snip20 = ["utils"]
 # Utils
 utils = []

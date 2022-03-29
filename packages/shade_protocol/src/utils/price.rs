@@ -21,13 +21,15 @@ pub fn normalize_price(amount: Uint128, decimals: u8) -> Uint128 {
 
 #[cfg(test)]
 mod tests {
+    use cosmwasm_std::Uint128;
+    use crate::utils::price::{translate_price, normalize_price};
     macro_rules! normalize_price_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
             fn $name() {
                 let (amount, decimals, expected) = $value;
-                assert_eq!(oracle::normalize_price(amount, decimals), expected)
+                assert_eq!(normalize_price(amount, decimals), expected)
             }
         )*
         }
@@ -63,7 +65,7 @@ mod tests {
             #[test]
             fn $name() {
                 let (scrt_price, trade_price, expected) = $value;
-                assert_eq!(query::translate_price(scrt_price, trade_price), expected)
+                assert_eq!(translate_price(scrt_price, trade_price), expected)
             }
         )*
         }
