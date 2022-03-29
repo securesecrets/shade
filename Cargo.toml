@@ -1,7 +1,6 @@
 [workspace]
 members = [
   # Packages
-  "packages/network_integration",
   "packages/shade_protocol",
   "packages/secretcli",
 
@@ -26,6 +25,9 @@ members = [
 
   # Tools
   "tools/doc2book"
+]
+exclude = [
+  "packages/network_integration",
 ]
 
 [profile.release]

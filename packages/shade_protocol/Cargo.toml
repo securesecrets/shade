@@ -11,7 +11,32 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = []
+default = ["utils"]
+# Templates
+dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
+band = []
+secretswap = ["utils"]
+sienna = ["utils", "math"]
+snip20 = ["utils"]
+
+# Utils
+utils = []
+errors = []
+flexible_msg = []
+math = []
+storage = []
+
+# Protocol contracts
+airdrop = ["utils", "errors"]
+initializer = ["snip20", "utils"]
+governance = ["utils"]
+mint = ["utils", "snip20"]
+mint_router = ["utils", "snip20"]
+oracle = ["snip20"]
+scrt_staking= ["utils"]
+staking = ["governance", "utils"]
+treasury = ["utils"]
+
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
