@@ -13,7 +13,10 @@ cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
 rm ./$(1).wasm
 endef
 
-CONTRACTS = airdrop governance mint mint_router treasury oracle mock_band initializer scrt_staking shd_staking snip20
+CONTRACTS = \
+		airdrop governance shd_staking mint mint_router \
+		treasury oracle initializer scrt_staking snip20 \
+		mock_band mock_secretswap_pair mock_sienna_pair
 
 debug: setup
 	(cd ${contracts_dir}; ${build-debug})

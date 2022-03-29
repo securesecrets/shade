@@ -5,6 +5,7 @@ use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -175,3 +176,4 @@ pub enum QueryAnswer {
         amount: Uint128,
     },
 }
+
