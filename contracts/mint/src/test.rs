@@ -6,7 +6,10 @@ pub mod tests {
         Extern, StdError, Uint128, HumanAddr,
     };
     use mockall_double::double;
-    use shade_protocol::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg, normalize_price, translate_price};
+    use shade_protocol::{
+        mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+        utils::price::{normalize_price, translate_price},
+    };
 
     use crate::{
         contract::{handle, init, query},
