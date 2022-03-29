@@ -13,11 +13,12 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["utils"]
 # Templates
+dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
 band = []
 secretswap = ["utils"]
 sienna = ["utils", "math"]
-dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
 snip20 = ["utils"]
+
 # Utils
 utils = []
 errors = []
