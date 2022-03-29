@@ -16,6 +16,7 @@ pub enum HandleMsg {
         asset: HumanAddr,
         amount: Uint128, 
     },
+    Claim {},
     Rebalance { 
         asset: HumanAddr,
     },
@@ -42,6 +43,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Balance { asset: HumanAddr },
     Unbondings {},
+    Claimable {},
 }
 
 impl Query for QueryMsg {
@@ -53,4 +55,5 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
     Unbondings { unbondings: Vec<Unbonding> },
+    Claimable { amount: Uint128 },
 }

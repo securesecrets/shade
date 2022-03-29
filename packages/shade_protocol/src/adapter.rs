@@ -28,6 +28,7 @@ pub enum HandleMsg {
     Unbond {
        amount: Uint128, 
     },
+    Claim { },
     // Maintenance trigger e.g. claim rewards and restake
     Update { },
 }
@@ -53,6 +54,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Balance { asset: Contract },
     Unbondings {},
+    Claimable {},
 }
 
 impl Query for QueryMsg {
@@ -64,4 +66,5 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
     Unbondings { unbondings: Vec<Bond> },
+    Claimable { amount: Uint128 },
 }

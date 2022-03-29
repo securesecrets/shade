@@ -3,11 +3,15 @@ use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
     Querier, StdError, StdResult, Storage, Uint128,
 };
-use secret_toolkit;
-use secret_toolkit::snip20::{
-    allowance_query, decrease_allowance_msg, increase_allowance_msg, register_receive_msg,
-    send_msg, batch_send_from_msg, set_viewing_key_msg, batch_send_msg,
-    batch::{ SendFromAction },
+use secret_toolkit::{
+    utils::Query,
+    snip20::{
+        allowance_query, decrease_allowance_msg,
+        increase_allowance_msg, register_receive_msg,
+        send_msg, batch_send_from_msg,
+        set_viewing_key_msg, batch_send_msg,
+        batch::{ SendFromAction },
+    },
 };
 
 use shade_protocol::{
@@ -227,6 +231,39 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    adapter: Contract,
+    asset: &Contract,
+) -> StdResult<Uint128> {
+
+    match (adapter::QueryMsg::Balance {
+        asset: asset.clone(),
+    }.query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
+        adapter::QueryAnswer::Balance { amount } => Ok(amount),
+        _ => Err(
+            StdError::generic_err(
+                format!("Failed to query adapter balance from {}", adapter.address)
+            )
+        )
+    }
+}
+
+/*
+pub fn refresh_adapter_balances<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    adapters: Vec<AllocationMeta>,
+    asset: Contract,
+) -> StdResult<Vec<AllocationMeta>> {
+
+    Ok(adapters.iter().map(|mut a| {
+        let mut new_a = a.clone();
+        new_a.balance = adapter_balance(deps, a.contract.clone(), &asset).ok().unwrap();
+        new_a
+    }).collect())
+}
+*/
+
 pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -237,7 +274,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
     let allocations = allocations_r(&mut deps.storage).load(asset.to_string().as_bytes())?;
 
-    let cur_allowance = allowance_query(
+    let mut allowance = allowance_query(
         &deps.querier,
         config.treasury.clone(),
         env.contract.address.clone(),
@@ -245,40 +282,73 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),
-    )?;
+    )?.allowance;
 
+    // For refreshed allocation data
+    let mut fresh_allocs = allocations.to_vec();
     // Build metadata
     let mut amount_total = Uint128::zero();
     let mut portion_total = Uint128::zero();
-    for a in &allocations {
+
+    for mut a in fresh_allocs {
         match a.alloc_type {
             AllocationType::Amount => amount_total += a.balance,
-            AllocationType::Portion => portion_total += a.balance,
+            AllocationType::Portion => {
+                a.balance = adapter_balance(deps, a.contract, 
+                                            &full_asset.contract)?;
+                portion_total += a.balance;
+            }
         };
     }
+
     let alloc_total = amount_total + portion_total;
 
     // To be spent in order to fill amounts before unbonding
-    let mut available = cur_allowance.allowance;
+    //let mut available = cur_allowance.allowance;
     // Batch send_from actions
     let mut actions = vec![];
 
-    for a in allocations {
+    for a in fresh_allocs {
         match a.alloc_type {
-            AllocationType::Amount => {
-            },
+            // TODO Separate handle for amount refresh
+            AllocationType::Amount => { },
             AllocationType::Portion => {
-                let amount = a.amount.multiply_ratio(portion_total, 1u128.pow(18));
-                actions.push(
-                    SendFromAction {
+
+                let amount = a.amount.multiply_ratio(
+                    portion_total,
+                    1u128.pow(18)
+                );
+                // Enough allowance to cover
+                if amount <= allowance {
+                    actions.push(
+                        SendFromAction {
+                            owner: config.treasury.clone(),
+                            recipient: a.contract.address,
+                            recipient_code_hash: None,
+                            amount,
+                            msg: None,
+                            memo: None,
+                        }
+                    );
+                    allowance = (allowance - amount)?;
+                }
+                // Need to unbond from somewhere
+                else {
+                    // Send all available
+                    actions.push(SendFromAction {
                         owner: config.treasury.clone(),
                         recipient: a.contract.address,
                         recipient_code_hash: None,
-                        amount: amount,
+                        amount: allowance,
                         msg: None,
                         memo: None,
-                    }
-                );
+                    });
+
+                    let unbond_amount = (amount - allowance)?;
+                    allowance = Uint128::zero();
+
+                    //TODO: unbond(unbond_amount) from adapters
+                }
             },
         };
     }

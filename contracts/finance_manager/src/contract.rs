@@ -57,12 +57,25 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         */
-        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { contract } => handle::try_register_asset(deps, &env, &contract),
-        HandleMsg::Allocate { asset, allocation } => handle::allocate(deps, &env, asset, allocation),
+        HandleMsg::UpdateConfig { 
+            config
+        } => handle::try_update_config(deps, env, config),
+        HandleMsg::RegisterAsset { 
+            contract
+        } => handle::try_register_asset(deps, &env, &contract),
+        HandleMsg::Allocate { 
+            asset,
+            allocation
+        } => handle::allocate(deps, &env, asset, allocation),
+
         HandleMsg::Manager(m) => match m {
-            manager::HandleMsg::Unbond { asset, amount } => Err(StdError::generic_err("Not Implemented")),
-            manager::HandleMsg::Rebalance { asset } => handle::rebalance(deps, &env, asset),
+            manager::HandleMsg::Unbond {
+                asset,
+                amount
+            } => Err(StdError::generic_err("Not Implemented")),
+            manager::HandleMsg::Rebalance {
+                asset
+            } => handle::rebalance(deps, &env, asset),
         }
     }
 }
@@ -74,10 +87,17 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
-        QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
-        QueryMsg::PendingAllowance { asset } => Err(StdError::generic_err("Not Implemented")),
+        QueryMsg::Allocations {
+            asset
+        } => to_binary(&query::allocations(deps, asset)?),
+        QueryMsg::PendingAllowance {
+            asset
+        } => Err(StdError::generic_err("Not Implemented")),
+
         QueryMsg::Manager(m) => match m {
-            manager::QueryMsg::Balance { asset } => Err(StdError::generic_err("Not Implemented")),
+            manager::QueryMsg::Balance {
+                asset
+            } => Err(StdError::generic_err("Not Implemented")),
             manager::QueryMsg::Unbondings { } => Err(StdError::generic_err("Not Implemented")),
         }
     }
