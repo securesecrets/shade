@@ -17,3 +17,4 @@ pub mod math;
 
 #[cfg(feature = "storage")]
 pub mod storage;
+pub mod price;
