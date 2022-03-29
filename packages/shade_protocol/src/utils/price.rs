@@ -22,7 +22,7 @@ pub fn normalize_price(amount: Uint128, decimals: u8) -> Uint128 {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Uint128;
-    use crate::utils::price::{translate_price, normalize_price};
+    use super::*;
     macro_rules! normalize_price_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
