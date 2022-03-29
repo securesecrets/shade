@@ -1,11 +1,16 @@
 [package]
-name = "shade-protocol"
+name = "mock_secretswap_pair"
 version = "0.1.0"
-authors = [
-  "Guy Garcia <guysebastiangarcia@gmail.com>",
-  "Jackson Swenson <jacksonswenson22@gmail.com>"
-]
+authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
 edition = "2018"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -18,16 +23,12 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
+bincode = "1.3.1"
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
-# Needed for airdrop
-rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }
-# Needed for transactions
-query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0"}
-secret-cosmwasm-math-compat = { git = "https://github.com/chris-ricketts/secret-cosmwasm-math-compat.git", branch = "main" }
-remain = "0.2.2"
