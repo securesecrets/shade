@@ -17,13 +17,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let state = Config {
+        limit_admin: msg.limit_admin,
         admin: msg.admin,
         oracle: msg.oracle,
         treasury: msg.treasury,
-        issuance_cap: msg.issuance_cap,
+        mint_asset: msg.mint_asset,
+        global_issuance_limit: msg.global_issuance_limit,
         activated: msg.activated,
-        start_date: msg.start_date,
-        end_date: msg.end_date,
+        global_minimum_claim_time: msg.global_minimum_claim_time,
     };
 
     config_w(&mut deps.storage).save(&state)?;
@@ -31,15 +32,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let token_info = token_info_query(
         &deps.querier, 
         1, 
-        msg.minted_asset.code_hash.clone(),
-        msg.minted_asset.address.clone(),
+        msg.mint_asset.code_hash.clone(),
+        msg.mint_asset.address.clone(),
     )?;
 
-    let token_config = token_config_query(&deps.querier, msg.minted_asset.clone())?;
+    let token_config = token_config_query(&deps.querier, msg.mint_asset.clone())?;
 
     debug_print!("Setting minted asset");
     minted_asset_w(&mut deps.storage).save(&Snip20Asset {
-        contract: msg.minted_asset.clone(),
+        contract: msg.mint_asset.clone(),
         token_info,
         token_config: Option::from(token_config),
     })?;
@@ -58,22 +59,40 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg{
+        HandleMsg::UpdateLimitConfig {
+            limit_admin,
+            global_issuance_limit,
+            global_minimum_claim_time,
+            global_minimum_bonding_period,
+            global_maximum_discount,
+        } => handle::try_update_limit_config(deps, env, limit_admin, global_issuance_limit),
         HandleMsg::UpdateConfig { 
             admin,
             oracle,
             treasury,
-            issuance_cap,
+            issued_asset,
             activated,
-            start_date,
-            end_date,
-         } => handle::try_update_config(deps, env, admin, oracle, treasury, minted_asset, activated, issuance_cap, start_date),
+            minting_bond,
+            bond_issuance_limit,
+            bonding_period,
+            discount,
+        } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset),
+        HandleMsg::OpenBond{
+            collateral_asset,
+            start_time,
+            end_time,
+            bond_issuance_limit,
+            bonding_period,
+            discount,
+        } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period),
         HandleMsg::Receive { 
             sender,
             from,
             amount,
             msg,
         } => handle::try_deposit(deps, &env, sender, from, amount, msg),
-        HandleMsg::RegisterAsset {contract} => handle::try_register_asset(deps, &env, &contract),
+        HandleMsg::RegisterCollateralAsset {collateral_asset} => handle::try_register_collateral_asset(deps, &env, &collateral_asset),
+        HandleMsg::RemoveCollateralAsset {collateral_asset} => handle::try_remove_collateral_asset(deps, &env, &collateral_asset),
     }
 }
 

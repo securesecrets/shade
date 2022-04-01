@@ -38,3 +38,4 @@ snafu = { version = "0.6.3" }
 mockall = "0.10.2"
 mockall_double = "0.2.0"
 chrono = "0.4.19"
+time = "0.1.44"

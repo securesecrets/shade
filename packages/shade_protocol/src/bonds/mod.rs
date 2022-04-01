@@ -1,5 +1,6 @@
 pub mod errors;
 
+use chrono::prelude::*;
 use crate::utils::generic_response::ResponseStatus;
 use crate::utils::asset::Contract;
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
@@ -10,41 +11,71 @@ use secret_toolkit::utils::{HandleCallback};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
+    pub limit_admin: HumanAddr,
     pub admin: HumanAddr,
     pub oracle: Contract,
     pub treasury: HumanAddr,
+    pub issued_asset: Contract,
     pub activated: bool,
-    pub issuance_cap: Uint128,
-    pub start_date: Option<u64>,
-    pub end_date: Option<u64>,
+    pub minting_bond: bool,
+    pub bond_issuance_limit: Uint128,
+    pub bonding_period: Uint128,
+    pub discount: Uint128,
+    pub global_issuance_limit: Uint128,
+    pub global_minimum_bonding_period: Uint128,
+    pub global_maximum_discount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
+    pub limit_admin: HumanAddr,
+    pub global_issuance_limit: Uint128,
+    pub global_minimum_bonding_period: Uint128,
+    pub global_maximum_discount: Uint128,
     pub admin: HumanAddr,
     pub oracle: Contract,
     pub treasury: HumanAddr,
-    pub issuance_cap: Uint128,
+    pub issued_asset: Contract,
     pub activated: bool,
-    pub start_date: u64,
-    pub end_date: u64,
+    pub minting_bond: bool,
+    pub bond_issuance_limit: Uint128,
+    pub bonding_period: Uint128,
+    pub discount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    UpdateLimitConfig {
+        limit_admin: Option<HumanAddr>,
+        global_issuance_limit: Option<Uint128>,
+        global_minimum_bonding_period: Option<Uint128>,
+        global_maximum_discount: Option<Uint128>,
+    },
     UpdateConfig {
         admin: Option<HumanAddr>,
         oracle: Option<Contract>,
         treasury: Option<HumanAddr>,
-        issuance_cap: Option<Uint128>,
+        issued_asset: Option<Contract>,
         activated: Option<bool>,
-        start_date: Option<u64>,
-        end_date: Option<u64>,
+        minting_bond: Option<bool>,
+        bond_issuance_limit: Option<Uint128>,
+        bonding_period: Option<Uint128>,
+        discount: Option<Uint128>,
     },
-    RegisterAssets {
-        collateral_contract: Contract,
-        minting_contract: Contract,
+    OpenBond {
+        collateral_asset: Option<Contract>,
+        start_time: Option<u64>,
+        end_time: Option<u64>,
+        bond_issuance_limit: Option<Uint128>,
+        bonding_period: Option<Uint128>,
+        discount: Option<Uint128>,
+    },
+    RegisterCollateralAsset {
+        collateral_asset: Contract,
+    },
+    RemoveCollateralAsset {
+        collateral_asset: Contract,
     },
     Receive {
         sender: HumanAddr,
@@ -61,19 +92,36 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
+    UpdateLimitConfig {
+        status: ResponseStatus,
+    },
     UpdateConfig {
         status: ResponseStatus,
     },
     Deposit {
         status: ResponseStatus,
-        amount: Uint128,
+        deposit_amount: Uint128,
+        pending_claim_amount: Uint128,
+        end_date: u64,
     },
     Claim {
         status: ResponseStatus,
         amount: Uint128,
     },
-    RegisterAsset {
+    RegisterCollateralAsset {
         status: ResponseStatus,
+    },
+    RemoveCollateralAsset {
+        status: ResponseStatus,
+    },
+    OpenBond {
+        status: ResponseStatus,
+        deposit_contract: Contract,
+        start_time: u64,
+        end_time: u64,
+        bond_issuance_limit: Uint128,
+        bonding_period: Uint128,
+        discount: Uint128,
     },
 }
 
@@ -82,7 +130,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     IssuanceCap {},
-    TotalMinted {},
+    TotalIssued {},
     CollateralAsset {},
 }   
 
@@ -92,11 +140,14 @@ pub enum QueryAnswer {
     Config {
         config: Config,
     },
-    IssuanceCap {
-        issuance_cap: Uint128,
+    BondingPeriod {
+        bonding_period: Uint128,
     },
-    TotalMinted {
-        total_minted: Uint128,
+    BondIssuanceLimit {
+        bond_issuance_limit: Uint128,
+    },
+    GlobalTotalIssued {
+        global_total_issued: Uint128,
     },
     CollateralAsset {
         collateral_asset: Snip20Asset,
@@ -107,10 +158,26 @@ pub enum QueryAnswer {
 #[serde(rename_all = "snake_case")]
 pub struct Account {
     pub address: HumanAddr,
-    pub deposited_amount: Uint128,
-    pub deposit_date: u64,
-    pub claimable_amount: Uint128,
-    pub is_claimable_status: bool,
-    pub claimed_status: bool,
-    pub claimed_date: u64,
+    pub pending_bonds: Vec<PendingBond>,
+}
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct PendingBond {
+    pub claim_amount: Uint128,
+    pub end: u64, // Will be turned into a time via block time calculations
+    pub deposit_denom: Snip20Asset,
+    pub deposit_amount: Uint128,
+}
+
+// When users deposit and try to use the bond, a Bond Opportunity is selected via deposit denom
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct BondOpportunity {
+    pub issuance_limit: Uint128,
+    pub amount_issued: Uint128,
+    pub deposit_denom: Snip20Asset,
+    pub start_time: u64,
+    pub end_time: u64,
+    pub bonding_period: Uint128,
+    pub discount: Uint128,
 }
