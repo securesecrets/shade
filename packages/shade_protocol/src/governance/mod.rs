@@ -1,3 +1,6 @@
+pub mod profile;
+pub mod committee;
+
 pub mod proposal;
 pub mod vote;
 
@@ -7,47 +10,43 @@ use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
+use crate::governance::committee::{Committee, CommitteeMsg};
+use crate::governance::profile::Profile;
+use crate::governance::proposal::QueriedProposal;
+use crate::governance::vote::Vote;
 
-// This is used when calling itself
-pub const GOVERNANCE_SELF: &str = "SELF";
+#[cfg(feature = "governance-impl")]
+use crate::utils::storage::SingletonStorage;
 
 // Admin command variable spot
-pub const ADMIN_COMMAND_VARIABLE: &str = "{}";
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Config {
-    pub admin: HumanAddr,
-    // Staking contract - optional to support admin only
-    pub staker: Option<Contract>,
-    // The token allowed for funding
-    pub funding_token: Contract,
-    // The amount required to fund a proposal
-    pub funding_amount: Uint128,
-    // Proposal funding period deadline
-    pub funding_deadline: u64,
-    // Proposal voting period deadline
-    pub voting_deadline: u64,
-    // The minimum total amount of votes needed to approve deadline
-    pub minimum_votes: Uint128,
-}
+pub const ADMIN_COMMAND_VARIABLE: &str = "{~}";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct AdminCommand {
-    pub msg: String,
-    pub total_arguments: u16,
+pub struct Config {
+    pub treasury: HumanAddr,
+    pub vote_token: Option<Contract>,
+    pub funding_token: Option<Contract>,
+}
+
+#[cfg(feature = "governance-impl")]
+impl SingletonStorage for Config {
+    const NAMESPACE: &'static [u8] = b"config-";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
-    pub staker: Option<Contract>,
-    pub funding_token: Contract,
-    pub funding_amount: Uint128,
-    pub funding_deadline: u64,
-    pub voting_deadline: u64,
-    pub quorum: Uint128,
+    pub treasury: HumanAddr,
+
+    // Admin rules
+    pub admin_members: Vec<HumanAddr>,
+    pub admin_profile: Profile,
+
+    // Public rules
+    pub public_profile: Profile,
+    pub funding_token: Option<Contract>,
+    pub vote_token: Option<Contract>
 }
 
 impl InitCallback for InitMsg {
@@ -56,81 +55,147 @@ impl InitCallback for InitMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub enum RuntimeState {
+    // Run like normal
+    Normal,
+    // Disable staking
+    DisableVoteToken,
+    // Allow only specific committees and admin
+    SpecificCommittees { commitees: Vec<Uint128> },
+    // Set as admin only
+    AdminOnly
+}
+
+#[cfg(feature = "governance-impl")]
+impl SingletonStorage for RuntimeState {
+    const NAMESPACE: &'static [u8] = b"runtime_state-";
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    /// Generic proposal
-    CreateProposal {
-        // Contract that will be run
-        target_contract: String,
-        // This will be saved as binary
-        proposal: String,
-        description: String,
+    // Internal config
+    SetConfig {
+        treasury: Option<HumanAddr>,
+        funding_token: Option<Contract>,
+        vote_token: Option<Contract>,
+        padding: Option<String>
+    },
+    SetRuntimeState {
+        state: RuntimeState,
+        padding: Option<String>
     },
 
-    /// Proposal funding
+    // Proposals
+    // Same as CommitteeProposal where committee is 0 and committee msg is 0
+    Proposal {
+        metadata: String,
+
+        // Optionals, if none the proposal is assumed to be a text proposal
+        // Allowed Contract
+        contract: Option<Uint128>,
+        // Msg for tx
+        msg: Option<String>,
+        padding: Option<String>
+    },
+
+    // Proposal interaction
+    /// Triggers the proposal when the MSG is approved
+    Trigger {
+        proposal: Uint128,
+        padding: Option<String>
+    },
+    /// Cancels the proposal if the msg keeps failing
+    Cancel {
+        proposal: Uint128,
+        padding: Option<String>
+    },
+    /// Forces a proposal update,
+    /// proposals automatically update on interaction
+    /// but this is a cheaper alternative
+    Update {
+        proposal: Uint128,
+        padding: Option<String>
+    },
+    /// Funds a proposal, msg is a prop ID
     Receive {
         sender: HumanAddr,
+        from: HumanAddr,
         amount: Uint128,
-        // Proposal ID
         msg: Option<Binary>,
+        memo: Option<String>,
+        padding: Option<String>
+    },
+    /// Votes on a committee vote
+    CommitteeVote {
+        proposal: Uint128,
+        vote: Vote,
+        padding: Option<String>
     },
 
-    /// Admin Command
-    /// These commands can be run by admins any time
-    AddAdminCommand {
-        name: String,
-        proposal: String,
-    },
-    RemoveAdminCommand {
-        name: String,
-    },
-    UpdateAdminCommand {
-        name: String,
-        proposal: String,
-    },
-    TriggerAdminCommand {
-        target: String,
-        command: String,
-        variables: Vec<String>,
-        description: String,
+    // Committees
+    /// Creates a proposal under a committee
+    CommitteeProposal {
+        committee: Uint128,
+        metadata: String,
+
+        // Optionals, if none the proposal is assumed to be a text proposal
+        // Allowed Contract
+        contract: Option<Uint128>,
+        // Committee msg ID
+        committee_msg: Option<Uint128>,
+        // Committee msg aguments
+        variables: Option<Vec<String>>,
+        padding: Option<String>
     },
 
-    /// Config changes
-    UpdateConfig {
-        admin: Option<HumanAddr>,
-        staker: Option<Contract>,
-        proposal_deadline: Option<u64>,
-        funding_amount: Option<Uint128>,
-        funding_deadline: Option<u64>,
-        minimum_votes: Option<Uint128>,
-    },
-
-    DisableStaker {},
-
-    // RequestMigration {}
-    /// Add a contract to send proposal msgs to
-    AddSupportedContract {
+    /// Creates a new committee
+    AddCommittee {
         name: String,
-        contract: Contract,
+        metadata: String,
+        members: Vec<HumanAddr>,
+        profile: Uint128,
+        padding: Option<String>
     },
-    RemoveSupportedContract {
-        name: String,
-    },
-    UpdateSupportedContract {
-        name: String,
-        contract: Contract,
-    },
-
-    /// Proposal voting - can only be done by staking contract
-    MakeVote {
-        voter: HumanAddr,
-        proposal_id: Uint128,
-        votes: vote::VoteTally,
+    /// Edits an existing committee
+    SetCommittee {
+        id: Uint128,
+        name: Option<String>,
+        metadata: Option<String>,
+        members: Option<Vec<HumanAddr>>,
+        profile: Option<Uint128>,
+        padding: Option<String>
     },
 
-    /// Trigger proposal
-    TriggerProposal {
-        proposal_id: Uint128,
+    // CommitteeMsgs
+    /// Creates a new committee message and its allowed users
+    AddCommitteeMsg {
+        name: String,
+        msg: String,
+        committees: Vec<Uint128>,
+        padding: Option<String>
     },
+    /// Edits an existing committee msg
+    SetCommitteeMsg {
+        id: Uint128,
+        name: Option<String>,
+        msg: Option<String>,
+        committees: Option<Vec<Uint128>>,
+        padding: Option<String>
+    },
+
+    // Profiles
+    /// Creates a new profile that can be added to committees
+    AddProfile {
+        profile: Profile,
+        padding: Option<String>
+    },
+    /// Edits an already existing profile and the committees using the profile
+    SetProfile {
+        id: Uint128,
+        profile: Profile,
+        padding: Option<String>
+    }
 }
 
 impl HandleCallback for HandleMsg {
@@ -140,72 +205,76 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    CreateProposal {
-        status: ResponseStatus,
-        proposal_id: Uint128,
+    SetConfig {
+        status: ResponseStatus
     },
-    FundProposal {
-        status: ResponseStatus,
-        total_funding: Uint128,
+    SetRuntimeState {
+        status: ResponseStatus
     },
-    AddAdminCommand {
-        status: ResponseStatus,
+    Proposal {
+        status: ResponseStatus
     },
-    RemoveAdminCommand {
-        status: ResponseStatus,
+    Trigger {
+        status: ResponseStatus
     },
-    UpdateAdminCommand {
-        status: ResponseStatus,
+    Cancel {
+        status: ResponseStatus
     },
-    TriggerAdminCommand {
-        status: ResponseStatus,
-        proposal_id: Uint128,
+    Update {
+        status: ResponseStatus
     },
-    UpdateConfig {
-        status: ResponseStatus,
+    Receive {
+        status: ResponseStatus
     },
-    DisableStaker {
-        status: ResponseStatus,
+    CommitteeVote {
+        status: ResponseStatus
     },
-    AddSupportedContract {
-        status: ResponseStatus,
+    CommitteeProposal {
+        status: ResponseStatus
     },
-    RemoveSupportedContract {
-        status: ResponseStatus,
+    AddCommittee {
+        status: ResponseStatus
     },
-    UpdateSupportedContract {
-        status: ResponseStatus,
+    SetCommittee {
+        status: ResponseStatus
     },
-    MakeVote {
-        status: ResponseStatus,
+    AddCommitteeMsg {
+        status: ResponseStatus
     },
-    TriggerProposal {
-        status: ResponseStatus,
+    SetCommitteeMsg {
+        status: ResponseStatus
+    },
+    AddProfile {
+        status: ResponseStatus
+    },
+    SetProfile {
+        status: ResponseStatus
     },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetProposalVotes {
-        proposal_id: Uint128,
-    },
-    GetProposals {
+    // TODO: Query individual user vote with VK and permit
+
+    Proposals {
         start: Uint128,
-        end: Uint128,
-        status: Option<proposal::ProposalStatus>,
+        end: Uint128
     },
-    GetProposal {
-        proposal_id: Uint128,
+
+    Committees {
+        start: Uint128,
+        end: Uint128
     },
-    GetTotalProposals {},
-    GetSupportedContracts {},
-    GetSupportedContract {
-        name: String,
+
+    CommitteeMsgs {
+        start: Uint128,
+        end: Uint128
     },
-    GetAdminCommands {},
-    GetAdminCommand {
-        name: String,
+
+    Profiles {
+        start: Uint128,
+        end: Uint128
     },
 }
 
@@ -216,28 +285,19 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    ProposalVotes {
-        status: vote::VoteTally,
-    },
     Proposals {
-        proposals: Vec<proposal::QueriedProposal>,
+        props: Vec<QueriedProposal>
     },
-    Proposal {
-        proposal: proposal::QueriedProposal,
+
+    Committees {
+        committees: Vec<Committee>
     },
-    TotalProposals {
-        total: Uint128,
+
+    CommitteeMsgs {
+        msgs: Vec<CommitteeMsg>
     },
-    SupportedContracts {
-        contracts: Vec<String>,
-    },
-    SupportedContract {
-        contract: Contract,
-    },
-    AdminCommands {
-        commands: Vec<String>,
-    },
-    AdminCommand {
-        command: AdminCommand,
+
+    Profiles {
+        profiles: Vec<Profile>,
     },
 }
