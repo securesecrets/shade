@@ -25,9 +25,7 @@ pub struct Bond {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     // Begin unbonding amount
-    Unbond {
-       amount: Uint128, 
-    },
+    Unbond { amount: Uint128 },
     Claim { },
     // Maintenance trigger e.g. claim rewards and restake
     Update { },
@@ -44,8 +42,16 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         address: HumanAddr,
     },
-    Response { 
-        status: ResponseStatus, 
+    Unbond {
+        status: ResponseStatus,
+        validator: Validator,
+    },
+    Claim {
+        status: ResponseStatus,
+        amount: Uint128,
+    },
+    Update {
+        status: ResponseStatus,
     },
 }
 
@@ -53,7 +59,7 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Balance { asset: Contract },
-    Unbondings {},
+    Unbonding {},
     Claimable {},
 }
 
@@ -65,6 +71,6 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
-    Unbondings { unbondings: Vec<Bond> },
+    Unbonding { unbondings: Vec<Bond> },
     Claimable { amount: Uint128 },
 }

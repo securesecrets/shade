@@ -1,6 +1,15 @@
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
-use secret_toolkit::{snip20::allowance_query, utils::Query};
-use shade_protocol::{snip20, finance_manager};
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use secret_toolkit::{
+    snip20::allowance_query,
+    utils::Query,
+};
+use shade_protocol::{
+    snip20,
+    finance_manager,
+    adapter,
+    manager,
+    utils::asset::Contract,
+};
 
 use crate::state::{
     allocations_r, asset_list_r, assets_r, config_r, self_address_r,
@@ -15,42 +24,50 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn balance<S: Storage, A: Api, Q: Querier>(
+pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    adapter: Contract,
+    asset: &Contract,
+) -> StdResult<Uint128> {
+
+    match (adapter::QueryMsg::Balance {
+        asset: asset.clone(),
+    }.query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
+        adapter::QueryAnswer::Balance { amount } => Ok(amount),
+        _ => Err(
+            StdError::generic_err(
+                format!("Failed to query adapter balance from {}", adapter.address)
+            )
+        )
+    }
+}
+
+pub fn outstanding_balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-) -> StdResult<finance_manager::QueryAnswer> {
-    //TODO: restrict to admin?
+) -> StdResult<manager::QueryAnswer> {
 
-    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
-        Some(a) => {
-            Err(StdError::generic_err("Not Implemented"))
-            // TODO: This should be outstanding, not counting allowance
-            /*
-            match (snip20::QueryMsg::Balance {
-                address: self_address_r(&deps.storage).load()?,
-                key: viewing_key_r(&deps.storage).load()?,
-            }.query(&deps.querier, a.contract.code_hash, a.contract.address)?) {
+    if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
 
-                snip20::QueryAnswer::Balance { amount } => {
-                    Ok(finance_manager::QueryAnswer::Balance { amount })
-                }
-                _ => Err(StdError::GenericErr {
-                    msg: "Unexpected Snip20 Response".to_string(),
-                    backtrace: None,
-                }),
-            }
-            */
-        }
-        None => Err(StdError::NotFound {
-            kind: asset.to_string(),
-            backtrace: None,
-        }),
+        let allocs = allocations_r(&deps.storage).load(asset.as_str().as_bytes())?;
+
+        let balance = allocs.iter().map(|alloc| {
+            adapter_balance(&deps, alloc.contract.clone(), &full_asset.contract).ok().unwrap().u128()
+        }).sum::<u128>();
+
+        return Ok(manager::QueryAnswer::Balance { 
+            amount: Uint128(balance)
+        });
     }
+
+    Err(StdError::generic_err("Not a registered asset"))
+
 }
 
 pub fn assets<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<finance_manager::QueryAnswer> {
+
     Ok(finance_manager::QueryAnswer::Assets {
         assets: asset_list_r(&deps.storage).load()?,
     })
@@ -60,6 +77,7 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<finance_manager::QueryAnswer> {
+
     Ok(finance_manager::QueryAnswer::Allocations {
         allocations: match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
             None => vec![],

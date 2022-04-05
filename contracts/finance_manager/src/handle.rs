@@ -20,7 +20,7 @@ use shade_protocol::{
     finance_manager::{
         Allocation, AllocationMeta,
         AllocationType, Config, 
-        HandleAnswer, QueryAnswer
+        HandleAnswer, QueryAnswer,
     },
     utils::{
         asset::Contract,
@@ -125,7 +125,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![
             // Register contract in asset
-            /*
             register_receive_msg(
                 env.contract_code_hash.clone(),
                 None,
@@ -133,7 +132,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
                 contract.code_hash.clone(),
                 contract.address.clone(),
             )?,
-            */
             // Set viewing key
             set_viewing_key_msg(
                 viewing_key_r(&deps.storage).load()?,
@@ -149,26 +147,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         })?),
     })
 }
-
-/*
-// extract contract address if any
-fn allocation_address(allocation: &Allocation) -> &HumanAddr {
-    match allocation {
-        Allocation::Amount { contract, .. }
-        | Allocation::Portion { contract, .. }
-        => &contract.address,
-    }
-}
-
-// extract allocaiton portion
-fn allocation_portion(allocation: &Allocation) -> u128 {
-    match allocation {
-        Allocation::Amount { .. } => 0,
-        | Allocation::Portion { portion, .. } => portion.u128(),
-    }
-}
-*/
-
 
 pub fn allocate<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -199,14 +177,15 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
         None => { }
     };
 
-
-    apps.push(AllocationMeta {
-        nick: allocation.nick,
-        contract: allocation.contract,
-        amount: allocation.amount,
-        alloc_type: allocation.alloc_type,
-        balance: Uint128::zero(),
-    });
+    apps.push(
+        AllocationMeta {
+            nick: allocation.nick,
+            contract: allocation.contract,
+            amount: allocation.amount,
+            alloc_type: allocation.alloc_type,
+            balance: Uint128::zero(),
+        }
+    );
 
     if (apps.iter().map(|a| {
         if a.alloc_type == AllocationType::Portion {
@@ -229,24 +208,6 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success,
         })?),
     })
-}
-
-pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    adapter: Contract,
-    asset: &Contract,
-) -> StdResult<Uint128> {
-
-    match (adapter::QueryMsg::Balance {
-        asset: asset.clone(),
-    }.query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
-        adapter::QueryAnswer::Balance { amount } => Ok(amount),
-        _ => Err(
-            StdError::generic_err(
-                format!("Failed to query adapter balance from {}", adapter.address)
-            )
-        )
-    }
 }
 
 /*
@@ -290,11 +251,11 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     let mut amount_total = Uint128::zero();
     let mut portion_total = Uint128::zero();
 
-    for mut a in fresh_allocs {
+    for mut a in fresh_allocs.clone() {
         match a.alloc_type {
             AllocationType::Amount => amount_total += a.balance,
             AllocationType::Portion => {
-                a.balance = adapter_balance(deps, a.contract, 
+                a.balance = query::adapter_balance(deps, a.contract, 
                                             &full_asset.contract)?;
                 portion_total += a.balance;
             }

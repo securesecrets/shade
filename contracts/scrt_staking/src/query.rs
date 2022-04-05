@@ -16,19 +16,13 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
 pub fn delegations<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<Vec<Delegation>> {
-    deps.querier
-        .query_all_delegations(self_address_r(&deps.storage).load()?)
+
+    deps.querier.query_all_delegations(
+        self_address_r(&deps.storage).load()?
+    )
 }
 
 pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Uint128> {
-
-    let scrt_balance: BalanceResponse = deps.querier.query(
-        &BankQuery::Balance {
-            address: self_address_r(&deps.storage).load()?,
-            denom: "uscrt".to_string(),
-        }
-        .into(),
-    )?;
 
     let query_rewards: RewardsResponse = deps.querier
         .query(
@@ -43,7 +37,7 @@ pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
         });
 
     if query_rewards.total.is_empty() {
-        return Ok(scrt_balance.amount.amount);
+        return Ok(Uint128::zero());
     }
 
     let denom = query_rewards.total[0].denom.as_str();
@@ -55,12 +49,25 @@ pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
                 denom, &d.denom
             )))
         } else {
-            Ok(acc + d.amount + scrt_balance.amount.amount)
+            Ok(acc + d.amount)
         }
     })
 }
 
-// This won't work until cosmwasm 0.16ish
+pub fn balance<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Uint128> {
+
+    let scrt_balance: BalanceResponse = deps.querier.query(
+        &BankQuery::Balance {
+            address: self_address_r(&deps.storage).load()?,
+            denom: "uscrt".to_string(),
+        }
+        .into(),
+    )?;
+
+    Ok(rewards(deps)? + scrt_balance.amount.amount)
+}
+
+// This won't work until cosmwasm 0.16
 /*
 pub fn delegation<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,

@@ -8,13 +8,18 @@ use secret_toolkit::snip20::{deposit_msg, redeem_msg, send_msg};
 
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    scrt_staking::{HandleAnswer, ValidatorBounds},
+    scrt_staking::{HandleAnswer, ValidatorBounds, Config},
     treasury::Flag,
+    adapter,
 };
 
 use crate::{
     query,
-    state::{config_r, config_w, self_address_r},
+    state::{
+        config_r, config_w,
+        self_address_r,
+        unbonding_w, unbonding_r,
+    },
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -90,6 +95,82 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+/* Claim rewards and restake, hold enough for pending unbondings
+ * Send available unbonded funds to treasury
+ */
+pub fn update<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+) -> StdResult<HandleResponse> {
+
+    let mut messages = vec![];
+
+    let config = config_r(&deps.storage).load()?;
+    let unbonding = unbonding_r(&deps.storage).load()?;
+
+    let scrt_balance = scrt_balance(deps)?;
+
+    // Claim Rewards
+    let rewards = query::rewards(&deps)?;
+    if rewards >= Uint128::zero() {
+        messages.append(&mut withdraw_rewards(deps)?);
+    }
+
+    let total = rewards + scrt_balance;
+
+    let mut restake_amount = Uint128::zero();
+    let mut unbond_amount = Uint128::zero();
+
+    if total > unbonding {
+        restake_amount = (total - unbonding)?;
+        unbond_amount = unbonding;
+    }
+    else {
+        unbond_amount = (unbonding - total)?;
+    }
+
+    unbonding_w(&mut deps.storage).update(
+        |u| Ok((u - unbond_amount)?)
+    )?;
+
+    messages.append(&mut wrap_and_send(deps, unbond_amount, &config)?);
+
+    if restake_amount > Uint128::zero() {
+        let validator = choose_validator(&deps, env.block.time)?;
+
+        messages.append(
+            &mut vec![
+                // wrap
+                redeem_msg(
+                    restake_amount,
+                    None,
+                    None,
+                    256,
+                    config.sscrt.code_hash.clone(),
+                    config.sscrt.address.clone(),
+                )?,
+                // Stake
+                CosmosMsg::Staking(StakingMsg::Delegate {
+                    validator: validator.address.clone(),
+                    amount: Coin {
+                        amount: restake_amount,
+                        denom: "uscrt".to_string(),
+                    },
+                }),
+            ]
+        );
+    }
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Update {
+            status: ResponseStatus::Success,
+        })?),
+    })
+
+}
+
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -105,6 +186,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     if env.message.sender != config.admin && env.message.sender != config.treasury {
         return Err(StdError::Unauthorized { backtrace: None });
     }
+
+    unbonding_w(&mut deps.storage).update(|u| Ok(u + amount))?;
 
     let mut messages = vec![];
 
@@ -182,72 +265,115 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn scrt_balance<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+) -> StdResult<Uint128> {
+
+    let resp: BalanceResponse = deps.querier.query(
+        &BankQuery::Balance {
+            address: self_address_r(&deps.storage).load()?,
+            denom: "uscrt".to_string(),
+        }
+        .into(),
+    )?;
+
+    Ok(resp.amount.amount)
+}
+
+pub fn withdraw_rewards<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+) -> StdResult<Vec<CosmosMsg>> {
+
+    let mut messages = vec![];
+    let address = self_address_r(&deps.storage).load()?;
+
+    for delegation in deps.querier.query_all_delegations(address.clone())? {
+        messages.push(
+            CosmosMsg::Staking(
+                StakingMsg::Withdraw {
+                    validator: delegation.validator,
+                    recipient: Some(address.clone()),
+                }
+            )
+        );
+    }
+
+    Ok(messages)
+}
+
+pub fn wrap_and_send<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    amount: Uint128,
+    config: &Config,
+) -> StdResult<Vec<CosmosMsg>> {
+    Ok(
+        vec![
+            deposit_msg(
+                amount,
+                None,
+                256,
+                config.sscrt.code_hash.clone(),
+                config.sscrt.address.clone(),
+            )?,
+            send_msg(
+                config.treasury.clone(),
+                amount,
+                Some(to_binary(
+                    &Flag {
+                        flag: "unallocated".to_string(),
+                    }
+                )?),
+                None,
+                None,
+                1,
+                config.sscrt.code_hash.clone(),
+                config.sscrt.address.clone(),
+            )?
+        ]
+    )
+}
+
 /*
- * Claims rewards and completed unbondings, wraps them, 
+ * Claims completed unbondings, wraps them, 
  * and returns them to treasury
  */
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
-    //validator: HumanAddr,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 
     let mut messages = vec![];
     let address = self_address_r(&deps.storage).load()?;
 
-    // Get total scrt balance, to get recently claimed rewards + lingering unbonded scrt
-    let scrt_balance: BalanceResponse = deps.querier.query(
-        &BankQuery::Balance {
-            address: address.clone(),
-            denom: "uscrt".to_string(),
-        }
-        .into(),
-    )?;
+    let unbond_amount = unbonding_r(&deps.storage).load()?;
+    let mut claim_amount = Uint128::zero();
 
-    let rewards = query::rewards(&deps)?;
-    if rewards >= Uint128::zero() {
-        // Withdraw rewards from all delegators
-        for delegation in deps.querier.query_all_delegations(address.clone())? {
-            messages.push(
-                CosmosMsg::Staking(
-                    StakingMsg::Withdraw {
-                        validator: delegation.validator,
-                        recipient: Some(address.clone()),
-                    }
-                )
-            );
+    let scrt_balance = scrt_balance(deps)?;
+
+    if scrt_balance >= unbond_amount {
+        let claim_amount = unbond_amount;
+    }
+
+    // need to claim some rewards first
+    else {
+        let rewards = query::rewards(&deps)?;
+
+        if rewards >= Uint128::zero() {
+            messages.append(&mut withdraw_rewards(deps)?);
+        }
+
+        if rewards + scrt_balance >= unbond_amount {
+            claim_amount = unbond_amount;
+        }
+        else {
+            claim_amount = rewards + scrt_balance;
         }
     }
 
-    let scrt_amount = scrt_balance.amount.amount;
+    unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
 
-    messages.push(
-        deposit_msg(
-            scrt_amount,
-            None,
-            256,
-            config.sscrt.code_hash.clone(),
-            config.sscrt.address.clone(),
-        )?
-    );
-
-    messages.push(
-        send_msg(
-            config.treasury,
-            scrt_amount,
-            Some(to_binary(
-                &Flag {
-                    flag: "unallocated".to_string(),
-                }
-            )?),
-            None,
-            None,
-            1,
-            config.sscrt.code_hash.clone(),
-            config.sscrt.address.clone(),
-        )?
-    );
+    messages.append(&mut wrap_and_send(deps, claim_amount, &config)?);
 
     Ok(HandleResponse {
         messages,

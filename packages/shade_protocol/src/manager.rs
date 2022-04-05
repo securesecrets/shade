@@ -34,7 +34,7 @@ pub enum HandleAnswer {
         //address: HumanAddr,
     },
     Response { 
-        status: ResponseStatus, 
+        status: ResponseStatus,
     },
 }
 
@@ -42,7 +42,7 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Balance { asset: HumanAddr },
-    Unbondings {},
+    Unbonding {},
     Claimable {},
 }
 
@@ -54,6 +54,6 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
-    Unbondings { unbondings: Vec<Unbonding> },
+    Unbonding { unbondings: Vec<Unbonding> },
     Claimable { amount: Uint128 },
 }

@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
     StdResult, StdError,
-    Storage,
+    Storage, Uint128,
 };
 
 use shade_protocol::{
@@ -13,7 +13,11 @@ use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
 
 use crate::{
     handle, query,
-    state::{config_w, self_address_w, viewing_key_r, viewing_key_w},
+    state::{
+        config_w, self_address_w, 
+        viewing_key_r, viewing_key_w,
+        unbonding_w,
+    },
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -35,6 +39,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
+    unbonding_w(&mut deps.storage).save(&Uint128::zero())?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -76,6 +81,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::HandleMsg::Unbond { amount } => handle::unbond(deps, env, amount),
             adapter::HandleMsg::Claim { } => handle::claim(deps, env),
+            adapter::HandleMsg::Update { } => Err(StdError::generic_err("Not Implemented")),
         },
     }
 }
@@ -86,12 +92,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
-        // All delegations
         QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
         QueryMsg::Adapter(adapter) => match adapter {
-            adapter::QueryMsg::Balance {} => {Err(StdError::generic_err("not implemented"))},
-            adapter::QueryMsg::Rewards {} => to_binary(&query::rewards(deps)?),
-            adapter::QueryMsg::Unbondings {} => {Err(StdError::generic_err("not implemented"))},
+            adapter::QueryMsg::Balance { asset } => to_binary(&query::rewards(deps)?),
+            adapter::QueryMsg::Claimable { } => Err(StdError::generic_err("not implemented")),
+            adapter::QueryMsg::Unbonding { } => Err(StdError::generic_err("not implemented")),
         }
     }
 }

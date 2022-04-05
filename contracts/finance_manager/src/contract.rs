@@ -73,6 +73,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 asset,
                 amount
             } => Err(StdError::generic_err("Not Implemented")),
+            manager::HandleMsg::Claim {} => Err(StdError::generic_err("Not Implemented")),
             manager::HandleMsg::Rebalance {
                 asset
             } => handle::rebalance(deps, &env, asset),
@@ -84,6 +85,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
+
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
@@ -97,8 +99,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Manager(m) => match m {
             manager::QueryMsg::Balance {
                 asset
-            } => Err(StdError::generic_err("Not Implemented")),
-            manager::QueryMsg::Unbondings { } => Err(StdError::generic_err("Not Implemented")),
+            } => to_binary(&query::outstanding_balance(deps, &asset)?),
+            manager::QueryMsg::Unbonding { } => Err(StdError::generic_err("Not Implemented")),
+            manager::QueryMsg::Claimable { } => Err(StdError::generic_err("Not Implemented")),
         }
     }
+
 }
