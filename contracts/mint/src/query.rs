@@ -64,7 +64,7 @@ pub fn mint<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {
 
-    let native_asset = 
+    let native_asset = native_asset_r(&deps.storage).load()?;
 
     match assets_r(&deps.storage).may_load(offer_asset.to_string().as_bytes())? {
         Some(asset) => {
@@ -73,7 +73,7 @@ pub fn mint<S: Storage, A: Api, Q: Querier>(
                 amount: mint_amount(deps,
                             (amount - calculate_portion(amount, asset.fee))?,
                             &asset,
-                            &native_asset_r(&deps.storage).load()?,
+                            &native_asset,
                         )?,
             })
         }
