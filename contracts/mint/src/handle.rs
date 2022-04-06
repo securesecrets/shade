@@ -30,6 +30,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
+
     let config = config_r(&deps.storage).load()?;
     // Check if contract enabled
     if !config.activated {
@@ -67,7 +68,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let mut input_amount = amount;
     let mut messages = vec![];
 
-    if burn_asset.fee > Uint128(0) {
+    if burn_asset.fee > Uint128::zero() {
         let fee_amount = calculate_portion(input_amount, burn_asset.fee);
         // Reduce input by fee
         input_amount = (input_amount - fee_amount)?;
@@ -106,10 +107,10 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let mut burn_amount = input_amount;
 
     // Ignore capture if the set capture is 0
-    if burn_asset.capture > Uint128(0) {
+    if burn_asset.capture > Uint128::zero() {
         let capture_amount = calculate_portion(amount, burn_asset.capture);
 
-        // Commission to treasury
+        // Capture to treasury
         messages.push(send_msg(
             config.treasury,
             capture_amount,
@@ -124,17 +125,30 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         burn_amount = (input_amount - capture_amount)?;
     }
 
-    // Try to burn
-    if let Some(token_config) = &burn_asset.asset.token_config {
-        if token_config.burn_enabled {
-            messages.push(burn_msg(
-                burn_amount,
-                None,
-                None,
-                256,
-                burn_asset.asset.contract.code_hash.clone(),
-                burn_asset.asset.contract.address.clone(),
-            )?);
+    if burn_amount > Uint128::zero() {
+        // Try to burn
+        if let Some(token_config) = &burn_asset.asset.token_config {
+            if token_config.burn_enabled {
+                messages.push(burn_msg(
+                    burn_amount,
+                    None,
+                    None,
+                    256,
+                    burn_asset.asset.contract.code_hash.clone(),
+                    burn_asset.asset.contract.address.clone(),
+                )?);
+            } else if let Some(recipient) = config.secondary_burn {
+                messages.push(send_msg(
+                    recipient,
+                    burn_amount,
+                    None,
+                    None,
+                    None,
+                    1,
+                    burn_asset.asset.contract.code_hash.clone(),
+                    burn_asset.asset.contract.address.clone(),
+                )?);
+            }
         } else if let Some(recipient) = config.secondary_burn {
             messages.push(send_msg(
                 recipient,
@@ -147,20 +161,8 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                 burn_asset.asset.contract.address.clone(),
             )?);
         }
-    } else if let Some(recipient) = config.secondary_burn {
-        messages.push(send_msg(
-            recipient,
-            burn_amount,
-            None,
-            None,
-            None,
-            1,
-            burn_asset.asset.contract.code_hash.clone(),
-            burn_asset.asset.contract.address.clone(),
-        )?);
     }
 
-    // Update burned amount
     total_burned_w(&mut deps.storage).update(
         burn_asset.asset.contract.address.to_string().as_bytes(),
         |burned| match burned {
@@ -168,11 +170,6 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
             None => Ok(burn_amount),
         },
     )?;
-
-    let mint_asset = native_asset_r(&deps.storage).load()?;
-
-    // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(deps, input_amount, &burn_asset, &mint_asset)?;
 
     if let Some(message) = msg {
         let msg: MintMsgHook = from_binary(&message)?;
@@ -184,12 +181,6 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
             ));
         }
     };
-
-    debug_print!(
-        "Minting: {} {}",
-        amount_to_mint,
-        &mint_asset.token_info.symbol
-    );
 
     messages.push(mint_msg(
         from,
@@ -499,6 +490,9 @@ pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
      *
      * return portion = amount * portion / 10^18
      */
+    if portion == Uint128::zero() {
+        return Uint128::zero()
+    }
 
     amount.multiply_ratio(portion, 10u128.pow(18))
 }

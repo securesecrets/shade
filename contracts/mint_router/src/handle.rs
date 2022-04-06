@@ -54,24 +54,25 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             }
         };
 
-        if output_asset.address != final_asset {
-            // ignore slippage until final asset
+        if output_asset.address == final_asset {
+            // Send with the msg for slippage
             messages.push(send_msg(
                 mint.address.clone(),
                 input_amount,
-                None,
+                msg.clone(),
                 None,
                 None,
                 1,
                 input_asset.code_hash.clone(),
                 input_asset.address.clone(),
             )?);
-        } else {
-            // Send with the OG msg, to maintain slippage reqs
+        } 
+        else {
+            // ignore slippage for intermediate steps
             messages.push(send_msg(
                 mint.address.clone(),
                 input_amount,
-                msg.clone(),
+                None,
                 None,
                 None,
                 1,
