@@ -9,43 +9,78 @@ use cosmwasm_std::{
     Uint128,
 };
 use secret_toolkit::snip20::register_receive_msg;
-use shade_protocol::governance::{Config, HandleMsg, InitMsg, QueryMsg};
+use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::governance::{MSG_VARIABLE, Config, HandleMsg, InitMsg, QueryMsg};
+use shade_protocol::governance::committee::{Committee, CommitteeMsg};
+use shade_protocol::governance::contract::AllowedContract;
+use shade_protocol::utils::asset::Contract;
+use shade_protocol::utils::flexible_msg::FlexibleMsg;
+use shade_protocol::utils::storage::{BucketStorage, SingletonStorage};
+use crate::handle::{try_set_config, try_set_runtime_state};
+use crate::handle::committee::{try_add_committee, try_committee_proposal, try_committee_vote, try_set_committee};
+use crate::handle::committee_msg::{try_add_committee_msg, try_set_committee_msg};
+use crate::handle::contract::try_add_contract;
+use crate::handle::profile::{try_add_profile, try_set_profile};
+use crate::handle::proposal::{try_cancel, try_proposal, try_receive, try_trigger, try_update};
+use crate::state::ID;
+
+// Used to pad up responses for better privacy.
+pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    let state = Config {
-        admin: match msg.admin {
-            None => env.message.sender.clone(),
-            Some(admin) => admin,
-        },
-        staker: msg.staker,
-        funding_token: msg.funding_token.clone(),
-        funding_amount: msg.funding_amount,
-        funding_deadline: msg.funding_deadline,
-        voting_deadline: msg.voting_deadline,
-        minimum_votes: msg.quorum,
-    };
+    // Setup config
+    Config {
+        treasury: msg.treasury,
+        vote_token: msg.vote_token,
+        funding_token: msg.funding_token
+    }.save(&mut deps.storage)?;
 
-    config_w(&mut deps.storage).save(&state)?;
+    // Setups IDs
+    ID::set_committee(&mut deps.storage, Uint128(1))?;
+    ID::set_profile(&mut deps.storage, Uint128(1))?;
+    ID::set_committee_msg(&mut deps.storage, Uint128::zero())?;
+    ID::set_contract(&mut deps.storage, Uint128::zero())?;
 
-    // Initialize total proposal counter
-    total_proposals_w(&mut deps.storage).save(&Uint128(0))?;
+    // Setup public profile
+    msg.public_profile.save(&mut deps.storage, Uint128::zero().to_string().as_bytes())?;
+    // Setup public committee
+    Committee {
+        name: "public".to_string(),
+        metadata: "All inclusive committee, acts like traditional governance".to_string(),
+        members: vec![],
+        profile: Uint128::zero()
+    }.save(&mut deps.storage, Uint128::zero().to_string().as_bytes())?;
 
-    // Initialize lists
-    admin_commands_list_w(&mut deps.storage).save(&vec![])?;
-    supported_contracts_list_w(&mut deps.storage).save(&vec![])?;
+    // Setup admin profile
+    msg.admin_profile.save(&mut deps.storage, Uint128(1).to_string().as_bytes())?;
+    // Setup admin committee
+    Committee {
+        name: "admin".to_string(),
+        metadata: "Committee of DAO admins.".to_string(),
+        members: msg.admin_members,
+        profile: Uint128::zero()
+    }.save(&mut deps.storage, Uint128(1).to_string().as_bytes())?;
+
+    // Setup generic command
+    CommitteeMsg {
+        name: "blank message".to_string(),
+        committees: vec![Uint128::zero(), Uint128(1)],
+        msg: FlexibleMsg { msg: MSG_VARIABLE.to_string(), arguments: 1 }
+    }.save(&mut deps.storage, Uint128::zero().to_string().as_bytes())?;
+
+    // Setup self contract
+    AllowedContract {
+        name: "Governance".to_string(),
+        metadata: "Current governance contract, this one".to_string(),
+        contract: Contract { address: env.contract.address, code_hash: env.contract_code_hash }
+    }.save(&mut deps.storage, &Uint128::zero())?;
 
     Ok(InitResponse {
-        messages: vec![register_receive_msg(
-            env.contract_code_hash,
-            None,
-            256,
-            msg.funding_token.code_hash,
-            msg.funding_token.address,
-        )?],
+        messages: vec![],
         log: vec![],
     })
 }
@@ -55,120 +90,74 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
-    match msg {
-        // Proposals
-        HandleMsg::CreateProposal {
-            target_contract,
-            proposal,
-            description,
-        } => handle::try_create_proposal(
-            deps,
-            &env,
-            target_contract,
-            Binary::from(proposal.as_bytes()),
-            description,
-        ),
+    pad_handle_result(
+        match msg {
+            // State setups
+            HandleMsg::SetConfig { treasury, vote_token, funding_token, ..
+            } => try_set_config(deps, env, treasury, vote_token, funding_token),
 
-        HandleMsg::Receive {
-            sender,
-            amount,
-            msg,
-        } => handle::try_fund_proposal(deps, &env, sender, amount, msg),
+            HandleMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, state),
 
-        // Self interactions
-        // Config
-        HandleMsg::UpdateConfig {
-            admin,
-            staker,
-            proposal_deadline,
-            funding_amount,
-            funding_deadline,
-            minimum_votes,
-        } => handle::try_update_config(
-            deps,
-            &env,
-            admin,
-            staker,
-            proposal_deadline,
-            funding_amount,
-            funding_deadline,
-            minimum_votes,
-        ),
+            // Proposals
+            HandleMsg::Proposal { metadata, contract, msg, ..
+            } => try_proposal(deps, env, metadata, contract, msg),
 
-        HandleMsg::DisableStaker {} => handle::try_disable_staker(deps, &env),
+            HandleMsg::Trigger { proposal, .. } => try_trigger(deps, env, proposal),
+            HandleMsg::Cancel { proposal, .. } => try_cancel(deps, env, proposal),
+            HandleMsg::Update { proposal, .. } => try_update(deps, env, proposal),
+            HandleMsg::Receive { sender, from, amount, msg, memo, ..
+            } => try_receive(deps, env, sender, from, amount, msg, memo),
 
-        // Supported contract
-        HandleMsg::AddSupportedContract { name, contract } => {
-            handle::try_add_supported_contract(deps, &env, name, contract)
-        }
+            // Committees
+            HandleMsg::CommitteeVote { proposal, vote, ..
+            } => try_committee_vote(deps, env, proposal, vote),
 
-        HandleMsg::RemoveSupportedContract { name } => {
-            handle::try_remove_supported_contract(deps, &env, name)
-        }
+            HandleMsg::CommitteeProposal { committee, metadata, contract, committee_msg, variables, ..
+            } => try_committee_proposal(deps, env, committee, metadata, contract, committee_msg, variables),
 
-        HandleMsg::UpdateSupportedContract { name, contract } => {
-            handle::try_update_supported_contract(deps, &env, name, contract)
-        }
+            HandleMsg::AddCommittee { name, metadata, members, profile, ..
+            } => try_add_committee(deps, env, name, metadata, members, profile),
 
-        // Admin command
-        HandleMsg::AddAdminCommand { name, proposal } => {
-            handle::try_add_admin_command(deps, &env, name, proposal)
-        }
+            HandleMsg::SetCommittee { id, name, metadata, members, profile, ..
+            } => try_set_committee(deps, env, id, name, metadata, members, profile),
 
-        HandleMsg::RemoveAdminCommand { name } => {
-            handle::try_remove_admin_command(deps, &env, name)
-        }
+            // Committee Msgs
+            HandleMsg::AddCommitteeMsg { name, msg, committees, ..
+            } => try_add_committee_msg(deps, env, name, msg, committees),
 
-        HandleMsg::UpdateAdminCommand { name, proposal } => {
-            handle::try_update_admin_command(deps, &env, name, proposal)
-        }
+            HandleMsg::SetCommitteeMsg { id, name, msg, committees, ..
+            } => try_set_committee_msg(deps, env, id, name, msg, committees),
 
-        // User interaction
-        HandleMsg::MakeVote {
-            voter,
-            proposal_id,
-            votes,
-        } => handle::try_vote(deps, &env, voter, proposal_id, votes),
+            // Profiles
+            HandleMsg::AddProfile { profile, .. } => try_add_profile(deps, env, profile),
+            HandleMsg::SetProfile { id, profile, .. } => try_set_profile(deps, env, id, profile),
 
-        HandleMsg::TriggerProposal { proposal_id } => {
-            handle::try_trigger_proposal(deps, &env, proposal_id)
-        }
-
-        // Admin interactions
-        HandleMsg::TriggerAdminCommand {
-            target,
-            command,
-            variables,
-            description,
-        } => handle::try_trigger_admin_command(deps, &env, target, command, variables, description),
-    }
+            // Contracts
+            HandleMsg::AddContract { name, metadata, contract, .. } => try_add_contract(deps, env, name, metadata, contract),
+            HandleMsg::SetContract { id, name, metadata, contract, .. } => try_set_contract(deps, env, id, name, metadata, contract),
+        },
+        RESPONSE_BLOCK_SIZE
+    )
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::GetProposals { start, end, status } => {
-            to_binary(&query::proposals(deps, start, end, status)?)
-        }
+    pad_query_result(
+        match msg {
+            QueryMsg::Proposals { start, end
+            } => to_binary(&query::proposals(deps, start, end)?),
 
-        QueryMsg::GetProposal { proposal_id } => to_binary(&query::proposal(deps, proposal_id)?),
+            QueryMsg::Committees { start, end
+            } => to_binary(&query::committees(deps, start, end)?),
 
-        QueryMsg::GetTotalProposals {} => to_binary(&query::total_proposals(deps)?),
+            QueryMsg::CommitteeMsgs { start, end
+            } => to_binary(&query::committeemsgs(deps, start, end)?),
 
-        QueryMsg::GetProposalVotes { proposal_id } => {
-            to_binary(&query::proposal_votes(deps, proposal_id)?)
-        }
-
-        QueryMsg::GetSupportedContracts {} => to_binary(&query::supported_contracts(deps)?),
-
-        QueryMsg::GetSupportedContract { name } => {
-            to_binary(&query::supported_contract(deps, name)?)
-        }
-
-        QueryMsg::GetAdminCommands {} => to_binary(&query::admin_commands(deps)?),
-
-        QueryMsg::GetAdminCommand { name } => to_binary(&query::admin_command(deps, name)?),
-    }
+            QueryMsg::Profiles { start, end
+            } => to_binary(&query::profiles(deps, start, end)?),
+        },
+        RESPONSE_BLOCK_SIZE
+    )
 }

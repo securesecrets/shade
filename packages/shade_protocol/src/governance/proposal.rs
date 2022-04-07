@@ -10,61 +10,80 @@ use crate::utils::storage::BucketStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct AllowedContract {
-    pub name: String,
-    pub contract: Contract
-}
-
-#[cfg(feature = "governance-impl")]
-impl BucketStorage for AllowedContract {
-    const NAMESPACE: &'static [u8] = b"allowed_contract-";
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct Proposal {
-    // Target smart contract ID
-    pub target: Option<Uint128>,
-    // Committee that called the proposal
-    pub committee: Uint128,
-    // Msg proposal template
-    pub committeeMsg: Uint128,
+    // Description
     // Address of the proposal proposer
     pub proposer: HumanAddr,
-    // Message to execute
-    pub msg: Option<Binary>,
     // Description of proposal, can be in base64
     pub metadata: String,
+
+    // Msg
+    // Target smart contract ID
+    pub target: Option<Uint128>,
+    // Msg proposal template
+    pub committeeMsg: Option<Uint128>,
+    // Message to execute
+    pub msg: Option<Binary>,
+
+    // Committee
+    // Committee that called the proposal
+    pub committee: Uint128,
+
+    // Status
+    pub status: Status,
+
+    //Status History
+    pub status_history: Vec<Status>
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for Proposal {
-    const NAMESPACE: &'static [u8] = b"proposal-";
+impl Proposal {
+    todo!();
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct CurrentStatus {
-    // The current proposal status
-    pub status: Status,
-    // The deadline for this status
-    pub deadline: u64
+pub struct ProposalDescription {
+    pub proposer: HumanAddr,
+    pub metadata: String
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for Proposal {
-    const NAMESPACE: &'static [u8] = b"current_status-";
+impl BucketStorage for ProposalDescription {
+    const NAMESPACE: &'static [u8] = b"proposal_description-";
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct ProposalMsg {
+    pub target: Option<Uint128>,
+    pub committeeMsg: Option<Uint128>,
+    pub msg: Option<Binary>,
+}
+
+#[cfg(feature = "governance-impl")]
+impl BucketStorage for ProposalMsg {
+    const NAMESPACE: &'static [u8] = b"proposal_msg-";
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct ProposalCommittee(pub Uint128);
+
+#[cfg(feature = "governance-impl")]
+impl BucketStorage for ProposalCommittee {
+    const NAMESPACE: &'static [u8] = b"proposal_committee-";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     // Committee voting period
-    CommitteeVote,
+    CommitteeVote {votes: VoteTally, start: u64, end:u64},
     // In funding period
-    Funding,
+    Funding {amount: Uint128, start: u64, end:u64},
     // Voting in progress
-    Voting,
+    Voting {votes: VoteTally, start: u64, end:u64},
     // Total votes did not reach minimum total votes
     Expired,
     // Proposal was rejected
@@ -80,18 +99,16 @@ pub enum Status {
     Failed
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct QueriedProposal {
-    proposal: Proposal,
-    status: CurrentStatus,
-    states: Vec<ProposalStates>
+#[cfg(feature = "governance-impl")]
+impl BucketStorage for Status {
+    const NAMESPACE: &'static [u8] = b"proposal_status-";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum ProposalStates {
-    TokenVoting { votes: VoteTally },
-    CommitteeVoting { votes: VoteTally },
-    Funding { amount: Uint128 }
+pub struct StatusHistory (pub Vec<Status>);
+
+#[cfg(feature = "governance-impl")]
+impl BucketStorage for StatusHistory {
+    const NAMESPACE: &'static [u8] = b"proposal_status_history-";
 }

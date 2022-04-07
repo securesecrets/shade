@@ -1,59 +1,101 @@
-use cosmwasm_std::Storage;
-use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
-    Singleton,
-};
-use shade_protocol::governance::{AdminCommand, Config};
-use shade_protocol::utils::asset::Contract;
+use cosmwasm_std::{StdResult, Storage, Uint128};
+use serde::{Deserialize, Serialize};
+use shade_protocol::utils::storage::NaiveSingletonStorage;
 
-pub static CONFIG_KEY: &[u8] = b"config";
-// Saved contracts
-pub static CONTRACT_KEY: &[u8] = b"supported_contracts";
-pub static CONTRACT_LIST_KEY: &[u8] = b"supported_contracts_list";
-// Admin commands
-pub static ADMIN_COMMANDS_KEY: &[u8] = b"admin_commands";
-pub static ADMIN_COMMANDS_LIST_KEY: &[u8] = b"admin_commands_list";
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+// Used to get total IDs
+pub struct ID(Uint128);
 
-pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
-    singleton(storage, CONFIG_KEY)
+impl NaiveSingletonStorage for ID {
+
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
-    singleton_read(storage, CONFIG_KEY)
-}
+static PROP_KEY: &[u8] = b"proposal_id-";
+static COMMITTEE_KEY: &[u8] = b"committee_id-";
+static COMMITTEE_MSG_KEY: &[u8] = b"committee_msg_id-";
+static PROFILE_KEY: &[u8] = b"profile_id-";
+static CONTRACT_KEY: &[u8] = b"allowed_contract_id-";
+impl ID {
+    // Load current ID related proposals
+    pub fn set_proposal<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
+        ID::write(storage, PROP_KEY).save(&ID(id))
+    }
 
-// Supported contracts
+    pub fn proposal<S: Storage>(storage: &S) -> StdResult<Uint128> {
+        Ok(ID::read(storage, PROP_KEY).load()?.0)
+    }
 
-pub fn supported_contract_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Contract> {
-    bucket_read(CONTRACT_KEY, storage)
-}
+    pub fn add_proposal<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
+        let mut item = ID::read(storage, PROP_KEY).load()?;
+        item.0 += Uint128(1);
+        ID::write(storage, PROP_KEY).save(&item)?;
+        Ok(item.0)
+    }
 
-pub fn supported_contract_w<S: Storage>(storage: &mut S) -> Bucket<S, Contract> {
-    bucket(CONTRACT_KEY, storage)
-}
+    // Committee
+    pub fn set_committee<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
+        ID::write(storage, COMMITTEE_KEY).save(&ID(id))
+    }
 
-pub fn supported_contracts_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<String>> {
-    singleton(storage, CONTRACT_LIST_KEY)
-}
+    pub fn committee<S: Storage>(storage: &S) -> StdResult<Uint128> {
+        Ok(ID::read(storage, COMMITTEE_KEY).load()?.0)
+    }
 
-pub fn supported_contracts_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<String>> {
-    singleton_read(storage, CONTRACT_LIST_KEY)
-}
+    pub fn add_committee<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
+        let mut item = ID::read(storage, COMMITTEE_KEY).load()?;
+        item.0 += Uint128(1);
+        ID::write(storage, COMMITTEE_KEY).save(&item)?;
+        Ok(item.0)
+    }
 
-// Admin commands
+    // Committee Msg
+    pub fn set_committee_msg<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
+        ID::write(storage, COMMITTEE_MSG_KEY).save(&ID(id))
+    }
 
-pub fn admin_commands_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, AdminCommand> {
-    bucket_read(ADMIN_COMMANDS_KEY, storage)
-}
+    pub fn committee_msg<S: Storage>(storage: &S) -> StdResult<Uint128> {
+        Ok(ID::read(storage, COMMITTEE_MSG_KEY).load()?.0)
+    }
 
-pub fn admin_commands_w<S: Storage>(storage: &mut S) -> Bucket<S, AdminCommand> {
-    bucket(ADMIN_COMMANDS_KEY, storage)
-}
+    pub fn add_committee_msg<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
+        let mut item = ID::read(storage, COMMITTEE_MSG_KEY).load()?;
+        item.0 += Uint128(1);
+        ID::write(storage, COMMITTEE_MSG_KEY).save(&item)?;
+        Ok(item.0)
+    }
 
-pub fn admin_commands_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<String>> {
-    singleton(storage, ADMIN_COMMANDS_LIST_KEY)
-}
+    // Profile
+    pub fn set_profile<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
+        ID::write(storage, PROFILE_KEY).save(&ID(id))
+    }
 
-pub fn admin_commands_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<String>> {
-    singleton_read(storage, ADMIN_COMMANDS_LIST_KEY)
+    pub fn profile<S: Storage>(storage: &S) -> StdResult<Uint128> {
+        Ok(ID::read(storage, PROFILE_KEY).load()?.0)
+    }
+
+    pub fn add_profile<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
+        let mut item = ID::read(storage, PROFILE_KEY).load()?;
+        item.0 += Uint128(1);
+        ID::write(storage, PROFILE_KEY).save(&item)?;
+        Ok(item.0)
+    }
+
+    // Contract
+    // Profile
+    pub fn set_contract<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
+        ID::write(storage, CONTRACT_KEY).save(&ID(id))
+    }
+
+    pub fn contract<S: Storage>(storage: &S) -> StdResult<Uint128> {
+        Ok(ID::read(storage, CONTRACT_KEY).load()?.0)
+    }
+
+    pub fn add_contract<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
+        let mut item = ID::read(storage, CONTRACT_KEY).load()?;
+        item.0 += Uint128(1);
+        ID::write(storage, CONTRACT_KEY).save(&item)?;
+        Ok(item.0)
+    }
+
 }

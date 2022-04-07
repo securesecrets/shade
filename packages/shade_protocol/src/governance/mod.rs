@@ -1,7 +1,7 @@
 pub mod profile;
 pub mod committee;
-
 pub mod proposal;
+pub mod contract;
 pub mod vote;
 
 use crate::utils::asset::Contract;
@@ -11,15 +11,16 @@ use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 use crate::governance::committee::{Committee, CommitteeMsg};
-use crate::governance::profile::Profile;
-use crate::governance::proposal::QueriedProposal;
+use crate::governance::contract::AllowedContract;
+use crate::governance::profile::{Profile, UpdateProfile};
+use crate::governance::proposal::Proposal;
 use crate::governance::vote::Vote;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::SingletonStorage;
 
 // Admin command variable spot
-pub const ADMIN_COMMAND_VARIABLE: &str = "{~}";
+pub const MSG_VARIABLE: &str = "{~}";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -193,7 +194,23 @@ pub enum HandleMsg {
     /// Edits an already existing profile and the committees using the profile
     SetProfile {
         id: Uint128,
-        profile: Profile,
+        profile: UpdateProfile,
+        padding: Option<String>
+    },
+
+    // Contracts
+    // TODO: maybe add a list of allowed committees for those contracts
+    AddContract {
+        name: String,
+        metadata: String,
+        contract: Contract,
+        padding: Option<String>
+    },
+    SetContract {
+        id: Uint128,
+        name: Option<String>,
+        metadata: String,
+        contract: Option<Contract>,
         padding: Option<String>
     }
 }
@@ -250,6 +267,12 @@ pub enum HandleAnswer {
     SetProfile {
         status: ResponseStatus
     },
+    AddContract {
+        status: ResponseStatus
+    },
+    SetContract {
+        status: ResponseStatus
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -276,6 +299,11 @@ pub enum QueryMsg {
         start: Uint128,
         end: Uint128
     },
+
+    Contracts {
+        start: Uint128,
+        end: Uint128
+    }
 }
 
 impl Query for QueryMsg {
@@ -286,7 +314,7 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Proposals {
-        props: Vec<QueriedProposal>
+        props: Vec<Proposal>
     },
 
     Committees {
@@ -300,4 +328,8 @@ pub enum QueryAnswer {
     Profiles {
         profiles: Vec<Profile>,
     },
+
+    Contracts {
+        contracts: Vec<AllowedContract>
+    }
 }
