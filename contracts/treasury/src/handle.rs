@@ -140,9 +140,6 @@ pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
     allowance: &Allowance
 ) -> StdResult<Option<DateTime<Utc>>> {
 
-    //let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
-    //let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-
     // Parse previous refresh datetime
     let rfc3339 = match allowance {
         Allowance::Reserves { .. } => { return Ok(None); }

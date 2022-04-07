@@ -95,8 +95,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::QueryMsg::Balance { asset } => to_binary(&query::rewards(deps)?),
-            adapter::QueryMsg::Claimable { } => Err(StdError::generic_err("not implemented")),
-            adapter::QueryMsg::Unbonding { } => Err(StdError::generic_err("not implemented")),
+            adapter::QueryMsg::Claimable { asset } => Err(StdError::generic_err("not implemented")),
+            adapter::QueryMsg::Unbonding { asset } => Err(StdError::generic_err("not implemented")),
         }
     }
 }

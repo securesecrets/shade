@@ -27,7 +27,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     adapter: Contract,
-    asset: &Contract,
+    asset: &HumanAddr,
 ) -> StdResult<Uint128> {
 
     match (adapter::QueryMsg::Balance {
@@ -52,7 +52,7 @@ pub fn outstanding_balance<S: Storage, A: Api, Q: Querier>(
         let allocs = allocations_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
         let balance = allocs.iter().map(|alloc| {
-            adapter_balance(&deps, alloc.contract.clone(), &full_asset.contract).ok().unwrap().u128()
+            adapter_balance(&deps, alloc.contract.clone(), &full_asset.contract.address).ok().unwrap().u128()
         }).sum::<u128>();
 
         return Ok(manager::QueryAnswer::Balance { 
@@ -83,5 +83,58 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
             None => vec![],
             Some(a) => a,
         },
+    })
+}
+
+pub fn claimable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<manager::QueryAnswer> {
+
+    let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        Some(a) => a,
+        None => { return Err(StdError::generic_err("Not an asset")); }
+    };
+
+    let mut failed_queries = 0u128;
+    let mut claimable = 0u128;
+
+    for alloc in allocations {
+        claimable += match (adapter::QueryMsg::Claimable {
+            asset: asset.clone(),
+        }.query(&deps.querier, alloc.contract.code_hash, alloc.contract.address.clone())?) {
+            adapter::QueryAnswer::Claimable { amount } => amount.u128(),
+            _ => {
+                return Err( StdError::generic_err(
+                    format!("Failed to query adapter claimable from {}", alloc.contract.address)
+                ))
+            }
+        }
+    }
+
+    /*
+    let claimable = allocations.into_iter().map(|a| {
+        match (adapter::QueryMsg::Claimable {
+            asset: asset.clone(),
+        }.query(&deps.querier, a.contract.code_hash, a.contract.address.clone()).ok()) {
+            //adapter::QueryAnswer::Claimable { amount } => amount.u128(),
+            Some(resp) => resp.amount.u128(),
+            _ => {
+                failed_queries += 1;
+                0u128
+            }
+            /*
+            {
+                return Err( StdError::generic_err(
+                    format!("Failed to query adapter claimable from {}", adapter.address)
+                ))
+            }
+            */
+        }
+    }).sum::<u128>();
+    */
+
+    Ok(manager::QueryAnswer::Claimable {
+        amount: Uint128(claimable),
     })
 }

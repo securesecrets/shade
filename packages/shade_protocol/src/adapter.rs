@@ -58,9 +58,9 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Balance { asset: Contract },
-    Unbonding {},
-    Claimable {},
+    Balance { asset: HumanAddr },
+    Unbonding { asset: HumanAddr },
+    Claimable { asset: HumanAddr },
 }
 
 impl Query for QueryMsg {

@@ -256,7 +256,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             AllocationType::Amount => amount_total += a.balance,
             AllocationType::Portion => {
                 a.balance = query::adapter_balance(deps, a.contract, 
-                                            &full_asset.contract)?;
+                                            &full_asset.contract.address)?;
                 portion_total += a.balance;
             }
         };

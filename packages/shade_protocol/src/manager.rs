@@ -42,8 +42,8 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Balance { asset: HumanAddr },
-    Unbonding {},
-    Claimable {},
+    Unbonding { asset: HumanAddr },
+    Claimable { asset: HumanAddr },
 }
 
 impl Query for QueryMsg {

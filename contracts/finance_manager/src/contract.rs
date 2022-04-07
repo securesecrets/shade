@@ -100,8 +100,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             manager::QueryMsg::Balance {
                 asset
             } => to_binary(&query::outstanding_balance(deps, &asset)?),
-            manager::QueryMsg::Unbonding { } => Err(StdError::generic_err("Not Implemented")),
-            manager::QueryMsg::Claimable { } => Err(StdError::generic_err("Not Implemented")),
+            manager::QueryMsg::Unbonding { asset } => Err(StdError::generic_err("Not Implemented")),
+            manager::QueryMsg::Claimable { asset } => Err(StdError::generic_err("Not Implemented")),
         }
     }
 
