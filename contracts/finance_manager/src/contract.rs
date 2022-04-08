@@ -57,13 +57,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         */
-        HandleMsg::UpdateConfig { 
+        HandleMsg::UpdateConfig {
             config
         } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { 
+        HandleMsg::RegisterAsset {
             contract
         } => handle::try_register_asset(deps, &env, &contract),
-        HandleMsg::Allocate { 
+        HandleMsg::Allocate {
             asset,
             allocation
         } => handle::allocate(deps, &env, asset, allocation),
@@ -94,14 +94,14 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         } => to_binary(&query::allocations(deps, asset)?),
         QueryMsg::PendingAllowance {
             asset
-        } => Err(StdError::generic_err("Not Implemented")),
+        } => to_binary(&query::pending_allowance(deps, asset)?),
 
         QueryMsg::Manager(m) => match m {
             manager::QueryMsg::Balance {
                 asset
             } => to_binary(&query::outstanding_balance(deps, &asset)?),
-            manager::QueryMsg::Unbonding { asset } => Err(StdError::generic_err("Not Implemented")),
-            manager::QueryMsg::Claimable { asset } => Err(StdError::generic_err("Not Implemented")),
+            manager::QueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
+            manager::QueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
         }
     }
 

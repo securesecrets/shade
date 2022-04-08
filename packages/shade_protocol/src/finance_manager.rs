@@ -114,5 +114,6 @@ pub enum QueryAnswer {
     Config { config: Config },
     Assets { assets: Vec<HumanAddr> },
     Allocations { allocations: Vec<AllocationMeta> },
+    PendingAllowance { amount: Uint128 },
     Manager(manager::QueryAnswer),
 }

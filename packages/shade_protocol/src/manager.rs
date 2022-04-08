@@ -54,6 +54,6 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
-    Unbonding { unbondings: Vec<Unbonding> },
+    Unbonding { amount: Uint128 },
     Claimable { amount: Uint128 },
 }

@@ -11,6 +11,7 @@ use shade_protocol::{
     scrt_staking::{HandleAnswer, ValidatorBounds, Config},
     treasury::Flag,
     adapter,
+    utils::asset::Contract,
 };
 
 use crate::{
@@ -118,11 +119,11 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 
     let total = rewards + scrt_balance;
 
-    let mut restake_amount = Uint128::zero();
+    let mut stake_amount = Uint128::zero();
     let mut unbond_amount = Uint128::zero();
 
     if total > unbonding {
-        restake_amount = (total - unbonding)?;
+        stake_amount = (total - unbonding)?;
         unbond_amount = unbonding;
     }
     else {
@@ -133,31 +134,19 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
         |u| Ok((u - unbond_amount)?)
     )?;
 
-    messages.append(&mut wrap_and_send(deps, unbond_amount, &config)?);
+    // Maybe don't do this until claim?
+    messages.append(&mut wrap_and_send(deps, unbond_amount, config.treasury, config.sscrt.clone())?);
 
-    if restake_amount > Uint128::zero() {
+    if stake_amount > Uint128::zero() {
         let validator = choose_validator(&deps, env.block.time)?;
-
-        messages.append(
-            &mut vec![
-                // wrap
-                redeem_msg(
-                    restake_amount,
-                    None,
-                    None,
-                    256,
-                    config.sscrt.code_hash.clone(),
-                    config.sscrt.address.clone(),
-                )?,
-                // Stake
-                CosmosMsg::Staking(StakingMsg::Delegate {
-                    validator: validator.address.clone(),
-                    amount: Coin {
-                        amount: restake_amount,
-                        denom: "uscrt".to_string(),
-                    },
-                }),
-            ]
+        messages.push(
+            CosmosMsg::Staking(StakingMsg::Delegate {
+                validator: validator.address.clone(),
+                amount: Coin {
+                    amount: stake_amount,
+                    denom: "uscrt".to_string(),
+                },
+            }),
         );
     }
 
@@ -168,12 +157,12 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success,
         })?),
     })
-
 }
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
+    asset: HumanAddr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
     /* Unbonding to the scrt staking contract
@@ -185,6 +174,10 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     if env.message.sender != config.admin && env.message.sender != config.treasury {
         return Err(StdError::Unauthorized { backtrace: None });
+    }
+
+    if asset != config.sscrt.address {
+        return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
     unbonding_w(&mut deps.storage).update(|u| Ok(u + amount))?;
@@ -304,7 +297,8 @@ pub fn withdraw_rewards<S: Storage, A: Api, Q: Querier>(
 pub fn wrap_and_send<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     amount: Uint128,
-    config: &Config,
+    treasury: HumanAddr,
+    token: Contract,
 ) -> StdResult<Vec<CosmosMsg>> {
     Ok(
         vec![
@@ -312,11 +306,11 @@ pub fn wrap_and_send<S: Storage, A: Api, Q: Querier>(
                 amount,
                 None,
                 256,
-                config.sscrt.code_hash.clone(),
-                config.sscrt.address.clone(),
+                token.code_hash.clone(),
+                token.address.clone(),
             )?,
             send_msg(
-                config.treasury.clone(),
+                treasury.clone(),
                 amount,
                 Some(to_binary(
                     &Flag {
@@ -326,11 +320,39 @@ pub fn wrap_and_send<S: Storage, A: Api, Q: Querier>(
                 None,
                 None,
                 1,
-                config.sscrt.code_hash.clone(),
-                config.sscrt.address.clone(),
+                token.code_hash.clone(),
+                token.address.clone(),
             )?
         ]
     )
+}
+
+pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    amount: Uint128,
+    validator: Validator,
+    token: Contract,
+) -> StdResult<Vec<CosmosMsg>> {
+
+    Ok(vec![
+        // unwrap
+        redeem_msg(
+            amount,
+            None,
+            None,
+            256,
+            token.code_hash.clone(),
+            token.address.clone(),
+        )?,
+        // Stake
+        CosmosMsg::Staking(StakingMsg::Delegate {
+            validator: validator.address.clone(),
+            amount: Coin {
+                amount,
+                denom: "uscrt".to_string(),
+            },
+        }),
+    ])
 }
 
 /*
@@ -340,8 +362,13 @@ pub fn wrap_and_send<S: Storage, A: Api, Q: Querier>(
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
+    asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
+
+    if asset != config.sscrt.address {
+        return Err(StdError::generic_err("Unrecognized Asset"));
+    }
 
     let mut messages = vec![];
     let address = self_address_r(&deps.storage).load()?;
@@ -352,7 +379,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     let scrt_balance = scrt_balance(deps)?;
 
     if scrt_balance >= unbond_amount {
-        let claim_amount = unbond_amount;
+        claim_amount = unbond_amount;
     }
 
     // need to claim some rewards first
@@ -373,13 +400,14 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
     unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
 
-    messages.append(&mut wrap_and_send(deps, claim_amount, &config)?);
+    messages.append(&mut wrap_and_send(deps, claim_amount, config.treasury, config.sscrt)?);
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::Claim {
+        data: Some(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,
+            amount: claim_amount,
         })?),
     })
 }

@@ -42,6 +42,34 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
     }
 }
 
+pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<finance_manager::QueryAnswer> {
+
+    let config = config_r(&deps.storage).load()?;
+    let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err(""));
+        }
+    };
+
+    let allowance = allowance_query(
+        &deps.querier,
+        config.treasury,
+        self_address_r(&deps.storage).load()?,
+        viewing_key_r(&deps.storage).load()?,
+        1,
+        full_asset.contract.code_hash.clone(),
+        full_asset.contract.address.clone(),
+    )?;
+
+    Ok(finance_manager::QueryAnswer::PendingAllowance { 
+        amount: allowance.allowance
+    })
+}
+
 pub fn outstanding_balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
@@ -51,17 +79,20 @@ pub fn outstanding_balance<S: Storage, A: Api, Q: Querier>(
 
         let allocs = allocations_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
-        let balance = allocs.iter().map(|alloc| {
-            adapter_balance(&deps, alloc.contract.clone(), &full_asset.contract.address).ok().unwrap().u128()
-        }).sum::<u128>();
-
         return Ok(manager::QueryAnswer::Balance { 
-            amount: Uint128(balance)
+            amount: Uint128(
+                allocs.iter()
+                .map(|alloc|
+                    adapter_balance(&deps, 
+                                alloc.contract.clone(), 
+                                &asset,
+                    ).ok().unwrap().u128()
+                ).sum::<u128>()
+            )
         });
     }
 
     Err(StdError::generic_err("Not a registered asset"))
-
 }
 
 pub fn assets<S: Storage, A: Api, Q: Querier>(
@@ -96,7 +127,6 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
         None => { return Err(StdError::generic_err("Not an asset")); }
     };
 
-    let mut failed_queries = 0u128;
     let mut claimable = 0u128;
 
     for alloc in allocations {
@@ -109,32 +139,40 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
                     format!("Failed to query adapter claimable from {}", alloc.contract.address)
                 ))
             }
-        }
+        };
     }
-
-    /*
-    let claimable = allocations.into_iter().map(|a| {
-        match (adapter::QueryMsg::Claimable {
-            asset: asset.clone(),
-        }.query(&deps.querier, a.contract.code_hash, a.contract.address.clone()).ok()) {
-            //adapter::QueryAnswer::Claimable { amount } => amount.u128(),
-            Some(resp) => resp.amount.u128(),
-            _ => {
-                failed_queries += 1;
-                0u128
-            }
-            /*
-            {
-                return Err( StdError::generic_err(
-                    format!("Failed to query adapter claimable from {}", adapter.address)
-                ))
-            }
-            */
-        }
-    }).sum::<u128>();
-    */
 
     Ok(manager::QueryAnswer::Claimable {
         amount: Uint128(claimable),
+    })
+}
+
+pub fn unbonding<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<manager::QueryAnswer> {
+
+    let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        Some(a) => a,
+        None => { return Err(StdError::generic_err("Not an asset")); }
+    };
+
+    let mut unbonding = 0u128;
+
+    for alloc in allocations {
+        unbonding += match (adapter::QueryMsg::Claimable {
+            asset: asset.clone(),
+        }.query(&deps.querier, alloc.contract.code_hash, alloc.contract.address.clone())?) {
+            adapter::QueryAnswer::Claimable { amount } => amount.u128(),
+            _ => {
+                return Err( StdError::generic_err(
+                    format!("Failed to query adapter claimable from {}", alloc.contract.address)
+                ))
+            }
+        };
+    }
+
+    Ok(manager::QueryAnswer::Unbonding {
+        amount: Uint128(unbonding),
     })
 }

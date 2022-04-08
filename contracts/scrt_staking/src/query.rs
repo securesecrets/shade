@@ -3,9 +3,9 @@ use cosmwasm_std::{
     Querier, RewardsResponse, StdError, StdResult, Storage, Uint128,
 };
 
-use shade_protocol::scrt_staking::QueryAnswer;
+use shade_protocol::{adapter, scrt_staking::QueryAnswer};
 
-use crate::state::{config_r, self_address_r};
+use crate::state::{config_r, self_address_r, unbonding_r};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -54,7 +54,15 @@ pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
     })
 }
 
-pub fn balance<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Uint128> {
+pub fn balance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    let config = config_r(&deps.storage).load()?;
+
+    if asset != config.sscrt.address {
+        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
+    }
 
     let scrt_balance: BalanceResponse = deps.querier.query(
         &BankQuery::Balance {
@@ -64,7 +72,60 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
         .into(),
     )?;
 
-    Ok(rewards(deps)? + scrt_balance.amount.amount)
+    let delegated = delegations(deps)?.into_iter()
+                        .map(|d| d.amount.amount.u128())
+                        .sum::<u128>();
+
+    Ok(adapter::QueryAnswer::Balance {
+        amount: rewards(deps)? + scrt_balance.amount.amount + Uint128(delegated),
+    })
+}
+
+pub fn claimable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    if asset != config.sscrt.address {
+        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
+    }
+
+    let scrt_balance: BalanceResponse = deps.querier.query(
+        &BankQuery::Balance {
+            address: self_address_r(&deps.storage).load()?,
+            denom: "uscrt".to_string(),
+        }
+        .into(),
+    )?;
+
+    let mut amount = scrt_balance.amount.amount;
+    let unbonding = unbonding_r(&deps.storage).load()?;
+
+    if amount > unbonding {
+        amount = unbonding;
+    }
+
+    Ok(adapter::QueryAnswer::Claimable {
+        amount: amount,
+    })
+}
+
+pub fn unbonding<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    if asset != config.sscrt.address {
+        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
+    }
+
+    Ok(adapter::QueryAnswer::Unbonding {
+        amount: unbonding_r(&deps.storage).load()?
+    })
 }
 
 // This won't work until cosmwasm 0.16

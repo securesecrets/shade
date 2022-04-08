@@ -22,35 +22,33 @@ chain_config = {
 
 viewing_key = 'password'
 
-
-account_key = 'a' #if chain_config['chain-id'] == 'holodeck-2' else 'a'
+ACCOUNT_KEY = 'a' #if chain_config['chain-id'] == 'holodeck-2' else 'a'
 backend = 'test' #None if chain_config['chain-id'] == 'holodeck-2' else 'test'
-account = run_command(['secretd', 'keys', 'show', '-a', account_key]).rstrip()
+ACCOUNT = run_command(['secretd', 'keys', 'show', '-a', ACCOUNT_KEY]).rstrip()
 
-
-print('ACCOUNT', account)
+print('ACCOUNT', ACCOUNT)
 
 print('Configuring sSCRT')
 sscrt = SNIP20(gen_label(8), 
             name='secretSCRT', symbol='SSCRT', 
             decimals=6, public_total_supply=True, 
             enable_deposit=True, enable_burn=True,
-            enable_redeem=True, admin=account, 
-            uploader=account, backend=backend)
+            enable_redeem=True, admin=ACCOUNT, 
+            uploader=ACCOUNT, backend=backend)
 print(sscrt.address)
 sscrt.execute({'set_viewing_key': {'key': viewing_key}})
 
 deposit_amount = '200000000' 
 
 print('Depositing', deposit_amount)
-sscrt.execute({'deposit': {}}, account, deposit_amount + 'uscrt')
-print('SSCRT', sscrt.get_balance(account, viewing_key))
+sscrt.execute({'deposit': {}}, ACCOUNT, deposit_amount + 'uscrt')
+print('SSCRT', sscrt.get_balance(ACCOUNT, viewing_key))
 
 scrt_staking = Contract(
     '../compiled/scrt_staking.wasm.gz',
     json.dumps({
-        'admin': account,
-        'treasury': account,
+        'admin': ACCOUNT,
+        'treasury': ACCOUNT,
         'sscrt': {
             'address': sscrt.address,
             'code_hash': sscrt.code_hash,
@@ -68,68 +66,44 @@ print(sscrt.execute({
             "amount": str(100000000),
         },
     },
-    account,
+    ACCOUNT,
 ))
 
+while True:
 
-print('DELEGATIONS')
-delegations = scrt_staking.query({'delegations': {}})
-print(delegations)
+    print('SSCRT', sscrt.get_balance(ACCOUNT, viewing_key))
 
-print('SSCRT', sscrt.get_balance(account, viewing_key))
-print('scrt staking L1 bal')
-print(json.loads(run_command(['secretd', 'q', 'bank', 'balances', scrt_staking.address])))
+    print('DELEGATIONS')
+    delegations = scrt_staking.query({'delegations': {}})
+    print(delegations)
 
-print('Waiting on rewards', end='')
-while scrt_staking.query({'adapter': {'rewards': {}}}) == '0':
-    print('.', end='')
-    pass
-    
-print()
-print('REWARDS', scrt_staking.query({'adapter': {'rewards': {}}}))
-print('scrt staking L1 bal')
-print(json.loads(run_command(['secretd', 'q', 'bank', 'balances', scrt_staking.address])))
+    print('L1 bal')
+    print(json.loads(run_command(['secretd', 'q', 'bank', 'balances', scrt_staking.address])))
 
-print('CLAIMING')
-print(scrt_staking.execute({'adapter': {'claim': {}}}))
+    print('Balance')
+    print(scrt_staking.query({'adapter': {'balance': {'asset': sscrt.address}}}))
 
-print('scrt staking L1 bal')
-print(json.loads(run_command(['secretd', 'q', 'bank', 'balances', scrt_staking.address])))
-print('SSCRT', sscrt.get_balance(account, viewing_key))
-print('REWARDS', scrt_staking.query({'adapter': {'rewards': {}}}))
+    print('Unbonding')
+    print(scrt_staking.query({'adapter': {'unbonding': {'asset': sscrt.address}}}))
 
-print('scrt staking L1 bal')
-print(json.loads(run_command(['secretd', 'q', 'bank', 'balances', scrt_staking.address])))
+    print('Updating')
+    print(scrt_staking.execute({'adapter': {'update': {}}}))
 
-print()
-print('UNBONDING', deposit_amount)
-print(scrt_staking.execute({'adapter': {'unbond': {'amount': deposit_amount}}}))
+    print('Claimable')
+    print(scrt_staking.query({'adapter': {'claimable': {'asset': sscrt.address}}}))
 
-print('DELEGATIONS')
-delegations = scrt_staking.query({'delegations': {}})
-print(delegations)
+    print('Claiming')
+    print(scrt_staking.execute({'adapter': {'claim': {'asset': sscrt.address}}}))
 
-print('scrt staking L1 bal')
-print(json.loads(run_command(['secretd', 'q', 'bank', 'balances', scrt_staking.address])))
+    unbond_amount = str(int(100 * 10**6))
 
-'''
-print('Waiting on rewards', end='')
-while scrt_staking.query({'adapter': {'rewards': {}}}) == '0':
-    print('.', end='')
-    pass
-'''
+    print('Unbonding', unbond_amount)
+    print(scrt_staking.execute({'adapter': {'unbond': {'asset': sscrt.address, 'amount': unbond_amount}}}))
 
-print('Waiting a few sec for unbond')
-sleep(5)
-    
-print()
-print('REWARDS', scrt_staking.query({'adapter': {'rewards': {}}}))
-
-print('CLAIMING')
-print(scrt_staking.execute({'adapter': {'claim': {}}}))
-
-print('scrt staking L1 bal')
-print(json.loads(run_command(['secretd', 'q', 'bank', 'balances', scrt_staking.address])))
-print('SSCRT', sscrt.get_balance(account, viewing_key))
-print('REWARDS', scrt_staking.query({'adapter': {'rewards': {}}}))
-
+    print('Waiting on claimable', end='')
+    while scrt_staking.query({'adapter': {'claimable': {'asset': sscrt.address}}}) == '0':
+        print('.', end='')
+        pass
+    print()
+    print('=' * 15)
+    print()
