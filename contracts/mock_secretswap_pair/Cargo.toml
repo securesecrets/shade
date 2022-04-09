@@ -1,7 +1,7 @@
 [package]
-name = "governance"
+name = "mock_secretswap_pair"
 version = "0.1.0"
-authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
+authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
 edition = "2018"
 
 exclude = [
@@ -23,19 +23,16 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
+bincode = "1.3.1"
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
-secret-toolkit = { version = "0.2" }
 cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
+secret-toolkit = { version = "0.2" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "governance",
+  "dex",
+  "secretswap",
 ] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
-
-[dev-dependencies]
-serde_json = { version = "1.0.67" }
-mockall = "0.10.2"
-mockall_double = "0.2.0"

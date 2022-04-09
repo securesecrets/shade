@@ -27,8 +27,10 @@ cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol" }
 cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+  "staking",
+] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }

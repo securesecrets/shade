@@ -1,5 +1,5 @@
 use crate::{
-    band, dex, mint,
+    band, dex,
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
@@ -13,38 +13,52 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Token {
-    pub contract_addr: HumanAddr,
-    pub token_code_hash: String,
-    pub viewing_key: String,
+pub enum TokenType {
+    CustomToken {
+        contract_addr: HumanAddr,
+        token_code_hash: String,
+    },
+    NativeToken {
+        denom: String,
+    },
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Pair {
+    pub token_0: TokenType,
+    pub token_1: TokenType,
+}
+
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AssetInfo {
     pub token: Token,
 }
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Asset {
+pub struct TokenTypeAmount {
     pub amount: Uint128,
-    pub info: AssetInfo,
+    pub token: TokenType,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Simulation {
-    pub offer_asset: Asset,
+pub struct SwapSimulation {
+    pub offer: TokenTypeAmount,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PairQuery {
-    Pair {},
+    /*
     Pool {},
-    Simulation { offer_asset: Asset },
-    //ReverseSimulation {},
+    */
+    PairInfo,
+    SwapSimulation { offer: TokenTypeAmount },
 }
 
 impl Query for PairQuery {
@@ -61,21 +75,20 @@ pub struct SimulationResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct PairResponse {
-    pub asset_infos: Vec<AssetInfo>,
-    pub contract_addr: HumanAddr,
-    pub liquidity_token: HumanAddr,
-    pub token_code_hash: String,
-    pub asset0_volume: Uint128,
-    pub asset1_volume: Uint128,
+pub struct PairInfo {
+    pub liquidity_token: Contract,
     pub factory: Contract,
+    pub pair: Pair,
+    pub amount_0: Uint128,
+    pub amount_1: Uint128,
+    pub total_liquidity: Uint128,
+    pub contract_version: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct PoolResponse {
-    pub assets: Vec<Asset>,
-    pub total_share: Uint128,
+pub struct PairInfoResponse {
+    pub pair_info: PairInfo,
 }
 
 pub fn is_pair<S: Storage, A: Api, Q: Querier>(
@@ -83,7 +96,7 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     pair: Contract,
 ) -> StdResult<bool> {
     Ok(
-        match (PairQuery::Pair {}).query::<Q, PairResponse>(
+        match (PairQuery::PairInfo).query::<Q, PairInfoResponse>(
             &deps.querier,
             pair.code_hash,
             pair.address.clone(),
@@ -100,6 +113,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     sscrt: Contract,
     band: Contract,
 ) -> StdResult<Uint128> {
+    // TODO: This should be passed in to avoid multipl BAND SCRT queries in one query
     let scrt_result = band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), band)?;
 
     // SCRT-USD / SCRT-symbol
@@ -117,15 +131,12 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
     pair: dex::TradingPair,
     sscrt: Contract,
 ) -> StdResult<Uint128> {
-    let response: SimulationResponse = PairQuery::Simulation {
-        offer_asset: Asset {
+    let response: SimulationResponse = PairQuery::SwapSimulation {
+        offer: TokenTypeAmount {
             amount: Uint128::new(1_000_000), // 1 sSCRT (6 decimals)
-            info: AssetInfo {
-                token: Token {
-                    contract_addr: sscrt.address,
-                    token_code_hash: sscrt.code_hash,
-                    viewing_key: "SecretSwap".to_string(),
-                },
+            token: TokenType::CustomToken {
+                contract_addr: sscrt.address,
+                token_code_hash: sscrt.code_hash,
             },
         },
     }
@@ -142,12 +153,12 @@ pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {
-    let pool: PoolResponse = PairQuery::Pool {}.query(
+    let pair_info: PairInfoResponse = PairQuery::PairInfo.query(
         &deps.querier,
         pair.contract.code_hash,
         pair.contract.address,
     )?;
 
     // Constant Product
-    Ok(pool.assets[0].amount * pool.assets[1].amount)
+    Ok(pair_info.pair_info.amount_0 * pair_info.pair_info.amount_1)
 }

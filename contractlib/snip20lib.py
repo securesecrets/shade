@@ -6,7 +6,7 @@ import json
 
 class SNIP20(Contract):
     def __init__(self, label, name="token", symbol="TKN", decimals=3, seed="cGFzc3dvcmQ=", public_total_supply=False,
-                 enable_deposit=False, enable_redeem=False, enable_mint=False, enable_burn=False,
+                 enable_deposit=False, enable_redeem=False, enable_mint=False, enable_burn=False, initial_balances=[],
                  contract='snip20.wasm.gz', admin='a', uploader='a', backend='test',
                  instantiated_contract=None, code_id=None):
         self.view_key = ""
@@ -20,6 +20,7 @@ class SNIP20(Contract):
                 "symbol": symbol,
                 "decimals": decimals,
                 "prng_seed": seed,
+                "initial_balances": initial_balances,
                 "config": {
                     "public_total_supply": public_total_supply,
                     "enable_deposit": enable_deposit,

@@ -2,7 +2,6 @@
 members = [
   # Packages
   "packages/cosmwasm_math_compat",
-  "packages/network_integration",
   "packages/shade_protocol",
   "packages/secretcli",
 
@@ -22,10 +21,14 @@ members = [
 
   # Mock contracts
   "contracts/mock_band",
+  "contracts/mock_secretswap_pair",
+  "contracts/mock_sienna_pair",
 
   # Tools
   "tools/doc2book",
 ]
+
+exclude = ["packages/network_integration"]
 
 [profile.release]
 opt-level = 3

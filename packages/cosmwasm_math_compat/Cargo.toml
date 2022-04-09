@@ -4,6 +4,9 @@ authors = ["Chris Ricketts <chris_ricketts@protonmail.com>"]
 version = "0.1.0"
 edition = "2018"
 
+[lib]
+doctest = false
+
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 schemars = "0.7"
