@@ -58,6 +58,7 @@ clippy:
 	cargo clippy
 
 clean:
+	find . -name "Cargo.lock" -delete
 	rm -r $(compiled_dir)
 
 format:
