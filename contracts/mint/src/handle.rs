@@ -206,8 +206,10 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     limit: Limit,
-) -> StdResult<()> {
+) -> StdResult<Uint128> {
+
     match DateTime::parse_from_rfc3339(&limit_refresh_r(&deps.storage).load()?) {
+
         Ok(parsed) => {
             let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
             let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
@@ -267,16 +269,17 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
 
                 limit_w(&mut deps.storage).update(|state| {
                     // Stack with previous unminted limit
-                    Ok((state - minted)? + fresh_amount)
+                    fresh_amount = (state - minted)? + fresh_amount;
+                    Ok(fresh_amount)
                 })?;
                 limit_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
                 minted_w(&mut deps.storage).save(&Uint128(0))?;
             }
+
+            Ok(fresh_amount)
         }
         Err(e) => return Err(StdError::generic_err("Failed to parse previous datetime")),
     }
-
-    Ok(())
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
