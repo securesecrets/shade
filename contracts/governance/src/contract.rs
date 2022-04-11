@@ -13,6 +13,7 @@ use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::governance::{MSG_VARIABLE, Config, HandleMsg, InitMsg, QueryMsg};
 use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::contract::AllowedContract;
+use shade_protocol::governance::stored_id::ID;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::flexible_msg::FlexibleMsg;
 use shade_protocol::utils::storage::{BucketStorage, SingletonStorage};
@@ -22,7 +23,6 @@ use crate::handle::assembly_msg::{try_add_assembly_msg, try_set_assembly_msg};
 use crate::handle::contract::{try_add_contract, try_set_contract};
 use crate::handle::profile::{try_add_profile, try_set_profile};
 use crate::handle::proposal::{try_cancel, try_proposal, try_receive, try_trigger, try_update};
-use crate::state::ID;
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -68,7 +68,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     // Setup generic command
     AssemblyMsg {
         name: "blank message".to_string(),
-        assemblys: vec![Uint128::zero(), Uint128(1)],
+        assemblies: vec![Uint128::zero(), Uint128(1)],
         msg: FlexibleMsg { msg: MSG_VARIABLE.to_string(), arguments: 1 }
     }.save(&mut deps.storage, &Uint128::zero())?;
 

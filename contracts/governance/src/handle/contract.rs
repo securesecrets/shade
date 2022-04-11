@@ -2,9 +2,9 @@ use cosmwasm_std::{Api, Env, Extern, HandleResponse, Querier, StdError, StdResul
 use secret_cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::contract::AllowedContract;
 use shade_protocol::governance::HandleAnswer;
+use shade_protocol::governance::stored_id::ID;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
-use crate::state::ID;
 
 pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

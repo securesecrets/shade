@@ -2,9 +2,9 @@ use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdErro
 use secret_cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::HandleAnswer;
 use shade_protocol::governance::profile::{Profile, UpdateProfile, UpdateVoteProfile, VoteProfile};
+use shade_protocol::governance::stored_id::ID;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::utils::storage::BucketStorage;
-use crate::state::ID;
 
 pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

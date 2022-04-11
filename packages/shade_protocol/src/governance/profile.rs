@@ -2,9 +2,11 @@ use cosmwasm_std::{StdResult, Storage};
 use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::governance::stored_id::ID;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::BucketStorage;
+#[cfg(feature = "governance-impl")]
 use crate::utils::storage::NaiveBucketStorage;
 
 /// Allow better control over the safety and privacy features that proposals will need if
@@ -14,7 +16,7 @@ use crate::utils::storage::NaiveBucketStorage;
 #[serde(rename_all = "snake_case")]
 pub struct Profile {
     pub name: String,
-    // State of the current profile and its subsequent assemblys
+    // State of the current profile and its subsequent assemblies
     pub enabled: bool,
     // Require assembly voting
     pub assembly: Option<VoteProfile>,
@@ -45,12 +47,19 @@ impl Profile {
         })
     }
 
+    pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
+        if id > &ID::profile(storage)? {
+            return Ok(None)
+        }
+        Ok(Some(Self::load(storage, id)?))
+    }
+
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
         ProfileData {
             name: self.name.clone(),
             enabled: self.enabled,
             cancel_deadline: self.cancel_deadline
-        }.save(storage, id.to_string().as_bytes())?;
+        }.save(storage, &id.to_be_bytes())?;
 
         Self::save_assembly(storage, &id, self.assembly.clone())?;
 
@@ -62,35 +71,35 @@ impl Profile {
     }
 
     pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProfileData> {
-        ProfileData::load(storage, id.to_string().as_bytes())
+        ProfileData::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_data<S: Storage>(storage: &mut S, id: &Uint128, data: ProfileData) -> StdResult<()> {
-        data.save(storage, id.to_string().as_bytes())
+        data.save(storage, &id.to_be_bytes())
     }
 
     pub fn load_assembly<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
-        Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, id.to_string().as_bytes())?.0)
+        Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())?.0)
     }
 
     pub fn save_assembly<S: Storage>(storage: &mut S, id: &Uint128, assembly: Option<VoteProfile>) -> StdResult<()> {
-        VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, id.to_string().as_bytes())
+        VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())
     }
 
     pub fn load_token<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
-        Ok(VoteProfileType::load(storage, TOKEN_PROFILE_KEY, id.to_string().as_bytes())?.0)
+        Ok(VoteProfileType::load(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())?.0)
     }
 
     pub fn save_token<S: Storage>(storage: &mut S, id: &Uint128, token: Option<VoteProfile>) -> StdResult<()> {
-        VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, id.to_string().as_bytes())
+        VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())
     }
 
     pub fn load_funding<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<FundProfile>> {
-        Ok(FundProfileType::load(storage, id.to_string().as_bytes())?.0)
+        Ok(FundProfileType::load(storage, &id.to_be_bytes())?.0)
     }
 
     pub fn save_funding<S: Storage>(storage: &mut S, id: &Uint128, funding: Option<FundProfile>) -> StdResult<()> {
-        FundProfileType(funding).save(storage, id.to_string().as_bytes())
+        FundProfileType(funding).save(storage, &id.to_be_bytes())
     }
 
 }

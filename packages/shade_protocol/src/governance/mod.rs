@@ -3,6 +3,8 @@ pub mod assembly;
 pub mod proposal;
 pub mod contract;
 pub mod vote;
+#[cfg(feature = "governance-impl")]
+pub mod stored_id;
 
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;

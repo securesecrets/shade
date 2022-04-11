@@ -2,6 +2,7 @@ use cosmwasm_std::{HumanAddr, StdResult, Storage};
 use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::governance::stored_id::ID;
 use crate::utils::flexible_msg::FlexibleMsg;
 
 #[cfg(feature = "governance-impl")]
@@ -34,34 +35,41 @@ impl Assembly {
         })
     }
 
+    pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
+        if id > &ID::assembly(storage)? {
+            return Ok(None)
+        }
+        Ok(Some(Self::load(storage, id)?))
+    }
+
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
         AssemblyData {
             members: self.members.clone(),
             profile: self.profile
-        }.save(storage, id.to_string().as_bytes())?;
+        }.save(storage, &id.to_be_bytes())?;
 
         AssemblyDescription {
             name: self.name.clone(),
             metadata: self.metadata.clone(),
-        }.save(storage, id.to_string().as_bytes())?;
+        }.save(storage, &id.to_be_bytes())?;
 
         Ok(())
     }
 
     pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AssemblyData> {
-        AssemblyData::load(storage, id.to_string().as_bytes())
+        AssemblyData::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_data<S: Storage>(storage: &mut S, id: &Uint128, data: AssemblyData) -> StdResult<()> {
-        data.save(storage, id.to_string().as_bytes())
+        data.save(storage, &id.to_be_bytes())
     }
 
     pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AssemblyDescription> {
-        AssemblyDescription::load(storage, id.to_string().as_bytes())
+        AssemblyDescription::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, desc: AssemblyDescription) -> StdResult<()> {
-        desc.save(storage, id.to_string().as_bytes())
+        desc.save(storage, &id.to_be_bytes())
     }
 }
 
@@ -96,8 +104,8 @@ impl BucketStorage for AssemblyDescription {
 // A generic msg is created at init, its a black msg where the variable is the start
 pub struct AssemblyMsg {
     pub name: String,
-    // Assemblys allowed to call this msg
-    pub assemblys: Vec<Uint128>,
+    // Assemblies allowed to call this msg
+    pub assemblies: Vec<Uint128>,
     // HandleMsg template
     pub msg: FlexibleMsg
 }
@@ -110,38 +118,45 @@ impl AssemblyMsg {
 
         Ok(Self {
             name: desc.name,
-            assemblys: data.assemblys,
+            assemblies: data.assemblys,
             msg: data.msg
         })
     }
 
+    pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
+        if id > &ID::assembly_msg(storage)? {
+            return Ok(None)
+        }
+        Ok(Some(Self::load(storage, id)?))
+    }
+
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
         AssemblyMsgData {
-            assemblys: self.assemblys.clone(),
+            assemblies: self.assemblies.clone(),
             msg: *self.msg
-        }.save(storage, id.to_string().as_bytes())?;
+        }.save(storage, &id.to_be_bytes())?;
 
         AssemblyMsgDescription {
             name: self.name.clone(),
-        }.save(storage, id.to_string().as_bytes())?;
+        }.save(storage, &id.to_be_bytes())?;
 
         Ok(())
     }
 
     pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AssemblyMsgData> {
-        AssemblyMsgData::load(storage, id.to_string().as_bytes())
+        AssemblyMsgData::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_data<S: Storage>(storage: &mut S, id: &Uint128, data: AssemblyMsgData) -> StdResult<()> {
-        data.save(storage, id.to_string().as_bytes())
+        data.save(storage, &id.to_be_bytes())
     }
 
     pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AssemblyMsgDescription> {
-        AssemblyMsgDescription::load(storage, id.to_string().as_bytes())
+        AssemblyMsgDescription::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, desc: AssemblyMsgDescription) -> StdResult<()> {
-        desc.save(storage, id.to_string().as_bytes())
+        desc.save(storage, &id.to_be_bytes())
     }
 }
 
@@ -149,7 +164,7 @@ impl AssemblyMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AssemblyMsgData {
-    pub assemblys: Vec<Uint128>,
+    pub assemblies: Vec<Uint128>,
     pub msg: FlexibleMsg
 }
 

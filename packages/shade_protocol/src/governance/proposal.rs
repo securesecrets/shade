@@ -3,6 +3,7 @@ use cosmwasm_std::{Binary, HumanAddr, StdResult, Storage};
 use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::governance::stored_id::ID;
 use crate::governance::vote::VoteTally;
 use crate::utils::asset::Contract;
 
@@ -35,6 +36,8 @@ pub struct Proposal {
 
     //Status History
     pub status_history: Vec<Status>
+
+    // TODO: add an optional funders list so they can be redeemed later
 }
 
 #[cfg(feature = "governance-impl")]
@@ -60,7 +63,14 @@ impl Proposal {
         Ok(())
     }
 
-    pub fn load<S: Storage>(storage: &mut S, id: &Uint128) -> StdResult<Self> {
+    pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
+        if id > &ID::proposal(storage)? {
+            return Ok(None)
+        }
+        Ok(Some(Self::load(storage, id)?))
+    }
+
+    pub fn load<S: Storage>(storage: & S, id: &Uint128) -> StdResult<Self> {
         let msg = Self::msg(storage, id)?;
         let description = Self::description(storage, &id)?;
         let assembly = Self::assembly(storage, &id)?;
@@ -80,43 +90,43 @@ impl Proposal {
     }
 
     pub fn msg<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProposalMsg> {
-        ProposalMsg::load(storage, id.to_string().as_bytes())
+        ProposalMsg::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_msg<S: Storage>(storage: &mut S, id: &Uint128, data: ProposalMsg) -> StdResult<()> {
-        data.save(storage, id.to_string().as_bytes())
+        data.save(storage, &id.to_be_bytes())
     }
 
     pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProposalDescription> {
-        ProposalDescription::load(storage, id.to_string().as_bytes())
+        ProposalDescription::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, data: ProposalDescription) -> StdResult<()> {
-        data.save(storage, id.to_string().as_bytes())
+        data.save(storage, &id.to_be_bytes())
     }
 
     pub fn assembly<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Uint128> {
-        Ok(ProposalAssembly::load(storage, id.to_string().as_bytes())?.0)
+        Ok(ProposalAssembly::load(storage, &id.to_be_bytes())?.0)
     }
 
     pub fn save_assembly<S: Storage>(storage: &mut S, id: &Uint128, data: Uint128) -> StdResult<()> {
-        ProposalAssembly(data).save(storage, id.to_string().as_bytes())
+        ProposalAssembly(data).save(storage, &id.to_be_bytes())
     }
 
     pub fn status<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Status> {
-        Status::load(storage, id.to_string().as_bytes())
+        Status::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_status<S: Storage>(storage: &mut S, id: &Uint128, data: Status) -> StdResult<()> {
-        data.save(storage, id.to_string().as_bytes())
+        data.save(storage, &id.to_be_bytes())
     }
 
     pub fn status_history<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vec<Status>> {
-        Ok(StatusHistory::load(storage, id.to_string().as_bytes())?.0)
+        Ok(StatusHistory::load(storage, &id.to_be_bytes())?.0)
     }
 
     pub fn save_status_history<S: Storage>(storage: &mut S, id: &Uint128, data: Vec<Status>) -> StdResult<()> {
-        StatusHistory(data).save(storage, id.to_string().as_bytes())
+        StatusHistory(data).save(storage, &id.to_be_bytes())
     }
 }
 
@@ -169,13 +179,13 @@ pub enum Status {
     Rejected,
     // Proposal was vetoed
     Vetoed,
-    // Proposal was approved
-    Passed,
+    // Proposal was approved, has a set timeline before it can be canceled
+    Passed {start: u64, end: u64},
     // If proposal is a msg then it was executed and was successful
     Success,
     // Proposal never got executed after a cancel deadline,
     // assumed that tx failed everytime it got triggered
-    Failed
+    Canceled
 }
 
 #[cfg(feature = "governance-impl")]

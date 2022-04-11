@@ -2,6 +2,7 @@ use cosmwasm_std::{StdResult, Storage};
 use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::governance::stored_id::ID;
 use crate::utils::asset::Contract;
 use crate::utils::storage::BucketStorage;
 
@@ -26,33 +27,40 @@ impl AllowedContract {
         })
     }
 
+    pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
+        if id > &ID::contract(storage)? {
+            return Ok(None)
+        }
+        Ok(Some(Self::load(storage, id)?))
+    }
+
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
         AllowedContractData {
             contract: *self.contract
-        }.save(storage, id.to_string().as_bytes())?;
+        }.save(storage, &id.to_be_bytes())?;
 
         AllowedContractDescription {
             name: self.name.clone(),
             metadata: self.metadata.clone(),
-        }.save(storage, id.to_string().as_bytes())?;
+        }.save(storage, &id.to_be_bytes())?;
 
         Ok(())
     }
 
     pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AllowedContractData> {
-        AllowedContractData::load(storage, id.to_string().as_bytes())
+        AllowedContractData::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_data<S: Storage>(storage: &mut S, id: &Uint128, data: AllowedContractData) -> StdResult<()> {
-        data.save(storage, id.to_string().as_bytes())
+        data.save(storage, &id.to_be_bytes())
     }
 
     pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AllowedContractDescription> {
-        AllowedContractDescription::load(storage, id.to_string().as_bytes())
+        AllowedContractDescription::load(storage, &id.to_be_bytes())
     }
 
     pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, desc: AllowedContractDescription) -> StdResult<()> {
-        desc.save(storage, id.to_string().as_bytes())
+        desc.save(storage, &id.to_be_bytes())
     }
 }
 

@@ -19,6 +19,17 @@ pub struct VoteTally {
 impl NaiveBucketStorage for VoteTally {
 }
 
+impl Default for VoteTally {
+    fn default() -> Self {
+        Self {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        }
+    }
+}
+
 #[cfg(feature = "governance-impl")]
 impl VoteTally {
     // Load votes related to staking

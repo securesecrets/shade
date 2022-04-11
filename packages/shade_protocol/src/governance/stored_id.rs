@@ -1,23 +1,22 @@
 use cosmwasm_std::{StdResult, Storage};
 use secret_cosmwasm_math_compat::Uint128;
 use serde::{Deserialize, Serialize};
-use shade_protocol::utils::storage::NaiveSingletonStorage;
+use crate::utils::storage::NaiveSingletonStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 // Used to get total IDs
 pub struct ID(Uint128);
 
-impl NaiveSingletonStorage for ID {
+impl NaiveSingletonStorage for ID {}
 
-}
-
-static PROP_KEY: &[u8] = b"proposal_id-";
-static COMMITTEE_KEY: &[u8] = b"assembly_id-";
-static COMMITTEE_MSG_KEY: &[u8] = b"assembly_msg_id-";
-static PROFILE_KEY: &[u8] = b"profile_id-";
-static CONTRACT_KEY: &[u8] = b"allowed_contract_id-";
 impl ID {
+    const PROP_KEY: &'static [u8] = b"proposal_id-";
+    const COMMITTEE_KEY: &'static [u8] = b"assembly_id-";
+    const COMMITTEE_MSG_KEY: &'static [u8] = b"assembly_msg_id-";
+    const PROFILE_KEY: &'static [u8] = b"profile_id-";
+    const CONTRACT_KEY: &'static [u8] = b"allowed_contract_id-";
+
     // Load current ID related proposals
     pub fn set_proposal<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
         ID::write(storage, PROP_KEY).save(&ID(id))

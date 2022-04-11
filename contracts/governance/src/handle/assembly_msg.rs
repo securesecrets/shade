@@ -2,10 +2,10 @@ use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdErro
 use secret_cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::assembly::AssemblyMsg;
 use shade_protocol::governance::{MSG_VARIABLE, HandleAnswer};
+use shade_protocol::governance::stored_id::ID;
 use shade_protocol::utils::flexible_msg::FlexibleMsg;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::utils::storage::BucketStorage;
-use crate::state::ID;
 
 pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -29,7 +29,7 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
 
     AssemblyMsg {
         name,
-        assemblys,
+        assemblies: assemblys,
         msg: FlexibleMsg::new(msg, MSG_VARIABLE)
     }.save(&mut deps.storage, &id)?;
 
@@ -54,7 +54,7 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized())
     }
 
-    let mut assembly_msg = match AssemblyMsg::may_load(&mut deps.storage, id.to_string().as_bytes())? {
+    let mut assembly_msg = match AssemblyMsg::may_load(&mut deps.storage, &id)? {
         None => return Err(StdError::not_found(AssemblyMsg)),
         Some(c) => c
     };
@@ -68,7 +68,7 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
     }
 
     if let Some(assemblys) = assemblys {
-        assembly_msg.assemblys = assemblys;
+        assembly_msg.assemblies = assemblys;
     }
 
     assembly_msg.save(&mut deps.storage, &id)?;
