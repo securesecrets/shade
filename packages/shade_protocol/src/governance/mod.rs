@@ -209,7 +209,7 @@ pub enum HandleMsg {
     SetContract {
         id: Uint128,
         name: Option<String>,
-        metadata: String,
+        metadata: Option<String>,
         contract: Option<Contract>,
         padding: Option<String>
     }

@@ -1,5 +1,5 @@
 use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, HumanAddr, Uint128};
+use cosmwasm_std::{Binary, HumanAddr, StdResult, Storage, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::governance::vote::VoteTally;
@@ -38,7 +38,85 @@ pub struct Proposal {
 
 #[cfg(feature = "governance-impl")]
 impl Proposal {
-    todo!();
+    pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
+        Self::save_msg(storage, &id, ProposalMsg{
+            target: self.target,
+            committeeMsg: self.committeeMsg,
+            msg: self.msg.clone()
+        })?;
+
+        Self::save_description(storage, &id, ProposalDescription {
+            proposer: self.proposer.clone(),
+            metadata: self.metadata.clone()
+        })?;
+
+        Self::save_committee(storage, &id, self.committee)?;
+
+        Self::save_status(storage, &id, self.status.clone())?;
+
+        Self::save_status_history(storage, &id, self.status_history.clone())?;
+
+        Ok(())
+    }
+
+    pub fn load<S: Storage>(storage: &mut S, id: &Uint128) -> StdResult<Self> {
+        let msg = Self::msg(storage, id)?;
+        let description = Self::description(storage, &id)?;
+        let committee = Self::committee(storage, &id)?;
+        let status = Self::status(storage, &id)?;
+        let status_history = Self::status_history(storage, &id)?;
+
+        Ok(Self {
+            proposer: description.proposer,
+            metadata: description.metadata,
+            target: msg.target,
+            committeeMsg: msg.committeeMsg,
+            msg: msg.msg,
+            committee,
+            status,
+            status_history
+        })
+    }
+
+    pub fn msg<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProposalMsg> {
+        ProposalMsg::load(storage, id.to_string().as_bytes())
+    }
+
+    pub fn save_msg<S: Storage>(storage: &mut S, id: &Uint128, data: ProposalMsg) -> StdResult<()> {
+        data.save(storage, id.to_string().as_bytes())
+    }
+
+    pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProposalDescription> {
+        ProposalDescription::load(storage, id.to_string().as_bytes())
+    }
+
+    pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, data: ProposalDescription) -> StdResult<()> {
+        data.save(storage, id.to_string().as_bytes())
+    }
+
+    pub fn committee<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Uint128> {
+        Ok(ProposalCommittee::load(storage, id.to_string().as_bytes())?.0)
+    }
+
+    pub fn save_committee<S: Storage>(storage: &mut S, id: &Uint128, data: Uint128) -> StdResult<()> {
+        ProposalCommittee(data).save(storage, id.to_string().as_bytes())
+    }
+
+    pub fn status<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Status> {
+        Status::load(storage, id.to_string().as_bytes())
+    }
+
+    pub fn save_status<S: Storage>(storage: &mut S, id: &Uint128, data: Status) -> StdResult<()> {
+        data.save(storage, id.to_string().as_bytes())
+    }
+
+    pub fn status_history<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vec<Status>> {
+        Ok(StatusHistory::load(storage, id.to_string().as_bytes())?.0)
+    }
+
+    pub fn save_status_history<S: Storage>(storage: &mut S, id: &Uint128, data: Vec<Status>) -> StdResult<()> {
+        StatusHistory(data).save(storage, id.to_string().as_bytes())
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -104,6 +182,7 @@ impl BucketStorage for Status {
     const NAMESPACE: &'static [u8] = b"proposal_status-";
 }
 
+#[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct StatusHistory (pub Vec<Status>);

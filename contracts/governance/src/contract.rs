@@ -19,7 +19,7 @@ use shade_protocol::utils::storage::{BucketStorage, SingletonStorage};
 use crate::handle::{try_set_config, try_set_runtime_state};
 use crate::handle::committee::{try_add_committee, try_committee_proposal, try_committee_vote, try_set_committee};
 use crate::handle::committee_msg::{try_add_committee_msg, try_set_committee_msg};
-use crate::handle::contract::try_add_contract;
+use crate::handle::contract::{try_add_contract, try_set_contract};
 use crate::handle::profile::{try_add_profile, try_set_profile};
 use crate::handle::proposal::{try_cancel, try_proposal, try_receive, try_trigger, try_update};
 use crate::state::ID;
@@ -46,31 +46,31 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     ID::set_contract(&mut deps.storage, Uint128::zero())?;
 
     // Setup public profile
-    msg.public_profile.save(&mut deps.storage, Uint128::zero().to_string().as_bytes())?;
+    msg.public_profile.save(&mut deps.storage, &Uint128::zero())?;
     // Setup public committee
     Committee {
         name: "public".to_string(),
         metadata: "All inclusive committee, acts like traditional governance".to_string(),
         members: vec![],
         profile: Uint128::zero()
-    }.save(&mut deps.storage, Uint128::zero().to_string().as_bytes())?;
+    }.save(&mut deps.storage, &Uint128::zero())?;
 
     // Setup admin profile
-    msg.admin_profile.save(&mut deps.storage, Uint128(1).to_string().as_bytes())?;
+    msg.admin_profile.save(&mut deps.storage, &Uint128(1))?;
     // Setup admin committee
     Committee {
         name: "admin".to_string(),
         metadata: "Committee of DAO admins.".to_string(),
         members: msg.admin_members,
         profile: Uint128::zero()
-    }.save(&mut deps.storage, Uint128(1).to_string().as_bytes())?;
+    }.save(&mut deps.storage, &Uint128(1))?;
 
     // Setup generic command
     CommitteeMsg {
         name: "blank message".to_string(),
         committees: vec![Uint128::zero(), Uint128(1)],
         msg: FlexibleMsg { msg: MSG_VARIABLE.to_string(), arguments: 1 }
-    }.save(&mut deps.storage, Uint128::zero().to_string().as_bytes())?;
+    }.save(&mut deps.storage, &Uint128::zero())?;
 
     // Setup self contract
     AllowedContract {

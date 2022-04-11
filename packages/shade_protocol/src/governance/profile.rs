@@ -11,7 +11,6 @@ use crate::utils::storage::NaiveBucketStorage;
 /// All percentages are taken as follows 100000 = 100%
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-// TODO: separate committee, funding and token from general info
 pub struct Profile {
     pub name: String,
     // State of the current profile and its subsequent committees
