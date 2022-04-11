@@ -95,7 +95,7 @@ while True:
     print('Claiming')
     print(scrt_staking.execute({'adapter': {'claim': {'asset': sscrt.address}}}))
 
-    unbond_amount = str(int(100 * 10**6))
+    unbond_amount = str(int(10 * 10**6))
 
     print('Unbonding', unbond_amount)
     print(scrt_staking.execute({'adapter': {'unbond': {'asset': sscrt.address, 'amount': unbond_amount}}}))

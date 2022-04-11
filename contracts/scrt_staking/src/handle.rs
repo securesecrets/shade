@@ -107,7 +107,6 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     let config = config_r(&deps.storage).load()?;
-    let unbonding = unbonding_r(&deps.storage).load()?;
 
     let scrt_balance = scrt_balance(deps)?;
 
@@ -119,23 +118,12 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 
     let total = rewards + scrt_balance;
 
+    let unbonding = unbonding_r(&deps.storage).load()?;
     let mut stake_amount = Uint128::zero();
-    let mut unbond_amount = Uint128::zero();
 
     if total > unbonding {
         stake_amount = (total - unbonding)?;
-        unbond_amount = unbonding;
     }
-    else {
-        unbond_amount = (unbonding - total)?;
-    }
-
-    unbonding_w(&mut deps.storage).update(
-        |u| Ok((u - unbond_amount)?)
-    )?;
-
-    // Maybe don't do this until claim?
-    messages.append(&mut wrap_and_send(deps, unbond_amount, config.treasury, config.sscrt.clone())?);
 
     if stake_amount > Uint128::zero() {
         let validator = choose_validator(&deps, env.block.time)?;
@@ -381,9 +369,8 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     if scrt_balance >= unbond_amount {
         claim_amount = unbond_amount;
     }
-
-    // need to claim some rewards first
     else {
+        // Claim Rewards
         let rewards = query::rewards(&deps)?;
 
         if rewards >= Uint128::zero() {
