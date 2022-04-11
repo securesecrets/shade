@@ -10,7 +10,7 @@ members = [
 
   # Protocol contracts
   "contracts/governance",
-  "contracts/staking",
+  "contracts/shd_staking",
   "contracts/mint",
   "contracts/mint_router",
   "contracts/treasury",

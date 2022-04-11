@@ -1,3 +1,4 @@
+pub mod permit;
 use crate::utils::asset::Contract;
 use cosmwasm_std::{Binary, HumanAddr, Querier, StdResult, Uint128};
 use schemars::JsonSchema;

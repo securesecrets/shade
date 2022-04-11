@@ -12,6 +12,10 @@ path = "src/launch/shade.rs"
 name = "launch_airdrop"
 path = "src/launch/airdrop.rs"
 
+[[bin]]
+name = "testnet_staking"
+path = "src/testnet_staking.rs"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
