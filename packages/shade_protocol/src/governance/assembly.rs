@@ -1,4 +1,5 @@
-use cosmwasm_std::{HumanAddr, StdResult, Storage, Uint128};
+use cosmwasm_std::{HumanAddr, StdResult, Storage};
+use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::utils::flexible_msg::FlexibleMsg;
@@ -8,19 +9,19 @@ use crate::utils::storage::BucketStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Committee {
+pub struct Assembly {
     // Readable name
     pub name: String,
-    // Description of the committee, preferably in base64
+    // Description of the assembly, preferably in base64
     pub metadata: String,
-    // List of members in committee
+    // List of members in assembly
     pub members: Vec<HumanAddr>,
     // Selected profile
     pub profile: Uint128,
 }
 
 #[cfg(feature = "governance-impl")]
-impl Committee {
+impl Assembly {
     pub fn load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Self> {
         let desc = Self::description(storage, id)?;
         let data = Self::data(storage, id)?;
@@ -34,12 +35,12 @@ impl Committee {
     }
 
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
-        CommitteeData {
+        AssemblyData {
             members: self.members.clone(),
             profile: self.profile
         }.save(storage, id.to_string().as_bytes())?;
 
-        CommitteeDescription {
+        AssemblyDescription {
             name: self.name.clone(),
             metadata: self.metadata.clone(),
         }.save(storage, id.to_string().as_bytes())?;
@@ -47,19 +48,19 @@ impl Committee {
         Ok(())
     }
 
-    pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<CommitteeData> {
-        CommitteeData::load(storage, id.to_string().as_bytes())
+    pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AssemblyData> {
+        AssemblyData::load(storage, id.to_string().as_bytes())
     }
 
-    pub fn save_data<S: Storage>(storage: &mut S, id: &Uint128, data: CommitteeData) -> StdResult<()> {
+    pub fn save_data<S: Storage>(storage: &mut S, id: &Uint128, data: AssemblyData) -> StdResult<()> {
         data.save(storage, id.to_string().as_bytes())
     }
 
-    pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<CommitteeDescription> {
-        CommitteeDescription::load(storage, id.to_string().as_bytes())
+    pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AssemblyDescription> {
+        AssemblyDescription::load(storage, id.to_string().as_bytes())
     }
 
-    pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, desc: CommitteeDescription) -> StdResult<()> {
+    pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, desc: AssemblyDescription) -> StdResult<()> {
         desc.save(storage, id.to_string().as_bytes())
     }
 }
@@ -67,79 +68,79 @@ impl Committee {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct CommitteeData {
+pub struct AssemblyData {
     pub members: Vec<HumanAddr>,
     pub profile: Uint128,
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for CommitteeData {
-    const NAMESPACE: &'static [u8] = b"committee_data-";
+impl BucketStorage for AssemblyData {
+    const NAMESPACE: &'static [u8] = b"assembly_data-";
 }
 
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct CommitteeDescription {
+pub struct AssemblyDescription {
     pub name: String,
     pub metadata: String,
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for CommitteeDescription {
-    const NAMESPACE: &'static [u8] = b"committee_description-";
+impl BucketStorage for AssemblyDescription {
+    const NAMESPACE: &'static [u8] = b"assembly_description-";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 // A generic msg is created at init, its a black msg where the variable is the start
-pub struct CommitteeMsg {
+pub struct AssemblyMsg {
     pub name: String,
-    // Committees allowed to call this msg
-    pub committees: Vec<Uint128>,
+    // Assemblys allowed to call this msg
+    pub assemblys: Vec<Uint128>,
     // HandleMsg template
     pub msg: FlexibleMsg
 }
 
 #[cfg(feature = "governance-impl")]
-impl CommitteeMsg {
+impl AssemblyMsg {
     pub fn load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Self> {
         let desc = Self::description(storage, id)?;
         let data = Self::data(storage, id)?;
 
         Ok(Self {
             name: desc.name,
-            committees: data.committees,
+            assemblys: data.assemblys,
             msg: data.msg
         })
     }
 
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
-        CommitteeMsgData {
-            committees: self.committees.clone(),
+        AssemblyMsgData {
+            assemblys: self.assemblys.clone(),
             msg: *self.msg
         }.save(storage, id.to_string().as_bytes())?;
 
-        CommitteeMsgDescription {
+        AssemblyMsgDescription {
             name: self.name.clone(),
         }.save(storage, id.to_string().as_bytes())?;
 
         Ok(())
     }
 
-    pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<CommitteeMsgData> {
-        CommitteeMsgData::load(storage, id.to_string().as_bytes())
+    pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AssemblyMsgData> {
+        AssemblyMsgData::load(storage, id.to_string().as_bytes())
     }
 
-    pub fn save_data<S: Storage>(storage: &mut S, id: &Uint128, data: CommitteeMsgData) -> StdResult<()> {
+    pub fn save_data<S: Storage>(storage: &mut S, id: &Uint128, data: AssemblyMsgData) -> StdResult<()> {
         data.save(storage, id.to_string().as_bytes())
     }
 
-    pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<CommitteeMsgDescription> {
-        CommitteeMsgDescription::load(storage, id.to_string().as_bytes())
+    pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AssemblyMsgDescription> {
+        AssemblyMsgDescription::load(storage, id.to_string().as_bytes())
     }
 
-    pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, desc: CommitteeMsgDescription) -> StdResult<()> {
+    pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, desc: AssemblyMsgDescription) -> StdResult<()> {
         desc.save(storage, id.to_string().as_bytes())
     }
 }
@@ -147,24 +148,24 @@ impl CommitteeMsg {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct CommitteeMsgData {
-    pub committees: Vec<Uint128>,
+pub struct AssemblyMsgData {
+    pub assemblys: Vec<Uint128>,
     pub msg: FlexibleMsg
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for CommitteeMsgData {
-    const NAMESPACE: &'static [u8] = b"committee_msg_data-";
+impl BucketStorage for AssemblyMsgData {
+    const NAMESPACE: &'static [u8] = b"assembly_msg_data-";
 }
 
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct CommitteeMsgDescription {
+pub struct AssemblyMsgDescription {
     pub name: String
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for CommitteeMsgDescription {
-    const NAMESPACE: &'static [u8] = b"committee_msg_description-";
+impl BucketStorage for AssemblyMsgDescription {
+    const NAMESPACE: &'static [u8] = b"assembly_msg_description-";
 }

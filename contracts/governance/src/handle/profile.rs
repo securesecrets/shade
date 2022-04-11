@@ -1,4 +1,5 @@
-use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary, Uint128};
+use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use secret_cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::HandleAnswer;
 use shade_protocol::governance::profile::{Profile, UpdateProfile, UpdateVoteProfile, VoteProfile};
 use shade_protocol::utils::generic_response::ResponseStatus;
@@ -49,12 +50,12 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
         profile.enabled = enabled;
     }
 
-    if new_profile.disable_committee {
-        profile.committee = None;
+    if new_profile.disable_assembly {
+        profile.assembly = None;
     }
 
-    else if let Some(committee) = new_profile.committee {
-        profile.committee = Some(committee);
+    else if let Some(assembly) = new_profile.assembly {
+        profile.assembly = Some(assembly);
     }
 
     if new_profile.disable_funding {

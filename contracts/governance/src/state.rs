@@ -1,4 +1,5 @@
-use cosmwasm_std::{StdResult, Storage, Uint128};
+use cosmwasm_std::{StdResult, Storage};
+use secret_cosmwasm_math_compat::Uint128;
 use serde::{Deserialize, Serialize};
 use shade_protocol::utils::storage::NaiveSingletonStorage;
 
@@ -12,8 +13,8 @@ impl NaiveSingletonStorage for ID {
 }
 
 static PROP_KEY: &[u8] = b"proposal_id-";
-static COMMITTEE_KEY: &[u8] = b"committee_id-";
-static COMMITTEE_MSG_KEY: &[u8] = b"committee_msg_id-";
+static COMMITTEE_KEY: &[u8] = b"assembly_id-";
+static COMMITTEE_MSG_KEY: &[u8] = b"assembly_msg_id-";
 static PROFILE_KEY: &[u8] = b"profile_id-";
 static CONTRACT_KEY: &[u8] = b"allowed_contract_id-";
 impl ID {
@@ -33,32 +34,32 @@ impl ID {
         Ok(item.0)
     }
 
-    // Committee
-    pub fn set_committee<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
+    // Assembly
+    pub fn set_assembly<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
         ID::write(storage, COMMITTEE_KEY).save(&ID(id))
     }
 
-    pub fn committee<S: Storage>(storage: &S) -> StdResult<Uint128> {
+    pub fn assembly<S: Storage>(storage: &S) -> StdResult<Uint128> {
         Ok(ID::read(storage, COMMITTEE_KEY).load()?.0)
     }
 
-    pub fn add_committee<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
+    pub fn add_assembly<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
         let mut item = ID::read(storage, COMMITTEE_KEY).load()?;
         item.0 += Uint128(1);
         ID::write(storage, COMMITTEE_KEY).save(&item)?;
         Ok(item.0)
     }
 
-    // Committee Msg
-    pub fn set_committee_msg<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
+    // Assembly Msg
+    pub fn set_assembly_msg<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
         ID::write(storage, COMMITTEE_MSG_KEY).save(&ID(id))
     }
 
-    pub fn committee_msg<S: Storage>(storage: &S) -> StdResult<Uint128> {
+    pub fn assembly_msg<S: Storage>(storage: &S) -> StdResult<Uint128> {
         Ok(ID::read(storage, COMMITTEE_MSG_KEY).load()?.0)
     }
 
-    pub fn add_committee_msg<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
+    pub fn add_assembly_msg<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
         let mut item = ID::read(storage, COMMITTEE_MSG_KEY).load()?;
         item.0 += Uint128(1);
         ID::write(storage, COMMITTEE_MSG_KEY).save(&item)?;

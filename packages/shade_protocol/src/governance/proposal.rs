@@ -1,5 +1,6 @@
 use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, HumanAddr, StdResult, Storage, Uint128};
+use cosmwasm_std::{Binary, HumanAddr, StdResult, Storage};
+use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::governance::vote::VoteTally;
@@ -21,13 +22,13 @@ pub struct Proposal {
     // Target smart contract ID
     pub target: Option<Uint128>,
     // Msg proposal template
-    pub committeeMsg: Option<Uint128>,
+    pub assemblyMsg: Option<Uint128>,
     // Message to execute
     pub msg: Option<Binary>,
 
-    // Committee
-    // Committee that called the proposal
-    pub committee: Uint128,
+    // Assembly
+    // Assembly that called the proposal
+    pub assembly: Uint128,
 
     // Status
     pub status: Status,
@@ -41,7 +42,7 @@ impl Proposal {
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
         Self::save_msg(storage, &id, ProposalMsg{
             target: self.target,
-            committeeMsg: self.committeeMsg,
+            assemblyMsg: self.assemblyMsg,
             msg: self.msg.clone()
         })?;
 
@@ -50,7 +51,7 @@ impl Proposal {
             metadata: self.metadata.clone()
         })?;
 
-        Self::save_committee(storage, &id, self.committee)?;
+        Self::save_assembly(storage, &id, self.assembly)?;
 
         Self::save_status(storage, &id, self.status.clone())?;
 
@@ -62,7 +63,7 @@ impl Proposal {
     pub fn load<S: Storage>(storage: &mut S, id: &Uint128) -> StdResult<Self> {
         let msg = Self::msg(storage, id)?;
         let description = Self::description(storage, &id)?;
-        let committee = Self::committee(storage, &id)?;
+        let assembly = Self::assembly(storage, &id)?;
         let status = Self::status(storage, &id)?;
         let status_history = Self::status_history(storage, &id)?;
 
@@ -70,9 +71,9 @@ impl Proposal {
             proposer: description.proposer,
             metadata: description.metadata,
             target: msg.target,
-            committeeMsg: msg.committeeMsg,
+            assemblyMsg: msg.assemblyMsg,
             msg: msg.msg,
-            committee,
+            assembly,
             status,
             status_history
         })
@@ -94,12 +95,12 @@ impl Proposal {
         data.save(storage, id.to_string().as_bytes())
     }
 
-    pub fn committee<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Uint128> {
-        Ok(ProposalCommittee::load(storage, id.to_string().as_bytes())?.0)
+    pub fn assembly<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Uint128> {
+        Ok(ProposalAssembly::load(storage, id.to_string().as_bytes())?.0)
     }
 
-    pub fn save_committee<S: Storage>(storage: &mut S, id: &Uint128, data: Uint128) -> StdResult<()> {
-        ProposalCommittee(data).save(storage, id.to_string().as_bytes())
+    pub fn save_assembly<S: Storage>(storage: &mut S, id: &Uint128, data: Uint128) -> StdResult<()> {
+        ProposalAssembly(data).save(storage, id.to_string().as_bytes())
     }
 
     pub fn status<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Status> {
@@ -135,7 +136,7 @@ impl BucketStorage for ProposalDescription {
 #[serde(rename_all = "snake_case")]
 pub struct ProposalMsg {
     pub target: Option<Uint128>,
-    pub committeeMsg: Option<Uint128>,
+    pub assemblyMsg: Option<Uint128>,
     pub msg: Option<Binary>,
 }
 
@@ -146,18 +147,18 @@ impl BucketStorage for ProposalMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct ProposalCommittee(pub Uint128);
+pub struct ProposalAssembly(pub Uint128);
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for ProposalCommittee {
-    const NAMESPACE: &'static [u8] = b"proposal_committee-";
+impl BucketStorage for ProposalAssembly {
+    const NAMESPACE: &'static [u8] = b"proposal_assembly-";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
-    // Committee voting period
-    CommitteeVote {votes: VoteTally, start: u64, end:u64},
+    // Assembly voting period
+    AssemblyVote {votes: VoteTally, start: u64, end:u64},
     // In funding period
     Funding {amount: Uint128, start: u64, end:u64},
     // Voting in progress

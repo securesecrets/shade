@@ -6,19 +6,19 @@ use crate::{
 };
 use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
-    Uint128,
 };
+use secret_cosmwasm_math_compat::Uint128;
 use secret_toolkit::snip20::register_receive_msg;
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::governance::{MSG_VARIABLE, Config, HandleMsg, InitMsg, QueryMsg};
-use shade_protocol::governance::committee::{Committee, CommitteeMsg};
+use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::contract::AllowedContract;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::flexible_msg::FlexibleMsg;
 use shade_protocol::utils::storage::{BucketStorage, SingletonStorage};
 use crate::handle::{try_set_config, try_set_runtime_state};
-use crate::handle::committee::{try_add_committee, try_committee_proposal, try_committee_vote, try_set_committee};
-use crate::handle::committee_msg::{try_add_committee_msg, try_set_committee_msg};
+use crate::handle::assembly::{try_add_assembly, try_assembly_proposal, try_assembly_vote, try_set_assembly};
+use crate::handle::assembly_msg::{try_add_assembly_msg, try_set_assembly_msg};
 use crate::handle::contract::{try_add_contract, try_set_contract};
 use crate::handle::profile::{try_add_profile, try_set_profile};
 use crate::handle::proposal::{try_cancel, try_proposal, try_receive, try_trigger, try_update};
@@ -40,35 +40,35 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }.save(&mut deps.storage)?;
 
     // Setups IDs
-    ID::set_committee(&mut deps.storage, Uint128(1))?;
+    ID::set_assembly(&mut deps.storage, Uint128(1))?;
     ID::set_profile(&mut deps.storage, Uint128(1))?;
-    ID::set_committee_msg(&mut deps.storage, Uint128::zero())?;
+    ID::set_assembly_msg(&mut deps.storage, Uint128::zero())?;
     ID::set_contract(&mut deps.storage, Uint128::zero())?;
 
     // Setup public profile
     msg.public_profile.save(&mut deps.storage, &Uint128::zero())?;
-    // Setup public committee
-    Committee {
+    // Setup public assembly
+    Assembly {
         name: "public".to_string(),
-        metadata: "All inclusive committee, acts like traditional governance".to_string(),
+        metadata: "All inclusive assembly, acts like traditional governance".to_string(),
         members: vec![],
         profile: Uint128::zero()
     }.save(&mut deps.storage, &Uint128::zero())?;
 
     // Setup admin profile
     msg.admin_profile.save(&mut deps.storage, &Uint128(1))?;
-    // Setup admin committee
-    Committee {
+    // Setup admin assembly
+    Assembly {
         name: "admin".to_string(),
-        metadata: "Committee of DAO admins.".to_string(),
+        metadata: "Assembly of DAO admins.".to_string(),
         members: msg.admin_members,
         profile: Uint128::zero()
     }.save(&mut deps.storage, &Uint128(1))?;
 
     // Setup generic command
-    CommitteeMsg {
+    AssemblyMsg {
         name: "blank message".to_string(),
-        committees: vec![Uint128::zero(), Uint128(1)],
+        assemblys: vec![Uint128::zero(), Uint128(1)],
         msg: FlexibleMsg { msg: MSG_VARIABLE.to_string(), arguments: 1 }
     }.save(&mut deps.storage, &Uint128::zero())?;
 
@@ -108,25 +108,25 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::Receive { sender, from, amount, msg, memo, ..
             } => try_receive(deps, env, sender, from, amount, msg, memo),
 
-            // Committees
-            HandleMsg::CommitteeVote { proposal, vote, ..
-            } => try_committee_vote(deps, env, proposal, vote),
+            // Assemblys
+            HandleMsg::AssemblyVote { proposal, vote, ..
+            } => try_assembly_vote(deps, env, proposal, vote),
 
-            HandleMsg::CommitteeProposal { committee, metadata, contract, committee_msg, variables, ..
-            } => try_committee_proposal(deps, env, committee, metadata, contract, committee_msg, variables),
+            HandleMsg::AssemblyProposal { assembly, metadata, contract, assembly_msg, variables, ..
+            } => try_assembly_proposal(deps, env, assembly, metadata, contract, assembly_msg, variables),
 
-            HandleMsg::AddCommittee { name, metadata, members, profile, ..
-            } => try_add_committee(deps, env, name, metadata, members, profile),
+            HandleMsg::AddAssembly { name, metadata, members, profile, ..
+            } => try_add_assembly(deps, env, name, metadata, members, profile),
 
-            HandleMsg::SetCommittee { id, name, metadata, members, profile, ..
-            } => try_set_committee(deps, env, id, name, metadata, members, profile),
+            HandleMsg::SetAssembly { id, name, metadata, members, profile, ..
+            } => try_set_assembly(deps, env, id, name, metadata, members, profile),
 
-            // Committee Msgs
-            HandleMsg::AddCommitteeMsg { name, msg, committees, ..
-            } => try_add_committee_msg(deps, env, name, msg, committees),
+            // Assembly Msgs
+            HandleMsg::AddAssemblyMsg { name, msg, assemblys, ..
+            } => try_add_assembly_msg(deps, env, name, msg, assemblys),
 
-            HandleMsg::SetCommitteeMsg { id, name, msg, committees, ..
-            } => try_set_committee_msg(deps, env, id, name, msg, committees),
+            HandleMsg::SetAssemblyMsg { id, name, msg, assemblys, ..
+            } => try_set_assembly_msg(deps, env, id, name, msg, assemblys),
 
             // Profiles
             HandleMsg::AddProfile { profile, .. } => try_add_profile(deps, env, profile),
@@ -149,11 +149,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::Proposals { start, end
             } => to_binary(&query::proposals(deps, start, end)?),
 
-            QueryMsg::Committees { start, end
-            } => to_binary(&query::committees(deps, start, end)?),
+            QueryMsg::Assemblys { start, end
+            } => to_binary(&query::assemblys(deps, start, end)?),
 
-            QueryMsg::CommitteeMsgs { start, end
-            } => to_binary(&query::committeemsgs(deps, start, end)?),
+            QueryMsg::AssemblyMsgs { start, end
+            } => to_binary(&query::assemblymsgs(deps, start, end)?),
 
             QueryMsg::Profiles { start, end
             } => to_binary(&query::profiles(deps, start, end)?),

@@ -1,16 +1,17 @@
 pub mod profile;
-pub mod committee;
+pub mod assembly;
 pub mod proposal;
 pub mod contract;
 pub mod vote;
 
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, HumanAddr, Uint128};
+use cosmwasm_std::{Binary, HumanAddr};
+use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
-use crate::governance::committee::{Committee, CommitteeMsg};
+use crate::governance::assembly::{Assembly, AssemblyMsg};
 use crate::governance::contract::AllowedContract;
 use crate::governance::profile::{Profile, UpdateProfile};
 use crate::governance::proposal::Proposal;
@@ -61,8 +62,8 @@ pub enum RuntimeState {
     Normal,
     // Disable staking
     DisableVoteToken,
-    // Allow only specific committees and admin
-    SpecificCommittees { commitees: Vec<Uint128> },
+    // Allow only specific assemblys and admin
+    SpecificAssemblys { commitees: Vec<Uint128> },
     // Set as admin only
     AdminOnly
 }
@@ -88,7 +89,7 @@ pub enum HandleMsg {
     },
 
     // Proposals
-    // Same as CommitteeProposal where committee is 0 and committee msg is 0
+    // Same as AssemblyProposal where assembly is 0 and assembly msg is 0
     Proposal {
         metadata: String,
 
@@ -127,39 +128,39 @@ pub enum HandleMsg {
         memo: Option<String>,
         padding: Option<String>
     },
-    /// Votes on a committee vote
-    CommitteeVote {
+    /// Votes on a assembly vote
+    AssemblyVote {
         proposal: Uint128,
         vote: Vote,
         padding: Option<String>
     },
 
-    // Committees
-    /// Creates a proposal under a committee
-    CommitteeProposal {
-        committee: Uint128,
+    // Assemblys
+    /// Creates a proposal under a assembly
+    AssemblyProposal {
+        assembly: Uint128,
         metadata: String,
 
         // Optionals, if none the proposal is assumed to be a text proposal
         // Allowed Contract
         contract: Option<Uint128>,
-        // Committee msg ID
-        committee_msg: Option<Uint128>,
-        // Committee msg aguments
+        // Assembly msg ID
+        assembly_msg: Option<Uint128>,
+        // Assembly msg aguments
         variables: Option<Vec<String>>,
         padding: Option<String>
     },
 
-    /// Creates a new committee
-    AddCommittee {
+    /// Creates a new assembly
+    AddAssembly {
         name: String,
         metadata: String,
         members: Vec<HumanAddr>,
         profile: Uint128,
         padding: Option<String>
     },
-    /// Edits an existing committee
-    SetCommittee {
+    /// Edits an existing assembly
+    SetAssembly {
         id: Uint128,
         name: Option<String>,
         metadata: Option<String>,
@@ -168,30 +169,30 @@ pub enum HandleMsg {
         padding: Option<String>
     },
 
-    // CommitteeMsgs
-    /// Creates a new committee message and its allowed users
-    AddCommitteeMsg {
+    // AssemblyMsgs
+    /// Creates a new assembly message and its allowed users
+    AddAssemblyMsg {
         name: String,
         msg: String,
-        committees: Vec<Uint128>,
+        assemblys: Vec<Uint128>,
         padding: Option<String>
     },
-    /// Edits an existing committee msg
-    SetCommitteeMsg {
+    /// Edits an existing assembly msg
+    SetAssemblyMsg {
         id: Uint128,
         name: Option<String>,
         msg: Option<String>,
-        committees: Option<Vec<Uint128>>,
+        assemblys: Option<Vec<Uint128>>,
         padding: Option<String>
     },
 
     // Profiles
-    /// Creates a new profile that can be added to committees
+    /// Creates a new profile that can be added to assemblys
     AddProfile {
         profile: Profile,
         padding: Option<String>
     },
-    /// Edits an already existing profile and the committees using the profile
+    /// Edits an already existing profile and the assemblys using the profile
     SetProfile {
         id: Uint128,
         profile: UpdateProfile,
@@ -199,7 +200,7 @@ pub enum HandleMsg {
     },
 
     // Contracts
-    // TODO: maybe add a list of allowed committees for those contracts
+    // TODO: maybe add a list of allowed assemblys for those contracts
     AddContract {
         name: String,
         metadata: String,
@@ -243,22 +244,22 @@ pub enum HandleAnswer {
     Receive {
         status: ResponseStatus
     },
-    CommitteeVote {
+    AssemblyVote {
         status: ResponseStatus
     },
-    CommitteeProposal {
+    AssemblyProposal {
         status: ResponseStatus
     },
-    AddCommittee {
+    AddAssembly {
         status: ResponseStatus
     },
-    SetCommittee {
+    SetAssembly {
         status: ResponseStatus
     },
-    AddCommitteeMsg {
+    AddAssemblyMsg {
         status: ResponseStatus
     },
-    SetCommitteeMsg {
+    SetAssemblyMsg {
         status: ResponseStatus
     },
     AddProfile {
@@ -285,12 +286,12 @@ pub enum QueryMsg {
         end: Uint128
     },
 
-    Committees {
+    Assemblys {
         start: Uint128,
         end: Uint128
     },
 
-    CommitteeMsgs {
+    AssemblyMsgs {
         start: Uint128,
         end: Uint128
     },
@@ -317,12 +318,12 @@ pub enum QueryAnswer {
         props: Vec<Proposal>
     },
 
-    Committees {
-        committees: Vec<Committee>
+    Assemblys {
+        assemblys: Vec<Assembly>
     },
 
-    CommitteeMsgs {
-        msgs: Vec<CommitteeMsg>
+    AssemblyMsgs {
+        msgs: Vec<AssemblyMsg>
     },
 
     Profiles {

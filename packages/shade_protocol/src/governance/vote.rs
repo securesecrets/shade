@@ -1,4 +1,5 @@
-use cosmwasm_std::{StdResult, Storage, Uint128};
+use cosmwasm_std::{StdResult, Storage};
+use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -29,13 +30,13 @@ impl VoteTally {
         VoteTally::write(storage, b"vote_tally_token-").save(key, self)
     }
 
-    // Load votes related to committee
-    fn load_committee<'a, S: Storage>(storage: &'a S, key: &'a [u8]) -> StdResult<Option<Self>> {
-        VoteTally::read(storage, b"vote_tally_committee-").may_load(key)
+    // Load votes related to assembly
+    fn load_assembly<'a, S: Storage>(storage: &'a S, key: &'a [u8]) -> StdResult<Option<Self>> {
+        VoteTally::read(storage, b"vote_tally_assembly-").may_load(key)
     }
 
-    fn save_committee<'a, S: Storage>(&self, storage: &'a mut S, key: &'a [u8]) -> StdResult<()> {
-        VoteTally::write(storage, b"vote_tally_committee-").save(key, self)
+    fn save_assembly<'a, S: Storage>(&self, storage: &'a mut S, key: &'a [u8]) -> StdResult<()> {
+        VoteTally::write(storage, b"vote_tally_assembly-").save(key, self)
     }
 }
 

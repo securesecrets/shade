@@ -1,4 +1,5 @@
-use cosmwasm_std::{StdResult, Storage, Uint128};
+use cosmwasm_std::{StdResult, Storage};
+use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -7,16 +8,16 @@ use crate::utils::storage::BucketStorage;
 use crate::utils::storage::NaiveBucketStorage;
 
 /// Allow better control over the safety and privacy features that proposals will need if
-/// Committees are implemented. If a profile is disabled then its committee will also be disabled.
+/// Assemblys are implemented. If a profile is disabled then its assembly will also be disabled.
 /// All percentages are taken as follows 100000 = 100%
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Profile {
     pub name: String,
-    // State of the current profile and its subsequent committees
+    // State of the current profile and its subsequent assemblys
     pub enabled: bool,
-    // Require committee voting
-    pub committee: Option<VoteProfile>,
+    // Require assembly voting
+    pub assembly: Option<VoteProfile>,
     // Require funding
     pub funding: Option<FundProfile>,
     // Require token voting
@@ -28,7 +29,7 @@ pub struct Profile {
 
 #[cfg(feature = "governance-impl")]
 impl Profile {
-    const COMMITTEE_PROFILE_KEY: &'static [u8] = b"committee_vote_profile-";
+    const COMMITTEE_PROFILE_KEY: &'static [u8] = b"assembly_vote_profile-";
     const TOKEN_PROFILE_KEY: &'static [u8] = b"token_vote_profile-";
 
     pub fn load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Self> {
@@ -37,7 +38,7 @@ impl Profile {
         Ok(Self {
             name: data.name,
             enabled: data.enabled,
-            committee: Self::load_committee(storage, &id)?,
+            assembly: Self::load_assembly(storage, &id)?,
             funding: Self::load_funding(storage, &id)?,
             token: Self::load_token(storage, &id)?,
             cancel_deadline: data.cancel_deadline
@@ -51,7 +52,7 @@ impl Profile {
             cancel_deadline: self.cancel_deadline
         }.save(storage, id.to_string().as_bytes())?;
 
-        Self::save_committee(storage, &id, self.committee.clone())?;
+        Self::save_assembly(storage, &id, self.assembly.clone())?;
 
         Self::save_token(storage, &id, self.token.clone())?;
 
@@ -68,12 +69,12 @@ impl Profile {
         data.save(storage, id.to_string().as_bytes())
     }
 
-    pub fn load_committee<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
+    pub fn load_assembly<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
         Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, id.to_string().as_bytes())?.0)
     }
 
-    pub fn save_committee<S: Storage>(storage: &mut S, id: &Uint128, committee: Option<VoteProfile>) -> StdResult<()> {
-        VoteProfileType(committee).save(storage, COMMITTEE_PROFILE_KEY, id.to_string().as_bytes())
+    pub fn save_assembly<S: Storage>(storage: &mut S, id: &Uint128, assembly: Option<VoteProfile>) -> StdResult<()> {
+        VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, id.to_string().as_bytes())
     }
 
     pub fn load_token<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
@@ -98,12 +99,12 @@ impl Profile {
 #[serde(rename_all = "snake_case")]
 pub struct UpdateProfile {
     pub name: Option<String>,
-    // State of the current profile and its subsequent committees
+    // State of the current profile and its subsequent assemblys
     pub enabled: Option<bool>,
-    // Committee status
-    pub disable_committee: bool,
-    // Require committee voting
-    pub committee: Option<UpdateVoteProfile>,
+    // Assembly status
+    pub disable_assembly: bool,
+    // Require assembly voting
+    pub assembly: Option<UpdateVoteProfile>,
     // Funding status
     pub disable_funding: bool,
     // Require funding

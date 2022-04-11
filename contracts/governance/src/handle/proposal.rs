@@ -1,4 +1,5 @@
-use cosmwasm_std::{Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdResult, Storage, to_binary, Uint128};
+use cosmwasm_std::{Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdResult, Storage, to_binary};
+use secret_cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::HandleAnswer;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;

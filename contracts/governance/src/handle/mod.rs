@@ -3,9 +3,9 @@ use shade_protocol::governance::{HandleAnswer, RuntimeState};
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 
-pub mod committee;
+pub mod assembly;
 pub mod proposal;
-pub mod committee_msg;
+pub mod assembly_msg;
 pub mod profile;
 pub mod contract;
 
