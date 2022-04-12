@@ -4,7 +4,7 @@ use secret_cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::governance::stored_id::ID;
-use crate::governance::vote::VoteTally;
+use crate::governance::vote::Vote;
 use crate::utils::asset::Contract;
 
 #[cfg(feature = "governance-impl")]
@@ -38,6 +38,7 @@ pub struct Proposal {
     pub status_history: Vec<Status>
 
     // TODO: add an optional funders list so they can be redeemed later
+    // TODO: keep a state to check if it was vetoed (to avoid funding claims)
 }
 
 #[cfg(feature = "governance-impl")]
@@ -168,11 +169,11 @@ impl BucketStorage for ProposalAssembly {
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     // Assembly voting period
-    AssemblyVote {votes: VoteTally, start: u64, end:u64},
+    AssemblyVote {votes: Vote, start: u64, end:u64},
     // In funding period
     Funding {amount: Uint128, start: u64, end:u64},
     // Voting in progress
-    Voting {votes: VoteTally, start: u64, end:u64},
+    Voting {votes: Vote, start: u64, end:u64},
     // Total votes did not reach minimum total votes
     Expired,
     // Proposal was rejected

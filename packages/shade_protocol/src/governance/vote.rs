@@ -8,7 +8,7 @@ use crate::utils::storage::{NaiveBucketStorage};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct VoteTally {
+pub struct Vote {
     pub yes: Uint128,
     pub no: Uint128,
     pub no_with_veto: Uint128,
@@ -16,10 +16,10 @@ pub struct VoteTally {
 }
 
 #[cfg(feature = "governance-impl")]
-impl NaiveBucketStorage for VoteTally {
+impl NaiveBucketStorage for Vote {
 }
 
-impl Default for VoteTally {
+impl Default for Vote {
     fn default() -> Self {
         Self {
             yes: Uint128::zero(),
@@ -31,39 +31,31 @@ impl Default for VoteTally {
 }
 
 #[cfg(feature = "governance-impl")]
-impl VoteTally {
+impl Vote {
     // Load votes related to staking
     fn load_token<'a, S: Storage>(storage: &'a S, key: &'a [u8]) -> StdResult<Option<Self>> {
-        VoteTally::read(storage, b"vote_tally_token-").may_load(key)
+        Vote::read(storage, b"vote_tally_token-").may_load(key)
     }
 
     fn save_token<'a, S: Storage>(&self, storage: &'a mut S, key: &'a [u8]) -> StdResult<()> {
-        VoteTally::write(storage, b"vote_tally_token-").save(key, self)
-    }
-
-    // Load votes related to assembly
-    fn load_assembly<'a, S: Storage>(storage: &'a S, key: &'a [u8]) -> StdResult<Option<Self>> {
-        VoteTally::read(storage, b"vote_tally_assembly-").may_load(key)
-    }
-
-    fn save_assembly<'a, S: Storage>(&self, storage: &'a mut S, key: &'a [u8]) -> StdResult<()> {
-        VoteTally::write(storage, b"vote_tally_assembly-").save(key, self)
+        Vote::write(storage, b"vote_tally_token-").save(key, self)
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Vote {
-    Yes,
-    No,
-    NoWithVeto,
-    Abstain,
+pub struct TalliedVotes {
+    pub yes: Uint128,
+    pub no: Uint128,
+    pub veto: Uint128,
+    pub total: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-/// Used to give weight to votes per user
-pub struct UserVote {
-    pub vote: Vote,
-    pub weight: u8,
+impl TalliedVotes {
+    pub fn tally(votes: Vote) -> Self {
+        Self {
+            yes: votes.yes,
+            no: votes.no + votes.no_with_veto,
+            veto: votes.no_with_veto,
+            total: votes.yes + votes.no + votes.no_with_veto + votes.abstain
+        }
+    }
 }

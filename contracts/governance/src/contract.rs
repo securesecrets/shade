@@ -62,7 +62,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         name: "admin".to_string(),
         metadata: "Assembly of DAO admins.".to_string(),
         members: msg.admin_members,
-        profile: Uint128::zero()
+        profile: Uint128(1)
     }.save(&mut deps.storage, &Uint128(1))?;
 
     // Setup generic command

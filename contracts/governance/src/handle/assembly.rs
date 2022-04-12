@@ -5,7 +5,7 @@ use shade_protocol::governance::{HandleAnswer, MSG_VARIABLE};
 use shade_protocol::governance::profile::Profile;
 use shade_protocol::governance::proposal::{Proposal, Status};
 use shade_protocol::governance::stored_id::ID;
-use shade_protocol::governance::vote::{Vote, VoteTally};
+use shade_protocol::governance::vote::{Vote, Vote};
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::utils::storage::BucketStorage;
 
@@ -55,9 +55,9 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     let status: Status;
 
     // Check if assembly voting
-    if let Some(vote_settings) = Profile::load_assembly(&deps.storage, &assembly.profile)? {
+    if let Some(vote_settings) = Profile::assembly_voting(&deps.storage, &assembly.profile)? {
         status = Status::AssemblyVote { 
-            votes: VoteTally::default(), 
+            votes: Vote::default(),
             start: env.block.time, 
             end: env.block.time + vote_settings.deadline 
         }
@@ -71,9 +71,9 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         }
     }
     // Check if token voting
-    if let Some(vote_settings) = Profile::load_token(&deps.storage, &assembly.profile)? {
+    if let Some(vote_settings) = Profile::public_voting(&deps.storage, &assembly.profile)? {
         status = Status::Voting {
-            votes: VoteTally::default(),
+            votes: Vote::default(),
             start: env.block.time,
             end: env.block.time + vote_settings.deadline
         }

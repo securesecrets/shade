@@ -40,9 +40,9 @@ impl Profile {
         Ok(Self {
             name: data.name,
             enabled: data.enabled,
-            assembly: Self::load_assembly(storage, &id)?,
+            assembly: Self::assembly_voting(storage, &id)?,
             funding: Self::load_funding(storage, &id)?,
-            token: Self::load_token(storage, &id)?,
+            token: Self::public_voting(storage, &id)?,
             cancel_deadline: data.cancel_deadline
         })
     }
@@ -61,9 +61,9 @@ impl Profile {
             cancel_deadline: self.cancel_deadline
         }.save(storage, &id.to_be_bytes())?;
 
-        Self::save_assembly(storage, &id, self.assembly.clone())?;
+        Self::save_assembly_voting(storage, &id, self.assembly.clone())?;
 
-        Self::save_token(storage, &id, self.token.clone())?;
+        Self::save_public_voting(storage, &id, self.token.clone())?;
 
         Self::save_funding(storage, &id, self.funding.clone())?;
 
@@ -78,19 +78,19 @@ impl Profile {
         data.save(storage, &id.to_be_bytes())
     }
 
-    pub fn load_assembly<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
+    pub fn assembly_voting<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
         Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_assembly<S: Storage>(storage: &mut S, id: &Uint128, assembly: Option<VoteProfile>) -> StdResult<()> {
+    pub fn save_assembly_voting<S: Storage>(storage: &mut S, id: &Uint128, assembly: Option<VoteProfile>) -> StdResult<()> {
         VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())
     }
 
-    pub fn load_token<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
+    pub fn public_voting<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
         Ok(VoteProfileType::load(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_token<S: Storage>(storage: &mut S, id: &Uint128, token: Option<VoteProfile>) -> StdResult<()> {
+    pub fn save_public_voting<S: Storage>(storage: &mut S, id: &Uint128, token: Option<VoteProfile>) -> StdResult<()> {
         VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())
     }
 
@@ -144,6 +144,7 @@ impl BucketStorage for ProfileData {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+// NOTE: 100% = Uint128(10000)
 pub struct VoteProfile {
     // Deadline for voting
     pub deadline: u64,
