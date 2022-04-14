@@ -1,10 +1,11 @@
 use crate::state::{config_r, dex_pairs_r, index_r};
-use cosmwasm_math_compat::Uint128;
+use cosmwasm_math_compat::{Uint128, Uint512};
 use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage};
 use shade_protocol::{
     band, dex,
     oracle::{IndexElement, QueryAnswer},
 };
+use std::convert::TryFrom;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -102,8 +103,8 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     index: Vec<IndexElement>,
 ) -> StdResult<Uint128> {
-    let mut weight_sum = Uint128::zero();
-    let mut price = Uint128::zero();
+    let mut weight_sum = Uint512::zero();
+    let mut price = Uint512::zero();
 
     let mut band_bases = vec![];
     let mut band_quotes = vec![];
@@ -111,15 +112,19 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     for element in index {
-        weight_sum += element.weight;
+        weight_sum += Uint512::from(element.weight.u128());
 
         // Get dex prices
         if let Some(dex_pairs) = dex_pairs_r(&deps.storage).may_load(element.symbol.as_bytes())? {
-            //return Err(StdError::generic_err(format!("EVAL INDEX DEX PAIRS {}", element.symbol)));
-            price +=
-                dex::aggregate_price(deps, dex_pairs, config.sscrt.clone(), config.band.clone())?
-                    .multiply_ratio(element.weight, 10u128.pow(18));
-            //return Err(StdError::generic_err(format!("EVAL INDEX DEX PAIRS {}", element.symbol)));
+            return Err(StdError::generic_err(format!(
+                "EVAL INDEX DEX PAIRS {}",
+                element.symbol
+            )));
+
+            // NOTE: unreachable?
+            // price +=
+            //     dex::aggregate_price(deps, dex_pairs, config.sscrt.clone(), config.band.clone())?
+            //         .multiply_ratio(element.weight, 10u128.pow(18))
         }
         // Nested index
         else if let Some(sub_index) =
@@ -130,11 +135,11 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
                 "EVAL NESTED INDEX {}",
                 element.symbol
             )));
-            price += eval_index(&deps, sub_index)?.multiply_ratio(element.weight, 10u128.pow(18));
+            // NOTE: unreachable?
+            // price += eval_index(&deps, sub_index)?.multiply_ratio(element.weight, 10u128.pow(18))
         }
         // Setup to query for all at once from BAND
         else {
-            //return Err(StdError::generic_err(format!("EVAL INDEX BAND {}", element.symbol)));
             band_weights.push(element.weight);
             band_bases.push(element.symbol.clone());
             band_quotes.push("USD".to_string());
@@ -150,11 +155,12 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
         )?;
 
         for (reference, weight) in ref_data.iter().zip(band_weights.iter()) {
-            price += reference.rate.multiply_ratio(*weight, 10u128.pow(18));
+            price += Uint512::from(reference.rate.u128()) * Uint512::from(weight.u128())
+                / Uint512::from(10u128.pow(18));
         }
     }
-    //return Err(StdError::generic_err(format!("Price {}", price)));
 
-    Ok(price.multiply_ratio(10u128.pow(18), weight_sum.u128()))
-    //Ok(price.multiply_ratio(1u128, weight_total.u128()))
+    Ok(Uint128::try_from(
+        price * Uint512::from(10u128.pow(18)) / weight_sum,
+    )?)
 }

@@ -8,7 +8,7 @@ MAX_TRIES = 30
 
 GAS_METRICS = []
 STORE_GAS = '4000000'
-GAS = '100000'
+GAS = '4000000'
 
 
 def run_command(command):
@@ -123,6 +123,7 @@ def run_command_compute_hash(command):
 
     try:
         txhash = json.loads(out)["txhash"]
+        # print(txhash)
     except Exception as e:
         # print(out)
         raise e

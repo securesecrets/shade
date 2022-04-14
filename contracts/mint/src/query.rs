@@ -68,8 +68,8 @@ pub fn mint<S: Storage, A: Api, Q: Querier>(
 
     match assets_r(&deps.storage).may_load(offer_asset.to_string().as_bytes())? {
         Some(asset) => {
-            let fee_amount = calculate_portion(amount, asset.fee);
-            let amount = mint_amount(deps, amount.checked_sub(fee_amount)?, &asset, &native_asset)?;
+            let fee = calculate_portion(amount, asset.fee);
+            let amount = mint_amount(deps, amount.checked_sub(fee)?, &asset, &native_asset)?;
             Ok(QueryAnswer::Mint {
                 asset: native_asset.contract,
                 amount,

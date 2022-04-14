@@ -80,7 +80,7 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
     let weighted_sum: Uint512 = amounts_per_scrt
         .into_iter()
         .zip(pool_sizes.into_iter())
-        .map(|(a, s)| a * s / combined_cp)
+        .map(|(amount, pool_size)| amount * pool_size / combined_cp)
         .sum();
 
     // Translate price from SHD/SCRT -> SHD/USD

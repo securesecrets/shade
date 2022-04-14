@@ -14,7 +14,7 @@ rm ./$(1).wasm
 endef
 
 CONTRACTS = \
-		airdrop governance staking mint mint_router \
+		airdrop governance shd_staking mint mint_router \
 		treasury oracle initializer scrt_staking snip20 \
 		mock_band mock_secretswap_pair mock_sienna_pair
 
@@ -32,6 +32,9 @@ compress_all: setup
 compress-snip20: setup
 	$(call opt_and_compress,snip20,snip20_reference_impl)
 
+compress-shd_staking: setup
+	$(call opt_and_compress,shd_staking,spip_stkd_0)
+
 compress-%: setup
 	$(call opt_and_compress,$*,$*)
 
@@ -48,6 +51,10 @@ test:
 
 test-%:
 	(cd ${contracts_dir}/$*; cargo unit-test)
+
+shd_staking: setup
+	(cd ${contracts_dir}/shd_staking; ${build-release})
+	@$(MAKE) $(addprefix compress-,shd_staking)
 
 setup: $(compiled_dir) $(checksum_dir)
 
