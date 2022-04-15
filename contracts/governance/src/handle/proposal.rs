@@ -1,5 +1,5 @@
 use cosmwasm_std::{Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
-use secret_cosmwasm_math_compat::Uint128;
+use cosmwasm_math_compat::Uint128;
 use secret_toolkit::snip20::send_msg;
 use secret_toolkit::utils::Query;
 use shade_protocol::governance::assembly::Assembly;
@@ -141,22 +141,28 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 
     match status {
         Status::AssemblyVote { votes, start, end } => {
-            // TODO: instantly skip if proposal info was updated
             if end > env.block.time {
                 return Err(StdError::unauthorized())
             }
 
             // Total power is equal to the total amount of assembly members
             let total_power = Uint128(Assembly::data(&deps.storage, &assembly)?.members.len().into());
-            let vote_settings = Profile::assembly_voting(&deps.storage, &profile)?.unwrap();
 
-            let mut vote_conclusion = validate_votes(votes, total_power, vote_settings);
+            // Try to load, if not then assume it was updated after proposal creation but before section end
+            let mut vote_conclusion: Status;
+            if let Some(settings) = Profile::assembly_voting(&deps.storage, &profile)? {
+                vote_conclusion = validate_votes(votes, total_power, settings);
+            }
+            else {
+                vote_conclusion = Status::Success
+            }
 
             if let Status::Vetoed{..} = vote_conclusion {
                 // Cant veto an assembly vote
                 vote_conclusion = Status::Rejected;
             }
 
+            // Try to load the next steps, if all are none then pass
             if let Status::Success = vote_conclusion {
                 if let Some(setting) = Profile::funding(&deps.storage, &profile)? {
                     vote_conclusion = Status::Funding {
@@ -183,7 +189,6 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
             new_status = vote_conclusion;
         }
         Status::Funding { amount, start, end } => {
-            // Check if amount reaches limit or reaches end
             if end > env.block.time {
                 return Err(StdError::unauthorized())
             }
@@ -205,7 +210,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                     }
                 }
                 else {
-                    vote_conclusion = Status::Passed {
+                    new_status = Status::Passed {
                         start: env.block.time,
                         end: env.block.time + Profile::data(&deps.storage, &profile)?.cancel_deadline
                     }
@@ -226,16 +231,23 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                     config.vote_token.unwrap().address
                 )?.into();
 
+            // Get total staking power
             let total_power = match query {
                 // TODO: fix when uint update is merged
-                shd_staking::QueryAnswer::TotalStaked { shares, tokens } => Uint128(tokens.u128()),
-                _ => Err(StdError::generic_err("Wrong query returned"))
+                shd_staking::QueryAnswer::TotalStaked { shares, tokens } => tokens.into(),
+                _ => return Err(StdError::generic_err("Wrong query returned"))
             };
-            let vote_settings = Profile::public_voting(&deps.storage, &profile)?.unwrap();
 
-            new_status = validate_votes(votes, total_power, vote_settings);
+            let mut vote_conclusion: Status;
 
-            if let Status::Vetoed {..} = new_status {
+            if let Some(settings) = Profile::public_voting(&deps.storage, &profile)? {
+                vote_conclusion = validate_votes(votes, total_power, settings);
+            }
+            else {
+                vote_conclusion = Status::Success
+            }
+
+            if let Status::Vetoed {..} = vote_conclusion {
                 // Send the funding amount to the treasury
                 if let Some(profile) = Profile::funding(&deps.storage, &profile)? {
                     // Look for the history and find funding
@@ -246,7 +258,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                             if send_amount != Uint128::zero() {
                                 let config = Config::load(&deps.storage)?;
                                 // Update slash amount
-                                new_status = Status::Vetoed { slashed_amount: send_amount };
+                                vote_conclusion = Status::Vetoed { slashed_amount: send_amount };
                                 messages.push(send_msg(
                                     config.treasury,
                                     cosmwasm_std::Uint128(send_amount.u128()),
@@ -255,6 +267,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                                     config.funding_token.unwrap().address
                                 )?);
                             }
+                            break;
                         }
                     }
                 }
@@ -265,10 +278,17 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                     end: env.block.time + Profile::data(&deps.storage, &profile)?.cancel_deadline
                 }
             }
+
+            new_status = vote_conclusion;
         }
         _ => Err(StdError::generic_err("Cants update"))
     }
 
+    // Add old status to history
+    history.push(status.clone());
+    Proposal::save_status_history(&mut deps.storage, &proposal, history)?;
+    // Save new status
+    Proposal::save_status(&mut deps.storage, &proposal, new_status.clone())?;
 
     Ok(HandleResponse {
         messages,

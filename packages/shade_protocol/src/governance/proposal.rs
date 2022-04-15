@@ -1,6 +1,6 @@
 use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_std::{Binary, HumanAddr, StdResult, Storage};
-use secret_cosmwasm_math_compat::Uint128;
+use cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::governance::stored_id::ID;

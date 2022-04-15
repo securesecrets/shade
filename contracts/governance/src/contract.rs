@@ -7,7 +7,7 @@ use crate::{
 use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
 };
-use secret_cosmwasm_math_compat::Uint128;
+use cosmwasm_math_compat::Uint128;
 use secret_toolkit::snip20::register_receive_msg;
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::governance::{MSG_VARIABLE, Config, HandleMsg, InitMsg, QueryMsg};

@@ -1,11 +1,11 @@
 use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
-use secret_cosmwasm_math_compat::Uint128;
+use cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::{HandleAnswer, MSG_VARIABLE};
 use shade_protocol::governance::profile::Profile;
 use shade_protocol::governance::proposal::{Proposal, Status};
 use shade_protocol::governance::stored_id::ID;
-use shade_protocol::governance::vote::{Vote, Vote};
+use shade_protocol::governance::vote::Vote;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::utils::storage::BucketStorage;
 

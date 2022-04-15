@@ -1,5 +1,5 @@
 use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
-use secret_cosmwasm_math_compat::Uint128;
+use cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::assembly::AssemblyMsg;
 use shade_protocol::governance::{MSG_VARIABLE, HandleAnswer};
 use shade_protocol::governance::stored_id::ID;
