@@ -1,12 +1,10 @@
-use crate::state::{config_r, index_r, dex_pairs_r};
-use cosmwasm_std;
-use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, StdError};
+use crate::state::{config_r, dex_pairs_r, index_r};
+use cosmwasm_math_compat::{Uint128, Uint512};
+use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage};
 use shade_protocol::{
-    band,
-    dex,
+    band, dex,
     oracle::{IndexElement, QueryAnswer},
 };
-use secret_cosmwasm_math_compat::{Uint128, Uint512};
 use std::convert::TryFrom;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
@@ -19,22 +17,15 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbol: String,
 ) -> StdResult<band::ReferenceData> {
-
     let config = config_r(&deps.storage).load()?;
     if symbol == "SSCRT" {
         return band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), config.band);
     }
 
     if let Some(dex_pairs) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-
         if dex_pairs.len() > 0 {
-            
             return Ok(band::ReferenceData {
-                rate: dex::aggregate_price(&deps, 
-                                           dex_pairs, 
-                                           config.sscrt, 
-                                           config.band
-                )?,
+                rate: dex::aggregate_price(&deps, dex_pairs, config.sscrt, config.band)?,
                 last_updated_base: 0,
                 last_updated_quote: 0,
             });
@@ -57,29 +48,29 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
 pub fn prices<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbols: Vec<String>,
-) -> StdResult<Vec<cosmwasm_std::Uint128>> {
+) -> StdResult<Vec<Uint128>> {
     let mut band_symbols = vec![];
     let mut band_quotes = vec![];
-    let mut results = vec![cosmwasm_std::Uint128(0); symbols.len()];
+    let mut results = vec![Uint128::zero(); symbols.len()];
 
     let config = config_r(&deps.storage).load()?;
 
     for (i, sym) in symbols.iter().enumerate() {
-
         // Aggregate DEX pair prices
         if let Some(dex_pairs) = dex_pairs_r(&deps.storage).may_load(sym.as_bytes())? {
             if dex_pairs.len() > 0 {
-                results[i] = dex::aggregate_price(&deps, dex_pairs, 
-                                               config.sscrt.clone(), config.band.clone())?;
+                results[i] = dex::aggregate_price(
+                    &deps,
+                    dex_pairs,
+                    config.sscrt.clone(),
+                    config.band.clone(),
+                )?;
             }
         }
-
         // Index
         else if let Some(index) = index_r(&deps.storage).may_load(sym.as_bytes())? {
-
             results[i] = eval_index(deps, index)?;
-
-        } 
+        }
         // BAND
         else {
             band_symbols.push(sym.clone());
@@ -88,7 +79,12 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
     }
 
     // Query all the band prices
-    let ref_data = band::reference_data_bulk(deps, band_symbols.clone(), band_quotes, config_r(&deps.storage).load()?.band)?;
+    let ref_data = band::reference_data_bulk(
+        deps,
+        band_symbols.clone(),
+        band_quotes,
+        config_r(&deps.storage).load()?.band,
+    )?;
 
     for (data, sym) in ref_data.iter().zip(band_symbols.iter()) {
         let result_index = symbols
@@ -106,8 +102,7 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
 pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     index: Vec<IndexElement>,
-) -> StdResult<cosmwasm_std::Uint128> {
-
+) -> StdResult<Uint128> {
     let mut weight_sum = Uint512::zero();
     let mut price = Uint512::zero();
 
@@ -121,23 +116,27 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
 
         // Get dex prices
         if let Some(dex_pairs) = dex_pairs_r(&deps.storage).may_load(element.symbol.as_bytes())? {
+            return Err(StdError::generic_err(format!(
+                "EVAL INDEX DEX PAIRS {}",
+                element.symbol
+            )));
 
-            return Err(StdError::generic_err(format!("EVAL INDEX DEX PAIRS {}", element.symbol)));
-
-            price += Uint512::from(
-                dex::aggregate_price(deps, dex_pairs, 
-                                     config.sscrt.clone(), 
-                                     config.band.clone()
-                 )?.multiply_ratio(element.weight, 10u128.pow(18)).u128());
-
+            // NOTE: unreachable?
+            // price +=
+            //     dex::aggregate_price(deps, dex_pairs, config.sscrt.clone(), config.band.clone())?
+            //         .multiply_ratio(element.weight, 10u128.pow(18))
         }
-
-        // Nested index 
-        else if let Some(sub_index) = index_r(&deps.storage).may_load(element.symbol.as_bytes())? {
+        // Nested index
+        else if let Some(sub_index) =
+            index_r(&deps.storage).may_load(element.symbol.as_bytes())?
+        {
             // TODO: make sure no circular deps
-            return Err(StdError::generic_err(format!("EVAL NESTED INDEX {}", element.symbol)));
-            price += Uint512::from(eval_index(&deps, sub_index)?.multiply_ratio(element.weight, 10u128.pow(18)).u128());
-
+            return Err(StdError::generic_err(format!(
+                "EVAL NESTED INDEX {}",
+                element.symbol
+            )));
+            // NOTE: unreachable?
+            // price += eval_index(&deps, sub_index)?.multiply_ratio(element.weight, 10u128.pow(18))
         }
         // Setup to query for all at once from BAND
         else {
@@ -148,17 +147,20 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     }
 
     if band_bases.len() > 0 {
-        let ref_data = band::reference_data_bulk(deps, band_bases, band_quotes, config_r(&deps.storage).load()?.band)?;
+        let ref_data = band::reference_data_bulk(
+            deps,
+            band_bases,
+            band_quotes,
+            config_r(&deps.storage).load()?.band,
+        )?;
 
         for (reference, weight) in ref_data.iter().zip(band_weights.iter()) {
-            price += Uint512::from(reference.rate.u128()) * Uint512::from(weight.u128()) / Uint512::from(10u128.pow(18));
+            price += Uint512::from(reference.rate.u128()) * Uint512::from(weight.u128())
+                / Uint512::from(10u128.pow(18));
         }
     }
 
-    Ok(cosmwasm_std::Uint128(
-            Uint128::try_from(
-                price * Uint512::from(10u128.pow(18)) / weight_sum
-            )?.u128()
-        )
-    )
+    Ok(Uint128::try_from(
+        price * Uint512::from(10u128.pow(18)) / weight_sum,
+    )?)
 }

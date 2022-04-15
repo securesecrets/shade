@@ -3,7 +3,7 @@ name = "shade-protocol"
 version = "0.1.0"
 authors = [
   "Guy Garcia <guysebastiangarcia@gmail.com>",
-  "Jackson Swenson <jacksonswenson22@gmail.com>"
+  "Jackson Swenson <jacksonswenson22@gmail.com>",
 ]
 edition = "2018"
 
@@ -33,7 +33,7 @@ governance = ["utils"]
 mint = ["utils", "snip20"]
 mint_router = ["utils", "snip20"]
 oracle = ["snip20"]
-scrt_staking= ["utils"]
+scrt_staking = ["utils"]
 shd_staking = ["utils"]
 treasury = ["utils"]
 
@@ -45,6 +45,7 @@ debug-print = ["cosmwasm-std/debug-print"]
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
+cosmwasm-math-compat = { path = "../cosmwasm_math_compat" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
 schemars = "0.7"
@@ -53,6 +54,5 @@ snafu = { version = "0.6.3" }
 # Needed for airdrop
 rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }
 # Needed for transactions
-query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0"}
-secret-cosmwasm-math-compat = { git = "https://github.com/chris-ricketts/secret-cosmwasm-math-compat.git", branch = "main" }
+query-authentication = { git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0" }
 remain = "0.2.2"

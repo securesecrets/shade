@@ -67,7 +67,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             amount,
             msg,
             ..
-        } => handle::receive(deps, env, sender, from, amount, msg),
+        } => handle::receive(deps, env, sender, from, amount.into(), msg),
         HandleMsg::UpdateConfig { admin } => handle::try_update_config(deps, env, admin),
         // Begin unbonding of a certain amount of scrt
         HandleMsg::Unbond { validator } => handle::unbond(deps, env, validator),

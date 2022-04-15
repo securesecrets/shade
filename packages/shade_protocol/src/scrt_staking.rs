@@ -1,5 +1,6 @@
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Validator};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};

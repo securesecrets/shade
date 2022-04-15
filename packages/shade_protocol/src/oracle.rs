@@ -1,14 +1,12 @@
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::HumanAddr;
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    utils::{
-        asset::Contract,
-        generic_response::ResponseStatus,
-    },
     dex::TradingPair,
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -65,15 +63,21 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    UpdateConfig { status: ResponseStatus },
+    UpdateConfig {
+        status: ResponseStatus,
+    },
 
     RegisterPair {
         status: ResponseStatus,
         symbol: String,
         pair: TradingPair,
     },
-    UnregisterPair { status: ResponseStatus },
-    RegisterIndex { status: ResponseStatus },
+    UnregisterPair {
+        status: ResponseStatus,
+    },
+    RegisterIndex {
+        status: ResponseStatus,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

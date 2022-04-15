@@ -11,9 +11,10 @@ use crate::{
         supported_contract_r, supported_contract_w, supported_contracts_list_w,
     },
 };
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage, Uint128, WasmMsg,
+    Querier, StdError, StdResult, Storage, WasmMsg,
 };
 use secret_toolkit::snip20::{batch::SendAction, batch_send_msg, send_msg};
 use shade_protocol::governance::{
@@ -48,7 +49,7 @@ pub fn create_proposal<S: Storage, A: Api, Q: Querier>(
 
     // Create new proposal ID
     let proposal_id = total_proposals_w(&mut deps.storage).update(|mut id| {
-        id += Uint128(1);
+        id += Uint128::new(1u128);
         Ok(id)
     })?;
 
@@ -125,7 +126,7 @@ pub fn try_fund_proposal<S: Storage, A: Api, Q: Querier>(
         // Send back amount
         messages.push(send_msg(
             sender,
-            amount,
+            amount.into(),
             None,
             None,
             None,
@@ -153,14 +154,14 @@ pub fn try_fund_proposal<S: Storage, A: Api, Q: Querier>(
 
     // return the excess
     if total > config.funding_amount {
-        let excess = (total - config.funding_amount)?;
-        adjusted_amount = (adjusted_amount - excess)?;
+        let excess = total.checked_sub(config.funding_amount)?;
+        adjusted_amount = adjusted_amount.checked_sub(excess)?;
         // Set total to max
         total = config.funding_amount;
 
         messages.push(send_msg(
             sender.clone(),
-            excess,
+            excess.into(),
             None,
             None,
             None,
@@ -178,7 +179,7 @@ pub fn try_fund_proposal<S: Storage, A: Api, Q: Querier>(
                 amounts.push(SendAction {
                     recipient: sender.clone(),
                     recipient_code_hash: None,
-                    amount: adjusted_amount,
+                    amount: adjusted_amount.into(),
                     msg: None,
                     memo: None,
                 });
@@ -362,9 +363,11 @@ pub fn try_vote<S: Storage, A: Api, Q: Querier>(
         None => {}
         Some(old_votes) => {
             // Remove those votes from state
-            proposal_voting_state.yes = (proposal_voting_state.yes - old_votes.yes)?;
-            proposal_voting_state.no = (proposal_voting_state.no - old_votes.no)?;
-            proposal_voting_state.abstain = (proposal_voting_state.abstain - old_votes.abstain)?;
+            proposal_voting_state.yes = proposal_voting_state.yes.checked_sub(old_votes.yes)?;
+            proposal_voting_state.no = proposal_voting_state.no.checked_sub(old_votes.no)?;
+            proposal_voting_state.abstain = proposal_voting_state
+                .abstain
+                .checked_sub(old_votes.abstain)?;
         }
     }
 
@@ -438,7 +441,7 @@ pub fn try_trigger_admin_command<S: Storage, A: Api, Q: Querier>(
 
     // Create new proposal ID
     let proposal_id = total_proposals_w(&mut deps.storage).update(|mut id| {
-        id += Uint128(1);
+        id += Uint128::new(1u128);
         Ok(id)
     })?;
 

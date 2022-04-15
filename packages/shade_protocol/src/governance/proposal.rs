@@ -1,5 +1,6 @@
 use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::Binary;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

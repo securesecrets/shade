@@ -1,22 +1,25 @@
 #[cfg(test)]
 pub mod tests {
     use crate::handle::inverse_normalizer;
-    use cosmwasm_std::{from_binary, Binary, HumanAddr, Uint128};
+    use cosmwasm_math_compat::Uint128;
+    use cosmwasm_std::{from_binary, Binary, HumanAddr};
     use query_authentication::{
         permit::bech32_to_canonical,
         transaction::{PermitSignature, PubKey},
     };
     use shade_protocol::airdrop::account::{AddressProofMsg, AddressProofPermit, FillerMsg};
-    use shade_protocol::utils::math::{div, mult};
 
     #[test]
     fn decay_factor() {
         assert_eq!(
-            Uint128(50),
-            Uint128(100) * inverse_normalizer(100, 200, 300)
+            Uint128::new(50u128),
+            Uint128::new(100u128) * inverse_normalizer(100, 200, 300)
         );
 
-        assert_eq!(Uint128(25), Uint128(100) * inverse_normalizer(0, 75, 100));
+        assert_eq!(
+            Uint128::new(25u128),
+            Uint128::new(100u128) * inverse_normalizer(0, 75, 100)
+        );
     }
 
     const MSGTYPE: &str = "wasm/MsgExecuteContract";
@@ -33,7 +36,7 @@ pub mod tests {
                 signature: Binary::from_base64(
                     "MM1UOheGCYX0Cb3r8zVhyZyWk/qIY61yqiDP53//31cjkd7G5FfEki+JC91kBRYCnt9NlI7gjnY8ZcJauDH3FA==").unwrap(),
             },
-            account_number: Some(Uint128(3441602)),
+            account_number: Some(Uint128::new(3441602u128).into()),
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
@@ -291,7 +294,7 @@ pub mod tests {
     fn memo_deserialization() {
         let expected_memo = AddressProofMsg {
             address: HumanAddr("secret19q7h2zy8mgesy3r39el5fcm986nxqjd7cgylrz".to_string()),
-            amount: Uint128(1000000),
+            amount: Uint128::new(1000000u128),
             contract: HumanAddr("secret1sr62lehajgwhdzpmnl65u35rugjrgznh2572mv".to_string()),
             index: 10,
             key: "account-creation-permit".to_string(),
@@ -308,24 +311,24 @@ pub mod tests {
     #[test]
     fn claim_query() {
         assert_eq!(
-            Uint128(300),
-            mult(div(Uint128(345), Uint128(100)).unwrap(), Uint128(100))
+            Uint128::new(300u128),
+            (Uint128::new(345u128) / Uint128::new(100u128)) * Uint128::new(100u128)
         )
     }
 
     #[test]
     fn claim_query_odd_multiple() {
         assert_eq!(
-            Uint128(13475),
-            mult(div(Uint128(13480), Uint128(7)).unwrap(), Uint128(7))
+            Uint128::new(13475u128),
+            (Uint128::new(13480u128) / Uint128::new(7u128)) * Uint128::new(7u128)
         )
     }
 
     #[test]
     fn claim_query_under_step() {
         assert_eq!(
-            Uint128(0),
-            mult(div(Uint128(200), Uint128(1000)).unwrap(), Uint128(1000))
+            Uint128::zero(),
+            (Uint128::new(200u128) / Uint128::new(1000u128)) * Uint128::new(1000u128)
         )
     }
 }

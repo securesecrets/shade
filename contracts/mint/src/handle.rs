@@ -1,7 +1,8 @@
 use chrono::prelude::*;
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
+    HumanAddr, Querier, StdError, StdResult, Storage,
 };
 use secret_toolkit::{
     snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
@@ -30,7 +31,6 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     // Check if contract enabled
     if !config.activated {
@@ -71,12 +71,12 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     if burn_asset.fee > Uint128::zero() {
         let fee_amount = calculate_portion(input_amount, burn_asset.fee);
         // Reduce input by fee
-        input_amount = (input_amount - fee_amount)?;
+        input_amount = input_amount.checked_sub(fee_amount)?;
 
         // Fee to treasury
         messages.push(send_msg(
             config.treasury.clone(),
-            fee_amount,
+            fee_amount.into(),
             None,
             None,
             None,
@@ -112,8 +112,8 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
         // Capture to treasury
         messages.push(send_msg(
-            config.treasury,
-            capture_amount,
+            config.treasury.into(),
+            capture_amount.into(),
             None,
             None,
             None,
@@ -122,7 +122,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
             burn_asset.asset.contract.address.clone(),
         )?);
 
-        burn_amount = (input_amount - capture_amount)?;
+        burn_amount = input_amount.checked_sub(capture_amount)?;
     }
 
     if burn_amount > Uint128::zero() {
@@ -130,7 +130,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         if let Some(token_config) = &burn_asset.asset.token_config {
             if token_config.burn_enabled {
                 messages.push(burn_msg(
-                    burn_amount,
+                    burn_amount.into(),
                     None,
                     None,
                     256,
@@ -140,7 +140,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
             } else if let Some(recipient) = config.secondary_burn {
                 messages.push(send_msg(
                     recipient,
-                    burn_amount,
+                    burn_amount.into(),
                     None,
                     None,
                     None,
@@ -152,7 +152,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         } else if let Some(recipient) = config.secondary_burn {
             messages.push(send_msg(
                 recipient,
-                burn_amount,
+                burn_amount.into(),
                 None,
                 None,
                 None,
@@ -184,7 +184,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     messages.push(mint_msg(
         from,
-        amount_to_mint,
+        amount_to_mint.into(),
         None,
         None,
         256,
@@ -207,15 +207,13 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
     env: Env,
     limit: Limit,
 ) -> StdResult<Uint128> {
-
     match DateTime::parse_from_rfc3339(&limit_refresh_r(&deps.storage).load()?) {
-
         Ok(parsed) => {
             let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
             let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
             let last_refresh: DateTime<Utc> = parsed.with_timezone(&Utc);
 
-            let mut fresh_amount = Uint128(0);
+            let mut fresh_amount = Uint128::zero();
 
             let native_asset = native_asset_r(&deps.storage).load()?;
 
@@ -227,7 +225,7 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
             )?;
 
             let supply = match token_info.total_supply {
-                Some(s) => s,
+                Some(s) => s.into(),
                 None => return Err(StdError::generic_err("Could not get native token supply")),
             };
 
@@ -264,16 +262,15 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
                 }
             }
 
-            if fresh_amount > Uint128(0) {
+            if fresh_amount > Uint128::zero() {
                 let minted = minted_r(&deps.storage).load()?;
 
                 limit_w(&mut deps.storage).update(|state| {
                     // Stack with previous unminted limit
-                    fresh_amount = (state - minted)? + fresh_amount;
-                    Ok(fresh_amount)
+                    Ok(state.checked_sub(minted)? + fresh_amount)
                 })?;
                 limit_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
-                minted_w(&mut deps.storage).save(&Uint128(0))?;
+                minted_w(&mut deps.storage).save(&Uint128::zero())?;
             }
 
             Ok(fresh_amount)
@@ -350,11 +347,11 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             },
             // If capture is not set then default to 0
             capture: match capture {
-                None => Uint128(0),
+                None => Uint128::zero(),
                 Some(value) => value,
             },
             fee: match fee {
-                None => Uint128(0),
+                None => Uint128::zero(),
                 Some(value) => value,
             },
             unlimited: match unlimited {
@@ -364,7 +361,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         },
     )?;
 
-    total_burned_w(&mut deps.storage).save(contract_str.as_bytes(), &Uint128(0))?;
+    total_burned_w(&mut deps.storage).save(contract_str.as_bytes(), &Uint128::zero())?;
 
     // Add the asset to list
     asset_list_w(&mut deps.storage).update(|mut state| {
@@ -478,7 +475,7 @@ pub fn calculate_mint(
     // To avoid a mess of different types doing math
     match difference.cmp(&0) {
         Ordering::Greater => {
-            Uint128(burn_value.u128() * 10u128.pow(u32::try_from(difference).unwrap()))
+            Uint128::new(burn_value.u128() * 10u128.pow(u32::try_from(difference).unwrap()))
         }
         Ordering::Less => {
             burn_value.multiply_ratio(1u128, 10u128.pow(u32::try_from(difference.abs()).unwrap()))
@@ -494,7 +491,7 @@ pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
      * return portion = amount * portion / 10^18
      */
     if portion == Uint128::zero() {
-        return Uint128::zero()
+        return Uint128::zero();
     }
 
     amount.multiply_ratio(portion, 10u128.pow(18))
