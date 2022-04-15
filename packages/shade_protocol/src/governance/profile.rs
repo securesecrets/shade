@@ -41,7 +41,7 @@ impl Profile {
             name: data.name,
             enabled: data.enabled,
             assembly: Self::assembly_voting(storage, &id)?,
-            funding: Self::load_funding(storage, &id)?,
+            funding: Self::funding(storage, &id)?,
             token: Self::public_voting(storage, &id)?,
             cancel_deadline: data.cancel_deadline
         })
@@ -94,7 +94,7 @@ impl Profile {
         VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())
     }
 
-    pub fn load_funding<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<FundProfile>> {
+    pub fn funding<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<FundProfile>> {
         Ok(FundProfileType::load(storage, &id.to_be_bytes())?.0)
     }
 
@@ -175,8 +175,6 @@ pub struct FundProfile {
     pub required: Uint128,
     // Display voter information
     pub privacy: bool,
-    // Deposit loss on failed proposal
-    pub failed_deposit_loss: Count,
     // Deposit loss on vetoed proposal
     pub veto_deposit_loss: Count,
 }

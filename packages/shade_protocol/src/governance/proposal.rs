@@ -179,7 +179,7 @@ pub enum Status {
     // Proposal was rejected
     Rejected,
     // Proposal was vetoed
-    Vetoed,
+    Vetoed { slashed_amount: Uint128 },
     // Proposal was approved, has a set timeline before it can be canceled
     Passed {start: u64, end: u64},
     // If proposal is a msg then it was executed and was successful

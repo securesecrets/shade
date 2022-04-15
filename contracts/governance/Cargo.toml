@@ -27,7 +27,7 @@ cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["governance-impl"] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["governance-impl", "shd_staking"] }
 secret-cosmwasm-math-compat = { git = "https://github.com/chris-ricketts/secret-cosmwasm-math-compat.git", branch = "main" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }

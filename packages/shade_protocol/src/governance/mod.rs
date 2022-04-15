@@ -29,7 +29,9 @@ pub const MSG_VARIABLE: &str = "{~}";
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub treasury: HumanAddr,
+    // When public voting is enabled, a voting token is expected
     pub vote_token: Option<Contract>,
+    // When funding is enabled, a funding token is expected
     pub funding_token: Option<Contract>,
 }
 

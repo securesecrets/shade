@@ -63,6 +63,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
     }
 
     else if let Some(funding) = new_profile.funding {
+        // TODO: go more detailed with this
         profile.funding = Some(funding);
     }
 

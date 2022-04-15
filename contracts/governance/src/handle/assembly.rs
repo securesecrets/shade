@@ -63,7 +63,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         }
     }
     // Check if funding
-    else if let Some(fund_settings) = Profile::load_funding(&deps.storage, &assembly.profile)? {
+    else if let Some(fund_settings) = Profile::funding(&deps.storage, &assembly.profile)? {
         status = Status::Funding {
             amount: Uint128::zero(),
             start: env.block.time,

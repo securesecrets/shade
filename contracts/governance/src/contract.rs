@@ -46,6 +46,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     ID::set_contract(&mut deps.storage, Uint128::zero())?;
 
     // Setup public profile
+    // TODO: expect funding or voting tokens to be present if profile is being set with those enabled
     msg.public_profile.save(&mut deps.storage, &Uint128::zero())?;
     // Setup public assembly
     Assembly {
