@@ -1,5 +1,6 @@
 use colored::*;
-use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{to_binary, Binary, HumanAddr};
 use network_integration::utils::store_struct;
 use network_integration::{
     contract_helpers::{
@@ -298,12 +299,12 @@ fn run_airdrop() -> Result<()> {
     let account_c = account_address("c")?;
     let account_d = account_address("d")?;
 
-    let a_airdrop = Uint128(50000000);
-    let b_airdrop = Uint128(20000000);
-    let ab_half_airdrop = Uint128(35000000);
-    let c_airdrop = Uint128(10000000);
+    let a_airdrop = Uint128::new(50000000);
+    let b_airdrop = Uint128::new(20000000);
+    let ab_half_airdrop = Uint128::new(35000000);
+    let c_airdrop = Uint128::new(10000000);
     let total_airdrop = a_airdrop + b_airdrop + c_airdrop; // 80000000
-    let decay_amount = Uint128(10000000);
+    let decay_amount = Uint128::new(10000000);
 
     let mut reports = vec![];
 
@@ -332,12 +333,12 @@ fn run_airdrop() -> Result<()> {
         Binary(merlke_tree.root().unwrap().to_vec()),
         leaves.len() as u32,
         a_airdrop,
-        Uint128(50),
+        Uint128::new(50),
         vec![RequiredTask {
             address: HumanAddr::from(account_a.clone()),
-            percent: Uint128(50),
+            percent: Uint128::new(50),
         }],
-        Uint128(30000000),
+        Uint128::new(30000000),
         total_airdrop + decay_amount,
         &mut reports,
     )?;
@@ -345,7 +346,7 @@ fn run_airdrop() -> Result<()> {
     print_contract(&airdrop);
     print_contract(&snip);
 
-    assert_eq!(Uint128(0), get_balance(&snip, account_a.clone()));
+    assert_eq!(Uint128::zero(), get_balance(&snip, account_a.clone()));
 
     print_warning("Creating initial permits");
     /// Create AB permit
@@ -473,7 +474,7 @@ fn run_airdrop() -> Result<()> {
         let query: airdrop::QueryAnswer = query(&airdrop, msg, None)?;
 
         if let airdrop::QueryAnswer::TotalClaimed { claimed } = query {
-            assert_eq!(claimed, Uint128(30000000));
+            assert_eq!(claimed, Uint128::new(30000000));
         }
     }
 
@@ -723,7 +724,7 @@ fn run_airdrop() -> Result<()> {
 fn generate_memo(airdrop: &NetContract, address: String, index: u32) -> String {
     let mut memo_content = AddressProofMsg {
         address: HumanAddr(address),
-        amount: Uint128(1000),
+        amount: Uint128::new(1000),
         contract: HumanAddr(airdrop.address.clone()),
         index,
         key: "key".to_string(),
@@ -846,14 +847,14 @@ fn airdrop_gas_prices() -> Result<()> {
                 None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001),
-                Uint128(20),
+                Uint128::new(1001),
+                Uint128::new(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
-                    percent: Uint128(80),
+                    percent: Uint128::new(80),
                 }],
-                Uint128(30000000),
-                Uint128(7000),
+                Uint128::new(30000000),
+                Uint128::new(7000),
                 &mut vec![],
             )?;
 
@@ -876,14 +877,14 @@ fn airdrop_gas_prices() -> Result<()> {
                 None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001),
-                Uint128(20),
+                Uint128::new(1001),
+                Uint128::new(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
-                    percent: Uint128(80),
+                    percent: Uint128::new(80),
                 }],
-                Uint128(30000000),
-                Uint128(7000),
+                Uint128::new(30000000),
+                Uint128::new(7000),
                 &mut vec![],
             )?;
 
@@ -917,14 +918,14 @@ fn airdrop_gas_prices() -> Result<()> {
             None,
             Binary(merlke_tree.root().unwrap().to_vec()),
             leaves.len() as u32,
-            Uint128(1001),
-            Uint128(20),
+            Uint128::new(1001),
+            Uint128::new(20),
             vec![RequiredTask {
                 address: HumanAddr::from(account_a.clone()),
-                percent: Uint128(80),
+                percent: Uint128::new(80),
             }],
-            Uint128(30000000),
-            Uint128(7000),
+            Uint128::new(30000000),
+            Uint128::new(7000),
             &mut vec![],
         )?;
 
@@ -957,14 +958,14 @@ fn airdrop_gas_prices() -> Result<()> {
             None,
             Binary(merlke_tree.root().unwrap().to_vec()),
             leaves.len() as u32,
-            Uint128(1001),
-            Uint128(20),
+            Uint128::new(1001),
+            Uint128::new(20),
             vec![RequiredTask {
                 address: HumanAddr::from(account_a.clone()),
-                percent: Uint128(80),
+                percent: Uint128::new(80),
             }],
-            Uint128(30000000),
-            Uint128(7000),
+            Uint128::new(30000000),
+            Uint128::new(7000),
             &mut vec![],
         )?;
 
@@ -997,14 +998,14 @@ fn airdrop_gas_prices() -> Result<()> {
             None,
             Binary(merlke_tree.root().unwrap().to_vec()),
             leaves.len() as u32,
-            Uint128(1001),
-            Uint128(20),
+            Uint128::new(1001),
+            Uint128::new(20),
             vec![RequiredTask {
                 address: HumanAddr::from(account_a.clone()),
-                percent: Uint128(80),
+                percent: Uint128::new(80),
             }],
-            Uint128(30000000),
-            Uint128(7000),
+            Uint128::new(30000000),
+            Uint128::new(7000),
             &mut vec![],
         )?;
 
@@ -1038,14 +1039,14 @@ fn airdrop_gas_prices() -> Result<()> {
                 None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001),
-                Uint128(20),
+                Uint128::new(1001),
+                Uint128::new(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
-                    percent: Uint128(80),
+                    percent: Uint128::new(80),
                 }],
-                Uint128(30000000),
-                Uint128(7000),
+                Uint128::new(30000000),
+                Uint128::new(7000),
                 &mut vec![],
             )?;
 
@@ -1073,14 +1074,14 @@ fn airdrop_gas_prices() -> Result<()> {
                 None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001),
-                Uint128(20),
+                Uint128::new(1001),
+                Uint128::new(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
-                    percent: Uint128(80),
+                    percent: Uint128::new(80),
                 }],
-                Uint128(30000000),
-                Uint128(7000),
+                Uint128::new(30000000),
+                Uint128::new(7000),
                 &mut vec![],
             )?;
 
@@ -1120,14 +1121,14 @@ fn airdrop_gas_prices() -> Result<()> {
                 None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001),
-                Uint128(20),
+                Uint128::new(1001),
+                Uint128::new(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
-                    percent: Uint128(80),
+                    percent: Uint128::new(80),
                 }],
-                Uint128(30000000),
-                Uint128(7000),
+                Uint128::new(30000000),
+                Uint128::new(7000),
                 &mut vec![],
             )?;
 
@@ -1156,14 +1157,14 @@ fn airdrop_gas_prices() -> Result<()> {
                 None,
                 Binary(merlke_tree.root().unwrap().to_vec()),
                 leaves.len() as u32,
-                Uint128(1001),
-                Uint128(20),
+                Uint128::new(1001),
+                Uint128::new(20),
                 vec![RequiredTask {
                     address: HumanAddr::from(account_a.clone()),
-                    percent: Uint128(80),
+                    percent: Uint128::new(80),
                 }],
-                Uint128(30000000),
-                Uint128(7000),
+                Uint128::new(30000000),
+                Uint128::new(7000),
                 &mut vec![],
             )?;
 

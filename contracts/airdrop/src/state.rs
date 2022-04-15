@@ -1,5 +1,6 @@
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    from_binary, Api, Binary, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
+    from_binary, Api, Binary, Extern, HumanAddr, Querier, StdError, StdResult, Storage,
 };
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,

@@ -1,7 +1,8 @@
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std;
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage, Uint128,
+    Querier, StdError, StdResult, Storage,
 };
 use secret_toolkit;
 use secret_toolkit::snip20::{
@@ -62,7 +63,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                 allocation,
             } => Some(send_msg(
                 contract.address,
-                amount.multiply_ratio(allocation, 10u128.pow(18)),
+                amount.multiply_ratio(allocation, 10u128.pow(18)).into(),
                 None,
                 None,
                 None,
@@ -75,7 +76,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                 allocation,
             } => Some(send_msg(
                 contract.address,
-                amount.multiply_ratio(allocation, 10u128.pow(18)),
+                amount.multiply_ratio(allocation, 10u128.pow(18)).into(),
                 None,
                 None,
                 None,
@@ -185,14 +186,16 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
                     1,
                     full_asset.contract.code_hash.clone(),
                     full_asset.contract.address.clone(),
-                )?;
+                )?
+                .allowance
+                .into();
 
-                match amount.cmp(&cur_allowance.allowance) {
+                match amount.cmp(&cur_allowance) {
                     // decrease allowance
                     std::cmp::Ordering::Less => {
                         messages.push(decrease_allowance_msg(
                             address.clone(),
-                            (cur_allowance.allowance - amount)?,
+                            amount.checked_sub(cur_allowance)?.into(),
                             None,
                             None,
                             1,
@@ -204,7 +207,7 @@ pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
                     std::cmp::Ordering::Greater => {
                         messages.push(increase_allowance_msg(
                             address.clone(),
-                            (amount - cur_allowance.allowance)?,
+                            amount.checked_sub(cur_allowance)?.into(),
                             None,
                             None,
                             1,
@@ -241,7 +244,7 @@ pub fn one_time_allowance<S: Storage, A: Api, Q: Querier>(
 
     let messages = vec![increase_allowance_msg(
         spender,
-        amount,
+        amount.into(),
         expiration,
         None,
         1,

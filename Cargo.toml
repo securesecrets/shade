@@ -1,6 +1,7 @@
 [workspace]
 members = [
   # Packages
+  "packages/cosmwasm_math_compat",
   "packages/shade_protocol",
   "packages/secretcli",
 
@@ -10,12 +11,12 @@ members = [
 
   # Protocol contracts
   "contracts/governance",
-  "contracts/shd_staking",
   "contracts/mint",
   "contracts/mint_router",
   "contracts/treasury",
   "contracts/oracle",
   "contracts/snip20",
+  "contracts/shd_staking",
   "contracts/scrt_staking",
 
   # Mock contracts
@@ -24,11 +25,10 @@ members = [
   "contracts/mock_sienna_pair",
 
   # Tools
-  "tools/doc2book"
+  "tools/doc2book",
 ]
-exclude = [
-  "packages/network_integration",
-]
+
+exclude = ["packages/network_integration"]
 
 [profile.release]
 opt-level = 3
