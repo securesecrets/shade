@@ -17,6 +17,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
     funding_token: Option<Contract>
 ) -> StdResult<HandleResponse> {
     todo!();
+    // TODO: once a funding token / voting token is set it can never be unset
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],

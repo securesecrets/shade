@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use cosmwasm_std::{Api, Binary, Env, Extern, from_binary, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
 use cosmwasm_math_compat::Uint128;
 use secret_toolkit::snip20::send_msg;
 use secret_toolkit::utils::Query;
@@ -189,14 +189,14 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
             new_status = vote_conclusion;
         }
         Status::Funding { amount, start, end } => {
-            if end > env.block.time {
-                return Err(StdError::unauthorized())
-            }
-
             // This helps combat the possibility of the profile changing
             // before another proposal is finished
             if let Some(setting) = Profile::funding(&deps.storage, &profile)? {
-                if amount < setting.required {
+                // Check if deadline or funding limit reached
+                if amount < setting.required && end > env.block.time {
+                    return Err(StdError::unauthorized())
+                }
+                else if amount < setting.required {
                     new_status = Status::Expired
                 }
             }
@@ -308,10 +308,85 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
     msg: Option<Binary>,
     memo: Option<String>
 ) -> StdResult<HandleResponse> {
-    todo!();
-    // Check if funding was passed and if
+    // Check if sent token is the funding token
+    let funding_token: Contract;
+    if let Some(token) = Config::load(&deps.storage)?.funding_token {
+        funding_token = token.clone();
+        if env.message.sender != token.address {
+            return Err(StdError::generic_err("Must be the set funding token"))
+        }
+    }
+    else {
+        return Err(StdError::generic_err("Funding token not set"))
+    }
+
+    // Check if msg contains the proposal information
+    let proposal: Uint128;
+    if let Some(msg) = msg {
+        proposal = from_binary(&msg)?;
+    }
+    else {
+        return Err(StdError::generic_err("Msg must be set"))
+    }
+
+    // Check if proposal is in funding stage
+    // TODO: return overspent amount
+    let mut new_fund = amount;
+    let mut return_amount = Uint128::zero();
+    let status = Proposal::status(&deps.storage, &proposal)?;
+    if let Status::Funding{ amount, start, end } = status {
+        // Check if proposal funding stage is set or funding limit already set
+        if env.block.time >= end {
+            return Err(StdError::generic_err("Funding time limit reached"))
+        }
+
+
+        let assembly = &Proposal::assembly(&deps.storage, &proposal)?;
+        let profile = &Assembly::data(&deps.storage, assembly)?.profile;
+        if let Some(funding_profile) = Profile::funding(&deps.storage, &profile)? {
+            if funding_profile.required == amount {
+                return Err(StdError::generic_err("Already funded"))
+            }
+
+            new_fund += amount;
+
+            if funding_profile.required < new_fund {
+                return_amount = new_fund.checked_sub(funding_profile.required)?;
+                new_fund = funding_profile.required;
+            }
+        }
+        else {
+            return Err(StdError::generic_err("Funding profile setting was removed"))
+        }
+
+        // Store the funder information and update the current funding data
+        Proposal::save_status(&mut deps.storage, &proposal, Status::Funding {
+            amount: new_fund,
+            start,
+            end
+        })?;
+    }
+    else {
+        return Err(StdError::generic_err("Not in funding status"))
+    }
+
+    let mut messages = vec![];
+    if return_amount != Uint128::zero() {
+        // TODO: should the recipient be sender or from
+        messages.push(send_msg(
+            from,
+            return_amount.into(),
+            None,
+            None,
+            None,
+            256,
+            funding_token.code_hash,
+            funding_token.address
+        )?);
+    }
+
     Ok(HandleResponse {
-        messages: vec![],
+        messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,

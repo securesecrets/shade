@@ -34,11 +34,13 @@ pub struct Proposal {
     // Status
     pub status: Status,
 
-    //Status History
-    pub status_history: Vec<Status>
+    // Status History
+    pub status_history: Vec<Status>,
 
-    // TODO: add an optional funders list so they can be redeemed later
-    // TODO: keep a state to check if it was vetoed (to avoid funding claims)
+    // Funders
+    // Leave as an option so we can hide the data if None
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub funders: Option<Vec<(HumanAddr, Uint128)>>
 }
 
 #[cfg(feature = "governance-impl")]
@@ -61,6 +63,13 @@ impl Proposal {
 
         Self::save_status_history(storage, &id, self.status_history.clone())?;
 
+        let mut funders = vec![];
+        for (funder, funding) in self.funders.iter() {
+            funders.push(*funder);
+            Self::save_funding(storage, id, &funder, *funding)?
+        }
+        Self::save_funders(storage, id, funders)?;
+
         Ok(())
     }
 
@@ -78,6 +87,19 @@ impl Proposal {
         let status = Self::status(storage, &id)?;
         let status_history = Self::status_history(storage, &id)?;
 
+        let mut funders_arr = vec![];
+        for funder in Self::funders(storage, &id)?.iter() {
+            funders_arr.push((funder.clone(), Self::funding(storage, &id, &funder)?))
+        }
+
+        let funders: Option<Vec<(HumanAddr, Uint128)>>;
+        if funders_arr.is_empty() {
+            funders = None;
+        }
+        else {
+            funders = Some(funders_arr);
+        }
+
         Ok(Self {
             proposer: description.proposer,
             metadata: description.metadata,
@@ -86,7 +108,8 @@ impl Proposal {
             msg: msg.msg,
             assembly,
             status,
-            status_history
+            status_history,
+            funders
         })
     }
 
@@ -128,6 +151,24 @@ impl Proposal {
 
     pub fn save_status_history<S: Storage>(storage: &mut S, id: &Uint128, data: Vec<Status>) -> StdResult<()> {
         StatusHistory(data).save(storage, &id.to_be_bytes())
+    }
+
+    pub fn funders<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vec<HumanAddr>> {
+        Ok(Funders::load(storage, &id.to_be_bytes())?.0)
+    }
+
+    pub fn save_funders<S: Storage>(storage: &mut S, id: &Uint128, data: Vec<HumanAddr>) -> StdResult<()> {
+        Funders(data).save(storage, &id.to_be_bytes())
+    }
+
+    pub fn funding<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Uint128> {
+        let key = id.to_string() + "-" + user.as_str();
+        Ok(Funding::load(storage, key.as_bytes())?.0)
+    }
+
+    pub fn save_funding<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: Uint128) -> StdResult<()> {
+        let key = id.to_string() + "-" + user.as_str();
+        Funding(data).save(storage, key.as_bytes())
     }
 }
 
@@ -202,4 +243,24 @@ pub struct StatusHistory (pub Vec<Status>);
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for StatusHistory {
     const NAMESPACE: &'static [u8] = b"proposal_status_history-";
+}
+
+#[cfg(feature = "governance-impl")]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Funders (pub Vec<HumanAddr>);
+
+#[cfg(feature = "governance-impl")]
+impl BucketStorage for Funders {
+    const NAMESPACE: &'static [u8] = b"proposal_funders-";
+}
+
+#[cfg(feature = "governance-impl")]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Funding (pub Uint128);
+
+#[cfg(feature = "governance-impl")]
+impl BucketStorage for Funding {
+    const NAMESPACE: &'static [u8] = b"proposal_funding-";
 }
