@@ -74,10 +74,10 @@ pub fn current_allowances_w<S: Storage>(storage: &mut S) -> Bucket<S, HumanAddr>
     bucket(CUR_ALLOWANCES, storage)
 }
 
-pub fn managers_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Contract>> {
+pub fn managers_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<treasury::Manager>> {
     singleton_read(storage, MANAGERS)
 }
 
-pub fn managers_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Contract>> {
+pub fn managers_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<treasury::Manager>> {
     singleton(storage, MANAGERS)
 }

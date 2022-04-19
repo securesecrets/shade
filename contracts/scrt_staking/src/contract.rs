@@ -79,9 +79,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig { admin } => handle::try_update_config(deps, env, admin),
         HandleMsg::Adapter(adapter) => match adapter {
-            adapter::HandleMsg::Unbond { asset, amount } => handle::unbond(deps, env, asset, amount),
-            adapter::HandleMsg::Claim { asset } => handle::claim(deps, env, asset),
-            adapter::HandleMsg::Update { } => handle::update(deps, env),
+            adapter::SubHandleMsg::Unbond { asset, amount } => handle::unbond(deps, env, asset, amount),
+            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
+            adapter::SubHandleMsg::Update { } => handle::update(deps, env),
         },
     }
 }
@@ -94,9 +94,9 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
         QueryMsg::Adapter(adapter) => match adapter {
-            adapter::QueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
-            adapter::QueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
-            adapter::QueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
+            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
+            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
+            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
         }
     }
 }

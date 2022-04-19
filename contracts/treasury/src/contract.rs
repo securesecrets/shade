@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage,
+    StdResult, Storage, StdError,
 };
 
 use shade_protocol::treasury::{Config, HandleMsg, InitMsg, QueryMsg};
@@ -56,6 +56,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::RegisterManager { mut contract } => handle::register_manager(deps, &env, &mut contract),
         HandleMsg::Allowance { asset, allowance } => handle::allowance(deps, &env, asset, allowance),
         HandleMsg::Rebalance { asset } => handle::rebalance(deps, &env, asset),
+        HandleMsg::Unbond { asset, amount } => Err(StdError::generic_err("Not Implemented")),
     }
 }
 
@@ -66,9 +67,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
-        QueryMsg::Allowances{ asset } => to_binary(&query::allowances(deps, asset)?),
-        QueryMsg::CurrentAllowances{ asset } => to_binary(&query::current_allowances(deps, asset)?),
+        QueryMsg::Allowances { asset } => to_binary(&query::allowances(deps, asset)?),
+        QueryMsg::CurrentAllowances { asset } => to_binary(&query::current_allowances(deps, asset)?),
         QueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
-        QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, &asset, &spender)?)
+        QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, &asset, &spender)?),
+        QueryMsg::Unbonding { asset } => Err(StdError::generic_err("Not Implemented")),
     }
 }

@@ -24,23 +24,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    adapter: Contract,
-    asset: &HumanAddr,
-) -> StdResult<Uint128> {
 
-    match (adapter::QueryMsg::Balance {
-        asset: asset.clone(),
-    }.query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
-        adapter::QueryAnswer::Balance { amount } => Ok(amount),
-        _ => Err(
-            StdError::generic_err(
-                format!("Failed to query adapter balance from {}", adapter.address)
-            )
-        )
-    }
-}
 
 pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -70,7 +54,7 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn outstanding_balance<S: Storage, A: Api, Q: Querier>(
+pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
 ) -> StdResult<manager::QueryAnswer> {
@@ -79,16 +63,17 @@ pub fn outstanding_balance<S: Storage, A: Api, Q: Querier>(
 
         let allocs = allocations_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
+        let mut total_balance = Uint128::zero();
+
+        for alloc in allocs {
+            total_balance += adapter::balance_query(&deps,
+                                      &asset,
+                                      alloc.contract.clone(),
+                                      )?;
+        }
+
         return Ok(manager::QueryAnswer::Balance { 
-            amount: Uint128(
-                allocs.iter()
-                .map(|alloc|
-                    adapter_balance(&deps, 
-                                alloc.contract.clone(), 
-                                &asset,
-                    ).ok().unwrap().u128()
-                ).sum::<u128>()
-            )
+            amount: total_balance,
         });
     }
 
@@ -127,23 +112,17 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
         None => { return Err(StdError::generic_err("Not an asset")); }
     };
 
-    let mut claimable = 0u128;
+    let mut claimable = Uint128::zero();
 
     for alloc in allocations {
-        claimable += match (adapter::QueryMsg::Claimable {
-            asset: asset.clone(),
-        }.query(&deps.querier, alloc.contract.code_hash, alloc.contract.address.clone())?) {
-            adapter::QueryAnswer::Claimable { amount } => amount.u128(),
-            _ => {
-                return Err( StdError::generic_err(
-                    format!("Failed to query adapter claimable from {}", alloc.contract.address)
-                ))
-            }
-        };
+        claimable += adapter::claimable_query(&deps,
+                                  &asset,
+                                  alloc.contract.clone(),
+                                  )?;
     }
 
     Ok(manager::QueryAnswer::Claimable {
-        amount: Uint128(claimable),
+        amount: claimable,
     })
 }
 
@@ -157,22 +136,16 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
         None => { return Err(StdError::generic_err("Not an asset")); }
     };
 
-    let mut unbonding = 0u128;
+    let mut unbonding = Uint128::zero();
 
     for alloc in allocations {
-        unbonding += match (adapter::QueryMsg::Claimable {
-            asset: asset.clone(),
-        }.query(&deps.querier, alloc.contract.code_hash, alloc.contract.address.clone())?) {
-            adapter::QueryAnswer::Claimable { amount } => amount.u128(),
-            _ => {
-                return Err( StdError::generic_err(
-                    format!("Failed to query adapter claimable from {}", alloc.contract.address)
-                ))
-            }
-        };
+        unbonding += adapter::unbonding_query(&deps,
+                                  &asset,
+                                  alloc.contract.clone(),
+                                  )?;
     }
 
     Ok(manager::QueryAnswer::Unbonding {
-        amount: Uint128(unbonding),
+        amount: unbonding,
     })
 }

@@ -7,7 +7,7 @@ use secret_toolkit::{
     snip20::{
         register_receive_msg, allowance_query,
         decrease_allowance_msg, increase_allowance_msg,
-        set_viewing_key_msg,
+        set_viewing_key_msg, balance_query,
     },
     utils::Query,
 };
@@ -15,7 +15,7 @@ use secret_toolkit::{
 use shade_protocol::{
     snip20,
     treasury::{
-        Allowance, Config, Flag, Cycle, 
+        Allowance, Config, Flag, Cycle, Manager,
         HandleAnswer, QueryAnswer,
     },
     manager,
@@ -134,6 +134,7 @@ pub fn parse_utc_datetime(
             )
         )
 }
+
 pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     env: &Env,
@@ -157,97 +158,174 @@ pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
 pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    asset: Option<HumanAddr>,
+    asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
 
     let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
     let key = viewing_key_r(&deps.storage).load()?;
+    let self_address = self_address_r(&deps.storage).load()?;
     let mut messages = vec![];
 
-    // Configured for single-asset
-    let asset_list = match asset {
-        None => asset_list_r(&deps.storage).load()?,
-        Some(a) => vec![a],
-    };
-
-    for asset in asset_list {
-
-        let full_asset = assets_r(&deps.storage).load(asset.as_str().as_bytes())?;
-        let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
-
-        let mut amount_total = 0u128;
-        let mut portion_total = 0u128;
-
-        //Build metadata
-        for allowance in &allowances {
-            amount_total += allowance_amount(allowance);
-            portion_total += allowance_portion(allowance);
+    let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Not an asset"));
         }
+    };
+    let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
-        // Perform rebalance
-        for allowance in allowances {
+    let balance = balance_query(
+                    &deps.querier,
+                    self_address,
+                    key.clone(),
+                    1,
+                    full_asset.contract.code_hash.clone(),
+                    full_asset.contract.address.clone(),
+                  )?.amount;
 
-            match allowance {
+    let mut amount_total = Uint128::zero();
+    let mut portion_total = Uint128::zero();
+    let mut out_balance = Uint128::zero();
 
-                Allowance::Amount {
-                    spender,
-                    cycle,
-                    amount,
-                    last_refresh,
-                } => {
-                    let datetime = parse_utc_datetime(&last_refresh)?;
+    //Build metadata
+    for allowance in &allowances {
+        match allowance {
+            Allowance::Amount {
+                spender,
+                cycle,
+                amount,
+                last_refresh,
+            } => {
+                //TODO: Query allowance
+                //amount_total += allowance_amount(allowance);
+            },
+            Allowance::Portion {
+                spender,
+                portion,
+                last_refresh,
+            } => {
+                portion_total += allowance_portion(allowance);
+                let manager = match managers_r(&deps.storage).load()?.into_iter().find(|m| m.contract.address == *spender) {
+                    Some(manager) => manager,
+                    None => {
+                        return Err(StdError::generic_err(format!("{} is not a manager", spender)));
+                    }
+                };
+                out_balance += manager::balance_query(&deps, 
+                                     &full_asset.contract.address.clone(),
+                                     manager.contract.clone())?;
+            },
+            Allowance::Reserves { .. } => { },
+        }
+    }
 
+    // Perform rebalance
+    for allowance in allowances {
 
-                    if needs_refresh(datetime, now, cycle) {
-                        if let Some(msg) = set_allowance(&deps, env,
-                                                  spender, amount,
-                                                  key.clone(), full_asset.contract.clone())? {
-                            messages.push(msg);
+        match allowance {
+
+            Allowance::Amount {
+                spender,
+                cycle,
+                amount,
+                last_refresh,
+            } => {
+                let datetime = parse_utc_datetime(&last_refresh)?;
+
+                if needs_refresh(datetime, now, cycle) {
+                    if let Some(msg) = set_allowance(&deps, env,
+                                              spender, amount,
+                                              key.clone(), full_asset.contract.clone())? {
+                        messages.push(msg);
+                    }
+                }
+            },
+            Allowance::Portion {
+                spender,
+                portion,
+                last_refresh,
+            } => {
+                let desired_amount = (balance + out_balance).multiply_ratio(portion, 10u128.pow(18));
+
+                let datetime = parse_utc_datetime(&last_refresh)?;
+                let manager = match managers_r(&deps.storage).load()?.into_iter().find(|m| m.contract.address == spender) {
+                    Some(manager) => manager,
+                    None => {
+                        return Err(StdError::generic_err(format!("{} is not a manager", spender)));
+                    }
+                };
+
+                let cur_allowance = allowance_query(
+                    &deps.querier,
+                    env.contract.address.clone(),
+                    spender.clone(),
+                    key.clone(),
+                    1,
+                    full_asset.contract.code_hash.clone(),
+                    full_asset.contract.address.clone(),
+                )?.allowance;
+
+                let manager_balance = manager::balance_query(&deps, 
+                                     &full_asset.contract.address.clone(),
+                                     manager.contract.clone())?;
+
+                if cur_allowance + manager_balance < desired_amount {
+                    let increase = (desired_amount - (manager_balance + cur_allowance))?;
+                    messages.push(
+                        increase_allowance_msg(
+                            spender,
+                            increase,
+                            None,
+                            None,
+                            1,
+                            full_asset.contract.code_hash.clone(),
+                            full_asset.contract.address.clone(),
+                        )?
+                    );
+                }
+                else if cur_allowance + manager_balance > desired_amount {
+                    let mut decrease = ((manager_balance + cur_allowance) - desired_amount)?;
+                    if cur_allowance > Uint128::zero() {
+
+                        if cur_allowance < decrease {
+                            messages.push(
+                                decrease_allowance_msg(
+                                    spender,
+                                    cur_allowance,
+                                    None,
+                                    None,
+                                    1,
+                                    full_asset.contract.code_hash.clone(),
+                                    full_asset.contract.address.clone(),
+                                )?
+                            );
+                            decrease = (decrease - cur_allowance)?;
+                        }
+                        else {
+                            messages.push(
+                                decrease_allowance_msg(
+                                    spender,
+                                    decrease,
+                                    None,
+                                    None,
+                                    1,
+                                    full_asset.contract.code_hash.clone(),
+                                    full_asset.contract.address.clone(),
+                                )?
+                            );
+                            decrease = Uint128::zero();
                         }
                     }
-                },
-                Allowance::Portion {
-                    spender,
-                    portion,
-                    last_refresh,
-                } => {
-                    let amount = portion.multiply_ratio(1u128, portion_total);
-
-                    let datetime = parse_utc_datetime(&last_refresh)?;
-                    let managers = managers_r(&deps.storage).load()?;
-                    let balance = match managers.into_iter().find(|m| m.address == spender) {
-                        Some(m) => manager_balance(&deps, m, full_asset.contract.clone())?,
-                        None => { 
-                            return Err(StdError::generic_err("Cannot portion to a non-manager"));
-                        }
-                    };
-
-                    if balance < amount {
-                        if let Some(msg) = set_allowance(&deps, env,
-                                                  spender, amount,
-                                                  key.clone(), full_asset.contract.clone())? {
-                            messages.push(msg);
-                        }
+                    if decrease > Uint128::zero() {
+                        messages.push(
+                            manager::unbond_msg(asset.clone(), decrease, manager.contract)?
+                        );
                     }
-
-                    // TODO: Calculate manager balances/portions to determine balance
-                    // Maybe we don't need a "refresh" cycle on managers?
-                    // Force portions to be registered managers?
-                    /*
-                    if needs_refresh(datetime, now, cycle) {
-                        // convert portion -> amount
-                        if let Some(msg) = set_allowance(&deps, env,
-                                                  spender, amount,
-                                                  key, full_asset.contract)? {
-                            messages.push(msg);
-                        }
-                    }
-                    */
-                },
-                Allowance::Reserves { .. } => { },
-            }
+                }
+            },
+            Allowance::Reserves { .. } => { },
         }
     };
 
@@ -338,46 +416,6 @@ pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-/* Gets the outstanding balance of a specific asset from a specific manager
- */
-pub fn manager_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    manager: Contract,
-    asset: Contract,
-) -> StdResult<Uint128> {
-
-    let self_address = self_address_r(&deps.storage).load()?;
-    let key = viewing_key_r(&deps.storage).load()?;
-
-    Ok(allowance_query(
-        &deps.querier,
-        self_address,
-        manager.address,
-        key,
-        1,
-        asset.code_hash.clone(),
-        asset.address.clone(),
-    )?.allowance)
-}
-
-pub fn manager_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    manager: Contract,
-    asset: Contract,
-) -> StdResult<Uint128> {
-
-    match (manager::QueryMsg::Balance {
-        asset: asset.address
-    }.query(&deps.querier, manager.code_hash, manager.address.clone())?) {
-        manager::QueryAnswer::Balance { amount } => Ok(amount),
-        _ => Err(
-            StdError::generic_err(
-                format!("Failed to query manager balance from {}", manager.address)
-            )
-        )
-    }
-}
-
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -445,10 +483,13 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
     }
 
     managers_w(&mut deps.storage).update(|mut managers| {
-        if managers.contains(&contract) {
+        if managers.iter().map(|m| m.contract.clone()).collect::<Vec<_>>().contains(&contract) {
             return Err(StdError::generic_err("Manager already registered"));
         }
-        managers.push(contract.clone());
+        managers.push(Manager {
+            contract: contract.clone(),
+            balance: Uint128::zero(),
+        });
         Ok(managers)
     })?;
 
@@ -471,19 +512,19 @@ fn allowance_address(allowance: &Allowance) -> Option<&HumanAddr> {
 }
 
 // extract allowanceaiton portion
-fn allowance_portion(allowance: &Allowance) -> u128 {
+fn allowance_portion(allowance: &Allowance) -> Uint128 {
     match allowance {
-        Allowance::Reserves { portion } => portion.u128(),
-        Allowance::Portion { portion, .. } => portion.u128(),
-        Allowance::Amount { .. } => 0,
+        Allowance::Reserves { portion } => *portion,
+        Allowance::Portion { portion, .. } => *portion,
+        Allowance::Amount { .. } => Uint128::zero(),
     }
 }
 
-fn allowance_amount(allowance: &Allowance) -> u128 {
+fn allowance_amount(allowance: &Allowance) -> Uint128 {
     match allowance {
-        Allowance::Amount { amount, .. } => amount.u128(),
+        Allowance::Amount { amount, .. } => *amount,
         Allowance::Portion { .. }
-        | Allowance::Reserves { .. } => 0,
+        | Allowance::Reserves { .. } => Uint128::zero(),
     }
 }
 
@@ -509,7 +550,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         Allowance::Portion {
             ref spender, ..
         } => {
-            if managers.into_iter().find(|m| m.address == *spender).is_none() {
+            if managers.into_iter().find(|m| m.contract.address == *spender).is_none() {
                 return Err(StdError::generic_err("Portion allowances to managers only"));
             }
         }
@@ -534,7 +575,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
                 if stale_allowance.is_none() && allowance_address(a) == allow_address {
                     (Some(idx), cur_allowances)
                 } else {
-                    (stale_allowance, cur_allowances + allowance_portion(a))
+                    (stale_allowance, cur_allowances + allowance_portion(a).u128())
                 }
             });
 
@@ -542,7 +583,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         apps.remove(old_allowance_idx);
     }
 
-    let new_allowance_portion = allowance_portion(&allowance);
+    let new_allowance_portion = allowance_portion(&allowance).u128();
 
     if cur_allowance_portion + new_allowance_portion > ONE_HUNDRED_PERCENT {
         return Err(StdError::generic_err(

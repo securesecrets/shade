@@ -1,10 +1,12 @@
 use cosmwasm_std;
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
+    from_binary, to_binary, Api, Binary, CosmosMsg, WasmMsg, Env, Extern, HandleResponse, HumanAddr,
     Querier, StdError, StdResult, Storage, Uint128,
 };
 use secret_toolkit::{
-    utils::Query,
+    utils::{
+        Query, HandleCallback,
+    },
     snip20::{
         allowance_query, decrease_allowance_msg,
         increase_allowance_msg, register_receive_msg,
@@ -17,6 +19,7 @@ use secret_toolkit::{
 use shade_protocol::{
     snip20,
     adapter,
+    manager,
     finance_manager::{
         Allocation, AllocationMeta,
         AllocationType, Config, 
@@ -193,7 +196,7 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
         } else {
             0
         }
-    }).sum::<u128>()) >= ONE_HUNDRED_PERCENT {
+    }).sum::<u128>()) > ONE_HUNDRED_PERCENT {
         return Err(StdError::generic_err(
             "Invalid allocation total exceeding 100%",
         ));
@@ -210,20 +213,38 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-/*
-pub fn refresh_adapter_balances<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    adapters: Vec<AllocationMeta>,
-    asset: Contract,
-) -> StdResult<Vec<AllocationMeta>> {
+pub fn claim<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    asset: HumanAddr,
+) -> StdResult<HandleResponse> {
 
-    Ok(adapters.iter().map(|mut a| {
-        let mut new_a = a.clone();
-        new_a.balance = adapter_balance(deps, a.contract.clone(), &asset).ok().unwrap();
-        new_a
-    }).collect())
+    if assets_r(&deps.storage).may_load(asset.as_str().as_bytes())?.is_none() {
+        return Err(StdError::generic_err("Not an asset"));
+    }
+
+    let mut total_claimable = Uint128::zero();
+    let mut messages = vec![];
+
+    for alloc in allocations_r(&deps.storage).load(asset.to_string().as_bytes())? {
+
+        let claim = adapter::claimable_query(deps, &asset.clone(), alloc.contract.clone())?;
+
+        if claim > Uint128::zero() {
+            total_claimable += claim;
+            messages.push(adapter::claim_msg(asset.clone(), alloc.contract)?);
+        }
+    }
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&manager::HandleAnswer::Claim {
+            status: ResponseStatus::Success,
+            amount: total_claimable,
+        })?),
+    })
 }
-*/
 
 pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -232,8 +253,30 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     let config = config_r(&deps.storage).load()?;
+
     let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
-    let allocations = allocations_r(&mut deps.storage).load(asset.to_string().as_bytes())?;
+
+    let mut allocations = allocations_r(&mut deps.storage).load(asset.to_string().as_bytes())?;
+
+    // Build metadata
+    let mut amount_total = Uint128::zero();
+    let mut portion_total = Uint128::zero();
+
+    for i in 0..allocations.len() {
+        match allocations[i].alloc_type {
+            AllocationType::Amount => amount_total += allocations[i].balance,
+            AllocationType::Portion => {
+                allocations[i].balance = adapter::balance_query(deps, 
+                                                   &full_asset.contract.address,
+                                                   allocations[i].contract.clone())?;
+                portion_total += allocations[i].balance;
+            }
+        };
+    }
+
+    // Batch send_from actions
+    let mut send_actions = vec![];
+    let mut messages = vec![];
 
     let mut allowance = allowance_query(
         &deps.querier,
@@ -245,88 +288,115 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         full_asset.contract.address.clone(),
     )?.allowance;
 
-    // For refreshed allocation data
-    let mut fresh_allocs = allocations.to_vec();
-    // Build metadata
-    let mut amount_total = Uint128::zero();
-    let mut portion_total = Uint128::zero();
+    let total = portion_total + allowance;
 
-    for mut a in fresh_allocs.clone() {
-        match a.alloc_type {
-            AllocationType::Amount => amount_total += a.balance,
-            AllocationType::Portion => {
-                a.balance = query::adapter_balance(deps, a.contract, 
-                                            &full_asset.contract.address)?;
-                portion_total += a.balance;
-            }
-        };
-    }
+    let mut total_unbond = Uint128::zero();
+    let mut total_input = Uint128::zero();
 
-    let alloc_total = amount_total + portion_total;
-
-    // To be spent in order to fill amounts before unbonding
-    //let mut available = cur_allowance.allowance;
-    // Batch send_from actions
-    let mut actions = vec![];
-
-    for a in fresh_allocs {
-        match a.alloc_type {
+    for adapter in allocations.clone() {
+        match adapter.alloc_type {
             // TODO Separate handle for amount refresh
             AllocationType::Amount => { },
             AllocationType::Portion => {
 
-                let amount = a.amount.multiply_ratio(
-                    portion_total,
-                    1u128.pow(18)
+                let desired_amount = adapter.amount.multiply_ratio(
+                    total, 10u128.pow(18)
                 );
-                // Enough allowance to cover
-                if amount <= allowance {
-                    actions.push(
-                        SendFromAction {
+
+                // .05 || 5%
+                //let REBALANCE_THRESHOLD = Uint128(5u128 * 10u128.pow(16));
+
+                // Overfunded
+                if adapter.balance > desired_amount {
+                    // Need to unbond
+                    let unbond_amount = (adapter.balance - desired_amount)?;
+                    /*
+                    return Err(StdError::generic_err(
+                        format!("{} is OverFunded, desired {} of total {}, portion: {}, unbond: {}",
+                                adapter.balance, desired_amount, 
+                                total, adapter.amount, 
+                                unbond_amount)
+                    ));
+                    */
+
+                    // TODO: Check claimable and claim first
+
+                    /*
+                    if unbond_amount.multiply_ratio(10u128.pow(18), desired_amount) > REBALANCE_THRESHOLD {
+                    }
+                    */
+                    total_unbond += unbond_amount;
+
+                    messages.push(
+                        adapter::unbond_msg(
+                            asset.clone(),
+                            unbond_amount, 
+                            adapter.contract
+                        )?);
+                }
+                // Underfunded
+                else if adapter.balance < desired_amount {
+                    // Need to add more from allowance
+                    let input_amount = (desired_amount - adapter.balance)?;
+
+                    /*
+                    if input_amount.multiply_ratio(10u128.pow(18), desired_amount) > REBALANCE_THRESHOLD {
+                    }
+                    */
+
+
+                    if input_amount <= allowance {
+                        total_input += input_amount;
+                        send_actions.push(
+                            SendFromAction {
+                                owner: config.treasury.clone(),
+                                recipient: adapter.contract.address,
+                                recipient_code_hash: Some(adapter.contract.code_hash),
+                                amount: input_amount,
+                                msg: None,
+                                memo: None,
+                            }
+                        );
+                        allowance = (allowance - input_amount)?;
+                    }
+                    else {
+                        total_input += allowance;
+                        // Send all allowance
+                        send_actions.push(SendFromAction {
                             owner: config.treasury.clone(),
-                            recipient: a.contract.address,
-                            recipient_code_hash: None,
-                            amount,
+                            recipient: adapter.contract.address,
+                            recipient_code_hash: Some(adapter.contract.code_hash),
+                            amount: allowance,
                             msg: None,
                             memo: None,
-                        }
-                    );
-                    allowance = (allowance - amount)?;
-                }
-                // Need to unbond from somewhere
-                else {
-                    // Send all available
-                    actions.push(SendFromAction {
-                        owner: config.treasury.clone(),
-                        recipient: a.contract.address,
-                        recipient_code_hash: None,
-                        amount: allowance,
-                        msg: None,
-                        memo: None,
-                    });
+                        });
 
-                    let unbond_amount = (amount - allowance)?;
-                    allowance = Uint128::zero();
-
-                    //TODO: unbond(unbond_amount) from adapters
+                        allowance = Uint128::zero();
+                    }
                 }
             },
         };
     }
 
-    Ok(HandleResponse {
-        messages: vec![
+    if !send_actions.is_empty() {
+        messages.push(
             batch_send_from_msg(
-                actions,
+                send_actions,
                 None,
                 1,
                 full_asset.contract.code_hash.clone(),
                 full_asset.contract.address.clone(),
             )?
-        ],
+        );
+    }
+
+    Ok(HandleResponse {
+        messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::Rebalance {
+        data: Some(to_binary(&manager::HandleAnswer::Rebalance {
             status: ResponseStatus::Success,
+            unbond: total_unbond,
+            input: total_input,
         })?),
     })
 }

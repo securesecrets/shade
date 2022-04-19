@@ -54,7 +54,7 @@ pub enum HandleMsg {
     UpdateConfig {
         admin: Option<HumanAddr>,
     },
-    Adapter(adapter::HandleMsg),
+    Adapter(adapter::SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -89,7 +89,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Delegations {},
-    Adapter(adapter::QueryMsg),
+    Adapter(adapter::SubQueryMsg),
 }
 
 impl Query for QueryMsg {

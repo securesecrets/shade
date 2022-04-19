@@ -3,7 +3,7 @@ use cosmwasm_std::{
     Querier, RewardsResponse, StdError, StdResult, Storage, Uint128,
 };
 
-use shade_protocol::{adapter, scrt_staking::QueryAnswer};
+use shade_protocol::{adapter, scrt_staking::QueryAnswer, utils::asset::scrt_balance};
 
 use crate::state::{config_r, self_address_r, unbonding_r};
 
@@ -64,20 +64,14 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
     }
 
-    let scrt_balance: BalanceResponse = deps.querier.query(
-        &BankQuery::Balance {
-            address: self_address_r(&deps.storage).load()?,
-            denom: "uscrt".to_string(),
-        }
-        .into(),
-    )?;
-
-    let delegated = delegations(deps)?.into_iter()
+    let delegated = Uint128(delegations(deps)?.into_iter()
                         .map(|d| d.amount.amount.u128())
-                        .sum::<u128>();
+                        .sum::<u128>());
+
+    let rewards = rewards(deps)?;
 
     Ok(adapter::QueryAnswer::Balance {
-        amount: rewards(deps)? + scrt_balance.amount.amount + Uint128(delegated),
+        amount: delegated + rewards,
     })
 }
 

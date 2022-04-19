@@ -72,7 +72,7 @@ pub enum HandleMsg {
         asset: HumanAddr,
         allocation: Allocation,
     },
-    Manager(manager::HandleMsg),
+    Manager(manager::SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -101,7 +101,7 @@ pub enum QueryMsg {
     Assets {},
     Allocations { asset: HumanAddr },
     PendingAllowance { asset: HumanAddr },
-    Manager(manager::QueryMsg),
+    Manager(manager::SubQueryMsg),
 }
 
 impl Query for QueryMsg {

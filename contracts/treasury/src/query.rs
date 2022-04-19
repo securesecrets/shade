@@ -1,10 +1,10 @@
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
 use secret_toolkit::{snip20::allowance_query, utils::Query};
-use shade_protocol::{snip20, treasury};
+use shade_protocol::{snip20, treasury, manager};
 
 use crate::state::{
     allowances_r, asset_list_r, assets_r, config_r, self_address_r,
-    viewing_key_r,
+    viewing_key_r, managers_r,
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
@@ -44,11 +44,28 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     }
 }
 
+pub fn unbonding<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: &HumanAddr,
+) -> StdResult<treasury::QueryAnswer> {
+    //TODO: restrict to admin?
+
+    let mut unbonding = Uint128::zero();
+    for manager in managers_r(&deps.storage).load()? {
+        unbonding += manager::unbonding_query(&deps, asset, manager.contract)?;
+    }
+
+    Ok(treasury::QueryAnswer::Unbonding {
+        amount: unbonding
+    })
+}
+
 pub fn allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
     spender: &HumanAddr,
 ) -> StdResult<treasury::QueryAnswer> {
+
     let self_address = self_address_r(&deps.storage).load()?;
     let key = viewing_key_r(&deps.storage).load()?;
 

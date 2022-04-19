@@ -1,5 +1,5 @@
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_std::{Binary, HumanAddr, Uint128};
+use cosmwasm_std::{Binary, HumanAddr, Uint128, StdResult};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
@@ -52,11 +52,17 @@ pub enum Allowance {
     Portion {
         //nick: Option<String>,
         spender: HumanAddr,
-        // Unlike others, this is a direct number of uTKN to allow monthly
-        //cycle: Cycle,
         portion: Uint128,
+        //TODO: This needs to be omitted from the handle msg
         last_refresh: String,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Manager {
+    pub contract: Contract,
+    pub balance: Uint128,
 }
 
 // Flag to be sent with funds
@@ -104,8 +110,13 @@ pub enum HandleMsg {
         allowance: Allowance,
     },
     Rebalance {
-        asset: Option<HumanAddr>,
+        asset: HumanAddr,
     },
+    // From account holders only
+    Unbond {
+        asset: HumanAddr,
+        amount: Uint128,
+    }
 }
 
 impl HandleCallback for HandleMsg {
@@ -124,6 +135,7 @@ pub enum HandleAnswer {
     RegisterAsset { status: ResponseStatus },
     Allowance { status: ResponseStatus },
     Rebalance { status: ResponseStatus },
+    Unbond { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -141,6 +153,7 @@ pub enum QueryMsg {
         asset: HumanAddr,
         spender: HumanAddr,
     },
+    Unbonding { asset: HumanAddr },
     // TODO: Implement, asset could be optional to do all (doesn't scale well)
     // NeedsRefresh { asset: HumanAddr },
     // CanRebalance { asset: HumanAddr },
@@ -159,4 +172,5 @@ pub enum QueryAnswer {
     CurrentAllowances { allowances: Vec<Allowance> },
     Allowance { allowance: Uint128 },
     Balance { amount: Uint128 },
+    Unbonding { amount: Uint128 },
 }

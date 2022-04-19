@@ -69,12 +69,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::allocate(deps, &env, asset, allocation),
 
         HandleMsg::Manager(m) => match m {
-            manager::HandleMsg::Unbond {
+            manager::SubHandleMsg::Unbond {
                 asset,
                 amount
             } => Err(StdError::generic_err("Not Implemented")),
-            manager::HandleMsg::Claim {} => Err(StdError::generic_err("Not Implemented")),
-            manager::HandleMsg::Rebalance {
+            manager::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),
+            manager::SubHandleMsg::Rebalance {
                 asset
             } => handle::rebalance(deps, &env, asset),
         }
@@ -97,11 +97,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         } => to_binary(&query::pending_allowance(deps, asset)?),
 
         QueryMsg::Manager(m) => match m {
-            manager::QueryMsg::Balance {
+            manager::SubQueryMsg::Balance {
                 asset
-            } => to_binary(&query::outstanding_balance(deps, &asset)?),
-            manager::QueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
-            manager::QueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
+            } => to_binary(&query::balance(deps, &asset)?),
+            manager::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
+            manager::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
         }
     }
 
