@@ -19,7 +19,6 @@ use secret_toolkit::{
 use shade_protocol::{
     snip20,
     adapter,
-    manager,
     finance_manager::{
         Allocation, AllocationMeta,
         AllocationType, Config, 
@@ -39,6 +38,7 @@ use crate::{
     },
 };
 use chrono::prelude::*;
+use std::convert::TryFrom;
 
 /*
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -239,14 +239,14 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&manager::HandleAnswer::Claim {
+        data: Some(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,
             amount: total_claimable,
         })?),
     })
 }
 
-pub fn rebalance<S: Storage, A: Api, Q: Querier>(
+pub fn update<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     asset: HumanAddr,
@@ -306,44 +306,9 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 // .05 || 5%
                 //let REBALANCE_THRESHOLD = Uint128(5u128 * 10u128.pow(16));
 
-                // Overfunded
-                if adapter.balance > desired_amount {
-                    // Need to unbond
-                    let unbond_amount = (adapter.balance - desired_amount)?;
-                    /*
-                    return Err(StdError::generic_err(
-                        format!("{} is OverFunded, desired {} of total {}, portion: {}, unbond: {}",
-                                adapter.balance, desired_amount, 
-                                total, adapter.amount, 
-                                unbond_amount)
-                    ));
-                    */
-
-                    // TODO: Check claimable and claim first
-
-                    /*
-                    if unbond_amount.multiply_ratio(10u128.pow(18), desired_amount) > REBALANCE_THRESHOLD {
-                    }
-                    */
-                    total_unbond += unbond_amount;
-
-                    messages.push(
-                        adapter::unbond_msg(
-                            asset.clone(),
-                            unbond_amount, 
-                            adapter.contract
-                        )?);
-                }
-                // Underfunded
-                else if adapter.balance < desired_amount {
+                if adapter.balance < desired_amount {
                     // Need to add more from allowance
                     let input_amount = (desired_amount - adapter.balance)?;
-
-                    /*
-                    if input_amount.multiply_ratio(10u128.pow(18), desired_amount) > REBALANCE_THRESHOLD {
-                    }
-                    */
-
 
                     if input_amount <= allowance {
                         total_input += input_amount;
@@ -372,6 +337,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                         });
 
                         allowance = Uint128::zero();
+                        break;
                     }
                 }
             },
@@ -393,10 +359,100 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&manager::HandleAnswer::Rebalance {
+        data: Some(to_binary(&adapter::HandleAnswer::Update {
             status: ResponseStatus::Success,
-            unbond: total_unbond,
-            input: total_input,
+        })?),
+    })
+}
+
+pub fn unbond<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    asset: HumanAddr,
+    amount: Uint128,
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
+
+    let mut allocations = allocations_r(&mut deps.storage).load(asset.to_string().as_bytes())?;
+
+    // Build metadata
+    let mut amount_total = Uint128::zero();
+    let mut portion_total = Uint128::zero();
+
+    for i in 0..allocations.len() {
+        match allocations[i].alloc_type {
+            AllocationType::Amount => amount_total += allocations[i].balance,
+            AllocationType::Portion => {
+                allocations[i].balance = adapter::balance_query(deps, 
+                                                   &full_asset.contract.address,
+                                                   allocations[i].contract.clone())?;
+                portion_total += allocations[i].balance;
+            }
+        };
+    }
+
+    // Batch send_from actions
+    let mut messages = vec![];
+
+    let mut allowance = allowance_query(
+        &deps.querier,
+        config.treasury.clone(),
+        env.contract.address.clone(),
+        viewing_key_r(&deps.storage).load()?,
+        1,
+        full_asset.contract.code_hash.clone(),
+        full_asset.contract.address.clone(),
+    )?.allowance;
+
+    let total = portion_total + allowance;
+
+    let mut total_unbond = Uint128::zero();
+
+    // How many adapters to unbond from
+    let mut unbond_count = 3;
+    if unbond_count > allocations.len() {
+        unbond_count = allocations.len();
+    }
+
+    let mut unbond_amount = amount.multiply_ratio(1u128, u128::try_from(unbond_count).unwrap());
+    if unbond_amount.multiply_ratio(u128::try_from(unbond_count).unwrap(), 1u128) < amount {
+        unbond_amount += Uint128(1);
+    }
+
+    for i in 0..unbond_count {
+        match allocations[i].alloc_type {
+            // TODO Separate handle for amount refresh
+            AllocationType::Amount => { },
+            AllocationType::Portion => {
+
+                let desired_amount = allocations[i].amount.multiply_ratio(
+                    total, 10u128.pow(18)
+                );
+
+                //return Err(StdError::generic_err(format!("bal {}, desired {}, unbonding {}", allocations[i].balance, desired_amount, unbond_amount)));
+
+                messages.push(
+                    adapter::unbond_msg(
+                        asset.clone(),
+                        unbond_amount, 
+                        allocations[i].contract.clone()
+                    )?
+                );
+
+            },
+        };
+    }
+
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: total_unbond
         })?),
     })
 }

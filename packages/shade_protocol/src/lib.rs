@@ -45,7 +45,8 @@ pub mod staking;
 pub mod treasury;
 #[cfg(feature = "adapter")]
 pub mod adapter;
-#[cfg(feature = "manager")]
-pub mod manager;
+
+//#[cfg(feature = "manager")]
+//pub mod manager;
 #[cfg(feature = "finance_manager")]
 pub mod finance_manager;

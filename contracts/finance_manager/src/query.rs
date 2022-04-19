@@ -7,7 +7,6 @@ use shade_protocol::{
     snip20,
     finance_manager,
     adapter,
-    manager,
     utils::asset::Contract,
 };
 
@@ -57,7 +56,7 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-) -> StdResult<manager::QueryAnswer> {
+) -> StdResult<adapter::QueryAnswer> {
 
     if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
 
@@ -72,7 +71,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
                                       )?;
         }
 
-        return Ok(manager::QueryAnswer::Balance { 
+        return Ok(adapter::QueryAnswer::Balance { 
             amount: total_balance,
         });
     }
@@ -105,7 +104,7 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
-) -> StdResult<manager::QueryAnswer> {
+) -> StdResult<adapter::QueryAnswer> {
 
     let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => a,
@@ -121,7 +120,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
                                   )?;
     }
 
-    Ok(manager::QueryAnswer::Claimable {
+    Ok(adapter::QueryAnswer::Claimable {
         amount: claimable,
     })
 }
@@ -129,7 +128,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
-) -> StdResult<manager::QueryAnswer> {
+) -> StdResult<adapter::QueryAnswer> {
 
     let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => a,
@@ -145,7 +144,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
                                   )?;
     }
 
-    Ok(manager::QueryAnswer::Unbonding {
+    Ok(adapter::QueryAnswer::Unbonding {
         amount: unbonding,
     })
 }

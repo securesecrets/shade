@@ -1,5 +1,5 @@
 use crate::{
-    manager,
+    adapter,
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
@@ -72,7 +72,7 @@ pub enum HandleMsg {
         asset: HumanAddr,
         allocation: Allocation,
     },
-    Manager(manager::SubHandleMsg),
+    Adapter(adapter::SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -91,7 +91,7 @@ pub enum HandleAnswer {
     RegisterAsset { status: ResponseStatus },
     Allocate { status: ResponseStatus },
     Rebalance { status: ResponseStatus },
-    Manager(manager::HandleAnswer),
+    Adapter(adapter::HandleAnswer),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -101,7 +101,7 @@ pub enum QueryMsg {
     Assets {},
     Allocations { asset: HumanAddr },
     PendingAllowance { asset: HumanAddr },
-    Manager(manager::SubQueryMsg),
+    Adapter(adapter::SubQueryMsg),
 }
 
 impl Query for QueryMsg {
@@ -115,5 +115,5 @@ pub enum QueryAnswer {
     Assets { assets: Vec<HumanAddr> },
     Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
-    Manager(manager::QueryAnswer),
+    Adapter(adapter::QueryAnswer),
 }

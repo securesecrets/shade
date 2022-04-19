@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 
 use shade_protocol::{
-    manager,
+    adapter,
     finance_manager::{
         Config, HandleMsg, InitMsg, QueryMsg
     },
@@ -68,15 +68,15 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             allocation
         } => handle::allocate(deps, &env, asset, allocation),
 
-        HandleMsg::Manager(m) => match m {
-            manager::SubHandleMsg::Unbond {
+        HandleMsg::Adapter(a) => match a {
+            adapter::SubHandleMsg::Unbond {
                 asset,
                 amount
-            } => Err(StdError::generic_err("Not Implemented")),
-            manager::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),
-            manager::SubHandleMsg::Rebalance {
+            } => handle::unbond(deps, &env, asset, amount),
+            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),
+            adapter::SubHandleMsg::Update {
                 asset
-            } => handle::rebalance(deps, &env, asset),
+            } => handle::update(deps, &env, asset),
         }
     }
 }
@@ -96,12 +96,12 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             asset
         } => to_binary(&query::pending_allowance(deps, asset)?),
 
-        QueryMsg::Manager(m) => match m {
-            manager::SubQueryMsg::Balance {
+        QueryMsg::Adapter(a) => match a {
+            adapter::SubQueryMsg::Balance {
                 asset
             } => to_binary(&query::balance(deps, &asset)?),
-            manager::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
-            manager::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
+            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
+            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
         }
     }
 

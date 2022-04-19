@@ -81,7 +81,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => handle::unbond(deps, env, asset, amount),
             adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
-            adapter::SubHandleMsg::Update { } => handle::update(deps, env),
+            adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, asset),
         },
     }
 }

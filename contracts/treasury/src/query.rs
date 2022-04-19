@@ -1,6 +1,6 @@
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
 use secret_toolkit::{snip20::allowance_query, utils::Query};
-use shade_protocol::{snip20, treasury, manager};
+use shade_protocol::{snip20, treasury, adapter};
 
 use crate::state::{
     allowances_r, asset_list_r, assets_r, config_r, self_address_r,
@@ -23,19 +23,21 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
     match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => {
-            match (snip20::QueryMsg::Balance {
+            let mut balance = match (snip20::QueryMsg::Balance {
                 address: self_address_r(&deps.storage).load()?,
                 key: viewing_key_r(&deps.storage).load()?,
             }.query(&deps.querier, a.contract.code_hash, a.contract.address)?) {
 
-                snip20::QueryAnswer::Balance { amount } => {
-                    Ok(treasury::QueryAnswer::Balance { amount })
+                snip20::QueryAnswer::Balance { amount } => amount,
+                _ => {
+                    return Err(StdError::generic_err("Unexpected Snip20 Response"));
                 }
-                _ => Err(StdError::GenericErr {
-                    msg: "Unexpected Snip20 Response".to_string(),
-                    backtrace: None,
-                }),
+            };
+
+            for manager in managers_r(&deps.storage).load()? {
+                balance += adapter::balance_query(&deps, asset, manager.contract)?;
             }
+            Ok(treasury::QueryAnswer::Balance { amount: balance })
         }
         None => Err(StdError::NotFound {
             kind: asset.to_string(),
@@ -52,7 +54,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 
     let mut unbonding = Uint128::zero();
     for manager in managers_r(&deps.storage).load()? {
-        unbonding += manager::unbonding_query(&deps, asset, manager.contract)?;
+        unbonding += adapter::unbonding_query(&deps, asset, manager.contract)?;
     }
 
     Ok(treasury::QueryAnswer::Unbonding {

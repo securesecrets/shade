@@ -107,11 +107,16 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 pub fn update<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
+    asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
 
     let mut messages = vec![];
 
     let config = config_r(&deps.storage).load()?;
+
+    if asset != config.sscrt.address {
+        return Err(StdError::generic_err("Unrecognized Asset"));
+    }
 
     let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
 
@@ -220,7 +225,10 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         available = Uint128::zero();
     }
 
-    let mut unbond_amount = (amount - (scrt_balance + rewards))?;
+    if amount > scrt_balance + rewards {
+        return Err(StdError::generic_err(format!("Cannot unbond more than is available: {}", scrt_balance + rewards)));
+    }
+    let mut unbond_amount = amount;
 
     while unbond_amount > Uint128::zero() {
 
@@ -343,7 +351,7 @@ pub fn wrap_and_send<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    _deps: &mut Extern<S, A, Q>,
     amount: Uint128,
     validator: Validator,
     token: Contract,
@@ -386,7 +394,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     }
 
     let mut messages = vec![];
-    let address = self_address_r(&deps.storage).load()?;
+    //let address = self_address_r(&deps.storage).load()?;
 
     let unbond_amount = unbonding_r(&deps.storage).load()?;
     let mut claim_amount = Uint128::zero();

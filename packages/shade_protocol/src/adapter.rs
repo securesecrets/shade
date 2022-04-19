@@ -28,7 +28,7 @@ pub enum SubHandleMsg {
     Unbond { asset: HumanAddr, amount: Uint128 },
     Claim { asset: HumanAddr },
     // Maintenance trigger e.g. claim rewards and restake
-    Update { },
+    Update { asset: HumanAddr },
 }
 
 impl HandleCallback for SubHandleMsg {
@@ -54,7 +54,7 @@ pub enum HandleAnswer {
     },
     Unbond {
         status: ResponseStatus,
-        validator: Validator,
+        amount: Uint128,
     },
     Claim {
         status: ResponseStatus,
@@ -126,7 +126,7 @@ pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
     }).query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
         QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
-            format!("Failed to query adapter claimable from {}", adapter.address)
+            format!("Failed to query adapter unbonding from {}", adapter.address)
         ))
     }
 }
@@ -173,6 +173,21 @@ pub fn unbond_msg(
             SubHandleMsg::Unbond{ 
                 asset,
                 amount
+            }).to_cosmos_msg(
+                adapter.code_hash,
+                adapter.address,
+                None
+            )?
+    )
+}
+
+pub fn update_msg(
+    asset: HumanAddr,
+    adapter: Contract,
+) -> StdResult<CosmosMsg> {
+    Ok(HandleMsg::Adapter(
+            SubHandleMsg::Update {
+                asset
             }).to_cosmos_msg(
                 adapter.code_hash,
                 adapter.address,

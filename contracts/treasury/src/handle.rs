@@ -18,7 +18,7 @@ use shade_protocol::{
         Allowance, Config, Flag, Cycle, Manager,
         HandleAnswer, QueryAnswer,
     },
-    manager,
+    adapter,
     utils::{
         asset::Contract, 
         generic_response::ResponseStatus
@@ -207,15 +207,15 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 last_refresh,
             } => {
                 portion_total += allowance_portion(allowance);
-                let manager = match managers_r(&deps.storage).load()?.into_iter().find(|m| m.contract.address == *spender) {
-                    Some(manager) => manager,
+                let adapter = match managers_r(&deps.storage).load()?.into_iter().find(|m| m.contract.address == *spender) {
+                    Some(adapter) => adapter,
                     None => {
-                        return Err(StdError::generic_err(format!("{} is not a manager", spender)));
+                        return Err(StdError::generic_err(format!("{} is not a adapter", spender)));
                     }
                 };
-                out_balance += manager::balance_query(&deps, 
+                out_balance += adapter::balance_query(&deps, 
                                      &full_asset.contract.address.clone(),
-                                     manager.contract.clone())?;
+                                     adapter.contract.clone())?;
             },
             Allowance::Reserves { .. } => { },
         }
@@ -250,10 +250,10 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 let desired_amount = (balance + out_balance).multiply_ratio(portion, 10u128.pow(18));
 
                 let datetime = parse_utc_datetime(&last_refresh)?;
-                let manager = match managers_r(&deps.storage).load()?.into_iter().find(|m| m.contract.address == spender) {
-                    Some(manager) => manager,
+                let adapter = match managers_r(&deps.storage).load()?.into_iter().find(|m| m.contract.address == spender) {
+                    Some(adapter) => adapter,
                     None => {
-                        return Err(StdError::generic_err(format!("{} is not a manager", spender)));
+                        return Err(StdError::generic_err(format!("{} is not a adapter", spender)));
                     }
                 };
 
@@ -267,12 +267,12 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                     full_asset.contract.address.clone(),
                 )?.allowance;
 
-                let manager_balance = manager::balance_query(&deps, 
+                let adapter_balance = adapter::balance_query(&deps, 
                                      &full_asset.contract.address.clone(),
-                                     manager.contract.clone())?;
+                                     adapter.contract.clone())?;
 
-                if cur_allowance + manager_balance < desired_amount {
-                    let increase = (desired_amount - (manager_balance + cur_allowance))?;
+                if cur_allowance + adapter_balance < desired_amount {
+                    let increase = (desired_amount - (adapter_balance + cur_allowance))?;
                     messages.push(
                         increase_allowance_msg(
                             spender,
@@ -285,8 +285,11 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                         )?
                     );
                 }
-                else if cur_allowance + manager_balance > desired_amount {
-                    let mut decrease = ((manager_balance + cur_allowance) - desired_amount)?;
+                else if cur_allowance + adapter_balance > desired_amount {
+                    let mut decrease = ((adapter_balance + cur_allowance) - desired_amount)?;
+                    //TODO: Implement rebalance threshould to minimize thrashing
+
+                    // Remove allowance first
                     if cur_allowance > Uint128::zero() {
 
                         if cur_allowance < decrease {
@@ -318,10 +321,27 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                             decrease = Uint128::zero();
                         }
                     }
+
+                    // Unbond
                     if decrease > Uint128::zero() {
-                        messages.push(
-                            manager::unbond_msg(asset.clone(), decrease, manager.contract)?
-                        );
+                        if adapter_balance > decrease {
+                            //return Err(StdError::generic_err(format!("OverFunded, Unbonding {}", decrease)));
+                            messages.push(
+                                adapter::unbond_msg(asset.clone(), decrease, adapter.contract)?
+                            );
+                            decrease = Uint128::zero();
+                        }
+                        else {
+                            //return Err(StdError::generic_err(format!("OverFunded, Unbonding full balance {}", adapter_balance)));
+                            messages.push(
+                                adapter::unbond_msg(asset.clone(), adapter_balance, adapter.contract)?
+                            );
+                            decrease = (decrease - adapter_balance)?;
+                        }
+                    }
+
+                    if decrease == Uint128::zero() {
+                        break;
                     }
                 }
             },
@@ -482,15 +502,15 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    managers_w(&mut deps.storage).update(|mut managers| {
-        if managers.iter().map(|m| m.contract.clone()).collect::<Vec<_>>().contains(&contract) {
+    managers_w(&mut deps.storage).update(|mut adapters| {
+        if adapters.iter().map(|m| m.contract.clone()).collect::<Vec<_>>().contains(&contract) {
             return Err(StdError::generic_err("Manager already registered"));
         }
-        managers.push(Manager {
+        adapters.push(Manager {
             contract: contract.clone(),
             balance: Uint128::zero(),
         });
-        Ok(managers)
+        Ok(adapters)
     })?;
 
     Ok(HandleResponse {
@@ -543,15 +563,15 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    let managers = managers_r(&deps.storage).load()?;
+    let adapters = managers_r(&deps.storage).load()?;
 
-    // Disallow Portion on non-managers
+    // Disallow Portion on non-adapters
     match allowance {
         Allowance::Portion {
             ref spender, ..
         } => {
-            if managers.into_iter().find(|m| m.contract.address == *spender).is_none() {
-                return Err(StdError::generic_err("Portion allowances to managers only"));
+            if adapters.into_iter().find(|m| m.contract.address == *spender).is_none() {
+                return Err(StdError::generic_err("Portion allowances to adapters only"));
             }
         }
         _ => {}
