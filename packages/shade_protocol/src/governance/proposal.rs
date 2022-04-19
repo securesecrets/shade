@@ -9,6 +9,7 @@ use crate::utils::asset::Contract;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::BucketStorage;
+use crate::utils::storage::NaiveBucketStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -21,10 +22,13 @@ pub struct Proposal {
 
     // Msg
     // Target smart contract ID
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target: Option<Uint128>,
     // Msg proposal template
-    pub assemblyMsg: Option<Uint128>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assembly_msg: Option<Uint128>,
     // Message to execute
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub msg: Option<Binary>,
 
     // Assembly
@@ -43,14 +47,25 @@ pub struct Proposal {
     pub funders: Option<Vec<(HumanAddr, Uint128)>>
 }
 
+const ASSEMBLY_VOTE: &'static [u8] = b"user-assembly-vote-";
+const ASSEMBLY_VOTES: &'static [u8] = b"total-assembly-votes-";
+const PUBLIC_VOTE: &'static [u8] = b"user-public-vote-";
+const PUBLIC_VOTES: &'static [u8] = b"total-public-votes-";
+
 #[cfg(feature = "governance-impl")]
 impl Proposal {
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
-        Self::save_msg(storage, &id, ProposalMsg{
-            target: self.target,
-            assemblyMsg: self.assemblyMsg,
-            msg: self.msg.clone()
-        })?;
+        if let Some(target) = self.target {
+            if let Some(assembly_msg) = self.assembly_msg {
+                if let Some(msg) = self.msg.clone() {
+                    Self::save_msg(storage, &id, ProposalMsg {
+                        target,
+                        assembly_msg,
+                        msg
+                    })?;
+                }
+            }
+        }
 
         Self::save_description(storage, &id, ProposalDescription {
             proposer: self.proposer.clone(),
@@ -100,12 +115,22 @@ impl Proposal {
             funders = Some(funders_arr);
         }
 
+        let mut target = None;
+        let mut assembly_msg = None;
+        let mut binary_msg = None;
+
+        if let Some(msg) = msg {
+            target = Some(msg.target);
+            assembly_msg = Some(msg.assembly_msg);
+            binary_msg = Some(msg.msg);
+        }
+
         Ok(Self {
             proposer: description.proposer,
             metadata: description.metadata,
-            target: msg.target,
-            assemblyMsg: msg.assemblyMsg,
-            msg: msg.msg,
+            target,
+            assembly_msg,
+            msg: binary_msg,
             assembly,
             status,
             status_history,
@@ -113,8 +138,8 @@ impl Proposal {
         })
     }
 
-    pub fn msg<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProposalMsg> {
-        ProposalMsg::load(storage, &id.to_be_bytes())
+    pub fn msg<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<ProposalMsg>> {
+        ProposalMsg::may_load(storage, &id.to_be_bytes())
     }
 
     pub fn save_msg<S: Storage>(storage: &mut S, id: &Uint128, data: ProposalMsg) -> StdResult<()> {
@@ -170,6 +195,52 @@ impl Proposal {
         let key = id.to_string() + "-" + user.as_str();
         Funding(data).save(storage, key.as_bytes())
     }
+
+    // User assembly votes
+    pub fn assembly_vote<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Option<Vote>> {
+        let key = id.to_string() + "-" + user.as_str();
+        Ok(Vote::read(storage, ASSEMBLY_VOTE).may_load(key.as_bytes())?)
+    }
+
+    pub fn save_assembly_vote<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: &Vote) -> StdResult<()> {
+        let key = id.to_string() + "-" + user.as_str();
+        Vote::write(storage, ASSEMBLY_VOTE).save(key.as_bytes(), data)
+    }
+
+    // Total assembly votes
+    pub fn assembly_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
+        match Vote::read(storage, ASSEMBLY_VOTES).may_load(&id.to_be_bytes())? {
+            None => Ok(Vote::default()),
+            Some(vote) => Ok(vote)
+        }
+    }
+
+    pub fn save_assembly_votes<S: Storage>(storage: &mut S, id: &Uint128, data: &Vote) -> StdResult<()> {
+        Vote::write(storage, ASSEMBLY_VOTES).save(&id.to_be_bytes(), data)
+    }
+
+    // User public votes
+    pub fn public_vote<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Option<Vote>> {
+        let key = id.to_string() + "-" + user.as_str();
+        Ok(Vote::read(storage, PUBLIC_VOTE).may_load(key.as_bytes())?)
+    }
+
+    pub fn save_public_vote<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: &Vote) -> StdResult<()> {
+        let key = id.to_string() + "-" + user.as_str();
+        Vote::write(storage, PUBLIC_VOTE).save(key.as_bytes(), data)
+    }
+
+    // Total public votes
+    pub fn public_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
+        match Vote::read(storage, PUBLIC_VOTES).may_load(&id.to_be_bytes())? {
+            None => Ok(Vote::default()),
+            Some(vote) => Ok(vote)
+        }
+    }
+
+    pub fn save_public_votes<S: Storage>(storage: &mut S, id: &Uint128, data: &Vote) -> StdResult<()> {
+        Vote::write(storage, PUBLIC_VOTES).save(&id.to_be_bytes(), data)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -187,9 +258,9 @@ impl BucketStorage for ProposalDescription {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ProposalMsg {
-    pub target: Option<Uint128>,
-    pub assemblyMsg: Option<Uint128>,
-    pub msg: Option<Binary>,
+    pub target: Uint128,
+    pub assembly_msg: Uint128,
+    pub msg: Binary,
 }
 
 #[cfg(feature = "governance-impl")]
@@ -209,6 +280,7 @@ impl BucketStorage for ProposalAssembly {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
+    // TODO: remove funding and votes and just add that as a separate thing
     // Assembly voting period
     AssemblyVote {votes: Vote, start: u64, end:u64},
     // In funding period

@@ -15,7 +15,37 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     proposal: Uint128,
     vote: Vote
 ) -> StdResult<HandleResponse> {
-    todo!();
+    let sender = env.message.sender;
+
+    // Check if proposal in assembly voting
+    if let Status::AssemblyVote {end, ..} = Proposal::status(&deps.storage, &proposal)? {
+        if end <= env.block.time {
+            return Err(StdError::generic_err("Voting time has been reached"))
+        }
+    }
+    else {
+        return Err(StdError::generic_err("Not in assembly vote phase"))
+    }
+    // Check if user in assembly
+    if !Assembly::data(&deps.storage, &Proposal::assembly(&deps.storage, &proposal)?)?.members.contains(&sender) {
+        return Err(StdError::unauthorized())
+    }
+
+    let mut tally = Proposal::assembly_votes(&deps.storage, &proposal)?;
+
+    // Assembly votes can only be = 1 uint
+    if vote.total_count() != Uint128::new(1) {
+        return Err(StdError::generic_err("Assembly vote can only be one"))
+    }
+
+    // Check if user voted
+    if let Some(old_vote) = Proposal::assembly_vote(&deps.storage, &proposal, &sender)? {
+        tally = tally.checked_sub(&old_vote)?;
+    }
+    
+    Proposal::save_assembly_vote(&mut deps.storage, &proposal, &sender, &vote)?;
+    Proposal::save_assembly_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
@@ -90,11 +120,12 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         proposer: env.message.sender,
         metadata,
         target: None,
-        assemblyMsg: None,
+        assembly_msg: None,
         msg: None,
         assembly: assembly_id,
         status,
-        status_history: vec![]
+        status_history: vec![],
+        funders: None
     };
     
     if let Some(msg_id) = assembly_msg_id {
@@ -104,7 +135,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::unauthorized())
         }
 
-        prop.assemblyMsg = assembly_msg_id;
+        prop.assembly_msg = assembly_msg_id;
         
         if let Some(id) = contract_id {
             if id > ID::contract(&deps.storage)? {

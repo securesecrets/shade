@@ -1,9 +1,11 @@
-use cosmwasm_std::{Api, Binary, Env, Extern, from_binary, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use cosmwasm_std::{Api, Binary, Env, Extern, from_binary, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary, WasmMsg};
 use cosmwasm_math_compat::Uint128;
 use secret_toolkit::snip20::send_msg;
 use secret_toolkit::utils::Query;
 use shade_protocol::governance::assembly::Assembly;
 use shade_protocol::governance::{Config, HandleAnswer};
+use shade_protocol::governance::contract::AllowedContract;
+use shade_protocol::governance::HandleMsg::Receive;
 use shade_protocol::governance::profile::{Count, Profile, VoteProfile};
 use shade_protocol::governance::proposal::{Proposal, Status};
 use shade_protocol::governance::vote::{TalliedVotes, Vote};
@@ -50,9 +52,34 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
     env: Env,
     proposal: Uint128
 ) -> StdResult<HandleResponse> {
-    todo!();
+    let mut messages = vec![];
+    let status = Proposal::status(&deps.storage, &proposal)?;
+    if let Status::Passed{..} = status {
+        let mut history = Proposal::status_history(&mut deps.storage, &proposal)?;
+        history.push(status);
+        Proposal::save_status_history(&mut deps.storage, &proposal, history)?;
+        Proposal::save_status(&mut deps.storage, &proposal, Status::Success)?;
+
+        // Trigger the msg
+        let proposal_msg = Proposal::msg(&deps.storage, &proposal)?;
+        if let Some(prop_msg) = proposal_msg {
+            let contract = AllowedContract::data(&deps.storage, &prop_msg.target)?.contract;
+            messages.push(WasmMsg::Execute {
+                contract_addr: contract.address,
+                callback_code_hash: contract.code_hash,
+                msg: prop_msg.msg,
+                send: vec![]
+            }.into());
+        }
+        else {
+            return Err(StdError::generic_err("Cannot trigger text only proposals"))
+        }
+    }
+    else {
+        Err(StdError::unauthorized())
+    }
     Ok(HandleResponse {
-        messages: vec![],
+        messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Trigger {
             status: ResponseStatus::Success,
@@ -330,7 +357,6 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check if proposal is in funding stage
-    // TODO: return overspent amount
     let mut new_fund = amount;
     let mut return_amount = Uint128::zero();
     let status = Proposal::status(&deps.storage, &proposal)?;
@@ -365,6 +391,19 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             start,
             end
         })?;
+
+        // Either add or update funder
+        let mut funder_amount = amount - return_amount;
+        let mut funders = Proposal::funders(&deps.storage, &proposal)?;
+        if funders.contains(&from) {
+            funder_amount += Proposal::funding(&deps.storage, &proposal, &from)?;
+        }
+        else {
+            funders.push(from.clone())?;
+            Proposal::save_funders(&mut deps.storage, &proposal, funders)?;
+        }
+        Proposal::save_funding(&mut deps.storage, &proposal, &from, funder_amount)?;
+
     }
     else {
         return Err(StdError::generic_err("Not in funding status"))
@@ -372,7 +411,6 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
     let mut messages = vec![];
     if return_amount != Uint128::zero() {
-        // TODO: should the recipient be sender or from
         messages.push(send_msg(
             from,
             return_amount.into(),

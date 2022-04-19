@@ -30,15 +30,33 @@ impl Default for Vote {
     }
 }
 
-#[cfg(feature = "governance-impl")]
 impl Vote {
-    // Load votes related to staking
-    fn load_token<'a, S: Storage>(storage: &'a S, key: &'a [u8]) -> StdResult<Option<Self>> {
-        Vote::read(storage, b"vote_tally_token-").may_load(key)
+    pub fn total_count(&self) -> StdResult<Uint128> {
+        Ok(self.yes.checked_add(
+            self.no.checked_add(
+                self.no_with_veto.checked_add(
+                    self.abstain
+                )?
+            )?
+        )?)
     }
 
-    fn save_token<'a, S: Storage>(&self, storage: &'a mut S, key: &'a [u8]) -> StdResult<()> {
-        Vote::write(storage, b"vote_tally_token-").save(key, self)
+    pub fn checked_sub(&self, vote: &Self) -> StdResult<Self> {
+        Ok(Self {
+            yes: self.yes.checked_sub(vote.yes)?,
+            no: self.no.checked_sub(vote.no)?,
+            no_with_veto: self.no_with_veto.checked_sub(vote.no_with_veto)?,
+            abstain: self.abstain.checked_sub(vote.abstain)?
+        })
+    }
+
+    pub fn checked_add(&self, vote: &Self) -> StdResult<Self> {
+        Ok(Self {
+            yes: self.yes.checked_add(vote.yes)?,
+            no: self.no.checked_add(vote.no)?,
+            no_with_veto: self.no_with_veto.checked_add(vote.no_with_veto)?,
+            abstain: self.abstain.checked_add(vote.abstain)?
+        })
     }
 }
 
