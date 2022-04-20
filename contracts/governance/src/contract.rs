@@ -1,9 +1,3 @@
-use crate::{
-    handle,
-    proposal_state::total_proposals_w,
-    query,
-    state::{admin_commands_list_w, config_w, supported_contracts_list_w},
-};
 use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, StdError};
 use cosmwasm_math_compat::Uint128;
 use secret_toolkit::snip20::register_receive_msg;
@@ -15,6 +9,7 @@ use shade_protocol::governance::stored_id::ID;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::flexible_msg::FlexibleMsg;
 use shade_protocol::utils::storage::{BucketStorage, SingletonStorage};
+use crate::query;
 use crate::handle::{try_set_config, try_set_runtime_state};
 use crate::handle::assembly::{try_add_assembly, try_assembly_proposal, try_assembly_vote, try_set_assembly};
 use crate::handle::assembly_msg::{try_add_assembly_msg, try_set_assembly_msg};
@@ -38,8 +33,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }.save(&mut deps.storage)?;
 
     // Setups IDs
-    ID::set_assembly(&mut deps.storage, Uint128(1))?;
-    ID::set_profile(&mut deps.storage, Uint128(1))?;
+    ID::set_assembly(&mut deps.storage, Uint128::new(1))?;
+    ID::set_profile(&mut deps.storage, Uint128::new(1))?;
     ID::set_assembly_msg(&mut deps.storage, Uint128::zero())?;
     ID::set_contract(&mut deps.storage, Uint128::zero())?;
 
@@ -67,7 +62,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }.save(&mut deps.storage, &Uint128::zero())?;
 
     // Setup admin profile
-    msg.admin_profile.save(&mut deps.storage, &Uint128(1))?;
+    msg.admin_profile.save(&mut deps.storage, &Uint128::new(1))?;
 
     if msg.admin_profile.funding.is_some() {
         if msg.funding_token.is_none() {
@@ -86,13 +81,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         name: "admin".to_string(),
         metadata: "Assembly of DAO admins.".to_string(),
         members: msg.admin_members,
-        profile: Uint128(1)
-    }.save(&mut deps.storage, &Uint128(1))?;
+        profile: Uint128::new(1)
+    }.save(&mut deps.storage, &Uint128::new(1))?;
 
     // Setup generic command
     AssemblyMsg {
         name: "blank message".to_string(),
-        assemblies: vec![Uint128::zero(), Uint128(1)],
+        assemblies: vec![Uint128::zero(), Uint128::new(1)],
         msg: FlexibleMsg { msg: MSG_VARIABLE.to_string(), arguments: 1 }
     }.save(&mut deps.storage, &Uint128::zero())?;
 
@@ -177,7 +172,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             } => to_binary(&query::assemblies(deps, start, end)?),
 
             QueryMsg::AssemblyMsgs { start, end
-            } => to_binary(&query::assemblymsgs(deps, start, end)?),
+            } => to_binary(&query::assembly_msgs(deps, start, end)?),
 
             QueryMsg::Profiles { start, end
             } => to_binary(&query::profiles(deps, start, end)?),

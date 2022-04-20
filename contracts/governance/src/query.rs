@@ -13,7 +13,7 @@ pub fn proposals<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: 
     let total = ID::proposal(&deps.storage)?;
 
     if start > total {
-        return Err(StdError::not_found(Proposal))
+        return Err(StdError::generic_err("Proposal not found"))
     }
 
     if end > total {
@@ -35,7 +35,7 @@ pub fn profiles<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: U
     let total = ID::profile(&deps.storage)?;
 
     if start > total {
-        return Err(StdError::not_found(Proposal))
+        return Err(StdError::generic_err("Profile not found"))
     }
 
     if end > total {
@@ -57,7 +57,7 @@ pub fn assemblies<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start:
     let total = ID::assembly(&deps.storage)?;
 
     if start > total {
-        return Err(StdError::not_found(Proposal))
+        return Err(StdError::generic_err("Assembly not found"))
     }
 
     if end > total {
@@ -79,7 +79,7 @@ pub fn assembly_msgs<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, sta
     let total = ID::assembly_msg(&deps.storage)?;
 
     if start > total {
-        return Err(StdError::not_found(Proposal))
+        return Err(StdError::generic_err("AssemblyMsg not found"))
     }
 
     if end > total {
@@ -101,7 +101,7 @@ pub fn contracts<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: 
     let total = ID::contract(&deps.storage)?;
 
     if start > total {
-        return Err(StdError::not_found(Proposal))
+        return Err(StdError::generic_err("Contract not found"))
     }
 
     if end > total {

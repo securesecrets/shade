@@ -36,7 +36,7 @@ impl AllowedContract {
 
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
         AllowedContractData {
-            contract: *self.contract
+            contract: self.contract.clone()
         }.save(storage, &id.to_be_bytes())?;
 
         AllowedContractDescription {

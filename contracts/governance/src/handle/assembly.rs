@@ -2,7 +2,7 @@ use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdErro
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::{HandleAnswer, MSG_VARIABLE};
-use shade_protocol::governance::profile::Profile;
+use shade_protocol::governance::profile::{Profile, VoteProfile};
 use shade_protocol::governance::proposal::{Proposal, Status};
 use shade_protocol::governance::stored_id::ID;
 use shade_protocol::governance::vote::Vote;
@@ -34,7 +34,7 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     let mut tally = Proposal::assembly_votes(&deps.storage, &proposal)?;
 
     // Assembly votes can only be = 1 uint
-    if vote.total_count() != Uint128::new(1) {
+    if vote.total_count()? != Uint128::new(1) {
         return Err(StdError::generic_err("Assembly vote can only be one"))
     }
 
@@ -66,18 +66,18 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
 
     // Get assembly
-    let assembly = Assembly::data(&deps.storage, &assembly_id)?;
+    let assembly_data = Assembly::data(&deps.storage, &assembly_id)?;
 
     // Check if public; everyone is allowed
-    if assembly != Uint128::zero() {
-        if !assembly.members.contains(&env.message.sender) {
+    if assembly_data.profile != Uint128::zero() {
+        if !assembly_data.members.contains(&env.message.sender) {
             return Err(StdError::unauthorized())
         }
     }
 
     // Get profile
     // Check if assembly is enabled
-    let profile = Profile::data(&deps.storage, &assembly.profile)?;
+    let profile = Profile::data(&deps.storage, &assembly_data.profile)?;
     if !profile.enabled {
         return Err(StdError::generic_err("Assembly is disabled"))
     }
@@ -85,7 +85,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     let status: Status;
 
     // Check if assembly voting
-    if let Some(vote_settings) = Profile::assembly_voting(&deps.storage, &assembly.profile)? {
+    if let Some(vote_settings) = Profile::assembly_voting(&deps.storage, &assembly_data.profile)? {
         status = Status::AssemblyVote { 
             votes: Vote::default(),
             start: env.block.time, 
@@ -93,7 +93,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         }
     }
     // Check if funding
-    else if let Some(fund_settings) = Profile::funding(&deps.storage, &assembly.profile)? {
+    else if let Some(fund_settings) = Profile::funding(&deps.storage, &assembly_data.profile)? {
         status = Status::Funding {
             amount: Uint128::zero(),
             start: env.block.time,
@@ -101,7 +101,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         }
     }
     // Check if token voting
-    if let Some(vote_settings) = Profile::public_voting(&deps.storage, &assembly.profile)? {
+    if let Some(vote_settings) = Profile::public_voting(&deps.storage, &assembly_data.profile)? {
         status = Status::Voting {
             votes: Vote::default(),
             start: env.block.time,
@@ -123,6 +123,8 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         assembly_msg: None,
         msg: None,
         assembly: assembly_id,
+        assembly_vote_tally: None,
+        public_vote_tally: None,
         status,
         status_history: vec![],
         funders: None
@@ -183,7 +185,7 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
 
     // Check that profile exists
     if profile > ID::profile(&deps.storage)? {
-        return Err(StdError::not_found(Profile))
+        return Err(StdError::generic_err("Profile not found"))
     }
 
     Assembly {
@@ -216,7 +218,7 @@ pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
     }
 
     let mut assembly = match Assembly::may_load(&mut deps.storage, &id)? {
-        None => return Err(StdError::not_found(Assembly)),
+        None => return Err(StdError::generic_err("Assembly not found")),
         Some(c) => c
     };
 
@@ -235,7 +237,7 @@ pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
     if let Some(profile) = profile {
         // Check that profile exists
         if profile > ID::profile(&deps.storage)? {
-            return Err(StdError::not_found(Profile))
+            return Err(StdError::not_found("Profile not found"))
         }
         assembly.profile = profile
     }

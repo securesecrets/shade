@@ -38,7 +38,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
     }
 
     let mut profile = match Profile::may_load(&mut deps.storage, &id)?{
-        None => return Err(StdError::not_found(Profile)),
+        None => return Err(StdError::generic_err("Profile not found")),
         Some(p) => p
     };
 

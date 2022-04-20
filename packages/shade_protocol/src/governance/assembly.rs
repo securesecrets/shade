@@ -118,7 +118,7 @@ impl AssemblyMsg {
 
         Ok(Self {
             name: desc.name,
-            assemblies: data.assemblys,
+            assemblies: data.assemblies,
             msg: data.msg
         })
     }
@@ -133,7 +133,7 @@ impl AssemblyMsg {
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
         AssemblyMsgData {
             assemblies: self.assemblies.clone(),
-            msg: *self.msg
+            msg: self.msg.clone()
         }.save(storage, &id.to_be_bytes())?;
 
         AssemblyMsgDescription {

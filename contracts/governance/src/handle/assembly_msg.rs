@@ -48,14 +48,14 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
     id: Uint128,
     name: Option<String>,
     msg: Option<String>,
-    assemblys: Option<Vec<Uint128>>
+    assemblies: Option<Vec<Uint128>>
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized())
     }
 
     let mut assembly_msg = match AssemblyMsg::may_load(&mut deps.storage, &id)? {
-        None => return Err(StdError::not_found(AssemblyMsg)),
+        None => return Err(StdError::generic_err("AssemblyMsg not found")),
         Some(c) => c
     };
 
@@ -67,7 +67,7 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
         assembly_msg.msg = FlexibleMsg::new(msg, MSG_VARIABLE);
     }
 
-    if let Some(assemblys) = assemblys {
+    if let Some(assemblys) = assemblies {
         assembly_msg.assemblies = assemblys;
     }
 

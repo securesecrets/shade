@@ -3,6 +3,8 @@ use cosmwasm_std::{Binary, HumanAddr, StdResult, Storage};
 use cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::governance::assembly::Assembly;
+use crate::governance::profile::Profile;
 use crate::governance::stored_id::ID;
 use crate::governance::vote::Vote;
 use crate::utils::asset::Contract;
@@ -87,12 +89,14 @@ impl Proposal {
 
         Self::save_status_history(storage, &id, self.status_history.clone())?;
 
-        let mut funders = vec![];
-        for (funder, funding) in self.funders.iter() {
-            funders.push(*funder);
-            Self::save_funding(storage, id, &funder, *funding)?
+        if let Some(funder_list) = self.funders.clone() {
+            let mut funders = vec![];
+            for (funder, funding) in funder_list.iter() {
+                funders.push(funder.clone());
+                Self::save_funding(storage, id, &funder, *funding)?
+            }
+            Self::save_funders(storage, id, funders)?;
         }
-        Self::save_funders(storage, id, funders)?;
 
         Ok(())
     }
@@ -134,6 +138,8 @@ impl Proposal {
             binary_msg = Some(msg.msg);
         }
 
+        let assembly_data = Assembly::data(storage, &assembly)?;
+
         Ok(Self {
             proposer: description.proposer,
             metadata: description.metadata,
@@ -141,6 +147,14 @@ impl Proposal {
             assembly_msg,
             msg: binary_msg,
             assembly,
+            assembly_vote_tally: match Profile::assembly_voting(storage, &assembly_data.profile)? {
+                None => None,
+                Some(_) => Some(Self::assembly_votes(storage, &id)?)
+            },
+            public_vote_tally: match Profile::public_voting(storage, &assembly_data.profile)? {
+                None => None,
+                Some(_) => Some(Self::public_votes(storage, &id)?)
+            },
             status,
             status_history,
             funders
@@ -216,7 +230,7 @@ impl Proposal {
         Vote::write(storage, ASSEMBLY_VOTE).save(key.as_bytes(), data)
     }
 
-    // Total assembly votes TODO: add may load
+    // Total assembly votes
     pub fn assembly_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
         match Vote::read(storage, ASSEMBLY_VOTES).may_load(&id.to_be_bytes())? {
             None => Ok(Vote::default()),

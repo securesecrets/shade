@@ -76,7 +76,7 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
         }
     }
     else {
-        Err(StdError::unauthorized())
+        return Err(StdError::unauthorized())
     }
     Ok(HandleResponse {
         messages,
@@ -96,7 +96,7 @@ pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
     let status = Proposal::status(&deps.storage, &proposal)?;
     if let Status::Passed {start, end} = status {
         if env.block.time < end {
-            Err(StdError::unauthorized())
+            return Err(StdError::unauthorized())
         }
         let mut history = Proposal::status_history(&mut deps.storage, &proposal)?;
         history.push(status);
@@ -104,7 +104,7 @@ pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
         Proposal::save_status(&mut deps.storage, &proposal, Status::Canceled)?;
     }
     else {
-        Err(StdError::unauthorized())
+        return Err(StdError::unauthorized())
     }
 
     Ok(HandleResponse {
@@ -120,17 +120,17 @@ fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> S
     let tally = TalliedVotes::tally(votes);
 
     let threshold = match settings.threshold {
-        Count::Percentage { percent } => total_power.multiply_ratio(Uint128(10000), percent),
+        Count::Percentage { percent } => total_power.multiply_ratio(Uint128::new(10000), percent),
         Count::LiteralCount { count } => count
     };
 
     let yes_threshold = match settings.yes_threshold {
-        Count::Percentage { percent } => (tally.yes + tally.no).multiply_ratio(Uint128(10000), percent),
+        Count::Percentage { percent } => (tally.yes + tally.no).multiply_ratio(Uint128::new(10000), percent),
         Count::LiteralCount { count } => count
     };
 
     let veto_threshold = match settings.veto_threshold {
-        Count::Percentage { percent } => (tally.yes + tally.no).multiply_ratio(Uint128(10000), percent),
+        Count::Percentage { percent } => (tally.yes + tally.no).multiply_ratio(Uint128::new(10000), percent),
         Count::LiteralCount { count } => count
     };
 
@@ -173,7 +173,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
             }
 
             // Total power is equal to the total amount of assembly members
-            let total_power = Uint128(Assembly::data(&deps.storage, &assembly)?.members.len().into());
+            let total_power = Uint128::new(Assembly::data(&deps.storage, &assembly)?.members.len() as u128);
 
             // Try to load, if not then assume it was updated after proposal creation but before section end
             let mut vote_conclusion: Status;
@@ -256,7 +256,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                     &deps.querier,
                     config.vote_token.unwrap().code_hash,
                     config.vote_token.unwrap().address
-                )?.into();
+                )?;
 
             // Get total staking power
             let total_power = match query {
@@ -281,7 +281,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                     for s in history {
                         // Check if it has funding history
                         if let Status::Funding{ amount, ..} = s {
-                            let send_amount = amount.multiply_ratio(Uint128(100000), profile.veto_deposit_loss.clone());
+                            let send_amount = amount.multiply_ratio(100000, profile.veto_deposit_loss.clone());
                             if send_amount != Uint128::zero() {
                                 let config = Config::load(&deps.storage)?;
                                 // Update slash amount
@@ -399,7 +399,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             funder_amount += Proposal::funding(&deps.storage, &proposal, &from)?;
         }
         else {
-            funders.push(from.clone())?;
+            funders.push(from.clone());
             Proposal::save_funders(&mut deps.storage, &proposal, funders)?;
         }
         Proposal::save_funding(&mut deps.storage, &proposal, &from, funder_amount)?;

@@ -46,7 +46,7 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
     }
 
     if id > ID::contract(&deps.storage)? {
-        return Err(StdError::not_found(AllowedContract))
+        return Err(StdError::generic_err("AllowedContract not found"))
     }
 
     let mut allowedContract = AllowedContract::load(&mut deps.storage, &id)?;
