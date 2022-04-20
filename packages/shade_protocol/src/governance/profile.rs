@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdResult, Storage};
+use cosmwasm_std::{StdError, StdResult, Storage};
 use cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -108,7 +108,7 @@ impl Profile {
 #[serde(rename_all = "snake_case")]
 pub struct UpdateProfile {
     pub name: Option<String>,
-    // State of the current profile and its subsequent assemblys
+    // State of the current profile and its subsequent assemblies
     pub enabled: Option<bool>,
     // Assembly status
     pub disable_assembly: bool,
@@ -125,6 +125,106 @@ pub struct UpdateProfile {
     // Once the contract is approved, theres a deadline for the tx to be executed and completed
     // else it will just be canceled and assume that the tx failed
     pub cancel_deadline: Option<u64>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct UpdateVoteProfile {
+    // Deadline for voting
+    pub deadline: Option<u64>,
+    // Expected participation threshold
+    pub threshold: Option<Count>,
+    // Expected yes votes
+    pub yes_threshold: Option<Count>,
+    // Expected veto votes
+    pub veto_threshold: Option<Count>
+}
+
+impl UpdateVoteProfile {
+    pub fn update_profile(&self, profile: &Option<VoteProfile>) -> StdResult<VoteProfile> {
+        let new_profile: VoteProfile;
+
+        if let Some(profile) = profile {
+            new_profile = VoteProfile {
+                deadline: self.deadline.unwrap_or(*profile.deadline),
+                threshold: self.threshold.unwrap_or(*profile.threshold),
+                yes_threshold: self.yes_threshold.unwrap_or(*profile.yes_threshold),
+                veto_threshold: self.veto_threshold.unwrap_or(*profile.veto_threshold)
+            };
+        }
+        else {
+            new_profile = VoteProfile {
+                deadline: match *self.deadline {
+                    None => Err(StdError::generic_err("Vote profile must be set")),
+                    Some(ret) => Ok(ret)
+                }?,
+                threshold: match *self.threshold{
+                    None => Err(StdError::generic_err("Vote profile must be set")),
+                    Some(ret) => Ok(ret)
+                }?,
+                yes_threshold: match *self.yes_threshold {
+                    None => Err(StdError::generic_err("Vote profile must be set")),
+                    Some(ret) => Ok(ret)
+                }?,
+                veto_threshold: match *self.veto_threshold {
+                    None => Err(StdError::generic_err("Vote profile must be set")),
+                    Some(ret) => Ok(ret)
+                }?
+            };
+        }
+
+        Ok(new_profile)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct UpdateFundProfile {
+    // Deadline for funding
+    pub deadline: Option<u64>,
+    // Amount required to fund
+    pub required: Option<Uint128>,
+    // Display voter information
+    pub privacy: Option<bool>,
+    // Deposit loss on vetoed proposal
+    pub veto_deposit_loss: Option<Count>,
+}
+
+impl UpdateFundProfile {
+    pub fn update_profile(&self, profile: &Option<FundProfile>) -> StdResult<FundProfile> {
+        let new_profile: FundProfile;
+
+        if let Some(profile) = profile {
+            new_profile = FundProfile {
+                deadline: self.deadline.unwrap_or(*profile.deadline),
+                required: self.required.unwrap_or(*profile.required),
+                privacy: self.privacy.unwrap_or(*profile.privacy),
+                veto_deposit_loss: self.veto_deposit_loss.unwrap_or(*profile.veto_deposit_loss)
+            };
+        }
+        else {
+            new_profile = FundProfile {
+                deadline: match *self.deadline {
+                    None => Err(StdError::generic_err("Fund profile must be set")),
+                    Some(ret) => Ok(ret)
+                }?,
+                required: match *self.required {
+                    None => Err(StdError::generic_err("Fund profile must be set")),
+                    Some(ret) => Ok(ret)
+                }?,
+                privacy: match *self.privacy {
+                    None => Err(StdError::generic_err("Fund profile must be set")),
+                    Some(ret) => Ok(ret)
+                }?,
+                veto_deposit_loss: match *self.veto_deposit_loss {
+                    None => Err(StdError::generic_err("Fund profile must be set")),
+                    Some(ret) => Ok(ret)
+                }?
+            };
+        }
+
+        Ok(new_profile)
+    }
 }
 
 #[cfg(feature = "governance-impl")]

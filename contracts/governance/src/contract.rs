@@ -4,9 +4,7 @@ use crate::{
     query,
     state::{admin_commands_list_w, config_w, supported_contracts_list_w},
 };
-use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
-};
+use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage, StdError};
 use cosmwasm_math_compat::Uint128;
 use secret_toolkit::snip20::register_receive_msg;
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
@@ -46,8 +44,20 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     ID::set_contract(&mut deps.storage, Uint128::zero())?;
 
     // Setup public profile
-    // TODO: expect funding or voting tokens to be present if profile is being set with those enabled
     msg.public_profile.save(&mut deps.storage, &Uint128::zero())?;
+
+    if msg.public_profile.funding.is_some() {
+        if msg.funding_token.is_none() {
+            return Err(StdError::generic_err("Funding token must be set"))
+        }
+    }
+
+    if msg.public_profile.token.is_some() {
+        if msg.vote_token.is_none() {
+            return Err(StdError::generic_err("Voting token must be set"))
+        }
+    }
+
     // Setup public assembly
     Assembly {
         name: "public".to_string(),
@@ -58,6 +68,19 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     // Setup admin profile
     msg.admin_profile.save(&mut deps.storage, &Uint128(1))?;
+
+    if msg.admin_profile.funding.is_some() {
+        if msg.funding_token.is_none() {
+            return Err(StdError::generic_err("Funding token must be set"))
+        }
+    }
+
+    if msg.admin_profile.token.is_some() {
+        if msg.vote_token.is_none() {
+            return Err(StdError::generic_err("Voting token must be set"))
+        }
+    }
+
     // Setup admin assembly
     Assembly {
         name: "admin".to_string(),
@@ -150,14 +173,17 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::Proposals { start, end
             } => to_binary(&query::proposals(deps, start, end)?),
 
-            QueryMsg::Assemblys { start, end
-            } => to_binary(&query::assemblys(deps, start, end)?),
+            QueryMsg::Assemblies { start, end
+            } => to_binary(&query::assemblies(deps, start, end)?),
 
             QueryMsg::AssemblyMsgs { start, end
             } => to_binary(&query::assemblymsgs(deps, start, end)?),
 
             QueryMsg::Profiles { start, end
             } => to_binary(&query::profiles(deps, start, end)?),
+
+            QueryMsg::Contracts { start, end
+            } => to_binary(&query::contracts(deps, start, end)?),
         },
         RESPONSE_BLOCK_SIZE
     )

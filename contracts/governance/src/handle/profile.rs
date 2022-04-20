@@ -55,7 +55,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
     }
 
     else if let Some(assembly) = new_profile.assembly {
-        profile.assembly = Some(assembly);
+        profile.assembly = Some(assembly.update_profile(&profile.assembly)?)
     }
 
     if new_profile.disable_funding {
@@ -63,8 +63,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
     }
 
     else if let Some(funding) = new_profile.funding {
-        // TODO: go more detailed with this
-        profile.funding = Some(funding);
+        profile.funding = Some(funding.update_profile(&profile.funding)?)
     }
 
     if new_profile.disable_token {
@@ -72,7 +71,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
     }
 
     else if let Some(token) = new_profile.token {
-        profile.token = Some(token);
+        profile.token = Some(token.update_profile(&profile.token)?)
     }
 
     if let Some(cancel_deadline) = new_profile.cancel_deadline {

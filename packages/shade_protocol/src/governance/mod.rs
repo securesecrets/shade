@@ -290,7 +290,7 @@ pub enum QueryMsg {
         end: Uint128
     },
 
-    Assemblys {
+    Assemblies {
         start: Uint128,
         end: Uint128
     },
@@ -322,8 +322,8 @@ pub enum QueryAnswer {
         props: Vec<Proposal>
     },
 
-    Assemblys {
-        assemblys: Vec<Assembly>
+    Assemblies {
+        assemblies: Vec<Assembly>
     },
 
     AssemblyMsgs {

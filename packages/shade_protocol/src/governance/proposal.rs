@@ -35,6 +35,14 @@ pub struct Proposal {
     // Assembly that called the proposal
     pub assembly: Uint128,
 
+    // TODO: try to display total assembly votes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assembly_vote_tally: Option<Vote>,
+
+    // TODO: try to display total user votes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub public_vote_tally: Option<Vote>,
+
     // Status
     pub status: Status,
 
@@ -45,6 +53,7 @@ pub struct Proposal {
     // Leave as an option so we can hide the data if None
     #[serde(skip_serializing_if = "Option::is_none")]
     pub funders: Option<Vec<(HumanAddr, Uint128)>>
+    // TODO: if funding and funding privacy then set funders
 }
 
 const ASSEMBLY_VOTE: &'static [u8] = b"user-assembly-vote-";
@@ -207,7 +216,7 @@ impl Proposal {
         Vote::write(storage, ASSEMBLY_VOTE).save(key.as_bytes(), data)
     }
 
-    // Total assembly votes
+    // Total assembly votes TODO: add may load
     pub fn assembly_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
         match Vote::read(storage, ASSEMBLY_VOTES).may_load(&id.to_be_bytes())? {
             None => Ok(Vote::default()),
