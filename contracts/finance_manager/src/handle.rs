@@ -411,20 +411,12 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     let mut total_unbond = Uint128::zero();
 
-    // How many adapters to unbond from
-    let mut unbond_count = 3;
-    if unbond_count > allocations.len() {
-        unbond_count = allocations.len();
-    }
+    allocations.sort_by(|a, b| a.balance.cmp(&b.balance));
 
-    let mut unbond_amount = amount.multiply_ratio(1u128, u128::try_from(unbond_count).unwrap());
-    if unbond_amount.multiply_ratio(u128::try_from(unbond_count).unwrap(), 1u128) < amount {
-        unbond_amount += Uint128(1);
-    }
-
-    for i in 0..unbond_count {
+    for i in 0..allocations.len() {
         match allocations[i].alloc_type {
             // TODO Separate handle for amount refresh
+            //      Or just do cycle::constant amounts
             AllocationType::Amount => { },
             AllocationType::Portion => {
 
@@ -432,12 +424,10 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     total, 10u128.pow(18)
                 );
 
-                //return Err(StdError::generic_err(format!("bal {}, desired {}, unbonding {}", allocations[i].balance, desired_amount, unbond_amount)));
-
                 messages.push(
                     adapter::unbond_msg(
                         asset.clone(),
-                        unbond_amount, 
+                        amount, 
                         allocations[i].contract.clone()
                     )?
                 );

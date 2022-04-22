@@ -1,4 +1,11 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
+use crate::{
+    adapter,
+    utils::{
+        asset::Contract, 
+        generic_response::ResponseStatus
+    },
+};
+
 use cosmwasm_std::{Binary, HumanAddr, Uint128, StdResult};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -10,6 +17,7 @@ pub struct Config {
     pub admin: HumanAddr,
     //pub account_holders: Vec<HumanAddr>,
     pub sscrt: Contract,
+    pub tolerance: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -37,9 +45,11 @@ pub enum Cycle {
 #[serde(rename_all = "snake_case")]
 pub enum Allowance {
     // To remain liquid at all times
+    /*
     Reserves {
         portion: Uint128,
     },
+    */
     // Monthly refresh, not counted in rebalance
     Amount {
         //nick: Option<String>,
@@ -63,6 +73,30 @@ pub enum Allowance {
 pub struct Manager {
     pub contract: Contract,
     pub balance: Uint128,
+    pub desired: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Balance {
+    pub token: HumanAddr,
+    pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Status {
+    Active,
+    Disabled,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Account {
+    pub balances: Vec<Balance>,
+    pub unbondings: Vec<Balance>,
+    pub claimable: Vec<Balance>,
+    pub status: Status,
 }
 
 // Flag to be sent with funds
@@ -77,6 +111,7 @@ pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
     pub sscrt: Contract,
+    pub tolerance: Uint128,
     //pub account_holders: Option<Vec<HumanAddr>>,
 }
 
@@ -109,14 +144,18 @@ pub enum HandleMsg {
         asset: HumanAddr,
         allowance: Allowance,
     },
-    Rebalance {
-        asset: HumanAddr,
+    AddAccount {
+        holder: HumanAddr,
     },
-    // From account holders only
-    Unbond {
-        asset: HumanAddr,
-        amount: Uint128,
-    }
+    RemoveAccount {
+        holder: HumanAddr,
+    },
+
+    /* TODO: Maybe?
+    TransferAccount {
+    },
+    */
+    Adapter(adapter::SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -134,6 +173,8 @@ pub enum HandleAnswer {
     Receive { status: ResponseStatus },
     RegisterAsset { status: ResponseStatus },
     Allowance { status: ResponseStatus },
+    AddAccount { status: ResponseStatus },
+    RemoveAccount { status: ResponseStatus },
     Rebalance { status: ResponseStatus },
     Unbond { status: ResponseStatus },
 }
@@ -143,8 +184,6 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    // Cumulative of on-treasury + manager outstanding
-    Balance { asset: HumanAddr },
     // List of recurring allowances configured
     Allowances { asset: HumanAddr },
     // List of actual current amounts
@@ -153,10 +192,8 @@ pub enum QueryMsg {
         asset: HumanAddr,
         spender: HumanAddr,
     },
-    Unbonding { asset: HumanAddr },
-    // TODO: Implement, asset could be optional to do all (doesn't scale well)
-    // NeedsRefresh { asset: HumanAddr },
-    // CanRebalance { asset: HumanAddr },
+    //Account { permit },
+    Adapter(adapter::SubQueryMsg),
 }
 
 impl Query for QueryMsg {

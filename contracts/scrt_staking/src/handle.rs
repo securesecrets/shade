@@ -216,7 +216,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
     let mut undelegated = vec![];
 
-    let mut available = scrt_balance + rewards;
+    let mut available = scrt_balance + rewards + delegated;
     
     if unbonding < available {
         available = (available - unbonding)?;
@@ -225,8 +225,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         available = Uint128::zero();
     }
 
-    if amount > scrt_balance + rewards {
-        return Err(StdError::generic_err(format!("Cannot unbond more than is available: {}", scrt_balance + rewards)));
+    if amount > available {
+        return Err(StdError::generic_err(format!("Cannot unbond more than is available: {}", available)));
     }
     let mut unbond_amount = amount;
 

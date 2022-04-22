@@ -1,5 +1,5 @@
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
-use secret_toolkit::{snip20::allowance_query, utils::Query};
+use secret_toolkit::{snip20::{allowance_query, balance_query}, utils::Query};
 use shade_protocol::{snip20, treasury, adapter};
 
 use crate::state::{
@@ -21,21 +21,34 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<treasury::QueryAnswer> {
     //TODO: restrict to admin?
 
+    let managers = managers_r(&deps.storage).load()?;
+
     match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => {
-            let mut balance = match (snip20::QueryMsg::Balance {
-                address: self_address_r(&deps.storage).load()?,
-                key: viewing_key_r(&deps.storage).load()?,
-            }.query(&deps.querier, a.contract.code_hash, a.contract.address)?) {
+            let mut balance = balance_query(
+                &deps.querier,
+                self_address_r(&deps.storage).load()?,
+                viewing_key_r(&deps.storage).load()?,
+                1,
+                a.contract.code_hash.clone(),
+                a.contract.address.clone(),
+            )?.amount;
 
-                snip20::QueryAnswer::Balance { amount } => amount,
-                _ => {
-                    return Err(StdError::generic_err("Unexpected Snip20 Response"));
-                }
-            };
 
-            for manager in managers_r(&deps.storage).load()? {
-                balance += adapter::balance_query(&deps, asset, manager.contract)?;
+            for allowance in allowances_r(&deps.storage).load(&asset.as_str().as_bytes())? {
+                match allowance {
+                    treasury::Allowance::Portion { spender, .. } => {
+                        let manager = managers
+                            .clone().into_iter()
+                            .find(|m| m.contract.address == spender).unwrap();
+                        balance += adapter::balance_query(
+                            &deps,
+                            asset,
+                            manager.contract
+                        )?;
+                    }
+                    _ => {}
+                };
             }
             Ok(treasury::QueryAnswer::Balance { amount: balance })
         }
@@ -52,9 +65,23 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<treasury::QueryAnswer> {
     //TODO: restrict to admin?
 
+    let managers = managers_r(&deps.storage).load()?;
     let mut unbonding = Uint128::zero();
-    for manager in managers_r(&deps.storage).load()? {
-        unbonding += adapter::unbonding_query(&deps, asset, manager.contract)?;
+
+    for allowance in allowances_r(&deps.storage).load(&asset.as_str().as_bytes())? {
+        match allowance {
+            treasury::Allowance::Portion { spender, .. } => {
+                let manager = managers
+                    .clone().into_iter()
+                    .find(|m| m.contract.address == spender).unwrap();
+                unbonding += adapter::unbonding_query(
+                    &deps,
+                    asset,
+                    manager.contract
+                )?;
+            }
+            _ => {}
+        };
     }
 
     Ok(treasury::QueryAnswer::Unbonding {

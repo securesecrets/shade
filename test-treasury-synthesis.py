@@ -40,25 +40,31 @@ sscrt = SNIP20(gen_label(8),
 print('sSCRT', sscrt.address, sscrt.code_hash)
 sscrt.execute({'set_viewing_key': {'key': viewing_key}})
 
-deposit_amount = '1000000000uscrt' 
-# lol
-# half_amount = '100000000uscrt' 
+seed_amount = 100000000000
 
-print('Depositing', deposit_amount)
-sscrt.execute({'deposit': {}}, ACCOUNT, deposit_amount)
-print('Wallet SSCRT', sscrt.get_balance(ACCOUNT, viewing_key))
+print('Depositing', seed_amount)
+sscrt.execute({'deposit': {}}, ACCOUNT, str(seed_amount) + 'uscrt')
 
-print('Deploying Treasury')
+tolerance = .05
+print(f'Deploying Treasury w/ tolerance {tolerance * 100}%')
 treasury = Contract(
     '../compiled/treasury.wasm.gz',
     json.dumps({
         'admin': ACCOUNT,
         'viewing_key': viewing_key,
         'sscrt': sscrt.as_dict(),
+        'tolerance': str(int(tolerance * 10**18)),
     }),
     gen_label(8),
 )
 print('TREASURY', treasury.address)
+
+print('Registering Account w/ treasury')
+print(treasury.execute({
+    'add_account': {
+        'holder': ACCOUNT,
+    }
+}))
 
 print('Registering sSCRT w/ treasury')
 print(treasury.execute({
@@ -144,11 +150,11 @@ print(treasury.query({'assets': {}}))
 print('Treasury sSCRT Balance')
 print(treasury.query({'balance': {'asset': sscrt.address}}))
 
-print('Sending 100000000 usscrt to treasury')
+print(f'Sending {seed_amount} usscrt to treasury')
 print(sscrt.execute({
         "send": {
             "recipient": treasury.address,
-            "amount": str(100000000),
+            "amount": str(seed_amount),
         },
     },
     ACCOUNT,
@@ -158,53 +164,77 @@ print(sscrt.execute({
 while True:
 
     print('\nTreasury')
-    print('Rebalance')
-    print(treasury.execute({
-        'rebalance': {
-            'asset': sscrt.address
-        },
-    }))
     print('Balance')
-    print(treasury.query({
+    treasury_balance = treasury.query({
         'balance': {
             'asset': sscrt.address
         },
-    }))
+    })['balance']['amount']
+    print(treasury_balance)
 
     print('\nFinance Manager')
-    print('Pending Allowance')
-    print(finance_manager.query({
-        'pending_allowance': {
-            'asset': sscrt.address
-        }
-    }))
-
-    print('Update')
-    print(finance_manager.execute({
-        'adapter': {
-            'update': {
-                'asset': sscrt.address,
-            }
-        }
-    }, ACCOUNT))
-
-    print('Pending Allowance')
-    print(finance_manager.query({
-        'pending_allowance': {
-            'asset': sscrt.address
-        }
-    }))
 
     print('Balance')
-    print(finance_manager.query({
+    finance_balance = finance_manager.query({
         'adapter': {
             'balance': {
                 'asset': sscrt.address,
             }
         }
-    }))
+    })['balance']['amount']
+    print(finance_balance)
+
+    outstanding = sum(map(int, [finance_balance]))
+    reserves = int(treasury_balance) - outstanding
+
+    print('ALLOCS')
+    print('Finance', int(finance_balance) / int(treasury_balance))
+    print('Reserves', int(reserves) / int(treasury_balance))
     
+    print('Rebalance...')
+    print(treasury.execute({
+        'rebalance': {
+            'asset': sscrt.address
+        },
+    }))
+    print(finance_manager.query({
+        'pending_allowance': {
+            'asset': sscrt.address
+        }
+    }))
+
     print('Unbonding')
+    unbonding = finance_manager.query({
+        'adapter': {
+            'unbonding': {
+                'asset': sscrt.address,
+            }
+        }
+    })['unbonding']['amount']
+    print(unbonding)
+
+    print('Updating...')
+    finance_manager.execute({
+        'adapter': {
+            'update': {
+                'asset': sscrt.address,
+            }
+        }
+    }, ACCOUNT)
+    scrt_staking.execute({
+        'adapter': {
+            'update': {
+                'asset': sscrt.address,
+            }
+        }
+    }, ACCOUNT)
+
+    print(finance_manager.query({
+        'pending_allowance': {
+            'asset': sscrt.address
+        }
+    }))
+
     print(finance_manager.query({
         'adapter': {
             'unbonding': {
@@ -213,7 +243,6 @@ while True:
         }
     }))
 
-    print('Claimable')
     claimable = finance_manager.query({
         'adapter': {
             'claimable': {
@@ -224,50 +253,12 @@ while True:
     print(claimable)
     if claimable['claimable']['amount'] != '0': 
         print('Claiming...')
-        print(finance_manager.execute({
+        finance_manager.execute({
             'adapter': {
                 'claim': {'asset': sscrt.address}
             }
-        }))
+        })
 
-    print('\nSCRT Staking')
-    print('Updating')
-    scrt_staking.execute({'adapter': {'update': {}}})
 
-    print('Balance')
-    print(scrt_staking.query({
-        'adapter': {
-            'balance': {
-                'asset': sscrt.address,
-            }
-        }
-    }))
-
-    print('Unbonding')
-    print(scrt_staking.query({
-        'adapter': {
-            'unbonding': {
-                'asset': sscrt.address,
-            }
-        }
-    }))
-
-    print('Claimable')
-    claimable = scrt_staking.query({
-        'adapter': {
-            'claimable': {
-                'asset': sscrt.address,
-            }
-        }
-    })
-    print(claimable)
-    if claimable['claimable']['amount'] != '0': 
-        print('Claiming...')
-        print(scrt_staking.execute({
-            'adapter': {
-                'claim': {'asset': sscrt.address}
-            }
-        }))
-
-    print('-' * 20, end='\n\n')
+    print('=' * 20, end='\n')
 
