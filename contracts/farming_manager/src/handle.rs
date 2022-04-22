@@ -19,7 +19,7 @@ use secret_toolkit::{
 use shade_protocol::{
     snip20,
     adapter,
-    finance_manager::{
+    farming_manager::{
         Allocation, AllocationMeta,
         AllocationType, Config, 
         HandleAnswer, QueryAnswer,

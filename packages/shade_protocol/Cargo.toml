@@ -36,11 +36,10 @@ mint_router = ["utils", "snip20"]
 oracle = ["snip20"]
 scrt_staking= ["utils", "adapter", "treasury"]
 staking = ["governance", "utils"]
-treasury = ["utils", "manager", "adapter", "snip20"]
-finance_manager = ["manager", "adapter"]
-manager = []
+treasury = ["utils", "adapter", "snip20"]
+farming_manager = ["adapter"]
+rewards_manager = ["adapter"]
 adapter = []
-#dao = ["treasury", "finance_manager", "manager", "adapter"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces

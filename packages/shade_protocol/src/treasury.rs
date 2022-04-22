@@ -15,9 +15,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
-    //pub account_holders: Vec<HumanAddr>,
     pub sscrt: Contract,
-    pub tolerance: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -65,6 +63,7 @@ pub enum Allowance {
         portion: Uint128,
         //TODO: This needs to be omitted from the handle msg
         last_refresh: String,
+        tolerance: Uint128,
     },
 }
 
@@ -111,7 +110,6 @@ pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
     pub sscrt: Contract,
-    pub tolerance: Uint128,
     //pub account_holders: Option<Vec<HumanAddr>>,
 }
 

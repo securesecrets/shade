@@ -62,7 +62,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-) -> StdResult<treasury::QueryAnswer> {
+) -> StdResult<adapter::QueryAnswer> {
     //TODO: restrict to admin?
 
     let managers = managers_r(&deps.storage).load()?;
@@ -84,8 +84,38 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
         };
     }
 
-    Ok(treasury::QueryAnswer::Unbonding {
+    Ok(adapter::QueryAnswer::Unbonding {
         amount: unbonding
+    })
+}
+
+pub fn claimable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: &HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    //TODO: restrict to admin?
+
+    let managers = managers_r(&deps.storage).load()?;
+    let mut claimable = Uint128::zero();
+
+    for allowance in allowances_r(&deps.storage).load(&asset.as_str().as_bytes())? {
+        match allowance {
+            treasury::Allowance::Portion { spender, .. } => {
+                let manager = managers
+                    .clone().into_iter()
+                    .find(|m| m.contract.address == spender).unwrap();
+                claimable += adapter::claimable_query(
+                    &deps,
+                    asset,
+                    manager.contract
+                )?;
+            }
+            _ => {}
+        };
+    }
+
+    Ok(adapter::QueryAnswer::Claimable {
+        amount: claimable
     })
 }
 

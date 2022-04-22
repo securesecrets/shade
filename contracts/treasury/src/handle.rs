@@ -28,11 +28,15 @@ use shade_protocol::{
 use crate::{
     query,
     state::{
-        allowances_r, allowances_w, asset_list_r, asset_list_w, assets_r, assets_w, config_r,
-        config_w, viewing_key_r,
-        self_address_r,
+        allowances_r, allowances_w, 
+        asset_list_r, asset_list_w, 
+        assets_r, assets_w, 
+        config_r, config_w, 
+        viewing_key_r, self_address_r,
         managers_r, managers_w,
-        account_r, account_w
+        account_r, account_w,
+        total_unbonding_r,
+        total_unbonding_w,
     },
 };
 use chrono::prelude::*;
@@ -63,7 +67,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
         account_w(&mut deps.storage).save(&key, &account)?;
     }
-    /*
+    /* Probably can just wait until rebalance
     if let Some(f) = msg {
         let flag: Flag = from_binary(&f)?;
         // NOTE: would this be better as a non-exhaustive enum?
@@ -224,6 +228,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 spender,
                 portion,
                 last_refresh,
+                tolerance,
             } => {
                 //portion_total += *portion; //allowance_portion(allowance);
                 let i = managers.iter().position(|m| m.contract.address == *spender).unwrap();
@@ -237,8 +242,6 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 
     managers_w(&mut deps.storage).save(&managers)?;
     let config = config_r(&deps.storage).load()?;
-    let threshold = (balance + out_balance)
-        .multiply_ratio(config.tolerance, 10u128.pow(18));
 
     // Perform rebalance
     for allowance in allowances {
@@ -265,12 +268,16 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 spender,
                 portion,
                 last_refresh,
+                tolerance,
             } => {
                 let desired_amount = (balance + out_balance)
                     .multiply_ratio(
                         portion, 
                         10u128.pow(18)
                     );
+
+                let threshold = (balance + out_balance)
+                    .multiply_ratio(tolerance, 10u128.pow(18));
 
                 let adapter = managers.clone()
                     .into_iter()
@@ -311,7 +318,6 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                     }
 
                     // Remove allowance first
-                    /*
                     if cur_allowance > Uint128::zero() {
 
                         if cur_allowance < decrease {
@@ -343,7 +349,6 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                             decrease = Uint128::zero();
                         }
                     }
-                    */
 
                     // Unbond remaining
                     if decrease > Uint128::zero() {
@@ -472,6 +477,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     )?;
 
     allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
+    total_unbonding_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Uint128::zero())?;
 
     Ok(HandleResponse {
         messages: vec![
@@ -625,16 +631,16 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         Utc
     );
 
-
     let spender = match allowance {
 
         Allowance::Portion {
-            spender, portion, last_refresh
+            spender, portion, last_refresh, tolerance,
         } => {
             apps.push(Allowance::Portion {
                 spender: spender.clone(),
                 portion: portion.clone(),
-                last_refresh: datetime.to_rfc3339()
+                last_refresh: datetime.to_rfc3339(),
+                tolerance,
             });
             spender
         },
@@ -724,6 +730,142 @@ pub fn remove_account<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RemoveAccount {
             status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn claim<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    asset: HumanAddr,
+) -> StdResult<HandleResponse> {
+
+    if env.message.sender != config_r(&deps.storage).load()?.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    let key = asset.as_str().as_bytes();
+
+    let managers = managers_r(&deps.storage).load()?;
+    let allowances = allowances_r(&deps.storage).load(&key)?;
+
+    let mut messages = vec![];
+
+    let mut claimed = Uint128::zero();
+
+    for allowance in allowances {
+        match allowance {
+            Allowance::Amount { .. } => {},
+            Allowance::Portion { spender, .. } => {
+                if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
+
+                    let claimable = adapter::claimable_query(&deps, &asset, manager.contract.clone())?;
+
+                    if claimable > Uint128::zero() {
+                        messages.push(
+                            adapter::claim_msg(
+                                asset.clone(),
+                                manager.contract.clone()
+                            )?
+                        );
+                        claimed += claimable;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+            status: ResponseStatus::Success,
+            amount: claimed,
+        })?),
+    })
+}
+
+pub fn unbond<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    asset: HumanAddr,
+    amount: Uint128,
+) -> StdResult<HandleResponse> {
+
+    /*
+    if env.message.sender != config_r(&deps.storage).load()?.admin {
+        return Err(StdError::unauthorized());
+    }
+    */
+
+    let account = match account_r(&deps.storage).may_load(&env.message.sender.as_str().as_bytes())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::unauthorized());
+        }
+    };
+
+    let managers = managers_r(&deps.storage).load()?;
+
+    let mut messages = vec![];
+
+    let mut unbond_amount = amount;
+
+    for allowance in allowances_r(&deps.storage).load(asset.as_str().as_bytes())? {
+        match allowance {
+            Allowance::Amount { .. } => {},
+            Allowance::Portion { spender, .. } => {
+                if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
+                    let balance = adapter::balance_query(&deps, &asset.clone(), manager.contract.clone())?;
+
+                    if balance > unbond_amount {
+                        messages.push(
+                            adapter::unbond_msg(
+                                asset.clone(),
+                                unbond_amount,
+                                manager.contract.clone(),
+                            )?
+                        );
+                        unbond_amount = Uint128::zero();
+                    }
+                    else {
+                        messages.push(
+                            adapter::unbond_msg(
+                                asset.clone(),
+                                balance,
+                                manager.contract.clone(),
+                            )?
+                        );
+                        unbond_amount = (unbond_amount - balance)?;
+                    }
+                }
+            }
+        }
+
+        if unbond_amount == Uint128::zero() {
+            break;
+        }
+    }
+
+    if unbond_amount > Uint128::zero() {
+        return Err(StdError::generic_err(
+            format!("Failed to fully unbond {}, {} available", 
+                    amount, (amount - unbond_amount)?)
+        ));
+    }
+
+    total_unbonding_w(&mut deps.storage)
+        .update(
+            asset.as_str().as_bytes(), 
+            |u| Ok(u.or(Some(Uint128::zero())).unwrap() + amount)
+        )?;
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+            status: ResponseStatus::Success,
+            amount,
         })?),
     })
 }

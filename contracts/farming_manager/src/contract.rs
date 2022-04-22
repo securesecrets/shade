@@ -5,7 +5,7 @@ use cosmwasm_std::{
 
 use shade_protocol::{
     adapter,
-    finance_manager::{
+    farming_manager::{
         Config, HandleMsg, InitMsg, QueryMsg
     },
 };
@@ -67,7 +67,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             asset,
             allocation
         } => handle::allocate(deps, &env, asset, allocation),
-
         HandleMsg::Adapter(a) => match a {
             adapter::SubHandleMsg::Unbond {
                 asset,
@@ -95,7 +94,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::PendingAllowance {
             asset
         } => to_binary(&query::pending_allowance(deps, asset)?),
-
         QueryMsg::Adapter(a) => match a {
             adapter::SubQueryMsg::Balance {
                 asset

@@ -53,7 +53,6 @@ treasury = Contract(
         'admin': ACCOUNT,
         'viewing_key': viewing_key,
         'sscrt': sscrt.as_dict(),
-        'tolerance': str(int(tolerance * 10**18)),
     }),
     gen_label(8),
 )
@@ -74,8 +73,8 @@ print(treasury.execute({
 }))
 
 print('Deploying Finance Manager')
-finance_manager = Contract(
-    '../compiled/finance_manager.wasm.gz',
+farming_manager = Contract(
+    '../compiled/farming_manager.wasm.gz',
     json.dumps({
         'admin': ACCOUNT,
         'treasury': treasury.address,
@@ -83,10 +82,10 @@ finance_manager = Contract(
     }),
     gen_label(8),
 )
-print('Manager', finance_manager.address)
+print('Manager', farming_manager.address)
 
 print('Registering sscrt w/ manager')
-print(finance_manager.execute({
+print(farming_manager.execute({
         'register_asset': {
             'contract': sscrt.as_dict(),
         }
@@ -97,7 +96,7 @@ print(finance_manager.execute({
 print(f'Registering Manager with Treasury')
 print(treasury.execute({
     'register_manager': {
-        'contract': finance_manager.as_dict(),
+        'contract': farming_manager.as_dict(),
     }
 }))
 
@@ -108,9 +107,10 @@ print(treasury.execute({
         'asset': sscrt.address,
         'allowance': {
             'portion': {
-                'spender': finance_manager.address,
+                'spender': farming_manager.address,
                 'portion': str(int(allowance * 10**18)),
                 'last_refresh': '',
+                'tolerance': str(int(tolerance * 10**18)),
             }
         }
     }
@@ -132,7 +132,7 @@ print(scrt_staking.address)
 allocation = 1
 
 print(f'Allocating {allocation * 100}% sSCRT to scrt-staking')
-print(finance_manager.execute({
+print(farming_manager.execute({
     'allocate': {
         'asset': sscrt.address,
         'allocation': {
@@ -175,20 +175,20 @@ while True:
     print('\nFinance Manager')
 
     print('Balance')
-    finance_balance = finance_manager.query({
+    farming_balance = farming_manager.query({
         'adapter': {
             'balance': {
                 'asset': sscrt.address,
             }
         }
     })['balance']['amount']
-    print(finance_balance)
+    print(farming_balance)
 
-    outstanding = sum(map(int, [finance_balance]))
+    outstanding = sum(map(int, [farming_balance]))
     reserves = int(treasury_balance) - outstanding
 
     print('ALLOCS')
-    print('Finance', int(finance_balance) / int(treasury_balance))
+    print('Finance', int(farming_balance) / int(treasury_balance))
     print('Reserves', int(reserves) / int(treasury_balance))
     
     print('Rebalance...')
@@ -197,14 +197,14 @@ while True:
             'asset': sscrt.address
         },
     }))
-    print(finance_manager.query({
+    print(farming_manager.query({
         'pending_allowance': {
             'asset': sscrt.address
         }
     }))
 
     print('Unbonding')
-    unbonding = finance_manager.query({
+    unbonding = farming_manager.query({
         'adapter': {
             'unbonding': {
                 'asset': sscrt.address,
@@ -214,7 +214,7 @@ while True:
     print(unbonding)
 
     print('Updating...')
-    finance_manager.execute({
+    farming_manager.execute({
         'adapter': {
             'update': {
                 'asset': sscrt.address,
@@ -229,13 +229,13 @@ while True:
         }
     }, ACCOUNT)
 
-    print(finance_manager.query({
+    print(farming_manager.query({
         'pending_allowance': {
             'asset': sscrt.address
         }
     }))
 
-    print(finance_manager.query({
+    print(farming_manager.query({
         'adapter': {
             'unbonding': {
                 'asset': sscrt.address,
@@ -243,7 +243,7 @@ while True:
         }
     }))
 
-    claimable = finance_manager.query({
+    claimable = farming_manager.query({
         'adapter': {
             'claimable': {
                 'asset': sscrt.address,
@@ -253,7 +253,7 @@ while True:
     print(claimable)
     if claimable['claimable']['amount'] != '0': 
         print('Claiming...')
-        finance_manager.execute({
+        farming_manager.execute({
             'adapter': {
                 'claim': {'asset': sscrt.address}
             }

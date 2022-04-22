@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage, StdError,
+    StdResult, Storage, StdError, Uint128,
 };
 
 use shade_protocol::{
@@ -12,8 +12,7 @@ use crate::{
     handle, query,
     state::{
         allowances_w, asset_list_w, config_w, self_address_w,
-        viewing_key_w,
-        managers_w,
+        viewing_key_w, managers_w, total_unbonding_w,
     },
 };
 use chrono::prelude::*;
@@ -27,7 +26,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     config_w(&mut deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(env.message.sender.clone()),
         sscrt: msg.sscrt,
-        tolerance: msg.tolerance,
     })?;
 
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
@@ -64,8 +62,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::RemoveAccount { holder } => handle::remove_account(deps, &env, holder),
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Update { asset } => handle::rebalance(deps, &env, asset),
-            adapter::SubHandleMsg::Claim { asset } => Err(StdError::generic_err("Not Implemented")),
-            adapter::SubHandleMsg::Unbond { asset, amount } => Err(StdError::generic_err("Not Implemented")),
+            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),
+            adapter::SubHandleMsg::Unbond { asset, amount } => handle::unbond(deps, &env, asset, amount),
         }
     }
 }
@@ -82,8 +80,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, &asset, &spender)?),
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
-            adapter::SubQueryMsg::Unbonding { asset } => Err(StdError::generic_err("Not Implemented")),
-            adapter::SubQueryMsg::Claimable { asset } => Err(StdError::generic_err("Not Implemented")),
+            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(&deps, &asset)?),
+            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(&deps, &asset)?),
         }
     }
 }

@@ -3,7 +3,7 @@ use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{snip20::Snip20Asset, finance_manager};
+use shade_protocol::{snip20::Snip20Asset, farming_manager};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static ASSETS: &[u8] = b"assets";
@@ -14,11 +14,11 @@ pub static ALLOCATIONS: &[u8] = b"allocations";
 //pub static ALLOWANCE_REFRESH: &[u8] = b"allowance_refresh";
 //pub static REWARDS: &[u8] = b"rewards_tracking";
 
-pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, finance_manager::Config> {
+pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, farming_manager::Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, finance_manager::Config> {
+pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, farming_manager::Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
@@ -54,10 +54,10 @@ pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
     singleton(storage, SELF_ADDRESS)
 }
 
-pub fn allocations_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<finance_manager::AllocationMeta>> {
+pub fn allocations_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<farming_manager::AllocationMeta>> {
     bucket_read(ALLOCATIONS, storage)
 }
 
-pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<finance_manager::AllocationMeta>> {
+pub fn allocations_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<farming_manager::AllocationMeta>> {
     bucket(ALLOCATIONS, storage)
 }

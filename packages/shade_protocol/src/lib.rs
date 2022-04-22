@@ -46,7 +46,5 @@ pub mod treasury;
 #[cfg(feature = "adapter")]
 pub mod adapter;
 
-//#[cfg(feature = "manager")]
-//pub mod manager;
-#[cfg(feature = "finance_manager")]
-pub mod finance_manager;
+#[cfg(feature = "farming_manager")]
+pub mod farming_manager;

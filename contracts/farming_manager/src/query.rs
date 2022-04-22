@@ -5,7 +5,7 @@ use secret_toolkit::{
 };
 use shade_protocol::{
     snip20,
-    finance_manager,
+    farming_manager,
     adapter,
     utils::asset::Contract,
 };
@@ -17,8 +17,8 @@ use crate::state::{
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-) -> StdResult<finance_manager::QueryAnswer> {
-    Ok(finance_manager::QueryAnswer::Config {
+) -> StdResult<farming_manager::QueryAnswer> {
+    Ok(farming_manager::QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
@@ -28,7 +28,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
-) -> StdResult<finance_manager::QueryAnswer> {
+) -> StdResult<farming_manager::QueryAnswer> {
 
     let config = config_r(&deps.storage).load()?;
     let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
@@ -48,7 +48,7 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
         full_asset.contract.address.clone(),
     )?;
 
-    Ok(finance_manager::QueryAnswer::PendingAllowance { 
+    Ok(farming_manager::QueryAnswer::PendingAllowance { 
         amount: allowance.allowance
     })
 }
@@ -81,9 +81,9 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
 pub fn assets<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-) -> StdResult<finance_manager::QueryAnswer> {
+) -> StdResult<farming_manager::QueryAnswer> {
 
-    Ok(finance_manager::QueryAnswer::Assets {
+    Ok(farming_manager::QueryAnswer::Assets {
         assets: asset_list_r(&deps.storage).load()?,
     })
 }
@@ -91,9 +91,9 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
 pub fn allocations<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
-) -> StdResult<finance_manager::QueryAnswer> {
+) -> StdResult<farming_manager::QueryAnswer> {
 
-    Ok(finance_manager::QueryAnswer::Allocations {
+    Ok(farming_manager::QueryAnswer::Allocations {
         allocations: match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
             None => vec![],
             Some(a) => a,

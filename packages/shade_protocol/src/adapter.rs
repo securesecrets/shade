@@ -71,8 +71,14 @@ pub enum SubQueryMsg {
     Balance { asset: HumanAddr },
     Unbonding { asset: HumanAddr },
     Claimable { asset: HumanAddr },
-    //TODO: for LP pools
-    //Ratio { asset0: HumanAddr, asset1: HumanAddr }
+    //CanUnbond { asset: HumanAddr },
+    /* TODO
+     * - LP pool assets
+     * Ratio { asset0: HumanAddr, asset1: HumanAddr },
+     * - things like unbond period
+     * Metadata { asset: HumanAddr },
+     * CanUnbond { asset: HumanAddr },
+     */
 }
 
 /*
@@ -97,6 +103,7 @@ pub enum QueryAnswer {
     Balance { amount: Uint128 },
     Unbonding { amount: Uint128 },
     Claimable { amount: Uint128 },
+    //CanUnbond { unbondable: bool },
 }
 
 pub fn claimable_query<S: Storage, A: Api, Q: Querier>(

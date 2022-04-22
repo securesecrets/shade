@@ -20,7 +20,7 @@ members = [
 
   # DAO
   "contracts/treasury",
-  "contracts/finance_manager",
+  "contracts/farming_manager",
 
   # Mock contracts
   "contracts/mock_band",

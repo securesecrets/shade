@@ -1,5 +1,5 @@
 [package]
-name = "finance_manager"
+name = "farming_manager"
 version = "0.1.0"
 authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
 edition = "2018"
@@ -28,7 +28,7 @@ cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "finance_manager",
+  "farming_manager",
   "snip20"
 ]}
 schemars = "0.7"
