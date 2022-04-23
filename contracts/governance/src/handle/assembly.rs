@@ -101,7 +101,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         }
     }
     // Check if token voting
-    if let Some(vote_settings) = Profile::public_voting(&deps.storage, &assembly_data.profile)? {
+    else if let Some(vote_settings) = Profile::public_voting(&deps.storage, &assembly_data.profile)? {
         status = Status::Voting {
             votes: Vote::default(),
             start: env.block.time,
@@ -158,7 +158,8 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    prop.save(&mut deps.storage, &ID::add_proposal(&mut deps.storage)?)?;
+    let prop_id = ID::add_proposal(&mut deps.storage)?;
+    prop.save(&mut deps.storage, &prop_id)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -237,7 +238,7 @@ pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
     if let Some(profile) = profile {
         // Check that profile exists
         if profile > ID::profile(&deps.storage)? {
-            return Err(StdError::not_found("Profile not found"))
+            return Err(StdError::generic_err("Profile not found"))
         }
         assembly.profile = profile
     }

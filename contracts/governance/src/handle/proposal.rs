@@ -159,14 +159,14 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let mut history = Proposal::status_history(&deps.storage, &proposal)?;
     let status = Proposal::status(&deps.storage, &proposal)?;
-    let new_status: Status;
+    let mut new_status: Status;
 
     let assembly = Proposal::assembly(&deps.storage, &proposal)?;
     let profile = Assembly::data(&deps.storage, &assembly)?.profile;
 
     let mut messages = vec![];
 
-    match status {
+    match status.clone() {
         Status::AssemblyVote { votes, start, end } => {
             if end > env.block.time {
                 return Err(StdError::unauthorized())
@@ -220,26 +220,34 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
             // before another proposal is finished
             if let Some(setting) = Profile::funding(&deps.storage, &profile)? {
                 // Check if deadline or funding limit reached
-                if amount < setting.required && end > env.block.time {
+                if amount >= setting.required {
+                    new_status = Status::Passed {
+                        start: env.block.time,
+                        end: env.block.time + Profile::data(
+                            &deps.storage, &profile)?.cancel_deadline
+                    }
+                }
+                else if end > env.block.time {
                     return Err(StdError::unauthorized())
                 }
-                else if amount < setting.required {
-                    new_status = Status::Expired
+                else {
+                    new_status = Status::Expired;
+                }
+            }
+            else {
+                new_status = Status::Passed {
+                    start: env.block.time,
+                    end: env.block.time + Profile::data(
+                        &deps.storage, &profile)?.cancel_deadline
                 }
             }
 
-            if new_status != Status::Expired {
+            if let Status::Passed{..} = new_status {
                 if let Some(setting) = Profile::public_voting(&deps.storage, &profile)? {
                     new_status = Status::Voting {
                         votes: Vote::default(),
                         start: env.block.time,
                         end: env.block.time + setting.deadline
-                    }
-                }
-                else {
-                    new_status = Status::Passed {
-                        start: env.block.time,
-                        end: env.block.time + Profile::data(&deps.storage, &profile)?.cancel_deadline
                     }
                 }
             }
@@ -254,7 +262,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
             let query: shd_staking::QueryAnswer = shd_staking::QueryMsg::TotalStaked {}
                 .query(
                     &deps.querier,
-                    config.vote_token.unwrap().code_hash,
+                    config.vote_token.clone().unwrap().code_hash,
                     config.vote_token.unwrap().address
                 )?;
 
@@ -278,10 +286,10 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                 // Send the funding amount to the treasury
                 if let Some(profile) = Profile::funding(&deps.storage, &profile)? {
                     // Look for the history and find funding
-                    for s in history {
+                    for s in history.iter() {
                         // Check if it has funding history
                         if let Status::Funding{ amount, ..} = s {
-                            let send_amount = amount.multiply_ratio(100000, profile.veto_deposit_loss.clone());
+                            let send_amount = amount.multiply_ratio(100000u128, profile.veto_deposit_loss.clone());
                             if send_amount != Uint128::zero() {
                                 let config = Config::load(&deps.storage)?;
                                 // Update slash amount
@@ -290,7 +298,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                                     config.treasury,
                                     cosmwasm_std::Uint128(send_amount.u128()),
                                     None, None, None, 1,
-                                    config.funding_token.unwrap().code_hash,
+                                    config.funding_token.clone().unwrap().code_hash,
                                     config.funding_token.unwrap().address
                                 )?);
                             }
@@ -299,8 +307,8 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                     }
                 }
             }
-            else if let Status::Success = new_status {
-                new_status = Status::Passed {
+            else if let Status::Success = vote_conclusion {
+                vote_conclusion = Status::Passed {
                     start: env.block.time,
                     end: env.block.time + Profile::data(&deps.storage, &profile)?.cancel_deadline
                 }
@@ -308,11 +316,11 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 
             new_status = vote_conclusion;
         }
-        _ => Err(StdError::generic_err("Cants update"))
+        _ => return Err(StdError::generic_err("Cant update"))
     }
 
     // Add old status to history
-    history.push(status.clone());
+    history.push(status);
     Proposal::save_status_history(&mut deps.storage, &proposal, history)?;
     // Save new status
     Proposal::save_status(&mut deps.storage, &proposal, new_status.clone())?;

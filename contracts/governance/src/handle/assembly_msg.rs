@@ -12,7 +12,7 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
     env: Env,
     name: String,
     msg: String,
-    assemblys: Vec<Uint128>
+    assemblies: Vec<Uint128>
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized())
@@ -21,15 +21,15 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
     let id = ID::add_assembly_msg(&mut deps.storage)?;
 
     // Check that assemblys exist
-    for assembly in assemblys {
-        if assembly > ID::assembly(&deps.storage)? {
+    for assembly in assemblies.iter() {
+        if *assembly > ID::assembly(&deps.storage)? {
             return Err(StdError::generic_err("Given assembly does not exist"))
         }
     }
 
     AssemblyMsg {
         name,
-        assemblies: assemblys,
+        assemblies,
         msg: FlexibleMsg::new(msg, MSG_VARIABLE)
     }.save(&mut deps.storage, &id)?;
 
@@ -67,8 +67,8 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
         assembly_msg.msg = FlexibleMsg::new(msg, MSG_VARIABLE);
     }
 
-    if let Some(assemblys) = assemblies {
-        assembly_msg.assemblies = assemblys;
+    if let Some(assemblies) = assemblies {
+        assembly_msg.assemblies = assemblies;
     }
 
     assembly_msg.save(&mut deps.storage, &id)?;

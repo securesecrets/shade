@@ -15,6 +15,7 @@ use crate::utils::storage::NaiveBucketStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+// TODO: add title
 pub struct Proposal {
     // Description
     // Address of the proposal proposer
@@ -33,15 +34,17 @@ pub struct Proposal {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub msg: Option<Binary>,
 
+    // TODO: only ask for contract if wasm msg
+    // TODO: have option for standard wasm msg
+    // TODO: have option to add coins
+
     // Assembly
     // Assembly that called the proposal
     pub assembly: Uint128,
 
-    // TODO: try to display total assembly votes
     #[serde(skip_serializing_if = "Option::is_none")]
     pub assembly_vote_tally: Option<Vote>,
 
-    // TODO: try to display total user votes
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_vote_tally: Option<Vote>,
 
@@ -222,7 +225,7 @@ impl Proposal {
     // User assembly votes
     pub fn assembly_vote<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Option<Vote>> {
         let key = id.to_string() + "-" + user.as_str();
-        Ok(Vote::read(storage, ASSEMBLY_VOTE).may_load(key.as_bytes())?)
+        Ok(Vote::may_load(storage, ASSEMBLY_VOTE, key.as_bytes())?)
     }
 
     pub fn save_assembly_vote<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: &Vote) -> StdResult<()> {
@@ -232,7 +235,7 @@ impl Proposal {
 
     // Total assembly votes
     pub fn assembly_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
-        match Vote::read(storage, ASSEMBLY_VOTES).may_load(&id.to_be_bytes())? {
+        match Vote::may_load(storage, ASSEMBLY_VOTES, &id.to_be_bytes())? {
             None => Ok(Vote::default()),
             Some(vote) => Ok(vote)
         }
@@ -245,7 +248,7 @@ impl Proposal {
     // User public votes
     pub fn public_vote<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Option<Vote>> {
         let key = id.to_string() + "-" + user.as_str();
-        Ok(Vote::read(storage, PUBLIC_VOTE).may_load(key.as_bytes())?)
+        Ok(Vote::may_load(storage, PUBLIC_VOTE, key.as_bytes())?)
     }
 
     pub fn save_public_vote<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: &Vote) -> StdResult<()> {
@@ -255,7 +258,7 @@ impl Proposal {
 
     // Total public votes
     pub fn public_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
-        match Vote::read(storage, PUBLIC_VOTES).may_load(&id.to_be_bytes())? {
+        match Vote::may_load(storage, PUBLIC_VOTES, &id.to_be_bytes())? {
             None => Ok(Vote::default()),
             Some(vote) => Ok(vote)
         }

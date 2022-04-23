@@ -93,6 +93,7 @@ pub enum HandleMsg {
     },
 
     // Proposals
+    // TODO: maybe proposals could be multi msg
     // Same as AssemblyProposal where assembly is 0 and assembly msg is 0
     Proposal {
         metadata: String,
@@ -132,6 +133,7 @@ pub enum HandleMsg {
         memo: Option<String>,
         padding: Option<String>
     },
+    // TODO: claim, claims fund amount placed
     /// Votes on a assembly vote
     AssemblyVote {
         proposal: Uint128,
@@ -178,7 +180,7 @@ pub enum HandleMsg {
     AddAssemblyMsg {
         name: String,
         msg: String,
-        assemblys: Vec<Uint128>,
+        assemblies: Vec<Uint128>,
         padding: Option<String>
     },
     /// Edits an existing assembly msg
@@ -186,7 +188,7 @@ pub enum HandleMsg {
         id: Uint128,
         name: Option<String>,
         msg: Option<String>,
-        assemblys: Option<Vec<Uint128>>,
+        assemblies: Option<Vec<Uint128>>,
         padding: Option<String>
     },
 
@@ -204,7 +206,7 @@ pub enum HandleMsg {
     },
 
     // Contracts
-    // TODO: maybe add a list of allowed assemblys for those contracts
+    // TODO: maybe add a list of allowed assemblies for those contracts
     AddContract {
         name: String,
         metadata: String,
@@ -284,6 +286,8 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     // TODO: Query individual user vote with VK and permit
+    // TODO: add get total amount of each of these queries
+    Config { },
 
     Proposals {
         start: Uint128,
@@ -318,6 +322,10 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
+    Config {
+        config: Config
+    },
+
     Proposals {
         props: Vec<Proposal>
     },

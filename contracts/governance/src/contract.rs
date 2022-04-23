@@ -27,9 +27,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     // Setup config
     Config {
-        treasury: msg.treasury,
-        vote_token: msg.vote_token,
-        funding_token: msg.funding_token
+        treasury: msg.treasury.clone(),
+        vote_token: msg.vote_token.clone(),
+        funding_token: msg.funding_token.clone()
     }.save(&mut deps.storage)?;
 
     // Setups IDs
@@ -115,6 +115,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::SetConfig { treasury, vote_token, funding_token, ..
             } => try_set_config(deps, env, treasury, vote_token, funding_token),
 
+            // TODO: set this, must be discussed with team
             HandleMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, state),
 
             // Proposals
@@ -127,7 +128,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::Receive { sender, from, amount, msg, memo, ..
             } => try_receive(deps, env, sender, from, amount, msg, memo),
 
-            // Assemblys
+            // Assemblies
             HandleMsg::AssemblyVote { proposal, vote, ..
             } => try_assembly_vote(deps, env, proposal, vote),
 
@@ -141,10 +142,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             } => try_set_assembly(deps, env, id, name, metadata, members, profile),
 
             // Assembly Msgs
-            HandleMsg::AddAssemblyMsg { name, msg, assemblys, ..
+            HandleMsg::AddAssemblyMsg { name, msg, assemblies: assemblys, ..
             } => try_add_assembly_msg(deps, env, name, msg, assemblys),
 
-            HandleMsg::SetAssemblyMsg { id, name, msg, assemblys, ..
+            HandleMsg::SetAssemblyMsg { id, name, msg, assemblies: assemblys, ..
             } => try_set_assembly_msg(deps, env, id, name, msg, assemblys),
 
             // Profiles
@@ -179,6 +180,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 
             QueryMsg::Contracts { start, end
             } => to_binary(&query::contracts(deps, start, end)?),
+
+            QueryMsg::Config {} => to_binary(&query::config(deps)?),
         },
         RESPONSE_BLOCK_SIZE
     )

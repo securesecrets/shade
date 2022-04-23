@@ -4,8 +4,16 @@ use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::contract::AllowedContract;
 use shade_protocol::governance::profile::Profile;
 use shade_protocol::governance::proposal::Proposal;
-use shade_protocol::governance::QueryAnswer;
+use shade_protocol::governance::{Config, QueryAnswer};
 use shade_protocol::governance::stored_id::ID;
+use shade_protocol::utils::storage::SingletonStorage;
+
+pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::Config {
+        config: Config::load(&deps.storage)?
+    })
+}
 
 pub fn proposals<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: Uint128, end: Uint128) -> StdResult<QueryAnswer> {
     let mut items = vec![];
@@ -42,7 +50,7 @@ pub fn profiles<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: U
         end = total;
     }
 
-    for i in start.u128()..end.u128() {
+    for i in start.u128()..=end.u128() {
         items.push(Profile::load(&deps.storage, &Uint128::new(i))?);
     }
 
@@ -64,7 +72,7 @@ pub fn assemblies<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start:
         end = total;
     }
 
-    for i in start.u128()..end.u128() {
+    for i in start.u128()..=end.u128() {
         items.push(Assembly::load(&deps.storage, &Uint128::new(i))?);
     }
 
@@ -86,7 +94,7 @@ pub fn assembly_msgs<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, sta
         end = total;
     }
 
-    for i in start.u128()..end.u128() {
+    for i in start.u128()..=end.u128() {
         items.push(AssemblyMsg::load(&deps.storage, &Uint128::new(i))?);
     }
 
@@ -108,7 +116,7 @@ pub fn contracts<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: 
         end = total;
     }
 
-    for i in start.u128()..end.u128() {
+    for i in start.u128()..=end.u128() {
         items.push(AllowedContract::load(&deps.storage, &Uint128::new(i))?);
     }
 
