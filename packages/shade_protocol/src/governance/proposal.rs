@@ -96,7 +96,7 @@ impl Proposal {
             let mut funders = vec![];
             for (funder, funding) in funder_list.iter() {
                 funders.push(funder.clone());
-                Self::save_funding(storage, id, &funder, *funding)?
+                Self::save_funding(storage, id, &funder, Funding{ amount: *funding, claimed: false})?
             }
             Self::save_funders(storage, id, funders)?;
         }
@@ -120,15 +120,16 @@ impl Proposal {
 
         let mut funders_arr = vec![];
         for funder in Self::funders(storage, &id)?.iter() {
-            funders_arr.push((funder.clone(), Self::funding(storage, &id, &funder)?))
+            funders_arr.push((funder.clone(), Self::funding(storage, &id, &funder)?.amount))
         }
 
-        let funders: Option<Vec<(HumanAddr, Uint128)>>;
-        if funders_arr.is_empty() {
-            funders = None;
-        }
-        else {
-            funders = Some(funders_arr);
+        let mut funders: Option<Vec<(HumanAddr, Uint128)>> = None;
+        if !funders_arr.is_empty() {
+            if let Some(prof) = Profile::funding(storage, &Assembly::data(storage, &assembly)?.profile)? {
+                if !prof.privacy {
+                    funders = Some(funders_arr);
+                }
+            }
         }
 
         let mut target = None;
@@ -212,14 +213,14 @@ impl Proposal {
         Funders(data).save(storage, &id.to_be_bytes())
     }
 
-    pub fn funding<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Uint128> {
+    pub fn funding<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Funding> {
         let key = id.to_string() + "-" + user.as_str();
-        Ok(Funding::load(storage, key.as_bytes())?.0)
+        Funding::load(storage, key.as_bytes())
     }
 
-    pub fn save_funding<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: Uint128) -> StdResult<()> {
+    pub fn save_funding<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: Funding) -> StdResult<()> {
         let key = id.to_string() + "-" + user.as_str();
-        Funding(data).save(storage, key.as_bytes())
+        data.save(storage, key.as_bytes())
     }
 
     // User assembly votes
@@ -318,7 +319,8 @@ pub enum Status {
     // Proposal was rejected
     Rejected,
     // Proposal was vetoed
-    Vetoed { slashed_amount: Uint128 },
+    // NOTE: percent it stored because proposal settings can change before claiming
+    Vetoed { slash_percent: Uint128 },
     // Proposal was approved, has a set timeline before it can be canceled
     Passed {start: u64, end: u64},
     // If proposal is a msg then it was executed and was successful
@@ -356,7 +358,10 @@ impl BucketStorage for Funders {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Funding (pub Uint128);
+pub struct Funding {
+    pub amount: Uint128,
+    pub claimed: bool
+}
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for Funding {

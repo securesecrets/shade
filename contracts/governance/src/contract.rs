@@ -15,7 +15,7 @@ use crate::handle::assembly::{try_add_assembly, try_assembly_proposal, try_assem
 use crate::handle::assembly_msg::{try_add_assembly_msg, try_set_assembly_msg};
 use crate::handle::contract::{try_add_contract, try_set_contract};
 use crate::handle::profile::{try_add_profile, try_set_profile};
-use crate::handle::proposal::{try_cancel, try_proposal, try_receive, try_trigger, try_update};
+use crate::handle::proposal::{try_cancel, try_claim_funding, try_proposal, try_receive, try_trigger, try_update};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -127,6 +127,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::Update { proposal, .. } => try_update(deps, env, proposal),
             HandleMsg::Receive { sender, from, amount, msg, memo, ..
             } => try_receive(deps, env, sender, from, amount, msg, memo),
+            HandleMsg::ClaimFunding { id } => try_claim_funding(deps, env, id),
 
             // Assemblies
             HandleMsg::AssemblyVote { proposal, vote, ..
@@ -166,17 +167,27 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     pad_query_result(
         match msg {
+            QueryMsg::TotalProposals {} => to_binary(&query::total_proposals(deps)?),
+
             QueryMsg::Proposals { start, end
             } => to_binary(&query::proposals(deps, start, end)?),
+
+            QueryMsg::TotalAssemblies {} => to_binary(&query::total_assemblies(deps)?),
 
             QueryMsg::Assemblies { start, end
             } => to_binary(&query::assemblies(deps, start, end)?),
 
+            QueryMsg::TotalAssemblyMsgs {} => to_binary(&query::total_assembly_msgs(deps)?),
+
             QueryMsg::AssemblyMsgs { start, end
             } => to_binary(&query::assembly_msgs(deps, start, end)?),
 
+            QueryMsg::TotalProfiles {} => to_binary(&query::total_profiles(deps)?),
+
             QueryMsg::Profiles { start, end
             } => to_binary(&query::profiles(deps, start, end)?),
+
+            QueryMsg::TotalContracts {} => to_binary(&query::total_contracts(deps)?),
 
             QueryMsg::Contracts { start, end
             } => to_binary(&query::contracts(deps, start, end)?),

@@ -133,7 +133,9 @@ pub enum HandleMsg {
         memo: Option<String>,
         padding: Option<String>
     },
-    // TODO: claim, claims fund amount placed
+    ClaimFunding {
+        id: Uint128
+    },
     /// Votes on a assembly vote
     AssemblyVote {
         proposal: Uint128,
@@ -250,6 +252,9 @@ pub enum HandleAnswer {
     Receive {
         status: ResponseStatus
     },
+    ClaimFunding {
+        status: ResponseStatus
+    },
     AssemblyVote {
         status: ResponseStatus
     },
@@ -286,28 +291,37 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     // TODO: Query individual user vote with VK and permit
-    // TODO: add get total amount of each of these queries
     Config { },
+
+    TotalProposals {},
 
     Proposals {
         start: Uint128,
         end: Uint128
     },
 
+    TotalAssemblies {},
+
     Assemblies {
         start: Uint128,
         end: Uint128
     },
+
+    TotalAssemblyMsgs {},
 
     AssemblyMsgs {
         start: Uint128,
         end: Uint128
     },
 
+    TotalProfiles {},
+
     Profiles {
         start: Uint128,
         end: Uint128
     },
+
+    TotalContracts {},
 
     Contracts {
         start: Uint128,
@@ -344,5 +358,9 @@ pub enum QueryAnswer {
 
     Contracts {
         contracts: Vec<AllowedContract>
+    },
+
+    Total {
+        total: Uint128
     }
 }

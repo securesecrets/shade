@@ -1,22 +1,9 @@
 
 // TODO: Queries
-// TODO: Query a range of proposals
-// TODO: Query where end range is greater than total
 // TODO: Check proposal without voting or funding and see how it returns
 
 // TODO: Verify proposal history
-
-// TODO: Query a range of assemblies
-// TODO: Query where end range is greater than total
-
-// TODO: Query a range of assembly msgs
-// TODO: Query where end range is greater than total
-
-// TODO: Query a range of profiles
-// TODO: Query where end range is greater than total
-
-// TODO: Query a range of contracts
-// TODO: Query where end range is greater than total
+// TODO: quwery proposals
 
 // TODO: Query user funding
 // TODO: Query where theres no user funding
@@ -29,8 +16,27 @@
 
 // TODO: funding privacy
 
+use cosmwasm_std::StdError;
 use cosmwasm_math_compat::Uint128;
+use shade_protocol::governance;
 use crate::tests::{admin_only_governance, get_assemblies, get_assembly_msgs, get_config, get_contract, get_profiles};
+
+#[test]
+fn query_total_assembly_msg() {
+    let (mut chain, gov) = admin_only_governance().unwrap();
+
+    let query: governance::QueryAnswer = chain.query(
+        gov.address.clone(),
+        &governance::QueryMsg::TotalAssemblyMsgs {}
+    ).unwrap();
+
+    let total = match query {
+        governance::QueryAnswer::Total { total } => total,
+        _ => Uint128::zero()
+    };
+
+    assert_eq!(total, Uint128::new(1));
+}
 
 #[test]
 fn query_assembly_msg() {
@@ -61,6 +67,23 @@ fn query_assembly_msg_wrong_index() {
     let assemblies = get_assembly_msgs(
         &mut chain, &gov, Uint128::new(5), Uint128::new(10)
     ).is_err();
+}
+
+#[test]
+fn query_total_contracts() {
+    let (mut chain, gov) = admin_only_governance().unwrap();
+
+    let query: governance::QueryAnswer = chain.query(
+        gov.address.clone(),
+        &governance::QueryMsg::TotalContracts {}
+    ).unwrap();
+
+    let total = match query {
+        governance::QueryAnswer::Total { total } => total,
+        _ => Uint128::zero()
+    };
+
+    assert_eq!(total, Uint128::new(1));
 }
 
 #[test]
@@ -95,6 +118,23 @@ fn query_contracts_wrong_index() {
 }
 
 #[test]
+fn query_total_profiles() {
+    let (mut chain, gov) = admin_only_governance().unwrap();
+
+    let query: governance::QueryAnswer = chain.query(
+        gov.address.clone(),
+        &governance::QueryMsg::TotalProfiles {}
+    ).unwrap();
+
+    let total = match query {
+        governance::QueryAnswer::Total { total } => total,
+        _ => Uint128::zero()
+    };
+
+    assert_eq!(total, Uint128::new(2));
+}
+
+#[test]
 fn query_profiles() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
@@ -123,6 +163,23 @@ fn query_profiles_wrong_index() {
     get_profiles(
         &mut chain, &gov, Uint128::new(5), Uint128::new(10)
     ).is_err();
+}
+
+#[test]
+fn query_total_assemblies() {
+    let (mut chain, gov) = admin_only_governance().unwrap();
+
+    let query: governance::QueryAnswer = chain.query(
+        gov.address.clone(),
+        &governance::QueryMsg::TotalAssemblies {}
+    ).unwrap();
+
+    let total = match query {
+        governance::QueryAnswer::Total { total } => total,
+        _ => Uint128::zero()
+    };
+
+    assert_eq!(total, Uint128::new(2));
 }
 
 #[test]

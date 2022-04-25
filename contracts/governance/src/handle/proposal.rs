@@ -7,7 +7,7 @@ use shade_protocol::governance::{Config, HandleAnswer};
 use shade_protocol::governance::contract::AllowedContract;
 use shade_protocol::governance::HandleMsg::Receive;
 use shade_protocol::governance::profile::{Count, Profile, VoteProfile};
-use shade_protocol::governance::proposal::{Proposal, Status};
+use shade_protocol::governance::proposal::{Funding, Proposal, Status};
 use shade_protocol::governance::vote::{TalliedVotes, Vote};
 use shade_protocol::shd_staking;
 use shade_protocol::utils::asset::Contract;
@@ -140,7 +140,7 @@ fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> S
         new_status = Status::Expired;
     }
     else if tally.veto >= veto_threshold {
-        new_status = Status::Vetoed{slashed_amount: Uint128::zero()};
+        new_status = Status::Vetoed{ slash_percent: Uint128::zero()};
     }
     else if tally.yes < yes_threshold {
         new_status = Status::Rejected;
@@ -289,11 +289,13 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                     for s in history.iter() {
                         // Check if it has funding history
                         if let Status::Funding{ amount, ..} = s {
-                            let send_amount = amount.multiply_ratio(100000u128, profile.veto_deposit_loss.clone());
+                            let loss = profile.veto_deposit_loss.clone();
+                            vote_conclusion = Status::Vetoed { slash_percent: loss };
+
+                            let send_amount = amount.multiply_ratio(100000u128, loss);
                             if send_amount != Uint128::zero() {
                                 let config = Config::load(&deps.storage)?;
                                 // Update slash amount
-                                vote_conclusion = Status::Vetoed { slashed_amount: send_amount };
                                 messages.push(send_msg(
                                     config.treasury,
                                     cosmwasm_std::Uint128(send_amount.u128()),
@@ -367,6 +369,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
     // Check if proposal is in funding stage
     let mut new_fund = amount;
     let mut return_amount = Uint128::zero();
+
     let status = Proposal::status(&deps.storage, &proposal)?;
     if let Status::Funding{ amount, start, end } = status {
         // Check if proposal funding stage is set or funding limit already set
@@ -404,13 +407,16 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
         let mut funder_amount = amount - return_amount;
         let mut funders = Proposal::funders(&deps.storage, &proposal)?;
         if funders.contains(&from) {
-            funder_amount += Proposal::funding(&deps.storage, &proposal, &from)?;
+            funder_amount += Proposal::funding(&deps.storage, &proposal, &from)?.amount;
         }
         else {
             funders.push(from.clone());
             Proposal::save_funders(&mut deps.storage, &proposal, funders)?;
         }
-        Proposal::save_funding(&mut deps.storage, &proposal, &from, funder_amount)?;
+        Proposal::save_funding(&mut deps.storage, &proposal, &from, Funding {
+            amount: funder_amount,
+            claimed: false
+        })?;
 
     }
     else {
@@ -435,6 +441,65 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Receive {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    id: Uint128
+) -> StdResult<HandleResponse> {
+
+    let reduction = match Proposal::status(&deps.storage, &id)? {
+        Status::AssemblyVote { .. } | Status::Funding { .. } | Status::Voting { .. } => {
+            return Err(StdError::generic_err("Cannot claim funding"))
+        }
+        Status::Vetoed { slash_percent } => {
+            slash_percent
+        }
+        _ => {
+            Uint128::zero()
+        }
+    };
+
+    let funding = Proposal::funding(&deps.storage, &id, &env.message.sender)?;
+
+    if funding.claimed {
+        return Err(StdError::generic_err("Funding already claimed"))
+    }
+
+    let return_amount = funding.amount.checked_sub(
+        funding.amount.multiply_ratio(
+            reduction, Uint128::new(10000)
+        )
+    )?;
+
+    if return_amount == Uint128::zero() {
+        return Err(StdError::generic_err("Nothing to claim"))
+    }
+
+    let funding_token = match Config::load(&deps.storage)?.funding_token {
+        None => return Err(StdError::generic_err("No funding token set")),
+        Some(token) => token
+    };
+
+    Ok(HandleResponse {
+        messages: vec![
+            send_msg(
+                env.message.sender,
+                return_amount.into(),
+                None,
+                None,
+                None,
+                256,
+                funding_token.code_hash,
+                funding_token.address
+            )?
+        ],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::ClaimFunding {
             status: ResponseStatus::Success,
         })?),
     })

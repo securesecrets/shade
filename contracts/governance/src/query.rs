@@ -15,6 +15,13 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
     })
 }
 
+pub fn total_proposals<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::Total {
+        total: ID::proposal(&deps.storage)?.checked_add(Uint128::new(1))?
+    })
+}
+
 pub fn proposals<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: Uint128, end: Uint128) -> StdResult<QueryAnswer> {
     let mut items = vec![];
     let mut end = end;
@@ -34,6 +41,13 @@ pub fn proposals<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: 
 
     Ok(QueryAnswer::Proposals {
         props: items
+    })
+}
+
+pub fn total_profiles<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::Total {
+        total: ID::profile(&deps.storage)?.checked_add(Uint128::new(1))?
     })
 }
 
@@ -59,6 +73,13 @@ pub fn profiles<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: U
     })
 }
 
+pub fn total_assemblies<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::Total {
+        total: ID::assembly(&deps.storage)?.checked_add(Uint128::new(1))?
+    })
+}
+
 pub fn assemblies<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: Uint128, end: Uint128) -> StdResult<QueryAnswer> {
     let mut items = vec![];
     let mut end = end;
@@ -81,6 +102,13 @@ pub fn assemblies<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start:
     })
 }
 
+pub fn total_assembly_msgs<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::Total {
+        total: ID::assembly_msg(&deps.storage)?.checked_add(Uint128::new(1))?
+    })
+}
+
 pub fn assembly_msgs<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: Uint128, end: Uint128) -> StdResult<QueryAnswer> {
     let mut items = vec![];
     let mut end = end;
@@ -100,6 +128,13 @@ pub fn assembly_msgs<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, sta
 
     Ok(QueryAnswer::AssemblyMsgs {
         msgs: items,
+    })
+}
+
+pub fn total_contracts<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+
+    Ok(QueryAnswer::Total {
+        total: ID::contract(&deps.storage)?.checked_add(Uint128::new(1))?
     })
 }
 
