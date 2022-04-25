@@ -2,7 +2,6 @@ use cosmwasm_std::{
     Uint128, StdResult, StdError,
 };
 use crate::{
-    adapter,
     utils::{
         asset::Contract, 
         generic_response::ResponseStatus
