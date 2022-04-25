@@ -2,8 +2,8 @@ contracts_dir=contracts
 compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
-build-release=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
-build-debug=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked --features="debug-print"
+build-release=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
+build-debug=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print"
 
 # args (no extensions): wasm_name, contract_dir_name
 define opt_and_compress = 
@@ -13,7 +13,7 @@ cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
 rm ./$(1).wasm
 endef
 
-CONTRACTS = airdrop governance staking mint mint_router treasury farming_manager oracle mock_band initializer scrt_staking snip20
+CONTRACTS = airdrop governance staking mint mint_router treasury treasury_manager oracle mock_band initializer scrt_staking snip20 rewards_emissions
 
 debug: setup
 	(cd ${contracts_dir}; ${build-debug})

@@ -1,4 +1,3 @@
-use cosmwasm_std;
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
     Querier, StdError, StdResult, Storage, Uint128,
@@ -21,7 +20,8 @@ use shade_protocol::{
     adapter,
     utils::{
         asset::Contract, 
-        generic_response::ResponseStatus
+        generic_response::ResponseStatus,
+        cycle::{ Cycle, parse_utc_datetime },
     },
 };
 
@@ -142,19 +142,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success,
         })?),
     })
-}
-
-pub fn parse_utc_datetime(
-    last_refresh: &String,
-) -> StdResult<DateTime<Utc>> {
-
-    DateTime::parse_from_rfc3339(&last_refresh)
-        .map(|dt| dt.with_timezone(&Utc))
-        .map_err(|_| 
-            StdError::generic_err(
-                format!("Failed to parse datetime {}", last_refresh)
-            )
-        )
 }
 
 pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(

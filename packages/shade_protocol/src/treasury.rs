@@ -1,8 +1,9 @@
 use crate::{
     adapter,
     utils::{
-        asset::Contract, 
-        generic_response::ResponseStatus
+        asset::Contract,
+        generic_response::ResponseStatus,
+        cycle::Cycle,
     },
 };
 
@@ -18,19 +19,6 @@ pub struct Config {
     pub sscrt: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Cycle {
-    Once,
-    Constant,
-    Daily {
-        days: Uint128,
-    },
-    Monthly {
-        months: Uint128,
-    },
-}
-
 /* Examples:
  * Constant-Portion -> Finance manager
  * Constant-Amount -> Rewards, pre-set manually adjusted
@@ -42,12 +30,6 @@ pub enum Cycle {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Allowance {
-    // To remain liquid at all times
-    /*
-    Reserves {
-        portion: Uint128,
-    },
-    */
     // Monthly refresh, not counted in rebalance
     Amount {
         //nick: Option<String>,

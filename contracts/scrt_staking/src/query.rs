@@ -122,6 +122,26 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn can_unbond<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    if asset != config.sscrt.address {
+        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
+    }
+
+    /*TODO: Query current unbondings
+     * 7+ = false
+     * <7 = true
+     */
+    Ok(adapter::QueryAnswer::CanUnbond {
+        can_unbond: false,
+    })
+}
+
 // This won't work until cosmwasm 0.16
 /*
 pub fn delegation<S: Storage, A: Api, Q: Querier>(
