@@ -166,10 +166,12 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     match status.clone() {
-        Status::AssemblyVote { votes, start, end } => {
+        Status::AssemblyVote { start, end } => {
             if end > env.block.time {
                 return Err(StdError::unauthorized())
             }
+
+            let votes = Proposal::assembly_votes(&deps.storage, &proposal)?;
 
             // Total power is equal to the total amount of assembly members
             let total_power = Uint128::new(Assembly::data(&deps.storage, &assembly)?.members.len() as u128);
@@ -199,7 +201,6 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                 }
                 else if let Some(setting) = Profile::public_voting(&deps.storage, &profile)? {
                     vote_conclusion = Status::Voting {
-                        votes: Vote::default(),
                         start: env.block.time,
                         end: env.block.time + setting.deadline
                     }
@@ -244,7 +245,6 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
             if let Status::Passed{..} = new_status {
                 if let Some(setting) = Profile::public_voting(&deps.storage, &profile)? {
                     new_status = Status::Voting {
-                        votes: Vote::default(),
                         start: env.block.time,
                         end: env.block.time + setting.deadline
                     }
@@ -252,12 +252,14 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
             }
 
         }
-        Status::Voting { votes, start, end } => {
+        Status::Voting { start, end } => {
             if end > env.block.time {
                 return Err(StdError::unauthorized())
             }
 
             let config = Config::load(&deps.storage)?;
+            let votes = Proposal::public_votes(&deps.storage, &proposal)?;
+
             let query: shd_staking::QueryAnswer = shd_staking::QueryMsg::TotalStaked {}
                 .query(
                     &deps.querier,

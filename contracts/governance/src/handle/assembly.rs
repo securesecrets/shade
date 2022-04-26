@@ -88,8 +88,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     // Check if assembly voting
     if let Some(vote_settings) = Profile::assembly_voting(&deps.storage, &assembly_data.profile)? {
         status = Status::AssemblyVote { 
-            votes: Vote::default(),
-            start: env.block.time, 
+            start: env.block.time,
             end: env.block.time + vote_settings.deadline 
         }
     }
@@ -104,7 +103,6 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     // Check if token voting
     else if let Some(vote_settings) = Profile::public_voting(&deps.storage, &assembly_data.profile)? {
         status = Status::Voting {
-            votes: Vote::default(),
             start: env.block.time,
             end: env.block.time + vote_settings.deadline
         }
