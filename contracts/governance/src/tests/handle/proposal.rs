@@ -1,8 +1,10 @@
+use cosmwasm_std::HumanAddr;
 use shade_protocol::governance;
 use fadroma_ensemble::MockEnv;
 use fadroma_platform_scrt::ContractLink;
 use cosmwasm_math_compat::Uint128;
-use crate::tests::admin_only_governance;
+use shade_protocol::governance::proposal::Status;
+use crate::tests::{admin_only_governance, get_proposals};
 
 #[test]
 fn trigger_admin_command() {
@@ -15,6 +17,7 @@ fn trigger_admin_command() {
             contract: None,
             assembly_msg: None,
             variables: None,
+            coins: None,
             padding: None
         },
         MockEnv::new(
@@ -38,6 +41,7 @@ fn unauthorized_trigger_admin_command() {
             contract: None,
             assembly_msg: None,
             variables: None,
+            coins: None,
             padding: None
         },
         MockEnv::new(
@@ -47,9 +51,55 @@ fn unauthorized_trigger_admin_command() {
     ).is_err());
 }
 
+#[test]
+fn text_only_proposal() {
+    let (mut chain, gov) = admin_only_governance().unwrap();
+    
+    chain.execute(
+        &governance::HandleMsg::AssemblyProposal {
+            assembly: Uint128::new(1),
+            metadata: "Text only proposal".to_string(),
+            contract: None,
+            assembly_msg: None,
+            variables: None,
+            coins: None,
+            padding: None
+        },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: gov.address.clone(),
+                code_hash: gov.code_hash.clone(),
+            }
+        )
+    ).unwrap();
+
+    let prop = get_proposals(
+        &mut chain,
+        &gov,
+        Uint128::zero(),
+        Uint128::new(2)
+    ).unwrap()[0].clone();
+
+    assert_eq!(prop.proposer, HumanAddr::from("admin"));
+    assert_eq!(prop.metadata, "Text only proposal".to_string());
+    assert_eq!(prop.target, None);
+    assert_eq!(prop.assembly_msg, None);
+    assert_eq!(prop.msg, None);
+    assert_eq!(prop.send, None);
+    assert_eq!(prop.assembly, Uint128::new(1));
+    assert_eq!(prop.assembly_vote_tally, None);
+    assert_eq!(prop.public_vote_tally, None);
+    match prop.status {
+        Status::Passed {..} => assert!(true),
+        _ => assert!(false)
+    };
+    assert_eq!(prop.status_history.len(), 0);
+    assert_eq!(prop.funders, None);
+    
+}
+
 // TODO: Create normal proposal
-// TODO: Create text only proposal
-// TODO: Create non wasm chain proposal
 
 // TODO: Try assembly voting
 // TODO: Try update while in assembly voting

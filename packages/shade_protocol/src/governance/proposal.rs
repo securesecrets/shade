@@ -1,5 +1,5 @@
 use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, HumanAddr, StdResult, Storage};
+use cosmwasm_std::{Binary, Coin, HumanAddr, StdResult, Storage};
 use cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -33,10 +33,9 @@ pub struct Proposal {
     // Message to execute
     #[serde(skip_serializing_if = "Option::is_none")]
     pub msg: Option<Binary>,
-
-    // TODO: only ask for contract if wasm msg
-    // TODO: have option for standard wasm msg
-    // TODO: have option to add coins
+    // Wasm Send
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub send: Option<Vec<Coin>>,
 
     // Assembly
     // Assembly that called the proposal
@@ -58,7 +57,6 @@ pub struct Proposal {
     // Leave as an option so we can hide the data if None
     #[serde(skip_serializing_if = "Option::is_none")]
     pub funders: Option<Vec<(HumanAddr, Uint128)>>
-    // TODO: if funding and funding privacy then set funders
 }
 
 const ASSEMBLY_VOTE: &'static [u8] = b"user-assembly-vote-";
@@ -75,7 +73,11 @@ impl Proposal {
                     Self::save_msg(storage, &id, ProposalMsg {
                         target,
                         assembly_msg,
-                        msg
+                        msg,
+                        send: match self.send.clone() {
+                            None => vec![],
+                            Some(arr) => arr
+                        }
                     })?;
                 }
             }
@@ -135,11 +137,13 @@ impl Proposal {
         let mut target = None;
         let mut assembly_msg = None;
         let mut binary_msg = None;
+        let mut send = None;
 
         if let Some(msg) = msg {
             target = Some(msg.target);
             assembly_msg = Some(msg.assembly_msg);
             binary_msg = Some(msg.msg);
+            send = Some(msg.send);
         }
 
         let assembly_data = Assembly::data(storage, &assembly)?;
@@ -150,6 +154,7 @@ impl Proposal {
             target,
             assembly_msg,
             msg: binary_msg,
+            send,
             assembly,
             assembly_vote_tally: match Profile::assembly_voting(storage, &assembly_data.profile)? {
                 None => None,
@@ -206,7 +211,11 @@ impl Proposal {
     }
 
     pub fn funders<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vec<HumanAddr>> {
-        Ok(Funders::load(storage, &id.to_be_bytes())?.0)
+        let funders = match Funders::may_load(storage, &id.to_be_bytes())? {
+            None => vec![],
+            Some(item) => item.0
+        };
+        Ok(funders)
     }
 
     pub fn save_funders<S: Storage>(storage: &mut S, id: &Uint128, data: Vec<HumanAddr>) -> StdResult<()> {
@@ -288,6 +297,7 @@ pub struct ProposalMsg {
     pub target: Uint128,
     pub assembly_msg: Uint128,
     pub msg: Binary,
+    pub send: Vec<Coin>
 }
 
 #[cfg(feature = "governance-impl")]
@@ -307,7 +317,6 @@ impl BucketStorage for ProposalAssembly {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
-    // TODO: remove funding and votes and just add that as a separate thing
     // Assembly voting period
     AssemblyVote {votes: Vote, start: u64, end:u64},
     // In funding period

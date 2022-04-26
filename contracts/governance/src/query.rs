@@ -35,7 +35,7 @@ pub fn proposals<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, start: 
         end = total;
     }
 
-    for i in start.u128()..end.u128() {
+    for i in start.u128()..=end.u128() {
         items.push(Proposal::load(&deps.storage, &Uint128::new(i))?);
     }
 

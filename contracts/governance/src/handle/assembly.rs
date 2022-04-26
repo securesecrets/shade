@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use cosmwasm_std::{Api, Coin, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::{HandleAnswer, MSG_VARIABLE};
@@ -62,7 +62,8 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     metadata: String,
     contract_id: Option<Uint128>,
     assembly_msg_id: Option<Uint128>,
-    variables: Option<Vec<String>>
+    variables: Option<Vec<String>>,
+    coins: Option<Vec<Coin>>
 ) -> StdResult<HandleResponse> {
 
     // Get assembly
@@ -122,6 +123,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         target: None,
         assembly_msg: None,
         msg: None,
+        send: None,
         assembly: assembly_id,
         assembly_vote_tally: None,
         public_vote_tally: None,
@@ -156,6 +158,8 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         else {
             return Err(StdError::generic_err("Variables were not specified"))
         }
+
+        prop.send = coins;
     }
 
     let prop_id = ID::add_proposal(&mut deps.storage)?;

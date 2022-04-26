@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Binary, Env, Extern, from_binary, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary, WasmMsg};
+use cosmwasm_std::{Api, Binary, Coin, Env, Extern, from_binary, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary, WasmMsg};
 use cosmwasm_math_compat::Uint128;
 use secret_toolkit::snip20::send_msg;
 use secret_toolkit::utils::Query;
@@ -21,7 +21,8 @@ pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
     env: Env,
     metadata: String,
     contract: Option<Uint128>,
-    msg: Option<String>
+    msg: Option<String>,
+    coins: Option<Vec<Coin>>
 ) -> StdResult<HandleResponse> {
     try_assembly_proposal(
         deps,
@@ -37,6 +38,7 @@ pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
             None => None,
             Some(msg) => Some(vec![msg])
         },
+        coins
     )?;
     Ok(HandleResponse {
         messages: vec![],
@@ -68,11 +70,8 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
                 contract_addr: contract.address,
                 callback_code_hash: contract.code_hash,
                 msg: prop_msg.msg,
-                send: vec![]
+                send: prop_msg.send
             }.into());
-        }
-        else {
-            return Err(StdError::generic_err("Cannot trigger text only proposals"))
         }
     }
     else {

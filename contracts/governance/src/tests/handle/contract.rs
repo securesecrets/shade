@@ -5,10 +5,6 @@ use shade_protocol::governance;
 use shade_protocol::utils::asset::Contract;
 use crate::tests::{admin_only_governance, get_contract};
 
-// TODO: Edit existing contract
-// TODO: Edit existing contract as a non gov
-// TODO: Add a new contract
-// TODO: Add a new contract as a non gov
 #[test]
 fn add_contract() {
     let (mut chain, gov) = admin_only_governance().unwrap();

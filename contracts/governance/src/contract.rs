@@ -119,8 +119,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, state),
 
             // Proposals
-            HandleMsg::Proposal { metadata, contract, msg, ..
-            } => try_proposal(deps, env, metadata, contract, msg),
+            HandleMsg::Proposal { metadata, contract, msg, coins, ..
+            } => try_proposal(deps, env, metadata, contract, msg, coins),
 
             HandleMsg::Trigger { proposal, .. } => try_trigger(deps, env, proposal),
             HandleMsg::Cancel { proposal, .. } => try_cancel(deps, env, proposal),
@@ -133,8 +133,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::AssemblyVote { proposal, vote, ..
             } => try_assembly_vote(deps, env, proposal, vote),
 
-            HandleMsg::AssemblyProposal { assembly, metadata, contract, assembly_msg, variables, ..
-            } => try_assembly_proposal(deps, env, assembly, metadata, contract, assembly_msg, variables),
+            HandleMsg::AssemblyProposal { assembly, metadata, contract, assembly_msg, variables, coins, ..
+            } => try_assembly_proposal(deps, env, assembly, metadata, contract, assembly_msg, variables, coins),
 
             HandleMsg::AddAssembly { name, metadata, members, profile, ..
             } => try_add_assembly(deps, env, name, metadata, members, profile),

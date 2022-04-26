@@ -19,7 +19,7 @@ const CONTRACT_KEY: &'static [u8] = b"allowed_contract_id-";
 impl ID {
     // Load current ID related proposals
     pub fn set_proposal<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
-        ID::write(storage, PROP_KEY).save(&ID(id))
+        ID(id).save(storage, PROP_KEY)
     }
 
     pub fn proposal<S: Storage>(storage: &S) -> StdResult<Uint128> {
@@ -27,18 +27,20 @@ impl ID {
     }
 
     pub fn add_proposal<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
-        let mut item = match ID::may_load(storage, PROP_KEY)? {
+        let item = match ID::may_load(storage, PROP_KEY)? {
             None => ID(Uint128::zero()),
-            Some(i) => i
+            Some(i) => {
+                let item = ID(i.0.checked_add(Uint128::new(1))?);
+                item
+            }
         };
-        item.0 += Uint128::new(1);
-        ID::write(storage, PROP_KEY).save(&item)?;
+        item.save(storage, PROP_KEY)?;
         Ok(item.0)
     }
 
     // Assembly
     pub fn set_assembly<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
-        ID::write(storage, COMMITTEE_KEY).save(&ID(id))
+        ID(id).save(storage, COMMITTEE_KEY)
     }
 
     pub fn assembly<S: Storage>(storage: &S) -> StdResult<Uint128> {
@@ -48,13 +50,13 @@ impl ID {
     pub fn add_assembly<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
         let mut item = ID::load(storage, COMMITTEE_KEY)?;
         item.0 += Uint128::new(1);
-        ID::write(storage, COMMITTEE_KEY).save(&item)?;
+        item.save(storage, COMMITTEE_KEY)?;
         Ok(item.0)
     }
 
     // Assembly Msg
     pub fn set_assembly_msg<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
-        ID::write(storage, COMMITTEE_MSG_KEY).save(&ID(id))
+        ID(id).save(storage, COMMITTEE_MSG_KEY)
     }
 
     pub fn assembly_msg<S: Storage>(storage: &S) -> StdResult<Uint128> {
@@ -64,13 +66,13 @@ impl ID {
     pub fn add_assembly_msg<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
         let mut item = ID::load(storage, COMMITTEE_MSG_KEY)?;
         item.0 += Uint128::new(1);
-        ID::write(storage, COMMITTEE_MSG_KEY).save(&item)?;
+        item.save(storage, COMMITTEE_MSG_KEY)?;
         Ok(item.0)
     }
 
     // Profile
     pub fn set_profile<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
-        ID::write(storage, PROFILE_KEY).save(&ID(id))
+        ID(id).save(storage, PROFILE_KEY)
     }
 
     pub fn profile<S: Storage>(storage: &S) -> StdResult<Uint128> {
@@ -80,14 +82,14 @@ impl ID {
     pub fn add_profile<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
         let mut item = ID::load(storage, PROFILE_KEY)?;
         item.0 += Uint128::new(1);
-        ID::write(storage, PROFILE_KEY).save(&item)?;
+        item.save(storage, PROFILE_KEY)?;
         Ok(item.0)
     }
 
     // Contract
     // Profile
     pub fn set_contract<S: Storage>(storage: &mut S, id: Uint128) -> StdResult<()> {
-        ID::write(storage, CONTRACT_KEY).save(&ID(id))
+        ID(id).save(storage, CONTRACT_KEY)
     }
 
     pub fn contract<S: Storage>(storage: &S) -> StdResult<Uint128> {
@@ -97,7 +99,7 @@ impl ID {
     pub fn add_contract<S: Storage>(storage: &mut S) -> StdResult<Uint128> {
         let mut item = ID::load(storage, CONTRACT_KEY)?;
         item.0 += Uint128::new(1);
-        ID::write(storage, CONTRACT_KEY).save(&item)?;
+        item.save(storage, CONTRACT_KEY)?;
         Ok(item.0)
     }
 

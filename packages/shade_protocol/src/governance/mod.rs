@@ -8,7 +8,7 @@ pub mod stored_id;
 
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, HumanAddr};
+use cosmwasm_std::{Binary, Coin, HumanAddr};
 use cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -103,6 +103,7 @@ pub enum HandleMsg {
         contract: Option<Uint128>,
         // Msg for tx
         msg: Option<String>,
+        coins: Option<Vec<Coin>>,
         padding: Option<String>
     },
 
@@ -154,8 +155,9 @@ pub enum HandleMsg {
         contract: Option<Uint128>,
         // Assembly msg ID
         assembly_msg: Option<Uint128>,
-        // Assembly msg aguments
+        // Assembly msg arguments
         variables: Option<Vec<String>>,
+        coins: Option<Vec<Coin>>,
         padding: Option<String>
     },
 

@@ -10,6 +10,7 @@ use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::profile::Profile;
 use shade_protocol::governance::Config;
 use shade_protocol::governance::contract::AllowedContract;
+use shade_protocol::governance::proposal::Proposal;
 use crate::contract::{handle, init, query};
 
 pub struct Governance;
@@ -99,6 +100,7 @@ pub fn gov_generic_proposal(
             contract: Some(Uint128::zero()),
             assembly_msg: Some(Uint128::zero()),
             variables: Some(vec![to_binary(&msg)?.to_base64()]),
+            coins: None,
             padding: None
         },
         MockEnv::new(
@@ -178,6 +180,24 @@ pub fn get_assemblies(
 
     match query {
         governance::QueryAnswer::Assemblies { assemblies } => Ok(assemblies),
+        _ => return Err(StdError::generic_err("Returned wrong enum"))
+    }
+}
+
+pub fn get_proposals(
+    chain: &mut ContractEnsemble,
+    gov: &ContractLink<HumanAddr>,
+    start: Uint128,
+    end: Uint128
+) -> StdResult<Vec<Proposal>> {
+
+    let query: governance::QueryAnswer = chain.query(
+        gov.address.clone(),
+        &governance::QueryMsg::Proposals{ start, end }
+    )?;
+
+    match query {
+        governance::QueryAnswer::Proposals { props } => Ok(props),
         _ => return Err(StdError::generic_err("Returned wrong enum"))
     }
 }
