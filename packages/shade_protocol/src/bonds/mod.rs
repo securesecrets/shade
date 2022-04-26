@@ -51,6 +51,8 @@ pub enum HandleMsg {
         global_issuance_limit: Option<Uint128>,
         global_minimum_bonding_period: Option<u64>,
         global_maximum_discount: Option<Uint128>,
+        reset_total_issued: Option<bool>,
+        reset_total_claimed: Option<bool>,
     },
     UpdateConfig {
         admin: Option<HumanAddr>,
@@ -191,10 +193,14 @@ impl ViewingKey<32> for AccountKey {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct PendingBond {
-    pub claim_amount: Uint128,
-    pub end: u64, // Will be turned into a time via block time calculations
     pub deposit_denom: Snip20Asset,
+    pub end: u64, // Will be turned into a time via block time calculations
     pub deposit_amount: Uint128,
+    pub deposit_price: Uint128,
+    pub claim_amount: Uint128,
+    pub claim_price: Uint128,
+    pub discount: Uint128,
+    pub discount_price: Uint128,
 }
 
 // When users deposit and try to use the bond, a Bond Opportunity is selected via deposit denom

@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage, Uint128,
+    StdResult, Storage, Uint128, HumanAddr,
 };
 use secret_toolkit::snip20::token_info_query;
 
@@ -9,7 +9,7 @@ use shade_protocol::{
     snip20::{token_config_query, Snip20Asset},
 };
 
-use crate::{handle::{self, try_set_viewing_key}, query, state::{config_w, issued_asset_w}};
+use crate::{handle::{self, try_set_viewing_key}, query, state::{config_w, issued_asset_w, global_total_issued_w, collateral_assets_w}};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -50,6 +50,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         token_config: Option::from(token_config),
     })?;
 
+    // Write initial values to storage
+    global_total_issued_w(&mut deps.storage).save(&Uint128(0))?;
+    let assets: Vec<HumanAddr> = vec![];
+    collateral_assets_w(&mut deps.storage).save(&assets)?;
+
     debug_print!("Contract was initialized by {}", env.message.sender);
 
     Ok(InitResponse {
@@ -69,7 +74,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             global_issuance_limit,
             global_minimum_bonding_period,
             global_maximum_discount,
-        } => handle::try_update_limit_config(deps, env, limit_admin, global_issuance_limit, global_minimum_bonding_period, global_maximum_discount),
+            reset_total_issued,
+            reset_total_claimed,
+        } => handle::try_update_limit_config(deps, env, limit_admin, global_issuance_limit, global_minimum_bonding_period, global_maximum_discount, reset_total_issued, reset_total_claimed),
         HandleMsg::UpdateConfig { 
             admin,
             oracle,

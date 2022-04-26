@@ -9,7 +9,7 @@ use crate::cli_types::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
-use std::{fs::File, io::Write, process::Command, thread, time};
+use std::{fs::File, io::{self, Write}, process::Command, thread, time};
 
 //secretcli tx sign-doc tx_to_sign --from sign-test
 
@@ -41,7 +41,7 @@ pub struct Report {
 /// * 'command' - a string array that contains the command to forward\
 ///
 fn secretcli_run(command: Vec<String>, max_retry: Option<i32>) -> Result<Value> {
-    let retry = max_retry.unwrap_or(20);
+    let retry = max_retry.unwrap_or(30);
     let mut commands = command;
     commands.append(&mut vec_str_to_vec_string(vec!["--output", "json"]));
     let mut cli = Command::new("secretd".to_string());
@@ -50,7 +50,6 @@ fn secretcli_run(command: Vec<String>, max_retry: Option<i32>) -> Result<Value> 
     }
 
     let mut result = cli.output().expect("Unexpected error");
-
     // We wait cause sometimes the query/action takes a while
     for _ in 0..retry {
         if !result.stderr.is_empty() {
@@ -109,7 +108,6 @@ fn store_contract(
 fn query_hash(hash: String) -> Result<TxQuery> {
     let command = vec!["q", "tx", &hash];
     let a = secretcli_run(vec_str_to_vec_string(command), None)?;
-
     serde_json::from_value(a)
 }
 
@@ -156,7 +154,7 @@ fn trim_newline(s: &mut String) {
 pub fn account_address(acc: &str) -> Result<String> {
     let command = vec_str_to_vec_string(vec!["keys", "show", "-a", acc]);
 
-    let retry = 20;
+    let retry = 40;
     let mut cli = Command::new("secretd".to_string());
     if !command.is_empty() {
         cli.args(command);
@@ -187,7 +185,7 @@ pub fn account_address(acc: &str) -> Result<String> {
 pub fn create_key_account(name: &str) -> Result<()> {
     let command = vec_str_to_vec_string(vec!["keys", "add", name]);
 
-    let retry = 20;
+    let retry = 40;
     let mut cli = Command::new("secretd".to_string());
     if !command.is_empty() {
         cli.args(command);
@@ -285,6 +283,8 @@ pub fn init<Message: serde::Serialize>(
     backend: Option<&str>,
     report: &mut Vec<Report>,
 ) -> Result<NetContract> {
+    println!("Started init");
+    io::stdout().flush();
     let store_response = store_contract(contract_file, Option::from(&*sender), store_gas, backend)?;
     let store_query = query_hash(store_response.txhash)?;
     let mut contract = NetContract {
@@ -474,4 +474,69 @@ pub fn create_permit<Tx: serde::Serialize>(tx: Tx, signer: &str) -> Result<Signe
         serde_json::from_value(secretcli_run(vec_str_to_vec_string(command), None)?)?;
 
     Ok(response)
+}
+
+pub fn start_loaded_local_testnet() -> Result<TxResponse> {
+    let command_arr = vec![
+        "run",
+        "-it",
+        "--rm",
+        "-p",
+        "26657:26657",
+        "-p",
+        "26656:26656",
+        "-p",
+        "1337:1337",
+        "-v",
+        "~/shade/shade/compiled:/root/code",
+        "--name",
+        "secretdev",
+        "enigmampc/secret-network-sw-dev",
+    ];
+
+    let command = vec_str_to_vec_string(command_arr);
+    let json = docker_run(command, None)?;
+    let out: Result<TxResponse> = serde_json::from_value(json);
+    out
+}
+
+fn docker_run(command: Vec<String>, max_retry: Option<i32>) -> Result<Value> {
+    let retry = max_retry.unwrap_or(100);
+    let mut commands = command;
+    let mut cli = Command::new("docker".to_string());
+    if !commands.is_empty() {
+        cli.args(commands);
+    }
+
+    let mut result = cli.output().expect("Unexpected error");
+    let out = result.stdout;
+    serde_json::from_str(&String::from_utf8_lossy(&out))
+}
+
+pub fn enter_test_container() -> Result<TxResponse> {
+    let command_arr = vec![
+        "exec",
+        "-it",
+        "secretdev",
+        "/bin/bash",
+    ];
+
+    let command = vec_str_to_vec_string(command_arr);
+    let json = docker_run(command, None)?;
+    let out: Result<TxResponse> = serde_json::from_value(json);
+    out
+}
+
+pub fn move_to_code() -> Result<TxResponse> {
+    let command_arr = vec![
+        "cd",
+        "code",
+        "secretdev",
+        "/bin/bash",
+    ];
+
+    let command = vec_str_to_vec_string(command_arr);
+    let json = docker_run(command, None)?;
+    let out: Result<TxResponse> = serde_json::from_value(json);
+    out
 }

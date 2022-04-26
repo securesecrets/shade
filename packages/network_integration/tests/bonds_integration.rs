@@ -1,0 +1,582 @@
+use query_authentication::viewing_keys::ViewingKey;
+use secretcli::{cli_types::NetContract, secretcli::{account_address, init, handle, query, Report, start_loaded_local_testnet, enter_test_container}};
+use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
+use network_integration::{
+    contract_helpers::{
+        minter::{get_balance},
+    },
+    utils::{
+        generate_label, print_contract, print_header, ACCOUNT_KEY,
+        BONDS_FILE, GAS, VIEW_KEY, SNIP20_FILE, STORE_GAS, MOCK_BAND_FILE, ORACLE_FILE,
+    },
+};
+use serde::Serialize;
+use serde_json::Result;
+use shade_protocol::snip20::{self, InitMsg, InitialBalance, InitConfig};
+use shade_protocol::bonds::{self};
+use shade_protocol::band::{self};
+use mock_band::contract::*;
+use shade_protocol::oracle::{self, InitMsg as OracleInitMsg};
+use shade_protocol::utils::asset::Contract;
+use std::{io::{self, Write, Repeat}, borrow::Borrow};
+
+pub const ADMIN_KEY: &str = "b";
+pub const LIMIT_ADMIN_KEY: &str = "c";
+
+fn setup_contracts(
+    global_issuance_limit: Uint128,
+    global_minimum_bonding_period: u64,
+    global_maximum_discount: Uint128,
+    activated: bool,
+    minting_bond: bool,
+    bond_issuance_period: u64,
+    discount: Uint128,
+    bond_issuance_limit: Uint128,
+    bonding_period: u64,
+    reports: &mut Vec<Report>,
+) -> Result<(NetContract, NetContract, NetContract, NetContract, NetContract)> {
+    println!("Starting setup of account_addresses");
+    io::stdout().flush();
+    let account_a = account_address(ACCOUNT_KEY)?;
+    //println!("Completed a");
+    //io::stdout().flush();
+    let account_admin = account_address(ADMIN_KEY)?;
+    let account_limit_admin = account_address(LIMIT_ADMIN_KEY)?;
+
+    print_header("Set up account_addresses");
+    print_header("Initializing snip20s");
+    let mint_snip_init_msg = snip20::InitMsg {
+        name: "test_mint".to_string(),
+        admin: None,
+        symbol: "MINT".to_string(),
+        decimals: 6,
+        initial_balances: None,
+        prng_seed: Default::default(),
+        config: Some(InitConfig{
+            public_total_supply: Some(true),
+            enable_deposit: Some(true),
+            enable_redeem: Some(true),
+            enable_mint: Some(true),
+            enable_burn: Some(false),
+        }),
+    };
+
+    print_header("Mint snip init");
+    let mint_snip = init(
+        &mint_snip_init_msg,
+        SNIP20_FILE,
+        &*generate_label(8),
+        ACCOUNT_KEY,
+        Some(STORE_GAS),
+        Some(GAS),
+        Some("test"),
+        reports,
+    )?;
+
+    print_header("Mint snip initiated");
+
+    let collat_snip_init_msg = snip20::InitMsg {
+        name: "test_collat".to_string(),
+        admin: None,
+        symbol: "COLL".to_string(),
+        decimals: 6,
+        initial_balances: Some(vec![InitialBalance {
+            address: HumanAddr::from(account_a.clone()),
+            amount: Uint128(1_000_000_000_000_000),
+        }]),
+        prng_seed: Default::default(),
+        config: Some(InitConfig{
+            public_total_supply: Some(true),
+            enable_deposit: Some(true),
+            enable_redeem: Some(true),
+            enable_mint: Some(true),
+            enable_burn: Some(false),
+        }),
+    };
+
+    print_header("Collateral snip init");
+    let collateral_snip = init(
+        &collat_snip_init_msg,
+        SNIP20_FILE,
+        &*generate_label(8),
+        ACCOUNT_KEY,
+        Some(STORE_GAS),
+        Some(GAS),
+        Some("test"),
+        reports,
+    )?;
+
+    print_header("Collateral snip initiated");
+    print_header("Initiating mockband and oracle");
+
+    let mockband_init_msg = band::InitMsg{};
+
+    let mockband = init(
+        &mockband_init_msg,
+        MOCK_BAND_FILE,
+        &*generate_label(8),
+        ACCOUNT_KEY,
+        Some(STORE_GAS),
+        Some(GAS),
+        Some("test"),
+        reports,
+    )?;
+
+    print_header("Mockband initiated");
+
+    let oracle_init_msg = oracle::InitMsg{
+        admin: Some(HumanAddr::from(account_limit_admin.clone())),
+        band: Contract{ address: HumanAddr::from(mockband.address.clone()), code_hash: mockband.code_hash.clone()},
+        sscrt: Contract { address: HumanAddr::from(""), code_hash: "".to_string() }
+    };
+
+    let oracle = init(
+        &oracle_init_msg,
+        ORACLE_FILE,
+        &*generate_label(8),
+        ACCOUNT_KEY,
+        Some(STORE_GAS),
+        Some(GAS),
+        Some("test"),
+        reports,
+    )?;
+
+    print_header("Oracle Initiated");
+
+    let bonds_init_msg = bonds::InitMsg{
+        limit_admin: HumanAddr::from(account_limit_admin.clone()),
+        global_issuance_limit,
+        global_minimum_bonding_period,
+        global_maximum_discount,
+        admin: HumanAddr::from(account_admin.clone()),
+        oracle: Contract {
+            address: HumanAddr::from(oracle.address.clone()),
+            code_hash: oracle.code_hash.clone(),
+        },
+        treasury: HumanAddr::from(account_admin),
+        issued_asset: Contract {
+            address: HumanAddr::from(mint_snip.address.clone()),
+            //address: HumanAddr::from("hehe"),
+            code_hash: mint_snip.code_hash.clone(),
+            //code_hash: "hehe".to_string(),
+        },
+        activated,
+        minting_bond,
+        bond_issuance_limit,
+        bonding_period,
+        discount,
+    };
+
+    let bonds = init(
+        &bonds_init_msg,
+        BONDS_FILE,
+        &*generate_label(8),
+        ACCOUNT_KEY,
+        Some(STORE_GAS),
+        Some(GAS),
+        Some("test"),
+        reports,
+    )?;
+
+    let msg = snip20::HandleMsg::SetViewingKey { key: String::from(VIEW_KEY), padding: None };
+
+    handle(&msg, &mint_snip, ACCOUNT_KEY, Some(GAS), Some("test"), None, reports, None)?;
+    handle(&msg, &collateral_snip, ACCOUNT_KEY, Some(GAS), Some("test"), None, reports, None)?;
+
+    Ok((bonds, mint_snip, collateral_snip, mockband, oracle))
+}
+
+fn open_bond(
+    collat_snip: &NetContract,
+    now: u64,
+    end: u64,
+    opp_limit: Option<Uint128>,
+    period: Option<u64>,
+    disc: Option<Uint128>,
+    reports: &mut Vec<Report>,
+    bonds: &NetContract,
+) -> Result<()> {
+
+    let msg = bonds::HandleMsg::OpenBond { 
+        collateral_asset: Contract { address: HumanAddr::from(collat_snip.address.clone()), code_hash: collat_snip.code_hash.clone() },
+        start_time: now,
+        end_time: end, 
+        bond_issuance_limit: opp_limit,
+        bonding_period: period,
+        discount: disc,
+    };
+
+    let tx_info = handle(
+        &msg,
+        bonds,
+        ADMIN_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+
+    println!("Gas used: {}", tx_info.gas_used);
+
+    Ok(())
+}
+
+fn close_bond(
+    collat_snip: &NetContract,
+    bonds: &NetContract,
+    reports: &mut Vec<Report>,
+) -> Result<()> {
+    let msg = bonds::HandleMsg::CloseBond { 
+        collateral_asset: Contract { 
+            address: HumanAddr::from(collat_snip.address.clone()), 
+            code_hash: collat_snip.code_hash.clone() }
+    };
+
+    let tx_info = handle(
+        &msg,
+        bonds,
+        ADMIN_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+
+    println!("Gas used: {}", tx_info.gas_used);
+
+    Ok(())
+}
+
+fn buy_bond(
+    collat_snip: &NetContract,
+    amount: Uint128,
+    reports: &mut Vec<Report>,
+    bonds: &NetContract,
+) -> Result<()> {
+    let msg = snip20::HandleMsg::Send { 
+        recipient: HumanAddr::from(bonds.address.clone()), 
+        amount: amount, 
+        msg: None, 
+        memo: None, 
+        padding: None 
+    }; 
+
+    let tx_info = handle(
+        &msg,
+        collat_snip,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+
+    println!("Gas used: {}", tx_info.gas_used);
+
+    Ok(())
+}
+
+fn claim_bond(
+    bonds: &NetContract,
+    reports: &mut Vec<Report>,
+) -> Result<()> {
+    let msg = bonds::HandleMsg::Claim {  };
+    
+    let tx_info = handle(
+        &msg,
+        bonds,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+
+    println!("Gas used: {}", tx_info.gas_used);
+    
+    Ok(())
+}
+
+fn set_viewing_keys(
+    key: String,
+    reports: &mut Vec<Report>,
+    bonds: &NetContract,
+    issued_snip20: &NetContract,
+) -> Result<String> {
+
+    let msg = bonds::HandleMsg::SetViewingKey { 
+        key: key.clone(),
+    };
+
+    let tx_info = handle(
+        &msg,
+        bonds,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+
+    println!("Gas used: {}", tx_info.gas_used);
+
+    let snip_msg = snip20::HandleMsg::CreateViewingKey { entropy: key, padding: None };
+
+    let snip_tx_info = handle(
+        &msg,
+        issued_snip20,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?;
+
+    println!("Gas used: {}", snip_tx_info.1.gas_used);
+
+    // Ok(Key{
+    //     0 = snip_tx_info.1.data
+    // })
+    Ok(snip_tx_info.1.data)
+}
+
+// struct Key {pub key: String,}
+
+// impl ToString for Key {
+//     fn to_string(&self) -> String {
+//         self.0.clone()
+//     }
+// }
+
+// impl ViewingKey<32> for Key{}
+
+fn set_band_prices(
+    collat_snip: &NetContract,
+    issued_snip: &NetContract,
+    coll_price: Uint128,
+    issued_price: Uint128,
+    reports: &mut Vec<Report>,
+    band: &NetContract
+) -> Result<()> {
+    let coll_msg = mock_band::contract::HandleMsg::MockPrice { 
+        symbol: "COLL".to_string(), 
+        price: coll_price
+    };
+
+    let coll_tx_info = handle(
+        &coll_msg,
+        band,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+
+    println!("Gas used: {}", coll_tx_info.gas_used);
+
+    let issued_msg = mock_band::contract::HandleMsg::MockPrice { 
+        symbol: "MINT".to_string(), 
+        price: issued_price
+    };
+
+    let issued_tx_info = handle(
+        &issued_msg,
+        band,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+    
+    println!("Gas used: {}", issued_tx_info.gas_used);
+
+    Ok(())
+}
+
+fn set_minting_privileges(
+    mint_snip20: &NetContract,
+    bonds: &NetContract,
+    reports: &mut Vec<Report>,
+) -> Result<()> {
+    let msg = snip20::HandleMsg::SetMinters { minters: vec![HumanAddr::from(bonds.address.clone())], padding: None };
+
+    print_header("Trying to set");
+    let tx_info = handle(
+        &msg,
+        mint_snip20,
+        ACCOUNT_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+    
+    println!("Gas used: {}", tx_info.gas_used);
+    
+    Ok(())
+}
+
+#[test]
+fn run_bonds() -> Result<()> {
+    let account_a = account_address(ACCOUNT_KEY)?;
+    let mut reports = vec![];
+
+    let now = chrono::offset::Utc::now().timestamp() as u64;
+    let end = now + 600u64;
+    print_header("Initializing bonds and snip20");
+    println!("Printed header");
+    let (bonds, mint_snip, collateral_snip, mockband, oracle) = setup_contracts(
+        Uint128(100_000_000_000), 
+        20, 
+        Uint128(7_000_000_000_000_000_000), 
+        true, 
+        true, 
+        240, 
+        Uint128(6), 
+        Uint128(100_000_000), 
+        130, 
+        &mut reports,
+    )?;
+
+    print_contract(&mint_snip);
+    print_contract(&collateral_snip);
+    print_contract(&bonds);
+    print_contract(&mockband);
+    print_contract(&oracle);
+
+    set_band_prices(&collateral_snip, &mint_snip, Uint128(5_000_000), Uint128(2_000_000), &mut reports, &mockband)?;
+    print_header("Band prices set");
+
+    set_minting_privileges(&mint_snip, &bonds, &mut reports)?;
+    print_header("Minting privileges set");
+
+    print_header("Asserting");
+    assert_eq!(Uint128(0), get_balance(&mint_snip, account_a.clone()));
+    print_header("Done asserting");
+
+    // Open bond opportunity
+    let opp_limit = Uint128(100_000_000_000);
+    let period = 20u64;
+    let disc = Uint128(6_000_000_000_000_000_000);
+    open_bond(&collateral_snip, now, end, Some(opp_limit), Some(period), Some(disc), &mut reports, &bonds)?;
+    print_header("Bond Opened");
+
+    let g_issued_query_msg = bonds::QueryMsg::GlobalTotalIssued {  };
+    let g_issued_query: bonds::QueryAnswer = query(&bonds, g_issued_query_msg, None)?;
+    if let bonds::QueryAnswer::GlobalTotalIssued { global_total_issued, 
+    } = g_issued_query
+    {
+        assert_eq!(global_total_issued, Uint128(100_000_000_000));
+    }
+
+    let bond_opp_quer_msg = bonds::QueryMsg::BondOpportunities {  };
+    let opp_query: bonds::QueryAnswer = query(&bonds, bond_opp_quer_msg, None)?;
+    
+    if let bonds::QueryAnswer::BondOpportunities { bond_opportunities,
+    } = opp_query
+    {
+        assert_eq!(bond_opportunities[0].amount_issued, Uint128(0));
+        assert_eq!(bond_opportunities[0].bonding_period, 20);
+        assert_eq!(bond_opportunities[0].discount, disc);
+        println!("\nBond opp: {}\n Starts: {}\n Ends: {}\n Bonding period: {}\n Discount: {}\n Amount Available: {}\n", 
+        bond_opportunities[0].deposit_denom.token_info.symbol,
+        bond_opportunities[0].start_time,
+        bond_opportunities[0].end_time,
+        bond_opportunities[0].bonding_period,
+        bond_opportunities[0].discount,
+        (bond_opportunities[0].issuance_limit - bond_opportunities[0].amount_issued).unwrap(),
+    )
+    }
+
+    buy_bond(&collateral_snip, Uint128(100_000_000), &mut reports, &bonds)?;
+    print_header("Bond opp bought");
+    let issued_snip20_key = set_viewing_keys(VIEW_KEY.to_string(), &mut reports, &bonds, &mint_snip)?;
+
+    let account_quer_msg = bonds::QueryMsg::AccountWithKey { account: HumanAddr::from(account_a.clone()), key: VIEW_KEY.to_string() };
+    let account_query: bonds::QueryAnswer = query(&bonds, account_quer_msg, None)?;
+    
+    if let bonds::QueryAnswer::Account { pending_bonds, 
+    } = account_query
+    {
+        assert_eq!(pending_bonds[0].deposit_amount, Uint128(100_000_000));
+        assert_eq!(pending_bonds[0].claim_amount, Uint128(265_957_446));
+        assert_eq!(pending_bonds[0].deposit_denom.token_info.symbol, "COLL".to_string());
+        println!("\nBond opp: {}\n Ends: {}\n Deposit Amount: {}\n Deposit Price: {}\n Claim Amount: {}\n Claim Price: {}\n Discount: {}\n Discount Price: {}", 
+            pending_bonds[0].deposit_denom.token_info.symbol,
+            pending_bonds[0].end,
+            pending_bonds[0].deposit_amount,
+            pending_bonds[0].deposit_price,
+            pending_bonds[0].claim_amount,
+            pending_bonds[0].claim_price,
+            pending_bonds[0].discount,
+            pending_bonds[0].discount_price,
+        )
+    }
+
+    claim_bond(&bonds, &mut reports)?;
+    print_header("Opportunity claimed");
+
+    let bond_opp_query_msg_2 = bonds::QueryMsg::BondOpportunities {  };
+    let opp_query_2: bonds::QueryAnswer = query(&bonds, bond_opp_query_msg_2, None)?;
+    
+    if let bonds::QueryAnswer::BondOpportunities { bond_opportunities,
+    } = opp_query_2
+    {
+        assert_eq!(bond_opportunities[0].amount_issued, Uint128(265_957_446));
+        assert_eq!(bond_opportunities[0].bonding_period, 20);
+        assert_eq!(bond_opportunities[0].discount, disc);
+        println!("\nBond opp: {}\n Starts: {}\n Ends: {}\n Bonding period: {}\n Discount: {}\n Amount Available: {}\n", 
+        bond_opportunities[0].deposit_denom.token_info.symbol,
+        bond_opportunities[0].start_time,
+        bond_opportunities[0].end_time,
+        bond_opportunities[0].bonding_period,
+        bond_opportunities[0].discount,
+        (bond_opportunities[0].issuance_limit - bond_opportunities[0].amount_issued).unwrap(),
+    )
+    }
+
+    let issued_snip_query_msg = snip20::QueryMsg::Balance { address: HumanAddr::from(account_a), key: issued_snip20_key };
+    let snip_query: snip20::QueryAnswer = query(&mint_snip, issued_snip_query_msg, None)?;
+
+    if let snip20::QueryAnswer::Balance { amount, 
+    } = snip_query
+    {
+        assert_eq!(amount, Uint128(268_817_204));
+        println!("Account A Current MINT Balance: {}\n", amount);
+        io::stdout().flush().unwrap();
+    }
+
+    close_bond(&collateral_snip, &bonds, &mut reports)?;
+
+    let bond_opp_query_msg_3 = bonds::QueryMsg::BondOpportunities {  };
+    let opp_query_3: bonds::QueryAnswer = query(&bonds, bond_opp_query_msg_3, None)?;
+    
+    if let bonds::QueryAnswer::BondOpportunities { bond_opportunities,
+    } = opp_query_3
+    {
+        assert_eq!(bond_opportunities.is_empty(), true);
+    }
+
+    buy_bond(&collateral_snip, Uint128(10), &mut reports, &bonds)?;
+
+    Ok(())
+}
+
+//#[test]
+//fn start_local_chain() -> Result<()> {
+//    start_loaded_local_testnet();
+//    enter_test_container();
+    
+//    Ok(())
+//}

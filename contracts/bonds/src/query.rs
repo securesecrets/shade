@@ -47,21 +47,27 @@ fn account_information<S: Storage, A: Api, Q: Querier>(
 pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
-    let collateral_assets = collateral_assets_r(&deps.storage).load().unwrap();
-    let iter = collateral_assets.iter();
-    let mut bond_opportunities: Vec<BondOpportunity> = vec![];
-    for asset in iter {
-        bond_opportunities.push(bond_opportunity_r(&deps.storage).load(asset.as_str().as_bytes()).unwrap());
+    let collateral_assets = collateral_assets_r(&deps.storage).load()?;
+    if collateral_assets.is_empty(){
+        return Ok(QueryAnswer::BondOpportunities {
+            bond_opportunities: vec![]
+        })
+    } else {
+        let iter = collateral_assets.iter();
+        let mut bond_opportunities: Vec<BondOpportunity> = vec![];
+        for asset in iter {
+            bond_opportunities.push(bond_opportunity_r(&deps.storage).load(asset.as_str().as_bytes())?);
+        }
+        return Ok(QueryAnswer::BondOpportunities {
+            bond_opportunities: bond_opportunities
+        })
     }
-    Ok(QueryAnswer::BondOpportunities {
-        bond_opportunities: bond_opportunities
-    })
 }
 
 pub fn global_total_issued<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
-    let global_total_issued = global_total_issued_r(&deps.storage).load().unwrap();
+    let global_total_issued = global_total_issued_r(&deps.storage).load()?;
     Ok(QueryAnswer::GlobalTotalIssued {
         global_total_issued: global_total_issued
     })
@@ -70,7 +76,7 @@ pub fn global_total_issued<S: Storage, A: Api, Q: Querier>(
 pub fn global_total_claimed<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
-    let global_total_claimed = global_total_claimed_r(&deps.storage).load().unwrap();
+    let global_total_claimed = global_total_claimed_r(&deps.storage).load()?;
     Ok(QueryAnswer::GlobalTotalClaimed {
         global_total_claimed: global_total_claimed
     })
@@ -79,7 +85,7 @@ pub fn global_total_claimed<S: Storage, A: Api, Q: Querier>(
 pub fn list_collateral_addresses<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
-    let collateral_addresses = collateral_assets_r(&deps.storage).load().unwrap();
+    let collateral_addresses = collateral_assets_r(&deps.storage).load()?;
     Ok(QueryAnswer::CollateralAddresses {
         collateral_addresses: collateral_addresses
     })
