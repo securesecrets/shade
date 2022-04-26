@@ -24,7 +24,7 @@ utils = []
 errors = []
 flexible_msg = []
 math = []
-storage = []
+storage = ["cosmwasm-storage/iterator"]
 
 # Protocol contracts
 airdrop = ["utils", "errors"]
