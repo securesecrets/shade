@@ -69,52 +69,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
         account_w(&mut deps.storage).save(&key, &account)?;
     }
 
-    /* Probably can just wait until rebalance
-    if let Some(f) = msg {
-        let flag: Flag = from_binary(&f)?;
-        // NOTE: would this be better as a non-exhaustive enum?
-        // https://doc.rust-lang.org/reference/attributes/type_system.html#the-non_exhaustive-attribute
-        if flag.flag == "unallocated" {
-            return Ok(HandleResponse {
-                messages: vec![],
-                log: vec![],
-                data: Some(to_binary(&HandleAnswer::Receive {
-                    status: ResponseStatus::Success,
-                })?),
-            });
-        }
-    };
-
-    let asset = assets_r(&deps.storage).load(env.message.sender.as_str().as_bytes())?;
-
-    let mut messages = vec![];
-
-    if let Some(allowances) = allowances_r(&deps.storage).may_load(asset.contract.address.as_str().as_bytes())? {
-        for allowance in allowances {
-            match allowance {
-                Allowance::Amount { .. } => { },
-                Allowance::Portion {
-                    spender,
-                    portion,
-                    last_refresh,
-                } => {
-                    messages.push(
-                        increase_allowance_msg(
-                            spender.clone(),
-                            amount.multiply_ratio(portion, 10u128.pow(18)),
-                            None,
-                            None,
-                            1,
-                            asset.contract.code_hash.clone(),
-                            asset.contract.address.clone(),
-                        )?
-                    );
-                },
-            }
-        }
-    }
-    */
-
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
@@ -211,7 +165,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 last_refresh,
             } => {
                 //TODO: Query allowance
-                //amount_total += allowance_amount(allowance);
+                amount_total += *amount;
             },
             Allowance::Portion {
                 spender,
@@ -219,7 +173,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 last_refresh,
                 tolerance,
             } => {
-                //portion_total += *portion; //allowance_portion(allowance);
+                //portion_total += *portion;
                 let i = managers.iter().position(|m| m.contract.address == *spender).unwrap();
                 managers[i].balance = adapter::balance_query(&deps,
                                          &full_asset.contract.address.clone(),
@@ -283,6 +237,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                     full_asset.contract.address.clone(),
                 )?.allowance;
 
+                // UnderFunded
                 if cur_allowance + adapter.balance < desired_amount {
                     let increase = (desired_amount - (adapter.balance + cur_allowance))?;
                     if increase < threshold {
@@ -300,6 +255,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                         )?
                     );
                 }
+                // Overfunded
                 else if cur_allowance + adapter.balance > desired_amount {
                     let mut decrease = ((adapter.balance + cur_allowance) - desired_amount)?;
                     if decrease < threshold {
