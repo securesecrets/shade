@@ -69,6 +69,8 @@ pub struct Balance {
 pub enum Status {
     Active,
     Disabled,
+    Closed,
+    Transferred,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -92,7 +94,6 @@ pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
     pub sscrt: Contract,
-    //pub account_holders: Option<Vec<HumanAddr>>,
 }
 
 impl InitCallback for InitMsg {
@@ -127,7 +128,7 @@ pub enum HandleMsg {
     AddAccount {
         holder: HumanAddr,
     },
-    RemoveAccount {
+    CloseAccount {
         holder: HumanAddr,
     },
 
@@ -167,12 +168,14 @@ pub enum QueryMsg {
     // List of recurring allowances configured
     Allowances { asset: HumanAddr },
     // List of actual current amounts
-    CurrentAllowances { asset: HumanAddr },
     Allowance {
         asset: HumanAddr,
         spender: HumanAddr,
     },
-    //Account { permit },
+    Accounts { },
+    Account { 
+        holder: HumanAddr,
+    },
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -188,6 +191,6 @@ pub enum QueryAnswer {
     Allowances { allowances: Vec<Allowance> },
     CurrentAllowances { allowances: Vec<Allowance> },
     Allowance { allowance: Uint128 },
-    Balance { amount: Uint128 },
-    Unbonding { amount: Uint128 },
+    Accounts { accounts: Vec<HumanAddr> },
+    Account { account: Account, },
 }

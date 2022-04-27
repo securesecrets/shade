@@ -5,6 +5,7 @@ use shade_protocol::{snip20, treasury, adapter};
 use crate::state::{
     allowances_r, asset_list_r, assets_r, config_r, self_address_r,
     viewing_key_r, managers_r,
+    account_list_r, account_r,
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
@@ -18,7 +19,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-) -> StdResult<treasury::QueryAnswer> {
+) -> StdResult<adapter::QueryAnswer> {
     //TODO: restrict to admin?
 
     let managers = managers_r(&deps.storage).load()?;
@@ -50,7 +51,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
                     _ => {}
                 };
             }
-            Ok(treasury::QueryAnswer::Balance { amount: balance })
+            Ok(adapter::QueryAnswer::Balance { amount: balance })
         }
         None => Err(StdError::NotFound {
             kind: asset.to_string(),
@@ -168,20 +169,24 @@ pub fn allowances<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn current_allowances<S: Storage, A: Api, Q: Querier>(
+pub fn accounts<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
 ) -> StdResult<treasury::QueryAnswer> {
-
-    Err(StdError::generic_err("Not Implemented"))
-    /*
-    Ok(treasury::QueryAnswer::Allowances {
-        allowance: match allowances_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
-            None => {
-                vec![]
-            }
-            Some(a) => a,
-        },
+    Ok(treasury::QueryAnswer::Accounts {
+        accounts: account_list_r(&deps.storage).load()?,
     })
-    */
+}
+
+pub fn account<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    holder: HumanAddr,
+) -> StdResult<treasury::QueryAnswer> {
+    match account_r(&deps.storage).may_load(holder.as_str().as_bytes())? {
+        Some(a) => Ok(
+            treasury::QueryAnswer::Account {
+                account: a,
+            }
+        ),
+        None => Err(StdError::generic_err("Not an account holder"))
+    }
 }

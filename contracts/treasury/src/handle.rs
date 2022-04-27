@@ -35,6 +35,7 @@ use crate::{
         viewing_key_r, self_address_r,
         managers_r, managers_w,
         account_r, account_w,
+        account_list_r, account_list_w,
         total_unbonding_r,
         total_unbonding_w,
     },
@@ -67,6 +68,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
         account_w(&mut deps.storage).save(&key, &account)?;
     }
+
     /* Probably can just wait until rebalance
     if let Some(f) = msg {
         let flag: Flag = from_binary(&f)?;
@@ -644,9 +646,13 @@ pub fn add_account<S: Storage, A: Api, Q: Querier>(
 
     let key = holder.as_str().as_bytes();
 
-    if !account_r(&deps.storage).may_load(key)?.is_none() {
-        return Err(StdError::generic_err("Account already exists"));
-    }
+    account_list_w(&mut deps.storage).update(|mut accounts| {
+        if accounts.contains(&holder.clone()) {
+            return Err(StdError::generic_err("Account already exists"));
+        }
+        accounts.push(holder.clone());
+        Ok(accounts)
+    })?;
 
     account_w(&mut deps.storage).save(key, 
         &Account {
@@ -666,7 +672,7 @@ pub fn add_account<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn remove_account<S: Storage, A: Api, Q: Querier>(
+pub fn close_account<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     holder: HumanAddr,
@@ -679,9 +685,8 @@ pub fn remove_account<S: Storage, A: Api, Q: Querier>(
     let key = holder.as_str().as_bytes();
 
     if let Some(mut account) = account_r(&deps.storage).may_load(key)? {
-        account.status = Status::Disabled;
+        account.status = Status::Closed;
         account_w(&mut deps.storage).save(key, &account)?;
-
     } else {
         return Err(StdError::generic_err("Account doesn't exist"));
     }

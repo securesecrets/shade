@@ -1,14 +1,25 @@
-# Treasury Contract
+# Treasury
 * [Introduction](#Introduction)
 * [Sections](#Sections)
     * [Init](#Init)
     * [Admin](#Admin)
         * Messages
+            * [Receive](#Receive)
             * [UpdateConfig](#UpdateConfig)
             * [RegisterAsset](#RegisterAsset)
+            * [RegisterManager](#RegisterManager)
+            * [Allowance](#Allowance)
+            * [AddAccount](#AddAccount)
+            * [CloseAccount](#CloseAccount)
+            * [AdapterInterface](#AdapterInterface)
         * Queries
-            * [GetConfig](#GetConfig)
-            * [GetBalance](#GetBalance)
+            * [Config](#Config)
+            * [Assets](#Assets)
+            * [Allowances](#Allowances)
+            * [CurrentAllowances](#CurrentAllowances)
+            * [Allowance](#Allowance)
+            * [Account](#Account)
+            * [AdapterInterface](#AdapterInterface)
 # Introduction
 The treasury contract holds network funds from things such as mint commission and pending airdrop funds
 
@@ -18,7 +29,9 @@ The treasury contract holds network funds from things such as mint commission an
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  contract owner/admin; a valid bech32 address; Controls funds
+|admin | string   |  contract owner/admin; a valid bech32 address; Controls funds
+|viewing_key | string   |  viewing key for all registered snip20 assets
+|sscrt | Contract |  sSCRT contract for wrapping & unwrapping
 
 ## Admin
 
@@ -28,8 +41,8 @@ Updates the given values
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|oracle    | Contract |  Oracle contract                                                                                                  |  no      |
+|config | string   |  New config to be set for the contract
+
 ##### Response
 ```json
 {
@@ -40,7 +53,7 @@ Updates the given values
 ```
 
 #### RegisterAsset
-Registers a supported asset. The asset must be SNIP-20 compliant since [RegisterReceive](https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md#RegisterReceive) is called.
+Registers a SNIP-20 compliant asset since [RegisterReceive](https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md#RegisterReceive) is called.
 
 Note: Will return an error if there's an asset with that address already registered.
 ##### Request
@@ -58,27 +71,102 @@ Note: Will return an error if there's an asset with that address already registe
 
 ### Queries
 
-#### GetConfig
-Gets the contract's configuration variables
+#### Config
+Gets the contract's configuration
 ##### Response
 ```json
 {
   "config": {
     "config": {
-      "owner": "Owner address",
+      "admin": "admin address",
+      "sscrt": {
+        "address": "",
+        "code_hash": "",
+      },
     }
   }
 }
 ```
 
-#### GetBalance
-Get the treasury balance for a given snip20 asset
-Note: Snip20 assets must be registered to have viewing key set
+#### Assets
+List of assets supported
 ##### Response
 ```json
 {
-  "get_balance": {
-    "contract": "asset address",
+  "assets": {
+    "assets": ["asset address", ...]
+  }
+}
+```
+
+#### Allowances
+List of configured allowances for things like treasury_manager & rewards
+##### Request
+|Name      |Type      |Description                                                                                                        | optional |
+|----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
+|asset | HumanAddr |  Asset to query balance of
+##### Response
+```json
+{
+  "allowances": {
+    "allowances": [
+    {
+      "allowance": ...
+    }, 
+    ...]
+  }
+}
+```
+
+#### Allowance
+List of configured allowances for things like treasury_manager & rewards
+##### Request
+|Name      |Type      |Description                                                                                                        | optional |
+|----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
+|asset | HumanAddr |  Asset to query allowance for
+|spender | HumanAddr |  Spender of allowance
+##### Response
+```json
+{
+  "allowances": {
+    "allowances": [
+      {
+        "allowance": ...
+      }, 
+      ...
+    ]
+  }
+}
+```
+
+#### Accounts
+List of account holders
+##### Response
+```json
+{
+  "accounts": {
+    "accounts": ["address0", ...],
+  }
+}
+```
+
+#### Account
+Balance of a given account holders assets (e.g. SHD staking)
+##### Request
+|Name      |Type      |Description                                                                                                        | optional |
+|----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
+|holder | HumanAddr |  Holder of the account
+|asset | HumanAddr |  Asset to query balance of
+##### Response
+```json
+{
+  "account": {
+    "account": {
+      "balances": Uint128,
+      "unbondings": Uint128,
+      "claimable": Uint128,
+      "status": ("active"|"disabled"|"closed"|"transferred"),
+    }
   }
 }
 ```

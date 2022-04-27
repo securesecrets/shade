@@ -59,7 +59,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::RegisterManager { mut contract } => handle::register_manager(deps, &env, &mut contract ),
         HandleMsg::Allowance { asset, allowance } => handle::allowance(deps, &env, asset, allowance),
         HandleMsg::AddAccount { holder } => handle::add_account(deps, &env, holder),
-        HandleMsg::RemoveAccount { holder } => handle::remove_account(deps, &env, holder),
+        HandleMsg::CloseAccount { holder } => handle::close_account(deps, &env, holder),
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Update { asset } => handle::rebalance(deps, &env, asset),
             adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),
@@ -76,8 +76,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
         QueryMsg::Allowances { asset } => to_binary(&query::allowances(deps, asset)?),
-        QueryMsg::CurrentAllowances { asset } => to_binary(&query::current_allowances(deps, asset)?),
         QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, &asset, &spender)?),
+        QueryMsg::Accounts { } => to_binary(&query::accounts(&deps)?),
+        QueryMsg::Account { holder } => to_binary(&query::account(&deps, holder)?),
+
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
             adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(&deps, &asset)?),
