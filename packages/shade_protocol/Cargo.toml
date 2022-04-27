@@ -17,7 +17,7 @@ dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
 band = []
 secretswap = ["utils"]
 sienna = ["utils", "math"]
-snip20 = ["utils"]
+snip20 = ["utils", "dep:remain"]
 
 # Utils
 utils = []
