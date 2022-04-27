@@ -37,7 +37,7 @@ oracle = ["snip20"]
 scrt_staking= ["utils", "adapter", "treasury"]
 staking = ["governance", "utils"]
 treasury = ["utils", "adapter", "snip20"]
-farming_manager = ["adapter"]
+treasury_manager = ["adapter"]
 rewards_manager = ["adapter"]
 adapter = []
 

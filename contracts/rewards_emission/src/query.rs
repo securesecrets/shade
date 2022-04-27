@@ -127,25 +127,8 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(&deps.storage).load()?;
-
-    if asset != config.sscrt.address {
-        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
-    }
-
-    let unbondable = match balance(deps, asset)? {
-        adapter::QueryAnswer::Balance { amount } => amount,
-        _ => {
-            return Err(StdError::generic_err("Failed to query balance"));
-        }
-    };
-
-    /*TODO: Query current unbondings
-     * 7+ = false
-     * <7 = true
-     */
     Ok(adapter::QueryAnswer::Unbondable {
-        amount: unbondable,
+        amount: Uint128::zero(),
     })
 }
 

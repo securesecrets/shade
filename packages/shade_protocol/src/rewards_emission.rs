@@ -13,12 +13,18 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct Rewards {
+    asset: HumanAddr,
+    amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
-    pub target: HumanAddr,
     pub asset: Contract,
-    pub cycle: Cycle,
-    pub amount: Uint128,
+    pub distributor: HumanAddr,
+    pub refill_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -44,8 +50,14 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
+    RefillRewards {
+        rewards: Vec<Rewards>,
+    },
     UpdateConfig {
         config: Config,
+    },
+    RegisterAsset {
+        asset: Contract,
     },
     Adapter(adapter::SubHandleMsg),
 }
@@ -68,12 +80,8 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         validator: Validator,
     },
-    Claim {
+    RegisterReward {
         status: ResponseStatus,
-    },
-    Unbond {
-        status: ResponseStatus,
-        delegations: Vec<HumanAddr>,
     },
 }
 
@@ -93,5 +101,4 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
-    Balance { amount: Uint128 },
 }

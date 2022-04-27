@@ -15,6 +15,8 @@ endef
 
 CONTRACTS = airdrop governance staking mint mint_router treasury treasury_manager oracle mock_band initializer scrt_staking snip20 rewards_emissions
 
+dao: treasury treasury_manager scrt_staking rewards_emission
+
 debug: setup
 	(cd ${contracts_dir}; ${build-debug})
 	@$(MAKE) compress_all
@@ -39,6 +41,7 @@ $(CONTRACTS): setup
 snip20: setup
 	(cd ${contracts_dir}/snip20; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20)
+
 
 test:
 	@$(MAKE) $(addprefix test-,$(CONTRACTS))

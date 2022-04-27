@@ -52,7 +52,7 @@ pub enum HandleMsg {
         msg: Option<Binary>,
     },
     UpdateConfig {
-        admin: Option<HumanAddr>,
+        config: Config,
     },
     Adapter(adapter::SubHandleMsg),
 }
@@ -75,6 +75,7 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         validator: Validator,
     },
+    /*
     Claim {
         status: ResponseStatus,
     },
@@ -82,6 +83,7 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         delegations: Vec<HumanAddr>,
     },
+    */
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -100,5 +102,5 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
-    Balance { amount: Uint128 },
+    //Balance { amount: Uint128 },
 }

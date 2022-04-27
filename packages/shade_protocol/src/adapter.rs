@@ -71,7 +71,7 @@ pub enum SubQueryMsg {
     Balance { asset: HumanAddr },
     Unbonding { asset: HumanAddr },
     Claimable { asset: HumanAddr },
-    CanUnbond { asset: HumanAddr },
+    Unbondable { asset: HumanAddr },
     /* TODO
      * - LP pool assets
      * Ratio { asset0: HumanAddr, asset1: HumanAddr },
@@ -104,7 +104,7 @@ pub enum QueryAnswer {
     Balance { amount: Uint128 },
     Unbonding { amount: Uint128 },
     Claimable { amount: Uint128 },
-    CanUnbond { can_unbond: bool },
+    Unbondable { amount: Uint128 },
 }
 
 pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
@@ -139,18 +139,18 @@ pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn can_unbond_query<S: Storage, A: Api, Q: Querier>(
+pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
     adapter: Contract,
-) -> StdResult<bool> {
+) -> StdResult<Uint128> {
 
-    match (QueryMsg::Adapter(SubQueryMsg::CanUnbond {
+    match (QueryMsg::Adapter(SubQueryMsg::Unbondable {
         asset: asset.clone(),
     }).query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
-        QueryAnswer::CanUnbond { can_unbond } => Ok(can_unbond),
+        QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
-            format!("Failed to query adapter can_unbond from {}", adapter.address)
+            format!("Failed to query adapter unbondable from {}", adapter.address)
         ))
     }
 }

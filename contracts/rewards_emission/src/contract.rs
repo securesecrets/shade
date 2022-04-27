@@ -78,6 +78,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        HandleMsg::RegisterReward {
+            asset, 
+            target, 
+            cycle 
+        } => handle::register_reward(deps, env, asset, target, cycle),
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => handle::unbond(deps, env, asset, amount),
             adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
@@ -97,7 +102,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
             adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
             adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
-            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(deps, asset)?),
+            adapter::SubQueryMsg::CanUnbond { asset } => to_binary(&query::can_unbond(deps, asset)?),
         }
     }
 }

@@ -13,15 +13,15 @@ use secret_toolkit::{
 
 use shade_protocol::{
     snip20,
+    adapter,
     treasury::{
-        Allowance, Config, Flag, Cycle, Manager, Account, Status,
+        Allowance, Config, Flag, Manager, Account, Status,
         HandleAnswer, QueryAnswer, Balance,
     },
-    adapter,
     utils::{
         asset::Contract, 
         generic_response::ResponseStatus,
-        cycle::{ Cycle, parse_utc_datetime },
+        cycle::{ Cycle, parse_utc_datetime, exceeds_cycle },
     },
 };
 
@@ -243,7 +243,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             } => {
                 let datetime = parse_utc_datetime(&last_refresh)?;
 
-                if needs_refresh(datetime, now, cycle) {
+                if exceeds_cycle(&datetime, &now, cycle) {
                     if let Some(msg) = set_allowance(&deps, env,
                                               spender, amount,
                                               key.clone(), full_asset.contract.clone())? {
@@ -361,32 +361,6 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success,
         })?),
     })
-}
-
-pub fn needs_refresh(
-    last_refresh: DateTime<Utc>,
-    now: DateTime<Utc>,
-    cycle: Cycle,
-) -> bool {
-
-    match cycle {
-        Cycle::Once => false,
-        // NOTE: idk about this one
-        Cycle::Constant => true,
-        Cycle::Daily { days } => now.num_days_from_ce() - last_refresh.num_days_from_ce() >= days.u128() as i32,
-        Cycle::Monthly { months } => {
-            let mut month_diff = 0u32;
-
-            if now.year() > last_refresh.year() {
-                month_diff = (12u32 - last_refresh.month()) + now.month();
-            }
-            else {
-                month_diff = now.month() - last_refresh.month();
-            }
-
-            month_diff >= months.u128() as u32
-        }
-    }
 }
 
 pub fn set_allowance<S: Storage, A: Api, Q: Querier>(

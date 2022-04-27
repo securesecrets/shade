@@ -81,6 +81,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
             adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(&deps, &asset)?),
+            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&StdError::generic_err("Not Implemented")),
             adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(&deps, &asset)?),
         }
     }
