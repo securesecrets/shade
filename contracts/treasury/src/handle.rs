@@ -149,8 +149,18 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         full_asset.contract.address.clone(),
     )?.amount;
 
+    let mut account_unbonding = Uint128::zero();
+
+    for holder in account_list_r(&deps.storage).load()? {
+        let account = account_r(&deps.storage).load(holder.as_str().as_bytes())?;
+        account_unbonding += Uint128(account.unbondings.iter()
+            .map(|u| {
+                if u.token == asset { u.amount.u128() }
+                else { 0u128 }
+            }).sum());
+    }
+
     let mut amount_total = Uint128::zero();
-    //let mut portion_total = Uint128::zero();
     let mut out_balance = Uint128::zero();
 
     let mut managers = managers_r(&deps.storage).load()?;
@@ -183,6 +193,8 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    let mut portion_total = ((balance + out_balance) - (amount_total + account_unbonding))?;
+
     managers_w(&mut deps.storage).save(&managers)?;
     let config = config_r(&deps.storage).load()?;
 
@@ -213,9 +225,8 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 last_refresh,
                 tolerance,
             } => {
-                let desired_amount = (balance + out_balance)
-                    .multiply_ratio(
-                        portion, 
+                let desired_amount = portion_total.multiply_ratio(
+                        portion,
                         10u128.pow(18)
                     );
 
@@ -662,7 +673,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
 
-    if env.message.sender != config_r(&deps.storage).load()?.admin {
+    if !account_list_r(&deps.storage).load()?.contains(&env.message.sender) {
         return Err(StdError::unauthorized());
     }
 

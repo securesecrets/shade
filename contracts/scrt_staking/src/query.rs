@@ -141,8 +141,8 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     };
 
     /*TODO: Query current unbondings
-     * 7+ = false
-     * <7 = true
+     * u >= 7 = false
+     * u <  7 = true
      */
     Ok(adapter::QueryAnswer::Unbondable {
         amount: unbondable,

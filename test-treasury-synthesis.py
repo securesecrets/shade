@@ -45,8 +45,7 @@ seed_amount = 100000000000
 print('Depositing', seed_amount)
 sscrt.execute({'deposit': {}}, ACCOUNT, str(seed_amount) + 'uscrt')
 
-tolerance = .05
-print(f'Deploying Treasury w/ tolerance {tolerance * 100}%')
+print(f'Deploying Treasury')
 treasury = Contract(
     '../compiled/treasury.wasm.gz',
     json.dumps({
@@ -72,9 +71,9 @@ print(treasury.execute({
     }
 }))
 
-print('Deploying Finance Manager')
-farming_manager = Contract(
-    '../compiled/farming_manager.wasm.gz',
+print('Deploying Manager')
+treasury_manager = Contract(
+    '../compiled/treasury_manager.wasm.gz',
     json.dumps({
         'admin': ACCOUNT,
         'treasury': treasury.address,
@@ -82,10 +81,10 @@ farming_manager = Contract(
     }),
     gen_label(8),
 )
-print('Manager', farming_manager.address)
+print('Manager', treasury_manager.address)
 
 print('Registering sscrt w/ manager')
-print(farming_manager.execute({
+print(treasury_manager.execute({
         'register_asset': {
             'contract': sscrt.as_dict(),
         }
@@ -96,18 +95,19 @@ print(farming_manager.execute({
 print(f'Registering Manager with Treasury')
 print(treasury.execute({
     'register_manager': {
-        'contract': farming_manager.as_dict(),
+        'contract': treasury_manager.as_dict(),
     }
 }))
 
+tolerance = .05
 allowance = .9
-print(f'Register Finance Manager allowance {allowance * 100}%')
+print(f'Register Manager allowance {allowance * 100}% tolerance {tolerance * 100}%')
 print(treasury.execute({
     'allowance': {
         'asset': sscrt.address,
         'allowance': {
             'portion': {
-                'spender': farming_manager.address,
+                'spender': treasury_manager.address,
                 'portion': str(int(allowance * 10**18)),
                 'last_refresh': '',
                 'tolerance': str(int(tolerance * 10**18)),
@@ -132,7 +132,7 @@ print(scrt_staking.address)
 allocation = 1
 
 print(f'Allocating {allocation * 100}% sSCRT to scrt-staking')
-print(farming_manager.execute({
+print(treasury_manager.execute({
     'allocate': {
         'asset': sscrt.address,
         'allocation': {
@@ -148,7 +148,7 @@ print('Treasury Assets')
 print(treasury.query({'assets': {}}))
 
 print('Treasury sSCRT Balance')
-print(treasury.query({'balance': {'asset': sscrt.address}}))
+print(treasury.query({'adapter': {'balance': {'asset': sscrt.address}}}))
 
 print(f'Sending {seed_amount} usscrt to treasury')
 print(sscrt.execute({
@@ -166,45 +166,49 @@ while True:
     print('\nTreasury')
     print('Balance')
     treasury_balance = treasury.query({
-        'balance': {
-            'asset': sscrt.address
-        },
+        'adapter': {
+            'balance': {
+                'asset': sscrt.address
+            },
+        }
     })['balance']['amount']
     print(treasury_balance)
 
-    print('\nFinance Manager')
+    print('\nManager')
 
     print('Balance')
-    farming_balance = farming_manager.query({
+    manager_balance = treasury_manager.query({
         'adapter': {
             'balance': {
                 'asset': sscrt.address,
             }
         }
     })['balance']['amount']
-    print(farming_balance)
+    print(manager_balance)
 
-    outstanding = sum(map(int, [farming_balance]))
+    outstanding = sum(map(int, [manager_balance]))
     reserves = int(treasury_balance) - outstanding
 
     print('ALLOCS')
-    print('Finance', int(farming_balance) / int(treasury_balance))
+    print('Manager', int(manager_balance) / int(treasury_balance))
     print('Reserves', int(reserves) / int(treasury_balance))
     
     print('Rebalance...')
     print(treasury.execute({
-        'rebalance': {
-            'asset': sscrt.address
-        },
+        'adapter': {
+            'update': {
+                'asset': sscrt.address
+            },
+        }
     }))
-    print(farming_manager.query({
+    print(treasury_manager.query({
         'pending_allowance': {
             'asset': sscrt.address
         }
     }))
 
     print('Unbonding')
-    unbonding = farming_manager.query({
+    unbonding = treasury_manager.query({
         'adapter': {
             'unbonding': {
                 'asset': sscrt.address,
@@ -213,14 +217,16 @@ while True:
     })['unbonding']['amount']
     print(unbonding)
 
-    print('Updating...')
-    farming_manager.execute({
+    print('Update Manager...')
+    treasury_manager.execute({
         'adapter': {
             'update': {
                 'asset': sscrt.address,
             }
         }
     }, ACCOUNT)
+
+    print('Update SCRT Staking...')
     scrt_staking.execute({
         'adapter': {
             'update': {
@@ -229,13 +235,13 @@ while True:
         }
     }, ACCOUNT)
 
-    print(farming_manager.query({
+    print(treasury_manager.query({
         'pending_allowance': {
             'asset': sscrt.address
         }
     }))
 
-    print(farming_manager.query({
+    print(treasury_manager.query({
         'adapter': {
             'unbonding': {
                 'asset': sscrt.address,
@@ -243,7 +249,7 @@ while True:
         }
     }))
 
-    claimable = farming_manager.query({
+    claimable = treasury_manager.query({
         'adapter': {
             'claimable': {
                 'asset': sscrt.address,
@@ -253,7 +259,7 @@ while True:
     print(claimable)
     if claimable['claimable']['amount'] != '0': 
         print('Claiming...')
-        farming_manager.execute({
+        treasury_manager.execute({
             'adapter': {
                 'claim': {'asset': sscrt.address}
             }

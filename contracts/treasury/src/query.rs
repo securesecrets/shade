@@ -64,7 +64,6 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    //TODO: restrict to admin?
 
     let managers = managers_r(&deps.storage).load()?;
     let mut unbonding = Uint128::zero();
@@ -94,7 +93,6 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    //TODO: restrict to admin?
 
     let managers = managers_r(&deps.storage).load()?;
     let mut claimable = Uint128::zero();

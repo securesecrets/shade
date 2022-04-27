@@ -13,6 +13,7 @@ use crate::{
     state::{
         allowances_w, asset_list_w, config_w, self_address_w,
         viewing_key_w, managers_w, total_unbonding_w,
+        account_list_w,
     },
 };
 use chrono::prelude::*;
@@ -32,6 +33,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     asset_list_w(&mut deps.storage).save(&Vec::new())?;
     managers_w(&mut deps.storage).save(&Vec::new())?;
+    account_list_w(&mut deps.storage).save(&Vec::new())?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
