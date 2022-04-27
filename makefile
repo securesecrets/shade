@@ -13,7 +13,7 @@ cat ./$(1).wasm | gzip -n -9 > ${compiled_dir}/$(1).wasm.gz
 rm ./$(1).wasm
 endef
 
-CONTRACTS = airdrop governance staking mint mint_router treasury treasury_manager oracle mock_band initializer scrt_staking snip20 rewards_emissions
+CONTRACTS = airdrop governance staking mint mint_router treasury treasury_manager oracle mock_band initializer scrt_staking snip20 rewards_emission
 
 dao: treasury treasury_manager scrt_staking rewards_emission
 

@@ -3,9 +3,23 @@ use cosmwasm_std::{
     Querier, RewardsResponse, StdError, StdResult, Storage, Uint128,
 };
 
-use shade_protocol::{adapter, scrt_staking::QueryAnswer, utils::asset::scrt_balance};
+use shade_protocol::{
+    adapter, 
+    rewards_emission::QueryAnswer, 
+    utils::asset::scrt_balance,
+};
 
-use crate::state::{config_r, self_address_r, unbonding_r};
+use secret_toolkit::snip20::{
+    balance_query,
+    allowance_query,
+};
+
+use crate::state::{
+    config_r, self_address_r,
+    viewing_key_r,
+    assets_r,
+    asset_r,
+};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -13,44 +27,32 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
     })
 }
 
-pub fn delegations<S: Storage, A: Api, Q: Querier>(
+pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-) -> StdResult<Vec<Delegation>> {
+    asset: HumanAddr,
+) -> StdResult<QueryAnswer> {
 
-    deps.querier.query_all_delegations(
-        self_address_r(&deps.storage).load()?
-    )
-}
-
-pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Uint128> {
-
-    let query_rewards: RewardsResponse = deps.querier
-        .query(
-            &DistQuery::Rewards {
-                delegator: self_address_r(&deps.storage).load()?,
-            }
-            .into(),
-        )
-        .unwrap_or_else(|_| RewardsResponse {
-            rewards: vec![],
-            total: vec![],
-        });
-
-    if query_rewards.total.is_empty() {
-        return Ok(Uint128::zero());
-    }
-
-    let denom = query_rewards.total[0].denom.as_str();
-    query_rewards.total.iter().fold(Ok(Uint128::zero()), |racc, d| {
-        let acc = racc?;
-        if d.denom.as_str() != denom {
-            Err(StdError::generic_err(format!(
-                "different denoms in bonds: '{}' vs '{}'",
-                denom, &d.denom
-            )))
-        } else {
-            Ok(acc + d.amount)
+    let full_asset = match asset_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
         }
+    };
+
+    let config = config_r(&deps.storage).load()?;
+
+    let allowance = allowance_query(
+        &deps.querier,
+        config.treasury,
+        self_address_r(&deps.storage).load()?,
+        viewing_key_r(&deps.storage).load()?,
+        1,
+        full_asset.contract.code_hash.clone(),
+        full_asset.contract.address.clone(),
+    )?.allowance;
+
+    Ok(QueryAnswer::PendingAllowance {
+        amount: allowance,
     })
 }
 
@@ -58,20 +60,25 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
 
-    if asset != config.sscrt.address {
-        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
-    }
+    let full_asset = match asset_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
+        }
+    };
 
-    let delegated = Uint128(delegations(deps)?.into_iter()
-                        .map(|d| d.amount.amount.u128())
-                        .sum::<u128>());
-
-    let rewards = rewards(deps)?;
+    let balance = balance_query(
+        &deps.querier,
+        self_address_r(&deps.storage).load()?,
+        viewing_key_r(&deps.storage).load()?,
+        1,
+        full_asset.contract.code_hash.clone(),
+        full_asset.contract.address.clone(),
+    )?.amount;
 
     Ok(adapter::QueryAnswer::Balance {
-        amount: delegated + rewards,
+        amount: balance,
     })
 }
 
@@ -80,30 +87,16 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(&deps.storage).load()?;
-
-    if asset != config.sscrt.address {
-        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
-    }
-
-    let scrt_balance: BalanceResponse = deps.querier.query(
-        &BankQuery::Balance {
-            address: self_address_r(&deps.storage).load()?,
-            denom: "uscrt".to_string(),
+    match asset_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+        Some(_) => {
+            Ok(adapter::QueryAnswer::Claimable {
+                amount: Uint128::zero(),
+            })
+        },
+        None => {
+            Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)))
         }
-        .into(),
-    )?;
-
-    let mut amount = scrt_balance.amount.amount;
-    let unbonding = unbonding_r(&deps.storage).load()?;
-
-    if amount > unbonding {
-        amount = unbonding;
     }
-
-    Ok(adapter::QueryAnswer::Claimable {
-        amount: amount,
-    })
 }
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
@@ -111,15 +104,17 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(&deps.storage).load()?;
-
-    if asset != config.sscrt.address {
-        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
+    match asset_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+        Some(_) => {
+            Ok(adapter::QueryAnswer::Unbonding {
+                amount: Uint128::zero(),
+            })
+        },
+        None => {
+            Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)))
+        }
     }
 
-    Ok(adapter::QueryAnswer::Unbonding {
-        amount: unbonding_r(&deps.storage).load()?
-    })
 }
 
 pub fn unbondable<S: Storage, A: Api, Q: Querier>(
@@ -127,18 +122,14 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    Ok(adapter::QueryAnswer::Unbondable {
-        amount: Uint128::zero(),
-    })
+    match asset_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+        Some(_) => {
+            Ok(adapter::QueryAnswer::Unbondable {
+                amount: Uint128::zero(),
+            })
+        },
+        None => {
+            Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)))
+        }
+    }
 }
-
-// This won't work until cosmwasm 0.16
-/*
-pub fn delegation<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    validator: HumanAddr,
-) -> StdResult<Option<FullDelegation>> {
-    let address = self_address_r(&deps.storage).load()?;
-    deps.querier.query_delegation(address, validator)
-}
-*/

@@ -25,6 +25,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
+
     let config = Config {
         admin: match msg.admin {
             None => env.message.sender.clone(),

@@ -43,11 +43,12 @@ pub mod staking;
 
 #[cfg(feature = "treasury")]
 pub mod treasury;
+
 #[cfg(feature = "adapter")]
 pub mod adapter;
 
 #[cfg(feature = "treasury_manager")]
 pub mod treasury_manager;
 
-#[cfg(feature = "rewards_emissions")]
-pub mod rewards_emissions;
+#[cfg(feature = "rewards_emission")]
+pub mod rewards_emission;

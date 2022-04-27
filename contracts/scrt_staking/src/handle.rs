@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Validator,
 };
 
-use secret_toolkit::snip20::{deposit_msg, redeem_msg, send_msg};
+use secret_toolkit::snip20::{deposit_msg, redeem_msg};
 
 use shade_protocol::{
     scrt_staking::{HandleAnswer, ValidatorBounds, Config},

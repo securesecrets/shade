@@ -1,6 +1,5 @@
 use crate::{
     adapter,
-    treasury::Cycle,
     utils::{
         asset::Contract, 
         generic_response::ResponseStatus
@@ -13,26 +12,25 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Rewards {
-    asset: HumanAddr,
-    amount: Uint128,
+pub struct Reward {
+    pub asset: HumanAddr,
+    pub amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admin: HumanAddr,
+    pub admins: Vec<HumanAddr>,
+    pub treasury: HumanAddr,
     pub asset: Contract,
     pub distributor: HumanAddr,
-    pub refill_amount: Uint128,
+    pub rewards: Vec<Reward>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
-    pub target: HumanAddr,
-    pub asset: Contract,
+    pub config: Config,
     pub viewing_key: String,
 }
 
@@ -51,7 +49,7 @@ pub enum HandleMsg {
         msg: Option<Binary>,
     },
     RefillRewards {
-        rewards: Vec<Rewards>,
+        rewards: Vec<Reward>,
     },
     UpdateConfig {
         config: Config,
@@ -78,9 +76,11 @@ pub enum HandleAnswer {
     },
     Receive {
         status: ResponseStatus,
-        validator: Validator,
     },
-    RegisterReward {
+    RegisterAsset {
+        status: ResponseStatus,
+    },
+    RefillRewards {
         status: ResponseStatus,
     },
 }
@@ -89,7 +89,9 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    Delegations {},
+    PendingAllowance {
+        asset: HumanAddr,
+    },
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -101,4 +103,5 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
+    PendingAllowance { amount: Uint128 },
 }

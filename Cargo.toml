@@ -18,14 +18,21 @@ members = [
   "contracts/snip20",
 
   # DAO
+  # - Core
   "contracts/treasury",
   "contracts/treasury_manager",
-  # Adapters
+  # - Adapters
   "contracts/scrt_staking",
   "contracts/rewards_emission",
 
+  # Allows stkd minting with sscrt
+  "contracts/stkd_sscrt",
+
   # Mock contracts
   "contracts/mock_band",
+  "contracts/mock_secretswap_pair",
+  "contracts/mock_sienna_pair",
+
 
   # Tools
   "tools/doc2book"
