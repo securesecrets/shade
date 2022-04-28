@@ -14,7 +14,6 @@ use shade_protocol::governance::proposal::Proposal;
 use crate::contract::{handle, init, query};
 
 pub struct Governance;
-
 impl ContractHarness for Governance {
     fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
         init(
@@ -34,6 +33,32 @@ impl ContractHarness for Governance {
 
     fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
         query(
+            deps,
+            from_binary(&msg)?
+        )
+    }
+}
+
+pub struct Snip20;
+impl ContractHarness for Snip20 {
+    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
+        snip20_reference_impl::contract::init(
+            deps,
+            env,
+            from_binary(&msg)?,
+        )
+    }
+
+    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
+        snip20_reference_impl::contract::handle(
+            deps,
+            env,
+            from_binary(&msg)?
+        )
+    }
+
+    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
+        snip20_reference_impl::contract::query(
             deps,
             from_binary(&msg)?
         )

@@ -119,17 +119,17 @@ fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> S
     let tally = TalliedVotes::tally(votes);
 
     let threshold = match settings.threshold {
-        Count::Percentage { percent } => total_power.multiply_ratio(Uint128::new(10000), percent),
+        Count::Percentage { percent } => total_power.multiply_ratio(percent, Uint128::new(10000)),
         Count::LiteralCount { count } => count
     };
 
     let yes_threshold = match settings.yes_threshold {
-        Count::Percentage { percent } => (tally.yes + tally.no).multiply_ratio(Uint128::new(10000), percent),
+        Count::Percentage { percent } => (tally.yes + tally.no).multiply_ratio(percent, Uint128::new(10000)),
         Count::LiteralCount { count } => count
     };
 
     let veto_threshold = match settings.veto_threshold {
-        Count::Percentage { percent } => (tally.yes + tally.no).multiply_ratio(Uint128::new(10000), percent),
+        Count::Percentage { percent } => (tally.yes + tally.no).multiply_ratio(percent, Uint128::new(10000)),
         Count::LiteralCount { count } => count
     };
 
