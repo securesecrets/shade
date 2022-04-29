@@ -32,6 +32,26 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         funding_token: msg.funding_token.clone()
     }.save(&mut deps.storage)?;
 
+    let mut messages = vec![];
+    if let Some(vote_token) = msg.vote_token.clone() {
+        messages.push(register_receive_msg(
+            env.contract_code_hash.clone(),
+            None,
+            255,
+            vote_token.code_hash,
+            vote_token.address
+        )?);
+    }
+    if let Some(funding_token) = msg.funding_token.clone() {
+        messages.push(register_receive_msg(
+            env.contract_code_hash.clone(),
+            None,
+            255,
+            funding_token.code_hash,
+            funding_token.address
+        )?);
+    }
+
     // Setups IDs
     ID::set_assembly(&mut deps.storage, Uint128::new(1))?;
     ID::set_profile(&mut deps.storage, Uint128::new(1))?;
@@ -99,7 +119,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }.save(&mut deps.storage, &Uint128::zero())?;
 
     Ok(InitResponse {
-        messages: vec![],
+        messages,
         log: vec![],
     })
 }

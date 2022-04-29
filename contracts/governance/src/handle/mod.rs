@@ -1,4 +1,5 @@
 use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use secret_toolkit::snip20::register_receive_msg;
 use shade_protocol::governance::{Config, HandleAnswer, RuntimeState};
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
@@ -21,25 +22,30 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized())
     }
 
+    let mut messages = vec![];
     let mut config = Config::load(&deps.storage)?;
 
     // Vote and funding tokens cannot be set to none after being set
-    if config.vote_token.is_some() {
-        if vote_token.is_some() {
-            config.vote_token = vote_token;
-        }
-    }
-    else {
-        config.vote_token = vote_token;
+    if let Some(vote_token) = vote_token {
+        config.vote_token = Some(vote_token.clone());
+        messages.push(register_receive_msg(
+            env.contract_code_hash.clone(),
+            None,
+            255,
+            vote_token.code_hash,
+            vote_token.address
+        )?);
     }
 
-    if config.funding_token.is_some() {
-        if funding_token.is_some() {
-            config.funding_token = funding_token;
-        }
-    }
-    else {
-        config.funding_token = funding_token;
+    if let Some(funding_token) = funding_token {
+        config.funding_token = Some(funding_token.clone());
+        messages.push(register_receive_msg(
+            env.contract_code_hash.clone(),
+            None,
+            255,
+            funding_token.code_hash,
+            funding_token.address
+        )?);
     }
 
     if let Some(treasury) = treasury {
@@ -48,7 +54,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
 
     config.save(&mut deps.storage)?;
     Ok(HandleResponse {
-        messages: vec![],
+        messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetConfig {
             status: ResponseStatus::Success,

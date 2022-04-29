@@ -368,25 +368,23 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check if proposal is in funding stage
-    let mut new_fund = amount;
     let mut return_amount = Uint128::zero();
 
     let status = Proposal::status(&deps.storage, &proposal)?;
-    if let Status::Funding{ amount, start, end } = status {
+    if let Status::Funding{ amount: funded, start, end } = status {
         // Check if proposal funding stage is set or funding limit already set
         if env.block.time >= end {
             return Err(StdError::generic_err("Funding time limit reached"))
         }
 
+        let mut new_fund = amount + funded;
 
         let assembly = &Proposal::assembly(&deps.storage, &proposal)?;
         let profile = &Assembly::data(&deps.storage, assembly)?.profile;
         if let Some(funding_profile) = Profile::funding(&deps.storage, &profile)? {
-            if funding_profile.required == amount {
+            if funding_profile.required == funded {
                 return Err(StdError::generic_err("Already funded"))
             }
-
-            new_fund += amount;
 
             if funding_profile.required < new_fund {
                 return_amount = new_fund.checked_sub(funding_profile.required)?;
@@ -405,7 +403,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
         })?;
 
         // Either add or update funder
-        let mut funder_amount = amount - return_amount;
+        let mut funder_amount = amount.checked_sub(return_amount)?;
         let mut funders = Proposal::funders(&deps.storage, &proposal)?;
         if funders.contains(&from) {
             funder_amount += Proposal::funding(&deps.storage, &proposal, &from)?.amount;

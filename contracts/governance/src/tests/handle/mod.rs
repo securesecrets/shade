@@ -6,9 +6,10 @@ pub mod proposal;
 
 use cosmwasm_std::HumanAddr;
 use fadroma_ensemble::MockEnv;
+use fadroma_platform_scrt::ContractLink;
 use shade_protocol::governance;
 use shade_protocol::utils::asset::Contract;
-use crate::tests::{admin_only_governance, get_config};
+use crate::tests::{admin_only_governance, get_config, Snip20};
 
 #[test]
 fn init_contract() {
@@ -23,16 +24,37 @@ fn set_config_msg() {
         &mut chain, &gov
     ).unwrap();
 
+    let snip20 = chain.register(Box::new(Snip20));
+    let snip20 = chain.instantiate(
+        snip20.id,
+        &snip20_reference_impl::msg::InitMsg {
+            name: "funding_token".to_string(),
+            admin: None,
+            symbol: "FND".to_string(),
+            decimals: 6,
+            initial_balances: None,
+            prng_seed: Default::default(),
+            config: None
+        },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: "funding_token".into(),
+                code_hash: snip20.code_hash,
+            }
+        )
+    ).unwrap();
+
     chain.execute(
         &governance::HandleMsg::SetConfig {
             treasury: Some(HumanAddr::from("random")),
             funding_token: Some(Contract {
-                address: HumanAddr::from("random"),
-                code_hash: "random".to_string()
+                address: snip20.address.clone(),
+                code_hash: snip20.code_hash.clone()
             }),
             vote_token: Some(Contract {
-                address: HumanAddr::from("random"),
-                code_hash: "random".to_string()
+                address: snip20.address,
+                code_hash: snip20.code_hash
             }),
             padding: None
         },
@@ -75,16 +97,37 @@ fn unauthorised_set_config_msg() {
 fn reject_disable_config_tokens() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
+    let snip20 = chain.register(Box::new(Snip20));
+    let snip20 = chain.instantiate(
+        snip20.id,
+        &snip20_reference_impl::msg::InitMsg {
+            name: "funding_token".to_string(),
+            admin: None,
+            symbol: "FND".to_string(),
+            decimals: 6,
+            initial_balances: None,
+            prng_seed: Default::default(),
+            config: None
+        },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: "funding_token".into(),
+                code_hash: snip20.code_hash,
+            }
+        )
+    ).unwrap();
+
     chain.execute(
         &governance::HandleMsg::SetConfig {
             treasury: Some(HumanAddr::from("random")),
             funding_token: Some(Contract {
-                address: HumanAddr::from("random"),
-                code_hash: "random".to_string()
+                address: snip20.address.clone(),
+                code_hash: snip20.code_hash.clone()
             }),
             vote_token: Some(Contract {
-                address: HumanAddr::from("random"),
-                code_hash: "random".to_string()
+                address: snip20.address,
+                code_hash: snip20.code_hash
             }),
             padding: None
         },
