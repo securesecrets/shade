@@ -84,20 +84,20 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
             // Unbonding disabled
             adapter::SubQueryMsg::Claimable { asset } => to_binary(
-                Ok(adapter::QueryAnswer::Claimable {
+                &adapter::QueryAnswer::Claimable {
                     amount: Uint128::zero(),
-                })
-            )?,
+                }
+            ),
             adapter::SubQueryMsg::Unbonding { asset } => to_binary(
-                Ok(adapter::QueryAnswer::Unbonding {
+                &adapter::QueryAnswer::Unbonding {
                     amount: Uint128::zero(),
-                })
-            )?,
+                }
+            ),
             adapter::SubQueryMsg::Unbondable { asset } => to_binary(
-                &Ok(adapter::QueryAnswer::Unbondable {
+                &adapter::QueryAnswer::Unbondable {
                     amount: Uint128::zero(),
-                })
-            )?,
+                }
+            ),
         },
     }
 }

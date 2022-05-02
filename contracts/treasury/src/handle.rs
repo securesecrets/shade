@@ -1,8 +1,7 @@
-use cosmwasm_math_compat::Uint128;
 use cosmwasm_std;
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage,
+    Querier, StdError, StdResult, Storage, Uint128,
 };
 use secret_toolkit::{
     snip20::{
