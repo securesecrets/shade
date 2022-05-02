@@ -64,7 +64,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::refill_rewards(deps, env, rewards),
 
         HandleMsg::Adapter(adapter) => match adapter {
+            // Maybe should return an Ok still?
             adapter::SubHandleMsg::Unbond { asset, amount } => Err(StdError::generic_err("Cannot unbond from rewards")),
+            // If error on unbond, also error on claim
             adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
             adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, asset),
         },
@@ -80,9 +82,22 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::PendingAllowance { asset } => to_binary(&query::pending_allowance(deps, asset)?),
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
-            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
-            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
-            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(deps, asset)?),
-        }
+            // Unbonding disabled
+            adapter::SubQueryMsg::Claimable { asset } => to_binary(
+                Ok(adapter::QueryAnswer::Claimable {
+                    amount: Uint128::zero(),
+                })
+            )?,
+            adapter::SubQueryMsg::Unbonding { asset } => to_binary(
+                Ok(adapter::QueryAnswer::Unbonding {
+                    amount: Uint128::zero(),
+                })
+            )?,
+            adapter::SubQueryMsg::Unbondable { asset } => to_binary(
+                &Ok(adapter::QueryAnswer::Unbondable {
+                    amount: Uint128::zero(),
+                })
+            )?,
+        },
     }
 }
