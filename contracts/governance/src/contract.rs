@@ -4,9 +4,9 @@ use crate::{
     query,
     state::{admin_commands_list_w, config_w, supported_contracts_list_w},
 };
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
-    Uint128,
 };
 use secret_toolkit::snip20::register_receive_msg;
 use shade_protocol::governance::{Config, HandleMsg, InitMsg, QueryMsg};
@@ -32,7 +32,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     config_w(&mut deps.storage).save(&state)?;
 
     // Initialize total proposal counter
-    total_proposals_w(&mut deps.storage).save(&Uint128(0))?;
+    total_proposals_w(&mut deps.storage).save(&Uint128::zero())?;
 
     // Initialize lists
     admin_commands_list_w(&mut deps.storage).save(&vec![])?;

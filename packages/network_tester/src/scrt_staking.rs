@@ -12,7 +12,8 @@ use shade_protocol::{
     snip20,
     scrt_staking,
 };
-use cosmwasm_std::{HumanAddr, Uint128, to_binary};
+use cosmwasm_std::{HumanAddr, to_binary};
+use cosmwasm_math_compat::Uint128;
 use shade_protocol::asset::Contract;
 use std::fmt::Display;
 use serde::Serialize;

@@ -1,6 +1,8 @@
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std;
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage, Uint128,
+    Querier, StdError, StdResult, Storage,
 };
 use secret_toolkit::{
     snip20::{
@@ -317,7 +319,6 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                             )?
                         );
                     }
-
                 }
             },
         }

@@ -1,7 +1,8 @@
 use chrono::prelude::*;
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
+    HumanAddr, Querier, StdError, StdResult, Storage,
 };
 use secret_toolkit::{
     snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
@@ -54,12 +55,12 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             }
         };
 
-        if output_asset.address != final_asset {
-            // ignore slippage until final asset
+        if output_asset.address == final_asset {
+            // Send with the msg for slippage
             messages.push(send_msg(
                 mint.address.clone(),
-                input_amount,
-                None,
+                input_amount.into(),
+                msg.clone(),
                 None,
                 None,
                 1,
@@ -67,11 +68,11 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                 input_asset.address.clone(),
             )?);
         } else {
-            // Send with the OG msg, to maintain slippage reqs
+            // ignore slippage for intermediate steps
             messages.push(send_msg(
                 mint.address.clone(),
-                input_amount,
-                msg.clone(),
+                input_amount.into(),
+                None,
                 None,
                 None,
                 1,
@@ -86,7 +87,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     messages.push(send_msg(
         from.clone(),
-        input_amount,
+        input_amount.into(),
         None,
         None,
         None,

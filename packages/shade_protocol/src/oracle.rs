@@ -1,24 +1,17 @@
-use crate::snip20::Snip20Asset;
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::HumanAddr;
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
-use crate::utils::asset::Contract;
-use crate::utils::generic_response::ResponseStatus;
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct SswapPair {
-    // secretswap_pair contract
-    pub pair: Contract,
-    // non-sscrt asset, other asset on pair should be sscrt
-    pub asset: Snip20Asset,
-}
+use crate::{
+    dex::TradingPair,
+    utils::{asset::Contract, generic_response::ResponseStatus},
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct IndexElement {
     pub symbol: String,
-    //TODO: Decimal, when better implementation is available
     pub weight: Uint128,
 }
 
@@ -47,14 +40,16 @@ pub enum HandleMsg {
         admin: Option<HumanAddr>,
         band: Option<Contract>,
     },
-    // Register Secret Swap Pair (should be */sSCRT or sSCRT/*)
-    RegisterSswapPair {
+    // Register Secret Swap or Sienna Pair (should be */sSCRT or sSCRT/*)
+    RegisterPair {
         pair: Contract,
     },
     // Unregister Secret Swap Pair (opposite action to RegisterSswapPair)
-    UnregisterSswapPair {
+    UnregisterPair {
+        symbol: String,
         pair: Contract,
     },
+
     RegisterIndex {
         symbol: String,
         basket: Vec<IndexElement>,
@@ -68,10 +63,21 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    UpdateConfig { status: ResponseStatus },
-    RegisterSswapPair { status: ResponseStatus },
-    UnregisterSswapPair { status: ResponseStatus },
-    RegisterIndex { status: ResponseStatus },
+    UpdateConfig {
+        status: ResponseStatus,
+    },
+
+    RegisterPair {
+        status: ResponseStatus,
+        symbol: String,
+        pair: TradingPair,
+    },
+    UnregisterPair {
+        status: ResponseStatus,
+    },
+    RegisterIndex {
+        status: ResponseStatus,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

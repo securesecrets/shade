@@ -1,13 +1,16 @@
-use std::{env, fs};
-use cosmwasm_std::{Binary, HumanAddr, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Binary, HumanAddr};
+use network_integration::utils::{
+    generate_label, print_contract, print_header, store_struct, AIRDROP_FILE, GAS, STORE_GAS,
+};
 use rs_merkle::algorithms::Sha256;
 use rs_merkle::{Hasher, MerkleTree};
-use serde::{Deserialize, Serialize};
-use network_integration::utils::{AIRDROP_FILE, GAS, generate_label, print_contract, print_header, STORE_GAS, store_struct};
 use secretcli::cli_types::NetContract;
 use secretcli::secretcli::{handle, init};
-use shade_protocol::{airdrop, snip20};
+use serde::{Deserialize, Serialize};
 use shade_protocol::utils::asset::Contract;
+use shade_protocol::{airdrop, snip20};
+use std::{env, fs};
 
 #[derive(Serialize, Deserialize)]
 struct Args {
@@ -42,8 +45,8 @@ struct Tree {
     pub amount: Uint128,
 }
 
-const QUERY_ROUNDING: Uint128 = Uint128(10_000_00000000);
-const DEFAULT_CLAIM: Uint128 = Uint128(20);
+const QUERY_ROUNDING: Uint128 = Uint128::new(1_000_000_000_000_u128);
+const DEFAULT_CLAIM: Uint128 = Uint128::new(20u128);
 
 fn main() -> serde_json::Result<()> {
     let bin_args: Vec<String> = env::args().collect();
@@ -83,7 +86,12 @@ fn main() -> serde_json::Result<()> {
         stored_tree.push(new_layer);
     }
 
-    println!("Merkle tree height: {}, amount: {}, max: {}", merkle_tree.layers().len(), airdrop_amount, max_amount);
+    println!(
+        "Merkle tree height: {}, amount: {}, max: {}",
+        merkle_tree.layers().len(),
+        airdrop_amount,
+        max_amount
+    );
     store_struct("merkle_tree.json", &stored_tree);
 
     // Initialize airdrop
@@ -116,7 +124,7 @@ fn main() -> serde_json::Result<()> {
         Some(STORE_GAS),
         Some(GAS),
         None,
-        &mut vec![]
+        &mut vec![],
     )?;
 
     print_contract(&airdrop);
@@ -127,7 +135,7 @@ fn main() -> serde_json::Result<()> {
             label: "".to_string(),
             id: "".to_string(),
             address: args.shade.address.to_string(),
-            code_hash: args.shade.code_hash.to_string()
+            code_hash: args.shade.code_hash.to_string(),
         };
         handle(
             &snip20::HandleMsg::Send {
@@ -143,7 +151,7 @@ fn main() -> serde_json::Result<()> {
             None,
             None,
             &mut vec![],
-            None
+            None,
         )?;
     }
 

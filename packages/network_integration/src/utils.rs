@@ -15,6 +15,7 @@ pub const ORACLE_FILE: &str = "../../compiled/oracle.wasm.gz";
 pub const INITIALIZER_FILE: &str = "../../compiled/initializer.wasm.gz";
 pub const MINT_FILE: &str = "../../compiled/mint.wasm.gz";
 pub const STAKING_FILE: &str = "../../compiled/staking.wasm.gz";
+pub const SHD_STAKING_FILE: &str = "../../compiled/shd_staking.wasm.gz";
 
 pub const STORE_GAS: &str = "10000000";
 pub const GAS: &str = "800000";

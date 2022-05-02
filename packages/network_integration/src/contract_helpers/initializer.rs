@@ -5,7 +5,8 @@ use crate::{
         INITIALIZER_FILE, STORE_GAS, VIEW_KEY,
     },
 };
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::HumanAddr;
 use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
@@ -47,7 +48,7 @@ pub fn initialize_initializer(
             prng_seed: Default::default(),
             initial_balances: Some(vec![InitialBalance {
                 address: HumanAddr::from(account.clone()),
-                amount: Uint128(10000000),
+                amount: Uint128::new(10000000u128),
             }]),
         },
     };

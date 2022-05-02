@@ -1,7 +1,7 @@
 [workspace]
 members = [
   # Packages
-  "packages/network_integration",
+  "packages/cosmwasm_math_compat",
   "packages/shade_protocol",
   "packages/secretcli",
 
@@ -11,7 +11,6 @@ members = [
 
   # Protocol contracts
   "contracts/governance",
-  "contracts/staking",
   "contracts/mint",
   "contracts/mint_router",
   "contracts/oracle",
@@ -24,19 +23,19 @@ members = [
   # - Adapters
   "contracts/scrt_staking",
   "contracts/rewards_emission",
-
-  # Allows stkd minting with sscrt
-  "contracts/stkd_sscrt",
+  
+  "contracts/shd_staking",
 
   # Mock contracts
   "contracts/mock_band",
   "contracts/mock_secretswap_pair",
   "contracts/mock_sienna_pair",
 
-
   # Tools
-  "tools/doc2book"
+  "tools/doc2book",
 ]
+
+exclude = ["packages/network_integration"]
 
 [profile.release]
 opt-level = 3

@@ -1,5 +1,7 @@
+pub mod permit;
 use crate::utils::asset::Contract;
-use cosmwasm_std::{Binary, HumanAddr, Querier, StdResult, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Binary, HumanAddr, Querier, StdResult};
 use schemars::JsonSchema;
 use secret_toolkit::{
     snip20::{token_info_query, Allowance, TokenInfo},

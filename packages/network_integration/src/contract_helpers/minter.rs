@@ -2,7 +2,8 @@ use crate::{
     contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_with_gov},
     utils::{print_contract, print_epoch_info, print_header, print_vec, GAS, MINT_FILE, VIEW_KEY},
 };
-use cosmwasm_std::{to_binary, HumanAddr, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{to_binary, HumanAddr};
 use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
@@ -30,8 +31,8 @@ pub fn initialize_minter(
             treasury: HumanAddr("".to_string()),
             secondary_burn: None,
             limit: Some(mint::Limit::Daily {
-                supply_portion: Uint128(1_000_000_000_000),
-                days: Uint128(1),
+                supply_portion: Uint128::new(1_000_000_000_000u128),
+                days: Uint128::new(1u128),
             }),
         },
         report,
@@ -62,8 +63,8 @@ pub fn setup_minters(
                 address: HumanAddr::from(sscrt.address.clone()),
                 code_hash: sscrt.code_hash.clone(),
             },
-            capture: Some(Uint128(1000)),
-            fee: Some(Uint128(0)),
+            capture: Some(Uint128::new(1000u128)),
+            fee: Some(Uint128::zero()),
             unlimited: Some(false),
         },
         Some("Register asset"),
@@ -74,8 +75,8 @@ pub fn setup_minters(
         "shade_minter".to_string(),
         mint::HandleMsg::RegisterAsset {
             contract: silk.clone(),
-            capture: Some(Uint128(1000)),
-            fee: Some(Uint128(0)),
+            capture: Some(Uint128::new(1000u128)),
+            fee: Some(Uint128::zero()),
             unlimited: Some(true),
         },
         Some("Register asset"),
@@ -86,8 +87,8 @@ pub fn setup_minters(
         "silk_minter".to_string(),
         mint::HandleMsg::RegisterAsset {
             contract: shade.clone(),
-            capture: Some(Uint128(1000)),
-            fee: Some(Uint128(0)),
+            capture: Some(Uint128::new(1000u128)),
+            fee: Some(Uint128::zero()),
             unlimited: Some(true),
         },
         Some("Register asset"),
@@ -170,7 +171,7 @@ pub fn get_balance(contract: &NetContract, from: String) -> Uint128 {
         return amount;
     }
 
-    Uint128(0)
+    Uint128::zero()
 }
 
 pub fn mint(

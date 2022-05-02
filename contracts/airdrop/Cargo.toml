@@ -1,9 +1,7 @@
 [package]
 name = "airdrop"
 version = "0.1.0"
-authors = [
-  "Guy Garcia <guysebastiangarcia@gmail.com>",
-]
+authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
 edition = "2018"
 
 exclude = [
@@ -29,11 +27,15 @@ cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol" }
+cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+  "airdrop",
+  "math",
+] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }
 mockall = "0.10.2"
 mockall_double = "0.2.0"
-query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0"}
+query-authentication = { git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0" }
