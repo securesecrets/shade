@@ -11,6 +11,9 @@ use crate::utils::storage::BucketStorage;
 pub struct AllowedContract {
     pub name: String,
     pub metadata: String,
+    // If none then anyone can use it
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assemblies: Option<Vec<Uint128>>,
     pub contract: Contract
 }
 
@@ -23,7 +26,8 @@ impl AllowedContract {
         Ok(Self {
             name: desc.name,
             metadata: desc.metadata,
-            contract: data.contract
+            contract: data.contract,
+            assemblies: data.assemblies
         })
     }
 
@@ -36,7 +40,8 @@ impl AllowedContract {
 
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
         AllowedContractData {
-            contract: self.contract.clone()
+            contract: self.contract.clone(),
+            assemblies: self.assemblies.clone(),
         }.save(storage, &id.to_be_bytes())?;
 
         AllowedContractDescription {
@@ -68,7 +73,8 @@ impl AllowedContract {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AllowedContractData {
-    pub contract: Contract
+    pub contract: Contract,
+    pub assemblies: Option<Vec<Uint128>>
 }
 
 #[cfg(feature = "governance-impl")]

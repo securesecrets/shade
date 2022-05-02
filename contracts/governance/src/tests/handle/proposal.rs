@@ -17,11 +17,9 @@ fn trigger_admin_command() {
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
             assembly: Uint128::new(1),
+            title: "Title".to_string(),
             metadata: "Proposal metadata".to_string(),
-            contract: None,
-            assembly_msg: None,
-            variables: None,
-            coins: None,
+            msgs: None,
             padding: None
         },
         MockEnv::new(
@@ -41,11 +39,9 @@ fn unauthorized_trigger_admin_command() {
     assert!(chain.execute(
         &governance::HandleMsg::AssemblyProposal {
             assembly: Uint128::new(1),
+            title: "Title".to_string(),
             metadata: "Proposal metadata".to_string(),
-            contract: None,
-            assembly_msg: None,
-            variables: None,
-            coins: None,
+            msgs: None,
             padding: None
         },
         MockEnv::new(
@@ -62,11 +58,9 @@ fn text_only_proposal() {
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
             assembly: Uint128::new(1),
+            title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
-            contract: None,
-            assembly_msg: None,
-            variables: None,
-            coins: None,
+            msgs: None,
             padding: None
         },
         MockEnv::new(
@@ -86,11 +80,9 @@ fn text_only_proposal() {
     ).unwrap()[0].clone();
 
     assert_eq!(prop.proposer, HumanAddr::from("admin"));
+    assert_eq!(prop.title, "Title".to_string());
     assert_eq!(prop.metadata, "Text only proposal".to_string());
-    assert_eq!(prop.target, None);
-    assert_eq!(prop.assembly_msg, None);
-    assert_eq!(prop.msg, None);
-    assert_eq!(prop.send, None);
+    assert_eq!(prop.msgs, None);
     assert_eq!(prop.assembly, Uint128::new(1));
     assert_eq!(prop.assembly_vote_tally, None);
     assert_eq!(prop.public_vote_tally, None);
@@ -164,11 +156,9 @@ fn init_assembly_governance_with_proposal(
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
             assembly: Uint128::new(1),
+            title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
-            contract: None,
-            assembly_msg: None,
-            variables: None,
-            coins: None,
+            msgs: None,
             padding: None
         },
         MockEnv::new(
@@ -1114,11 +1104,9 @@ fn assembly_vote_count_percentage() {
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
             assembly: Uint128::new(1),
+            title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
-            contract: None,
-            assembly_msg: None,
-            variables: None,
-            coins: None,
+            msgs: None,
             padding: None
         },
         MockEnv::new(
@@ -1290,11 +1278,9 @@ fn init_funding_governance_with_proposal(
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
             assembly: Uint128::new(1),
+            title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
-            contract: None,
-            assembly_msg: None,
-            variables: None,
-            coins: None,
+            msgs: None,
             padding: None
         },
         MockEnv::new(
@@ -1387,11 +1373,9 @@ fn assembly_to_funding_transition() {
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
             assembly: Uint128::new(1),
+            title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
-            contract: None,
-            assembly_msg: None,
-            variables: None,
-            coins: None,
+            msgs: None,
             padding: None
         },
         MockEnv::new(

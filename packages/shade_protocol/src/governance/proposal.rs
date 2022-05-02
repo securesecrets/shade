@@ -15,27 +15,18 @@ use crate::utils::storage::NaiveBucketStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-// TODO: add title
 pub struct Proposal {
     // Description
     // Address of the proposal proposer
     pub proposer: HumanAddr,
+    // Proposal title
+    pub title: String,
     // Description of proposal, can be in base64
     pub metadata: String,
 
     // Msg
-    // Target smart contract ID
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub target: Option<Uint128>,
-    // Msg proposal template
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub assembly_msg: Option<Uint128>,
-    // Message to execute
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub msg: Option<Binary>,
-    // Wasm Send
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub send: Option<Vec<Coin>>,
+    pub msgs: Option<Vec<ProposalMsg>>,
 
     // Assembly
     // Assembly that called the proposal
@@ -67,24 +58,13 @@ const PUBLIC_VOTES: &'static [u8] = b"total-public-votes-";
 #[cfg(feature = "governance-impl")]
 impl Proposal {
     pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
-        if let Some(target) = self.target {
-            if let Some(assembly_msg) = self.assembly_msg {
-                if let Some(msg) = self.msg.clone() {
-                    Self::save_msg(storage, &id, ProposalMsg {
-                        target,
-                        assembly_msg,
-                        msg,
-                        send: match self.send.clone() {
-                            None => vec![],
-                            Some(arr) => arr
-                        }
-                    })?;
-                }
-            }
+        if let Some(msgs) = self.msgs.clone() {
+            Self::save_msg(storage, &id, msgs)?;
         }
 
         Self::save_description(storage, &id, ProposalDescription {
             proposer: self.proposer.clone(),
+            title: self.title.clone(),
             metadata: self.metadata.clone()
         })?;
 
@@ -114,7 +94,7 @@ impl Proposal {
     }
 
     pub fn load<S: Storage>(storage: & S, id: &Uint128) -> StdResult<Self> {
-        let msg = Self::msg(storage, id)?;
+        let msgs = Self::msg(storage, id)?;
         let description = Self::description(storage, &id)?;
         let assembly = Self::assembly(storage, &id)?;
         let status = Self::status(storage, &id)?;
@@ -134,27 +114,13 @@ impl Proposal {
             }
         }
 
-        let mut target = None;
-        let mut assembly_msg = None;
-        let mut binary_msg = None;
-        let mut send = None;
-
-        if let Some(msg) = msg {
-            target = Some(msg.target);
-            assembly_msg = Some(msg.assembly_msg);
-            binary_msg = Some(msg.msg);
-            send = Some(msg.send);
-        }
-
         let assembly_data = Assembly::data(storage, &assembly)?;
 
         Ok(Self {
+            title: description.title,
             proposer: description.proposer,
             metadata: description.metadata,
-            target,
-            assembly_msg,
-            msg: binary_msg,
-            send,
+            msgs,
             assembly,
             assembly_vote_tally: match Profile::assembly_voting(storage, &assembly_data.profile)? {
                 None => None,
@@ -170,12 +136,15 @@ impl Proposal {
         })
     }
 
-    pub fn msg<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<ProposalMsg>> {
-        ProposalMsg::may_load(storage, &id.to_be_bytes())
+    pub fn msg<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Vec<ProposalMsg>>> {
+        match ProposalMsgs::may_load(storage, &id.to_be_bytes())? {
+            None => Ok(None),
+            Some(i) => Ok(Some(i.0))
+        }
     }
 
-    pub fn save_msg<S: Storage>(storage: &mut S, id: &Uint128, data: ProposalMsg) -> StdResult<()> {
-        data.save(storage, &id.to_be_bytes())
+    pub fn save_msg<S: Storage>(storage: &mut S, id: &Uint128, data: Vec<ProposalMsg>) -> StdResult<()> {
+        ProposalMsgs(data).save(storage, &id.to_be_bytes())
     }
 
     pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProposalDescription> {
@@ -283,6 +252,7 @@ impl Proposal {
 #[serde(rename_all = "snake_case")]
 pub struct ProposalDescription {
     pub proposer: HumanAddr,
+    pub title: String,
     pub metadata: String
 }
 
@@ -296,18 +266,23 @@ impl BucketStorage for ProposalDescription {
 pub struct ProposalMsg {
     pub target: Uint128,
     pub assembly_msg: Uint128,
+    // Used as both Vec<String> when calling a handleMsg and Vec<Binary> when saving the msg
     pub msg: Binary,
     pub send: Vec<Coin>
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+struct ProposalMsgs(pub Vec<ProposalMsg>);
+
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for ProposalMsg {
-    const NAMESPACE: &'static [u8] = b"proposal_msg-";
+impl BucketStorage for ProposalMsgs {
+    const NAMESPACE: &'static [u8] = b"proposal_msgs-";
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct ProposalAssembly(pub Uint128);
+struct ProposalAssembly(pub Uint128);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for ProposalAssembly {
@@ -347,7 +322,7 @@ impl BucketStorage for Status {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct StatusHistory (pub Vec<Status>);
+struct StatusHistory (pub Vec<Status>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for StatusHistory {
@@ -357,7 +332,7 @@ impl BucketStorage for StatusHistory {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Funders (pub Vec<HumanAddr>);
+struct Funders (pub Vec<HumanAddr>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for Funders {

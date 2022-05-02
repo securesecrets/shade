@@ -117,7 +117,7 @@ impl AssemblyMsg {
         let data = Self::data(storage, id)?;
 
         Ok(Self {
-            name: desc.name,
+            name: desc,
             assemblies: data.assemblies,
             msg: data.msg
         })
@@ -136,9 +136,7 @@ impl AssemblyMsg {
             msg: self.msg.clone()
         }.save(storage, &id.to_be_bytes())?;
 
-        AssemblyMsgDescription {
-            name: self.name.clone(),
-        }.save(storage, &id.to_be_bytes())?;
+        AssemblyMsgDescription (self.name.clone()).save(storage, &id.to_be_bytes())?;
 
         Ok(())
     }
@@ -151,12 +149,12 @@ impl AssemblyMsg {
         data.save(storage, &id.to_be_bytes())
     }
 
-    pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AssemblyMsgDescription> {
-        AssemblyMsgDescription::load(storage, &id.to_be_bytes())
+    pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<String> {
+        Ok(AssemblyMsgDescription::load(storage, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, desc: AssemblyMsgDescription) -> StdResult<()> {
-        desc.save(storage, &id.to_be_bytes())
+    pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, desc: String) -> StdResult<()> {
+        AssemblyMsgDescription(desc).save(storage, &id.to_be_bytes())
     }
 }
 
@@ -176,9 +174,7 @@ impl BucketStorage for AssemblyMsgData {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct AssemblyMsgDescription {
-    pub name: String
-}
+struct AssemblyMsgDescription (pub String);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for AssemblyMsgDescription {

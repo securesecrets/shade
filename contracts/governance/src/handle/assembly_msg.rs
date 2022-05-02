@@ -81,3 +81,33 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
         })?),
     })
 }
+
+pub fn try_add_assembly_msg_assemblies<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    id: Uint128,
+    assemblies: Vec<Uint128>
+) -> StdResult<HandleResponse> {
+    if env.message.sender != env.contract.address {
+        return Err(StdError::unauthorized())
+    }
+
+    let mut assembly_msg = AssemblyMsg::data(&mut deps.storage, &id)?;
+
+    let assembly_id = ID::assembly(&deps.storage)?;
+    for assembly in assemblies.iter() {
+        if assembly < &assembly_id && !assembly_msg.assemblies.contains(assembly) {
+            assembly_msg.assemblies.push(assembly.clone());
+        }
+    }
+
+    AssemblyMsg::save_data(&mut deps.storage, &id, assembly_msg)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::SetAssemblyMsg {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}

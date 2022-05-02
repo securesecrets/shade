@@ -12,8 +12,8 @@ use shade_protocol::utils::storage::{BucketStorage, SingletonStorage};
 use crate::query;
 use crate::handle::{try_set_config, try_set_runtime_state};
 use crate::handle::assembly::{try_add_assembly, try_assembly_proposal, try_assembly_vote, try_set_assembly};
-use crate::handle::assembly_msg::{try_add_assembly_msg, try_set_assembly_msg};
-use crate::handle::contract::{try_add_contract, try_set_contract};
+use crate::handle::assembly_msg::{try_add_assembly_msg, try_add_assembly_msg_assemblies, try_set_assembly_msg};
+use crate::handle::contract::{try_add_contract, try_add_contract_assemblies, try_set_contract};
 use crate::handle::profile::{try_add_profile, try_set_profile};
 use crate::handle::proposal::{try_cancel, try_claim_funding, try_proposal, try_receive, try_trigger, try_update};
 
@@ -115,6 +115,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     AllowedContract {
         name: "Governance".to_string(),
         metadata: "Current governance contract, this one".to_string(),
+        assemblies: None,
         contract: Contract { address: env.contract.address, code_hash: env.contract_code_hash }
     }.save(&mut deps.storage, &Uint128::zero())?;
 
@@ -139,8 +140,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, state),
 
             // Proposals
-            HandleMsg::Proposal { metadata, contract, msg, coins, ..
-            } => try_proposal(deps, env, metadata, contract, msg, coins),
+            HandleMsg::Proposal { title, metadata, contract, msg, coins, ..
+            } => try_proposal(deps, env, title, metadata, contract, msg, coins),
 
             HandleMsg::Trigger { proposal, .. } => try_trigger(deps, env, proposal),
             HandleMsg::Cancel { proposal, .. } => try_cancel(deps, env, proposal),
@@ -153,8 +154,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::AssemblyVote { proposal, vote, ..
             } => try_assembly_vote(deps, env, proposal, vote),
 
-            HandleMsg::AssemblyProposal { assembly, metadata, contract, assembly_msg, variables, coins, ..
-            } => try_assembly_proposal(deps, env, assembly, metadata, contract, assembly_msg, variables, coins),
+            HandleMsg::AssemblyProposal { assembly, title, metadata, msgs, ..
+            } => try_assembly_proposal(deps, env, assembly, title, metadata, msgs),
 
             HandleMsg::AddAssembly { name, metadata, members, profile, ..
             } => try_add_assembly(deps, env, name, metadata, members, profile),
@@ -163,19 +164,31 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             } => try_set_assembly(deps, env, id, name, metadata, members, profile),
 
             // Assembly Msgs
-            HandleMsg::AddAssemblyMsg { name, msg, assemblies: assemblys, ..
-            } => try_add_assembly_msg(deps, env, name, msg, assemblys),
+            HandleMsg::AddAssemblyMsg { name, msg, assemblies, ..
+            } => try_add_assembly_msg(deps, env, name, msg, assemblies),
 
-            HandleMsg::SetAssemblyMsg { id, name, msg, assemblies: assemblys, ..
-            } => try_set_assembly_msg(deps, env, id, name, msg, assemblys),
+            HandleMsg::SetAssemblyMsg { id, name, msg, assemblies, ..
+            } => try_set_assembly_msg(deps, env, id, name, msg, assemblies),
+
+            HandleMsg::AddAssemblyMsgAssemblies { id, assemblies
+            } => try_add_assembly_msg_assemblies(deps, env, id, assemblies),
 
             // Profiles
-            HandleMsg::AddProfile { profile, .. } => try_add_profile(deps, env, profile),
-            HandleMsg::SetProfile { id, profile, .. } => try_set_profile(deps, env, id, profile),
+            HandleMsg::AddProfile { profile, ..
+            } => try_add_profile(deps, env, profile),
+
+            HandleMsg::SetProfile { id, profile, ..
+            } => try_set_profile(deps, env, id, profile),
 
             // Contracts
-            HandleMsg::AddContract { name, metadata, contract, .. } => try_add_contract(deps, env, name, metadata, contract),
-            HandleMsg::SetContract { id, name, metadata, contract, .. } => try_set_contract(deps, env, id, name, metadata, contract),
+            HandleMsg::AddContract { name, metadata, contract, assemblies, ..
+            } => try_add_contract(deps, env, name, metadata, contract, assemblies),
+
+            HandleMsg::SetContract { id, name, metadata, contract, disable_assemblies, assemblies, ..
+            } => try_set_contract(deps, env, id, name, metadata, contract, disable_assemblies, assemblies),
+
+            HandleMsg::AddContractAssemblies { id, assemblies
+            } => try_add_contract_assemblies(deps, env, id, assemblies),
         },
         RESPONSE_BLOCK_SIZE
     )

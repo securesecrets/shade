@@ -10,7 +10,7 @@ use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::profile::Profile;
 use shade_protocol::governance::Config;
 use shade_protocol::governance::contract::AllowedContract;
-use shade_protocol::governance::proposal::Proposal;
+use shade_protocol::governance::proposal::{Proposal, ProposalMsg};
 use crate::contract::{handle, init, query};
 
 pub struct Governance;
@@ -121,11 +121,16 @@ pub fn gov_generic_proposal(
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
             assembly: Uint128::new(1),
+            title: "Title".to_string(),
             metadata: "Proposal metadata".to_string(),
-            contract: Some(Uint128::zero()),
-            assembly_msg: Some(Uint128::zero()),
-            variables: Some(vec![to_binary(&msg)?.to_base64()]),
-            coins: None,
+            msgs: Some(vec![
+                ProposalMsg {
+                    target: Uint128::zero(),
+                    assembly_msg: Uint128::zero(),
+                    msg: to_binary(&msg)?,
+                    send: vec![]
+                }
+            ]),
             padding: None
         },
         MockEnv::new(

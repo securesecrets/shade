@@ -7,7 +7,7 @@ use shade_protocol::governance::{Config, HandleAnswer};
 use shade_protocol::governance::contract::AllowedContract;
 use shade_protocol::governance::HandleMsg::Receive;
 use shade_protocol::governance::profile::{Count, Profile, VoteProfile};
-use shade_protocol::governance::proposal::{Funding, Proposal, Status};
+use shade_protocol::governance::proposal::{Funding, Proposal, ProposalMsg, Status};
 use shade_protocol::governance::vote::{TalliedVotes, Vote};
 use shade_protocol::shd_staking;
 use shade_protocol::utils::asset::Contract;
@@ -19,26 +19,39 @@ use crate::handle::assembly::try_assembly_proposal;
 pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
+    title: String,
     metadata: String,
     contract: Option<Uint128>,
     msg: Option<String>,
     coins: Option<Vec<Coin>>
 ) -> StdResult<HandleResponse> {
+
+    let msgs: Option<Vec<ProposalMsg>>;
+
+    if contract.is_some() && msg.is_some() {
+        msgs = Some(vec![
+            ProposalMsg {
+                target: contract.unwrap(),
+                assembly_msg: Uint128::zero(),
+                msg: to_binary(&msg.unwrap())?,
+                send: match coins {
+                    None => vec![],
+                    Some(c) => c
+                }
+            }
+        ]);
+    }
+    else {
+        msgs = None;
+    }
+
     try_assembly_proposal(
         deps,
         env,
         Uint128::zero(),
+        title,
         metadata,
-        contract,
-        match msg {
-            None => None,
-            Some(_) => Some(Uint128::zero())
-        },
-        match msg {
-            None => None,
-            Some(msg) => Some(vec![msg])
-        },
-        coins
+        msgs
     )?;
     Ok(HandleResponse {
         messages: vec![],
@@ -64,14 +77,16 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
 
         // Trigger the msg
         let proposal_msg = Proposal::msg(&deps.storage, &proposal)?;
-        if let Some(prop_msg) = proposal_msg {
-            let contract = AllowedContract::data(&deps.storage, &prop_msg.target)?.contract;
-            messages.push(WasmMsg::Execute {
-                contract_addr: contract.address,
-                callback_code_hash: contract.code_hash,
-                msg: prop_msg.msg,
-                send: prop_msg.send
-            }.into());
+        if let Some(prop_msgs) = proposal_msg {
+            for prop_msg in prop_msgs.iter() {
+                let contract = AllowedContract::data(&deps.storage, &prop_msg.target)?.contract;
+                messages.push(WasmMsg::Execute {
+                    contract_addr: contract.address,
+                    callback_code_hash: contract.code_hash,
+                    msg: prop_msg.msg.clone(),
+                    send: prop_msg.send.clone()
+                }.into());
+            }
         }
     }
     else {

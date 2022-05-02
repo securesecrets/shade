@@ -19,10 +19,13 @@ pub struct Profile {
     // State of the current profile and its subsequent assemblies
     pub enabled: bool,
     // Require assembly voting
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub assembly: Option<VoteProfile>,
     // Require funding
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub funding: Option<FundProfile>,
     // Require token voting
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<VoteProfile>,
     // Once the contract is approved, theres a deadline for the tx to be executed and completed
     // else it will just be canceled and assume that the tx failed
@@ -136,7 +139,7 @@ pub struct VoteProfile {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct VoteProfileType(pub Option<VoteProfile>);
+struct VoteProfileType(pub Option<VoteProfile>);
 
 #[cfg(feature = "governance-impl")]
 impl NaiveBucketStorage for VoteProfileType {
@@ -159,7 +162,7 @@ pub struct FundProfile {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct FundProfileType(pub Option<FundProfile>);
+struct FundProfileType(pub Option<FundProfile>);
 
 
 #[cfg(feature = "governance-impl")]

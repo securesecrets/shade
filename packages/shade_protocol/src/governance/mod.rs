@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::governance::assembly::{Assembly, AssemblyMsg};
 use crate::governance::contract::AllowedContract;
 use crate::governance::profile::{Profile, UpdateProfile};
-use crate::governance::proposal::Proposal;
+use crate::governance::proposal::{Proposal, ProposalMsg};
 use crate::governance::vote::Vote;
 
 #[cfg(feature = "governance-impl")]
@@ -93,9 +93,9 @@ pub enum HandleMsg {
     },
 
     // Proposals
-    // TODO: maybe proposals could be multi msg
     // Same as AssemblyProposal where assembly is 0 and assembly msg is 0
     Proposal {
+        title: String,
         metadata: String,
 
         // Optionals, if none the proposal is assumed to be a text proposal
@@ -144,20 +144,15 @@ pub enum HandleMsg {
         padding: Option<String>
     },
 
-    // Assemblys
+    // Assemblies
     /// Creates a proposal under a assembly
     AssemblyProposal {
         assembly: Uint128,
+        title: String,
         metadata: String,
 
         // Optionals, if none the proposal is assumed to be a text proposal
-        // Allowed Contract
-        contract: Option<Uint128>,
-        // Assembly msg ID
-        assembly_msg: Option<Uint128>,
-        // Assembly msg arguments
-        variables: Option<Vec<String>>,
-        coins: Option<Vec<Coin>>,
+        msgs: Option<Vec<ProposalMsg>>,
         padding: Option<String>
     },
 
@@ -195,6 +190,10 @@ pub enum HandleMsg {
         assemblies: Option<Vec<Uint128>>,
         padding: Option<String>
     },
+    AddAssemblyMsgAssemblies {
+        id: Uint128,
+        assemblies: Vec<Uint128>
+    },
 
     // Profiles
     /// Creates a new profile that can be added to assemblys
@@ -210,11 +209,11 @@ pub enum HandleMsg {
     },
 
     // Contracts
-    // TODO: maybe add a list of allowed assemblies for those contracts
     AddContract {
         name: String,
         metadata: String,
         contract: Contract,
+        assemblies: Option<Vec<Uint128>>,
         padding: Option<String>
     },
     SetContract {
@@ -222,7 +221,13 @@ pub enum HandleMsg {
         name: Option<String>,
         metadata: Option<String>,
         contract: Option<Contract>,
+        disable_assemblies: bool,
+        assemblies: Option<Vec<Uint128>>,
         padding: Option<String>
+    },
+    AddContractAssemblies {
+        id: Uint128,
+        assemblies: Vec<Uint128>
     }
 }
 

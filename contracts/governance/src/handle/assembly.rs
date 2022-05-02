@@ -1,9 +1,11 @@
-use cosmwasm_std::{Api, Coin, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use std::convert::TryInto;
+use cosmwasm_std::{Api, Coin, Env, Extern, from_binary, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::{HandleAnswer, MSG_VARIABLE};
+use shade_protocol::governance::contract::AllowedContract;
 use shade_protocol::governance::profile::{Profile, VoteProfile};
-use shade_protocol::governance::proposal::{Proposal, Status};
+use shade_protocol::governance::proposal::{Proposal, ProposalMsg, Status};
 use shade_protocol::governance::stored_id::ID;
 use shade_protocol::governance::vote::Vote;
 use shade_protocol::utils::generic_response::ResponseStatus;
@@ -59,11 +61,9 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     assembly_id: Uint128,
+    title: String,
     metadata: String,
-    contract_id: Option<Uint128>,
-    assembly_msg_id: Option<Uint128>,
-    variables: Option<Vec<String>>,
-    coins: Option<Vec<Coin>>
+    msgs: Option<Vec<ProposalMsg>>
 ) -> StdResult<HandleResponse> {
 
     // Get assembly
@@ -114,14 +114,47 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
             end: env.block.time + profile.cancel_deadline
         }
     }
-    
-    let mut prop = Proposal {
+
+    let processed_msgs: Option<Vec<ProposalMsg>>;
+    if let Some(msgs) = msgs.clone() {
+        let mut new_msgs = vec![];
+        for msg in msgs.iter() {
+            // Check if msg is allowed in assembly
+            let assembly_msg = AssemblyMsg::data(&deps.storage, &msg.assembly_msg)?;
+            if !assembly_msg.assemblies.contains(&assembly_id) {
+                return Err(StdError::unauthorized())
+            }
+
+            // Check if msg is allowed in contract
+            let contract = AllowedContract::data(&deps.storage, &msg.target)?;
+            if let Some(assemblies) = contract.assemblies {
+                if !assemblies.contains(&msg.target) {
+                    return Err(StdError::unauthorized())
+                }
+            }
+
+            let vars: Vec<String> = from_binary(&msg.msg)?;
+            let binary_msg = to_binary(&assembly_msg.msg.create_msg(vars, MSG_VARIABLE))?;
+
+            new_msgs.push(ProposalMsg {
+                target: msg.target,
+                assembly_msg: msg.assembly_msg,
+                msg: binary_msg,
+                send: msg.send.clone()
+            });
+
+        }
+        processed_msgs = Some(new_msgs);
+    }
+    else {
+        processed_msgs = None;
+    }
+
+    let prop = Proposal {
         proposer: env.message.sender,
+        title,
         metadata,
-        target: None,
-        assembly_msg: None,
-        msg: None,
-        send: None,
+        msgs: processed_msgs,
         assembly: assembly_id,
         assembly_vote_tally: None,
         public_vote_tally: None,
@@ -129,36 +162,6 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         status_history: vec![],
         funders: None
     };
-    
-    if let Some(msg_id) = assembly_msg_id {
-        // Check if msg is allowed in assembly
-        let assembly_msg = AssemblyMsg::data(&deps.storage, &msg_id)?;
-        if !assembly_msg.assemblies.contains(&assembly_id) {
-            return Err(StdError::unauthorized())
-        }
-
-        prop.assembly_msg = assembly_msg_id;
-        
-        if let Some(id) = contract_id {
-            if id > ID::contract(&deps.storage)? {
-                return Err(StdError::generic_err("Contract ID does not exist"))
-            }
-            prop.target = contract_id;
-        }
-        else {
-            return Err(StdError::generic_err("Contract ID was not specified"))
-        }
-
-        // Try to replace variables in msg
-        if let Some(vars) = variables {
-            prop.msg = Some(to_binary(&assembly_msg.msg.create_msg(vars, MSG_VARIABLE))?);
-        }
-        else {
-            return Err(StdError::generic_err("Variables were not specified"))
-        }
-
-        prop.send = coins;
-    }
 
     let prop_id = ID::add_proposal(&mut deps.storage)?;
     prop.save(&mut deps.storage, &prop_id)?;

@@ -17,6 +17,7 @@ fn add_contract() {
                 address: HumanAddr::from("contract"),
                 code_hash: "hash".to_string()
             },
+            assemblies: None,
             padding: None
         },
         MockEnv::new(
@@ -44,6 +45,7 @@ fn unauthorised_add_contract() {
                 address: HumanAddr::from("contract"),
                 code_hash: "hash".to_string()
             },
+            assemblies: None,
             padding: None
         },
         MockEnv::new(
@@ -65,6 +67,7 @@ fn set_contract() {
                 address: HumanAddr::from("contract"),
                 code_hash: "hash".to_string()
             },
+            assemblies: None,
             padding: None
         },
         MockEnv::new(
@@ -87,6 +90,8 @@ fn set_contract() {
                 address: HumanAddr::from("new contract"),
                 code_hash: "other hash".to_string()
             }),
+            disable_assemblies: false,
+            assemblies: None,
             padding: None
         },
         MockEnv::new(
@@ -107,6 +112,120 @@ fn set_contract() {
 }
 
 #[test]
+fn disable_contract_assemblies() {
+    let (mut chain, gov) = admin_only_governance().unwrap();
+
+    chain.execute(
+        &governance::HandleMsg::AddContract {
+            name: "Contract".to_string(),
+            metadata: "some description".to_string(),
+            contract: Contract {
+                address: HumanAddr::from("contract"),
+                code_hash: "hash".to_string()
+            },
+            assemblies: Some(vec![Uint128::zero()]),
+            padding: None
+        },
+        MockEnv::new(
+            // Sender is self
+            gov.address.clone(),
+            gov.clone()
+        )
+    ).unwrap();
+
+    let old_contract = get_contract(
+        &mut chain, &gov, Uint128::new(1), Uint128::new(1)
+    ).unwrap()[0].clone();
+
+    chain.execute(
+        &governance::HandleMsg::SetContract {
+            id: Uint128::new(1),
+            name: Some("New name".to_string()),
+            metadata: Some("New desc".to_string()),
+            contract: Some(Contract {
+                address: HumanAddr::from("new contract"),
+                code_hash: "other hash".to_string()
+            }),
+            disable_assemblies: true,
+            assemblies: None,
+            padding: None
+        },
+        MockEnv::new(
+            // Sender is self
+            gov.address.clone(),
+            gov.clone()
+        )
+    ).unwrap();
+
+    let new_contract = get_contract(
+        &mut chain, &gov, Uint128::new(1), Uint128::new(1)
+    ).unwrap()[0].clone();
+
+    assert_ne!(old_contract.name, new_contract.name);
+    assert_ne!(old_contract.metadata, new_contract.metadata);
+    assert_ne!(old_contract.contract.address, new_contract.contract.address);
+    assert_ne!(old_contract.contract.code_hash, new_contract.contract.code_hash);
+    assert_ne!(old_contract.assemblies, new_contract.assemblies);
+}
+
+#[test]
+fn enable_contract_assemblies() {
+    let (mut chain, gov) = admin_only_governance().unwrap();
+
+    chain.execute(
+        &governance::HandleMsg::AddContract {
+            name: "Contract".to_string(),
+            metadata: "some description".to_string(),
+            contract: Contract {
+                address: HumanAddr::from("contract"),
+                code_hash: "hash".to_string()
+            },
+            assemblies: None,
+            padding: None
+        },
+        MockEnv::new(
+            // Sender is self
+            gov.address.clone(),
+            gov.clone()
+        )
+    ).unwrap();
+
+    let old_contract = get_contract(
+        &mut chain, &gov, Uint128::new(1), Uint128::new(1)
+    ).unwrap()[0].clone();
+
+    chain.execute(
+        &governance::HandleMsg::SetContract {
+            id: Uint128::new(1),
+            name: Some("New name".to_string()),
+            metadata: Some("New desc".to_string()),
+            contract: Some(Contract {
+                address: HumanAddr::from("new contract"),
+                code_hash: "other hash".to_string()
+            }),
+            disable_assemblies: false,
+            assemblies: Some(vec![Uint128::zero()]),
+            padding: None
+        },
+        MockEnv::new(
+            // Sender is self
+            gov.address.clone(),
+            gov.clone()
+        )
+    ).unwrap();
+
+    let new_contract = get_contract(
+        &mut chain, &gov, Uint128::new(1), Uint128::new(1)
+    ).unwrap()[0].clone();
+
+    assert_ne!(old_contract.name, new_contract.name);
+    assert_ne!(old_contract.metadata, new_contract.metadata);
+    assert_ne!(old_contract.contract.address, new_contract.contract.address);
+    assert_ne!(old_contract.contract.code_hash, new_contract.contract.code_hash);
+    assert_ne!(old_contract.assemblies, new_contract.assemblies);
+}
+
+#[test]
 fn unauthorised_set_contract() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
@@ -119,6 +238,8 @@ fn unauthorised_set_contract() {
                 address: HumanAddr::from("new contract"),
                 code_hash: "other hash".to_string()
             }),
+            disable_assemblies: false,
+            assemblies: None,
             padding: None
         },
         MockEnv::new(
@@ -128,3 +249,5 @@ fn unauthorised_set_contract() {
         )
     ).is_err();
 }
+// TODO: add contract assemblies
+// TODO: if assemblies is some limit who can trigger
