@@ -12,7 +12,6 @@ use cosmwasm_std::{
     Extern, Querier, Api, Storage,
 };
 
-use cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
@@ -165,5 +164,5 @@ pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
     )?;
 
     // Constant Product
-    Ok(pair_info.pair_info.amount_0 * pair_info.pair_info.amount_1)
+    Ok(Uint128(pair_info.pair_info.amount_0.u128() * pair_info.pair_info.amount_1.u128()))
 }

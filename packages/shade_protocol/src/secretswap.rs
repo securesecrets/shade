@@ -123,7 +123,7 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
 
     let response: SimulationResponse = PairQuery::Simulation {
         offer_asset: Asset {
-            amount: Uint128::new(1_000_000), // 1 sSCRT (6 decimals)
+            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
             info: AssetInfo {
                 token: Token {
                     contract_addr: sscrt.address,
@@ -153,5 +153,5 @@ pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
     )?;
 
     // Constant Product
-    Ok(pool.assets[0].amount * pool.assets[1].amount)
+    Ok(Uint128(pool.assets[0].amount.u128() * pool.assets[1].amount.u128()))
 }

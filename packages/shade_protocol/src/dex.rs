@@ -15,7 +15,7 @@ use cosmwasm_std;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use secret_cosmwasm_math_compat::{Uint128, Uint512};
+use secret_cosmwasm_math_compat::{Uint512, Uint128};
 use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -37,8 +37,8 @@ pub struct TradingPair {
  * returns how much to be received from take_pool
  */
 
-pub fn pool_take_amount(give_amount: Uint128, give_pool: Uint128, take_pool: Uint128) -> Uint128 {
-    take_pool - ((give_pool * take_pool) / (give_pool + give_amount))
+pub fn pool_take_amount(give_amount: cosmwasm_std::Uint128, give_pool: cosmwasm_std::Uint128, take_pool: cosmwasm_std::Uint128) -> cosmwasm_std::Uint128 {
+    cosmwasm_std::Uint128(take_pool.u128() - give_pool.u128() * take_pool.u128() / (give_pool + give_amount).u128())
 }
 
 pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
