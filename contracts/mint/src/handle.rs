@@ -507,5 +507,6 @@ fn oracle<S: Storage, A: Api, Q: Querier>(
         config.oracle.code_hash,
         config.oracle.address,
     )?;
-    Ok(answer.rate)
+
+    Ok(Uint128::new(answer.rate.u128()))
 }
