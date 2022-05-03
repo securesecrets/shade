@@ -64,6 +64,7 @@ pub fn mint<S: Storage, A: Api, Q: Querier>(
     offer_asset: HumanAddr,
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {
+
     let native_asset = native_asset_r(&deps.storage).load()?;
 
     match assets_r(&deps.storage).may_load(offer_asset.to_string().as_bytes())? {

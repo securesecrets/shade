@@ -3,6 +3,7 @@ members = [
   # Packages
   "packages/cosmwasm_math_compat",
   "packages/shade_protocol",
+  "packages/fadroma/crates/fadroma-ensemble",
   "packages/secretcli",
 
   # Network setups

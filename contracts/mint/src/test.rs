@@ -1,482 +1,437 @@
-#[cfg(test)]
-pub mod tests {
-    use cosmwasm_math_compat::Uint128;
-    use cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-        Extern, HumanAddr, StdError,
-    };
-    use mockall_double::double;
-    use shade_protocol::{
-        mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
-        utils::price::{normalize_price, translate_price},
-    };
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std;
+use cosmwasm_std::{
+    coins, from_binary, to_binary,
+    Extern, HumanAddr, StdError,
+    Binary, StdResult, HandleResponse, Env,
+    InitResponse,
+};
 
-    use crate::{
-        contract::{handle, init, query},
-        handle::{calculate_mint, calculate_portion, try_burn},
-    };
+use shade_protocol::{
+    mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+    utils::{
+        asset::Contract,
+        price::{normalize_price, translate_price},
+    },
+    band::{ ReferenceData, BandQuery },
+};
 
-    mod mock_secret_toolkit {
+use snip20_reference_impl;
+use oracle;
+use mock_band;
 
-        use cosmwasm_math_compat::Uint128;
-        use cosmwasm_std::{HumanAddr, Querier, StdResult};
-        use secret_toolkit::snip20::TokenInfo;
+use crate::{
+    contract::{handle, init, query},
+    handle::{calculate_mint, calculate_portion, try_burn},
+};
 
-        pub fn mock_token_info_query<Q: Querier>(
-            _querier: &Q,
-            _block_size: usize,
-            _callback_code_hash: String,
-            _contract_addr: HumanAddr,
-        ) -> StdResult<TokenInfo> {
-            Ok(TokenInfo {
-                name: "Token".to_string(),
-                symbol: "TKN".to_string(),
-                decimals: 6,
-                total_supply: Some(Uint128::new(150u128).into()),
-            })
-        }
+use fadroma::{
+    ContractLink, 
+    ensemble::{
+       MockEnv, MockDeps, 
+       ContractHarness, ContractEnsemble,
+    },
+};
+
+pub struct Mint;
+
+impl ContractHarness for Mint {
+    // Use the method from the default implementation
+    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
+        init(
+            deps,
+            env,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
     }
 
-    #[double]
-    use mock_secret_toolkit::token_info_query;
-    use shade_protocol::utils::asset::Contract;
-
-    fn create_contract(address: &str, code_hash: &str) -> Contract {
-        let env = mock_env(address.to_string(), &[]);
-        return Contract {
-            address: env.message.sender,
-            code_hash: code_hash.to_string(),
-        };
+    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
+         handle(
+            deps,
+            env,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
     }
 
-    fn dummy_init(
-        admin: String,
-        native_asset: Contract,
-        oracle: Contract,
-        peg: Option<String>,
-        treasury: HumanAddr,
-        capture: Option<Uint128>,
-    ) -> Extern<MockStorage, MockApi, MockQuerier> {
-        let mut deps = mock_dependencies(20, &[]);
-        let msg = InitMsg {
-            admin: None,
-            native_asset,
-            oracle,
-            peg,
-            treasury,
+    // Override with some hardcoded value for the ease of testing
+    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
+         query(
+            deps,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+}
+
+pub struct MockBand;
+
+impl ContractHarness for MockBand {
+    // Use the method from the default implementation
+    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
+        mock_band::contract::init(
+            deps,
+            env,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+
+    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
+         mock_band::contract::handle(
+            deps,
+            env,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+
+    // Override with some hardcoded value for the ease of testing
+    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
+         mock_band::contract::query(
+            deps,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+}
+
+pub struct Snip20;
+
+impl ContractHarness for Snip20 {
+    // Use the method from the default implementation
+    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
+        snip20_reference_impl::contract::init(
+            deps,
+            env,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+
+    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
+         snip20_reference_impl::contract::handle(
+            deps,
+            env,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+
+    // Override with some hardcoded value for the ease of testing
+    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
+         snip20_reference_impl::contract::query(
+            deps,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+}
+
+pub struct Oracle;
+
+impl ContractHarness for Oracle {
+    // Use the method from the default implementation
+    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
+        oracle::contract::init(
+            deps,
+            env,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+
+    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
+         oracle::contract::handle(
+            deps,
+            env,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+
+    // Override with some hardcoded value for the ease of testing
+    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
+         oracle::contract::query(
+            deps,
+            from_binary(&msg)?,
+            //mint::DefaultImpl,
+        )
+    }
+}
+
+#[test]
+fn test_ensemble() {
+    let mut ensemble = ContractEnsemble::new(50);
+
+    let reg_oracle = ensemble.register(Box::new(Oracle));
+    let reg_mint = ensemble.register(Box::new(Mint));
+    let reg_snip20 = ensemble.register(Box::new(Snip20));
+    let reg_band = ensemble.register(Box::new(MockBand));
+
+    let sscrt = ensemble.instantiate(
+        reg_snip20.id,
+        &snip20_reference_impl::msg::InitMsg {
+            name: "secretSCRT".into(),
+            admin: Some("admin".into()),
+            symbol: "SSCRT".into(),
+            decimals: 6,
+            initial_balances: None,
+            prng_seed: to_binary("").ok().unwrap(),
+            config: None,
+        },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: HumanAddr("sscrt".into()),
+                code_hash: reg_snip20.code_hash.clone(),
+            }
+        )
+    ).unwrap();
+
+    let shade = ensemble.instantiate(
+        reg_snip20.id,
+        &snip20_reference_impl::msg::InitMsg {
+            name: "Shade".into(),
+            admin: Some("admin".into()),
+            symbol: "SHD".into(),
+            decimals: 8,
+            initial_balances: None,
+            prng_seed: to_binary("").ok().unwrap(),
+            config: None,
+        },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: HumanAddr("shade".into()),
+                code_hash: reg_snip20.code_hash.clone(),
+            }
+        )
+    ).unwrap();
+
+    let band = ensemble.instantiate(
+        reg_band.id,
+        &shade_protocol::band::InitMsg { },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: HumanAddr("band".into()),
+                code_hash: reg_band.code_hash.clone(),
+            }
+        )
+    ).unwrap();
+
+    let oracle = ensemble.instantiate(
+        reg_oracle.id,
+        &shade_protocol::oracle::InitMsg {
+            admin: Some(HumanAddr("admin".into())),
+            band: Contract {
+                address: band.address.clone(),
+                code_hash: band.code_hash.clone(),
+            },
+            sscrt: Contract {
+                address: sscrt.address.clone(),
+                code_hash: sscrt.code_hash.clone(),
+            },
+        },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: HumanAddr("oracle".into()),
+                code_hash: reg_oracle.code_hash.clone(),
+            }
+        )
+    ).unwrap();
+
+    let mint = ensemble.instantiate(
+        reg_mint.id,
+        &shade_protocol::mint::InitMsg {
+            admin: Some(HumanAddr("admin".into())),
+            oracle: Contract {
+                address: oracle.address.clone(),
+                code_hash: oracle.code_hash.clone(),
+            },
+            native_asset: Contract {
+                address: shade.address.clone(), 
+                code_hash: shade.code_hash.clone(),
+            },
+            peg: None,
+            treasury: HumanAddr("admin".into()),
             secondary_burn: None,
             limit: None,
-        };
-        let env = mock_env(admin, &coins(1000, "earth"));
-        let _res = init(&mut deps, env, msg).unwrap();
-
-        return deps;
-    }
-
-    #[test]
-    /*
-    fn proper_initialization() {
-        let mut deps = mock_dependencies(20, &[]);
-        let msg = InitMsg {
-            admin: None,
-            native_asset: create_contract("", ""),
-            oracle: create_contract("", ""),
-            peg: Option::from("TKN".to_string()),
-            treasury: Option::from(create_contract("", "")),
-            // 1%
-            capture: Option::from(Uint128(100)),
-        };
-        let env = mock_env("creator", &coins(1000, "earth"));
-
-        // we can just call .unwrap() to assert this was a success
-        let res = init(&mut deps, env, msg).unwrap();
-        assert_eq!(0, res.messages.len());
-    }
-    */
-
-    /*
-    #[test]
-    fn config_update() {
-        let native_asset = create_contract("snip20", "hash");
-        let oracle = create_contract("oracle", "hash");
-        let treasury = create_contract("treasury", "hash");
-        let capture = Uint128(100);
-
-        let admin_env = mock_env("admin", &coins(1000, "earth"));
-        let mut deps = dummy_init("admin".to_string(),
-                                  native_asset,
-                                  oracle,
-                                  None,
-                                  Option::from(treasury),
-                                  Option::from(capture));
-
-        // new config vars
-        let new_oracle = Option::from(create_contract("new_oracle", "hash"));
-        let new_treasury = Option::from(create_contract("new_treasury", "hash"));
-        let new_capture = Option::from(Uint128(200));
-
-        // Update config
-        let update_msg = HandleMsg::UpdateConfig {
-            owner: None,
-            oracle: new_oracle.clone(),
-            treasury: new_treasury.clone(),
-            // 2%
-            capture: new_capture.clone(),
-        };
-        let update_res = handle(&mut deps, admin_env, update_msg);
-
-        let config_res = query(&deps, QueryMsg::GetConfig {}).unwrap();
-        let value: QueryAnswer = from_binary(&config_res).unwrap();
-        match value {
-            QueryAnswer::Config { config } => {
-                assert_eq!(config.oracle, new_oracle.unwrap());
-                assert_eq!(config.treasury, new_treasury);
-                assert_eq!(config.capture, new_capture);
+        },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: HumanAddr("mint".into()),
+                code_hash: reg_mint.code_hash,
             }
-            _ => { panic!("Received wrong answer") }
+        )
+    ).unwrap();
+
+    // $1
+    let sscrt_price = cosmwasm_std::Uint128(1u128 * 10u128.pow(18));
+    // $1
+    let shade_price = cosmwasm_std::Uint128(1u128 * 10u128.pow(18));
+
+    // Setup band price feeds
+    // SCRT
+    ensemble.execute(
+        &mock_band::contract::HandleMsg::MockPrice {
+            symbol: "SCRT".into(),
+            price: sscrt_price,
+        },
+        MockEnv::new(
+            "admin", 
+            band.clone(),
+        ),
+    ).unwrap();
+    // SHD
+    ensemble.execute(
+        &mock_band::contract::HandleMsg::MockPrice {
+            symbol: "SHD".into(),
+            price: shade_price,
+        },
+        MockEnv::new(
+            "admin", 
+            band.clone(),
+        ),
+    ).unwrap();
+
+    // Register sSCRT burn
+    ensemble.execute(
+        &shade_protocol::mint::HandleMsg::RegisterAsset {
+            contract: Contract {
+                address: sscrt.address.clone(),
+                code_hash: sscrt.code_hash.clone(),
+            },
+            capture: None,
+            fee: None,
+            unlimited: None,
+        },
+        MockEnv::new(
+            "admin", 
+            mint.clone(),
+        ),
+    ).unwrap();
+
+    // Check price feeds
+    let ReferenceData { rate, .. } = ensemble.query(
+        oracle.address.clone(),
+        &shade_protocol::oracle::QueryMsg::Price { symbol: "SSCRT".into() },
+    ).unwrap();
+    assert_eq!(rate, sscrt_price);
+
+    let ReferenceData { rate, .. } = ensemble.query(
+        oracle.address.clone(),
+        &shade_protocol::oracle::QueryMsg::Price { symbol: "SHD".into() },
+    ).unwrap();
+    assert_eq!(rate, shade_price);
+
+    // Check mint query
+    let (asset, amount) = match ensemble.query(
+        mint.address.clone(),
+        &shade_protocol::mint::QueryMsg::Mint {
+            offer_asset: sscrt.address.clone(),
+            amount: Uint128::new(10u128.pow(6)),
         }
-    }
-    */
+    ).unwrap() {
+        shade_protocol::mint::QueryAnswer::Mint { asset, amount } => (asset, amount),
+        _ => (Contract { address: HumanAddr("".into()), code_hash: "".into()} , Uint128::new(0)),
 
-    /*
-    #[test]
-    fn user_register_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""),
-                                  create_contract("", ""),
-                                  None, None, None);
+    };
 
-        // User should not be allowed to add an item
-        let user_env = mock_env("user", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
-            contract: dummy_contract,
-        };
-        let res = handle(&mut deps, user_env, msg);
-        match res {
-            Err(StdError::Unauthorized { .. }) => {}
-            _ => panic!("Must return unauthorized error"),
-        }
+    assert_eq!(asset, Contract {
+        address: shade.address.clone(),
+        code_hash: shade.code_hash.clone(),
+    });
+    assert_eq!(amount, Uint128::new(10u128.pow(8)));
+}
 
-        // Response should be an empty array
-        let res = query(&deps, QueryMsg::GetSupportedAssets {}).unwrap();
-        let value: QueryAnswer = from_binary(&res).unwrap();
-        match value {
-            QueryAnswer::SupportedAssets { assets } => { assert_eq!(0, assets.len()) }
-            _ => { panic!("Received wrong answer") }
-        }
-    }
+#[test]
+fn capture_calc() {
+    let amount = Uint128::new(1_000_000_000_000_000_000u128);
+    //10%
+    let capture = Uint128::new(100_000_000_000_000_000u128);
+    let expected = Uint128::new(100_000_000_000_000_000u128);
+    let value = calculate_portion(amount, capture);
+    assert_eq!(value, expected);
+}
 
-    #[test]
-    fn admin_register_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""),
-                                  create_contract("", ""),
-                                  None,
-                                  None,
-                                  None);
-
-        // Admin should be allowed to add an item
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
-            contract: dummy_contract,
-        };
-        let _res = handle(&mut deps, env, msg).unwrap();
-
-        // Response should be an array of size 1
-        let res = query(&deps, QueryMsg::GetSupportedAssets {}).unwrap();
-        let value: QueryAnswer = from_binary(&res).unwrap();
-        match value {
-            QueryAnswer::SupportedAssets { assets } => { assert_eq!(1, assets.len()) }
-            _ => { panic!("Received wrong answer") }
-        }
-    }
-
-    #[test]
-    fn duplicate_register_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""),
-                                  create_contract("", ""),
-                                  None,
-                                  None,
-                                  None);
-
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
-            contract: dummy_contract,
-        };
-        let _res = handle(&mut deps, env, msg).unwrap();
-
-        // Should not be allowed to add an existing asset
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "other_hash");
-        let msg = HandleMsg::RegisterAsset {
-            contract: dummy_contract,
-        };
-        let res = handle(&mut deps, env, msg);
-        match res {
-            Err(StdError::GenericErr { .. }) => {}
-            _ => panic!("Must return not found error"),
-        };
-    }
-
-    /*
-    #[test]
-    fn user_update_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""),
-                                  create_contract("", ""));
-
-        // Add a supported asset
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
-            contract: dummy_contract,
-        };
-        let _res = handle(&mut deps, env, msg).unwrap();
-
-        // users should not be allowed to update assets
-        let user_env = mock_env("user", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let new_dummy_contract = create_contract("some_other_contract", "some_hash");
-        let msg = HandleMsg::UpdateAsset {
-            asset: dummy_contract.address,
-            contract: new_dummy_contract,
-        };
-        let res = handle(&mut deps, user_env, msg);
-        match res {
-            Err(StdError::Unauthorized { .. }) => {}
-            _ => panic!("Must return unauthorized error"),
-        };
-    }
-    */
-
-    /*
-    #[test]
-    fn admin_update_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""),
-                                  create_contract("", ""));
-
-        // Add a supported asset
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
-            contract: dummy_contract,
-        };
-        let _res = handle(&mut deps, env, msg).unwrap();
-
-        // admins can update assets
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let new_dummy_contract = create_contract("some_other_contract", "some_hash");
-        let msg = HandleMsg::UpdateAsset {
-            asset: dummy_contract.address,
-            contract: new_dummy_contract,
-        };
-        let _res = handle(&mut deps, env, msg).unwrap();
-
-        // Response should be new dummy contract
-        let res = query(&deps, QueryMsg::GetAsset { contract: "some_other_contract".to_string() }).unwrap();
-        let value: QueryAnswer = from_binary(&res).unwrap();
-        match value {
-            QueryAnswer::Asset { asset, burned } => { assert_eq!("some_other_contract".to_string(), asset.contract.address.to_string()) }
-            _ => { panic!("Received wrong answer") }
-        };
-    }
-    */
-
-    #[test]
-    fn receiving_an_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""),
-                                  create_contract("", ""),
-                                  None, None, None);
-
-        // Add a supported asset
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
-            contract: dummy_contract,
-        };
-        let _res = handle(&mut deps, env, msg).unwrap();
-
-        // Contract tries to send funds
-        let env = mock_env("some_contract", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_owner", "some_hash");
-
-        let msg = HandleMsg::Receive {
-            sender: dummy_contract.address,
-            from: Default::default(),
-            amount: Uint128(100),
-            msg: None,
-            memo: None
-        };
-
-        let res = handle(&mut deps, env, msg);
-        match res {
-            Err(err) => {
-                match err {
-                    StdError::NotFound { .. } => {panic!("Not found");}
-                    StdError::Unauthorized { .. } => {panic!("Unauthorized");}
-                    _ => {}
-                }
+macro_rules! mint_algorithm_tests {
+    ($($name:ident: $value:expr,)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let (in_price, in_amount, in_decimals, target_price, target_decimals, expected_value) = $value;
+                assert_eq!(calculate_mint(in_price, in_amount, in_decimals, target_price, target_decimals), expected_value);
             }
-            _ => {}
-        }
+        )*
     }
+}
 
-    #[test]
-    fn receiving_an_asset_from_non_supported_asset() {
-        let mut deps = dummy_init("admin".to_string(),
-                                  create_contract("", ""),
-                                  create_contract("", ""),
-                                  None,
-                                  None,
-                                  None,
-                                  );
-
-        // Add a supported asset
-        let env = mock_env("admin", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
-            contract: dummy_contract,
-        };
-        let _res = handle(&mut deps, env, msg).unwrap();
-
-        // Contract tries to send funds
-        let env = mock_env("some_other_contract", &coins(1000, "earth"));
-        let dummy_contract = create_contract("some_owner", "some_hash");
-        let msg = HandleMsg::Receive {
-            sender: dummy_contract.address,
-            from: Default::default(),
-            amount: Uint128(100),
-            msg: None,
-            memo: None
-        };
-        let res = handle(&mut deps, env, msg);
-        match res {
-            Err(StdError::NotFound { .. }) => {}
-            _ => {panic!("Must return not found error")},
-        }
-    }
-    */
-    #[test]
-    fn capture_calc() {
-        let amount = Uint128::new(1_000_000_000_000_000_000u128);
-        //10%
-        let capture = Uint128::new(100_000_000_000_000_000u128);
-        let expected = Uint128::new(100_000_000_000_000_000u128);
-        let value = calculate_portion(amount, capture);
-        assert_eq!(value, expected);
-    }
-
-    /**
-    #[test]
-    fn mint_algorithm_simple() {
+mint_algorithm_tests! {
+    mint_simple_0: (
         // In this example the "sent" value is 1 with 6 decimal places
         // The mint value will be 1 with 3 decimal places
-        let price = Uint128::new(1_000_000_000_000_000_000u128);
-        let in_amount = Uint128::new(1_000_000u128);
-        let expected_value = Uint128::new(1_000u128);
-        let value = calculate_mint(price, in_amount, 6, price, 3);
-
-        assert_eq!(value, expected_value);
-    }
-
-    #[test]
-    fn mint_algorithm_complex_1() {
+        Uint128::new(1_000_000_000_000_000_000), //Burn price
+        Uint128::new(1_000_000),                 //Burn amount
+        6u8,                                //Burn decimals
+        Uint128::new(1_000_000_000_000_000_000), //Mint price
+        3u8,                                //Mint decimals
+        Uint128::new(1_000),                     //Expected value
+    ),
+    mint_simple_1: (
+        // In this example the "sent" value is 1 with 8 decimal places
+        // The mint value will be 1 with 3 decimal places
+        Uint128::new(1_000_000_000_000_000_000), //Burn price
+        Uint128::new(1_000_000),                 //Burn amount
+        6u8,                                //Burn decimals
+        Uint128::new(1_000_000_000_000_000_000), //Mint price
+        8u8,                                //Mint decimals
+        Uint128::new(100_000_000),                     //Expected value
+    ),
+    mint_complex_0: (
         // In this example the "sent" value is 1.8 with 6 decimal places
         // The mint value will be 3.6 with 12 decimal places
-        let in_price = Uint128::new(2_000_000_000_000_000_000u128);
-        let target_price = Uint128::new(1_000_000_000_000_000_000u128);
-        let in_amount = Uint128::new(1_800_000u128);
-        let expected_value = Uint128::new(3_600_000_000_000u128);
-        let value = calculate_mint(in_price, in_amount, 6, target_price, 12);
-
-        assert_eq!(value, expected_value);
-    }
-
-    #[test]
-    fn mint_algorithm_complex_2() {
+        Uint128::new(2_000_000_000_000_000_000),
+        Uint128::new(1_800_000),
+        6u8,
+        Uint128::new(1_000_000_000_000_000_000),
+        12u8,
+        Uint128::new(3_600_000_000_000),
+    ),
+    mint_complex_1: (
         // In amount is 50.000 valued at 20
         // target price is 100$ with 6 decimals
-        let in_price = Uint128::new(20_000_000_000_000_000_000u128);
-        let target_price = Uint128::new(100_000_000_000_000_000_000u128);
-        let in_amount = Uint128::new(50_000u128);
-        let expected_value = Uint128::new(10_000_000u128);
-        let value = calculate_mint(in_price, in_amount, 3, target_price, 6);
-
-        assert_eq!(value, expected_value);
-    }
-    **/
-    macro_rules! mint_algorithm_tests {
-        ($($name:ident: $value:expr,)*) => {
-            $(
-                #[test]
-                fn $name() {
-                    let (in_price, in_amount, in_decimals, target_price, target_decimals, expected_value) = $value;
-                    assert_eq!(calculate_mint(in_price, in_amount, in_decimals, target_price, target_decimals), expected_value);
-                }
-            )*
-        }
-    }
-
-    mint_algorithm_tests! {
-        mint_simple_0: (
-            // In this example the "sent" value is 1 with 6 decimal places
-            // The mint value will be 1 with 3 decimal places
-            Uint128::new(1_000_000_000_000_000_000), //Burn price
-            Uint128::new(1_000_000),                 //Burn amount
-            6u8,                                //Burn decimals
-            Uint128::new(1_000_000_000_000_000_000), //Mint price
-            3u8,                                //Mint decimals
-            Uint128::new(1_000),                     //Expected value
-        ),
-        mint_complex_0: (
-            // In this example the "sent" value is 1.8 with 6 decimal places
-            // The mint value will be 3.6 with 12 decimal places
-            Uint128::new(2_000_000_000_000_000_000),
-            Uint128::new(1_800_000),
-            6u8,
-            Uint128::new(1_000_000_000_000_000_000),
-            12u8,
-            Uint128::new(3_600_000_000_000),
-        ),
-        mint_complex_1: (
-            // In amount is 50.000 valued at 20
-            // target price is 100$ with 6 decimals
-            Uint128::new(20_000_000_000_000_000_000),
-            Uint128::new(50_000),
-            3u8,
-            Uint128::new(100_000_000_000_000_000_000),
-            6u8,
-            Uint128::new(10_000_000),
-        ),
-        mint_complex_2: (
-            // In amount is 10,000,000 valued at 100
-            // Target price is $10 with 6 decimals
-            Uint128::new(1_000_000_000_000_000_000_000),
-            Uint128::new(100_000_000_000_000),
-            8u8,
-            Uint128::new(10_000_000_000_000_000_000),
-            6u8,
-            Uint128::new(100_000_000_000_000),
-        ),
-    }
+        Uint128::new(20_000_000_000_000_000_000),
+        Uint128::new(50_000),
+        3u8,
+        Uint128::new(100_000_000_000_000_000_000),
+        6u8,
+        Uint128::new(10_000_000),
+    ),
+    mint_complex_2: (
+        // In amount is 10,000,000 valued at 100
+        // Target price is $10 with 6 decimals
+        Uint128::new(1_000_000_000_000_000_000_000),
+        Uint128::new(100_000_000_000_000),
+        8u8,
+        Uint128::new(10_000_000_000_000_000_000),
+        6u8,
+        Uint128::new(100_000_000_000_000),
+    ),
     /*
     mint_overflow_0: (
         // In amount is 1,000,000,000,000,000,000,000,000 valued at 1,000
         // Target price is $5 with 6 decimals
-        Uint128(1_000_000_000_000_000_000_000),
-        Uint128(100_000_000_000_000_000_000_000_000_000_000),
+        Uint128::new(1_000_000_000_000_000_000_000),
+        Uint128::new(100_000_000_000_000_000_000_000_000_000_000),
         8u8,
-        Uint128(5_000_000_000_000_000_000),
+        Uint128::new(5_000_000_000_000_000_000),
         6u8,
-        Uint128(500_000_000_000_000_000_000_000_000_000_000_000),
+        Uint128::new(500_000_000_000_000_000_000_000_000_000_000_000),
     ),
     */
 }

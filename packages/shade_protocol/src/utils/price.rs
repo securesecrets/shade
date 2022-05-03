@@ -22,7 +22,7 @@ pub fn normalize_price(amount: Uint128, decimals: u8) -> Uint128 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_math_compat::Uint128;
+    use cosmwasm_std::Uint128;
   
     macro_rules! normalize_price_tests {
     ($($name:ident: $value:expr,)*) => {

@@ -54,7 +54,7 @@ test:
 	@$(MAKE) $(addprefix test-,$(CONTRACTS))
 
 test-%:
-	(cd ${contracts_dir}/$*; cargo unit-test)
+	(cd ${contracts_dir}/$*; cargo test)
 
 shd_staking: setup
 	(cd ${contracts_dir}/shd_staking; ${build-release})
