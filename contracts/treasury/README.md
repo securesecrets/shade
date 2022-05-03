@@ -2,7 +2,8 @@
 * [Introduction](#Introduction)
 * [Sections](#Sections)
     * [Init](#Init)
-    * [Admin](#Admin)
+    * [DAO Adapter](/packages/shade_protocol/src/DAO_ADAPTER.md)
+    * [Interface](#Interface)
         * Messages
             * [Receive](#Receive)
             * [UpdateConfig](#UpdateConfig)
@@ -11,7 +12,6 @@
             * [Allowance](#Allowance)
             * [AddAccount](#AddAccount)
             * [CloseAccount](#CloseAccount)
-            * [AdapterInterface](#AdapterInterface)
         * Queries
             * [Config](#Config)
             * [Assets](#Assets)
@@ -19,7 +19,6 @@
             * [CurrentAllowances](#CurrentAllowances)
             * [Allowance](#Allowance)
             * [Account](#Account)
-            * [AdapterInterface](#AdapterInterface)
 # Introduction
 The treasury contract holds network funds from things such as mint commission and pending airdrop funds
 
@@ -33,9 +32,10 @@ The treasury contract holds network funds from things such as mint commission an
 |viewing_key | string   |  viewing key for all registered snip20 assets
 |sscrt | Contract |  sSCRT contract for wrapping & unwrapping
 
-## Admin
+## Interface
 
 ### Messages
+
 #### UpdateConfig
 Updates the given values
 ##### Request

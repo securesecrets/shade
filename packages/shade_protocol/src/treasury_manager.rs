@@ -90,7 +90,6 @@ pub enum HandleAnswer {
     UpdateConfig { status: ResponseStatus },
     RegisterAsset { status: ResponseStatus },
     Allocate { status: ResponseStatus },
-    Rebalance { status: ResponseStatus },
     Adapter(adapter::HandleAnswer),
 }
 

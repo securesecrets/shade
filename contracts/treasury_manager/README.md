@@ -1,14 +1,17 @@
 # Treasury Contract
 * [Introduction](#Introduction)
 * [Sections](#Sections)
+    * [DAO Adapter](/packages/shade_protocol/src/DAO_ADAPTER.md)
     * [Init](#Init)
-    * [Admin](#Admin)
+    * [Interface](#Interface)
         * Messages
             * [UpdateConfig](#UpdateConfig)
             * [RegisterAsset](#RegisterAsset)
+            * [Allocate](#Allocate)
         * Queries
-            * [GetConfig](#GetConfig)
-            * [GetBalance](#GetBalance)
+            * [Config](#Config)
+            * [Assets](#Assets)
+            * [PendingAllowance](#PendingAllowance)
 # Introduction
 The treasury contract holds network funds from things such as mint commission and pending airdrop funds
 
@@ -18,9 +21,11 @@ The treasury contract holds network funds from things such as mint commission an
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  contract owner/admin; a valid bech32 address; Controls funds
+|admin     | HumanAddr|  Admin address
+|viewing_key | String |  Key set on relevant SNIP-20's
+|treasury    | HumanAddr |  treasury that is owner of funds
 
-## Admin
+## Interface
 
 ### Messages
 #### UpdateConfig
@@ -28,8 +33,7 @@ Updates the given values
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | string   |  New contract owner; SHOULD be a valid bech32 address, but contracts may use a different naming scheme as well    |  yes     |
-|oracle    | Contract |  Oracle contract                                                                                                  |  no      |
+|config    | Config   |  New contract config
 ##### Response
 ```json
 {
@@ -56,29 +60,83 @@ Note: Will return an error if there's an asset with that address already registe
 }
 ```
 
+#### Allocate
+Registers a supported asset. The asset must be SNIP-20 compliant since [RegisterReceive](https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md#RegisterReceive) is called.
+
+Note: Will return an error if there's an asset with that address already registered.
+##### Request
+|Name        |Type    |Description                                                                                                            | optional |
+|------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
+|asset       | HumanAddr |  Desired SNIP-20
+|allocation  | Allocation | Allocation data
+##### Response
+```json
+{
+  "allocate": {
+    "status": "success"
+  }
+}
+```
+
 ### Queries
 
-#### GetConfig
+#### Config
 Gets the contract's configuration variables
 ##### Response
 ```json
 {
   "config": {
-    "config": {
-      "owner": "Owner address",
-    }
+    "config": { .. }
   }
 }
 ```
 
-#### GetBalance
-Get the treasury balance for a given snip20 asset
-Note: Snip20 assets must be registered to have viewing key set
+#### Assets
+Get the list of registered assets
 ##### Response
 ```json
 {
-  "get_balance": {
-    "contract": "asset address",
+  "assets": {
+    "assets": ["asset address", ..],
+  }
+}
+```
+
+#### Allocations
+Get the allocations for a given asset
+
+##### Request
+|Name        |Type    |Description                                                                                                            | optional |
+|------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
+|asset      | HumanAddr | Address of desired SNIP-20 asset
+
+##### Response
+```json
+{
+  "allocations": {
+    "allocations": [
+      {
+        "allocation": {},
+      },
+      ..
+    ],
+  }
+}
+```
+
+#### PendingAllowance
+Get the pending allowance for a given asset
+
+##### Request
+|Name        |Type    |Description                                                                                                            | optional |
+|------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
+|asset      | HumanAddr | Address of desired SNIP-20 asset
+
+##### Response
+```json
+{
+  "pending_allowance": {
+    "amount": "100000",
   }
 }
 ```
