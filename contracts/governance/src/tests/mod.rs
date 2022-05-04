@@ -4,6 +4,7 @@ pub mod handle;
 use cosmwasm_std::{Binary, Env, from_binary, HandleResponse, HumanAddr, InitResponse, StdError, StdResult, to_binary};
 use fadroma_ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
 use fadroma_platform_scrt::ContractLink;
+use serde::Serialize;
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::governance;
 use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
@@ -127,7 +128,7 @@ pub fn gov_generic_proposal(
                 ProposalMsg {
                     target: Uint128::zero(),
                     assembly_msg: Uint128::zero(),
-                    msg: to_binary(&msg)?,
+                    msg: to_binary(&vec![serde_json::to_string(&msg).unwrap()])?,
                     send: vec![]
                 }
             ]),

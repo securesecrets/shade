@@ -8,7 +8,7 @@ use shade_protocol::governance::profile::{Count, FundProfile, Profile, UpdatePro
 use shade_protocol::governance::proposal::Status;
 use shade_protocol::governance::vote::Vote;
 use shade_protocol::utils::asset::Contract;
-use crate::tests::{admin_only_governance, get_proposals, Governance, init_governance, Snip20};
+use crate::tests::{admin_only_governance, get_assemblies, get_proposals, gov_generic_proposal, Governance, init_governance, Snip20};
 
 #[test]
 fn trigger_admin_command() {
@@ -1904,6 +1904,73 @@ fn claim_after_passing() {
 // TODO: Try update on veto
 
 // TODO: Create normal proposal
+#[test]
+fn msg_proposal() {
+    let (mut chain, gov) = admin_only_governance().unwrap();
+
+    gov_generic_proposal(&mut chain, &gov, "admin", governance::HandleMsg::SetAssembly {
+        id: Uint128::new(1),
+        name: Some("Random name".to_string()),
+        metadata: None,
+        members: None,
+        profile: None,
+        padding: None
+    }).unwrap();
+
+    let old_assembly = get_assemblies(
+        &mut chain, &gov, Uint128::new(1), Uint128::new(2)
+    ).unwrap()[0].clone();
+
+    let prop = get_proposals(
+        &mut chain,
+        &gov,
+        Uint128::zero(),
+        Uint128::new(2)
+    ).unwrap()[0].clone();
+
+    match prop.status {
+        Status::Passed {..} => assert!(true),
+        _ => assert!(false)
+    };
+
+    // assert_eq!(to_binary(&governance::HandleMsg::SetAssembly {
+    //     id: Uint128::new(1),
+    //     name: Some("Random name".to_string()),
+    //     metadata: None,
+    //     members: None,
+    //     profile: None,
+    //     padding: None
+    // }).unwrap().to_base64(), "");
+
+    chain.execute(
+        &governance::HandleMsg::Trigger {
+            proposal: Uint128::new(0),
+            padding: None
+        },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: gov.address.clone(),
+                code_hash: gov.code_hash.clone(),
+            }
+        )
+    ).unwrap();
+
+    let prop = get_proposals(
+        &mut chain,
+        &gov,
+        Uint128::zero(),
+        Uint128::new(2)
+    ).unwrap()[0].clone();
+
+    assert_eq!(prop.status, Status::Success);
+
+    let new_assembly = get_assemblies(
+        &mut chain, &gov, Uint128::new(1), Uint128::new(2)
+    ).unwrap()[0].clone();
+
+    assert_ne!(new_assembly.name, old_assembly.name);
+}
 
 // TODO: Trigger a failed contract and then cancel
 // TODO: Cancel contract

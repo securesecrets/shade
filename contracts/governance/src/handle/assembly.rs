@@ -1,5 +1,5 @@
 use std::convert::TryInto;
-use cosmwasm_std::{Api, Coin, Env, Extern, from_binary, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use cosmwasm_std::{Api, Binary, Coin, Env, Extern, from_binary, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::governance::assembly::{Assembly, AssemblyMsg};
 use shade_protocol::governance::{HandleAnswer, MSG_VARIABLE};
@@ -134,7 +134,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
             }
 
             let vars: Vec<String> = from_binary(&msg.msg)?;
-            let binary_msg = to_binary(&assembly_msg.msg.create_msg(vars, MSG_VARIABLE))?;
+            let binary_msg = Binary::from(assembly_msg.msg.create_msg(vars, MSG_VARIABLE)?.as_bytes());
 
             new_msgs.push(ProposalMsg {
                 target: msg.target,
