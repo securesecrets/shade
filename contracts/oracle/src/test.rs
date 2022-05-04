@@ -7,8 +7,12 @@ use cosmwasm_std::{
     Binary, StdResult, HandleResponse, Env,
     InitResponse,
 };
-use fadroma_ensemble::{
-    MockDeps, ContractHarness, ContractEnsemble,
+use fadroma::{
+    ContractLink, 
+    ensemble::{
+       MockEnv, MockDeps, 
+       ContractHarness, ContractEnsemble,
+    },
 };
 
 pub struct Oracle;
