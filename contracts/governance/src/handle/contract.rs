@@ -122,7 +122,7 @@ pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
     if let Some(mut old_assemblies) = allowed_contract.assemblies {
         let assembly_id = ID::assembly(&deps.storage)?;
         for assembly in assemblies.iter() {
-            if assembly < &assembly_id && !old_assemblies.contains(assembly) {
+            if assembly <= &assembly_id && !old_assemblies.contains(assembly) {
                 old_assemblies.push(assembly.clone());
             }
         }
