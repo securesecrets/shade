@@ -36,7 +36,7 @@ schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 chrono = "0.4.19"
-
+[dev-dependencies]
 fadroma = { path = "../../packages/fadroma/crates/fadroma" }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20" }
 oracle = { version = "0.1.0", path = "../../contracts/oracle" }
