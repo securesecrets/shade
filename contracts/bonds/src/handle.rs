@@ -26,9 +26,10 @@ use std::{cmp::Ordering, convert::TryFrom, ops::Add};
 
 use crate::state::{config_r, config_w, collateral_assets_r, collateral_assets_w, 
     issued_asset_r, global_issuance_limit_r, global_total_issued_r, global_total_issued_w,
-    bond_total_issued_r, bond_total_issued_w, account_r, account_w,
+    bond_total_issued_r, bond_total_issued_w, account_r, account_w, allowance_key_r, allowance_key_w,
     bond_opportunity_r, bond_opportunity_w, account_viewkey_w, global_issuance_limit_w,
     global_total_claimed_r, global_total_claimed_w, allocated_allowance_r, allocated_allowance_w};
+
 
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -79,7 +80,7 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+        data: Some(to_binary(&HandleAnswer::UpdateLimitConfig {
             status: ResponseStatus::Success,
         })?),
     })
@@ -98,6 +99,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     bond_issuance_limit: Option<Uint128>,
     bonding_period: Option<u64>,
     discount: Option<Uint128>,
+    global_minimum_issued_price: Option<Uint128>,
+    allowance_key: Option<String>,
 ) -> StdResult<HandleResponse> {
     let cur_config = config_r(&deps.storage).load()?;
 
@@ -134,6 +137,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
         if let Some(discount) = discount {
             state.discount = discount;
+        }
+        if let Some(global_minimum_issued_price) = global_minimum_issued_price {
+            state.global_minimum_issued_price = global_minimum_issued_price;
         }
         Ok(state)
     })?;
@@ -300,7 +306,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     // Load mint asset information
     let issuance_asset = issued_asset_r(&deps.storage).load()?;
     // Calculate conversion of collateral to SHD
-    let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(&deps, deposit_amount, available, bond_opportunity.deposit_denom.clone(), issuance_asset, bond_opportunity.discount)?;
+    let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(&deps, deposit_amount, available, bond_opportunity.deposit_denom.clone(), issuance_asset, bond_opportunity.discount, bond_opportunity.max_collateral_price, config.global_minimum_issued_price)?;
     
     // Add to total issued, globally and bond opportunity-specific
     //global_total_issued_w(&mut deps.storage).update(|global_total_issued| {
@@ -392,7 +398,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Find user account, error out if DNE
-    let account = match account_r(&deps.storage).may_load(env.message.sender.as_str().as_bytes())? {
+    let mut account = match account_r(&deps.storage).may_load(env.message.sender.as_str().as_bytes())? {
         None => {
             return Err(StdError::NotFound {
                 kind: env.message.sender.to_string(),
@@ -411,7 +417,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     }
 
     // Set up loop comparison values.
-    let now = env.block.time * 24u64 * 60u64 * 60u64; // Current time in seconds
+    let now = env.block.time; // Current time in seconds
     let mut total = Uint128(0);
 
     // Iterate through pending bonds and compare one's end to current time
@@ -422,10 +428,14 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    // Remove claimed bonds from vector
+    // Remove claimed bonds from vector and save back to the account
     pending_bonds.retain(|bond|
         bond.end > now  // Retain only the bonds that end at a time greater than now
     );
+    
+    account.pending_bonds = pending_bonds;
+    account_w(&mut deps.storage).save(env.message.sender.as_str().as_bytes(), &account)?;
+
 
     // Add total to running total of amount claimed, globally
     //let mut global_total_claimed = global_total_claimed_r(&deps.storage).load().unwrap();
@@ -488,6 +498,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     bond_issuance_limit: Option<Uint128>,
     bonding_period: Option<u64>,
     discount: Option<Uint128>,
+    max_collateral_price: Uint128,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 
@@ -509,7 +520,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         &deps.querier,
         config.treasury, 
         env.contract.address.clone(),
-        "asdf".to_string(),
+        allowance_key_r(&deps.storage).load()?.to_string(),
         1,
             config.issued_asset.code_hash,
             config.issued_asset.address,
@@ -586,7 +597,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         end_time,
         discount: discount,
         bonding_period: period,  
-        amount_issued: Uint128(0),                 
+        amount_issued: Uint128(0),  
+        max_collateral_price,               
     };
     
     // Save bond opportunity
@@ -612,6 +624,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             bond_issuance_limit: bond_opportunity.issuance_limit,
             bonding_period: bond_opportunity.bonding_period,
             discount: bond_opportunity.discount,
+            max_collateral_price: bond_opportunity.max_collateral_price,
         })?),
     })
 }
@@ -754,9 +767,17 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     collateral_asset: Snip20Asset,
     issuance_asset: Snip20Asset,
     discount: Uint128,
+    max_collateral_price: Uint128,
+    min_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
     let collateral_price = oracle(&deps, collateral_asset.token_info.symbol.clone())?;// Placeholder for Oracle lookup
+    if collateral_price > max_collateral_price {
+        return Err(collateral_price_exceeds_limit(collateral_price.clone(), max_collateral_price.clone()))
+    }
     let issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?; // Placeholder for minted asset price lookup
+    if issued_price < min_issued_price {
+        return Err(issued_price_below_minimum(issued_price.clone(), min_issued_price.clone()))
+    }
     let (issued_amount, discount_price) = calculate_issuance(
         collateral_price.clone(), 
         collateral_amount,
@@ -820,8 +841,9 @@ pub fn calculate_claim_date(
     //let end: DateTime<Utc> = now.add(bond_duration);
 
     // Attempt at a block time implementation instead
-    let delay = bonding_period.checked_mul(24u64 * 60u64 * 60u64).unwrap();
-    let end = env_time.checked_add(delay).unwrap();
+    // let delay = bonding_period.checked_mul(24u64 * 60u64 * 60u64).unwrap();
+    // let end = env_time.checked_add(delay).unwrap();
+    let end = env_time.checked_add(bonding_period).unwrap();
 
     end
 }

@@ -22,6 +22,7 @@ pub static ACCOUNTS_KEY: &[u8] = b"accounts";
 pub static BOND_OPPORTUNITIES: &[u8] = b"bond_opportunities";
 pub static ACCOUNT_VIEWING_KEY: &[u8] = b"account_viewing_key";
 pub static ALLOCATED_ALLOWANCE: &[u8] = b"allocated_allowance";
+pub static ALLOWANCE_VIEWING_KEY: &[u8] = b"allowance_viewing_key";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG)
@@ -136,4 +137,13 @@ pub fn allocated_allowance_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint12
 
 pub fn allocated_allowance_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
     singleton_read(storage, ALLOCATED_ALLOWANCE)
+}
+
+// Stores the bond contracts viewing key to see its own allowance
+pub fn allowance_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
+    singleton(storage, ALLOWANCE_VIEWING_KEY)
+}
+
+pub fn allowance_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
+    singleton_read(storage, ALLOWANCE_VIEWING_KEY)
 }

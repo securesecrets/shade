@@ -9,7 +9,7 @@ use shade_protocol::{
     snip20::{token_config_query, Snip20Asset},
 };
 
-use crate::{handle::{self, try_set_viewing_key}, query, state::{config_w, issued_asset_w, global_total_issued_w, collateral_assets_w}};
+use crate::{handle::{self, try_set_viewing_key}, query, state::{config_w, issued_asset_w, global_total_issued_w, collateral_assets_w, global_total_claimed_w, allocated_allowance_w, allowance_key_w}};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -30,9 +30,21 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         discount: msg.discount,
         bond_issuance_limit: msg.bond_issuance_limit,
         bonding_period: msg.bonding_period,
+        global_minimum_issued_price: msg.global_minimum_issued_price,
         };
 
     config_w(&mut deps.storage).save(&state)?;
+
+    if !msg.minting_bond{
+        match msg.allowance_key {
+            Some(key) => {
+                allowance_key_w(&mut deps.storage).save(&key)?;
+            }
+            None => {
+
+            }
+        }
+    }
 
     let token_info = token_info_query(
         &deps.querier,
@@ -52,6 +64,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     // Write initial values to storage
     global_total_issued_w(&mut deps.storage).save(&Uint128(0))?;
+    global_total_claimed_w(&mut deps.storage).save(&Uint128(0))?;
+    allocated_allowance_w(&mut deps.storage).save(&Uint128(0))?;
     let assets: Vec<HumanAddr> = vec![];
     collateral_assets_w(&mut deps.storage).save(&assets)?;
 
@@ -87,7 +101,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             bond_issuance_limit,
             bonding_period,
             discount,
-        } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset, minting_bond, bond_issuance_limit, bonding_period, discount),
+            global_minimum_issued_price,
+            allowance_key,
+        } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset, minting_bond, bond_issuance_limit, bonding_period, discount, global_minimum_issued_price, allowance_key),
         HandleMsg::OpenBond{
             collateral_asset,
             start_time,
@@ -95,7 +111,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             bond_issuance_limit,
             bonding_period,
             discount,
-        } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period, discount),
+            max_collateral_price,
+        } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period, discount, max_collateral_price),
         HandleMsg::CloseBond{
             collateral_asset
         } => handle::try_close_bond(deps, env, collateral_asset),

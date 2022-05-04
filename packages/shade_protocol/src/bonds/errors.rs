@@ -22,6 +22,8 @@ pub enum Error{
     BondDiscountAboveMaximumRate,
     BondIssuanceExceedsAllowance,
     NotLimitAdmin,
+    CollateralPriceExceedsLimit,
+    IssuedPriceBelowMinimum,
 }
 
 impl_into_u8!(Error);
@@ -70,6 +72,12 @@ impl CodeType for Error {
             }
             Error::NotLimitAdmin => {
                 build_string("Global limit parameters can only be changed by the limit admin", context)
+            }
+            Error::CollateralPriceExceedsLimit => {
+                build_string("Collateral asset price of {} exceeds limit price of {}, cannot enter bond opportunity", context)
+            }
+            Error::IssuedPriceBelowMinimum => {
+                build_string("Issued asset price of {} is below minimum value of {}, cannot enter opportunity", context)
             }
         }
     }
@@ -169,4 +177,20 @@ pub fn bond_issuance_exceeds_allowance(snip20_allowance: Uint128, allocated_allo
 
 pub fn not_limit_admin() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::NotLimitAdmin, vec![]).to_error()
+}
+
+pub fn collateral_price_exceeds_limit(collateral_price: Uint128, limit: Uint128) -> StdError {
+    let collateral_string = collateral_price.to_string();
+    let collateral_str = collateral_string.as_str();
+    let limit_string = limit.to_string();
+    let limit_str = limit_string.as_str();
+    DetailedError::from_code(BOND_TARGET, Error::CollateralPriceExceedsLimit, vec![collateral_str, limit_str]).to_error()
+}
+
+pub fn issued_price_below_minimum(issued_price: Uint128, limit: Uint128) -> StdError {
+    let issued_string = issued_price.to_string();
+    let issued_str = issued_string.as_str();
+    let limit_string = limit.to_string();
+    let limit_str = limit_string.as_str();
+    DetailedError::from_code(BOND_TARGET, Error::IssuedPriceBelowMinimum, vec![issued_str, limit_str]).to_error()
 }

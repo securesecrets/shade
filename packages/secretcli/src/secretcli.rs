@@ -283,7 +283,6 @@ pub fn init<Message: serde::Serialize>(
     backend: Option<&str>,
     report: &mut Vec<Report>,
 ) -> Result<NetContract> {
-    println!("Started init");
     io::stdout().flush();
     let store_response = store_contract(contract_file, Option::from(&*sender), store_gas, backend)?;
     let store_query = query_hash(store_response.txhash)?;

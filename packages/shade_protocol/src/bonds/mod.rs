@@ -24,6 +24,7 @@ pub struct Config {
     pub global_issuance_limit: Uint128,
     pub global_minimum_bonding_period: u64,
     pub global_maximum_discount: Uint128,
+    pub global_minimum_issued_price: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -41,6 +42,8 @@ pub struct InitMsg {
     pub bond_issuance_limit: Uint128,
     pub bonding_period: u64,
     pub discount: Uint128,
+    pub global_minimum_issued_price: Uint128,
+    pub allowance_key: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -64,6 +67,8 @@ pub enum HandleMsg {
         bond_issuance_limit: Option<Uint128>,
         bonding_period: Option<u64>,
         discount: Option<Uint128>,
+        global_minimum_issued_price: Option<Uint128>,
+        allowance_key: Option<String>,
     },
     OpenBond {
         collateral_asset: Contract,
@@ -72,6 +77,7 @@ pub enum HandleMsg {
         bond_issuance_limit: Option<Uint128>,
         bonding_period: Option<u64>,
         discount: Option<Uint128>,
+        max_collateral_price: Uint128,
     },
     CloseBond {
         collateral_asset: Contract,
@@ -120,6 +126,7 @@ pub enum HandleAnswer {
         bond_issuance_limit: Uint128,
         bonding_period: u64,
         discount: Uint128,
+        max_collateral_price: Uint128,
     },
     ClosedBond {
         status: ResponseStatus,
@@ -214,4 +221,5 @@ pub struct BondOpportunity {
     pub end_time: u64,
     pub bonding_period: u64,
     pub discount: Uint128,
+    pub max_collateral_price: Uint128,
 }
