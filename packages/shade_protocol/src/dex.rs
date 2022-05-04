@@ -38,7 +38,7 @@ pub struct TradingPair {
  */
 
 pub fn pool_take_amount(give_amount: cosmwasm_std::Uint128, give_pool: cosmwasm_std::Uint128, take_pool: cosmwasm_std::Uint128) -> cosmwasm_std::Uint128 {
-take_pool.checked_sub(give_pool.checked_mul(take_pool)?.checked_div(give_pool.checked_add(give_amount)?)?)?.into()
+    cosmwasm_std::Uint128(take_pool.u128() - give_pool.u128() * take_pool.u128() / (give_pool + give_amount).u128())
 }
 
 pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
