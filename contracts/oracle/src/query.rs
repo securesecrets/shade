@@ -1,7 +1,6 @@
 use crate::state::{config_r, dex_pairs_r, index_r};
 use cosmwasm_math_compat::{Uint128, Uint512};
-use cosmwasm_std;
-use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
 use shade_protocol::{
     band, dex,
     oracle::{IndexElement, QueryAnswer},
