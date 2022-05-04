@@ -40,4 +40,5 @@ schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 
-fadroma-ensemble= { version = "0.1.0", path = "../../packages/fadroma/crates/fadroma-ensemble"}
+[dev-dependencies]
+fadroma = { version = "22.1.0", git = "https://github.com/hackbg/fadroma.git" }

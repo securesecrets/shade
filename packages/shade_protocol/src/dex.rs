@@ -15,7 +15,7 @@ use cosmwasm_std;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use secret_cosmwasm_math_compat::{Uint512, Uint128};
+use cosmwasm_math_compat::{Uint512, Uint128};
 use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

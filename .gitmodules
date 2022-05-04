@@ -6,7 +6,3 @@
 	path = contracts/shd_staking
 	url = https://github.com/securesecrets/SPIP-STKN-0
     branch = staking-implementation
-[submodule "packages/fadroma"]
-	path = packages/fadroma
-	url = https://github.com/hackbg/fadroma
-	branch = v100

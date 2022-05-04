@@ -484,6 +484,7 @@ pub fn calculate_mint(
     }
 }
 
+/*
 pub fn calculate_fee_curve(
     // "Centered"
     base_fee: Uint128, 
@@ -499,6 +500,7 @@ pub fn calculate_fee_curve(
      * y = (x + speed) ^ (2 * aggressiveness)
      */
 }
+*/
 
 pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
     /* amount: total amount sent to burn (uSSCRT/uSILK/uSHD)
