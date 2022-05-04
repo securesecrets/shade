@@ -1,10 +1,9 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std;
+use cosmwasm_math_compat as compat;
 use cosmwasm_std::{
     coins, from_binary, to_binary,
     Extern, HumanAddr, StdError,
     Binary, StdResult, HandleResponse, Env,
-    InitResponse,
+    InitResponse, Uint128,
 };
 
 use shade_protocol::{
@@ -20,7 +19,7 @@ use snip20_reference_impl;
 use oracle;
 use mock_band;
 
-use crate::{
+use mint::{
     contract::{handle, init, query},
     handle::{calculate_mint, calculate_portion, try_burn},
 };
@@ -161,8 +160,8 @@ impl ContractHarness for Oracle {
     }
 }
 
-#[test]
-fn test_ensemble() {
+fn test_ensemble(offer_price: Uint128, offer_amount: Uint128, mint_price: Uint128, expected_amount: Uint128) {
+
     let mut ensemble = ContractEnsemble::new(50);
 
     let reg_oracle = ensemble.register(Box::new(Oracle));
@@ -270,28 +269,21 @@ fn test_ensemble() {
         )
     ).unwrap();
 
-    // $1
-    let sscrt_price = cosmwasm_std::Uint128(1u128 * 10u128.pow(18));
-    // $1
-    let shade_price = cosmwasm_std::Uint128(1u128 * 10u128.pow(18));
-
-    // Setup band price feeds
-    // SCRT
+    // Setup price feeds
     ensemble.execute(
         &mock_band::contract::HandleMsg::MockPrice {
             symbol: "SCRT".into(),
-            price: sscrt_price,
+            price: offer_price,
         },
         MockEnv::new(
             "admin", 
             band.clone(),
         ),
     ).unwrap();
-    // SHD
     ensemble.execute(
         &mock_band::contract::HandleMsg::MockPrice {
             symbol: "SHD".into(),
-            price: shade_price,
+            price: mint_price,
         },
         MockEnv::new(
             "admin", 
@@ -316,29 +308,16 @@ fn test_ensemble() {
         ),
     ).unwrap();
 
-    // Check price feeds
-    let ReferenceData { rate, .. } = ensemble.query(
-        oracle.address.clone(),
-        &shade_protocol::oracle::QueryMsg::Price { symbol: "SSCRT".into() },
-    ).unwrap();
-    assert_eq!(rate, sscrt_price);
-
-    let ReferenceData { rate, .. } = ensemble.query(
-        oracle.address.clone(),
-        &shade_protocol::oracle::QueryMsg::Price { symbol: "SHD".into() },
-    ).unwrap();
-    assert_eq!(rate, shade_price);
-
     // Check mint query
     let (asset, amount) = match ensemble.query(
         mint.address.clone(),
         &shade_protocol::mint::QueryMsg::Mint {
             offer_asset: sscrt.address.clone(),
-            amount: Uint128::new(10u128.pow(6)),
+            amount: compat::Uint128::new(offer_amount.u128()),
         }
     ).unwrap() {
         shade_protocol::mint::QueryAnswer::Mint { asset, amount } => (asset, amount),
-        _ => (Contract { address: HumanAddr("".into()), code_hash: "".into()} , Uint128::new(0)),
+        _ => (Contract { address: HumanAddr("".into()), code_hash: "".into()} , compat::Uint128::new(0)),
 
     };
 
@@ -346,92 +325,44 @@ fn test_ensemble() {
         address: shade.address.clone(),
         code_hash: shade.code_hash.clone(),
     });
-    assert_eq!(amount, Uint128::new(10u128.pow(8)));
+
+    assert_eq!(amount, compat::Uint128::new(expected_amount.u128()));
 }
 
-#[test]
-fn capture_calc() {
-    let amount = Uint128::new(1_000_000_000_000_000_000u128);
-    //10%
-    let capture = Uint128::new(100_000_000_000_000_000u128);
-    let expected = Uint128::new(100_000_000_000_000_000u128);
-    let value = calculate_portion(amount, capture);
-    assert_eq!(value, expected);
-}
-
-macro_rules! mint_algorithm_tests {
+macro_rules! mint_int_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
             fn $name() {
-                let (in_price, in_amount, in_decimals, target_price, target_decimals, expected_value) = $value;
-                assert_eq!(calculate_mint(in_price, in_amount, in_decimals, target_price, target_decimals), expected_value);
+                let (offer_price, offer_amount, mint_price, expected_amount) = $value;
+                test_ensemble(offer_price, offer_amount, mint_price, expected_amount);
             }
         )*
     }
 }
-
-mint_algorithm_tests! {
-    mint_simple_0: (
-        // In this example the "sent" value is 1 with 6 decimal places
-        // The mint value will be 1 with 3 decimal places
-        Uint128::new(1_000_000_000_000_000_000), //Burn price
-        Uint128::new(1_000_000),                 //Burn amount
-        6u8,                                //Burn decimals
-        Uint128::new(1_000_000_000_000_000_000), //Mint price
-        3u8,                                //Mint decimals
-        Uint128::new(1_000),                     //Expected value
+mint_int_tests! {
+    mint_int_0: (
+        Uint128(10u128.pow(18)), // $1
+        Uint128(10u128.pow(6)), // 1sscrt
+        Uint128(10u128.pow(18)), // $1
+        Uint128(10u128.pow(8)), // 1 SHD
     ),
-    mint_simple_1: (
-        // In this example the "sent" value is 1 with 8 decimal places
-        // The mint value will be 1 with 3 decimal places
-        Uint128::new(1_000_000_000_000_000_000), //Burn price
-        Uint128::new(1_000_000),                 //Burn amount
-        6u8,                                //Burn decimals
-        Uint128::new(1_000_000_000_000_000_000), //Mint price
-        8u8,                                //Mint decimals
-        Uint128::new(100_000_000),                     //Expected value
+    mint_int_1: (
+        Uint128(2 * 10u128.pow(18)), // $2
+        Uint128(10u128.pow(6)), // 1 sscrt
+        Uint128(10u128.pow(18)), // $1
+        Uint128(2 * 10u128.pow(8)), // 2 SHD
     ),
-    mint_complex_0: (
-        // In this example the "sent" value is 1.8 with 6 decimal places
-        // The mint value will be 3.6 with 12 decimal places
-        Uint128::new(2_000_000_000_000_000_000),
-        Uint128::new(1_800_000),
-        6u8,
-        Uint128::new(1_000_000_000_000_000_000),
-        12u8,
-        Uint128::new(3_600_000_000_000),
+    mint_int_2: (
+        Uint128(1 * 10u128.pow(18)), // $1
+        Uint128(4 * 10u128.pow(6)), // 4 sscrt
+        Uint128(10u128.pow(18)), // $1
+        Uint128(4 * 10u128.pow(8)), // 4 SHD
     ),
-    mint_complex_1: (
-        // In amount is 50.000 valued at 20
-        // target price is 100$ with 6 decimals
-        Uint128::new(20_000_000_000_000_000_000),
-        Uint128::new(50_000),
-        3u8,
-        Uint128::new(100_000_000_000_000_000_000),
-        6u8,
-        Uint128::new(10_000_000),
+    mint_int_3: (
+        Uint128(10 * 10u128.pow(18)), // $10
+        Uint128(30 * 10u128.pow(6)), // 30 sscrt
+        Uint128(5 * 10u128.pow(18)), // $5
+        Uint128(60 * 10u128.pow(8)), // 60 SHD
     ),
-    mint_complex_2: (
-        // In amount is 10,000,000 valued at 100
-        // Target price is $10 with 6 decimals
-        Uint128::new(1_000_000_000_000_000_000_000),
-        Uint128::new(100_000_000_000_000),
-        8u8,
-        Uint128::new(10_000_000_000_000_000_000),
-        6u8,
-        Uint128::new(100_000_000_000_000),
-    ),
-    /*
-    mint_overflow_0: (
-        // In amount is 1,000,000,000,000,000,000,000,000 valued at 1,000
-        // Target price is $5 with 6 decimals
-        Uint128::new(1_000_000_000_000_000_000_000),
-        Uint128::new(100_000_000_000_000_000_000_000_000_000_000),
-        8u8,
-        Uint128::new(5_000_000_000_000_000_000),
-        6u8,
-        Uint128::new(500_000_000_000_000_000_000_000_000_000_000_000),
-    ),
-    */
 }
