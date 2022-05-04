@@ -524,5 +524,5 @@ fn oracle<S: Storage, A: Api, Q: Querier>(
         config.oracle.address,
     )?;
 
-    Ok(Uint128::new(answer.rate.u128()))
+    Ok(Uint128::from(answer.rate))
 }
