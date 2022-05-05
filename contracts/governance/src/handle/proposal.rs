@@ -8,7 +8,7 @@ use shade_protocol::governance::contract::AllowedContract;
 use shade_protocol::governance::HandleMsg::Receive;
 use shade_protocol::governance::profile::{Count, Profile, VoteProfile};
 use shade_protocol::governance::proposal::{Funding, Proposal, ProposalMsg, Status};
-use shade_protocol::governance::vote::{TalliedVotes, Vote};
+use shade_protocol::governance::vote::{ReceiveBalanceMsg, TalliedVotes, Vote};
 use shade_protocol::shd_staking;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
@@ -514,6 +514,76 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
         ],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ClaimFunding {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    sender: HumanAddr,
+    msg: Option<Binary>,
+    balance: Uint128,
+    memo: Option<String>
+) -> StdResult<HandleResponse> {
+
+    if let Some(token) = Config::load(&deps.storage)?.vote_token {
+        if env.message.sender != token.address {
+            return Err(StdError::generic_err("Must be the set voting token"))
+        }
+    }
+    else {
+        return Err(StdError::generic_err("Voting token not set"))
+    }
+
+    let vote: Vote;
+    let proposal: Uint128;
+    if let Some(msg) = msg {
+        let decoded_msg: ReceiveBalanceMsg = from_binary(&msg)?;
+        vote = decoded_msg.vote;
+        proposal = decoded_msg.proposal;
+
+        // Verify that total does not exceed balance
+        let total_votes = vote.yes
+            .checked_add(vote.no
+                .checked_add(vote.abstain
+                    .checked_add(vote.no_with_veto)?
+                )?
+            )?;
+
+        if total_votes > balance {
+            return Err(StdError::generic_err("Total voting is greater than available balance"))
+        }
+    }
+    else {
+        return Err(StdError::generic_err("Msg not set"))
+    }
+
+    // Check if proposal in assembly voting
+    if let Status::Voting {end, ..} = Proposal::status(&deps.storage, &proposal)? {
+        if end <= env.block.time {
+            return Err(StdError::generic_err("Voting time has been reached"))
+        }
+    }
+    else {
+        return Err(StdError::generic_err("Not in public vote phase"))
+    }
+
+    let mut tally = Proposal::public_votes(&deps.storage, &proposal)?;
+
+    // Check if user voted
+    if let Some(old_vote) = Proposal::public_vote(&deps.storage, &proposal, &sender)? {
+        tally = tally.checked_sub(&old_vote)?;
+    }
+
+    Proposal::save_public_vote(&mut deps.storage, &proposal, &sender, &vote)?;
+    Proposal::save_public_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::ReceiveBalance {
             status: ResponseStatus::Success,
         })?),
     })

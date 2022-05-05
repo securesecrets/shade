@@ -15,7 +15,7 @@ use crate::handle::assembly::{try_add_assembly, try_assembly_proposal, try_assem
 use crate::handle::assembly_msg::{try_add_assembly_msg, try_add_assembly_msg_assemblies, try_set_assembly_msg};
 use crate::handle::contract::{try_add_contract, try_add_contract_assemblies, try_set_contract};
 use crate::handle::profile::{try_add_profile, try_set_profile};
-use crate::handle::proposal::{try_cancel, try_claim_funding, try_proposal, try_receive, try_trigger, try_update};
+use crate::handle::proposal::{try_cancel, try_claim_funding, try_proposal, try_receive, try_receive_balance, try_trigger, try_update};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -149,6 +149,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::Receive { sender, from, amount, msg, memo, ..
             } => try_receive(deps, env, sender, from, amount, msg, memo),
             HandleMsg::ClaimFunding { id } => try_claim_funding(deps, env, id),
+
+            HandleMsg::ReceiveBalance { sender, msg, balance, memo
+            } => try_receive_balance(deps, env, sender, msg, balance, memo),
 
             // Assemblies
             HandleMsg::AssemblyVote { proposal, vote, ..

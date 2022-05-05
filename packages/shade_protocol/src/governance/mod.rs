@@ -143,6 +143,13 @@ pub enum HandleMsg {
         vote: Vote,
         padding: Option<String>
     },
+    /// Votes on voting token
+    ReceiveBalance {
+        sender: HumanAddr,
+        msg: Option<Binary>,
+        balance: Uint128,
+        memo: Option<String>
+    },
 
     // Assemblies
     /// Creates a proposal under a assembly
@@ -245,6 +252,9 @@ pub enum HandleAnswer {
         status: ResponseStatus
     },
     Proposal {
+        status: ResponseStatus
+    },
+    ReceiveBalance {
         status: ResponseStatus
     },
     Trigger {

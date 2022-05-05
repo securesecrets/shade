@@ -66,6 +66,32 @@ impl ContractHarness for Snip20 {
     }
 }
 
+pub struct StkdShd;
+impl ContractHarness for StkdShd {
+    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
+        spip_stkd_0::contract::init(
+            deps,
+            env,
+            from_binary(&msg)?,
+        )
+    }
+
+    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
+        spip_stkd_0::contract::handle(
+            deps,
+            env,
+            from_binary(&msg)?
+        )
+    }
+
+    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
+        spip_stkd_0::contract::query(
+            deps,
+            from_binary(&msg)?
+        )
+    }
+}
+
 pub fn init_governance(msg: governance::InitMsg) -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)>{
     let mut chain = ContractEnsemble::new(50);
 
@@ -119,19 +145,28 @@ pub fn gov_generic_proposal(
     sender: &str,
     msg: governance::HandleMsg
 ) -> StdResult<()> {
+    gov_msg_proposal(chain, gov, sender, vec![
+        ProposalMsg {
+            target: Uint128::zero(),
+            assembly_msg: Uint128::zero(),
+            msg: to_binary(&vec![serde_json::to_string(&msg).unwrap()])?,
+            send: vec![]
+        }
+    ])
+}
+
+pub fn gov_msg_proposal(
+    chain: &mut ContractEnsemble,
+    gov: &ContractLink<HumanAddr>,
+    sender: &str,
+    msgs: Vec<ProposalMsg>
+) -> StdResult<()> {
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
             assembly: Uint128::new(1),
             title: "Title".to_string(),
             metadata: "Proposal metadata".to_string(),
-            msgs: Some(vec![
-                ProposalMsg {
-                    target: Uint128::zero(),
-                    assembly_msg: Uint128::zero(),
-                    msg: to_binary(&vec![serde_json::to_string(&msg).unwrap()])?,
-                    send: vec![]
-                }
-            ]),
+            msgs: Some(msgs),
             padding: None
         },
         MockEnv::new(

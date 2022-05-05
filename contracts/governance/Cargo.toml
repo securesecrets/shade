@@ -43,3 +43,4 @@ mockall_double = "0.2.0"
 fadroma-ensemble = { version = "0.1.0", git = "https://github.com/hackbg/fadroma.git" }
 fadroma-platform-scrt = { version = "0.1.0", git = "https://github.com/hackbg/fadroma.git" }
 snip20-reference-impl = { version = "0.1.0", path = "../snip20" }
+spip_stkd_0 = { version = "0.1.0", path = "../shd_staking" }

@@ -8,6 +8,13 @@ use crate::utils::storage::{NaiveBucketStorage};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct ReceiveBalanceMsg {
+    pub vote: Vote,
+    pub proposal: Uint128
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Vote {
     pub yes: Uint128,
     pub no: Uint128,
