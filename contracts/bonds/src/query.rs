@@ -1,10 +1,12 @@
+use std::arch::global_asm;
+
 use crate::{
     state::{
         config_r, global_total_issued_r, global_total_claimed_r, account_viewkey_r, account_r, bond_opportunity_r, collateral_assets_r, issued_asset_r
-    }
+    }, handle::oracle,
 };
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::bonds::{QueryAnswer, AccountKey, BondOpportunity};
+use shade_protocol::{bonds::{QueryAnswer, AccountKey, BondOpportunity}, snip20::Snip20Asset, oracle};
 use shade_protocol::bonds::errors::incorrect_viewing_key;
 use query_authentication::viewing_keys::ViewingKey;
 
@@ -64,21 +66,16 @@ pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn global_total_issued<S: Storage, A: Api, Q: Querier>(
+pub fn bond_info<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
     let global_total_issued = global_total_issued_r(&deps.storage).load()?;
-    Ok(QueryAnswer::GlobalTotalIssued {
-        global_total_issued: global_total_issued
-    })
-}
-
-pub fn global_total_claimed<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<QueryAnswer> {
     let global_total_claimed = global_total_claimed_r(&deps.storage).load()?;
-    Ok(QueryAnswer::GlobalTotalClaimed {
-        global_total_claimed: global_total_claimed
+    let issued_asset = issued_asset_r(&deps.storage).load()?;
+    Ok(QueryAnswer::BondInfo {
+        global_total_issued: global_total_issued,
+        global_total_claimed: global_total_claimed,
+        issued_asset: issued_asset,
     })
 }
 
@@ -91,10 +88,12 @@ pub fn list_collateral_addresses<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn issued_asset<S: Storage, A: Api, Q: Querier>(
+pub fn price_check<S: Storage, A: Api, Q: Querier>(
+    asset: String,
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
-    Ok(QueryAnswer::IssuedAsset {
-        issued_asset: issued_asset_r(&deps.storage).load()?
+    let price = oracle(deps, asset)?;
+    Ok(QueryAnswer::PriceCheck {
+        price: price
     })
 }

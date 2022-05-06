@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
     HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
 };
 
@@ -13,11 +13,11 @@ use secret_toolkit::{
 
 use shade_protocol::bonds::{
     errors::*,
-    {Config, HandleAnswer, PendingBond, Account, AccountKey}, BondOpportunity};
+    {Config, HandleAnswer, PendingBond, Account, AccountKey}, BondOpportunity, SlipMsg};
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::{
-    snip20::{token_config_query, Snip20Asset, TokenConfig},
+    snip20::{token_config_query, Snip20Asset, TokenConfig, HandleMsg},
     oracle::QueryMsg::Price,
     band::ReferenceData,
 };
@@ -144,6 +144,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         Ok(state)
     })?;
 
+    
+
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
@@ -152,93 +154,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         })?),
     })
 }
-/*
-// Register an asset before receiving it as user deposit
-pub fn try_register_bond_opportunity<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    contract: &Contract,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-    // Check if admin
-    if env.message.sender != config.admin {
-        return Err(StdError::Unauthorized {backtrace: None });
-    }
-    
-    // Check if contract is activated
-    if !config.activated {
-        return Err(StdError::Unauthorized {backtrace: None });
-    }
-
-    // Storing Snip20 contract as key for bucket
-    let contract_str = contract.address.to_string();
-
-    // Adding the Snip20Asset to the contract's storage
-    // First acquiring TokenInfo
-    let asset_info = token_info_query(
-        &deps.querier,
-        1,
-        contract.code_hash.clone(),
-        contract.address.clone(),
-    )?;
-
-    // Acquiring TokenConfig
-    let asset_config: Option<TokenConfig> = 
-        match token_config_query(&deps.querier, contract.clone()) {
-            Ok(c) => Option::from(c),
-            Err(_) => None,
-        };
-
-    // Saving Snip20Asset with contract, TokenInfo, and TokenConfig copies
-    debug_print!("Registering {}", asset_info.symbol);
-    collateral_assets_w(&mut deps.storage).save(
-        contract_str.as_bytes(),
-        &Snip20Asset {
-            contract: contract.clone(),
-            token_info: asset_info,
-            token_config: asset_config,
-        },
-    )?;
-
-    // Enact register receive so funds sent to Bonds will call Receive
-    let messages = vec![register_receive(env, contract)?];
-
-    Ok(HandleResponse {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterCollateralAsset {
-            status: ResponseStatus::Success,
-        })?),
-    })
-}
-*/
-
-/*
-pub fn try_remove_bond_opportunity<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    address: HumanAddr,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-    // Check if admin
-    if env.message.sender != config.admin{
-        return Err(StdError::Unauthorized {backtrace: None})
-    }
-
-    let address_str = address.to_string();
-
-    // Remove asset from the collateral assets list
-    collateral_assets_w(&mut deps.storage).remove(address_str.as_bytes());
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveCollateralAsset {
-            status: ResponseStatus::Success,
-        })?),
-    })
-}
-*/
 
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -246,10 +161,9 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     sender: HumanAddr,
     _from: HumanAddr,
     deposit_amount: Uint128,
-    _msg: Option<Binary>,
+    msg: Option<Binary>,
 ) -> StdResult<HandleResponse>{
     let config = config_r(&deps.storage).load()?;
-
 
     // Check that sender isn't the treasury
     if config.treasury == sender {
@@ -281,25 +195,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
                 return Err(no_bond_found(env.message.sender.as_str()));
             }
         };
-    /*
-    let collateral_asset = 
-        match collateral_assets_r(&deps.storage).may_load(env.message.sender.to_string().as_bytes())?{
-           Some(supported_asset) => {
-                debug_print!(
-                    "Found Collateral Asset: {} {}",
-                    &supported_asset.token_info.symbol,
-                    env.message.sender.to_string()
-                );
-                supported_asset
-            }
-            None => {
-                return Err(StdError::NotFound {
-                    kind: env.message.sender.to_string(),
-                    backtrace: None,
-                });
-            }
-        };
-    */
+
 
     let available = (bond_opportunity.issuance_limit - bond_opportunity.amount_issued).unwrap();
     
@@ -308,6 +204,15 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     // Calculate conversion of collateral to SHD
     let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(&deps, deposit_amount, available, bond_opportunity.deposit_denom.clone(), issuance_asset, bond_opportunity.discount, bond_opportunity.max_collateral_price, config.global_minimum_issued_price)?;
     
+    if let Some(message) = msg {
+        let msg: SlipMsg = from_binary(&message)?;
+
+        // Check Slippage
+        if amount_to_issue.clone() < msg.minimum_expected_amount.clone() {
+            return Err(slippage_tolerance_exceeded(amount_to_issue, msg.minimum_expected_amount));
+        }
+    };
+
     // Add to total issued, globally and bond opportunity-specific
     //global_total_issued_w(&mut deps.storage).update(|global_total_issued| {
     //    Ok(global_total_issued + amount_to_issue)
@@ -663,9 +568,14 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
                 Ok(assets)
             })?;
 
+            let unspent = (prev_opp.issuance_limit - prev_opp.amount_issued)?;
+            global_total_issued_w(&mut deps.storage).update(|issued| {
+                Ok((issued - unspent.clone())?)
+            })?;
+
             if !config.minting_bond{
                 // Unallocate allowance that wasn't issued
-                let unspent = (prev_opp.issuance_limit - prev_opp.amount_issued)?;
+                
                 allocated_allowance_w(&mut deps.storage).update(|allocated| {
                     Ok((allocated - unspent)?)
                 })?;
@@ -694,6 +604,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     key: String,
 ) -> StdResult<HandleResponse> {
+
     account_viewkey_w(&mut deps.storage).save(
         &env.message.sender.to_string().as_bytes(),
         &AccountKey(key).hash(),
@@ -768,11 +679,15 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     issuance_asset: Snip20Asset,
     discount: Uint128,
     max_collateral_price: Uint128,
+    //err_collateral_price: Uint128,
     min_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
     let collateral_price = oracle(&deps, collateral_asset.token_info.symbol.clone())?;// Placeholder for Oracle lookup
     if collateral_price > max_collateral_price {
-        return Err(collateral_price_exceeds_limit(collateral_price.clone(), max_collateral_price.clone()))
+        //if collateral_price > err_collateral_price {
+            return Err(collateral_price_exceeds_limit(collateral_price.clone(), max_collateral_price.clone()))
+        //}
+        //collateral_price = max_collateral_price;
     }
     let issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?; // Placeholder for minted asset price lookup
     if issued_price < min_issued_price {
@@ -858,7 +773,7 @@ pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> 
     )
 }
 
-fn oracle<S: Storage, A: Api, Q: Querier>(
+pub fn oracle<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbol: String,
 ) -> StdResult<Uint128> {

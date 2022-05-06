@@ -141,15 +141,16 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    GlobalTotalIssued {},
-    GlobalTotalClaimed {},
     BondOpportunities {},
     AccountWithKey {
         account: HumanAddr,
         key: String,
     },
     CollateralAddresses {},
-    IssuedAsset {},
+    PriceCheck {
+        asset: String,
+    },
+    BondInfo {},
 }   
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -157,12 +158,6 @@ pub enum QueryMsg {
 pub enum QueryAnswer {
     Config {
         config: Config,
-    },
-    GlobalTotalIssued {
-        global_total_issued: Uint128,
-    },
-    GlobalTotalClaimed {
-        global_total_claimed: Uint128,
     },
     BondOpportunities {
         bond_opportunities: Vec<BondOpportunity>
@@ -173,7 +168,12 @@ pub enum QueryAnswer {
     CollateralAddresses {
         collateral_addresses: Vec<HumanAddr>,
     },
-    IssuedAsset {
+    PriceCheck {
+        price: Uint128,
+    },
+    BondInfo {
+        global_total_issued: Uint128,
+        global_total_claimed: Uint128,
         issued_asset: Snip20Asset,
     }
 }
@@ -196,6 +196,44 @@ impl ToString for AccountKey {
 }
 
 impl ViewingKey<32> for AccountKey {}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct ViewingKey(pub string);
+
+impl ViewingKey {
+    pub fn check_viewing_key(&self, hashed_pw: &[u8]) -> bool {
+        let mine_hashed = create_hashed_password(&self.0);
+
+        ct_slice_compare(&mine_hashed, hashed_pw)
+    }
+
+    pub fn new(env: &Env, seed: &[u8], entropy: &[u8]) -> Self {
+        // 16 here represents the lengths in bytes of the block height and time.
+        let entropy_len = 16 + env.message.sender.len() + entropy.len();
+        let mut rng_entropy = Vec::with_capacity(entropy_len);
+        rng_entropy.extend_from_slice(&env.block.height.to_be_bytes());
+        rng_entropy.extend_from_slice(&env.block.time.to_be_bytes());
+        rng_entropy.extend_from_slice(&env.message.sender.0.as_bytes());
+        rng_entropy.extend_from_slice(entropy);
+
+        let mut rng = Prng::new(seed, &rng_entropy);
+
+        let rand_slice = rng.rand_bytes();
+
+        let key = sha_256(&rand_slice);
+
+        Self(VIEWING_KEY_PREFIX.to_string() + &base64::encode(key))
+    }
+
+    pub fn to_hashed(&self) -> [u8; VIEWING_KEY_SIZE] {
+        create_hashed_password(&self.0)
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -222,4 +260,10 @@ pub struct BondOpportunity {
     pub bonding_period: u64,
     pub discount: Uint128,
     pub max_collateral_price: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct SlipMsg {
+    pub minimum_expected_amount: Uint128,
 }

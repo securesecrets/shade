@@ -6,7 +6,7 @@ use secret_toolkit::snip20::token_info_query;
 
 use shade_protocol::{
     bonds::{Config, InitMsg, HandleMsg, QueryMsg},
-    snip20::{token_config_query, Snip20Asset},
+    snip20::{token_config_query, Snip20Asset, HandleMsg as SnipHandle},
 };
 
 use crate::{handle::{self, try_set_viewing_key}, query, state::{config_w, issued_asset_w, global_total_issued_w, collateral_assets_w, global_total_claimed_w, allocated_allowance_w, allowance_key_w}};
@@ -38,6 +38,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     if !msg.minting_bond{
         match msg.allowance_key {
             Some(key) => {
+
                 allowance_key_w(&mut deps.storage).save(&key)?;
             }
             None => {
@@ -135,12 +136,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
-        QueryMsg::IssuedAsset {} => to_binary(&query::issued_asset(deps)?),
-        QueryMsg::GlobalTotalIssued {} => to_binary(&query::global_total_issued(deps)?),
-        QueryMsg::GlobalTotalClaimed {} => to_binary(&query::global_total_claimed(deps)?),
         QueryMsg::BondOpportunities {} => to_binary(&query::bond_opportunities(deps)?),
         QueryMsg::AccountWithKey {account, key} => to_binary(&query::account_with_key(deps, account, key)?),
         QueryMsg::CollateralAddresses {} => to_binary(&query::list_collateral_addresses(deps)?),
+        QueryMsg::PriceCheck { asset } => to_binary(&query::price_check(asset, deps)?),
+        QueryMsg::BondInfo {} => to_binary(&query::bond_info(deps)?),
     }
 }
 

@@ -24,6 +24,7 @@ pub enum Error{
     NotLimitAdmin,
     CollateralPriceExceedsLimit,
     IssuedPriceBelowMinimum,
+    SlippageToleranceExceeded,
 }
 
 impl_into_u8!(Error);
@@ -78,6 +79,9 @@ impl CodeType for Error {
             }
             Error::IssuedPriceBelowMinimum => {
                 build_string("Issued asset price of {} is below minimum value of {}, cannot enter opportunity", context)
+            }
+            Error::SlippageToleranceExceeded => {
+                build_string("Calculated issuance amount of {} is below minimum accepted value of {}", context)
             }
         }
     }
@@ -193,4 +197,12 @@ pub fn issued_price_below_minimum(issued_price: Uint128, limit: Uint128) -> StdE
     let limit_string = limit.to_string();
     let limit_str = limit_string.as_str();
     DetailedError::from_code(BOND_TARGET, Error::IssuedPriceBelowMinimum, vec![issued_str, limit_str]).to_error()
+}
+
+pub fn slippage_tolerance_exceeded(amount_to_issue: Uint128, min_expected_amount: Uint128) -> StdError {
+    let issue_string = amount_to_issue.to_string();
+    let issue_str = issue_string.as_str();
+    let min_amount_string = min_expected_amount.to_string();
+    let min_amount_str = min_amount_string.as_str(); 
+    DetailedError::from_code(BOND_TARGET, Error::SlippageToleranceExceeded, vec![issue_str, min_amount_str]).to_error()
 }

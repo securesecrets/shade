@@ -18,12 +18,11 @@
             * [SetViewingKey](#SetViewingKey)
         * Queries
             * [Config](#Config)
-            * [GlobalTotalIssued](#GlobalTotalIssued)
-            * [GlobalTotalClaimed](#GlobalTotalClaimed)
             * [BondOpportunities](#BondOpportunities)
             * [Account](#Account)
             * [CollateralAddresses](#CollateralAddresses)
-            * [IssuedAsset](#IssuedAsset)
+            * [BondInfo](#BondInfo)
+            * [PriceCheck](#PriceCheck)
 
 # Introduction
 Contract responsible to handle snip20 airdrop
@@ -32,21 +31,23 @@ Contract responsible to handle snip20 airdrop
 
 ## Init
 ##### Request
-| Name           | Type          | Description                                                                | optional |
-|----------------|---------------|----------------------------------------------------------------------------|----------|
-| admin          | String        | New contract owner; SHOULD be a valid bech32 address                       | yes      |
-| dump_address   | String        | Where the decay amount will be sent                                        | yes      |
-| airdrop_token  | Contract      | The token that will be airdropped                                          | no       |
-| airdrop_amount | String        | Total airdrop amount to be claimed                                         | no       |
-| start_date     | u64           | When the airdrop starts in UNIX time                                       | yes      |
-| end_date       | u64           | When the airdrop ends in UNIX time                                         | yes      |
-| decay_start    | u64           | When the airdrop decay starts in UNIX time                                 | yes      |
-| merkle_root    | String        | Base 64 encoded merkle root of the airdrop data tree                       | no       |
-| total_accounts | u32           | Total accounts in airdrop (needed for merkle proof)                        | no       |
-| max_amount     | String        | Used to limit the user permit amounts (lowers exploit possibility)         | no       |
-| default_claim  | String        | The default amount to be gifted regardless of tasks                        | no       |
-| task_claim     | RequiredTasks | The amounts per tasks to gift                                              | no       |
-| query_rounding | string        | To prevent leaking information, total claimed is rounded off to this value | no       |
+| Name                            | Type      | Description                                                                | optional |
+|---------------------------------|-----------|----------------------------------------------------------------------------|----------|
+| limit_admin                     | HumanAddr | New contract owner; SHOULD be a valid bech32 address                       | no       |
+| global_issuance_limit           | Uint128   | Where the decay amount will be sent                                        | no       |
+| global_minimum_bonding_period   | u64       | The token that will be airdropped                                          | no       |
+| global_maximum_discount         | Uint128   | Total airdrop amount to be claimed                                         | no       |
+| admin                           | HumanAddr | When the airdrop starts in UNIX time                                       | mo       |
+| oracle                          | Contract  | When the airdrop ends in UNIX time                                         | no       |
+| treasury                        | HumanAddr | When the airdrop decay starts in UNIX time                                 | no       |
+| issued_asset                    | Contract  | Base 64 encoded merkle root of the airdrop data tree                       | no       |
+| activated                       | bool      | Total accounts in airdrop (needed for merkle proof)                        | no       |
+| minting_bond                    | bool      | Used to limit the user permit amounts (lowers exploit possibility)         | no       |
+| bond_issuance_limit             | Uint128   | The default amount to be gifted regardless of tasks                        | no       |
+| bonding_period                  | u64       | The amounts per tasks to gift                                              | no       |
+| discount                        | Uint128   | To prevent leaking information, total claimed is rounded off to this value | no       |
+| global_minimum_issued_price     | Uint128   | To prevent leaking information, total claimed is rounded off to this value | no       |
+| allowance_key                   | String    | To prevent leaking information, total claimed is rounded off to this value | yes      |
 
 ## Admin
 
@@ -221,30 +222,6 @@ Gets the contract's config
 }
 ```
 
-#### GlobalTotalIssued
-Get the total issued amount across all opportunities for this contract
-
-##### Response
-```json
-{
-  "global_total_issued": {
-    "global_total_issued": "global total issued Uint128"
-  }
-}
-```
-
-#### GlobalTotalClaimed
-Get the total claimed amount across all pending bonds for this contract
-
-##### Response
-```json
-{
-  "total_claimed": {
-    "claimed": "Claimed amount"
-  }
-}
-```
-
 #### BondOpportunities
 Get the vector of bond opportunities currently available
 
@@ -287,18 +264,31 @@ Get the list of addresses for currently recognized collateral addresses, correla
 }
 ```
 
-#### IssuedAsset
-Gets this bond contract's issued asset
+#### BondInfo
+Gets this contracts issuance and claimed totals, as well as the issued asseet
 
 ##### Response
 ```json
 {
-  "issued_asset": {
-    "issued_asset": "Issued asset Snip20Asset",
+  "bond_info": {
+    "global_total_issued": "global total issued Uint128",
+    "global_total_claimed": "global_total_claimed Uint128",
+    "issued_asset": "native/issued asset Snip20Asset",
   }
 }
 ```
 
+#### PriceCheck
+Gets the price for the passed asset by querying the oracle registered in the config
+
+##### Response
+```json
+{
+  "price_check": {
+    "price": "price of passed asset in dollars Uint128",
+  }
+}
+```
 
 ## Account
 User account, stores address
