@@ -41,4 +41,4 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 
 [dev-dependencies]
-fadroma = { version = "v100", git = "https://github.com/hackbg/fadroma.git" }
+fadroma = { version = "100", git = "https://github.com/hackbg/fadroma.git" }
