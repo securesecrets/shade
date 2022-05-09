@@ -265,7 +265,7 @@ Get the list of addresses for currently recognized collateral addresses, correla
 ```
 
 #### BondInfo
-Gets this contracts issuance and claimed totals, as well as the issued asseet
+Gets this contracts issuance and claimed totals, as well as the issued asset
 
 ##### Response
 ```json
