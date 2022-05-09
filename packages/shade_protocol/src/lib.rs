@@ -38,8 +38,8 @@ pub mod oracle;
 #[cfg(feature = "scrt_staking")]
 pub mod scrt_staking;
 
-#[cfg(feature = "shd_staking")]
-pub mod shd_staking;
+#[cfg(feature = "snip20_staking")]
+pub mod snip20_staking;
 
 #[cfg(feature = "treasury")]
 pub mod treasury;

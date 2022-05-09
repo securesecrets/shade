@@ -3,7 +3,7 @@ use std::collections::BinaryHeap;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use cosmwasm_std::{HumanAddr, Uint128};
-use crate::utils::storage::{BucketStorage, SingletonStorage};
+use crate::utils::storage::default::{BucketStorage, SingletonStorage};
 use crate::utils::asset::Contract;
 
 // Configuration file for staking
@@ -144,7 +144,7 @@ pub trait VecQueueMerge {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Uint128;
-    use crate::shd_staking::stake::{DailyUnbonding, QueueItem, VecQueue};
+    use crate::snip20_staking::stake::{DailyUnbonding, QueueItem, VecQueue};
 
     #[test]
     fn is_funded() {

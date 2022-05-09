@@ -35,8 +35,8 @@ use crate::viewing_key::{ViewingKey, VIEWING_KEY_SIZE};
 use crate::{batch, distributors, stake_queries};
 use secret_toolkit::permit::{validate, Permission, Permit, RevokedPermits};
 use secret_toolkit::snip20::{register_receive_msg, send_msg, token_info_query};
-use shade_protocol::shd_staking::stake::{Cooldown, StakeConfig, VecQueue};
-use shade_protocol::shd_staking::ReceiveType;
+use shade_protocol::snip20_staking::stake::{Cooldown, StakeConfig, VecQueue};
+use shade_protocol::snip20_staking::ReceiveType;
 use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
 
 /// We make sure that responses from `handle` are padded to a multiple of this size.
@@ -1537,7 +1537,7 @@ mod staking_tests {
     use crate::msg::ResponseStatus;
     use cosmwasm_std::testing::*;
     use cosmwasm_std::{from_binary, BlockInfo, ContractInfo, MessageInfo, QueryResponse, WasmMsg};
-    use shade_protocol::shd_staking::ReceiveType;
+    use shade_protocol::snip20_staking::ReceiveType;
     use shade_protocol::utils::asset::Contract;
     use std::any::Any;
 
@@ -1610,7 +1610,7 @@ mod staking_tests {
             sender: HumanAddr(acc.to_string()),
             from: Default::default(),
             amount: stake,
-            msg: Some(to_binary(&ReceveType::Bond { useFrom: None }).unwrap()),
+            msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
         };
@@ -1649,7 +1649,7 @@ mod staking_tests {
             sender: HumanAddr("foo".to_string()),
             from: Default::default(),
             amount: Uint128(100 * 10u128.pow(8)),
-            msg: Some(to_binary(&ReceiveType::Bond { useFrom: None }).unwrap()),
+            msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
         };
@@ -2871,7 +2871,7 @@ mod staking_tests {
             sender: HumanAddr("foo".to_string()),
             from: Default::default(),
             amount: Uint128(100 * 10u128.pow(8)),
-            msg: Some(to_binary(&ReceiveType::Bond { useFrom: None }).unwrap()),
+            msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
         };
@@ -2934,7 +2934,7 @@ mod staking_tests {
             sender: HumanAddr("foo".to_string()),
             from: Default::default(),
             amount: Uint128(100 * 10u128.pow(8)),
-            msg: Some(to_binary(&ReceiveType::Bond { useFrom: None }).unwrap()),
+            msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
         };
@@ -2971,7 +2971,7 @@ mod snip20_tests {
     use crate::msg::ResponseStatus;
     use cosmwasm_std::testing::*;
     use cosmwasm_std::{from_binary, BlockInfo, ContractInfo, MessageInfo, QueryResponse, WasmMsg};
-    use shade_protocol::shd_staking::ReceiveType;
+    use shade_protocol::snip20_staking::ReceiveType;
     use shade_protocol::utils::asset::Contract;
     use std::any::Any;
     use cosmwasm_std::Coin;
@@ -2994,7 +2994,7 @@ mod snip20_tests {
             sender: HumanAddr(acc.to_string()),
             from: Default::default(),
             amount: stake,
-            msg: Some(to_binary(&ReceiveType::Bond { useFrom: None }).unwrap()),
+            msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
         };
@@ -3256,7 +3256,7 @@ mod snip20_tests {
             sender: HumanAddr("giannis".to_string()),
             from: Default::default(),
             amount: Uint128(1),
-            msg: Some(to_binary(&ReceiveType::Bond { useFrom: None }).unwrap()),
+            msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
         };

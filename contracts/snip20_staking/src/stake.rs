@@ -16,8 +16,8 @@ use cosmwasm_std::{
 };
 use ethnum::u256;
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::shd_staking::stake::{DailyUnbonding, StakeConfig, Unbonding, VecQueue};
-use shade_protocol::shd_staking::ReceiveType;
+use shade_protocol::snip20_staking::stake::{DailyUnbonding, StakeConfig, Unbonding, VecQueue};
+use shade_protocol::snip20_staking::ReceiveType;
 use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
 
 //TODO: set errors
@@ -393,10 +393,10 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
         .symbol;
     let mut messages = vec![];
     match receive_type {
-        ReceiveType::Bond { useFrom } => {
+        ReceiveType::Bond { use_from } => {
             let mut target = sender;
             let mut target_canon = sender_canon;
-            if let Some(use_from) = useFrom {
+            if let Some(use_from) = use_from {
                 if use_from {
                     target_canon = deps.api.canonical_address(&from)?;
                     target = from;
@@ -824,7 +824,7 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
 #[cfg(test)]
 mod tests {
     use crate::stake::{calculate_rewards, round_date, shares_per_token, tokens_per_share};
-    use shade_protocol::shd_staking::stake::StakeConfig;
+    use shade_protocol::snip20_staking::stake::StakeConfig;
     use shade_protocol::utils::asset::Contract;
 
     fn init_config(token_decimals: u8, shares_decimals: u8) -> StakeConfig {

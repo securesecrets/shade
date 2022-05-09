@@ -8,7 +8,7 @@ use crate::state_staking::{
 use cosmwasm_std::{
     to_binary, Api, Binary, Extern, HumanAddr, Querier, StdResult, Storage, Uint128,
 };
-use shade_protocol::shd_staking::stake::{StakeConfig, VecQueue};
+use shade_protocol::snip20_staking::stake::{StakeConfig, VecQueue};
 use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
 
 pub fn stake_config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {

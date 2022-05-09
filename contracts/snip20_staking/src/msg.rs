@@ -8,7 +8,7 @@ use crate::transaction_history::{RichTx, Tx};
 use crate::viewing_key::ViewingKey;
 use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult, Uint128};
 use secret_toolkit::permit::Permit;
-use shade_protocol::shd_staking::stake::{QueueItem, StakeConfig, VecQueue};
+use shade_protocol::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue};
 use shade_protocol::utils::asset::Contract;
 
 #[derive(Serialize, Deserialize, JsonSchema)]

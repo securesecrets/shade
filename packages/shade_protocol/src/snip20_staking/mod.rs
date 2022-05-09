@@ -5,7 +5,7 @@ use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, Query};
 use serde::{Deserialize, Serialize};
-use crate::shd_staking::stake::{QueueItem, StakeConfig, VecQueue};
+use crate::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue};
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct InitMsg {
@@ -33,7 +33,7 @@ pub struct InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ReceiveType {
     // User staking, users can pick between using the sender or fund allower
-    Bond { useFrom: Option<bool> },
+    Bond { use_from: Option<bool> },
     // Adding staker rewards
     Reward,
     // Funding unbonds

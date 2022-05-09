@@ -10,7 +10,7 @@ use cosmwasm_std::{
     StdResult, Storage, Uint128,
 };
 use secret_toolkit::utils::HandleCallback;
-use shade_protocol::shd_staking::stake::VecQueue;
+use shade_protocol::snip20_staking::stake::VecQueue;
 use shade_protocol::utils::storage::default::BucketStorage;
 
 pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
