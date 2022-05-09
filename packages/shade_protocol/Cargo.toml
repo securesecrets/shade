@@ -17,24 +17,25 @@ dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
 band = []
 secretswap = ["utils"]
 sienna = ["utils", "math"]
-snip20 = ["utils"]
+snip20 = ["utils", "dep:remain", "dep:query-authentication"]
 
 # Utils
 utils = []
 errors = []
 flexible_msg = []
 math = []
-storage = []
+storage = ["cosmwasm-storage/iterator"]
+storage_plus = ["dep:secret-storage-plus"]
 
 # Protocol contracts
-airdrop = ["utils", "errors"]
+airdrop = ["utils", "errors", "dep:remain", "dep:query-authentication"]
 initializer = ["snip20", "utils"]
 governance = ["utils", "flexible_msg"]
 mint = ["utils", "snip20"]
 mint_router = ["utils", "snip20"]
 oracle = ["snip20"]
 scrt_staking = ["utils"]
-shd_staking = ["utils", "snip20"]
+snip20_staking = ["utils", "snip20"]
 treasury = ["utils"]
 
 # Protocol Implementation Contracts
@@ -58,5 +59,9 @@ snafu = { version = "0.6.3" }
 # Needed for airdrop
 rs_merkle = { git = "https://github.com/FloppyDisck/rs-merkle", branch = "node_export" }
 # Needed for transactions
-query-authentication = { git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0" }
-remain = "0.2.2"
+query-authentication = { git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0", optional = true }
+# Used by airdrop
+remain = { version = "0.2.2", optional = true }
+# storage plus implementation
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }
+
