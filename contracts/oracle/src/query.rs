@@ -162,6 +162,6 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     }
 
     Ok(cosmwasm_std::Uint128(
-        Uint128::try_from(price * Uint512::from(10u128.pow(18)) / weight_sum)?.u128(),
+        Uint128::try_from(price.checked_mul(Uint512::from(10u128.pow(18)))?.checked_div(weight_sum)?)?.u128(),
     ))
 }
