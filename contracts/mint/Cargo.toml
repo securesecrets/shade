@@ -38,7 +38,7 @@ snafu = { version = "0.6.3" }
 chrono = "0.4.19"
 
 [dev-dependencies]
-fadroma = { version = "^22.1.0", git = "https://github.com/hackbg/fadroma.git" }
+fadroma = { version = "v100", git = "https://github.com/hackbg/fadroma.git" }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20" }
 oracle = { version = "0.1.0", path = "../../contracts/oracle" }
 mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }
