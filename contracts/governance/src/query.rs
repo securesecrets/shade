@@ -6,7 +6,7 @@ use shade_protocol::governance::profile::Profile;
 use shade_protocol::governance::proposal::Proposal;
 use shade_protocol::governance::{Config, QueryAnswer};
 use shade_protocol::governance::stored_id::ID;
-use shade_protocol::utils::storage::SingletonStorage;
+use shade_protocol::utils::storage::default::SingletonStorage;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
 

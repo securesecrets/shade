@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::governance::stored_id::ID;
 use crate::utils::asset::Contract;
-use crate::utils::storage::BucketStorage;
+use crate::utils::storage::default::BucketStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

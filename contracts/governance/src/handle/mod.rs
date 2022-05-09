@@ -3,7 +3,7 @@ use secret_toolkit::snip20::register_receive_msg;
 use shade_protocol::governance::{Config, HandleAnswer, RuntimeState};
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
-use shade_protocol::utils::storage::SingletonStorage;
+use shade_protocol::utils::storage::default::SingletonStorage;
 
 pub mod assembly;
 pub mod proposal;

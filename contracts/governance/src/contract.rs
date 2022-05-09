@@ -8,7 +8,7 @@ use shade_protocol::governance::contract::AllowedContract;
 use shade_protocol::governance::stored_id::ID;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::flexible_msg::FlexibleMsg;
-use shade_protocol::utils::storage::{BucketStorage, SingletonStorage};
+use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
 use crate::query;
 use crate::handle::{try_set_config, try_set_runtime_state};
 use crate::handle::assembly::{try_add_assembly, try_assembly_proposal, try_assembly_vote, try_set_assembly};

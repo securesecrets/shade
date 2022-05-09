@@ -10,8 +10,8 @@ use crate::governance::vote::Vote;
 use crate::utils::asset::Contract;
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::BucketStorage;
-use crate::utils::storage::NaiveBucketStorage;
+use crate::utils::storage::default::BucketStorage;
+use crate::utils::storage::default::NaiveBucketStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

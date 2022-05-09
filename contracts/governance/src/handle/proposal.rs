@@ -9,10 +9,10 @@ use shade_protocol::governance::HandleMsg::Receive;
 use shade_protocol::governance::profile::{Count, Profile, VoteProfile};
 use shade_protocol::governance::proposal::{Funding, Proposal, ProposalMsg, Status};
 use shade_protocol::governance::vote::{ReceiveBalanceMsg, TalliedVotes, Vote};
-use shade_protocol::shd_staking;
+use shade_protocol::snip20_staking;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
-use shade_protocol::utils::storage::SingletonStorage;
+use shade_protocol::utils::storage::default::SingletonStorage;
 use crate::handle::assembly::try_assembly_proposal;
 
 // Initializes a proposal on the public assembly with the blank command
@@ -275,7 +275,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
             let config = Config::load(&deps.storage)?;
             let votes = Proposal::public_votes(&deps.storage, &proposal)?;
 
-            let query: shd_staking::QueryAnswer = shd_staking::QueryMsg::TotalStaked {}
+            let query: snip20_staking::QueryAnswer = snip20_staking::QueryMsg::TotalStaked {}
                 .query(
                     &deps.querier,
                     config.vote_token.clone().unwrap().code_hash,
@@ -285,7 +285,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
             // Get total staking power
             let total_power = match query {
                 // TODO: fix when uint update is merged
-                shd_staking::QueryAnswer::TotalStaked { shares, tokens } => tokens.into(),
+                snip20_staking::QueryAnswer::TotalStaked { shares, tokens } => tokens.into(),
                 _ => return Err(StdError::generic_err("Wrong query returned"))
             };
 

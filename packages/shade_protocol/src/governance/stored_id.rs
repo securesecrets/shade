@@ -1,7 +1,7 @@
 use cosmwasm_std::{StdResult, Storage};
 use cosmwasm_math_compat::Uint128;
 use serde::{Deserialize, Serialize};
-use crate::utils::storage::NaiveSingletonStorage;
+use crate::utils::storage::default::NaiveSingletonStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]

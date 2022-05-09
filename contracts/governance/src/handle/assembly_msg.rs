@@ -5,7 +5,7 @@ use shade_protocol::governance::{MSG_VARIABLE, HandleAnswer};
 use shade_protocol::governance::stored_id::ID;
 use shade_protocol::utils::flexible_msg::FlexibleMsg;
 use shade_protocol::utils::generic_response::ResponseStatus;
-use shade_protocol::utils::storage::BucketStorage;
+use shade_protocol::utils::storage::default::BucketStorage;
 
 pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

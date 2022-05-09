@@ -30,7 +30,7 @@ secret-toolkit = { version = "0.2" }
 cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "governance-impl",
-  "shd_staking"
+  "snip20_staking"
 ] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
@@ -43,4 +43,4 @@ mockall_double = "0.2.0"
 fadroma-ensemble = { branch = "v100", git = "https://github.com/hackbg/fadroma.git" }
 fadroma-platform-scrt = { branch = "v100",  git = "https://github.com/hackbg/fadroma.git" }
 snip20-reference-impl = { version = "0.1.0", path = "../snip20" }
-spip_stkd_0 = { version = "0.1.0", path = "../shd_staking" }
+spip_stkd_0 = { version = "0.1.0", path = "../snip20_staking" }

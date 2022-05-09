@@ -9,7 +9,7 @@ use shade_protocol::governance::proposal::{Proposal, ProposalMsg, Status};
 use shade_protocol::governance::stored_id::ID;
 use shade_protocol::governance::vote::Vote;
 use shade_protocol::utils::generic_response::ResponseStatus;
-use shade_protocol::utils::storage::BucketStorage;
+use shade_protocol::utils::storage::default::BucketStorage;
 
 pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

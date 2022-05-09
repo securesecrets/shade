@@ -20,7 +20,7 @@ use crate::governance::proposal::{Proposal, ProposalMsg};
 use crate::governance::vote::Vote;
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::SingletonStorage;
+use crate::utils::storage::default::SingletonStorage;
 
 // Admin command variable spot
 pub const MSG_VARIABLE: &str = "{~}";

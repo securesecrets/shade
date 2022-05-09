@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 use crate::governance::stored_id::ID;
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::BucketStorage;
+use crate::utils::storage::default::BucketStorage;
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::NaiveBucketStorage;
+use crate::utils::storage::default::NaiveBucketStorage;
 
 /// Allow better control over the safety and privacy features that proposals will need if
 /// Assemblys are implemented. If a profile is disabled then its assembly will also be disabled.

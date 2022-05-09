@@ -6,7 +6,7 @@ use crate::governance::stored_id::ID;
 use crate::utils::flexible_msg::FlexibleMsg;
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::BucketStorage;
+use crate::utils::storage::default::BucketStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
