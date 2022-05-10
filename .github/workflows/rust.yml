@@ -31,7 +31,7 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
-      - uses: actions-rs/cargo@v1.60.0
+      - uses: actions-rs/cargo@v1.0.1
         with:
           command: build
           args: --release --target wasm32-unknown-unknown --manifest-path=${{matrix.dir}}
@@ -48,7 +48,7 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
-      - uses: actions-rs/cargo@v1.60.0
+      - uses: actions-rs/cargo@v1.0.1
         with:
           command: test
           args: --manifest-path=Cargo.toml
