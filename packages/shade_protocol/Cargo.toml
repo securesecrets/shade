@@ -25,7 +25,6 @@ utils = []
 errors = []
 flexible_msg = []
 math = []
-
 storage = ["cosmwasm-storage/iterator"]
 storage_plus = ["dep:secret-storage-plus"]
 
@@ -41,7 +40,7 @@ treasury = ["utils", "adapter", "snip20"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 adapter = []
-shd_staking = ["utils"]
+snip20_staking = ["utils"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
@@ -57,11 +56,12 @@ secret-toolkit = { version = "0.2" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
-# Needed for transactions
+# TODO: fix import
 chrono = "0.4.19"
-
+# Needed for transactions
 query-authentication = { git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0", optional = true }
 # Used by airdrop
 remain = { version = "0.2.2", optional = true }
 # storage plus implementation
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }
+

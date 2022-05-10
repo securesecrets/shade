@@ -23,8 +23,8 @@ members = [
   # - Adapters
   "contracts/scrt_staking",
   "contracts/rewards_emission",
-  
-  "contracts/shd_staking",
+
+  "contracts/snip20_staking",
 
   # Mock contracts
   "contracts/mock_band",
