@@ -41,7 +41,7 @@ treasury = ["utils", "adapter", "snip20"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 adapter = []
-shd_staking = ["utils"]
+snip20_staking = ["utils"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
@@ -57,6 +57,8 @@ secret-toolkit = { version = "0.2" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
+# TODO: fix import
+chrono = "0.4.19"
 # Needed for transactions
 chrono = "0.4.19"
 

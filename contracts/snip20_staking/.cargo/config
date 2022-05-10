@@ -1,0 +1,4 @@
+[alias]
+unit-test = "test --lib --features backtraces"
+integration-test = "test --test integration"
+schema = "run --example schema"
