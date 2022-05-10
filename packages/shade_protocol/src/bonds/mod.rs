@@ -313,7 +313,7 @@ pub struct AddressProofMsg {
 #[serde(rename_all = "snake_case")]
 pub struct PendingBond {
     pub deposit_denom: Snip20Asset,
-    pub end: u64, // Will be turned into a time via block time calculations
+    pub end_time: u64, // Will be turned into a time via block time calculations
     pub deposit_amount: Uint128,
     pub deposit_price: Uint128,
     pub claim_amount: Uint128,

@@ -309,7 +309,7 @@ NOTE: The parameters must be in order
 | Name            | Type        | Description                                                                             | optional  |
 |-----------------|-------------|-----------------------------------------------------------------------------------------|---------- |
 | deposit_denom   | Snip20Asset | Snip20 information for issued asset                                                     | no        |
-| end             | u64         | Time that bond will be matured and claimable in UNIX time                               | no        |                                 
+| end_time        | u64         | Time that bond will be matured and claimable in UNIX time                               | no        |                                 
 | deposit_amount  | Uint128     | Amount of issued asset when opportunity was purchased                                   | no        |
 | deposit_price   | Uint128     | Price of collateral asset when opportunity was purchased                                | no        |
 | claim_amount    | Uint128     | Amount of issued asset set to be claimed                                                | no        |

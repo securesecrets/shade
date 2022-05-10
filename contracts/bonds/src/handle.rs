@@ -243,7 +243,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     // Begin PendingBond
     let new_bond = PendingBond{
         claim_amount: amount_to_issue.clone(),
-        end: end,
+        end_time: end,
         deposit_denom: bond_opportunity.deposit_denom,
         deposit_amount,
         deposit_price: deposit_price,
@@ -299,7 +299,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success,
             deposit_amount: new_bond.deposit_amount,
             pending_claim_amount: new_bond.claim_amount,
-            end_date: new_bond.end, 
+            end_date: new_bond.end_time, 
         })?),
     })
 }
@@ -338,14 +338,14 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     // Iterate through pending bonds and compare one's end to current time
     let pending_bonds_iter = pending_bonds.iter();
     for bond in pending_bonds_iter{
-        if bond.end <= now {                // Add claim amount to total
+        if bond.end_time <= now {                // Add claim amount to total
             total = total.add(bond.claim_amount);
         }
     }
 
     // Remove claimed bonds from vector and save back to the account
     pending_bonds.retain(|bond|
-        bond.end > now  // Retain only the bonds that end at a time greater than now
+        bond.end_time > now  // Retain only the bonds that end at a time greater than now
     );
     
     account.pending_bonds = pending_bonds;
