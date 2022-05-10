@@ -1,6 +1,6 @@
 use crate::impl_into_u8;
 use crate::utils::errors::{build_string, CodeType, DetailedError};
-use cosmwasm_std::{StdError, Uint128};
+use cosmwasm_std::{StdError, Uint128, HumanAddr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -17,6 +17,9 @@ pub enum Error{
     NoBondFound,
     NoPendingBonds,
     IncorrectViewingKey,
+    PermitContractMismatch,
+    PermitKeyRevoked,
+    PermitRejected,
     BondLimitExceedsGlobalLimit,
     BondingPeriodBelowMinimumTime,
     BondDiscountAboveMaximumRate,
@@ -25,6 +28,8 @@ pub enum Error{
     CollateralPriceExceedsLimit,
     IssuedPriceBelowMinimum,
     SlippageToleranceExceeded,
+    Blacklisted,
+    IssuedAssetDeposit,
 }
 
 impl_into_u8!(Error);
@@ -82,6 +87,21 @@ impl CodeType for Error {
             }
             Error::SlippageToleranceExceeded => {
                 build_string("Calculated issuance amount of {} is below minimum accepted value of {}", context)
+            }
+            Error::PermitContractMismatch => {
+                build_string("Permit is valid for {}, expected {}", context)
+            }
+            Error::PermitKeyRevoked => {
+                build_string("Permit key {} revoked", context)
+            }
+            Error::PermitRejected => {
+                build_string("Permit was rejected", context)
+            }
+            Error::Blacklisted => {
+                build_string("Cannot enter bond opportunity, sender address of {} is blacklisted", context)
+            }
+            Error::IssuedAssetDeposit => {
+                build_string("Cannot deposit using this contract's issued asset", context)
             }
         }
     }
@@ -205,4 +225,29 @@ pub fn slippage_tolerance_exceeded(amount_to_issue: Uint128, min_expected_amount
     let min_amount_string = min_expected_amount.to_string();
     let min_amount_str = min_amount_string.as_str(); 
     DetailedError::from_code(BOND_TARGET, Error::SlippageToleranceExceeded, vec![issue_str, min_amount_str]).to_error()
+}
+
+pub fn permit_contract_mismatch(contract: &str, expected: &str) -> StdError {
+    DetailedError::from_code(
+        BOND_TARGET,
+        Error::PermitContractMismatch,
+        vec![contract, expected],
+    )
+    .to_error()
+}
+
+pub fn permit_key_revoked(key: &str) -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::PermitKeyRevoked, vec![key]).to_error()
+}
+
+pub fn permit_rejected() -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::PermitRejected, vec![]).to_error()
+}
+
+pub fn blacklisted(address: HumanAddr) -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::Blacklisted, vec![address.as_str()]).to_error()
+}
+
+pub fn issued_asset_deposit() -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::IssuedAssetDeposit, vec![]).to_error()
 }

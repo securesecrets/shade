@@ -2,11 +2,11 @@ use std::arch::global_asm;
 
 use crate::{
     state::{
-        config_r, global_total_issued_r, global_total_claimed_r, account_viewkey_r, account_r, bond_opportunity_r, collateral_assets_r, issued_asset_r
+        config_r, global_total_issued_r, global_total_claimed_r, account_viewkey_r, account_r, bond_opportunity_r, collateral_assets_r, issued_asset_r, validate_account_permit
     }, handle::oracle,
 };
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::{bonds::{QueryAnswer, AccountKey, BondOpportunity}, snip20::Snip20Asset, oracle};
+use shade_protocol::{bonds::{QueryAnswer, AccountKey, BondOpportunity, AccountPermit}, snip20::Snip20Asset, oracle};
 use shade_protocol::bonds::errors::incorrect_viewing_key;
 use query_authentication::viewing_keys::ViewingKey;
 
@@ -18,19 +18,15 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
     })
 }
 
-pub fn account_with_key<S: Storage, A: Api, Q: Querier>(
+pub fn account<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account: HumanAddr,
-    key: String,
+    permit: AccountPermit,
 ) -> StdResult<QueryAnswer> {
+    let config = config_r(&deps.storage).load()?;
     // Validate address
-    let stored_hash = account_viewkey_r(&deps.storage).load(account.to_string().as_bytes())?;
+    let contract = config.contract;
 
-    if !AccountKey(key).compare(&stored_hash) {
-        return Err(incorrect_viewing_key());
-    }
-
-    account_information(deps, account)
+    account_information(deps, validate_account_permit(deps, &permit, contract)?)
 }
 
 fn account_information<S: Storage, A: Api, Q: Querier>(

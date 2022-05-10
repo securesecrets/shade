@@ -35,6 +35,8 @@ mod test{
             bond_issuance_limit: Uint128(10_000_000_000),
             bonding_period: 7u64,
             discount: Uint128(7_000_000_000_000_000_000),
+            global_minimum_issued_price: todo!(),
+            allowance_key_entropy: todo!(),
         };
         let res = contract::init(&mut deps, env, bonds_init_msg).unwrap();
         assert_eq!(0, res.messages.len());
@@ -59,6 +61,8 @@ mod test{
             bond_issuance_limit: Uint128(10_000_000_000),
             bonding_period: 7u64,
             discount: Uint128(7_000_000_000_000_000_000),
+            global_minimum_issued_price: todo!(),
+            contract: todo!(),
         };
         let query_answer = query::config(&mut deps).unwrap();
         let query_result = match query_answer{
@@ -95,7 +99,7 @@ mod test{
             Uint128(5_000_000_000_000_000_000), 
             6, 
             Uint128(7_000_000_000_000_000_000));
-        assert_eq!(result, Uint128(15_053_763));
+        assert_eq!(result.0, Uint128(15_053_763));
         let result2 = calculate_issuance(
             Uint128(10_000_000_000_000_000_000), 
             Uint128(50_000_000), 
@@ -103,7 +107,7 @@ mod test{
             Uint128(50_000_000_000_000_000_000), 
             8, 
             Uint128(9_000_000_000_000_000_000),);
-        assert_eq!(result2, Uint128(1_098_901_000));
+        assert_eq!(result2.0, Uint128(1_098_901_000));
         let result3 = calculate_issuance(
             Uint128(10_000_000_000_000_000_000), 
             Uint128(5_000_000_000), 
@@ -111,7 +115,7 @@ mod test{
             Uint128(50_000_000_000_000_000_000), 
             6, 
             Uint128(9_000_000_000_000_000_000),);
-        assert_eq!(result3, Uint128(10989010));
+        assert_eq!(result3.0, Uint128(10989010));
     }
 }
 

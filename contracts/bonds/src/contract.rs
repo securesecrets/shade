@@ -2,14 +2,14 @@ use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
     StdResult, Storage, Uint128, HumanAddr,
 };
-use secret_toolkit::snip20::token_info_query;
+use secret_toolkit::snip20::{token_info_query, set_viewing_key_msg};
 
 use shade_protocol::{
-    bonds::{Config, InitMsg, HandleMsg, QueryMsg},
-    snip20::{token_config_query, Snip20Asset, HandleMsg as SnipHandle},
+    bonds::{Config, InitMsg, HandleMsg, QueryMsg, SnipViewingKey},
+    snip20::{token_config_query, Snip20Asset, HandleMsg as SnipHandle, self},
 };
 
-use crate::{handle::{self, try_set_viewing_key}, query, state::{config_w, issued_asset_w, global_total_issued_w, collateral_assets_w, global_total_claimed_w, allocated_allowance_w, allowance_key_w}};
+use crate::{handle::{self}, query, state::{config_w, issued_asset_w, global_total_issued_w, collateral_assets_w, global_total_claimed_w, allocated_allowance_w, allowance_key_w}};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -31,15 +31,20 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         bond_issuance_limit: msg.bond_issuance_limit,
         bonding_period: msg.bonding_period,
         global_minimum_issued_price: msg.global_minimum_issued_price,
+        contract: env.contract.address.clone(),
         };
 
     config_w(&mut deps.storage).save(&state)?;
+    
+    let mut messages = vec![];
+
 
     if !msg.minting_bond{
-        match msg.allowance_key {
-            Some(key) => {
-
-                allowance_key_w(&mut deps.storage).save(&key)?;
+        match msg.allowance_key_entropy {
+            Some(entropy) => {
+                let allowance_key: SnipViewingKey = SnipViewingKey::new(&env, Default::default(), entropy.as_ref());
+                messages.push(set_viewing_key_msg(allowance_key.0.clone(), None, 256, state.issued_asset.code_hash.clone(), state.issued_asset.address.clone())?);
+                allowance_key_w(&mut deps.storage).save(&allowance_key.0)?;
             }
             None => {
 
@@ -73,7 +78,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     debug_print!("Contract was initialized by {}", env.message.sender);
 
     Ok(InitResponse {
-        messages: vec![],
+        messages,
         log: vec![],
     })
 }
@@ -124,10 +129,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg,
         } => handle::try_deposit(deps, &env, sender, from, amount, msg),
         HandleMsg::Claim {} => handle::try_claim(deps, env),
-        HandleMsg::SetViewingKey { key } => try_set_viewing_key(deps, &env, key),
-        //HandleMsg::RegisterCollateralAsset {collateral_asset} => handle::try_register_collateral_asset(deps, &env, &collateral_asset),
-        //HandleMsg::RemoveCollateralAsset {collateral_asset} => handle::try_remove_collateral_asset(deps, &env, &collateral_asset),
-    }
+        }
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
@@ -137,7 +139,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::BondOpportunities {} => to_binary(&query::bond_opportunities(deps)?),
-        QueryMsg::AccountWithKey {account, key} => to_binary(&query::account_with_key(deps, account, key)?),
+        QueryMsg::Account {permit} => to_binary(&query::account(deps, permit)?),
         QueryMsg::CollateralAddresses {} => to_binary(&query::list_collateral_addresses(deps)?),
         QueryMsg::PriceCheck { asset } => to_binary(&query::price_check(asset, deps)?),
         QueryMsg::BondInfo {} => to_binary(&query::bond_info(deps)?),

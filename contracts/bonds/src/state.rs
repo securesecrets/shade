@@ -1,21 +1,18 @@
-use cosmwasm_std::{Storage, Uint128, HumanAddr};
+use cosmwasm_std::{Storage, Api, Querier, Uint128, HumanAddr, Extern, StdResult};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
 use shade_protocol::{
-    bonds::{Config, Account, BondOpportunity},
+    bonds::{Config, Account, BondOpportunity, AccountPermit, AddressProofPermit,
+            errors::{permit_contract_mismatch, permit_key_revoked}},
     snip20::Snip20Asset,
     utils::asset::Contract,
 };
 
 pub static CONFIG: &[u8] = b"config";
-pub static GLOBAL_ISSUANCE_LIMIT: &[u8] = b"global_issuance_limit";
 pub static GLOBAL_TOTAL_ISSUED: &[u8] = b"global_total_issued";
 pub static GLOBAL_TOTAL_CLAIMED: &[u8] = b"global_total_claimed";
-pub static BOND_ISSUANCE_LIMIT: &[u8] = b"bond_issuance_limit"; 
-pub static BOND_TOTAL_ISSUED: &[u8] = b"bond_total_issued";
-pub static BONDING_PERIOD: &[u8] = b"bonding_period";
 pub static COLLATERAL_ASSETS: &[u8] = b"collateral_assets";
 pub static ISSUED_ASSET: &[u8] = b"issued_asset";
 pub static ACCOUNTS_KEY: &[u8] = b"accounts";
@@ -23,6 +20,7 @@ pub static BOND_OPPORTUNITIES: &[u8] = b"bond_opportunities";
 pub static ACCOUNT_VIEWING_KEY: &[u8] = b"account_viewing_key";
 pub static ALLOCATED_ALLOWANCE: &[u8] = b"allocated_allowance";
 pub static ALLOWANCE_VIEWING_KEY: &[u8] = b"allowance_viewing_key";
+pub static ACCOUNT_PERMIT_KEY: &str = "account_permit_key";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG)
@@ -30,15 +28,6 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
 
 pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG)
-}
-
-/* Global issuance limit for all bond opportunities */
-pub fn global_issuance_limit_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
-    singleton(storage, GLOBAL_ISSUANCE_LIMIT)
-}
-
-pub fn global_issuance_limit_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
-    singleton_read(storage, GLOBAL_ISSUANCE_LIMIT)
 }
 
 /* Global amount issued since last issuance reset */
@@ -57,33 +46,6 @@ pub fn global_total_claimed_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint1
 
 pub fn global_total_claimed_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
     singleton_read(storage, GLOBAL_TOTAL_CLAIMED)
-}
-
-/* Issuance limit for particular bond instance */
-pub fn bond_issuance_limit_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
-    singleton(storage, BOND_ISSUANCE_LIMIT)
-}
-
-pub fn bond_issuance_limit_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
-    singleton_read(storage, BOND_ISSUANCE_LIMIT)
-}
-
-/* Amount minted during this bond's lifespan (e.g. 14 days) */
-pub fn bond_total_issued_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
-    singleton(storage, BOND_TOTAL_ISSUED)
-}
-
-pub fn bond_total_issued_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
-    singleton_read(storage, BOND_TOTAL_ISSUED)
-}
-
-/* Duration after locking up collateral before minted tokens are claimable (e.g. 7 days) */
-pub fn bonding_period_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
-    singleton(storage, BONDING_PERIOD)
-}
-
-pub fn bonding_period_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
-    singleton_read(storage, BONDING_PERIOD)
 }
 
 /* List of assets that have bond opportunities stored */
@@ -146,4 +108,63 @@ pub fn allowance_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
 
 pub fn allowance_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
     singleton_read(storage, ALLOWANCE_VIEWING_KEY)
+}
+
+pub fn account_permit_key_r<S: Storage>(storage: &S, account: String) -> ReadonlyBucket<S, bool> {
+    let key = ACCOUNT_PERMIT_KEY.to_string() + &account;
+    bucket_read(key.as_bytes(), storage)
+}
+
+pub fn account_permit_key_w<S: Storage>(storage: &mut S, account: String) -> Bucket<S, bool> {
+    let key = ACCOUNT_PERMIT_KEY.to_string() + &account;
+    bucket(key.as_bytes(), storage)
+}
+
+pub fn revoke_permit<S: Storage>(storage: &mut S, account: String, permit_key: String) {
+    account_permit_key_w(storage, account)
+        .save(permit_key.as_bytes(), &false)
+        .unwrap();
+}
+
+pub fn is_permit_revoked<S: Storage>(
+    storage: &S,
+    account: String,
+    permit_key: String,
+) -> StdResult<bool> {
+    if account_permit_key_r(storage, account)
+        .may_load(permit_key.as_bytes())?
+        .is_some()
+    {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    permit: &AccountPermit,
+    contract: HumanAddr,
+) -> StdResult<HumanAddr> {
+    // Check that contract matches
+    if permit.params.contract != contract {
+        return Err(permit_contract_mismatch(
+            permit.params.contract.as_str(),
+            contract.as_str(),
+        ));
+    }
+
+    // Authenticate permit
+    let address = permit.validate(None)?.as_humanaddr(&deps.api)?;
+
+    // Check that permit is not revoked
+    if is_permit_revoked(
+        &deps.storage,
+        address.to_string(),
+        permit.params.key.clone(),
+    )? {
+        return Err(permit_key_revoked(permit.params.key.as_str()));
+    }
+
+    return Ok(address);
 }

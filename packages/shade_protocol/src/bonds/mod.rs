@@ -1,9 +1,19 @@
 pub mod errors;
+pub mod utils;
+pub mod rand;
+
+use cosmwasm_std::Env;
 
 use query_authentication::viewing_keys::ViewingKey;
+use query_authentication::{
+    permit::{Permit, bech32_to_canonical}};
+    
+use crate::bonds::utils::{create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE};
 use crate::utils::generic_response::ResponseStatus;
 use crate::utils::asset::Contract;
-use cosmwasm_std::{Binary, HumanAddr, Uint128};
+use crate::bonds::rand::{sha_256, Prng};
+use crate::bonds::errors::{permit_rejected};
+use cosmwasm_std::{Binary, HumanAddr, Uint128, StdResult, StdError};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::snip20::Snip20Asset;
@@ -25,6 +35,7 @@ pub struct Config {
     pub global_minimum_bonding_period: u64,
     pub global_maximum_discount: Uint128,
     pub global_minimum_issued_price: Uint128,
+    pub contract: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -43,7 +54,7 @@ pub struct InitMsg {
     pub bonding_period: u64,
     pub discount: Uint128,
     pub global_minimum_issued_price: Uint128,
-    pub allowance_key: Option<String>,
+    pub allowance_key_entropy: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -90,9 +101,6 @@ pub enum HandleMsg {
     },
     Claim {
     },
-    SetViewingKey {
-        key: String,
-    }
 }
 
 impl HandleCallback for HandleMsg {
@@ -132,9 +140,6 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         collateral_asset: Contract,
     },
-    SetViewingKey {
-        status: ResponseStatus,
-    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -142,9 +147,8 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     BondOpportunities {},
-    AccountWithKey {
-        account: HumanAddr,
-        key: String,
+    Account {
+        permit: AccountPermit,
     },
     CollateralAddresses {},
     PriceCheck {
@@ -195,13 +199,13 @@ impl ToString for AccountKey {
     }
 }
 
-impl ViewingKey<32> for AccountKey {}
+//impl ViewingKey<32> for AccountKey {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct ViewingKey(pub string);
+pub struct SnipViewingKey(pub String);
 
-impl ViewingKey {
+impl SnipViewingKey {
     pub fn check_viewing_key(&self, hashed_pw: &[u8]) -> bool {
         let mine_hashed = create_hashed_password(&self.0);
 
@@ -233,6 +237,74 @@ impl ViewingKey {
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
+}
+
+// Used for querying account information
+pub type AccountPermit = Permit<AccountPermitMsg>;
+
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccountPermitMsg {
+    pub contract: HumanAddr,
+    pub key: String,
+}
+
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct FillerMsg {
+    pub coins: Vec<String>,
+    pub contract: String,
+    pub execute_msg: EmptyMsg,
+    pub sender: String,
+}
+
+impl Default for FillerMsg {
+    fn default() -> Self {
+        Self {
+            coins: vec![],
+            contract: "".to_string(),
+            sender: "".to_string(),
+            execute_msg: EmptyMsg {},
+        }
+    }
+}
+
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EmptyMsg {}
+
+// Used to prove ownership over IBC addresses
+pub type AddressProofPermit = Permit<FillerMsg>;
+
+pub fn authenticate_ownership(permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
+    let signer_address = permit
+        .validate(Some("wasm/MsgExecuteContract".to_string()))?
+        .as_canonical();
+
+    if signer_address != bech32_to_canonical(permit_address) {
+        return Err(permit_rejected());
+    }
+
+    Ok(())
+}
+
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AddressProofMsg {
+    // Address is necessary since we have other network permits present
+    pub address: HumanAddr,
+    // Reward amount
+    pub amount: Uint128,
+    // Used to prevent permits from being used elsewhere
+    pub contract: HumanAddr,
+    // Index of the address in the leaves array
+    pub index: u32,
+    // Used to identify permits
+    pub key: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

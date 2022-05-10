@@ -7,7 +7,7 @@ use cosmwasm_std::{
 use query_authentication::viewing_keys::ViewingKey;
 
 use secret_toolkit::{
-    snip20::{token_info_query, register_receive_msg, send_msg, mint_msg, transfer_from_msg, allowance_query, Allowance},
+    snip20::{token_info_query, register_receive_msg, send_msg, mint_msg, transfer_from_msg, allowance_query, Allowance, transfer_msg},
     utils::Query,
 };
 
@@ -25,9 +25,9 @@ use shade_protocol::{
 use std::{cmp::Ordering, convert::TryFrom, ops::Add};
 
 use crate::state::{config_r, config_w, collateral_assets_r, collateral_assets_w, 
-    issued_asset_r, global_issuance_limit_r, global_total_issued_r, global_total_issued_w,
-    bond_total_issued_r, bond_total_issued_w, account_r, account_w, allowance_key_r, allowance_key_w,
-    bond_opportunity_r, bond_opportunity_w, account_viewkey_w, global_issuance_limit_w,
+    issued_asset_r, global_total_issued_r, global_total_issued_w,
+    account_r, account_w, allowance_key_r, allowance_key_w,
+    bond_opportunity_r, bond_opportunity_w, account_viewkey_w,
     global_total_claimed_r, global_total_claimed_w, allocated_allowance_r, allocated_allowance_w};
 
 
@@ -167,16 +167,21 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 
     // Check that sender isn't the treasury
     if config.treasury == sender {
-        return Err(StdError::generic_err(
-            "Sender cannot be the treasury.",
-        ));
+        return Err(blacklisted(config.treasury));
+    }
+
+    if config.contract == sender {
+        return Err(blacklisted(config.contract))
+    }
+
+    // Check that sender isn't bonds assembly
+    if config.admin == sender {
+        return Err(blacklisted(sender));
     }
 
     // Check that sender isn't the minted asset
     if config.issued_asset.address == env.message.sender {
-        return Err(StdError::generic_err(
-            "Collateral asset cannot be the same as the minted asset."
-        ));
+        return Err(issued_asset_deposit());
     }
 
     // Check that sender asset has an active bond opportunity
@@ -201,6 +206,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     
     // Load mint asset information
     let issuance_asset = issued_asset_r(&deps.storage).load()?;
+    
     // Calculate conversion of collateral to SHD
     let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(&deps, deposit_amount, available, bond_opportunity.deposit_denom.clone(), issuance_asset, bond_opportunity.discount, bond_opportunity.max_collateral_price, config.global_minimum_issued_price)?;
     
@@ -213,30 +219,15 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    // Add to total issued, globally and bond opportunity-specific
-    //global_total_issued_w(&mut deps.storage).update(|global_total_issued| {
-    //    Ok(global_total_issued + amount_to_issue)
-    //})?;
-
     let mut opp = bond_opportunity_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     opp.amount_issued += amount_to_issue;
     bond_opportunity_w(&mut deps.storage).save(env.message.sender.to_string().as_bytes(), &opp)?;
-
-    // bond_opportunity_w(&mut deps.storage).update(env.message.sender.to_string().as_bytes(), |prev_bond_opportunity| match prev_bond_opportunity {
-    //     Some(mut prev_bond_opportunity) => {
-    //         prev_bond_opportunity.amount_issued = prev_bond_opportunity.amount_issued + amount_to_issue;
-    //         Ok(prev_bond_opportunity)
-    //     }
-    //     None => {
-    //         return Err(no_bond_found(env.message.sender.as_str()));
-    //     }
-    // })?;
 
     let mut messages = vec![];
 
     // Collateral to treasury
     messages.push(send_msg(
-        config.treasury,
+        config.treasury.clone(),
         deposit_amount,
         None,
         None,
@@ -246,12 +237,12 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         bond_opportunity.deposit_denom.contract.address.clone(),
     )?);
 
-    // Format end date (7 days from now) as String
+    // Format end date as String
     let end: u64 = calculate_claim_date(env.block.time, bond_opportunity.bonding_period);
     
     // Begin PendingBond
     let new_bond = PendingBond{
-        claim_amount: amount_to_issue,
+        claim_amount: amount_to_issue.clone(),
         end: end,
         deposit_denom: bond_opportunity.deposit_denom,
         deposit_amount,
@@ -281,6 +272,25 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     // Save account
     account_w(&mut deps.storage).save(account.address.as_str().as_bytes(), &account)?;
 
+
+    if !config.minting_bond {
+        // Decrease AllocatedAllowance since user is claiming
+        allocated_allowance_w(&mut deps.storage).update(|allocated| allocated - amount_to_issue.clone())?;
+
+        // Transfer funds using allowance to bonds
+        messages.push(transfer_from_msg(
+        config.treasury.clone(),
+        env.contract.address.clone(),
+        amount_to_issue,
+        None,
+        None,
+        256,
+        config.issued_asset.code_hash.clone(),
+        config.issued_asset.address,
+    )?);
+    }
+    
+
     // Return Success response
     Ok(HandleResponse {
         messages,
@@ -298,8 +308,8 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
 ) -> StdResult<HandleResponse> {
-    //TODO, should check if bonding period has elapsed and allow user to claim
-    //however much of the issuance asset they paid for with their deposit
+    // Check if bonding period has elapsed and allow user to claim
+    // however much of the issuance asset they paid for with their deposit
     let config = config_r(&deps.storage).load()?;
 
     // Find user account, error out if DNE
@@ -341,11 +351,6 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     account.pending_bonds = pending_bonds;
     account_w(&mut deps.storage).save(env.message.sender.as_str().as_bytes(), &account)?;
 
-
-    // Add total to running total of amount claimed, globally
-    //let mut global_total_claimed = global_total_claimed_r(&deps.storage).load().unwrap();
-    //global_total_claimed += total.clone();
-    //global_total_claimed_w(&mut deps.storage).save(&global_total_claimed)?;
     global_total_claimed_w(&mut deps.storage).update(|global_total_claimed| {
         Ok(global_total_claimed + total.clone())
     })?;
@@ -366,20 +371,15 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
             config.issued_asset.address,
         )?);
     } else {
-        // Decrease AllocatedAllowance since user is claiming
-        allocated_allowance_w(&mut deps.storage).update(|allocated| allocated - total)?;
-
-        // Transfer funds using allowance to the user
-        messages.push(transfer_from_msg(
-            config.treasury,
-            env.message.sender,
+        messages.push(transfer_msg(
+            env.message.sender, 
             total,
-            None,
-            None,
-            256,
-            config.issued_asset.code_hash.clone(),
+            None, 
+            None, 
+            256, 
+            config.issued_asset.code_hash.clone(), 
             config.issued_asset.address,
-        )?);
+    )?);
     }
 
 
@@ -431,6 +431,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             config.issued_asset.address,
         )?;
     
+        debug_print!("Allowance according to query is {}", snip20_allowance.allowance.clone());
 
         let allocated_allowance = allocated_allowance_r(&deps.storage).load()?;
 
@@ -514,9 +515,6 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         Ok(global_total_issued + bond_opportunity.issuance_limit)
     })?;
     
-    // Try with update instead
-    //let mut global_update_issued = global_issuance_limit_w(&mut deps.storage).update(bond_opportunity.issuance_limit);
-
     // Return Success response
     Ok(HandleResponse {
         messages,
@@ -557,11 +555,6 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
             );
             bond_opportunity_w(&mut deps.storage).remove(collateral_asset.address.as_str().as_bytes());
             
-            //let collateral_addresses = collateral_assets_r(&deps.storage).load()?;
-            //let index = collateral_addresses.iter().position(|&x| x == collateral_asset.address).unwrap();
-            //collateral_addresses.swap_remove(index);
-            //collateral_assets_w(&mut deps.storage).save(&collateral_addresses)?;
-            
             // Remove asset from address list
             collateral_assets_w(&mut deps.storage).update(|mut assets|{
                 assets.retain(|address| *address != collateral_asset.address);
@@ -595,26 +588,6 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
         data: Some(to_binary(&HandleAnswer::ClosedBond {
             status: ResponseStatus::Success,
             collateral_asset,
-        })?),
-    })
-}
-
-pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    key: String,
-) -> StdResult<HandleResponse> {
-
-    account_viewkey_w(&mut deps.storage).save(
-        &env.message.sender.to_string().as_bytes(),
-        &AccountKey(key).hash(),
-    )?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetViewingKey {
-            status: ResponseStatus::Success,
         })?),
     })
 }

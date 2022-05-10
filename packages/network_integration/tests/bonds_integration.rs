@@ -1,5 +1,5 @@
 use query_authentication::viewing_keys::ViewingKey;
-use secretcli::{cli_types::NetContract, secretcli::{account_address, init, handle, query, Report, start_loaded_local_testnet, enter_test_container}};
+use secretcli::{cli_types::NetContract, secretcli::{account_address, init, handle, query, Report, start_loaded_local_testnet, enter_test_container, create_permit}};
 use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128};
 use network_integration::{
     contract_helpers::{
@@ -10,10 +10,12 @@ use network_integration::{
         BONDS_FILE, GAS, VIEW_KEY, SNIP20_FILE, STORE_GAS, MOCK_BAND_FILE, ORACLE_FILE,
     },
 };
+use query_authentication::{permit::Permit, transaction::PermitSignature};
+use query_authentication::transaction::PubKey;
 use serde::Serialize;
 use serde_json::Result;
 use shade_protocol::snip20::{self, InitMsg, InitialBalance, InitConfig};
-use shade_protocol::bonds::{self};
+use shade_protocol::bonds::{self, FillerMsg, AccountPermitMsg};
 use shade_protocol::band::{self};
 use mock_band::contract::*;
 use shade_protocol::oracle::{self, InitMsg as OracleInitMsg};
@@ -33,7 +35,6 @@ fn setup_contracts(
     discount: Uint128,
     bond_issuance_limit: Uint128,
     bonding_period: u64,
-    allowance_key: String,
     reports: &mut Vec<Report>,
 ) -> Result<(NetContract, NetContract, NetContract, NetContract, NetContract)> {
     println!("Starting setup of account_addresses");
@@ -167,7 +168,7 @@ fn setup_contracts(
         bonding_period,
         discount,
         global_minimum_issued_price: Uint128(1),
-        allowance_key: Some(VIEW_KEY.to_string()),
+        allowance_key_entropy: Some(VIEW_KEY.to_string()),
     };
 
     let bonds = init(
@@ -335,7 +336,7 @@ fn setup_contracts_allowance(
         bonding_period,
         discount,
         global_minimum_issued_price: Uint128(1),
-        allowance_key: Some(VIEW_KEY.to_string().clone()),
+        allowance_key_entropy: Some(VIEW_KEY.to_string().clone()),
     };
 
     let bonds = init(
@@ -563,8 +564,18 @@ fn print_pending_bonds(
     bonds: &NetContract,
     reports: &mut Vec<Report>,
 ) -> Result<()> {
-    let account_a = account_address(ACCOUNT_KEY)?;
-    let account_quer_msg = bonds::QueryMsg::AccountWithKey { account: HumanAddr::from(account_a.clone()), key: VIEW_KEY.to_string() };
+    // Create permit
+    let account_permit = create_signed_permit(
+        AccountPermitMsg {
+            contract: HumanAddr(bonds.address.clone()),
+            key: "key".to_string(),
+        },
+        None,
+        None,
+        ACCOUNT_KEY,
+    );
+
+    let account_quer_msg = bonds::QueryMsg::Account { permit: account_permit  };
     let account_query: bonds::QueryAnswer = query(&bonds, account_quer_msg, None)?;
     
     if let bonds::QueryAnswer::Account { pending_bonds, 
@@ -596,22 +607,22 @@ fn set_viewing_keys(
     collat_snip20: &NetContract,
 ) -> Result<()> {
 
-    let msg = bonds::HandleMsg::SetViewingKey { 
-        key: key.clone(),
-    };
+    // let msg = bonds::HandleMsg::SetViewingKey { 
+    //     key: key.clone(),
+    // };
 
-    let tx_info = handle(
-        &msg,
-        bonds,
-        ACCOUNT_KEY,
-        Some(GAS),
-        Some("test"),
-        None,
-        reports,
-        None,
-    )?.1;
+    // let tx_info = handle(
+    //     &msg,
+    //     bonds,
+    //     ACCOUNT_KEY,
+    //     Some(GAS),
+    //     Some("test"),
+    //     None,
+    //     reports,
+    //     None,
+    // )?.1;
 
-    println!("Gas used: {}", tx_info.gas_used);
+    // println!("Gas used: {}", tx_info.gas_used);
 
     let issued_snip_msg = snip20::HandleMsg::SetViewingKey { key: key.clone(), padding: None };
 
@@ -683,7 +694,7 @@ fn set_band_prices(
     println!("Gas used: {}", coll_tx_info.gas_used);
 
     let issued_msg = mock_band::contract::HandleMsg::MockPrice { 
-        symbol: "MINT".to_string(), 
+        symbol: "ISSU".to_string(), 
         price: issued_price
     };
 
@@ -767,7 +778,7 @@ fn increase_allowance(
     let allowance_snip_tx_info = handle(
         &allowance_snip_msg,
         &issued_snip,
-        ACCOUNT_KEY,
+        ADMIN_KEY,
         Some(GAS),
         Some("test"),
         None,
@@ -778,6 +789,42 @@ fn increase_allowance(
     println!("Gas used: {}", allowance_snip_tx_info.gas_used);
 
     Ok(())
+}
+
+fn create_signed_permit<T: Clone + Serialize>(
+    params: T,
+    memo: Option<String>,
+    msg_type: Option<String>,
+    signer: &str,
+) -> Permit<T> {
+    let mut permit = Permit {
+        params,
+        signature: PermitSignature {
+            pub_key: PubKey {
+                r#type: "".to_string(),
+                value: Default::default(),
+            },
+            signature: Default::default(),
+        },
+        account_number: None,
+        chain_id: Some("testnet".to_string()),
+        sequence: None,
+        memo,
+    };
+
+    let unsigned_msg = permit.create_signed_tx(msg_type);
+
+    let signed_info = create_permit(unsigned_msg, signer).unwrap();
+
+    permit.signature = PermitSignature {
+        pub_key: query_authentication::transaction::PubKey {
+            r#type: signed_info.pub_key.msg_type,
+            value: Binary::from_base64(&signed_info.pub_key.value).unwrap(),
+        },
+        signature: Binary::from_base64(&signed_info.signature).unwrap(),
+    };
+
+    permit
 }
 
 #[test]
@@ -792,7 +839,7 @@ fn run_bonds_singular() -> Result<()> {
     println!("Printed header");
     let (bonds, mint_snip, collateral_snip, mockband, oracle) = setup_contracts(
         Uint128(100_000_000_000), 
-        20, 
+        1u64, 
         Uint128(7_000_000_000_000_000_000), 
         true, 
         true, 
@@ -800,7 +847,6 @@ fn run_bonds_singular() -> Result<()> {
         Uint128(6), 
         Uint128(100_000_000), 
         130, 
-        VIEW_KEY.to_string(),
         &mut reports,
     )?;
 
@@ -822,17 +868,18 @@ fn run_bonds_singular() -> Result<()> {
 
     // Open bond opportunity
     let opp_limit = Uint128(100_000_000_000);
-    let period = 20u64;
+    let period = 1u64;
     let disc = Uint128(6_000_000_000_000_000_000);
-    open_bond(&collateral_snip, now, end, Some(opp_limit), Some(period), Some(disc), Uint128(100_000_000_000), &mut reports, &bonds)?;
+    open_bond(&collateral_snip, now, end, Some(opp_limit), Some(period), Some(disc), Uint128(100_000_000_000_000_000_000), &mut reports, &bonds)?;
     print_header("Bond Opened");
 
-    let g_issued_query_msg = bonds::QueryMsg::GlobalTotalIssued {  };
+    let g_issued_query_msg = bonds::QueryMsg::BondInfo {  };
     let g_issued_query: bonds::QueryAnswer = query(&bonds, g_issued_query_msg, None)?;
-    if let bonds::QueryAnswer::GlobalTotalIssued { global_total_issued, 
+    if let bonds::QueryAnswer::BondInfo { global_total_issued, global_total_claimed, issued_asset
     } = g_issued_query
     {
         assert_eq!(global_total_issued, Uint128(100_000_000_000));
+        assert_eq!(global_total_claimed, Uint128(0));
     }
 
     let bond_opp_quer_msg = bonds::QueryMsg::BondOpportunities {  };
@@ -842,7 +889,7 @@ fn run_bonds_singular() -> Result<()> {
     } = opp_query
     {
         assert_eq!(bond_opportunities[0].amount_issued, Uint128(0));
-        assert_eq!(bond_opportunities[0].bonding_period, 20);
+        assert_eq!(bond_opportunities[0].bonding_period, 1);
         assert_eq!(bond_opportunities[0].discount, disc);
         println!("\nBond opp: {}\n Starts: {}\n Ends: {}\n Bonding period: {}\n Discount: {}\n Amount Available: {}\n", 
         bond_opportunities[0].deposit_denom.token_info.symbol,
@@ -858,7 +905,18 @@ fn run_bonds_singular() -> Result<()> {
     print_header("Bond opp bought");
     set_viewing_keys(VIEW_KEY.to_string(), &mut reports, &bonds, &mint_snip, &collateral_snip)?;
 
-    let account_quer_msg = bonds::QueryMsg::AccountWithKey { account: HumanAddr::from(account_a.clone()), key: VIEW_KEY.to_string() };
+    // Create permit
+    let account_permit = create_signed_permit(
+        AccountPermitMsg {
+            contract: HumanAddr(bonds.address.clone()),
+            key: "key".to_string(),
+        },
+        None,
+        None,
+        ACCOUNT_KEY,
+    );
+
+    let account_quer_msg = bonds::QueryMsg::Account { permit: account_permit };
     let account_query: bonds::QueryAnswer = query(&bonds, account_quer_msg, None)?;
     
     if let bonds::QueryAnswer::Account { pending_bonds, 
@@ -889,7 +947,7 @@ fn run_bonds_singular() -> Result<()> {
     } = opp_query_2
     {
         assert_eq!(bond_opportunities[0].amount_issued, Uint128(265_957_446));
-        assert_eq!(bond_opportunities[0].bonding_period, 20);
+        assert_eq!(bond_opportunities[0].bonding_period, 1);
         assert_eq!(bond_opportunities[0].discount, disc);
         println!("\nBond opp: {}\n Starts: {}\n Ends: {}\n Bonding period: {}\n Discount: {}\n Amount Available: {}\n", 
         bond_opportunities[0].deposit_denom.token_info.symbol,
@@ -907,8 +965,8 @@ fn run_bonds_singular() -> Result<()> {
     if let snip20::QueryAnswer::Balance { amount, 
     } = issued_snip_query
     {
-        assert_eq!(amount, Uint128(265_957_446));
         println!("Account A Current MINT Balance: {}\n", amount);
+        assert_eq!(amount, Uint128(265_957_446));
         io::stdout().flush().unwrap();
     }
 
@@ -959,7 +1017,6 @@ fn run_bonds_multiple_opps() -> Result<()> {
         Uint128(6), 
         Uint128(100_000_000), 
         130, 
-        VIEW_KEY.to_string(),
         &mut reports,
     )?;
 
@@ -990,9 +1047,9 @@ fn run_bonds_multiple_opps() -> Result<()> {
     open_bond(&sefi, now, end, Some(opp_limit_2), Some(period_2), Some(disc_2), Uint128(10_000_000_000_000_000_000), &mut reports, &bonds)?;
     print_header("Second Bond Opened");
 
-    let g_issued_query_msg = bonds::QueryMsg::GlobalTotalIssued {  };
+    let g_issued_query_msg = bonds::QueryMsg::BondInfo {  };
     let g_issued_query: bonds::QueryAnswer = query(&bonds, g_issued_query_msg, None)?;
-    if let bonds::QueryAnswer::GlobalTotalIssued { global_total_issued, 
+    if let bonds::QueryAnswer::BondInfo { global_total_issued, global_total_claimed, issued_asset
     } = g_issued_query
     {
         assert_eq!(global_total_issued, Uint128(300_000_000_000));
@@ -1022,7 +1079,19 @@ fn run_bonds_multiple_opps() -> Result<()> {
 
     print_pending_bonds(&bonds, &mut reports)?;
 
-    let account_quer_msg = bonds::QueryMsg::AccountWithKey { account: HumanAddr::from(account_a.clone()), key: VIEW_KEY.to_string() };
+    // Create permit
+    let account_permit = create_signed_permit(
+        AccountPermitMsg {
+            contract: HumanAddr(bonds.address.clone()),
+            key: "key".to_string(),
+        },
+        None,
+        None,
+        ACCOUNT_KEY,
+    );
+
+
+    let account_quer_msg = bonds::QueryMsg::Account { permit: account_permit };
     let account_query: bonds::QueryAnswer = query(&bonds, account_quer_msg, None)?;
     
     if let bonds::QueryAnswer::Account { pending_bonds, 
@@ -1096,6 +1165,7 @@ fn run_bonds_singular_allowance() -> Result<()> {
 
     // Allocated allowance to bonds from admin ("treasury, eventually")
     increase_allowance(&bonds, &issued_snip, Uint128(100_000_000_000_000), &mut reports)?;
+    
 
     // Open bond opportunity
     let opp_limit = Uint128(100_000_000_000);
@@ -1104,9 +1174,9 @@ fn run_bonds_singular_allowance() -> Result<()> {
     open_bond(&collateral_snip, now, end, Some(opp_limit), Some(period), Some(disc), Uint128(10_000_000_000_000_000_000), &mut reports, &bonds)?;
     print_header("Bond Opened");
 
-    let g_issued_query_msg = bonds::QueryMsg::GlobalTotalIssued {  };
+    let g_issued_query_msg = bonds::QueryMsg::BondInfo {  };
     let g_issued_query: bonds::QueryAnswer = query(&bonds, g_issued_query_msg, None)?;
-    if let bonds::QueryAnswer::GlobalTotalIssued { global_total_issued, 
+    if let bonds::QueryAnswer::BondInfo { global_total_issued, global_total_claimed, issued_asset 
     } = g_issued_query
     {
         assert_eq!(global_total_issued, Uint128(100_000_000_000));
@@ -1135,7 +1205,19 @@ fn run_bonds_singular_allowance() -> Result<()> {
     print_header("Bond opp bought");
     set_viewing_keys(VIEW_KEY.to_string(), &mut reports, &bonds, &issued_snip, &collateral_snip)?;
 
-    let account_quer_msg = bonds::QueryMsg::AccountWithKey { account: HumanAddr::from(account_a.clone()), key: VIEW_KEY.to_string() };
+    // Create permit
+    let account_permit = create_signed_permit(
+        AccountPermitMsg {
+            contract: HumanAddr(bonds.address.clone()),
+            key: "key".to_string(),
+        },
+        None,
+        None,
+        ACCOUNT_KEY,
+    );
+
+
+    let account_quer_msg = bonds::QueryMsg::Account { permit: account_permit };
     let account_query: bonds::QueryAnswer = query(&bonds, account_quer_msg, None)?;
     
     if let bonds::QueryAnswer::Account { pending_bonds, 
@@ -1166,7 +1248,7 @@ fn run_bonds_singular_allowance() -> Result<()> {
     } = opp_query_2
     {
         assert_eq!(bond_opportunities[0].amount_issued, Uint128(265_957_446));
-        assert_eq!(bond_opportunities[0].bonding_period, 20);
+        assert_eq!(bond_opportunities[0].bonding_period, 2);
         assert_eq!(bond_opportunities[0].discount, disc);
         println!("\nBond opp: {}\n Starts: {}\n Ends: {}\n Bonding period: {}\n Discount: {}\n Amount Available: {}\n", 
         bond_opportunities[0].deposit_denom.token_info.symbol,
