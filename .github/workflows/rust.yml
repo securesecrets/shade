@@ -22,7 +22,6 @@ jobs:
       matrix:
         dir: ${{fromJson(needs.find_contracts.outputs.dir)}} # List matrix strategy from directories dynamically
     steps:
-
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -32,12 +31,25 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
-      - uses: actions-rs/cargo@v1.0.1
+      - uses: actions-rs/cargo@v1.0.3
         with:
           command: build
           args: --release --target wasm32-unknown-unknown --manifest-path=${{matrix.dir}}
           
-      - uses: actions-rs/cargo@v1.0.1
+  test-all:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - uses: actions-rs/cargo@v1.0.3
         with:
           command: test
-          args: --manifest-path=${{matrix.dir}}
+          args: --manifest-path=Cargo.toml
+
