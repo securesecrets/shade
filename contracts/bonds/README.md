@@ -82,16 +82,16 @@ Updates the given values
 Opens new bond opportunity for a unique asset
 
 ##### Request
-| Name                  | Type      | Description                                       | optional  |
-|-----------------------|-----------|---------------------------------------------------|-----------|
-| collateral_asset      | Contract  | Contract for collateral asset                     | no        |
-| start_time            | u64       | When the opportunity opens in UNIX time           | yes       |
-| end_time              | u64       | When the opportunity closes in UNIX time          | yes       |
-| bond_issuance_limit   | Uint128   | Issuance limit for this opportunity               | yes       |
-| bonding_period        | u64       | Bonding period for this opportunity in UNIX time  | yes       |
-| discount              | Uint128   | Discount % for this opportunity                   | yes       |
-| max_collateral_price  | Uint128   | Maximum accepted price for collateral asset       | yes       |
-
+| Name                          | Type      | Description                                       | optional  |
+|-------------------------------|-----------|---------------------------------------------------|-----------|
+| collateral_asset              | Contract  | Contract for collateral asset                     | no        |
+| start_time                    | u64       | When the opportunity opens in UNIX time           | yes       |
+| end_time                      | u64       | When the opportunity closes in UNIX time          | yes       |
+| bond_issuance_limit           | Uint128   | Issuance limit for this opportunity               | yes       |
+| bonding_period                | u64       | Bonding period for this opportunity in UNIX time  | yes       |
+| discount                      | Uint128   | Discount % for this opportunity                   | yes       |
+| max_accepted_collateral_price | Uint128   | Maximum accepted price for collateral asset       | no        |
+| err_collateral_price          | Uint128   | Price for collateral asset that causes error      | no        |
 ##### Response
 ```json
 {
@@ -103,7 +103,8 @@ Opens new bond opportunity for a unique asset
     "bond_issuance_limit": "opportunity limit Uint128",
     "bonding_period": "u64 bonding period in UNIX time",
     "discount": "opportunity discount percentage Uint128",
-    "max_collateral_price": "maximum price accepted for collateral asset Uint128",
+    "max_accepted_collateral_price": "maximum price accepted for collateral asset Uint128",
+    "err_collateral_price": "error-causing price limit for collateral asset Uint128",
   }
 }
 ```
@@ -322,13 +323,24 @@ Stores information for bond opportunity
 
 NOTE: The parameters must be in order
 ### Structure
-| Name                  | Type        | Description                                                           | optional  |
-|-----------------------|-------------|-----------------------------------------------------------------------|---------- |
-| issuance_limit        | Uint128     | Issuance limit for this bond opportunity                              | no        |
-| amount_issued         | Uint128     | Amount of issued asset when opportunity was purchased                 | no        |
-| deposit_denom         | Snip20Asset | Snip20 information for issued asset                                   | no        |
-| start_time            | u64         | Time that bond opportunity will be open in UNIX time                  | no        |                                 
-| end_time              | u64         | Time that bond opportunity will be closed in UNIX time                | no        |                                 
-| bonding_period        | u64         | Time that users that enter the opportunity must wait before claiming  | no        |
-| discount              | Uint128     | Discount of issued asset when opportunity was purchased               | no        |
-| max_collateral_price  | Uint128     | Maximum accepted price for collateral asset                           | no        |
+| Name                          | Type        | Description                                                           | optional  |
+|-------------------------------|-------------|-----------------------------------------------------------------------|---------- |
+| issuance_limit                | Uint128     | Issuance limit for this bond opportunity                              | no        |
+| amount_issued                 | Uint128     | Amount of issued asset when opportunity was purchased                 | no        |
+| deposit_denom                 | Snip20Asset | Snip20 information for issued asset                                   | no        |
+| start_time                    | u64         | Time that bond opportunity will be open in UNIX time                  | no        |                                 
+| end_time                      | u64         | Time that bond opportunity will be closed in UNIX time                | no        |                                 
+| bonding_period                | u64         | Time that users that enter the opportunity must wait before claiming  | no        |
+| discount                      | Uint128     | Discount of issued asset when opportunity was purchased               | no        |
+| max_accepted_collateral_price | Uint128     | Maximum accepted price for collateral asset                           | no        |
+| err_collateral_price          | Uint128     | Error-causing limit price for collateral                      | no        |
+
+## SlipMsg
+Stores the user's slippage limit when entering bond opportunities
+
+```json
+{
+  "slip_msg": {
+    "minimum_expected_amount": "minimum expected amount to be issued Uint128"
+  }
+}

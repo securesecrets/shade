@@ -86,8 +86,8 @@ mod test{
 
     #[test]
     fn claim_date() {
-        assert_eq!(calculate_claim_date(0, 1), 86400);
-        assert_eq!(calculate_claim_date(100_000_000, 7), 100_604_800);
+        assert_eq!(calculate_claim_date(0, 1), 1);
+        assert_eq!(calculate_claim_date(100_000_000, 7), 100_000_007);
     }
 
     #[test]

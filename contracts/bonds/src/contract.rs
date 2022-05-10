@@ -117,8 +117,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             bond_issuance_limit,
             bonding_period,
             discount,
-            max_collateral_price,
-        } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period, discount, max_collateral_price),
+            max_accepted_collateral_price,
+            err_collateral_price,
+        } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period, discount, max_accepted_collateral_price, err_collateral_price),
         HandleMsg::CloseBond{
             collateral_asset
         } => handle::try_close_bond(deps, env, collateral_asset),

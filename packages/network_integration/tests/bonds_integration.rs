@@ -434,7 +434,88 @@ fn open_bond(
         bond_issuance_limit: opp_limit,
         bonding_period: period,
         discount: disc,
-        max_collateral_price: max_collateral_price,
+        max_accepted_collateral_price: max_collateral_price,
+        err_collateral_price: Uint128(10000000000000000)
+    };
+
+    let tx_info = handle(
+        &msg,
+        bonds,
+        ADMIN_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+
+    println!("Gas used: {}", tx_info.gas_used);
+
+    Ok(())
+}
+
+fn update_bonds_config(
+    admin: Option<HumanAddr>,
+    oracle: Option<Contract>,
+    treasury: Option<HumanAddr>,
+    issued_asset: Option<Contract>,
+    activated: Option<bool>,
+    minting_bond: Option<bool>,
+    bond_issuance_limit: Option<Uint128>,
+    bonding_period: Option<u64>,
+    discount: Option<Uint128>,
+    global_minimum_issued_price: Option<Uint128>,
+    allowance_key: Option<String>,
+    bonds: &NetContract,
+    reports: &mut Vec<Report>,
+) -> Result<()> {
+    let msg = bonds::HandleMsg::UpdateConfig { 
+        admin,
+        oracle,
+        treasury, 
+        issued_asset, 
+        activated,
+        minting_bond,
+        bond_issuance_limit, 
+        bonding_period,
+        discount,
+        global_minimum_issued_price,
+        allowance_key
+    };
+
+    let tx_info = handle(
+        &msg,
+        bonds,
+        ADMIN_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+
+    println!("Gas used: {}", tx_info.gas_used);
+
+    Ok(())
+}
+
+fn update_bonds_limit_config(
+    limit_admin: Option<HumanAddr>,
+    global_issuance_limit: Option<Uint128>,
+    global_minimum_bonding_period: Option<u64>,
+    global_maximum_discount: Option<Uint128>,
+    reset_total_issued: Option<bool>,
+    reset_total_claimed: Option<bool>,
+    bonds: &NetContract,
+    reports: &mut Vec<Report>,
+) -> Result<()> {
+    let msg = bonds::HandleMsg::UpdateLimitConfig { 
+        limit_admin,
+        global_issuance_limit,
+        global_minimum_bonding_period,
+        global_maximum_discount,
+        reset_total_issued,
+        reset_total_claimed
     };
 
     let tx_info = handle(
@@ -1297,10 +1378,190 @@ fn run_bonds_singular_allowance() -> Result<()> {
 
     Ok(())
 }
-//#[test]
-//fn start_local_chain() -> Result<()> {
-//    start_loaded_local_testnet();
-//    enter_test_container();
+
+#[test]
+fn run_bonds_bad_opportunities() -> Result<()> {
+    let account_a = account_address(ACCOUNT_KEY)?;
+    let account_admin = account_address(ADMIN_KEY)?;
+    let account_limit_admin = account_address(LIMIT_ADMIN_KEY)?;
+    let mut reports = vec![];
+
+    let now = chrono::offset::Utc::now().timestamp() as u64;
+    let end = now + 600u64;
+    print_header("Initializing bonds and snip20");
+    println!("Printed header");
+    let (bonds, issued_snip, collateral_snip, mockband, oracle) = setup_contracts_allowance(
+        Uint128(100_000_000_000), 
+        5, 
+        Uint128(10), 
+        false, 
+        false, 
+        240, 
+        Uint128(10), 
+        Uint128(100_000_000), 
+        130, 
+        &mut reports,
+    )?;
+
+    print_contract(&issued_snip);
+    print_contract(&collateral_snip);
+    print_contract(&bonds);
+    print_contract(&mockband);
+    print_contract(&oracle);
+
+    set_band_prices(&collateral_snip, &issued_snip, Uint128(100_000_000_000_000_000_000), Uint128(2_000_000_000_000_000_000), &mut reports, &mockband)?;
+    print_header("Band prices set");
+
+    assert_eq!(Uint128(0), get_balance(&issued_snip, account_a.clone()));
+
+    // Allocated allowance to bonds from admin ("treasury, eventually")
+    increase_allowance(&bonds, &issued_snip, Uint128(100_000_000_000_000), &mut reports)?;
     
-//    Ok(())
-//}
+
+    // Open bond opportunity
+    let opp_limit = Uint128(100_000_000_000);
+    let period = 2u64;
+    let disc = Uint128(6_000_000_000_000_000_000);
+    open_bond(&collateral_snip, now, end, Some(opp_limit), Some(period), Some(disc), Uint128(10_000_000_000_000_000_000), &mut reports, &bonds)?;
+    print_header("Opp while deactivated attempted");
+
+    let bond_opp_quer_msg = bonds::QueryMsg::BondOpportunities {  };
+    let opp_query: bonds::QueryAnswer = query(&bonds, bond_opp_quer_msg, None)?;
+    
+    if let bonds::QueryAnswer::BondOpportunities { bond_opportunities,
+    } = opp_query
+    {
+        assert_eq!(bond_opportunities[0].amount_issued, Uint128(0));
+        assert_eq!(bond_opportunities[0].bonding_period, 2);
+        assert_eq!(bond_opportunities[0].discount, disc);
+        println!("\nBond opp: {}\n Starts: {}\n Ends: {}\n Bonding period: {}\n Discount: {}\n Amount Available: {}\n", 
+        bond_opportunities[0].deposit_denom.token_info.symbol,
+        bond_opportunities[0].start_time,
+        bond_opportunities[0].end_time,
+        bond_opportunities[0].bonding_period,
+        bond_opportunities[0].discount,
+        (bond_opportunities[0].issuance_limit - bond_opportunities[0].amount_issued).unwrap(),
+    )
+    }
+    print_header("Attempted to print opps");
+
+    update_bonds_config(None, None, None, None, Some(true), None, None, None, None, None, None, &bonds, &mut reports)?;
+
+    open_bond(&collateral_snip, now, end, Some(opp_limit), Some(period), Some(disc), Uint128(10_000_000_000_000_000_000), &mut reports, &bonds)?;
+    print_header("Opp with bad discount attempted");
+
+    let bond_opp_quer_msg = bonds::QueryMsg::BondOpportunities {  };
+    let opp_query: bonds::QueryAnswer = query(&bonds, bond_opp_quer_msg, None)?;
+    
+    if let bonds::QueryAnswer::BondOpportunities { bond_opportunities,
+    } = opp_query
+    {
+        assert_eq!(bond_opportunities[0].amount_issued, Uint128(0));
+        assert_eq!(bond_opportunities[0].bonding_period, 2);
+        assert_eq!(bond_opportunities[0].discount, disc);
+        println!("\nBond opp: {}\n Starts: {}\n Ends: {}\n Bonding period: {}\n Discount: {}\n Amount Available: {}\n", 
+        bond_opportunities[0].deposit_denom.token_info.symbol,
+        bond_opportunities[0].start_time,
+        bond_opportunities[0].end_time,
+        bond_opportunities[0].bonding_period,
+        bond_opportunities[0].discount,
+        (bond_opportunities[0].issuance_limit - bond_opportunities[0].amount_issued).unwrap(),
+    )
+    }
+    print_header("Attempted to print opps");
+
+    buy_bond(&collateral_snip, Uint128(100_000_000), &mut reports, &bonds)?;
+    print_header("Bond opp bought");
+    set_viewing_keys(VIEW_KEY.to_string(), &mut reports, &bonds, &issued_snip, &collateral_snip)?;
+
+    // Create permit
+    let account_permit = create_signed_permit(
+        AccountPermitMsg {
+            contract: HumanAddr(bonds.address.clone()),
+            key: "key".to_string(),
+        },
+        None,
+        None,
+        ACCOUNT_KEY,
+    );
+
+    let account_quer_msg = bonds::QueryMsg::Account { permit: account_permit };
+    let account_query: bonds::QueryAnswer = query(&bonds, account_quer_msg, None)?;
+    
+    if let bonds::QueryAnswer::Account { pending_bonds, 
+    } = account_query
+    {
+        assert_eq!(pending_bonds[0].deposit_amount, Uint128(100_000_000));
+        assert_eq!(pending_bonds[0].claim_amount, Uint128(265_957_446));
+        assert_eq!(pending_bonds[0].deposit_denom.token_info.symbol, "COLL".to_string());
+        println!("\nBond opp: {}\n Ends: {}\n Deposit Amount: {}\n Deposit Price: {}\n Claim Amount: {}\n Claim Price: {}\n Discount: {}\n Discount Price: {}", 
+            pending_bonds[0].deposit_denom.token_info.symbol,
+            pending_bonds[0].end,
+            pending_bonds[0].deposit_amount,
+            pending_bonds[0].deposit_price,
+            pending_bonds[0].claim_amount,
+            pending_bonds[0].claim_price,
+            pending_bonds[0].discount,
+            pending_bonds[0].discount_price,
+        )
+    }
+
+    claim_bond(&bonds, &mut reports)?;
+
+
+    let bond_opp_query_msg_2 = bonds::QueryMsg::BondOpportunities {  };
+    let opp_query_2: bonds::QueryAnswer = query(&bonds, bond_opp_query_msg_2, None)?;
+    
+    if let bonds::QueryAnswer::BondOpportunities { bond_opportunities,
+    } = opp_query_2
+    {
+        assert_eq!(bond_opportunities[0].amount_issued, Uint128(265_957_446));
+        assert_eq!(bond_opportunities[0].bonding_period, 2);
+        assert_eq!(bond_opportunities[0].discount, disc);
+        println!("\nBond opp: {}\n Starts: {}\n Ends: {}\n Bonding period: {}\n Discount: {}\n Amount Available: {}\n", 
+        bond_opportunities[0].deposit_denom.token_info.symbol,
+        bond_opportunities[0].start_time,
+        bond_opportunities[0].end_time,
+        bond_opportunities[0].bonding_period,
+        bond_opportunities[0].discount,
+        (bond_opportunities[0].issuance_limit - bond_opportunities[0].amount_issued).unwrap(),
+    )
+    }
+
+    let issued_snip_query_msg = snip20::QueryMsg::Balance { address: HumanAddr::from(account_a), key: VIEW_KEY.to_string() };
+    let issued_snip_query: snip20::QueryAnswer = query(&issued_snip, issued_snip_query_msg, None)?;
+
+    if let snip20::QueryAnswer::Balance { amount, 
+    } = issued_snip_query
+    {
+        assert_eq!(amount, Uint128(265_957_446));
+        println!("Account A Current ISSU Balance: {}\n", amount);
+        io::stdout().flush().unwrap();
+    }
+
+    let collat_snip_query_msg = snip20::QueryMsg::Balance { address: HumanAddr::from(account_admin), key: VIEW_KEY.to_string() };
+    let collat_snip_query: snip20::QueryAnswer = query(&collateral_snip, collat_snip_query_msg, None)?;
+
+    if let snip20::QueryAnswer::Balance { amount, 
+    } = collat_snip_query
+    {
+        assert_eq!(amount, Uint128(100_000_000));
+        println!("Account Admin Current COLL Balance: {}\n", amount);
+        io::stdout().flush().unwrap();
+    }
+
+    close_bond(&collateral_snip, &bonds, &mut reports)?;
+
+    let bond_opp_query_msg_3 = bonds::QueryMsg::BondOpportunities {  };
+    let opp_query_3: bonds::QueryAnswer = query(&bonds, bond_opp_query_msg_3, None)?;
+    
+    if let bonds::QueryAnswer::BondOpportunities { bond_opportunities,
+    } = opp_query_3
+    {
+        assert_eq!(bond_opportunities.is_empty(), true);
+    }
+
+    buy_bond(&collateral_snip, Uint128(10), &mut reports, &bonds)?;
+
+    Ok(())
+}

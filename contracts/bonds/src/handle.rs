@@ -208,7 +208,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     let issuance_asset = issued_asset_r(&deps.storage).load()?;
     
     // Calculate conversion of collateral to SHD
-    let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(&deps, deposit_amount, available, bond_opportunity.deposit_denom.clone(), issuance_asset, bond_opportunity.discount, bond_opportunity.max_collateral_price, config.global_minimum_issued_price)?;
+    let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(&deps, deposit_amount, available, bond_opportunity.deposit_denom.clone(), issuance_asset, bond_opportunity.discount, bond_opportunity.max_accepted_collateral_price, bond_opportunity.err_collateral_price, config.global_minimum_issued_price)?;
     
     if let Some(message) = msg {
         let msg: SlipMsg = from_binary(&message)?;
@@ -403,7 +403,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     bond_issuance_limit: Option<Uint128>,
     bonding_period: Option<u64>,
     discount: Option<Uint128>,
-    max_collateral_price: Uint128,
+    max_accepted_collateral_price: Uint128,
+    err_collateral_price: Uint128,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 
@@ -504,7 +505,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         discount: discount,
         bonding_period: period,  
         amount_issued: Uint128(0),  
-        max_collateral_price,               
+        max_accepted_collateral_price,
+        err_collateral_price,               
     };
     
     // Save bond opportunity
@@ -527,7 +529,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             bond_issuance_limit: bond_opportunity.issuance_limit,
             bonding_period: bond_opportunity.bonding_period,
             discount: bond_opportunity.discount,
-            max_collateral_price: bond_opportunity.max_collateral_price,
+            max_accepted_collateral_price: bond_opportunity.max_accepted_collateral_price,
+            err_collateral_price: bond_opportunity.err_collateral_price,
         })?),
     })
 }
@@ -651,16 +654,16 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     collateral_asset: Snip20Asset,
     issuance_asset: Snip20Asset,
     discount: Uint128,
-    max_collateral_price: Uint128,
-    //err_collateral_price: Uint128,
+    max_accepted_collateral_price: Uint128,
+    err_collateral_price: Uint128,
     min_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
-    let collateral_price = oracle(&deps, collateral_asset.token_info.symbol.clone())?;// Placeholder for Oracle lookup
-    if collateral_price > max_collateral_price {
-        //if collateral_price > err_collateral_price {
-            return Err(collateral_price_exceeds_limit(collateral_price.clone(), max_collateral_price.clone()))
-        //}
-        //collateral_price = max_collateral_price;
+    let mut collateral_price = oracle(&deps, collateral_asset.token_info.symbol.clone())?;// Placeholder for Oracle lookup
+    if collateral_price > max_accepted_collateral_price {
+        if collateral_price > err_collateral_price {
+            return Err(collateral_price_exceeds_limit(collateral_price.clone(), err_collateral_price.clone()))
+        }
+        collateral_price = max_accepted_collateral_price;
     }
     let issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?; // Placeholder for minted asset price lookup
     if issued_price < min_issued_price {
@@ -722,15 +725,9 @@ pub fn calculate_claim_date(
     env_time: u64,
     bonding_period: u64,
 ) -> u64 {
-    //let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
-    //let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-    // Take now, add bonding_period, save as end_time
-    //let bond_duration: Duration = Duration::days(bonding_period as i64);
-    //let end: DateTime<Utc> = now.add(bond_duration);
-
-    // Attempt at a block time implementation instead
-    // let delay = bonding_period.checked_mul(24u64 * 60u64 * 60u64).unwrap();
-    // let end = env_time.checked_add(delay).unwrap();
+    // Previously, translated the passed u64 as days and converted to seconds.
+    // Now, however, it treats the passed value as seconds, due to that being
+    // how the block environment tracks it.
     let end = env_time.checked_add(bonding_period).unwrap();
 
     end

@@ -88,7 +88,8 @@ pub enum HandleMsg {
         bond_issuance_limit: Option<Uint128>,
         bonding_period: Option<u64>,
         discount: Option<Uint128>,
-        max_collateral_price: Uint128,
+        max_accepted_collateral_price: Uint128,
+        err_collateral_price: Uint128,
     },
     CloseBond {
         collateral_asset: Contract,
@@ -134,7 +135,8 @@ pub enum HandleAnswer {
         bond_issuance_limit: Uint128,
         bonding_period: u64,
         discount: Uint128,
-        max_collateral_price: Uint128,
+        max_accepted_collateral_price: Uint128,
+        err_collateral_price: Uint128,
     },
     ClosedBond {
         status: ResponseStatus,
@@ -331,7 +333,8 @@ pub struct BondOpportunity {
     pub end_time: u64,
     pub bonding_period: u64,
     pub discount: Uint128,
-    pub max_collateral_price: Uint128,
+    pub max_accepted_collateral_price: Uint128,
+    pub err_collateral_price: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
