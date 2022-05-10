@@ -1,53 +1,85 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, HumanAddr};
+use crate::{
+    adapter,
+    utils::{
+        asset::Contract,
+        generic_response::ResponseStatus,
+        cycle::Cycle,
+    },
+};
+
+use cosmwasm_std::{Binary, HumanAddr, Uint128, StdResult};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
-    //pub account_holders: Vec<HumanAddr>,
     pub sscrt: Contract,
+}
+
+/* Examples:
+ * Constant-Portion -> Finance manager
+ * Constant-Amount -> Rewards, pre-set manually adjusted
+ * Monthly-Portion -> Rewards, self-scaling
+ * Monthly-Amount -> Governance grant or Committee funding
+ *
+ * Once-Portion -> Disallowed
+ */
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Allowance {
+    // Monthly refresh, not counted in rebalance
+    Amount {
+        //nick: Option<String>,
+        spender: HumanAddr,
+        // Unlike others, this is a direct number of uTKN to allow monthly
+        cycle: Cycle,
+        amount: Uint128,
+        last_refresh: String,
+    },
+    Portion {
+        //nick: Option<String>,
+        spender: HumanAddr,
+        portion: Uint128,
+        //TODO: This needs to be omitted from the handle msg
+        last_refresh: String,
+        tolerance: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum Allocation {
-    // To remain liquid at all times
-    Reserves {
-        allocation: Uint128,
-    },
-    // Won't be counted in rebalancing
-    Rewards {
-        contract: Contract,
-        allocation: Uint128,
-    },
-    // Monthly refresh, not counted in rebalance
-    Allowance {
-        address: HumanAddr,
-        // Unlike others, this is a direct number of uTKN to allow monthly
-        amount: Uint128,
-    },
-    // SCRT/ATOM/OSMO staking
-    Staking {
-        contract: Contract,
-        allocation: Uint128,
-    },
-    // SKY / Derivative Staking
-    Application {
-        contract: Contract,
-        allocation: Uint128,
-        token: HumanAddr,
-    },
-    // Liquidity Providing
-    Pool {
-        contract: Contract,
-        allocation: Uint128,
-        secondary_asset: HumanAddr,
-        token: HumanAddr,
-    },
+pub struct Manager {
+    pub contract: Contract,
+    pub balance: Uint128,
+    pub desired: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Balance {
+    pub token: HumanAddr,
+    pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Status {
+    Active,
+    Disabled,
+    Closed,
+    Transferred,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Account {
+    pub balances: Vec<Balance>,
+    pub unbondings: Vec<Balance>,
+    pub claimable: Vec<Balance>,
+    pub status: Status,
 }
 
 // Flag to be sent with funds
@@ -58,17 +90,10 @@ pub struct Flag {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct AllowanceData {
-    pub spender: HumanAddr,
-    pub amount: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
     pub sscrt: Contract,
-    //pub account_holders: Option<Vec<HumanAddr>>,
 }
 
 impl InitCallback for InitMsg {
@@ -85,12 +110,6 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    OneTimeAllowance {
-        asset: HumanAddr,
-        spender: HumanAddr,
-        amount: Uint128,
-        expiration: Option<u64>,
-    },
     UpdateConfig {
         config: Config,
     },
@@ -98,16 +117,26 @@ pub enum HandleMsg {
         contract: Contract,
         reserves: Option<Uint128>,
     },
-    /* List of contracts/users given an allowance based on a percentage of the asset balance
-     * e.g. governance, LP, SKY
-     */
-    RegisterAllocation {
-        asset: HumanAddr,
-        allocation: Allocation,
+    RegisterManager {
+        contract: Contract,
     },
-    RefreshAllowance {},
-    // Trigger to re-allocate asset (all if none)
-    //Rebalance { asset: Option<HumanAddr> },
+    // Setup a new allowance
+    Allowance {
+        asset: HumanAddr,
+        allowance: Allowance,
+    },
+    AddAccount {
+        holder: HumanAddr,
+    },
+    CloseAccount {
+        holder: HumanAddr,
+    },
+
+    /* TODO: Maybe?
+    TransferAccount {
+    },
+    */
+    Adapter(adapter::SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -121,25 +150,14 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         address: HumanAddr,
     },
-    UpdateConfig {
-        status: ResponseStatus,
-    },
-    Receive {
-        status: ResponseStatus,
-    },
-    RegisterAsset {
-        status: ResponseStatus,
-    },
-    RegisterApp {
-        status: ResponseStatus,
-    },
-    RefreshAllowance {
-        status: ResponseStatus,
-    },
-    OneTimeAllowance {
-        status: ResponseStatus,
-    },
-    //Rebalance { status: ResponseStatus },
+    UpdateConfig { status: ResponseStatus },
+    Receive { status: ResponseStatus },
+    RegisterAsset { status: ResponseStatus },
+    Allowance { status: ResponseStatus },
+    AddAccount { status: ResponseStatus },
+    RemoveAccount { status: ResponseStatus },
+    Rebalance { status: ResponseStatus },
+    Unbond { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -147,17 +165,18 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Balance {
-        asset: HumanAddr,
-    },
-    Allocations {
-        asset: HumanAddr,
-    },
-    Allowances {
+    // List of recurring allowances configured
+    Allowances { asset: HumanAddr },
+    // List of actual current amounts
+    Allowance {
         asset: HumanAddr,
         spender: HumanAddr,
     },
-    LastAllowanceRefresh {},
+    Accounts { },
+    Account { 
+        holder: HumanAddr,
+    },
+    Adapter(adapter::SubQueryMsg),
 }
 
 impl Query for QueryMsg {
@@ -169,8 +188,9 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config { config: Config },
     Assets { assets: Vec<HumanAddr> },
-    Allocations { allocations: Vec<Allocation> },
-    Balance { amount: Uint128 },
-    Allowances { allowances: Vec<AllowanceData> },
-    LastAllowanceRefresh { datetime: String },
+    Allowances { allowances: Vec<Allowance> },
+    CurrentAllowances { allowances: Vec<Allowance> },
+    Allowance { allowance: Uint128 },
+    Accounts { accounts: Vec<HumanAddr> },
+    Account { account: Account, },
 }

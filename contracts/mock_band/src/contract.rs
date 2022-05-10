@@ -1,7 +1,6 @@
-use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError,
-    StdResult, Storage,
+    StdResult, Storage, Uint128,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

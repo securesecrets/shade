@@ -13,11 +13,18 @@ members = [
   "contracts/governance",
   "contracts/mint",
   "contracts/mint_router",
-  "contracts/treasury",
   "contracts/oracle",
   "contracts/snip20",
-  "contracts/shd_staking",
+
+  # DAO
+  # - Core
+  "contracts/treasury",
+  "contracts/treasury_manager",
+  # - Adapters
   "contracts/scrt_staking",
+  "contracts/rewards_emission",
+  
+  "contracts/shd_staking",
 
   # Mock contracts
   "contracts/mock_band",

@@ -1,6 +1,12 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Validator};
+use crate::{
+    adapter,
+    utils::{
+        asset::Contract, 
+        generic_response::ResponseStatus
+    },
+};
+use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
+
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
@@ -39,9 +45,6 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    UpdateConfig {
-        admin: Option<HumanAddr>,
-    },
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
@@ -49,17 +52,10 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    // Begin unbonding amount
-    Unbond {
-        validator: HumanAddr,
+    UpdateConfig {
+        config: Config,
     },
-    //TODO: switch to this interface for standardization
-    //Claim { amount: Uint128 },
-
-    // Claim all pending rewards & completed unbondings
-    Claim {
-        validator: HumanAddr,
-    },
+    Adapter(adapter::SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -80,24 +76,23 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         validator: Validator,
     },
+    /*
     Claim {
         status: ResponseStatus,
     },
     Unbond {
         status: ResponseStatus,
-        delegation: Delegation,
+        delegations: Vec<HumanAddr>,
     },
+    */
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    GetConfig {},
-    //TODO: find a way to query this and return
-    //Unbondings {},
+    Config {},
     Delegations {},
-    //Delegation { validator: HumanAddr },
-    Rewards {},
+    Adapter(adapter::SubQueryMsg),
 }
 
 impl Query for QueryMsg {
@@ -108,5 +103,5 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
-    Balance { amount: Uint128 },
+    //Balance { amount: Uint128 },
 }
