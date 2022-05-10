@@ -244,6 +244,7 @@ contracts = {
     # mints
     'shade_mint': shade_mint.address,
     'silk_mint': silk_mint.address,
+    'mint_router': mint_router.address,
 
     'oracle': oracle.address,
     'band': mock_band.address,

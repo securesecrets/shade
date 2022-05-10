@@ -2,8 +2,8 @@ contracts_dir=contracts
 compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
-build-release=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
-build-debug=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked --features="debug-print"
+build-release=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
+build-debug=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print"
 
 # args (no extensions): wasm_name, contract_dir_name
 define opt_and_compress = 
@@ -15,7 +15,8 @@ endef
 
 CONTRACTS = \
 		airdrop governance snip20_staking mint mint_router \
-		treasury oracle initializer scrt_staking snip20 \
+		treasury treasury_manager scrt_staking rewards_emission \
+    oracle initializer snip20 \
 		mock_band mock_secretswap_pair mock_sienna_pair
 
 debug: setup
@@ -25,6 +26,8 @@ debug: setup
 release: setup
 	(cd ${contracts_dir}; ${build-release})
 	@$(MAKE) compress_all
+
+dao: treasury treasury_manager scrt_staking rewards_emission
 
 compress_all: setup
 	@$(MAKE) $(addprefix compress-,$(CONTRACTS))
@@ -50,7 +53,7 @@ test:
 	@$(MAKE) $(addprefix test-,$(CONTRACTS))
 
 test-%:
-	(cd ${contracts_dir}/$*; cargo unit-test)
+	(cd ${contracts_dir}/$*; cargo test)
 
 shd_staking: setup
 	(cd ${contracts_dir}/shd_staking; ${build-release})
@@ -68,6 +71,7 @@ clippy:
 	cargo clippy
 
 clean:
+	find . -name "Cargo.lock" -delete
 	rm -r $(compiled_dir)
 
 format:
