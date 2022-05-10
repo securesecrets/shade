@@ -344,3 +344,35 @@ Stores the user's slippage limit when entering bond opportunities
     "minimum_expected_amount": "minimum expected amount to be issued Uint128"
   }
 }
+```
+
+## AccountProofMsg
+The information inside permits that validate account ownership
+
+NOTE: The parameters must be in order
+### Structure
+| Name     | Type    | Description                                             | optional |
+|----------|---------|---------------------------------------------------------|----------|
+| contract | String  | Bonds contract                                        | no       |
+| key      | String  | Some permit key                                         | no       |
+
+
+## PermitSignature
+The signature that proves the validity of the data
+
+NOTE: The parameters must be in order
+### Structure
+| Name      | Type   | Description               | optional |
+|-----------|--------|---------------------------|----------|
+| pub_key   | pubkey | Signer's public key       | no       |
+| signature | String | Base 64 encoded signature | no       |
+
+## Pubkey
+Public key
+
+NOTE: The parameters must be in order
+### Structure
+| Name  | Type   | Description                        | optional |
+|-------|--------|------------------------------------|----------|
+| type  | String | Must be tendermint/PubKeySecp256k1 | no       |
+| value | String | The base 64 key                    | no       |
