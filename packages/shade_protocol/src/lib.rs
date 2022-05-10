@@ -1,11 +1,14 @@
 #[cfg(feature = "band")]
 pub mod band;
 
-#[cfg(feature = "secretswap")]
+#[cfg(feature = "dex")]
 pub mod secretswap;
 
-#[cfg(feature = "sienna")]
+#[cfg(feature = "dex")]
 pub mod sienna;
+
+#[cfg(feature = "dex")]
+pub mod shadeswap;
 
 #[cfg(feature = "dex")]
 pub mod dex;
@@ -37,6 +40,9 @@ pub mod oracle;
 
 #[cfg(feature = "scrt_staking")]
 pub mod scrt_staking;
+
+#[cfg(feature = "lp_shade_swap")]
+pub mod lp_shade_swap
 
 #[cfg(feature = "snip20_staking")]
 pub mod snip20_staking;

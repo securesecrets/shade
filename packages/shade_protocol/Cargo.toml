@@ -14,10 +14,8 @@ crate-type = ["cdylib", "rlib"]
 default = ["utils"]
 
 # Templates
-dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
+dex = ["utils", "math", "snip20", "mint", "band"]
 band = []
-secretswap = ["utils"]
-sienna = ["utils", "math"]
 snip20 = ["utils", "dep:remain", "dep:query-authentication"]
 
 # Utils
@@ -39,6 +37,7 @@ scrt_staking= ["utils", "adapter", "treasury"]
 treasury = ["utils", "adapter", "snip20"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
+lp_shade_swap = []
 adapter = []
 snip20_staking = ["utils"]
 

@@ -180,13 +180,13 @@ pub fn claim_msg(
     adapter: Contract,
 ) -> StdResult<CosmosMsg> {
     Ok(HandleMsg::Adapter(
-            SubHandleMsg::Claim { 
-                asset 
-            }).to_cosmos_msg(
-                adapter.code_hash,
-                adapter.address,
-                None
-            )?
+        SubHandleMsg::Claim { 
+            asset 
+        }).to_cosmos_msg(
+            adapter.code_hash,
+            adapter.address,
+            None
+        )?
     )
 }
 
@@ -196,14 +196,14 @@ pub fn unbond_msg(
     adapter: Contract,
 ) -> StdResult<CosmosMsg> {
     Ok(HandleMsg::Adapter(
-            SubHandleMsg::Unbond{ 
-                asset,
-                amount
-            }).to_cosmos_msg(
-                adapter.code_hash,
-                adapter.address,
-                None
-            )?
+        SubHandleMsg::Unbond{ 
+            asset,
+            amount
+        }).to_cosmos_msg(
+            adapter.code_hash,
+            adapter.address,
+            None
+        )?
     )
 }
 
@@ -212,12 +212,12 @@ pub fn update_msg(
     adapter: Contract,
 ) -> StdResult<CosmosMsg> {
     Ok(HandleMsg::Adapter(
-            SubHandleMsg::Update {
-                asset
-            }).to_cosmos_msg(
-                adapter.code_hash,
-                adapter.address,
-                None
-            )?
+        SubHandleMsg::Update {
+            asset
+        }).to_cosmos_msg(
+            adapter.code_hash,
+            adapter.address,
+            None
+        )?
     )
 }
