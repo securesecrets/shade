@@ -6,10 +6,19 @@ use crate::{
 };
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
 };
 use secret_toolkit::snip20::register_receive_msg;
-use shade_protocol::governance::{Config, HandleMsg, InitMsg, QueryMsg};
+use shade_protocol::contract_interfaces::governance::{Config, HandleMsg, InitMsg, QueryMsg};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

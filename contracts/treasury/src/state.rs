@@ -1,12 +1,17 @@
 use cosmwasm_std::{HumanAddr, Storage, Uint128};
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
-    Singleton, 
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
 };
 use shade_protocol::{
-    snip20::Snip20Asset,
+    contract_interfaces::{snip20::Snip20Asset, treasury::treasury},
     utils::asset::Contract,
-    treasury
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";
@@ -86,7 +91,6 @@ pub fn managers_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<treasury:
 pub fn managers_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<treasury::Manager>> {
     singleton(storage, MANAGERS)
 }
-
 
 pub fn account_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<HumanAddr>> {
     singleton_read(storage, ACCOUNT_LIST)

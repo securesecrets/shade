@@ -1,13 +1,9 @@
 use crate::{
-    adapter,
-    utils::{
-        asset::Contract,
-        generic_response::ResponseStatus,
-        cycle::Cycle,
-    },
+    contract_interfaces::treasury::adapter,
+    utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStatus},
 };
 
-use cosmwasm_std::{Binary, HumanAddr, Uint128, StdResult};
+use cosmwasm_std::{Binary, HumanAddr, StdResult, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
@@ -150,14 +146,30 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         address: HumanAddr,
     },
-    UpdateConfig { status: ResponseStatus },
-    Receive { status: ResponseStatus },
-    RegisterAsset { status: ResponseStatus },
-    Allowance { status: ResponseStatus },
-    AddAccount { status: ResponseStatus },
-    RemoveAccount { status: ResponseStatus },
-    Rebalance { status: ResponseStatus },
-    Unbond { status: ResponseStatus },
+    UpdateConfig {
+        status: ResponseStatus,
+    },
+    Receive {
+        status: ResponseStatus,
+    },
+    RegisterAsset {
+        status: ResponseStatus,
+    },
+    Allowance {
+        status: ResponseStatus,
+    },
+    AddAccount {
+        status: ResponseStatus,
+    },
+    RemoveAccount {
+        status: ResponseStatus,
+    },
+    Rebalance {
+        status: ResponseStatus,
+    },
+    Unbond {
+        status: ResponseStatus,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -166,14 +178,16 @@ pub enum QueryMsg {
     Config {},
     Assets {},
     // List of recurring allowances configured
-    Allowances { asset: HumanAddr },
+    Allowances {
+        asset: HumanAddr,
+    },
     // List of actual current amounts
     Allowance {
         asset: HumanAddr,
         spender: HumanAddr,
     },
-    Accounts { },
-    Account { 
+    Accounts {},
+    Account {
         holder: HumanAddr,
     },
     Adapter(adapter::SubQueryMsg),
@@ -192,5 +206,5 @@ pub enum QueryAnswer {
     CurrentAllowances { allowances: Vec<Allowance> },
     Allowance { allowance: Uint128 },
     Accounts { accounts: Vec<HumanAddr> },
-    Account { account: Account, },
+    Account { account: Account },
 }

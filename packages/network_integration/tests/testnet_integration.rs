@@ -24,11 +24,11 @@ use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use secretcli::secretcli::{account_address, create_permit, handle, init, query};
 use serde::Serialize;
 use serde_json::Result;
-use shade_protocol::airdrop::account::FillerMsg;
+use shade_protocol::contract_interfaces::airdrop::account::FillerMsg;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    airdrop::{
+    contract_interfaces::airdrop::{
         self,
         account::{AccountPermitMsg, AddressProofMsg},
         claim_info::RequiredTask,

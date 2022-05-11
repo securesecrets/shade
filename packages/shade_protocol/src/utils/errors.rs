@@ -1,6 +1,5 @@
 use cosmwasm_std::StdError;
-use schemars::JsonSchema;
-use schemars::_serde_json::to_string;
+use schemars::{JsonSchema, _serde_json::to_string};
 use serde::{Deserialize, Serialize};
 
 #[macro_export]
@@ -28,9 +27,11 @@ impl<T: CodeType + Serialize> DetailedError<T> {
     pub fn to_error(&self) -> StdError {
         StdError::generic_err(self.to_string())
     }
+
     pub fn to_string(&self) -> String {
         to_string(&self).unwrap_or("".to_string())
     }
+
     pub fn from_code(target: &str, code: T, context: Vec<&str>) -> Self {
         let verbose = code.to_verbose(&context);
         Self {
@@ -152,10 +153,10 @@ pub mod tests {
             DetailedError::from_code("contract", TestCode::Error3, vec!["address", "amount"]);
         assert_eq!(err3.code, 2);
         assert_eq!(err3.r#type, TestCode::Error3);
-        assert_eq!(
-            err3.context,
-            vec!["address".to_string(), "amount".to_string()]
-        );
+        assert_eq!(err3.context, vec![
+            "address".to_string(),
+            "amount".to_string()
+        ]);
         assert_eq!(err3.verbose, "Expecting address but got amount".to_string());
     }
 

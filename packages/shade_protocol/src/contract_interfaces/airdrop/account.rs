@@ -1,10 +1,10 @@
-use crate::airdrop::errors::permit_rejected;
+use crate::contract_interfaces::airdrop::errors::permit_rejected;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult};
-use query_authentication::viewing_keys::ViewingKey;
 use query_authentication::{
     permit::{bech32_to_canonical, Permit},
     transaction::SignedTx,
+    viewing_keys::ViewingKey,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

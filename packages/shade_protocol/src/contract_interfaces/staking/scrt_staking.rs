@@ -1,9 +1,6 @@
 use crate::{
-    adapter,
-    utils::{
-        asset::Contract, 
-        generic_response::ResponseStatus
-    },
+    contract_interfaces::treasury::adapter,
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
 

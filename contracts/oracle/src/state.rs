@@ -1,13 +1,17 @@
 use cosmwasm_std::Storage;
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{
-    oracle::{
-        IndexElement, OracleConfig
-    },
-    dex,
+use shade_protocol::contract_interfaces::{
+    dex::dex,
+    oracles::oracle::{IndexElement, OracleConfig},
 };
 
 pub static CONFIG_KEY: &[u8] = b"config";

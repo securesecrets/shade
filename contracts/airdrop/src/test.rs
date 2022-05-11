@@ -7,7 +7,11 @@ pub mod tests {
         permit::bech32_to_canonical,
         transaction::{PermitSignature, PubKey},
     };
-    use shade_protocol::airdrop::account::{AddressProofMsg, AddressProofPermit, FillerMsg};
+    use shade_protocol::contract_interfaces::airdrop::account::{
+        AddressProofMsg,
+        AddressProofPermit,
+        FillerMsg,
+    };
 
     #[test]
     fn decay_factor() {
@@ -54,9 +58,11 @@ pub mod tests {
 
         permit.memo = Some("OtherMemo".to_string());
 
-        assert!(permit
-            .validate(Some("wasm/MsgExecuteContract".to_string()))
-            .is_err())
+        assert!(
+            permit
+                .validate(Some("wasm/MsgExecuteContract".to_string()))
+                .is_err()
+        )
     }
 
     #[test]

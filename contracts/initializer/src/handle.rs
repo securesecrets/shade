@@ -1,10 +1,21 @@
 use crate::state::{config_r, config_w, silk_r, silk_w};
 use cosmwasm_std::{
-    to_binary, Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage,
+    to_binary,
+    Api,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use secret_toolkit::utils::InitCallback;
-use shade_protocol::initializer::{HandleAnswer, Snip20ContractInfo, Snip20InitHistory};
-use shade_protocol::utils::generic_response::ResponseStatus::Success;
+use shade_protocol::{
+    contract_interfaces::initializer::{HandleAnswer, Snip20ContractInfo, Snip20InitHistory},
+    utils::generic_response::ResponseStatus::Success,
+};
 
 pub fn set_admin<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -46,7 +57,7 @@ pub fn init_silk<S: Storage, A: Api, Q: Querier>(
     }
 
     // Snip20 configs
-    let coin_config = Some(shade_protocol::snip20::InitConfig {
+    let coin_config = Some(shade_protocol::contract_interfaces::snip20::InitConfig {
         public_total_supply: Option::from(true),
         enable_deposit: Option::from(false),
         enable_redeem: Option::from(false),
@@ -55,7 +66,7 @@ pub fn init_silk<S: Storage, A: Api, Q: Querier>(
     });
 
     // Initialize Silk
-    let silk_init_msg = shade_protocol::snip20::InitMsg {
+    let silk_init_msg = shade_protocol::contract_interfaces::snip20::InitMsg {
         name: "Silk".to_string(),
         admin: Some(silk.admin.unwrap_or_else(|| env.message.sender.clone())),
         symbol: ticker,

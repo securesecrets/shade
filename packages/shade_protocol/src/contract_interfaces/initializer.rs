@@ -1,5 +1,4 @@
-use crate::snip20::InitialBalance;
-use crate::utils::generic_response::ResponseStatus;
+use crate::{contract_interfaces::snip20::InitialBalance, utils::generic_response::ResponseStatus};
 use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};

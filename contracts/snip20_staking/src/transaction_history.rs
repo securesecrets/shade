@@ -2,7 +2,15 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{
-    Api, CanonicalAddr, Coin, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
+    Api,
+    CanonicalAddr,
+    Coin,
+    HumanAddr,
+    ReadonlyStorage,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
 };
 use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
@@ -179,6 +187,7 @@ impl StoredTxAction {
             address3: Some(recipient),
         }
     }
+
     fn mint(minter: CanonicalAddr, recipient: CanonicalAddr) -> Self {
         Self {
             tx_type: TxCode::Mint.to_u8(),
@@ -187,6 +196,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn burn(owner: CanonicalAddr, burner: CanonicalAddr) -> Self {
         Self {
             tx_type: TxCode::Burn.to_u8(),
@@ -195,6 +205,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn deposit() -> Self {
         Self {
             tx_type: TxCode::Deposit.to_u8(),
@@ -203,6 +214,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn stake(staker: CanonicalAddr) -> Self {
         Self {
             tx_type: TxCode::Stake.to_u8(),
@@ -211,6 +223,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn add_reward(funder: CanonicalAddr) -> Self {
         Self {
             tx_type: TxCode::AddReward.to_u8(),
@@ -219,6 +232,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn fund_unbond(funder: CanonicalAddr) -> Self {
         Self {
             tx_type: TxCode::FundUnbond.to_u8(),
@@ -227,6 +241,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn unbond(staker: CanonicalAddr) -> Self {
         Self {
             tx_type: TxCode::Unbond.to_u8(),
@@ -235,6 +250,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn claim_unbond(staker: CanonicalAddr) -> Self {
         Self {
             tx_type: TxCode::ClaimUnbond.to_u8(),
@@ -243,6 +259,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn claim_reward(staker: CanonicalAddr) -> Self {
         Self {
             tx_type: TxCode::ClaimReward.to_u8(),

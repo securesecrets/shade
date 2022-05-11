@@ -1,11 +1,15 @@
 pub mod stake;
-use crate::{utils::{asset::Contract, generic_response::ResponseStatus}};
-use crate::snip20::permit::Snip20Permit;
+use crate::{
+    contract_interfaces::{
+        snip20::permit::Snip20Permit,
+        staking::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue},
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
+};
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, Query};
 use serde::{Deserialize, Serialize};
-use crate::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue};
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct InitMsg {
@@ -26,7 +30,7 @@ pub struct InitMsg {
 
     // Distributors
     pub limit_transfer: bool,
-    pub distributors: Option<Vec<HumanAddr>>
+    pub distributors: Option<Vec<HumanAddr>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -37,7 +41,7 @@ pub enum ReceiveType {
     // Adding staker rewards
     Reward,
     // Funding unbonds
-    Unbond
+    Unbond,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -57,7 +61,7 @@ pub enum HandleMsg {
         unbond_time: Option<u64>,
         disable_treasury: bool,
         treasury: Option<HumanAddr>,
-        padding: Option<String>
+        padding: Option<String>,
     },
     Receive {
         sender: HumanAddr,
@@ -65,20 +69,20 @@ pub enum HandleMsg {
         amount: Uint128,
         msg: Option<Binary>,
         memo: Option<String>,
-        padding: Option<String>
+        padding: Option<String>,
     },
     Unbond {
         amount: Uint128,
-        padding: Option<String>
+        padding: Option<String>,
     },
     ClaimUnbond {
-        padding: Option<String>
+        padding: Option<String>,
     },
     ClaimRewards {
-        padding: Option<String>
+        padding: Option<String>,
     },
     StakeRewards {
-        padding: Option<String>
+        padding: Option<String>,
     },
 
     // Balance
@@ -87,7 +91,7 @@ pub enum HandleMsg {
         code_hash: Option<String>,
         msg: Option<Binary>,
         memo: Option<String>,
-        padding: Option<String>
+        padding: Option<String>,
     },
 
     ExposeBalanceWithCooldown {
@@ -95,27 +99,26 @@ pub enum HandleMsg {
         code_hash: Option<String>,
         msg: Option<Binary>,
         memo: Option<String>,
-        padding: Option<String>
+        padding: Option<String>,
     },
 
     // Distributors
     SetDistributorsStatus {
         enabled: bool,
-        padding: Option<String>
+        padding: Option<String>,
     },
     AddDistributors {
         distributors: Vec<HumanAddr>,
-        padding: Option<String>
+        padding: Option<String>,
     },
     SetDistributors {
         distributors: Vec<HumanAddr>,
-        padding: Option<String>
+        padding: Option<String>,
     },
 
     ContractStatus {
         status: ContractStatusLevel,
     },
-
     // Implement this to receive balance information
     // ReceiveBalance {
     //      sender: HumanAddr,
@@ -155,7 +158,7 @@ pub enum QueryMsg {
     Unbonding {},
     Unfunded {
         start: u64,
-        total: u64
+        total: u64,
     },
     Staked {
         address: HumanAddr,
@@ -178,9 +181,7 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryWithPermit {
-    Staked {
-        time: Option<u64>,
-    },
+    Staked { time: Option<u64> },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -192,11 +193,11 @@ pub enum QueryAnswer {
     },
     TotalStaked {
         tokens: Uint128,
-        shares: Uint128
+        shares: Uint128,
     },
     // Shares per token
     StakeRate {
-        shares: Uint128
+        shares: Uint128,
     },
     Staked {
         tokens: Uint128,
@@ -204,17 +205,17 @@ pub enum QueryAnswer {
         pending_rewards: Uint128,
         unbonding: Uint128,
         unbonded: Option<Uint128>,
-        cooldown: VecQueue<QueueItem>
+        cooldown: VecQueue<QueueItem>,
     },
     Unbonding {
-        total: Uint128
+        total: Uint128,
     },
     Unfunded {
-        total: Uint128
+        total: Uint128,
     },
 
     // Distributors
     Distributors {
-        distributors: Option<Vec<HumanAddr>>
+        distributors: Option<Vec<HumanAddr>>,
     },
 }

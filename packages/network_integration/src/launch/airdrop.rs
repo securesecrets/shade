@@ -9,7 +9,10 @@ use secretcli::cli_types::NetContract;
 use secretcli::secretcli::{handle, init};
 use serde::{Deserialize, Serialize};
 use shade_protocol::utils::asset::Contract;
-use shade_protocol::{airdrop, snip20};
+use shade_protocol::{
+    contract_interfaces::airdrop,
+    contract_interfaces::snip20
+};
 use std::{env, fs};
 
 #[derive(Serialize, Deserialize)]

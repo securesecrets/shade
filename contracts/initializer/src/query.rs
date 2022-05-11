@@ -1,6 +1,6 @@
 use crate::state::{config_r, shade_r, silk_r};
 use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage};
-use shade_protocol::initializer::QueryAnswer;
+use shade_protocol::contract_interfaces::initializer::QueryAnswer;
 
 pub fn contracts<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Contracts {

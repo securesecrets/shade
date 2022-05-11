@@ -1,24 +1,52 @@
-use crate::contract::check_if_admin;
-use crate::msg::HandleAnswer;
-use crate::msg::ResponseStatus::Success;
-use crate::state::{Balances, Config, ReadonlyConfig};
-use crate::state_staking::{
-    DailyUnbondingQueue, TotalShares, TotalTokens, TotalUnbonding, UnbondingQueue,
-    UnsentStakedTokens, UserCooldown, UserShares,
-};
-use crate::transaction_history::{
-    store_add_reward, store_claim_reward, store_claim_unbond, store_fund_unbond, store_stake,
-    store_unbond,
+use crate::{
+    contract::check_if_admin,
+    msg::{HandleAnswer, ResponseStatus::Success},
+    state::{Balances, Config, ReadonlyConfig},
+    state_staking::{
+        DailyUnbondingQueue,
+        TotalShares,
+        TotalTokens,
+        TotalUnbonding,
+        UnbondingQueue,
+        UnsentStakedTokens,
+        UserCooldown,
+        UserShares,
+    },
+    transaction_history::{
+        store_add_reward,
+        store_claim_reward,
+        store_claim_unbond,
+        store_fund_unbond,
+        store_stake,
+        store_unbond,
+    },
 };
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, CanonicalAddr, Decimal, Env, Extern,
-    HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
+    from_binary,
+    to_binary,
+    Api,
+    Binary,
+    CanonicalAddr,
+    Decimal,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
 };
 use ethnum::u256;
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::snip20_staking::stake::{DailyUnbonding, StakeConfig, Unbonding, VecQueue};
-use shade_protocol::snip20_staking::ReceiveType;
-use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
+use shade_protocol::{
+    contract_interfaces::staking::snip20_staking::{
+        stake::{DailyUnbonding, StakeConfig, Unbonding, VecQueue},
+        ReceiveType,
+    },
+    utils::storage::default::{BucketStorage, SingletonStorage},
+};
 
 //TODO: set errors
 
@@ -253,8 +281,7 @@ pub fn claim_rewards<S: Storage>(
     sender: &HumanAddr,
     sender_canon: &CanonicalAddr,
 ) -> StdResult<u128> {
-    let user_shares =
-        UserShares::may_load(storage, sender.as_str().as_bytes())?.expect("No funds");
+    let user_shares = UserShares::may_load(storage, sender.as_str().as_bytes())?.expect("No funds");
 
     let user_balance = Balances::from_storage(storage).balance(sender_canon);
 
@@ -462,10 +489,10 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
             let mut daily_unbond_queue = DailyUnbondingQueue::load(&deps.storage)?;
 
-            while !daily_unbond_queue.0 .0.is_empty() {
-                remaining_amount = daily_unbond_queue.0 .0[0].fund(remaining_amount);
-                if daily_unbond_queue.0 .0[0].is_funded() {
-                    daily_unbond_queue.0 .0.pop();
+            while !daily_unbond_queue.0.0.is_empty() {
+                remaining_amount = daily_unbond_queue.0.0[0].fund(remaining_amount);
+                if daily_unbond_queue.0.0[0].is_funded() {
+                    daily_unbond_queue.0.0.pop();
                 }
                 if remaining_amount == Uint128::zero() {
                     break;
@@ -642,16 +669,16 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
 
     let mut total = Uint128::zero();
     // Iterate over the sorted queue
-    while !unbond_queue.0 .0.is_empty() {
+    while !unbond_queue.0.0.is_empty() {
         // Since the queue is sorted, the moment we find a date above the current then we assume
         // that no other item in the queue is eligible
-        if unbond_queue.0 .0[0].release <= env.block.time {
+        if unbond_queue.0.0[0].release <= env.block.time {
             // Daily unbond queue is also sorted, therefore as long as its next item is greater
             // than the unbond then we assume its funded
             if daily_unbond_queue.0.is_empty()
-                || round_date(unbond_queue.0 .0[0].release) < daily_unbond_queue.0[0].release
+                || round_date(unbond_queue.0.0[0].release) < daily_unbond_queue.0[0].release
             {
-                total += unbond_queue.0 .0[0].amount;
+                total += unbond_queue.0.0[0].amount;
                 unbond_queue.0.pop();
             } else {
                 break;
@@ -824,8 +851,10 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
 #[cfg(test)]
 mod tests {
     use crate::stake::{calculate_rewards, round_date, shares_per_token, tokens_per_share};
-    use shade_protocol::snip20_staking::stake::StakeConfig;
-    use shade_protocol::utils::asset::Contract;
+    use shade_protocol::{
+        contract_interfaces::staking::snip20_staking::stake::StakeConfig,
+        utils::asset::Contract,
+    };
 
     fn init_config(token_decimals: u8, shares_decimals: u8) -> StakeConfig {
         StakeConfig {
@@ -973,8 +1002,8 @@ mod tests {
         assert_eq!(reward_token, 0);
     }
 
-    use rand::Rng;
     use cosmwasm_math_compat::Uint128;
+    use rand::Rng;
 
     #[test]
     fn staking_simulation() {

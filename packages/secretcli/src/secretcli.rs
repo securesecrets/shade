@@ -1,5 +1,11 @@
 use crate::cli_types::{
-    ListCodeResponse, ListContractCode, NetContract, SignedTx, TxCompute, TxQuery, TxResponse,
+    ListCodeResponse,
+    ListContractCode,
+    NetContract,
+    SignedTx,
+    TxCompute,
+    TxQuery,
+    TxResponse,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};

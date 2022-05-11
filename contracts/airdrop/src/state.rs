@@ -1,15 +1,34 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    from_binary, Api, Binary, Extern, HumanAddr, Querier, StdError, StdResult, Storage,
+    from_binary,
+    Api,
+    Binary,
+    Extern,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::airdrop::account::AddressProofMsg;
-use shade_protocol::airdrop::errors::{permit_contract_mismatch, permit_key_revoked};
-use shade_protocol::airdrop::{
-    account::{authenticate_ownership, Account, AccountPermit, AddressProofPermit},
+use shade_protocol::contract_interfaces::airdrop::{
+    account::{
+        authenticate_ownership,
+        Account,
+        AccountPermit,
+        AddressProofMsg,
+        AddressProofPermit,
+    },
+    errors::{permit_contract_mismatch, permit_key_revoked},
     Config,
 };
 

@@ -1,6 +1,6 @@
 use cosmwasm_std::Storage;
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use shade_protocol::initializer::{Config, Snip20InitHistory};
+use shade_protocol::contract_interfaces::initializer::{Config, Snip20InitHistory};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SHADE_KEY: &[u8] = b"shade";

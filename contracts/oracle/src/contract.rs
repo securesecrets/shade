@@ -1,9 +1,23 @@
 use crate::{handle, query, state::config_w};
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
 };
-use shade_protocol::oracle::{HandleMsg, InitMsg, OracleConfig, QueryMsg};
+use shade_protocol::contract_interfaces::oracles::oracle::{
+    HandleMsg,
+    InitMsg,
+    OracleConfig,
+    QueryMsg,
+};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -36,7 +50,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             handle::try_update_config(deps, env, admin, band)
         }
         HandleMsg::RegisterPair { pair } => handle::register_pair(deps, env, pair),
-        HandleMsg::UnregisterPair { symbol, pair } => handle::unregister_pair(deps, env, symbol, pair),
+        HandleMsg::UnregisterPair { symbol, pair } => {
+            handle::unregister_pair(deps, env, symbol, pair)
+        }
         HandleMsg::RegisterIndex { symbol, basket } => {
             handle::register_index(deps, env, symbol, basket)
         }

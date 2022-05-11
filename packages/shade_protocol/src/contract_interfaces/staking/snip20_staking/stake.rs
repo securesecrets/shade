@@ -1,10 +1,11 @@
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
+use crate::utils::{
+    asset::Contract,
+    storage::default::{BucketStorage, SingletonStorage},
+};
 use cosmwasm_std::{HumanAddr, Uint128};
-use crate::utils::storage::default::{BucketStorage, SingletonStorage};
-use crate::utils::asset::Contract;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::{cmp::Ordering, collections::BinaryHeap};
 
 // Configuration file for staking
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -13,7 +14,7 @@ pub struct StakeConfig {
     pub unbond_time: u64,
     pub staked_token: Contract,
     pub decimal_difference: u8,
-    pub treasury: Option<HumanAddr>
+    pub treasury: Option<HumanAddr>,
 }
 
 impl SingletonStorage for StakeConfig {
@@ -26,7 +27,7 @@ impl SingletonStorage for StakeConfig {
 pub struct DailyUnbonding {
     pub unbonding: Uint128,
     pub funded: Uint128,
-    pub release: u64
+    pub release: u64,
 }
 
 impl DailyUnbonding {
@@ -34,7 +35,7 @@ impl DailyUnbonding {
         Self {
             unbonding,
             funded: Uint128::zero(),
-            release
+            release,
         }
     }
 
@@ -47,17 +48,17 @@ impl DailyUnbonding {
     ///
     pub fn fund(&mut self, amount: Uint128) -> Uint128 {
         if self.is_funded() {
-            return amount
+            return amount;
         }
 
         let to_fund = (self.unbonding - self.funded).unwrap();
         if to_fund < amount {
             self.funded = self.unbonding.into();
-            return (amount - to_fund).unwrap()
+            return (amount - to_fund).unwrap();
         }
 
         self.funded += amount;
-        return Uint128::zero()
+        return Uint128::zero();
     }
 }
 
@@ -143,13 +144,31 @@ pub trait VecQueueMerge {
 
 #[cfg(test)]
 mod tests {
+    use crate::contract_interfaces::staking::snip20_staking::stake::{
+        DailyUnbonding,
+        QueueItem,
+        VecQueue,
+    };
     use cosmwasm_std::Uint128;
-    use crate::snip20_staking::stake::{DailyUnbonding, QueueItem, VecQueue};
 
     #[test]
     fn is_funded() {
-        assert!(DailyUnbonding{ unbonding: Uint128(100), funded: Uint128(100), release: 0 }.is_funded());
-        assert!(!DailyUnbonding{ unbonding: Uint128(150), funded: Uint128(100), release: 0 }.is_funded());
+        assert!(
+            DailyUnbonding {
+                unbonding: Uint128(100),
+                funded: Uint128(100),
+                release: 0
+            }
+            .is_funded()
+        );
+        assert!(
+            !DailyUnbonding {
+                unbonding: Uint128(150),
+                funded: Uint128(100),
+                release: 0
+            }
+            .is_funded()
+        );
     }
 
     #[test]
@@ -180,19 +199,19 @@ mod tests {
 
         vec.push(&QueueItem {
             amount: Uint128(1),
-            release: 1
+            release: 1,
         });
         vec.push(&QueueItem {
             amount: Uint128(1),
-            release: 2
+            release: 2,
         });
         vec.push(&QueueItem {
             amount: Uint128(1),
-            release: 2
+            release: 2,
         });
         vec.push(&QueueItem {
             amount: Uint128(1),
-            release: 3
+            release: 3,
         });
 
         assert_eq!(vec.0[0], QueueItem {

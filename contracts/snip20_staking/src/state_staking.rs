@@ -1,8 +1,15 @@
 use cosmwasm_std::{HumanAddr, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::snip20_staking::stake::{Cooldown, DailyUnbonding, Unbonding, VecQueue};
-use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
+use shade_protocol::{
+    contract_interfaces::staking::snip20_staking::stake::{
+        Cooldown,
+        DailyUnbonding,
+        Unbonding,
+        VecQueue,
+    },
+    utils::storage::default::{BucketStorage, SingletonStorage},
+};
 
 // used to determine what each token is worth to calculate rewards
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

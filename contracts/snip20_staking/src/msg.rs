@@ -3,13 +3,17 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::batch;
-use crate::transaction_history::{RichTx, Tx};
-use crate::viewing_key::ViewingKey;
+use crate::{
+    batch,
+    transaction_history::{RichTx, Tx},
+    viewing_key::ViewingKey,
+};
 use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult, Uint128};
 use secret_toolkit::permit::Permit;
-use shade_protocol::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue};
-use shade_protocol::utils::asset::Contract;
+use shade_protocol::{
+    contract_interfaces::staking::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue},
+    utils::asset::Contract,
+};
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct InitMsg {
