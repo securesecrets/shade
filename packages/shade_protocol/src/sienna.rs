@@ -1,12 +1,17 @@
 use crate::{
-    band, dex,
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
     },
+    dex,
+    band,
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{
+    HumanAddr, Uint128,
+    StdResult, StdError, 
+    Extern, Querier, Api, Storage,
+};
+
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
@@ -117,12 +122,11 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     let scrt_result = band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), band)?;
 
     // SCRT-USD / SCRT-symbol
-    Ok(translate_price(
-        scrt_result.rate,
-        normalize_price(
-            amount_per_scrt(deps, pair.clone(), sscrt)?,
-            pair.asset.token_info.decimals,
-        ),
+    Ok(translate_price(scrt_result.rate, 
+         normalize_price(
+             amount_per_scrt(deps, pair.clone(), sscrt)?, 
+             pair.asset.token_info.decimals
+         )
     ))
 }
 
@@ -133,11 +137,11 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Uint128> {
     let response: SimulationResponse = PairQuery::SwapSimulation {
         offer: TokenTypeAmount {
-            amount: Uint128::new(1_000_000), // 1 sSCRT (6 decimals)
+            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
             token: TokenType::CustomToken {
                 contract_addr: sscrt.address,
                 token_code_hash: sscrt.code_hash,
-            },
+            }
         },
     }
     .query(
@@ -160,5 +164,5 @@ pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
     )?;
 
     // Constant Product
-    Ok(pair_info.pair_info.amount_0 * pair_info.pair_info.amount_1)
+    Ok(Uint128(pair_info.pair_info.amount_0.u128() * pair_info.pair_info.amount_1.u128()))
 }

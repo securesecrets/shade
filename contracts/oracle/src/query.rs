@@ -1,6 +1,6 @@
 use crate::state::{config_r, dex_pairs_r, index_r};
 use cosmwasm_math_compat::{Uint128, Uint512};
-use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
 use shade_protocol::{
     band, dex,
     oracle::{IndexElement, QueryAnswer},
@@ -48,10 +48,10 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
 pub fn prices<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbols: Vec<String>,
-) -> StdResult<Vec<Uint128>> {
+) -> StdResult<Vec<cosmwasm_std::Uint128>> {
     let mut band_symbols = vec![];
     let mut band_quotes = vec![];
-    let mut results = vec![Uint128::zero(); symbols.len()];
+    let mut results = vec![cosmwasm_std::Uint128::zero(); symbols.len()];
 
     let config = config_r(&deps.storage).load()?;
 
@@ -96,13 +96,14 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
         results[result_index] = data.rate;
     }
 
-    Ok(results)
+    Ok(results.iter().map(|r| cosmwasm_std::Uint128(r.u128())).collect())
 }
 
 pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     index: Vec<IndexElement>,
-) -> StdResult<Uint128> {
+) -> StdResult<cosmwasm_std::Uint128> {
+
     let mut weight_sum = Uint512::zero();
     let mut price = Uint512::zero();
 
@@ -160,7 +161,7 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Ok(Uint128::try_from(
-        price * Uint512::from(10u128.pow(18)) / weight_sum,
-    )?)
+    Ok(cosmwasm_std::Uint128(
+        Uint128::try_from(price.checked_mul(Uint512::from(10u128.pow(18)))?.checked_div(weight_sum)?)?.u128(),
+    ))
 }

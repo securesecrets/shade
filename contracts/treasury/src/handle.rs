@@ -1,26 +1,44 @@
-use cosmwasm_math_compat::Uint128;
 use cosmwasm_std;
 use cosmwasm_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage,
+    Querier, StdError, StdResult, Storage, Uint128,
 };
-use secret_toolkit;
-use secret_toolkit::snip20::{
-    allowance_query, decrease_allowance_msg, increase_allowance_msg, register_receive_msg,
-    send_msg, set_viewing_key_msg,
+use secret_toolkit::{
+    snip20::{
+        register_receive_msg, allowance_query,
+        decrease_allowance_msg, increase_allowance_msg,
+        set_viewing_key_msg, balance_query,
+    },
+    utils::Query,
 };
 
 use shade_protocol::{
     snip20,
-    treasury::{Allocation, Config, Flag, HandleAnswer, QueryAnswer},
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    adapter,
+    treasury::{
+        Allowance, Config, Flag, Manager, Account, Status,
+        HandleAnswer, QueryAnswer, Balance,
+    },
+    utils::{
+        asset::Contract, 
+        generic_response::ResponseStatus,
+        cycle::{ Cycle, parse_utc_datetime, exceeds_cycle },
+    },
 };
 
 use crate::{
     query,
     state::{
-        allocations_r, allocations_w, asset_list_r, asset_list_w, assets_r, assets_w, config_r,
-        config_w, last_allowance_refresh_r, last_allowance_refresh_w, viewing_key_r,
+        allowances_r, allowances_w, 
+        asset_list_r, asset_list_w, 
+        assets_r, assets_w, 
+        config_r, config_w, 
+        viewing_key_r, self_address_r,
+        managers_r, managers_w,
+        account_r, account_w,
+        account_list_r, account_list_w,
+        total_unbonding_r,
+        total_unbonding_w,
     },
 };
 use chrono::prelude::*;
@@ -28,77 +46,32 @@ use chrono::prelude::*;
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    _sender: HumanAddr,
+    sender: HumanAddr,
     _from: HumanAddr,
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-    //debug_print!("Treasured {} u{}", amount, asset.token_info.symbol);
-    // skip the rest if the send the "unallocated" flag
-    if let Some(f) = msg {
-        let flag: Flag = from_binary(&f)?;
-        // NOTE: would this be better as a non-exhaustive enum?
-        // https://doc.rust-lang.org/reference/attributes/type_system.html#the-non_exhaustive-attribute
-        if flag.flag == "unallocated" {
-            return Ok(HandleResponse {
-                messages: vec![],
-                log: vec![],
-                data: Some(to_binary(&HandleAnswer::Receive {
-                    status: ResponseStatus::Success,
-                })?),
+
+    let key = sender.as_str().as_bytes();
+
+    if let Some(mut account) = account_r(&deps.storage).may_load(&key)? {
+
+        if let Some(i) = account.balances.iter()
+                                .position(|b| b.token == env.message.sender) {
+            account.balances[i].amount += amount;
+        }
+        else {
+            account.balances.push(Balance {
+                token: env.message.sender,
+                amount,
             });
         }
-    };
 
-    let asset = assets_r(&deps.storage).load(env.message.sender.as_str().as_bytes())?;
-
-    let messages = allocations_r(&deps.storage)
-        .may_load(asset.contract.address.as_str().as_bytes())?
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|alloc| match alloc {
-            Allocation::Reserves { .. } | Allocation::Allowance { .. } => None,
-            Allocation::Rewards {
-                contract,
-                allocation,
-            } => Some(send_msg(
-                contract.address,
-                amount.multiply_ratio(allocation, 10u128.pow(18)).into(),
-                None,
-                None,
-                None,
-                1,
-                asset.contract.code_hash.clone(),
-                asset.contract.address.clone(),
-            )),
-            Allocation::Staking {
-                contract,
-                allocation,
-            } => Some(send_msg(
-                contract.address,
-                amount.multiply_ratio(allocation, 10u128.pow(18)).into(),
-                None,
-                None,
-                None,
-                1,
-                asset.contract.code_hash.clone(),
-                asset.contract.address.clone(),
-            )),
-            Allocation::Application { .. } => {
-                //debug_print!("Applications Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
-                //TODO: implement
-                None
-            }
-            Allocation::Pool { .. } => {
-                //debug_print!("Pools Unsupported {}/{} u{} to {}", allocation, amount, asset.token_info.symbol, contract.address);
-                //TODO: implement
-                None
-            }
-        })
-        .collect::<Result<_, _>>()?;
+        account_w(&mut deps.storage).save(&key, &account)?;
+    }
 
     Ok(HandleResponse {
-        messages,
+        messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,
@@ -128,137 +101,287 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn refresh_allowance<S: Storage, A: Api, Q: Querier>(
+pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    env: &Env,
+    allowance: &Allowance
+) -> StdResult<Option<DateTime<Utc>>> {
+
+    // Parse previous refresh datetime
+    let rfc3339 = match allowance {
+        Allowance::Amount { last_refresh, .. } => last_refresh,
+        Allowance::Portion { last_refresh, .. } => last_refresh,
+    };
+
+    DateTime::parse_from_rfc3339(&rfc3339)
+        .map(|dt| Some(dt.with_timezone(&Utc)))
+        .map_err(|_| StdError::generic_err(
+            format!("Failed to parse datetime {}", rfc3339)
+        ))
+}
+
+pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
+    asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
+
     let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
-    // Parse previous refresh datetime
-    let last_refresh = last_allowance_refresh_r(&deps.storage)
-        .load()
-        .and_then(|rfc3339| {
-            DateTime::parse_from_rfc3339(&rfc3339)
-                .map(|dt| dt.with_timezone(&Utc))
-                .map_err(|_| StdError::generic_err("Failed to parse previous datetime"))
-        })?;
-
-    // Fail if we have already refreshed this month
-    if now.year() <= last_refresh.year() && now.month() <= last_refresh.month() {
-        return Err(StdError::generic_err(format!(
-            "Last refresh too recent: {}",
-            last_refresh.to_rfc3339()
-        )));
-    }
-
-    last_allowance_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
-
-    Ok(HandleResponse {
-        messages: do_allowance_refresh(deps, env)?,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RefreshAllowance {
-            status: ResponseStatus::Success,
-        })?),
-    })
-}
-
-/* Not exposed as a tx
- */
-pub fn do_allowance_refresh<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    env: &Env,
-) -> StdResult<Vec<CosmosMsg>> {
+    let key = viewing_key_r(&deps.storage).load()?;
+    let self_address = self_address_r(&deps.storage).load()?;
     let mut messages = vec![];
 
-    let key = viewing_key_r(&deps.storage).load()?;
+    let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Not an asset"));
+        }
+    };
+    let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
-    for asset in asset_list_r(&deps.storage).load()? {
-        for alloc in allocations_r(&deps.storage).load(asset.as_str().as_bytes())? {
-            if let Allocation::Allowance { address, amount } = alloc {
-                let full_asset = assets_r(&deps.storage).load(asset.as_str().as_bytes())?;
-                // Determine current allowance
+    let balance = balance_query(
+        &deps.querier,
+        self_address,
+        key.clone(),
+        1,
+        full_asset.contract.code_hash.clone(),
+        full_asset.contract.address.clone(),
+    )?.amount;
+
+    let mut account_unbonding = Uint128::zero();
+
+    for holder in account_list_r(&deps.storage).load()? {
+        let account = account_r(&deps.storage).load(holder.as_str().as_bytes())?;
+        account_unbonding += Uint128(account.unbondings.iter()
+            .map(|u| {
+                if u.token == asset { u.amount.u128() }
+                else { 0u128 }
+            }).sum());
+    }
+
+    let mut amount_total = Uint128::zero();
+    let mut out_balance = Uint128::zero();
+
+    let mut managers = managers_r(&deps.storage).load()?;
+
+    // Fetch & sum balances
+    for allowance in &allowances {
+        match allowance {
+            Allowance::Amount {
+                spender,
+                cycle,
+                amount,
+                last_refresh,
+            } => {
+                //TODO: Query allowance
+                amount_total += *amount;
+            },
+            Allowance::Portion {
+                spender,
+                portion,
+                last_refresh,
+                tolerance,
+            } => {
+                //portion_total += *portion;
+                let i = managers.iter().position(|m| m.contract.address == *spender).unwrap();
+                managers[i].balance = adapter::balance_query(&deps,
+                                         &full_asset.contract.address.clone(),
+                                         managers[i].contract.clone())?;
+                out_balance += managers[i].balance;
+            },
+        }
+    }
+
+    let mut portion_total = ((balance + out_balance) - (amount_total + account_unbonding))?;
+
+    managers_w(&mut deps.storage).save(&managers)?;
+    let config = config_r(&deps.storage).load()?;
+
+    // Perform rebalance
+    for allowance in allowances {
+
+        match allowance {
+
+            Allowance::Amount {
+                spender,
+                cycle,
+                amount,
+                last_refresh,
+            } => {
+                let datetime = parse_utc_datetime(&last_refresh)?;
+
+                if exceeds_cycle(&datetime, &now, cycle) {
+                    if let Some(msg) = set_allowance(&deps, env,
+                                              spender, amount,
+                                              key.clone(), full_asset.contract.clone())? {
+                        messages.push(msg);
+                    }
+                }
+            },
+            Allowance::Portion {
+                spender,
+                portion,
+                last_refresh,
+                tolerance,
+            } => {
+                let desired_amount = portion_total.multiply_ratio(
+                        portion,
+                        10u128.pow(18)
+                    );
+
+                let threshold = (balance + out_balance)
+                    .multiply_ratio(tolerance, 10u128.pow(18));
+
+                let adapter = managers.clone()
+                    .into_iter()
+                    .find(|m| m.contract.address == spender)
+                    .unwrap();
+
                 let cur_allowance = allowance_query(
                     &deps.querier,
                     env.contract.address.clone(),
-                    address.clone(),
+                    spender.clone(),
                     key.clone(),
                     1,
                     full_asset.contract.code_hash.clone(),
                     full_asset.contract.address.clone(),
-                )?
-                .allowance
-                .into();
+                )?.allowance;
 
-                match amount.cmp(&cur_allowance) {
-                    // decrease allowance
-                    std::cmp::Ordering::Less => {
-                        messages.push(decrease_allowance_msg(
-                            address.clone(),
-                            amount.checked_sub(cur_allowance)?.into(),
+                // UnderFunded
+                if cur_allowance + adapter.balance < desired_amount {
+                    let increase = (desired_amount - (adapter.balance + cur_allowance))?;
+                    if increase < threshold {
+                        continue;
+                    }
+                    messages.push(
+                        increase_allowance_msg(
+                            spender,
+                            increase,
                             None,
                             None,
                             1,
                             full_asset.contract.code_hash.clone(),
                             full_asset.contract.address.clone(),
-                        )?);
-                    }
-                    // increase allowance
-                    std::cmp::Ordering::Greater => {
-                        messages.push(increase_allowance_msg(
-                            address.clone(),
-                            amount.checked_sub(cur_allowance)?.into(),
-                            None,
-                            None,
-                            1,
-                            full_asset.contract.code_hash.clone(),
-                            full_asset.contract.address.clone(),
-                        )?);
-                    }
-                    _ => {}
+                        )?
+                    );
                 }
-            }
+                // Overfunded
+                else if cur_allowance + adapter.balance > desired_amount {
+                    let mut decrease = ((adapter.balance + cur_allowance) - desired_amount)?;
+                    if decrease < threshold {
+                        continue;
+                    }
+
+                    // Remove allowance first
+                    if cur_allowance > Uint128::zero() {
+
+                        if cur_allowance < decrease {
+                            messages.push(
+                                decrease_allowance_msg(
+                                    spender,
+                                    cur_allowance,
+                                    None,
+                                    None,
+                                    1,
+                                    full_asset.contract.code_hash.clone(),
+                                    full_asset.contract.address.clone(),
+                                )?
+                            );
+                            decrease = (decrease - cur_allowance)?;
+                        }
+                        else {
+                            messages.push(
+                                decrease_allowance_msg(
+                                    spender,
+                                    decrease,
+                                    None,
+                                    None,
+                                    1,
+                                    full_asset.contract.code_hash.clone(),
+                                    full_asset.contract.address.clone(),
+                                )?
+                            );
+                            decrease = Uint128::zero();
+                        }
+                    }
+
+                    // Unbond remaining
+                    if decrease > Uint128::zero() {
+
+                        messages.push(
+                            adapter::unbond_msg(
+                                asset.clone(), 
+                                decrease, 
+                                adapter.contract,
+                            )?
+                        );
+                    }
+                }
+            },
         }
-    }
-
-    Ok(messages)
-}
-
-pub fn one_time_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    asset: HumanAddr,
-    spender: HumanAddr,
-    amount: Uint128,
-    expiration: Option<u64>,
-) -> StdResult<HandleResponse> {
-    let cur_config = config_r(&deps.storage).load()?;
-
-    if env.message.sender != cur_config.admin {
-        return Err(StdError::unauthorized());
-    }
-
-    let full_asset = assets_r(&deps.storage)
-        .may_load(asset.as_str().as_bytes())?
-        .ok_or_else(|| StdError::generic_err(format!("Unknown Asset: {}", asset)))?;
-
-    let messages = vec![increase_allowance_msg(
-        spender,
-        amount.into(),
-        expiration,
-        None,
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address,
-    )?];
+    };
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::OneTimeAllowance {
+        data: Some(to_binary(&HandleAnswer::Rebalance {
             status: ResponseStatus::Success,
         })?),
     })
+}
+
+pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    env: &Env,
+    spender: HumanAddr,
+    amount: Uint128,
+    key: String,
+    asset: Contract,
+) -> StdResult<Option<CosmosMsg>> {
+
+    let cur_allowance = allowance_query(
+        &deps.querier,
+        env.contract.address.clone(),
+        spender.clone(),
+        key,
+        1,
+        asset.code_hash.clone(),
+        asset.address.clone(),
+    )?;
+
+    match amount.cmp(&cur_allowance.allowance) {
+        // Decrease Allowance
+        std::cmp::Ordering::Less => {
+            Ok(Some(
+                decrease_allowance_msg(
+                    spender.clone(),
+                    (cur_allowance.allowance - amount)?,
+                    None,
+                    None,
+                    1,
+                    asset.code_hash.clone(),
+                    asset.address.clone(),
+                )?
+            ))
+        },
+        // Increase Allowance
+        std::cmp::Ordering::Greater => {
+            Ok(Some(
+                increase_allowance_msg(
+                    spender.clone(),
+                    (amount - cur_allowance.allowance)?,
+                    None,
+                    None,
+                    1,
+                    asset.code_hash.clone(),
+                    asset.address.clone(),
+                )?
+            ))
+        },
+        _ => { Ok(None) }
+    }
 }
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
@@ -283,33 +406,61 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         &snip20::fetch_snip20(contract, &deps.querier)?,
     )?;
 
-    let allocs = reserves
-        .map(|r| vec![Allocation::Reserves { allocation: r }])
-        .unwrap_or_default();
-
-    allocations_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &allocs)?;
-
-    let messages = vec![
-        // Register contract in asset
-        register_receive_msg(
-            env.contract_code_hash.clone(),
-            None,
-            256,
-            contract.code_hash.clone(),
-            contract.address.clone(),
-        )?,
-        // Set viewing key
-        set_viewing_key_msg(
-            viewing_key_r(&deps.storage).load()?,
-            None,
-            1,
-            contract.code_hash.clone(),
-            contract.address.clone(),
-        )?,
-    ];
+    allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
+    total_unbonding_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Uint128::zero())?;
 
     Ok(HandleResponse {
-        messages,
+        messages: vec![
+            // Register contract in asset
+            register_receive_msg(
+                env.contract_code_hash.clone(),
+                None,
+                256,
+                contract.code_hash.clone(),
+                contract.address.clone(),
+            )?,
+            // Set viewing key
+            set_viewing_key_msg(
+                viewing_key_r(&deps.storage).load()?,
+                None,
+                256,
+                contract.code_hash.clone(),
+                contract.address.clone(),
+            )?,
+        ],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::RegisterAsset {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn register_manager<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    contract: &mut Contract,
+) -> StdResult<HandleResponse> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    if env.message.sender != config.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    managers_w(&mut deps.storage).update(|mut adapters| {
+        if adapters.iter().map(|m| m.contract.clone()).collect::<Vec<_>>().contains(&contract) {
+            return Err(StdError::generic_err("Manager already registered"));
+        }
+        adapters.push(Manager {
+            contract: contract.clone(),
+            balance: Uint128::zero(),
+            desired: Uint128::zero(),
+        });
+        Ok(adapters)
+    })?;
+
+    Ok(HandleResponse {
+        messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RegisterAsset {
             status: ResponseStatus::Success,
@@ -318,33 +469,34 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 // extract contract address if any
-fn allocation_address(allocation: &Allocation) -> Option<&HumanAddr> {
-    match allocation {
-        Allocation::Rewards { contract, .. }
-        | Allocation::Staking { contract, .. }
-        | Allocation::Application { contract, .. }
-        | Allocation::Pool { contract, .. } => Some(&contract.address),
+fn allowance_address(allowance: &Allowance) -> Option<&HumanAddr> {
+    match allowance {
+        Allowance::Amount { spender, .. } => Some(&spender),
+        Allowance::Portion { spender, .. } => Some(&spender),
         _ => None,
     }
 }
 
-// extract allocaiton portion
-fn allocation_portion(allocation: &Allocation) -> u128 {
-    match allocation {
-        Allocation::Reserves { allocation }
-        | Allocation::Rewards { allocation, .. }
-        | Allocation::Staking { allocation, .. }
-        | Allocation::Application { allocation, .. }
-        | Allocation::Pool { allocation, .. } => allocation.u128(),
-        Allocation::Allowance { .. } => 0,
+// extract allowanceaiton portion
+fn allowance_portion(allowance: &Allowance) -> Uint128 {
+    match allowance {
+        Allowance::Portion { portion, .. } => *portion,
+        Allowance::Amount { .. } => Uint128::zero(),
     }
 }
 
-pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
+fn allowance_amount(allowance: &Allowance) -> Uint128 {
+    match allowance {
+        Allowance::Amount { amount, .. } => *amount,
+        Allowance::Portion { .. } => Uint128::zero(),
+    }
+}
+
+pub fn allowance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     asset: HumanAddr,
-    alloc: Allocation,
+    allowance: Allowance,
 ) -> StdResult<HandleResponse> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
@@ -355,86 +507,298 @@ pub fn register_allocation<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    // might be used later
-    let _full_asset = assets_r(&deps.storage)
-        .may_load(asset.to_string().as_bytes())
-        .and_then(|asset| {
-            asset.ok_or_else(|| StdError::generic_err("Unexpected response for balance"))
-        })?;
+    let adapters = managers_r(&deps.storage).load()?;
 
-    // might be used later
-    let _liquid_balance = query::balance(deps, &asset).and_then(|r| match r {
-        QueryAnswer::Balance { amount } => Ok(amount),
-        _ => Err(StdError::generic_err("Unexpected response for balance")),
-    })?;
+    // Disallow Portion on non-adapters
+    match allowance {
+        Allowance::Portion {
+            ref spender, ..
+        } => {
+            if adapters.clone().into_iter().find(|m| m.contract.address == *spender).is_none() {
+                return Err(StdError::generic_err("Portion allowances to adapters only"));
+            }
+        }
+        _ => {}
+    };
 
     let key = asset.as_str().as_bytes();
 
-    let mut apps = allocations_r(&deps.storage)
+    let mut apps = allowances_r(&deps.storage)
         .may_load(key)?
         .unwrap_or_default();
 
-    let alloc_address = allocation_address(&alloc);
+    let allow_address = allowance_address(&allowance);
 
-    // find any old allocations with the same contract address & sum current allocations in one loop.
+    // find any old allowances with the same contract address & sum current allowances in one loop.
     // saves looping twice in the worst case
-    let (stale_alloc, curr_alloc_portion) =
+    // TODO: Remove Reserves if this would be one of those
+    let (stale_allowance, cur_allowance_portion) =
         apps.iter()
             .enumerate()
-            .fold((None, 0u128), |(stale_alloc, curr_allocs), (idx, a)| {
-                if stale_alloc.is_none() && allocation_address(a) == alloc_address {
-                    (Some(idx), curr_allocs)
+            .fold((None, 0u128), |(stale_allowance, cur_allowances), (idx, a)| {
+                if stale_allowance.is_none() && allowance_address(a) == allow_address {
+                    (Some(idx), cur_allowances)
                 } else {
-                    (stale_alloc, curr_allocs + allocation_portion(a))
+                    (stale_allowance, cur_allowances + allowance_portion(a).u128())
                 }
             });
 
-    if let Some(old_alloc_idx) = stale_alloc {
-        apps.remove(old_alloc_idx);
+    if let Some(old_allowance_idx) = stale_allowance {
+        apps.remove(old_allowance_idx);
     }
 
-    let new_alloc_portion = allocation_portion(&alloc);
+    let new_allowance_portion = allowance_portion(&allowance).u128();
 
-    // NOTE: should this be '>' if 1e18 == 100%?
-    if curr_alloc_portion + new_alloc_portion >= ONE_HUNDRED_PERCENT {
+    if cur_allowance_portion + new_allowance_portion > ONE_HUNDRED_PERCENT {
         return Err(StdError::generic_err(
-            "Invalid allocation total exceeding 100%",
+            "Invalid allowance total exceeding 100%",
         ));
     }
 
-    apps.push(alloc);
+    // Zero the last-refresh
+    let datetime: DateTime<Utc> = DateTime::from_utc(
+        NaiveDateTime::from_timestamp(0, 0),
+        Utc
+    );
 
-    allocations_w(&mut deps.storage).save(key, &apps)?;
+    let spender = match allowance {
 
-    /*TODO: Need to re-allocate/re-balance funds based on the new addition
-     * get Uint128 math functions to do these things (untested)
-     * re-add send_msg below
-     */
+        Allowance::Portion {
+            spender, portion, last_refresh, tolerance,
+        } => {
+            apps.push(Allowance::Portion {
+                spender: spender.clone(),
+                portion: portion.clone(),
+                last_refresh: datetime.to_rfc3339(),
+                tolerance,
+            });
+            spender
+        },
+        Allowance::Amount {
+            spender,
+            cycle,
+            amount,
+            last_refresh,
+        }=> {
+            apps.push(Allowance::Amount {
+                spender: spender.clone(),
+                cycle: cycle.clone(),
+                amount: amount.clone(),
+                last_refresh: datetime.to_rfc3339()
+            });
+            spender
+        }
+    };
 
-    /*
-    let liquid_portion = (allocated_portion * liquid_balance) / allocated_portion;
-
-    // Determine how much of current balance is to be allocated
-    let to_allocate = liquid_balance - (alloc_portion / liquid_portion);
-    */
+    allowances_w(&mut deps.storage).save(key, &apps)?;
 
     Ok(HandleResponse {
-        messages: vec![
-            /*
-            send_msg(
-                    alloc_address,
-                    to_allocate,
-                    None,
-                    None,
-                    1,
-                    full_asset.contract.code_hash.clone(),
-                    full_asset.contract.address.clone(),
-            )?
-            */
-        ],
+        messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterApp {
+        data: Some(to_binary(&HandleAnswer::Allowance {
             status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn add_account<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    holder: HumanAddr,
+) -> StdResult<HandleResponse> {
+
+    if env.message.sender != config_r(&deps.storage).load()?.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    let key = holder.as_str().as_bytes();
+
+    account_list_w(&mut deps.storage).update(|mut accounts| {
+        if accounts.contains(&holder.clone()) {
+            return Err(StdError::generic_err("Account already exists"));
+        }
+        accounts.push(holder.clone());
+        Ok(accounts)
+    })?;
+
+    account_w(&mut deps.storage).save(key, 
+        &Account {
+            balances: Vec::new(),
+            unbondings: Vec::new(),
+            claimable: Vec::new(),
+            status: Status::Active,
+        }
+    )?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::AddAccount {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn close_account<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    holder: HumanAddr,
+) -> StdResult<HandleResponse> {
+
+    if env.message.sender != config_r(&deps.storage).load()?.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    let key = holder.as_str().as_bytes();
+
+    if let Some(mut account) = account_r(&deps.storage).may_load(key)? {
+        account.status = Status::Closed;
+        account_w(&mut deps.storage).save(key, &account)?;
+    } else {
+        return Err(StdError::generic_err("Account doesn't exist"));
+    }
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::RemoveAccount {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn claim<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    asset: HumanAddr,
+) -> StdResult<HandleResponse> {
+
+    if !account_list_r(&deps.storage).load()?.contains(&env.message.sender) {
+        return Err(StdError::unauthorized());
+    }
+
+    let key = asset.as_str().as_bytes();
+
+    let managers = managers_r(&deps.storage).load()?;
+    let allowances = allowances_r(&deps.storage).load(&key)?;
+
+    let mut messages = vec![];
+
+    let mut claimed = Uint128::zero();
+
+    for allowance in allowances {
+        match allowance {
+            Allowance::Amount { .. } => {},
+            Allowance::Portion { spender, .. } => {
+                if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
+
+                    let claimable = adapter::claimable_query(&deps, &asset, manager.contract.clone())?;
+
+                    if claimable > Uint128::zero() {
+                        messages.push(
+                            adapter::claim_msg(
+                                asset.clone(),
+                                manager.contract.clone()
+                            )?
+                        );
+                        claimed += claimable;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+            status: ResponseStatus::Success,
+            amount: claimed,
+        })?),
+    })
+}
+
+pub fn unbond<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    asset: HumanAddr,
+    amount: Uint128,
+) -> StdResult<HandleResponse> {
+
+    /*
+    if env.message.sender != config_r(&deps.storage).load()?.admin {
+        return Err(StdError::unauthorized());
+    }
+    */
+
+    let account = match account_r(&deps.storage).may_load(&env.message.sender.as_str().as_bytes())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::unauthorized());
+        }
+    };
+
+    let managers = managers_r(&deps.storage).load()?;
+
+    let mut messages = vec![];
+
+    let mut unbond_amount = amount;
+
+    for allowance in allowances_r(&deps.storage).load(asset.as_str().as_bytes())? {
+        match allowance {
+            Allowance::Amount { .. } => {},
+            Allowance::Portion { spender, .. } => {
+                if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
+                    let balance = adapter::balance_query(&deps, &asset.clone(), manager.contract.clone())?;
+
+                    if balance > unbond_amount {
+                        messages.push(
+                            adapter::unbond_msg(
+                                asset.clone(),
+                                unbond_amount,
+                                manager.contract.clone(),
+                            )?
+                        );
+                        unbond_amount = Uint128::zero();
+                    }
+                    else {
+                        messages.push(
+                            adapter::unbond_msg(
+                                asset.clone(),
+                                balance,
+                                manager.contract.clone(),
+                            )?
+                        );
+                        unbond_amount = (unbond_amount - balance)?;
+                    }
+                }
+            }
+        }
+
+        if unbond_amount == Uint128::zero() {
+            break;
+        }
+    }
+
+    if unbond_amount > Uint128::zero() {
+        return Err(StdError::generic_err(
+            format!("Failed to fully unbond {}, {} available", 
+                    amount, (amount - unbond_amount)?)
+        ));
+    }
+
+    total_unbonding_w(&mut deps.storage)
+        .update(
+            asset.as_str().as_bytes(), 
+            |u| Ok(u.or(Some(Uint128::zero())).unwrap() + amount)
+        )?;
+
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+            status: ResponseStatus::Success,
+            amount,
         })?),
     })
 }

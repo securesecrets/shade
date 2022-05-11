@@ -1,15 +1,19 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage,
+    StdResult, Storage, StdError, Uint128,
 };
 
-use shade_protocol::treasury::{Config, HandleMsg, InitMsg, QueryMsg};
+use shade_protocol::{
+    adapter,
+    treasury::{Config, HandleMsg, InitMsg, QueryMsg},
+};
 
 use crate::{
     handle, query,
     state::{
-        allocations_w, asset_list_w, config_w, last_allowance_refresh_w, self_address_w,
-        viewing_key_w,
+        allowances_w, asset_list_w, config_w, self_address_w,
+        viewing_key_w, managers_w, total_unbonding_w,
+        account_list_w,
     },
 };
 use chrono::prelude::*;
@@ -19,6 +23,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
+
     config_w(&mut deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(env.message.sender.clone()),
         sscrt: msg.sscrt,
@@ -27,13 +32,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     asset_list_w(&mut deps.storage).save(&Vec::new())?;
-
-    //init last refresh with epoch 0 so first refresh always goes
-    let timestamp = 0;
-    let naive = NaiveDateTime::from_timestamp(timestamp, 0);
-    let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-
-    last_allowance_refresh_w(&mut deps.storage).save(&datetime.to_rfc3339())?;
+    managers_w(&mut deps.storage).save(&Vec::new())?;
+    account_list_w(&mut deps.storage).save(&Vec::new())?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -57,23 +57,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { contract, reserves } => {
-            handle::try_register_asset(deps, &env, &contract, reserves)
+        HandleMsg::RegisterAsset { contract, reserves } => handle::try_register_asset(deps, &env, &contract, reserves),
+        HandleMsg::RegisterManager { mut contract } => handle::register_manager(deps, &env, &mut contract ),
+        HandleMsg::Allowance { asset, allowance } => handle::allowance(deps, &env, asset, allowance),
+        HandleMsg::AddAccount { holder } => handle::add_account(deps, &env, holder),
+        HandleMsg::CloseAccount { holder } => handle::close_account(deps, &env, holder),
+        HandleMsg::Adapter(adapter) => match adapter {
+            adapter::SubHandleMsg::Update { asset } => handle::rebalance(deps, &env, asset),
+            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),
+            adapter::SubHandleMsg::Unbond { asset, amount } => handle::unbond(deps, &env, asset, amount),
         }
-        HandleMsg::RegisterAllocation { asset, allocation } => {
-            handle::register_allocation(deps, &env, asset, allocation)
-        }
-        HandleMsg::RefreshAllowance {} => handle::refresh_allowance(deps, &env),
-        HandleMsg::OneTimeAllowance {
-            asset,
-            spender,
-            amount,
-            expiration,
-        } => handle::one_time_allowance(deps, &env, asset, spender, amount, expiration),
-        /*
-          HandleMsg::Rebalance {
-          } => handle::rebalance(deps, &env),
-        */
     }
 }
 
@@ -84,11 +77,16 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
-        QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
-        QueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
-        QueryMsg::Allowances { asset, spender } => {
-            to_binary(&query::allowances(&deps, &asset, &spender)?)
+        QueryMsg::Allowances { asset } => to_binary(&query::allowances(deps, asset)?),
+        QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, &asset, &spender)?),
+        QueryMsg::Accounts { } => to_binary(&query::accounts(&deps)?),
+        QueryMsg::Account { holder } => to_binary(&query::account(&deps, holder)?),
+
+        QueryMsg::Adapter(adapter) => match adapter {
+            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
+            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(&deps, &asset)?),
+            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&StdError::generic_err("Not Implemented")),
+            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(&deps, &asset)?),
         }
-        QueryMsg::LastAllowanceRefresh {} => to_binary(&query::last_allowance_refresh(&deps)?),
     }
 }

@@ -123,7 +123,8 @@ def run_command_compute_hash(command):
 
     try:
         txhash = json.loads(out)["txhash"]
-        # print(txhash)
+        #print(txhash)
+
     except Exception as e:
         # print(out)
         raise e

@@ -484,6 +484,24 @@ pub fn calculate_mint(
     }
 }
 
+/*
+pub fn calculate_fee_curve(
+    // "Centered"
+    base_fee: Uint128, 
+    // How far off from where we want (abs(desired_price - cur_price))
+    price_skew: Uint128,
+    // skew we should never reach (where fee maxes out)
+    asymptote: Uint128,
+) -> Uint128 {
+
+    /*  aggressiveness is how sharply it turns up at the asymptote
+     *  speed is the overall speed of increase
+     *  how to include asymptote to push the threshold before acceleration?
+     * y = (x + speed) ^ (2 * aggressiveness)
+     */
+}
+*/
+
 pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
     /* amount: total amount sent to burn (uSSCRT/uSILK/uSHD)
      * portion: percent * 10^18 e.g. 5_320_000_000_000_000_000 = 5.32% = .0532
@@ -507,5 +525,6 @@ fn oracle<S: Storage, A: Api, Q: Querier>(
         config.oracle.code_hash,
         config.oracle.address,
     )?;
-    Ok(answer.rate)
+
+    Ok(Uint128::from(answer.rate))
 }
