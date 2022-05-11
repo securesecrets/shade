@@ -42,7 +42,7 @@ pub mod oracle;
 pub mod scrt_staking;
 
 #[cfg(feature = "lp_shade_swap")]
-pub mod lp_shade_swap
+pub mod lp_shade_swap;
 
 #[cfg(feature = "snip20_staking")]
 pub mod snip20_staking;
