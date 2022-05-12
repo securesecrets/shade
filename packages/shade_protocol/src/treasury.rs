@@ -16,7 +16,6 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
-    pub sscrt: Contract,
 }
 
 /* Examples:
@@ -73,6 +72,7 @@ pub enum Status {
     Transferred,
 }
 
+//TODO: move accounts to treasury manager
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Account {
@@ -93,7 +93,6 @@ pub struct Flag {
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
-    pub sscrt: Contract,
 }
 
 impl InitCallback for InitMsg {

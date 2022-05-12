@@ -87,7 +87,6 @@ pub fn managers_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<treasury::Man
     singleton(storage, MANAGERS)
 }
 
-
 pub fn account_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<HumanAddr>> {
     singleton_read(storage, ACCOUNT_LIST)
 }
@@ -104,6 +103,7 @@ pub fn account_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury::Account> {
 }
 
 // Total unbonding per asset, to be used in rebalance
+// TODO: remove?
 pub fn total_unbonding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
     bucket_read(UNBONDING, storage)
 }
@@ -112,6 +112,7 @@ pub fn total_unbonding_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
     bucket(UNBONDING, storage)
 }
 
+// Actually stored in accounts?
 pub fn unbondings_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
     bucket_read(UNBONDING, storage)
 }

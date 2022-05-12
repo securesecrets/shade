@@ -12,7 +12,7 @@ use crate::{
     handle, query,
     state::{
         allowances_w, asset_list_w, config_w, self_address_w,
-        viewing_key_w, managers_w, total_unbonding_w,
+        viewing_key_w, managers_w, //total_unbonding_w,
         account_list_w,
     },
 };
@@ -26,7 +26,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(env.message.sender.clone()),
-        sscrt: msg.sscrt,
     })?;
 
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;

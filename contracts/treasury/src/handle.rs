@@ -239,6 +239,22 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                     .find(|m| m.contract.address == spender)
                     .unwrap();
 
+                /* NOTE: remove claiming if rebalance tx becomes too heavy
+                 * alternatives:
+                 * - separate rebalance & update,
+                 *  - update could do an adapter.update on all "children"
+                 *  - rebalance can be unique as its not needed as an adapter
+                 */
+                if adapter::claimable_query(&deps, 
+                                            &asset, 
+                                            adapter.contract.clone()
+                                    )? > Uint128::zero() {
+                    messages.push(adapter::claim_msg(
+                        asset.clone(),
+                        adapter.contract.clone()
+                    )?);
+                };
+
                 let cur_allowance = allowance_query(
                     &deps.querier,
                     env.contract.address.clone(),
@@ -731,7 +747,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     }
     */
 
-    let account = match account_r(&deps.storage).may_load(&env.message.sender.as_str().as_bytes())? {
+    let mut account = match account_r(&deps.storage).may_load(&env.message.sender.as_str().as_bytes())? {
         Some(a) => a,
         None => {
             return Err(StdError::unauthorized());
@@ -743,15 +759,16 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     let mut unbond_amount = amount;
+    let mut unbonded = Uint128::zero();
 
     for allowance in allowances_r(&deps.storage).load(asset.as_str().as_bytes())? {
         match allowance {
             Allowance::Amount { .. } => {},
             Allowance::Portion { spender, .. } => {
                 if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
-                    let balance = adapter::balance_query(&deps, &asset.clone(), manager.contract.clone())?;
+                    let unbondable = adapter::unbondable_query(&deps, &asset.clone(), manager.contract.clone())?;
 
-                    if balance > unbond_amount {
+                    if unbondable > unbond_amount {
                         messages.push(
                             adapter::unbond_msg(
                                 asset.clone(),
@@ -760,16 +777,18 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                             )?
                         );
                         unbond_amount = Uint128::zero();
+                        unbonded = unbond_amount;
                     }
                     else {
                         messages.push(
                             adapter::unbond_msg(
                                 asset.clone(),
-                                balance,
+                                unbondable,
                                 manager.contract.clone(),
                             )?
                         );
-                        unbond_amount = (unbond_amount - balance)?;
+                        unbond_amount = (unbond_amount - unbondable)?;
+                        unbonded = unbonded + unbondable;
                     }
                 }
             }
@@ -780,9 +799,24 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    //TODO: update unbondings/balances, maybe not claimable?
+    match account.unbondings.iter_mut().find(|u| u.token == asset) {
+        Some(unbonding) => {
+            unbonding.amount += unbonded;
+        },
+        None => {
+            account.unbondings.push(
+                Balance {
+                    token: asset.clone(),
+                    amount: unbonded,
+            });
+        }
+    }
+
+    // TODO: Shouldn't be an error, need to log somehow
     if unbond_amount > Uint128::zero() {
         return Err(StdError::generic_err(
-            format!("Failed to fully unbond {}, {} available", 
+            format!("Failed to fully unbond {}, {} available",
                     amount, (amount - unbond_amount)?)
         ));
     }
@@ -790,7 +824,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     total_unbonding_w(&mut deps.storage)
         .update(
             asset.as_str().as_bytes(), 
-            |u| Ok(u.or(Some(Uint128::zero())).unwrap() + amount)
+            |u| Ok(u.or(Some(Uint128::zero())).unwrap() + unbonded)
         )?;
 
     Ok(HandleResponse {
