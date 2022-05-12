@@ -144,7 +144,7 @@ pub trait VecQueueMerge {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Uint128;
+    use cosmwasm_math_compat::Uint128;
     use crate::snip20_staking::stake::{DailyUnbonding, QueueItem, VecQueue};
 
     #[test]
