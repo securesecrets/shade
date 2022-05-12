@@ -30,6 +30,7 @@ pub enum Error{
     SlippageToleranceExceeded,
     Blacklisted,
     IssuedAssetDeposit,
+    NotTreasuryBond,
 }
 
 impl_into_u8!(Error);
@@ -102,6 +103,9 @@ impl CodeType for Error {
             }
             Error::IssuedAssetDeposit => {
                 build_string("Cannot deposit using this contract's issued asset", context)
+            }
+            Error::NotTreasuryBond => {
+                build_string("Cannot perform function since this is not a treasury bond", context)
             }
         }
     }
@@ -250,4 +254,8 @@ pub fn blacklisted(address: HumanAddr) -> StdError {
 
 pub fn issued_asset_deposit() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::IssuedAssetDeposit, vec![]).to_error()
+}
+
+pub fn not_treasury_bond() -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::NotTreasuryBond, vec![]).to_error()
 }

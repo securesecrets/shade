@@ -666,7 +666,7 @@ fn print_pending_bonds(
         for pending in pend_iter{
             println!("\nBond opp: {}\n Ends: {}\n Deposit Amount: {}\n Deposit Price: {}\n Claim Amount: {}\n Claim Price: {}\n Discount: {}\n Discount Price: {}", 
             pending.deposit_denom.token_info.symbol,
-            pending.end,
+            pending.end_time,
             pending.deposit_amount,
             pending.deposit_price,
             pending.claim_amount,
@@ -1008,7 +1008,7 @@ fn run_bonds_singular() -> Result<()> {
         assert_eq!(pending_bonds[0].deposit_denom.token_info.symbol, "COLL".to_string());
         println!("\nBond opp: {}\n Ends: {}\n Deposit Amount: {}\n Deposit Price: {}\n Claim Amount: {}\n Claim Price: {}\n Discount: {}\n Discount Price: {}", 
             pending_bonds[0].deposit_denom.token_info.symbol,
-            pending_bonds[0].end,
+            pending_bonds[0].end_time,
             pending_bonds[0].deposit_amount,
             pending_bonds[0].deposit_price,
             pending_bonds[0].claim_amount,
@@ -1309,7 +1309,7 @@ fn run_bonds_singular_allowance() -> Result<()> {
         assert_eq!(pending_bonds[0].deposit_denom.token_info.symbol, "COLL".to_string());
         println!("\nBond opp: {}\n Ends: {}\n Deposit Amount: {}\n Deposit Price: {}\n Claim Amount: {}\n Claim Price: {}\n Discount: {}\n Discount Price: {}", 
             pending_bonds[0].deposit_denom.token_info.symbol,
-            pending_bonds[0].end,
+            pending_bonds[0].end_time,
             pending_bonds[0].deposit_amount,
             pending_bonds[0].deposit_price,
             pending_bonds[0].claim_amount,
@@ -1496,7 +1496,7 @@ fn run_bonds_bad_opportunities() -> Result<()> {
         assert_eq!(pending_bonds[0].deposit_denom.token_info.symbol, "COLL".to_string());
         println!("\nBond opp: {}\n Ends: {}\n Deposit Amount: {}\n Deposit Price: {}\n Claim Amount: {}\n Claim Price: {}\n Discount: {}\n Discount Price: {}", 
             pending_bonds[0].deposit_denom.token_info.symbol,
-            pending_bonds[0].end,
+            pending_bonds[0].end_time,
             pending_bonds[0].deposit_amount,
             pending_bonds[0].deposit_price,
             pending_bonds[0].claim_amount,

@@ -157,6 +157,7 @@ pub enum QueryMsg {
         asset: String,
     },
     BondInfo {},
+    CheckAllowance {},
 }   
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -181,6 +182,9 @@ pub enum QueryAnswer {
         global_total_issued: Uint128,
         global_total_claimed: Uint128,
         issued_asset: Snip20Asset,
+    },
+    CheckAllowance {
+        allowance: Uint128,
     }
 }
 

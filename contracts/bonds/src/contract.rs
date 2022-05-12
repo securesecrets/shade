@@ -9,7 +9,12 @@ use shade_protocol::{
     snip20::{token_config_query, Snip20Asset, HandleMsg as SnipHandle, self},
 };
 
+use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+
 use crate::{handle::{self}, query, state::{config_w, issued_asset_w, global_total_issued_w, collateral_assets_w, global_total_claimed_w, allocated_allowance_w, allowance_key_w}};
+
+// Used to pad up responses for better privacy.
+pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -88,62 +93,69 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
-    match msg{
-        HandleMsg::UpdateLimitConfig {
-            limit_admin,
-            global_issuance_limit,
-            global_minimum_bonding_period,
-            global_maximum_discount,
-            reset_total_issued,
-            reset_total_claimed,
-        } => handle::try_update_limit_config(deps, env, limit_admin, global_issuance_limit, global_minimum_bonding_period, global_maximum_discount, reset_total_issued, reset_total_claimed),
-        HandleMsg::UpdateConfig { 
-            admin,
-            oracle,
-            treasury,
-            issued_asset,
-            activated,
-            minting_bond,
-            bond_issuance_limit,
-            bonding_period,
-            discount,
-            global_minimum_issued_price,
-            allowance_key,
-        } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset, minting_bond, bond_issuance_limit, bonding_period, discount, global_minimum_issued_price, allowance_key),
-        HandleMsg::OpenBond{
-            collateral_asset,
-            start_time,
-            end_time,
-            bond_issuance_limit,
-            bonding_period,
-            discount,
-            max_accepted_collateral_price,
-            err_collateral_price,
-        } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period, discount, max_accepted_collateral_price, err_collateral_price),
-        HandleMsg::CloseBond{
-            collateral_asset
-        } => handle::try_close_bond(deps, env, collateral_asset),
-        HandleMsg::Receive { 
-            sender,
-            from,
-            amount,
-            msg,
-        } => handle::try_deposit(deps, &env, sender, from, amount, msg),
-        HandleMsg::Claim {} => handle::try_claim(deps, env),
-        }
+    pad_handle_result(
+        match msg{
+            HandleMsg::UpdateLimitConfig {
+                limit_admin,
+                global_issuance_limit,
+                global_minimum_bonding_period,
+                global_maximum_discount,
+                reset_total_issued,
+                reset_total_claimed,
+            } => handle::try_update_limit_config(deps, env, limit_admin, global_issuance_limit, global_minimum_bonding_period, global_maximum_discount, reset_total_issued, reset_total_claimed),
+            HandleMsg::UpdateConfig { 
+                admin,
+                oracle,
+                treasury,
+                issued_asset,
+                activated,
+                minting_bond,
+                bond_issuance_limit,
+                bonding_period,
+                discount,
+                global_minimum_issued_price,
+                allowance_key,
+            } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset, minting_bond, bond_issuance_limit, bonding_period, discount, global_minimum_issued_price, allowance_key),
+            HandleMsg::OpenBond{
+                collateral_asset,
+                start_time,
+                end_time,
+                bond_issuance_limit,
+                bonding_period,
+                discount,
+                max_accepted_collateral_price,
+                err_collateral_price,
+            } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period, discount, max_accepted_collateral_price, err_collateral_price),
+            HandleMsg::CloseBond{
+                collateral_asset
+            } => handle::try_close_bond(deps, env, collateral_asset),
+            HandleMsg::Receive { 
+                sender,
+                from,
+                amount,
+                msg,
+            } => handle::try_deposit(deps, &env, sender, from, amount, msg),
+            HandleMsg::Claim {} => handle::try_claim(deps, env),
+            }, 
+        RESPONSE_BLOCK_SIZE)
+    
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::Config {} => to_binary(&query::config(deps)?),
-        QueryMsg::BondOpportunities {} => to_binary(&query::bond_opportunities(deps)?),
-        QueryMsg::Account {permit} => to_binary(&query::account(deps, permit)?),
-        QueryMsg::CollateralAddresses {} => to_binary(&query::list_collateral_addresses(deps)?),
-        QueryMsg::PriceCheck { asset } => to_binary(&query::price_check(asset, deps)?),
-        QueryMsg::BondInfo {} => to_binary(&query::bond_info(deps)?),
-    }
+    pad_query_result(
+        match msg {
+            QueryMsg::Config {} => to_binary(&query::config(deps)?),
+            QueryMsg::BondOpportunities {} => to_binary(&query::bond_opportunities(deps)?),
+            QueryMsg::Account {permit} => to_binary(&query::account(deps, permit)?),
+            QueryMsg::CollateralAddresses {} => to_binary(&query::list_collateral_addresses(deps)?),
+            QueryMsg::PriceCheck { asset } => to_binary(&query::price_check(asset, deps)?),
+            QueryMsg::BondInfo {} => to_binary(&query::bond_info(deps)?),
+            QueryMsg::CheckAllowance {} => to_binary(&query::check_allowance(deps)?),
+        },
+        RESPONSE_BLOCK_SIZE,    
+    )
 }
 
