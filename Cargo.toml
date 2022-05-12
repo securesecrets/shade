@@ -4,6 +4,7 @@ members = [
   "packages/cosmwasm_math_compat",
   "packages/shade_protocol",
   "packages/secretcli",
+  "packages/contract_harness",
 
   # Network setups
   "contracts/initializer",
