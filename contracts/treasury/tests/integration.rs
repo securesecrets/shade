@@ -15,14 +15,7 @@ use shade_protocol::{
     band::{ ReferenceData, BandQuery },
 };
 
-use snip20_reference_impl;
-use oracle;
-use mock_band;
-
-use mint::{
-    contract::{handle, init, query},
-    handle::{calculate_mint, calculate_portion, try_burn},
-};
+use contract_harness::harness;
 
 use fadroma::{
     ContractLink, 
@@ -32,130 +25,11 @@ use fadroma::{
     },
 };
 
-pub struct Treasury;
-
-impl ContractHarness for Treasury {
-    // Use the method from the default implementation
-    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
-        init(
-            deps,
-            env,
-            from_binary(&msg)?,
-        )
-    }
-
-    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
-         handle(
-            deps,
-            env,
-            from_binary(&msg)?,
-        )
-    }
-
-    // Override with some hardcoded value for the ease of testing
-    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
-         query(
-            deps,
-            from_binary(&msg)?,
-        )
-    }
-}
-
-pub struct TreasuryManager;
-
-impl ContractHarness for TreasuryManager {
-    // Use the method from the default implementation
-    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
-        treasury_manager::contract::init(
-            deps,
-            env,
-            from_binary(&msg)?,
-        )
-    }
-
-    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
-         treasury_manager::contract::handle(
-            deps,
-            env,
-            from_binary(&msg)?,
-        )
-    }
-
-    // Override with some hardcoded value for the ease of testing
-    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
-         treasury_manager::contract::query(
-            deps,
-            from_binary(&msg)?,
-        )
-    }
-}
-
-pub struct ScrtStaking;
-
-impl ContractHarness for ScrtStaking {
-    // Use the method from the default implementation
-    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
-        scrt_staking::contract::init(
-            deps,
-            env,
-            from_binary(&msg)?,
-        )
-    }
-
-    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
-         scrt_staking::contract::handle(
-            deps,
-            env,
-            from_binary(&msg)?,
-        )
-    }
-
-    // Override with some hardcoded value for the ease of testing
-    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
-         scrt_staking::contract::query(
-            deps,
-            from_binary(&msg)?,
-        )
-    }
-}
-
-pub struct Snip20;
-
-impl ContractHarness for Snip20 {
-    // Use the method from the default implementation
-    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
-        snip20_reference_impl::contract::init(
-            deps,
-            env,
-            from_binary(&msg)?,
-            //mint::DefaultImpl,
-        )
-    }
-
-    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
-         snip20_reference_impl::contract::handle(
-            deps,
-            env,
-            from_binary(&msg)?,
-            //mint::DefaultImpl,
-        )
-    }
-
-    // Override with some hardcoded value for the ease of testing
-    fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
-         snip20_reference_impl::contract::query(
-            deps,
-            from_binary(&msg)?,
-            //mint::DefaultImpl,
-        )
-    }
-}
-
 //fn treasury_base(
 //fn manager_integration(
 
 // Add other adapters here as they come
-fn single_asset_full_dao_integration(
+fn single_asset_portion_full_dao_integration(
     deposit: Uint128, 
     allowance: Uint128,
     allocation: Uint128,
@@ -167,10 +41,10 @@ fn single_asset_full_dao_integration(
 
     let mut ensemble = ContractEnsemble::new(50);
 
-    let reg_treasury = ensemble.register(Box::new(Treasury));
-    let reg_manager = ensemble.register(Box::new(TreasuryManager));
-    let reg_scrt_staking = ensemble.register(Box::new(ScrtStaking));
-    let reg_snip20 = ensemble.register(Box::new(Snip20));
+    let reg_treasury = ensemble.register(Box::new(harness::treasury::Treasury));
+    let reg_manager = ensemble.register(Box::new(harness::treasury_manager::TreasuryManager));
+    let reg_scrt_staking = ensemble.register(Box::new(harness::scrt_staking::ScrtStaking));
+    let reg_snip20 = ensemble.register(Box::new(harness::snip20::Snip20));
 
     let token = ensemble.instantiate(
         reg_snip20.id,
@@ -196,7 +70,7 @@ fn single_asset_full_dao_integration(
         reg_treasury.id,
         &shade_protocol::treasury::InitMsg {
             admin: Some(HumanAddr("admin".into())),
-            viewing_key: "viewing_key",
+            viewing_key: "viewing_key".to_string(),
         },
         MockEnv::new(
             "admin",
@@ -212,6 +86,7 @@ fn single_asset_full_dao_integration(
         &shade_protocol::treasury_manager::InitMsg {
             admin: Some(HumanAddr("admin".into())),
             treasury: HumanAddr("treasury".into()),
+            viewing_key: "viewing_key".to_string(),
         },
         MockEnv::new(
             "admin",
@@ -228,9 +103,11 @@ fn single_asset_full_dao_integration(
             admin: Some(HumanAddr("admin".into())),
             treasury: HumanAddr("treasury".into()),
             sscrt: Contract {
-                token.address.clone(),
-                token.code_hash.clone(),
-            }
+                address: token.address.clone(),
+                code_hash: token.code_hash.clone(),
+            },
+            validator_bounds: None,
+            viewing_key: "viewing_key".to_string(),
         },
         MockEnv::new(
             "admin",
@@ -250,7 +127,7 @@ fn single_asset_full_dao_integration(
                 code_hash: token.code_hash.clone(),
             },
             // unused?
-            reserves: Uint128::zero(),
+            reserves: Some(Uint128::zero()),
         },
         MockEnv::new(
             "admin", 
@@ -286,11 +163,45 @@ fn single_asset_full_dao_integration(
         ),
     ).unwrap();
 
-    // Register scrt_staking -> manager
+    // Allocate scrt_staking -> manager
+    ensemble.execute(
+        &shade_protocol::treasury_manager::HandleMsg::Allocate {
+            asset: token.address.clone(),
+            allocation: Allocation {
+                nick: "sSCRT Staking".to_string(),
+                contract: Contract {
+                    address: scrt_staking.address.clone(),
+                    code_hash: scrt_staking.code_hash.clone(),
+                }
+                alloc_type: shade_protocol::treasury::AllocationType::Portion,
+                amount: allocation,
+            },
+        },
+        MockEnv::new(
+            "admin", 
+            treasury_manager.clone(),
+        ),
+    ).unwrap();
 
     // treasury allowance to manager
-
-    // manager allocation to scrt_staking
+    ensemble.execute(
+        &shade_protocol::treasury::HandleMsg::Allowance {
+            asset: token.address.clone(),
+            allowance: shade_protocol::treasury::Allowance::Portion {
+                //nick: "Mid-Stakes-Manager".to_string(),
+                spender: treasury_manager.address.clone(),
+                portion: allowance,
+                // to be removed
+                last_refresh: "".to_string(),
+                // 100% (adapter balance will 2x before unbond)
+                tolerance: Uint128(10u128.pow(18)),
+            },
+        },
+        MockEnv::new(
+            "admin", 
+            treasury_manager.clone(),
+        ),
+    ).unwrap();
 
     // Deposit funds into treasury
     //ensemble.execute();
@@ -298,35 +209,32 @@ fn single_asset_full_dao_integration(
     //rebalance/update treasury
     //rebalance/update manager
     //check balances are expected
-    
-   
 }
 
-macro_rules! single_asset_full_dao_tests {
+macro_rules! single_asset_portion_full_dao_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
             fn $name() {
-                let (offer_price, offer_amount, mint_price, expected_amount) = $value;
                 let (
-                    deposit: Uint128, 
-                    allowance: Uint128,
-                    allocation: Uint128,
+                    deposit,
+                    allowance,
+                    allocation,
                     // expected balances
-                    expected_treasury: Uint128,
-                    expected_manager: Uint128,
-                    expected_scrt_staking: Uint128,
+                    expected_treasury,
+                    expected_manager,
+                    expected_scrt_staking,
                 ) = $value;
-                single_asset_full_dao(deposit, allowance, allocation, expected_treasury, expected_manager, expected_scrt_staking);
+                single_asset_portion_full_dao_integration(deposit, allowance, allocation, expected_treasury, expected_manager, expected_scrt_staking);
             }
         )*
     }
 }
-single_asset_full_dao_tests! {
-    single_asset_full_dao_0: (
+single_asset_portion_full_dao_tests! {
+    single_asset_portion_full_dao_0: (
         Uint128(100), // deposit 
-        Uint128(90 * 10.pow(18)), // allow 90%
-        Uint128(100 * 10.pow(18)), // allocate 100%
+        Uint128(90 * 10u128.pow(18)), // allow 90%
+        Uint128(100 * 10u128.pow(18)), // allocate 100%
         Uint128(10), // treasury 10
         Uint128(0), // manager 0
         Uint128(90), // scrt_staking 90
