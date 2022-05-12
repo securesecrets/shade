@@ -3,10 +3,11 @@ use secret_toolkit::{snip20::allowance_query, utils::Query};
 use shade_protocol::{
     contract_interfaces::{
         snip20,
-        treasury::{adapter, treasury_manager},
+        dao::treasury_manager,
     },
     utils::asset::Contract,
 };
+use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::state::{
     allocations_r,

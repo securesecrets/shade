@@ -1,18 +1,18 @@
 use cosmwasm_std::{
     self,
-    from_binary,
-    to_binary,
     Api,
     Binary,
     CosmosMsg,
     Env,
     Extern,
+    from_binary,
     HandleResponse,
     HumanAddr,
     Querier,
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
 };
 use secret_toolkit::{
@@ -30,8 +30,7 @@ use secret_toolkit::{
 use shade_protocol::{
     contract_interfaces::{
         snip20,
-        treasury::{
-            adapter,
+        dao::{
             treasury::{
                 Account,
                 Allowance,
@@ -47,7 +46,7 @@ use shade_protocol::{
     },
     utils::{
         asset::Contract,
-        cycle::{exceeds_cycle, parse_utc_datetime, Cycle},
+        cycle::{Cycle, exceeds_cycle, parse_utc_datetime},
         generic_response::ResponseStatus,
     },
 };
@@ -76,6 +75,7 @@ use crate::{
     },
 };
 use chrono::prelude::*;
+use shade_protocol::contract_interfaces::dao::adapter;
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

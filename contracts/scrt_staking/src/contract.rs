@@ -1,8 +1,7 @@
 use cosmwasm_std::{
-    debug_print,
-    to_binary,
     Api,
     Binary,
+    debug_print,
     Env,
     Extern,
     HandleResponse,
@@ -11,15 +10,14 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
 };
 
-use shade_protocol::contract_interfaces::{
-    staking::scrt_staking::{Config, HandleMsg, InitMsg, QueryMsg},
-    treasury::adapter,
-};
+use shade_protocol::contract_interfaces::dao::scrt_staking::{Config, HandleMsg, InitMsg, QueryMsg};
 
 use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
+use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{
     handle,

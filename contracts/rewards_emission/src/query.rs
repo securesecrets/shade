@@ -16,11 +16,12 @@ use cosmwasm_std::{
 };
 
 use shade_protocol::{
-    contract_interfaces::treasury::{adapter, rewards_emission::QueryAnswer},
+    contract_interfaces::dao::rewards_emission::QueryAnswer,
     utils::asset::scrt_balance,
 };
 
 use secret_toolkit::snip20::{allowance_query, balance_query};
+use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::state::{asset_r, assets_r, config_r, self_address_r, viewing_key_r};
 

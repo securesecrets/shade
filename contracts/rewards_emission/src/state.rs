@@ -9,7 +9,7 @@ use cosmwasm_storage::{
     ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::contract_interfaces::{snip20::Snip20Asset, treasury::rewards_emission};
+use shade_protocol::contract_interfaces::{snip20::Snip20Asset, dao::rewards_emission};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SELF_ADDRESS: &[u8] = b"self_address";

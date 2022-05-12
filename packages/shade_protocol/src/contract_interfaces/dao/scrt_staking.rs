@@ -1,33 +1,37 @@
 use crate::{
-    contract_interfaces::treasury::adapter,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
+
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Reward {
-    pub asset: HumanAddr,
-    pub amount: Uint128,
-}
+use crate::contract_interfaces::dao::adapter;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admins: Vec<HumanAddr>,
+    pub admin: HumanAddr,
     pub treasury: HumanAddr,
-    pub asset: Contract,
-    pub distributor: HumanAddr,
-    pub rewards: Vec<Reward>,
+    pub sscrt: Contract,
+    pub validator_bounds: Option<ValidatorBounds>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct ValidatorBounds {
+    pub min_commission: Decimal,
+    pub max_commission: Decimal,
+    pub top_position: Uint128,
+    pub bottom_position: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
-    pub config: Config,
+    pub admin: Option<HumanAddr>,
+    pub treasury: HumanAddr,
+    pub sscrt: Contract,
+    pub validator_bounds: Option<ValidatorBounds>,
     pub viewing_key: String,
 }
 
@@ -45,14 +49,8 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    RefillRewards {
-        rewards: Vec<Reward>,
-    },
     UpdateConfig {
         config: Config,
-    },
-    RegisterAsset {
-        asset: Contract,
     },
     Adapter(adapter::SubHandleMsg),
 }
@@ -73,20 +71,24 @@ pub enum HandleAnswer {
     },
     Receive {
         status: ResponseStatus,
+        validator: Validator,
     },
-    RegisterAsset {
+    /*
+    Claim {
         status: ResponseStatus,
     },
-    RefillRewards {
+    Unbond {
         status: ResponseStatus,
+        delegations: Vec<HumanAddr>,
     },
+    */
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    PendingAllowance { asset: HumanAddr },
+    Delegations {},
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -98,5 +100,5 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
-    PendingAllowance { amount: Uint128 },
+    //Balance { amount: Uint128 },
 }

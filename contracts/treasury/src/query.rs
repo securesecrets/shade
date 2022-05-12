@@ -5,8 +5,9 @@ use secret_toolkit::{
 };
 use shade_protocol::contract_interfaces::{
     snip20,
-    treasury::{adapter, treasury},
+    dao::treasury,
 };
+use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::state::{
     account_list_r,

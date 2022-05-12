@@ -1,8 +1,7 @@
 use cosmwasm_std::{
-    debug_print,
-    to_binary,
     Api,
     Binary,
+    debug_print,
     Env,
     Extern,
     HandleResponse,
@@ -11,11 +10,11 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
 };
 
-use shade_protocol::contract_interfaces::treasury::{
-    adapter,
+use shade_protocol::contract_interfaces::dao::{
     treasury::{Config, HandleMsg, InitMsg, QueryMsg},
 };
 
@@ -34,6 +33,7 @@ use crate::{
     },
 };
 use chrono::prelude::*;
+use shade_protocol::contract_interfaces::dao::adapter;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

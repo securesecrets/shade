@@ -1,6 +1,6 @@
 pub mod dex;
 
-pub mod treasury;
+pub mod dao;
 
 pub mod oracles;
 

@@ -1,12 +1,11 @@
 use cosmwasm_std::{
-    debug_print,
-    to_binary,
     Api,
     BalanceResponse,
     BankQuery,
     Binary,
     Coin,
     CosmosMsg,
+    debug_print,
     Env,
     Extern,
     HandleResponse,
@@ -16,6 +15,7 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
+    to_binary,
     Uint128,
     Validator,
 };
@@ -33,16 +33,16 @@ use secret_toolkit::snip20::{
 use shade_protocol::{
     contract_interfaces::{
         snip20::{fetch_snip20, Snip20Asset},
-        treasury::{
-            adapter,
+        dao::{
             rewards_emission::{Config, HandleAnswer, Reward},
         },
     },
     utils::{
-        asset::{scrt_balance, Contract},
+        asset::{Contract, scrt_balance},
         generic_response::ResponseStatus,
     },
 };
+use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{
     query,

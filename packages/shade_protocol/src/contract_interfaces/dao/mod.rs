@@ -9,3 +9,6 @@ pub mod rewards_emission;
 
 #[cfg(feature = "treasury")]
 pub mod treasury;
+
+#[cfg(feature = "scrt_staking")]
+pub mod scrt_staking;
