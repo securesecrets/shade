@@ -2,9 +2,15 @@ use std::arch::global_asm;
 
 use crate::{
     state::{
-        config_r, global_total_issued_r, global_total_claimed_r, account_viewkey_r, account_r, bond_opportunity_r, collateral_assets_r, issued_asset_r, validate_account_permit
+        config_r, global_total_issued_r, global_total_claimed_r, account_viewkey_r, account_r, bond_opportunity_r, collateral_assets_r, issued_asset_r, validate_account_permit,
+        allowance_key_r
     }, handle::oracle,
 };
+
+use shade_protocol::bonds::errors::{not_treasury_bond};
+
+use secret_toolkit::snip20::allowance_query;
+
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
 use shade_protocol::{bonds::{QueryAnswer, AccountKey, BondOpportunity, AccountPermit}, snip20::Snip20Asset, oracle};
 use shade_protocol::bonds::errors::incorrect_viewing_key;
@@ -91,5 +97,30 @@ pub fn price_check<S: Storage, A: Api, Q: Querier>(
     let price = oracle(deps, asset)?;
     Ok(QueryAnswer::PriceCheck {
         price: price
+    })
+}
+
+pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<QueryAnswer> {
+    let config = config_r(&deps.storage).load()?;
+    
+    if config.minting_bond{
+        return Err(not_treasury_bond());
+    }
+    
+    // Check bond issuance amount against snip20 allowance and allocated_allowance
+    let snip20_allowance = allowance_query(
+        &deps.querier,
+        config.treasury, 
+        config.contract,
+        allowance_key_r(&deps.storage).load()?.to_string(),
+        1,
+        config.issued_asset.code_hash,
+        config.issued_asset.address,
+    )?;
+
+    Ok(QueryAnswer::CheckAllowance {
+        allowance: snip20_allowance.allowance
     })
 }
