@@ -7,7 +7,10 @@ use cosmwasm_std::{
 use shade_protocol::{
     adapter,
     shadeswap,
-    lp_shade_swap::{Config, HandleMsg, InitMsg, QueryMsg},
+    lp_shade_swap::{
+        Config, HandleMsg, InitMsg, QueryMsg,
+        is_supported_asset,
+    },
     utils::asset::Contract,
 };
 
@@ -90,16 +93,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         pair: msg.pair.clone(),
         token_a: token_a.clone(),
         token_b: token_b.clone(),
-        share_token: msg.share_token.clone(),
-        reward_token: None,
+        liquidity_token: pair_info.liquidity_token.clone(),
         rewards_contract: msg.rewards_contract.clone(),
+        // TODO: query reward token from rewards contract
+        reward_token: None, //msg.reward_token,
     };
 
     // Init unbondings to 0
     for asset in vec![
             token_a.clone(),
             token_b.clone(),
-            msg.share_token.clone(),
+            pair_info.liquidity_token.clone(),
         ] {
         unbonding_w(&mut deps.storage).save(
             asset.address.as_str().as_bytes(),
@@ -107,53 +111,77 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(&mut deps.storage).save(&config.clone())?;
+
+    let mut messages = vec![
+        set_viewing_key_msg(
+            msg.viewing_key.clone(),
+            None,
+            1,
+            config.token_a.code_hash.clone(),
+            config.token_a.address.clone(),
+        )?,
+        register_receive_msg(
+            env.contract_code_hash.clone(),
+            None,
+            256,
+            config.token_a.code_hash.clone(),
+            config.token_a.address.clone(),
+        )?,
+        set_viewing_key_msg(
+            msg.viewing_key.clone(),
+            None,
+            1,
+            config.token_b.code_hash.clone(),
+            config.token_b.address.clone(),
+        )?,
+        register_receive_msg(
+            env.contract_code_hash.clone(),
+            None,
+            256,
+            config.token_b.code_hash.clone(),
+            config.token_b.address.clone(),
+        )?,
+        set_viewing_key_msg(
+            msg.viewing_key.clone(),
+            None,
+            1,
+            pair_info.liquidity_token.code_hash.clone(),
+            pair_info.liquidity_token.address.clone(),
+        )?,
+        register_receive_msg(
+            env.contract_code_hash.clone(),
+            None,
+            256,
+            pair_info.liquidity_token.code_hash.clone(),
+            pair_info.liquidity_token.address.clone(),
+        )?,
+    ];
+
+    if let Some(ref reward_token) = config.reward_token {
+
+        if !is_supported_asset(&config.clone(), &reward_token.address) {
+            messages.append(&mut vec![
+                set_viewing_key_msg(
+                    msg.viewing_key.clone(),
+                    None,
+                    1,
+                    reward_token.code_hash.clone(),
+                    reward_token.address.clone(),
+                )?,
+                register_receive_msg(
+                    env.contract_code_hash.clone(),
+                    None,
+                    256,
+                    reward_token.code_hash.clone(),
+                    reward_token.address.clone(),
+                )?,
+            ]);
+        }
+    }
 
     Ok(InitResponse {
-        messages: vec![
-            set_viewing_key_msg(
-                msg.viewing_key.clone(),
-                None,
-                1,
-                config.token_a.code_hash.clone(),
-                config.token_a.address.clone(),
-            )?,
-            register_receive_msg(
-                env.contract_code_hash.clone(),
-                None,
-                256,
-                config.token_a.code_hash,
-                config.token_a.address,
-            )?,
-            set_viewing_key_msg(
-                msg.viewing_key.clone(),
-                None,
-                1,
-                config.token_b.code_hash.clone(),
-                config.token_b.address.clone(),
-            )?,
-            register_receive_msg(
-                env.contract_code_hash.clone(),
-                None,
-                256,
-                config.token_b.code_hash,
-                config.token_b.address,
-            )?,
-            set_viewing_key_msg(
-                msg.viewing_key.clone(),
-                None,
-                1,
-                pair_info.liquidity_token.code_hash.clone(),
-                pair_info.liquidity_token.address.clone(),
-            )?,
-            register_receive_msg(
-                env.contract_code_hash.clone(),
-                None,
-                256,
-                pair_info.liquidity_token.code_hash.clone(),
-                pair_info.liquidity_token.address.clone(),
-            )?,
-        ],
+        messages,
         log: vec![],
     })
 }

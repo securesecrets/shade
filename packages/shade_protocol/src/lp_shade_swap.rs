@@ -19,7 +19,7 @@ pub struct Config {
     pub pair: Contract,
     pub token_a: Contract,
     pub token_b: Contract,
-    pub share_token: Contract,
+    pub liquidity_token: Contract,
     pub reward_token: Option<Contract>,
     pub rewards_contract: Option<Contract>,
 }
@@ -30,11 +30,9 @@ pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub treasury: HumanAddr,
     pub viewing_key: String,
-    // Should be 2
+    pub pair: Contract,
     pub token_a: Contract,
     pub token_b: Contract,
-    pub pair: Contract,
-    pub share_token: Contract,
     pub rewards_contract: Option<Contract>,
 }
 
@@ -113,7 +111,7 @@ pub fn is_supported_asset(config: &Config, asset: &HumanAddr) -> bool {
     vec![
         config.token_a.address.clone(),
         config.token_b.address.clone(),
-        config.share_token.address.clone(),
+        config.liquidity_token.address.clone(),
     ].contains(asset) 
 }
 
@@ -124,6 +122,6 @@ pub fn get_supported_asset(
     vec![
         config.token_a.clone(),
         config.token_b.clone(),
-        config.share_token.clone(),
+        config.liquidity_token.clone(),
     ].into_iter().find(|a| a.address == *asset).unwrap()
 }

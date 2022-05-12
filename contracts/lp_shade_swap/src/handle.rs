@@ -144,7 +144,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     let mut messages = vec![];
 
-    if asset == config.share_token.address {
+    if asset == config.liquidity_token.address {
         /* Pull LP token out of rewards contract
          * Hold for claiming
          */

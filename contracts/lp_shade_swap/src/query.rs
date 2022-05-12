@@ -21,17 +21,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
     })
 }
 
-pub fn delegations<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<Vec<Delegation>> {
-
-    deps.querier.query_all_delegations(
-        self_address_r(&deps.storage).load()?
-    )
-}
-
 pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Uint128> {
-
     //TODO: query pending rewards from rewards contract
     Ok(Uint128::zero())
 }
@@ -52,7 +42,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     if vec![config.token_a.address, config.token_b.address].contains(&asset) {
         // Determine balance of LP, determine redemption value
     }
-    else if config.share_token.address == asset {
+    else if config.liquidity_token.address == asset {
         // Check LP tokens in rewards contract + balance
     }
 
