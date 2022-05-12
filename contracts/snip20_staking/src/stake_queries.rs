@@ -6,8 +6,9 @@ use crate::state_staking::{
     UserShares,
 };
 use cosmwasm_std::{
-    to_binary, Api, Binary, Extern, HumanAddr, Querier, StdResult, Storage, Uint128,
+    to_binary, Api, Binary, Extern, HumanAddr, Querier, StdResult, Storage,
 };
+use cosmwasm_math_compat::Uint128;
 use shade_protocol::snip20_staking::stake::{StakeConfig, VecQueue};
 use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
 
@@ -26,12 +27,12 @@ pub fn total_staked<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> S
 
 pub fn stake_rate<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
     to_binary(&QueryAnswer::StakeRate {
-        shares: Uint128(shares_per_token(
+        shares: shares_per_token(
             &StakeConfig::load(&deps.storage)?,
-            &1,
-            &TotalTokens::load(&deps.storage)?.0.u128(),
-            &TotalShares::load(&deps.storage)?.0.u128(),
-        )?),
+            &Uint128::new(1),
+            &TotalTokens::load(&deps.storage)?.0,
+            &TotalShares::load(&deps.storage)?.0,
+        )?,
     })
 }
 
@@ -50,7 +51,7 @@ pub fn unfunded<S: Storage, A: Api, Q: Querier>(
             if count >= total {
                 break;
             }
-            total_bonded += (item.unbonding - item.funded)?;
+            total_bonded += item.unbonding.checked_sub(item.funded)?;
             count += 1;
         }
     }
@@ -78,10 +79,10 @@ pub fn staked<S: Storage, A: Api, Q: Querier>(
 
     let (rewards, _) = calculate_rewards(
         &StakeConfig::load(&deps.storage)?,
-        tokens,
-        shares.u128(),
-        TotalTokens::load(&deps.storage)?.0.u128(),
-        TotalShares::load(&deps.storage)?.0.u128(),
+        Uint128::new(tokens),
+        shares,
+        TotalTokens::load(&deps.storage)?.0,
+        TotalShares::load(&deps.storage)?.0,
     )?;
 
     let queue = UnbondingQueue::may_load(&deps.storage, account.as_str().as_bytes())?
@@ -103,9 +104,9 @@ pub fn staked<S: Storage, A: Api, Q: Querier>(
     }
 
     to_binary(&QueryAnswer::Staked {
-        tokens: Uint128(tokens),
+        tokens: Uint128::new(tokens),
         shares,
-        pending_rewards: Uint128(rewards),
+        pending_rewards: rewards,
         unbonding,
         unbonded: time.map(|_| unbonded),
         cooldown: UserCooldown::may_load(&deps.storage, account.as_str().as_bytes())?

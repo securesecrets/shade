@@ -2,7 +2,8 @@ use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{HumanAddr};
+use cosmwasm_math_compat::Uint128;
 use crate::utils::storage::default::{BucketStorage, SingletonStorage};
 use crate::utils::asset::Contract;
 
@@ -50,10 +51,10 @@ impl DailyUnbonding {
             return amount
         }
 
-        let to_fund = (self.unbonding - self.funded).unwrap();
+        let to_fund = self.unbonding.checked_sub(self.funded).unwrap();
         if to_fund < amount {
             self.funded = self.unbonding.into();
-            return (amount - to_fund).unwrap()
+            return amount.checked_sub(to_fund).unwrap()
         }
 
         self.funded += amount;
@@ -148,29 +149,29 @@ mod tests {
 
     #[test]
     fn is_funded() {
-        assert!(DailyUnbonding{ unbonding: Uint128(100), funded: Uint128(100), release: 0 }.is_funded());
-        assert!(!DailyUnbonding{ unbonding: Uint128(150), funded: Uint128(100), release: 0 }.is_funded());
+        assert!(DailyUnbonding{ unbonding: Uint128::new(100), funded: Uint128::new(100), release: 0 }.is_funded());
+        assert!(!DailyUnbonding{ unbonding: Uint128::new(150), funded: Uint128::new(100), release: 0 }.is_funded());
     }
 
     #[test]
     fn fund() {
         // Initialize new unbond
-        let mut unbond = DailyUnbonding::new(Uint128(500), 0);
+        let mut unbond = DailyUnbonding::new(Uint128::new(500), 0);
         assert!(!unbond.is_funded());
 
         // Add small fund
-        let residue = unbond.fund(Uint128(250));
-        assert_eq!(unbond.funded, Uint128(250));
+        let residue = unbond.fund(Uint128::new(250));
+        assert_eq!(unbond.funded, Uint128::new(250));
         assert_eq!(residue, Uint128::zero());
 
         // Add overflowing fund
-        let residue = unbond.fund(Uint128(500));
+        let residue = unbond.fund(Uint128::new(500));
         assert!(unbond.is_funded());
-        assert_eq!(residue, Uint128(250));
+        assert_eq!(residue, Uint128::new(250));
 
         // Add to funded fund
-        let residue = unbond.fund(Uint128(300));
-        assert_eq!(residue, Uint128(300));
+        let residue = unbond.fund(Uint128::new(300));
+        assert_eq!(residue, Uint128::new(300));
     }
 
     #[test]
@@ -179,32 +180,32 @@ mod tests {
         assert_eq!(vec.0.len(), 0);
 
         vec.push(&QueueItem {
-            amount: Uint128(1),
+            amount: Uint128::new(1),
             release: 1
         });
         vec.push(&QueueItem {
-            amount: Uint128(1),
+            amount: Uint128::new(1),
             release: 2
         });
         vec.push(&QueueItem {
-            amount: Uint128(1),
+            amount: Uint128::new(1),
             release: 2
         });
         vec.push(&QueueItem {
-            amount: Uint128(1),
+            amount: Uint128::new(1),
             release: 3
         });
 
         assert_eq!(vec.0[0], QueueItem {
-            amount: Uint128(1),
+            amount: Uint128::new(1),
             release: 1
         });
         assert_eq!(vec.0[1], QueueItem {
-            amount: Uint128(2),
+            amount: Uint128::new(2),
             release: 2
         });
         assert_eq!(vec.0[2], QueueItem {
-            amount: Uint128(1),
+            amount: Uint128::new(1),
             release: 3
         });
     }

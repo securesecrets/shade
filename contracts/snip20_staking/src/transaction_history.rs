@@ -2,11 +2,12 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{
-    Api, CanonicalAddr, Coin, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
+    Api, CanonicalAddr, Coin, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage,
 };
 use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
 use secret_toolkit::storage::{AppendStore, AppendStoreMut};
+use cosmwasm_math_compat::Uint128;
 
 use crate::state::Config;
 
@@ -409,7 +410,7 @@ pub fn store_transfer<S: Storage>(
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
+    let coins = Coin { denom, amount: amount.into() };
     let transfer = StoredLegacyTransfer {
         id,
         from: owner.clone(),
@@ -452,7 +453,7 @@ pub fn store_mint<S: Storage>(
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
+    let coins = Coin { denom, amount: amount.into() };
     let action = StoredTxAction::mint(minter.clone(), recipient.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
@@ -474,7 +475,7 @@ pub fn store_burn<S: Storage>(
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
+    let coins = Coin { denom, amount: amount.into() };
     let action = StoredTxAction::burn(owner.clone(), burner.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
@@ -495,7 +496,7 @@ pub fn store_stake<S: Storage>(
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
+    let coins = Coin { denom, amount: amount.into() };
     let action = StoredTxAction::stake(staker.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
@@ -513,7 +514,7 @@ pub fn store_add_reward<S: Storage>(
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
+    let coins = Coin { denom, amount: amount.into() };
     let action = StoredTxAction::add_reward(staker.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
@@ -531,7 +532,7 @@ pub fn store_fund_unbond<S: Storage>(
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
+    let coins = Coin { denom, amount: amount.into() };
     let action = StoredTxAction::fund_unbond(staker.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
@@ -549,7 +550,7 @@ pub fn store_unbond<S: Storage>(
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
+    let coins = Coin { denom, amount: amount.into() };
     let action = StoredTxAction::unbond(staker.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
@@ -567,7 +568,7 @@ pub fn store_claim_unbond<S: Storage>(
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
+    let coins = Coin { denom, amount: amount.into() };
     let action = StoredTxAction::claim_unbond(staker.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
@@ -585,7 +586,7 @@ pub fn store_claim_reward<S: Storage>(
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
-    let coins = Coin { denom, amount };
+    let coins = Coin { denom, amount: amount.into() };
     let action = StoredTxAction::claim_reward(staker.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
