@@ -14,12 +14,19 @@ default = []
 snip20 = ["dep:snip20-reference-impl"]
 mint = ["dep:mint"]
 oracle = ["dep:oracle"]
-mock_band= ["dep:mock_band"]
+mock_band = ["dep:mock_band"]
+treasury = ["dep:treasury"]
+treasury_manager = ["dep:treasury_manager"]
+scrt_staking = ["dep:scrt_staking"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 fadroma-ensemble = { branch = "v100", git = "https://github.com/hackbg/fadroma.git"}
+
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
 oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
 mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }
+treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
+treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
+scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optional = true }
