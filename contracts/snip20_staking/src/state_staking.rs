@@ -1,20 +1,14 @@
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{HumanAddr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::{
-    contract_interfaces::staking::snip20_staking::stake::{
-        Cooldown,
-        DailyUnbonding,
-        Unbonding,
-        VecQueue,
-    },
-    utils::storage::default::{BucketStorage, SingletonStorage},
-};
+use cosmwasm_math_compat::{Uint128, Uint256};
+use shade_protocol::snip20_staking::stake::{Cooldown, DailyUnbonding, Unbonding, VecQueue};
+use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
 
 // used to determine what each token is worth to calculate rewards
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct TotalShares(pub Uint128);
+pub struct TotalShares(pub Uint256);
 
 impl SingletonStorage for TotalShares {
     const NAMESPACE: &'static [u8] = b"total_shares";
@@ -31,7 +25,7 @@ impl SingletonStorage for TotalTokens {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct UserShares(pub Uint128);
+pub struct UserShares(pub Uint256);
 
 impl BucketStorage for UserShares {
     const NAMESPACE: &'static [u8] = b"user_shares";
@@ -114,9 +108,9 @@ impl UserCooldown {
             let index = self.queue.0.len() - 1;
             if self.queue.0[index].amount <= remaining {
                 let item = self.queue.0.remove(index);
-                remaining = (remaining - item.amount).unwrap();
+                remaining = remaining.checked_sub(item.amount).unwrap();
             } else {
-                self.queue.0[index].amount = (self.queue.0[index].amount - remaining).unwrap();
+                self.queue.0[index].amount = self.queue.0[index].amount.checked_sub(remaining).unwrap();
                 break;
             }
         }
@@ -126,7 +120,7 @@ impl UserCooldown {
         while !self.queue.0.is_empty() {
             if self.queue.0[0].release <= time {
                 let i = self.queue.pop().unwrap();
-                self.total = (self.total - i.amount).unwrap();
+                self.total = self.total.checked_sub(i.amount).unwrap();
             } else {
                 break;
             }

@@ -1,31 +1,18 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    msg::{HandleAnswer, ResponseStatus::Success},
-    state::{get_receiver_hash, Balances},
-    state_staking::UserCooldown,
-};
+use crate::msg::HandleAnswer;
+use crate::msg::ResponseStatus::Success;
+use crate::state::{get_receiver_hash, Balances};
+use crate::state_staking::UserCooldown;
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    Binary,
-    CosmosMsg,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
+    to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr, Querier, StdError,
+    StdResult, Storage,
 };
 use secret_toolkit::utils::HandleCallback;
-use shade_protocol::{
-    contract_interfaces::staking::snip20_staking::stake::VecQueue,
-    utils::storage::default::BucketStorage,
-};
+use cosmwasm_math_compat::Uint128;
+use shade_protocol::snip20_staking::stake::VecQueue;
+use shade_protocol::utils::storage::default::BucketStorage;
 
 pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -48,10 +35,11 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("No code hash received"));
     }
 
-    let messages = vec![
-        Snip20BalanceReceiverMsg::new(env.message.sender, Uint128(balance), memo, msg)
-            .to_cosmos_msg(receiver_hash, recipient)?,
-    ];
+    let messages =
+        vec![
+            Snip20BalanceReceiverMsg::new(env.message.sender, Uint128::new(balance), memo, msg)
+                .to_cosmos_msg(receiver_hash, recipient)?,
+        ];
 
     Ok(HandleResponse {
         messages,
@@ -90,15 +78,13 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
     cooldown.update(env.block.time);
     cooldown.save(&mut deps.storage, env.message.sender.to_string().as_bytes())?;
 
-    let messages = vec![
-        Snip20BalanceReceiverMsg::new(
-            env.message.sender,
-            (Uint128(balance) - cooldown.total)?,
-            memo,
-            msg,
-        )
-        .to_cosmos_msg_cooldown(receiver_hash, recipient)?,
-    ];
+    let messages = vec![Snip20BalanceReceiverMsg::new(
+        env.message.sender,
+        Uint128::new(balance).checked_sub(cooldown.total)?,
+        memo,
+        msg,
+    )
+    .to_cosmos_msg_cooldown(receiver_hash, recipient)?];
 
     Ok(HandleResponse {
         messages,
