@@ -33,3 +33,21 @@ pub mod mock_band {
     pub struct MockBand;
     harness_macro::implement_harness!(MockBand, mock_band);
 }
+
+#[cfg(feature = "governance")]
+pub mod governance {
+    use crate::harness_macro;
+    use governance;
+
+    pub struct Governance;
+    harness_macro::implement_harness!(Governance, governance);
+}
+
+#[cfg(feature = "snip20_staking")]
+pub mod snip20_staking {
+    use crate::harness_macro;
+    use spip_stkd_0;
+
+    pub struct Snip20Staking;
+    harness_macro::implement_harness!(Snip20Staking, spip_stkd_0);
+}

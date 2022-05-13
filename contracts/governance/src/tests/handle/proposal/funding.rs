@@ -1,18 +1,34 @@
-use cosmwasm_std::{Binary, HumanAddr, StdResult, to_binary};
-use shade_protocol::governance;
+use crate::tests::{
+    admin_only_governance,
+    get_assemblies,
+    get_proposals,
+    gov_generic_proposal,
+    gov_msg_proposal,
+    init_governance,
+};
+use contract_harness::harness::{governance::Governance, snip20::Snip20};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{to_binary, Binary, HumanAddr, StdResult};
 use fadroma_ensemble::{ContractEnsemble, MockEnv};
 use fadroma_platform_scrt::ContractLink;
-use cosmwasm_math_compat::Uint128;
-use shade_protocol::governance::InitMsg;
-use shade_protocol::governance::profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile};
-use shade_protocol::governance::proposal::{ProposalMsg, Status};
-use shade_protocol::governance::vote::Vote;
-use shade_protocol::utils::asset::Contract;
-use crate::tests::{admin_only_governance, get_assemblies, get_proposals, gov_generic_proposal, gov_msg_proposal, Governance, init_governance, Snip20};
+use shade_protocol::{
+    contract_interfaces::{
+        governance,
+        governance::{
+            profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
+            proposal::{ProposalMsg, Status},
+            vote::Vote,
+            InitMsg,
+        },
+    },
+    utils::asset::Contract,
+};
 
-fn init_funding_governance_with_proposal(
-) -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>, ContractLink<HumanAddr>)>
-{
+fn init_funding_governance_with_proposal() -> StdResult<(
+    ContractEnsemble,
+    ContractLink<HumanAddr>,
+    ContractLink<HumanAddr>,
+)> {
     let mut chain = ContractEnsemble::new(50);
 
     // Register snip20
@@ -39,15 +55,12 @@ fn init_funding_governance_with_proposal(
                 },
             ]),
             prng_seed: Default::default(),
-            config: None
+            config: None,
         },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: "funding_token".into(),
-                code_hash: snip20.code_hash,
-            }
-        )
+        MockEnv::new("admin", ContractLink {
+            address: "funding_token".into(),
+            code_hash: snip20.code_hash,
+        }),
     )?;
 
     // Register governance
@@ -59,7 +72,7 @@ fn init_funding_governance_with_proposal(
             admin_members: vec![
                 HumanAddr::from("alpha"),
                 HumanAddr::from("beta"),
-                HumanAddr::from("charlie")
+                HumanAddr::from("charlie"),
             ],
             admin_profile: Profile {
                 name: "admin".to_string(),
@@ -69,10 +82,10 @@ fn init_funding_governance_with_proposal(
                     deadline: 1000,
                     required: Uint128::new(2000),
                     privacy: false,
-                    veto_deposit_loss: Default::default()
+                    veto_deposit_loss: Default::default(),
                 }),
                 token: None,
-                cancel_deadline: 0
+                cancel_deadline: 0,
             },
             public_profile: Profile {
                 name: "public".to_string(),
@@ -80,21 +93,18 @@ fn init_funding_governance_with_proposal(
                 assembly: None,
                 funding: None,
                 token: None,
-                cancel_deadline: 0
+                cancel_deadline: 0,
             },
             funding_token: Some(Contract {
                 address: snip20.address.clone(),
-                code_hash: snip20.code_hash.clone()
+                code_hash: snip20.code_hash.clone(),
             }),
-            vote_token: None
+            vote_token: None,
         },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: "gov".into(),
-                code_hash: gov.code_hash,
-            }
-        )
+        MockEnv::new("admin", ContractLink {
+            address: "gov".into(),
+            code_hash: gov.code_hash,
+        }),
     )?;
 
     chain.execute(
@@ -103,57 +113,45 @@ fn init_funding_governance_with_proposal(
             title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
             msgs: None,
-            padding: None
+            padding: None,
         },
-        MockEnv::new(
-            "alpha",
-            ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }
-        )
+        MockEnv::new("alpha", ContractLink {
+            address: gov.address.clone(),
+            code_hash: gov.code_hash.clone(),
+        }),
     )?;
 
     chain.execute(
         &snip20_reference_impl::msg::HandleMsg::SetViewingKey {
             key: "password".to_string(),
-            padding: None
+            padding: None,
         },
-        MockEnv::new(
-            "alpha",
-            ContractLink {
-                address: snip20.address.clone(),
-                code_hash: snip20.code_hash.clone(),
-            }
-        )
+        MockEnv::new("alpha", ContractLink {
+            address: snip20.address.clone(),
+            code_hash: snip20.code_hash.clone(),
+        }),
     )?;
 
     chain.execute(
         &snip20_reference_impl::msg::HandleMsg::SetViewingKey {
             key: "password".to_string(),
-            padding: None
+            padding: None,
         },
-        MockEnv::new(
-            "beta",
-            ContractLink {
-                address: snip20.address.clone(),
-                code_hash: snip20.code_hash.clone(),
-            }
-        )
+        MockEnv::new("beta", ContractLink {
+            address: snip20.address.clone(),
+            code_hash: snip20.code_hash.clone(),
+        }),
     )?;
 
     chain.execute(
         &snip20_reference_impl::msg::HandleMsg::SetViewingKey {
             key: "password".to_string(),
-            padding: None
+            padding: None,
         },
-        MockEnv::new(
-            "charlie",
-            ContractLink {
-                address: snip20.address.clone(),
-                code_hash: snip20.code_hash.clone(),
-            }
-        )
+        MockEnv::new("charlie", ContractLink {
+            address: snip20.address.clone(),
+            code_hash: snip20.code_hash.clone(),
+        }),
     )?;
 
     Ok((chain, gov, snip20))
@@ -162,117 +160,117 @@ fn init_funding_governance_with_proposal(
 #[test]
 fn assembly_to_funding_transition() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
-    chain.execute(
-        &governance::HandleMsg::SetProfile {
-            id: Uint128::new(1),
-            profile: UpdateProfile {
-                name: None,
-                enabled: None,
-                disable_assembly: false,
-                assembly: Some(UpdateVoteProfile {
-                    deadline: Some(1000),
-                    threshold: Some(Count::LiteralCount {count:Uint128::new(1)}),
-                    yes_threshold: Some(Count::LiteralCount {count:Uint128::new(1)}),
-                    veto_threshold: Some(Count::LiteralCount {count:Uint128::new(1)})
-                }),
-                disable_funding: false,
-                funding: None,
-                disable_token: false,
-                token: None,
-                cancel_deadline: None
+    chain
+        .execute(
+            &governance::HandleMsg::SetProfile {
+                id: Uint128::new(1),
+                profile: UpdateProfile {
+                    name: None,
+                    enabled: None,
+                    disable_assembly: false,
+                    assembly: Some(UpdateVoteProfile {
+                        deadline: Some(1000),
+                        threshold: Some(Count::LiteralCount {
+                            count: Uint128::new(1),
+                        }),
+                        yes_threshold: Some(Count::LiteralCount {
+                            count: Uint128::new(1),
+                        }),
+                        veto_threshold: Some(Count::LiteralCount {
+                            count: Uint128::new(1),
+                        }),
+                    }),
+                    disable_funding: false,
+                    funding: None,
+                    disable_token: false,
+                    token: None,
+                    cancel_deadline: None,
+                },
+                padding: None,
             },
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            gov.address.clone(),
-            gov.clone()
+            MockEnv::new(
+                // Sender is self
+                gov.address.clone(),
+                gov.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
-    chain.execute(
-        &governance::HandleMsg::AssemblyProposal {
-            assembly: Uint128::new(1),
-            title: "Title".to_string(),
-            metadata: "Text only proposal".to_string(),
-            msgs: None,
-            padding: None
-        },
-        MockEnv::new(
-            "alpha",
-            ContractLink {
+    chain
+        .execute(
+            &governance::HandleMsg::AssemblyProposal {
+                assembly: Uint128::new(1),
+                title: "Title".to_string(),
+                metadata: "Text only proposal".to_string(),
+                msgs: None,
+                padding: None,
+            },
+            MockEnv::new("alpha", ContractLink {
                 address: gov.address.clone(),
                 code_hash: gov.code_hash.clone(),
-            }
+            }),
         )
-    ).unwrap();
+        .unwrap();
 
-    chain.execute(
-        &governance::HandleMsg::AssemblyVote {
-            proposal: Uint128::new(1),
-            vote: Vote {
-                yes: Uint128::new(1),
-                no: Uint128::zero(),
-                no_with_veto: Uint128::zero(),
-                abstain: Uint128::zero()
+    chain
+        .execute(
+            &governance::HandleMsg::AssemblyVote {
+                proposal: Uint128::new(1),
+                vote: Vote {
+                    yes: Uint128::new(1),
+                    no: Uint128::zero(),
+                    no_with_veto: Uint128::zero(),
+                    abstain: Uint128::zero(),
+                },
+                padding: None,
             },
-            padding: None
-        },
-        MockEnv::new(
-            "alpha",
-            ContractLink {
+            MockEnv::new("alpha", ContractLink {
                 address: gov.address.clone(),
                 code_hash: gov.code_hash.clone(),
-            }
+            }),
         )
-    ).unwrap();
+        .unwrap();
 
-    chain.execute(
-        &governance::HandleMsg::AssemblyVote {
-            proposal: Uint128::new(1),
-            vote: Vote {
-                yes: Uint128::new(1),
-                no: Uint128::zero(),
-                no_with_veto: Uint128::zero(),
-                abstain: Uint128::zero()
+    chain
+        .execute(
+            &governance::HandleMsg::AssemblyVote {
+                proposal: Uint128::new(1),
+                vote: Vote {
+                    yes: Uint128::new(1),
+                    no: Uint128::zero(),
+                    no_with_veto: Uint128::zero(),
+                    abstain: Uint128::zero(),
+                },
+                padding: None,
             },
-            padding: None
-        },
-        MockEnv::new(
-            "beta",
-            ContractLink {
+            MockEnv::new("beta", ContractLink {
                 address: gov.address.clone(),
                 code_hash: gov.code_hash.clone(),
-            }
+            }),
         )
-    ).unwrap();
+        .unwrap();
 
     chain.block().time += 30000;
 
-    chain.execute(
-        &governance::HandleMsg::Update {
-            proposal: Uint128::new(1),
-            padding: None
-        },
-        MockEnv::new(
-            "beta",
-            ContractLink {
+    chain
+        .execute(
+            &governance::HandleMsg::Update {
+                proposal: Uint128::new(1),
+                padding: None,
+            },
+            MockEnv::new("beta", ContractLink {
                 address: gov.address.clone(),
                 code_hash: gov.code_hash.clone(),
-            }
+            }),
         )
-    ).unwrap();
+        .unwrap();
 
-    let prop = get_proposals(
-        &mut chain,
-        &gov,
-        Uint128::new(1),
-        Uint128::new(2)
-    ).unwrap()[0].clone();
+    let prop =
+        get_proposals(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
 
     match prop.status {
-        Status::Funding {..} => assert!(true),
-        _ => assert!(false)
+        Status::Funding { .. } => assert!(true),
+        _ => assert!(false),
     };
 }
 #[test]
@@ -280,72 +278,75 @@ fn fake_funding_token() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
     let other = chain.register(Box::new(Snip20));
-    let other = chain.instantiate(
-        other.id,
-        &snip20_reference_impl::msg::InitMsg {
-            name: "funding_token".to_string(),
-            admin: None,
-            symbol: "FND".to_string(),
-            decimals: 6,
-            initial_balances: Some(vec![
-                snip20_reference_impl::msg::InitialBalance {
-                    address: HumanAddr::from("alpha"),
-                    amount: cosmwasm_std::Uint128(10000),
-                },
-                snip20_reference_impl::msg::InitialBalance {
-                    address: HumanAddr::from("beta"),
-                    amount: cosmwasm_std::Uint128(10000),
-                },
-                snip20_reference_impl::msg::InitialBalance {
-                    address: HumanAddr::from("charlie"),
-                    amount: cosmwasm_std::Uint128(10000),
-                },
-            ]),
-            prng_seed: Default::default(),
-            config: None
-        },
-        MockEnv::new(
-            "admin",
-            ContractLink {
+    let other = chain
+        .instantiate(
+            other.id,
+            &snip20_reference_impl::msg::InitMsg {
+                name: "funding_token".to_string(),
+                admin: None,
+                symbol: "FND".to_string(),
+                decimals: 6,
+                initial_balances: Some(vec![
+                    snip20_reference_impl::msg::InitialBalance {
+                        address: HumanAddr::from("alpha"),
+                        amount: cosmwasm_std::Uint128(10000),
+                    },
+                    snip20_reference_impl::msg::InitialBalance {
+                        address: HumanAddr::from("beta"),
+                        amount: cosmwasm_std::Uint128(10000),
+                    },
+                    snip20_reference_impl::msg::InitialBalance {
+                        address: HumanAddr::from("charlie"),
+                        amount: cosmwasm_std::Uint128(10000),
+                    },
+                ]),
+                prng_seed: Default::default(),
+                config: None,
+            },
+            MockEnv::new("admin", ContractLink {
                 address: "other".into(),
                 code_hash: snip20.code_hash.clone(),
-            }
-        )
-    ).unwrap();
-
-    chain.execute(
-        &governance::HandleMsg::SetConfig {
-            treasury: None,
-            funding_token: Some(Contract {
-                address: other.address.clone(),
-                code_hash: other.code_hash,
             }),
-            vote_token: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            gov.address.clone(),
-            gov.clone()
         )
-    ).unwrap();
+        .unwrap();
 
-    assert!(
-        chain.execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
-                recipient: gov.address,
-                recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(100),
-                msg: None,
-                memo: None,
-                padding: None
+    chain
+        .execute(
+            &governance::HandleMsg::SetConfig {
+                treasury: None,
+                funding_token: Some(Contract {
+                    address: other.address.clone(),
+                    code_hash: other.code_hash,
+                }),
+                vote_token: None,
+                padding: None,
             },
             MockEnv::new(
                 // Sender is self
-                HumanAddr::from("alpha"),
-                snip20.clone()
+                gov.address.clone(),
+                gov.clone(),
+            ),
+        )
+        .unwrap();
+
+    assert!(
+        chain
+            .execute(
+                &snip20_reference_impl::msg::HandleMsg::Send {
+                    recipient: gov.address,
+                    recipient_code_hash: None,
+                    amount: cosmwasm_std::Uint128(100),
+                    msg: None,
+                    memo: None,
+                    padding: None
+                },
+                MockEnv::new(
+                    // Sender is self
+                    HumanAddr::from("alpha"),
+                    snip20.clone()
+                )
             )
-        ).is_err()
+            .is_err()
     );
 }
 #[test]
@@ -353,69 +354,71 @@ fn funding_proposal_without_msg() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
     assert!(
-        chain.execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
-                recipient: gov.address,
-                recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(100),
-                msg: None,
-                memo: None,
-                padding: None
-            },
-            MockEnv::new(
-                // Sender is self
-                HumanAddr::from("alpha"),
-                snip20.clone()
+        chain
+            .execute(
+                &snip20_reference_impl::msg::HandleMsg::Send {
+                    recipient: gov.address,
+                    recipient_code_hash: None,
+                    amount: cosmwasm_std::Uint128(100),
+                    msg: None,
+                    memo: None,
+                    padding: None
+                },
+                MockEnv::new(
+                    // Sender is self
+                    HumanAddr::from("alpha"),
+                    snip20.clone()
+                )
             )
-        ).is_err()
+            .is_err()
     );
 }
 #[test]
 fn funding_proposal() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
-    chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
-            recipient: gov.address.clone(),
-            recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(100),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
-            memo: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            snip20.clone()
+    chain
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::Send {
+                recipient: gov.address.clone(),
+                recipient_code_hash: None,
+                amount: cosmwasm_std::Uint128(100),
+                msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("alpha"),
+                snip20.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
-    chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
-            recipient: gov.address.clone(),
-            recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(100),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
-            memo: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("beta"),
-            snip20.clone()
+    chain
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::Send {
+                recipient: gov.address.clone(),
+                recipient_code_hash: None,
+                amount: cosmwasm_std::Uint128(100),
+                msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("beta"),
+                snip20.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
-    let prop = get_proposals(
-        &mut chain,
-        &gov,
-        Uint128::zero(),
-        Uint128::new(2)
-    ).unwrap()[0].clone();
+    let prop =
+        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
 
     match prop.status {
-        Status::Funding {amount, ..} => assert_eq!(amount, Uint128::new(200)),
-        _ => assert!(false)
+        Status::Funding { amount, .. } => assert_eq!(amount, Uint128::new(200)),
+        _ => assert!(false),
     };
 }
 #[test]
@@ -424,291 +427,310 @@ fn funding_proposal_after_deadline() {
 
     chain.block().time += 10000;
 
-    assert!(chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
-            recipient: gov.address.clone(),
-            recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(100),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
-            memo: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            snip20.clone()
-        )
-    ).is_err())
+    assert!(
+        chain
+            .execute(
+                &snip20_reference_impl::msg::HandleMsg::Send {
+                    recipient: gov.address.clone(),
+                    recipient_code_hash: None,
+                    amount: cosmwasm_std::Uint128(100),
+                    msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                    memo: None,
+                    padding: None
+                },
+                MockEnv::new(
+                    // Sender is self
+                    HumanAddr::from("alpha"),
+                    snip20.clone()
+                )
+            )
+            .is_err()
+    )
 }
 #[test]
 fn update_while_funding() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
-    assert!(chain.execute(
-        &governance::HandleMsg::Update {
-            proposal: Uint128::zero(),
-            padding: None
-        },
-        MockEnv::new(
-            "beta",
-            ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }
-        )
-    ).is_err());
+    assert!(
+        chain
+            .execute(
+                &governance::HandleMsg::Update {
+                    proposal: Uint128::zero(),
+                    padding: None
+                },
+                MockEnv::new("beta", ContractLink {
+                    address: gov.address.clone(),
+                    code_hash: gov.code_hash.clone(),
+                })
+            )
+            .is_err()
+    );
 }
 #[test]
 fn update_when_fully_funded() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
-    chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
-            recipient: gov.address.clone(),
-            recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(1000),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
-            memo: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            snip20.clone()
+    chain
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::Send {
+                recipient: gov.address.clone(),
+                recipient_code_hash: None,
+                amount: cosmwasm_std::Uint128(1000),
+                msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("alpha"),
+                snip20.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
-    chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
-            recipient: gov.address.clone(),
-            recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(1000),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
-            memo: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("beta"),
-            snip20.clone()
+    chain
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::Send {
+                recipient: gov.address.clone(),
+                recipient_code_hash: None,
+                amount: cosmwasm_std::Uint128(1000),
+                msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("beta"),
+                snip20.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
     chain.execute(
         &governance::HandleMsg::Update {
             proposal: Uint128::zero(),
-            padding: None
+            padding: None,
         },
-        MockEnv::new(
-            "beta",
-            ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }
-        )
+        MockEnv::new("beta", ContractLink {
+            address: gov.address.clone(),
+            code_hash: gov.code_hash.clone(),
+        }),
     );
 
-    let prop = get_proposals(
-        &mut chain,
-        &gov,
-        Uint128::zero(),
-        Uint128::new(2)
-    ).unwrap()[0].clone();
+    let prop =
+        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
 
     match prop.status {
         Status::Passed { .. } => assert!(true),
-        _ => assert!(false)
+        _ => assert!(false),
     };
 }
 #[test]
 fn update_after_failed_funding() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
-    chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
-            recipient: gov.address.clone(),
-            recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(1000),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
-            memo: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            snip20.clone()
+    chain
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::Send {
+                recipient: gov.address.clone(),
+                recipient_code_hash: None,
+                amount: cosmwasm_std::Uint128(1000),
+                msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("alpha"),
+                snip20.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
     chain.block().time += 10000;
 
     chain.execute(
         &governance::HandleMsg::Update {
             proposal: Uint128::zero(),
-            padding: None
+            padding: None,
         },
-        MockEnv::new(
-            "beta",
-            ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }
-        )
+        MockEnv::new("beta", ContractLink {
+            address: gov.address.clone(),
+            code_hash: gov.code_hash.clone(),
+        }),
     );
 
-    let prop = get_proposals(
-        &mut chain,
-        &gov,
-        Uint128::zero(),
-        Uint128::new(2)
-    ).unwrap()[0].clone();
+    let prop =
+        get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
 
     match prop.status {
-        Status::Expired { } => assert!(true),
-        _ => assert!(false)
+        Status::Expired {} => assert!(true),
+        _ => assert!(false),
     };
 }
 #[test]
 fn claim_when_not_finished() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
-    chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
-            recipient: gov.address.clone(),
-            recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(1000),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
-            memo: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            snip20.clone()
+    chain
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::Send {
+                recipient: gov.address.clone(),
+                recipient_code_hash: None,
+                amount: cosmwasm_std::Uint128(1000),
+                msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("alpha"),
+                snip20.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
-    assert!(chain.execute(
-        &governance::HandleMsg::ClaimFunding {
-            id: Uint128::new(0)
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            snip20.clone()
-        )
-    ).is_err());
+    assert!(
+        chain
+            .execute(
+                &governance::HandleMsg::ClaimFunding {
+                    id: Uint128::new(0)
+                },
+                MockEnv::new(
+                    // Sender is self
+                    HumanAddr::from("alpha"),
+                    snip20.clone()
+                )
+            )
+            .is_err()
+    );
 }
 #[test]
 fn claim_after_failing() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
-    chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
-            recipient: gov.address.clone(),
-            recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(1000),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
-            memo: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            snip20.clone()
+    chain
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::Send {
+                recipient: gov.address.clone(),
+                recipient_code_hash: None,
+                amount: cosmwasm_std::Uint128(1000),
+                msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("alpha"),
+                snip20.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
     chain.block().time += 10000;
 
     chain.execute(
         &governance::HandleMsg::Update {
             proposal: Uint128::zero(),
-            padding: None
+            padding: None,
         },
-        MockEnv::new(
-            "beta",
-            ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }
-        )
+        MockEnv::new("beta", ContractLink {
+            address: gov.address.clone(),
+            code_hash: gov.code_hash.clone(),
+        }),
     );
 
-    chain.execute(
-        &governance::HandleMsg::ClaimFunding {
-            id: Uint128::new(0)
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            gov.clone()
+    chain
+        .execute(
+            &governance::HandleMsg::ClaimFunding {
+                id: Uint128::new(0),
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("alpha"),
+                gov.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
-    let query: snip20_reference_impl::msg::QueryAnswer = chain.query(
-        snip20.address.clone(),
-        &snip20_reference_impl::msg::QueryMsg::Balance { address: HumanAddr::from("alpha"), key: "password".to_string() }
-    ).unwrap();
+    let query: snip20_reference_impl::msg::QueryAnswer = chain
+        .query(
+            snip20.address.clone(),
+            &snip20_reference_impl::msg::QueryMsg::Balance {
+                address: HumanAddr::from("alpha"),
+                key: "password".to_string(),
+            },
+        )
+        .unwrap();
 
     match query {
-        snip20_reference_impl::msg::QueryAnswer::Balance {amount} => assert_eq!(amount, cosmwasm_std::Uint128(10000)),
-        _ => assert!(false)
+        snip20_reference_impl::msg::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, cosmwasm_std::Uint128(10000))
+        }
+        _ => assert!(false),
     };
 }
 #[test]
 fn claim_after_passing() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
-    chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
-            recipient: gov.address.clone(),
-            recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(2000),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
-            memo: None,
-            padding: None
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            snip20.clone()
+    chain
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::Send {
+                recipient: gov.address.clone(),
+                recipient_code_hash: None,
+                amount: cosmwasm_std::Uint128(2000),
+                msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("alpha"),
+                snip20.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
     chain.execute(
         &governance::HandleMsg::Update {
             proposal: Uint128::zero(),
-            padding: None
+            padding: None,
         },
-        MockEnv::new(
-            "beta",
-            ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }
-        )
+        MockEnv::new("beta", ContractLink {
+            address: gov.address.clone(),
+            code_hash: gov.code_hash.clone(),
+        }),
     );
 
-    chain.execute(
-        &governance::HandleMsg::ClaimFunding {
-            id: Uint128::new(0)
-        },
-        MockEnv::new(
-            // Sender is self
-            HumanAddr::from("alpha"),
-            gov.clone()
+    chain
+        .execute(
+            &governance::HandleMsg::ClaimFunding {
+                id: Uint128::new(0),
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("alpha"),
+                gov.clone(),
+            ),
         )
-    ).unwrap();
+        .unwrap();
 
-    let query: snip20_reference_impl::msg::QueryAnswer = chain.query(
-        snip20.address.clone(),
-        &snip20_reference_impl::msg::QueryMsg::Balance { address: HumanAddr::from("alpha"), key: "password".to_string() }
-    ).unwrap();
+    let query: snip20_reference_impl::msg::QueryAnswer = chain
+        .query(
+            snip20.address.clone(),
+            &snip20_reference_impl::msg::QueryMsg::Balance {
+                address: HumanAddr::from("alpha"),
+                key: "password".to_string(),
+            },
+        )
+        .unwrap();
 
     match query {
-        snip20_reference_impl::msg::QueryAnswer::Balance {amount} => assert_eq!(amount, cosmwasm_std::Uint128(10000)),
-        _ => assert!(false)
+        snip20_reference_impl::msg::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, cosmwasm_std::Uint128(10000))
+        }
+        _ => assert!(false),
     };
 }
 

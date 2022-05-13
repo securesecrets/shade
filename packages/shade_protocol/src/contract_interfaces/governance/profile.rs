@@ -1,8 +1,8 @@
-use cosmwasm_std::{StdError, StdResult, Storage};
+use crate::contract_interfaces::governance::stored_id::ID;
 use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{StdError, StdResult, Storage};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::governance::stored_id::ID;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::BucketStorage;
@@ -29,7 +29,7 @@ pub struct Profile {
     pub token: Option<VoteProfile>,
     // Once the contract is approved, theres a deadline for the tx to be executed and completed
     // else it will just be canceled and assume that the tx failed
-    pub cancel_deadline: u64
+    pub cancel_deadline: u64,
 }
 
 const COMMITTEE_PROFILE_KEY: &'static [u8] = b"assembly_vote_profile-";
@@ -46,13 +46,13 @@ impl Profile {
             assembly: Self::assembly_voting(storage, &id)?,
             funding: Self::funding(storage, &id)?,
             token: Self::public_voting(storage, &id)?,
-            cancel_deadline: data.cancel_deadline
+            cancel_deadline: data.cancel_deadline,
         })
     }
 
     pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
         if id > &ID::profile(storage)? {
-            return Ok(None)
+            return Ok(None);
         }
         Ok(Some(Self::load(storage, id)?))
     }
@@ -61,8 +61,9 @@ impl Profile {
         ProfileData {
             name: self.name.clone(),
             enabled: self.enabled,
-            cancel_deadline: self.cancel_deadline
-        }.save(storage, &id.to_be_bytes())?;
+            cancel_deadline: self.cancel_deadline,
+        }
+        .save(storage, &id.to_be_bytes())?;
 
         Self::save_assembly_voting(storage, &id, self.assembly.clone())?;
 
@@ -77,15 +78,26 @@ impl Profile {
         ProfileData::load(storage, &id.to_be_bytes())
     }
 
-    pub fn save_data<S: Storage>(storage: &mut S, id: &Uint128, data: ProfileData) -> StdResult<()> {
+    pub fn save_data<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        data: ProfileData,
+    ) -> StdResult<()> {
         data.save(storage, &id.to_be_bytes())
     }
 
-    pub fn assembly_voting<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
+    pub fn assembly_voting<S: Storage>(
+        storage: &S,
+        id: &Uint128,
+    ) -> StdResult<Option<VoteProfile>> {
         Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_assembly_voting<S: Storage>(storage: &mut S, id: &Uint128, assembly: Option<VoteProfile>) -> StdResult<()> {
+    pub fn save_assembly_voting<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        assembly: Option<VoteProfile>,
+    ) -> StdResult<()> {
         VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())
     }
 
@@ -93,7 +105,11 @@ impl Profile {
         Ok(VoteProfileType::load(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_public_voting<S: Storage>(storage: &mut S, id: &Uint128, token: Option<VoteProfile>) -> StdResult<()> {
+    pub fn save_public_voting<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        token: Option<VoteProfile>,
+    ) -> StdResult<()> {
         VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())
     }
 
@@ -101,10 +117,13 @@ impl Profile {
         Ok(FundProfileType::load(storage, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_funding<S: Storage>(storage: &mut S, id: &Uint128, funding: Option<FundProfile>) -> StdResult<()> {
+    pub fn save_funding<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        funding: Option<FundProfile>,
+    ) -> StdResult<()> {
         FundProfileType(funding).save(storage, &id.to_be_bytes())
     }
-
 }
 
 #[cfg(feature = "governance-impl")]
@@ -113,7 +132,7 @@ impl Profile {
 pub struct ProfileData {
     pub name: String,
     pub enabled: bool,
-    pub cancel_deadline: u64
+    pub cancel_deadline: u64,
 }
 
 #[cfg(feature = "governance-impl")]
@@ -133,7 +152,7 @@ pub struct VoteProfile {
     // Expected yes votes
     pub yes_threshold: Count,
     // Expected veto votes
-    pub veto_threshold: Count
+    pub veto_threshold: Count,
 }
 
 #[cfg(feature = "governance-impl")]
@@ -142,8 +161,7 @@ pub struct VoteProfile {
 struct VoteProfileType(pub Option<VoteProfile>);
 
 #[cfg(feature = "governance-impl")]
-impl NaiveBucketStorage for VoteProfileType {
-}
+impl NaiveBucketStorage for VoteProfileType {}
 
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -164,7 +182,6 @@ pub struct FundProfile {
 #[serde(rename_all = "snake_case")]
 struct FundProfileType(pub Option<FundProfile>);
 
-
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for FundProfileType {
     const NAMESPACE: &'static [u8] = b"fund_profile-";
@@ -175,7 +192,7 @@ impl BucketStorage for FundProfileType {
 #[serde(rename_all = "snake_case")]
 pub enum Count {
     Percentage { percent: u16 },
-    LiteralCount { count: Uint128 }
+    LiteralCount { count: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -198,7 +215,7 @@ pub struct UpdateProfile {
     pub token: Option<UpdateVoteProfile>,
     // Once the contract is approved, theres a deadline for the tx to be executed and completed
     // else it will just be canceled and assume that the tx failed
-    pub cancel_deadline: Option<u64>
+    pub cancel_deadline: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -211,7 +228,7 @@ pub struct UpdateVoteProfile {
     // Expected yes votes
     pub yes_threshold: Option<Count>,
     // Expected veto votes
-    pub veto_threshold: Option<Count>
+    pub veto_threshold: Option<Count>,
 }
 
 impl UpdateVoteProfile {
@@ -222,28 +239,33 @@ impl UpdateVoteProfile {
             new_profile = VoteProfile {
                 deadline: self.deadline.unwrap_or(profile.deadline),
                 threshold: self.threshold.clone().unwrap_or(profile.threshold.clone()),
-                yes_threshold: self.yes_threshold.clone().unwrap_or(profile.yes_threshold.clone()),
-                veto_threshold: self.veto_threshold.clone().unwrap_or(profile.veto_threshold.clone())
+                yes_threshold: self
+                    .yes_threshold
+                    .clone()
+                    .unwrap_or(profile.yes_threshold.clone()),
+                veto_threshold: self
+                    .veto_threshold
+                    .clone()
+                    .unwrap_or(profile.veto_threshold.clone()),
             };
-        }
-        else {
+        } else {
             new_profile = VoteProfile {
                 deadline: match self.deadline {
                     None => Err(StdError::generic_err("Vote profile must be set")),
-                    Some(ret) => Ok(ret)
+                    Some(ret) => Ok(ret),
                 }?,
                 threshold: match self.threshold.clone() {
                     None => Err(StdError::generic_err("Vote profile must be set")),
-                    Some(ret) => Ok(ret)
+                    Some(ret) => Ok(ret),
                 }?,
                 yes_threshold: match self.yes_threshold.clone() {
                     None => Err(StdError::generic_err("Vote profile must be set")),
-                    Some(ret) => Ok(ret)
+                    Some(ret) => Ok(ret),
                 }?,
                 veto_threshold: match self.veto_threshold.clone() {
                     None => Err(StdError::generic_err("Vote profile must be set")),
-                    Some(ret) => Ok(ret)
-                }?
+                    Some(ret) => Ok(ret),
+                }?,
             };
         }
 
@@ -273,27 +295,29 @@ impl UpdateFundProfile {
                 deadline: self.deadline.unwrap_or(profile.deadline),
                 required: self.required.unwrap_or(profile.required),
                 privacy: self.privacy.unwrap_or(profile.privacy),
-                veto_deposit_loss: self.veto_deposit_loss.clone().unwrap_or(profile.veto_deposit_loss.clone())
+                veto_deposit_loss: self
+                    .veto_deposit_loss
+                    .clone()
+                    .unwrap_or(profile.veto_deposit_loss.clone()),
             };
-        }
-        else {
+        } else {
             new_profile = FundProfile {
                 deadline: match self.deadline {
                     None => Err(StdError::generic_err("Fund profile must be set")),
-                    Some(ret) => Ok(ret)
+                    Some(ret) => Ok(ret),
                 }?,
                 required: match self.required {
                     None => Err(StdError::generic_err("Fund profile must be set")),
-                    Some(ret) => Ok(ret)
+                    Some(ret) => Ok(ret),
                 }?,
                 privacy: match self.privacy {
                     None => Err(StdError::generic_err("Fund profile must be set")),
-                    Some(ret) => Ok(ret)
+                    Some(ret) => Ok(ret),
                 }?,
                 veto_deposit_loss: match self.veto_deposit_loss.clone() {
                     None => Err(StdError::generic_err("Fund profile must be set")),
-                    Some(ret) => Ok(ret)
-                }?
+                    Some(ret) => Ok(ret),
+                }?,
             };
         }
 

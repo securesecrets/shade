@@ -1,13 +1,16 @@
-use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, Coin, HumanAddr, StdResult, Storage};
+use crate::{
+    contract_interfaces::governance::{
+        assembly::Assembly,
+        profile::Profile,
+        stored_id::ID,
+        vote::Vote,
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
+};
 use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Binary, Coin, HumanAddr, StdResult, Storage};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::governance::assembly::Assembly;
-use crate::governance::profile::Profile;
-use crate::governance::stored_id::ID;
-use crate::governance::vote::Vote;
-use crate::utils::asset::Contract;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::BucketStorage;
@@ -47,7 +50,7 @@ pub struct Proposal {
     // Funders
     // Leave as an option so we can hide the data if None
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub funders: Option<Vec<(HumanAddr, Uint128)>>
+    pub funders: Option<Vec<(HumanAddr, Uint128)>>,
 }
 
 const ASSEMBLY_VOTE: &'static [u8] = b"user-assembly-vote-";
@@ -65,7 +68,7 @@ impl Proposal {
         Self::save_description(storage, &id, ProposalDescription {
             proposer: self.proposer.clone(),
             title: self.title.clone(),
-            metadata: self.metadata.clone()
+            metadata: self.metadata.clone(),
         })?;
 
         Self::save_assembly(storage, &id, self.assembly)?;
@@ -78,7 +81,10 @@ impl Proposal {
             let mut funders = vec![];
             for (funder, funding) in funder_list.iter() {
                 funders.push(funder.clone());
-                Self::save_funding(storage, id, &funder, Funding{ amount: *funding, claimed: false})?
+                Self::save_funding(storage, id, &funder, Funding {
+                    amount: *funding,
+                    claimed: false,
+                })?
             }
             Self::save_funders(storage, id, funders)?;
         }
@@ -88,12 +94,12 @@ impl Proposal {
 
     pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
         if id > &ID::proposal(storage)? {
-            return Ok(None)
+            return Ok(None);
         }
         Ok(Some(Self::load(storage, id)?))
     }
 
-    pub fn load<S: Storage>(storage: & S, id: &Uint128) -> StdResult<Self> {
+    pub fn load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Self> {
         let msgs = Self::msg(storage, id)?;
         let description = Self::description(storage, &id)?;
         let assembly = Self::assembly(storage, &id)?;
@@ -107,7 +113,9 @@ impl Proposal {
 
         let mut funders: Option<Vec<(HumanAddr, Uint128)>> = None;
         if !funders_arr.is_empty() {
-            if let Some(prof) = Profile::funding(storage, &Assembly::data(storage, &assembly)?.profile)? {
+            if let Some(prof) =
+                Profile::funding(storage, &Assembly::data(storage, &assembly)?.profile)?
+            {
                 if !prof.privacy {
                     funders = Some(funders_arr);
                 }
@@ -124,26 +132,30 @@ impl Proposal {
             assembly,
             assembly_vote_tally: match Profile::assembly_voting(storage, &assembly_data.profile)? {
                 None => None,
-                Some(_) => Some(Self::assembly_votes(storage, &id)?)
+                Some(_) => Some(Self::assembly_votes(storage, &id)?),
             },
             public_vote_tally: match Profile::public_voting(storage, &assembly_data.profile)? {
                 None => None,
-                Some(_) => Some(Self::public_votes(storage, &id)?)
+                Some(_) => Some(Self::public_votes(storage, &id)?),
             },
             status,
             status_history,
-            funders
+            funders,
         })
     }
 
     pub fn msg<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Vec<ProposalMsg>>> {
         match ProposalMsgs::may_load(storage, &id.to_be_bytes())? {
             None => Ok(None),
-            Some(i) => Ok(Some(i.0))
+            Some(i) => Ok(Some(i.0)),
         }
     }
 
-    pub fn save_msg<S: Storage>(storage: &mut S, id: &Uint128, data: Vec<ProposalMsg>) -> StdResult<()> {
+    pub fn save_msg<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        data: Vec<ProposalMsg>,
+    ) -> StdResult<()> {
         ProposalMsgs(data).save(storage, &id.to_be_bytes())
     }
 
@@ -151,7 +163,11 @@ impl Proposal {
         ProposalDescription::load(storage, &id.to_be_bytes())
     }
 
-    pub fn save_description<S: Storage>(storage: &mut S, id: &Uint128, data: ProposalDescription) -> StdResult<()> {
+    pub fn save_description<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        data: ProposalDescription,
+    ) -> StdResult<()> {
         data.save(storage, &id.to_be_bytes())
     }
 
@@ -159,7 +175,11 @@ impl Proposal {
         Ok(ProposalAssembly::load(storage, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_assembly<S: Storage>(storage: &mut S, id: &Uint128, data: Uint128) -> StdResult<()> {
+    pub fn save_assembly<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        data: Uint128,
+    ) -> StdResult<()> {
         ProposalAssembly(data).save(storage, &id.to_be_bytes())
     }
 
@@ -175,19 +195,27 @@ impl Proposal {
         Ok(StatusHistory::load(storage, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_status_history<S: Storage>(storage: &mut S, id: &Uint128, data: Vec<Status>) -> StdResult<()> {
+    pub fn save_status_history<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        data: Vec<Status>,
+    ) -> StdResult<()> {
         StatusHistory(data).save(storage, &id.to_be_bytes())
     }
 
     pub fn funders<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vec<HumanAddr>> {
         let funders = match Funders::may_load(storage, &id.to_be_bytes())? {
             None => vec![],
-            Some(item) => item.0
+            Some(item) => item.0,
         };
         Ok(funders)
     }
 
-    pub fn save_funders<S: Storage>(storage: &mut S, id: &Uint128, data: Vec<HumanAddr>) -> StdResult<()> {
+    pub fn save_funders<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        data: Vec<HumanAddr>,
+    ) -> StdResult<()> {
         Funders(data).save(storage, &id.to_be_bytes())
     }
 
@@ -196,18 +224,32 @@ impl Proposal {
         Funding::load(storage, key.as_bytes())
     }
 
-    pub fn save_funding<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: Funding) -> StdResult<()> {
+    pub fn save_funding<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        user: &HumanAddr,
+        data: Funding,
+    ) -> StdResult<()> {
         let key = id.to_string() + "-" + user.as_str();
         data.save(storage, key.as_bytes())
     }
 
     // User assembly votes
-    pub fn assembly_vote<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Option<Vote>> {
+    pub fn assembly_vote<S: Storage>(
+        storage: &S,
+        id: &Uint128,
+        user: &HumanAddr,
+    ) -> StdResult<Option<Vote>> {
         let key = id.to_string() + "-" + user.as_str();
         Ok(Vote::may_load(storage, ASSEMBLY_VOTE, key.as_bytes())?)
     }
 
-    pub fn save_assembly_vote<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: &Vote) -> StdResult<()> {
+    pub fn save_assembly_vote<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        user: &HumanAddr,
+        data: &Vote,
+    ) -> StdResult<()> {
         let key = id.to_string() + "-" + user.as_str();
         Vote::write(storage, ASSEMBLY_VOTE).save(key.as_bytes(), data)
     }
@@ -216,21 +258,34 @@ impl Proposal {
     pub fn assembly_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
         match Vote::may_load(storage, ASSEMBLY_VOTES, &id.to_be_bytes())? {
             None => Ok(Vote::default()),
-            Some(vote) => Ok(vote)
+            Some(vote) => Ok(vote),
         }
     }
 
-    pub fn save_assembly_votes<S: Storage>(storage: &mut S, id: &Uint128, data: &Vote) -> StdResult<()> {
+    pub fn save_assembly_votes<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        data: &Vote,
+    ) -> StdResult<()> {
         Vote::write(storage, ASSEMBLY_VOTES).save(&id.to_be_bytes(), data)
     }
 
     // User public votes
-    pub fn public_vote<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Option<Vote>> {
+    pub fn public_vote<S: Storage>(
+        storage: &S,
+        id: &Uint128,
+        user: &HumanAddr,
+    ) -> StdResult<Option<Vote>> {
         let key = id.to_string() + "-" + user.as_str();
         Ok(Vote::may_load(storage, PUBLIC_VOTE, key.as_bytes())?)
     }
 
-    pub fn save_public_vote<S: Storage>(storage: &mut S, id: &Uint128, user: &HumanAddr, data: &Vote) -> StdResult<()> {
+    pub fn save_public_vote<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        user: &HumanAddr,
+        data: &Vote,
+    ) -> StdResult<()> {
         let key = id.to_string() + "-" + user.as_str();
         Vote::write(storage, PUBLIC_VOTE).save(key.as_bytes(), data)
     }
@@ -239,11 +294,15 @@ impl Proposal {
     pub fn public_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
         match Vote::may_load(storage, PUBLIC_VOTES, &id.to_be_bytes())? {
             None => Ok(Vote::default()),
-            Some(vote) => Ok(vote)
+            Some(vote) => Ok(vote),
         }
     }
 
-    pub fn save_public_votes<S: Storage>(storage: &mut S, id: &Uint128, data: &Vote) -> StdResult<()> {
+    pub fn save_public_votes<S: Storage>(
+        storage: &mut S,
+        id: &Uint128,
+        data: &Vote,
+    ) -> StdResult<()> {
         Vote::write(storage, PUBLIC_VOTES).save(&id.to_be_bytes(), data)
     }
 }
@@ -253,7 +312,7 @@ impl Proposal {
 pub struct ProposalDescription {
     pub proposer: HumanAddr,
     pub title: String,
-    pub metadata: String
+    pub metadata: String,
 }
 
 #[cfg(feature = "governance-impl")]
@@ -268,7 +327,7 @@ pub struct ProposalMsg {
     pub assembly_msg: Uint128,
     // Used as both Vec<String> when calling a handleMsg and Vec<Binary> when saving the msg
     pub msg: Binary,
-    pub send: Vec<Coin>
+    pub send: Vec<Coin>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -293,25 +352,40 @@ impl BucketStorage for ProposalAssembly {
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     // Assembly voting period
-    AssemblyVote {start: u64, end:u64},
+    AssemblyVote {
+        start: u64,
+        end: u64,
+    },
     // In funding period
-    Funding {amount: Uint128, start: u64, end:u64},
+    Funding {
+        amount: Uint128,
+        start: u64,
+        end: u64,
+    },
     // Voting in progress
-    Voting {start: u64, end:u64},
+    Voting {
+        start: u64,
+        end: u64,
+    },
     // Total votes did not reach minimum total votes
     Expired,
     // Proposal was rejected
     Rejected,
     // Proposal was vetoed
     // NOTE: percent it stored because proposal settings can change before claiming
-    Vetoed { slash_percent: Uint128 },
+    Vetoed {
+        slash_percent: Uint128,
+    },
     // Proposal was approved, has a set timeline before it can be canceled
-    Passed {start: u64, end: u64},
+    Passed {
+        start: u64,
+        end: u64,
+    },
     // If proposal is a msg then it was executed and was successful
     Success,
     // Proposal never got executed after a cancel deadline,
     // assumed that tx failed everytime it got triggered
-    Canceled
+    Canceled,
 }
 
 #[cfg(feature = "governance-impl")]
@@ -322,7 +396,7 @@ impl BucketStorage for Status {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-struct StatusHistory (pub Vec<Status>);
+struct StatusHistory(pub Vec<Status>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for StatusHistory {
@@ -332,7 +406,7 @@ impl BucketStorage for StatusHistory {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-struct Funders (pub Vec<HumanAddr>);
+struct Funders(pub Vec<HumanAddr>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for Funders {
@@ -344,7 +418,7 @@ impl BucketStorage for Funders {
 #[serde(rename_all = "snake_case")]
 pub struct Funding {
     pub amount: Uint128,
-    pub claimed: bool
+    pub claimed: bool,
 }
 
 #[cfg(feature = "governance-impl")]

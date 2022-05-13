@@ -1,7 +1,7 @@
-use cosmwasm_std::{StdResult, Storage};
-use cosmwasm_math_compat::Uint128;
-use serde::{Deserialize, Serialize};
 use crate::utils::storage::default::NaiveSingletonStorage;
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{StdResult, Storage};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -102,5 +102,4 @@ impl ID {
         item.save(storage, CONTRACT_KEY)?;
         Ok(item.0)
     }
-
 }

@@ -1,16 +1,16 @@
-use cosmwasm_std::{StdResult, Storage};
 use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{StdResult, Storage};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::{NaiveBucketStorage};
+use crate::utils::storage::default::NaiveBucketStorage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ReceiveBalanceMsg {
     pub vote: Vote,
-    pub proposal: Uint128
+    pub proposal: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -23,8 +23,7 @@ pub struct Vote {
 }
 
 #[cfg(feature = "governance-impl")]
-impl NaiveBucketStorage for Vote {
-}
+impl NaiveBucketStorage for Vote {}
 
 impl Default for Vote {
     fn default() -> Self {
@@ -32,7 +31,7 @@ impl Default for Vote {
             yes: Uint128::zero(),
             no: Uint128::zero(),
             no_with_veto: Uint128::zero(),
-            abstain: Uint128::zero()
+            abstain: Uint128::zero(),
         }
     }
 }
@@ -40,11 +39,8 @@ impl Default for Vote {
 impl Vote {
     pub fn total_count(&self) -> StdResult<Uint128> {
         Ok(self.yes.checked_add(
-            self.no.checked_add(
-                self.no_with_veto.checked_add(
-                    self.abstain
-                )?
-            )?
+            self.no
+                .checked_add(self.no_with_veto.checked_add(self.abstain)?)?,
         )?)
     }
 
@@ -53,7 +49,7 @@ impl Vote {
             yes: self.yes.checked_sub(vote.yes)?,
             no: self.no.checked_sub(vote.no)?,
             no_with_veto: self.no_with_veto.checked_sub(vote.no_with_veto)?,
-            abstain: self.abstain.checked_sub(vote.abstain)?
+            abstain: self.abstain.checked_sub(vote.abstain)?,
         })
     }
 
@@ -62,7 +58,7 @@ impl Vote {
             yes: self.yes.checked_add(vote.yes)?,
             no: self.no.checked_add(vote.no)?,
             no_with_veto: self.no_with_veto.checked_add(vote.no_with_veto)?,
-            abstain: self.abstain.checked_add(vote.abstain)?
+            abstain: self.abstain.checked_add(vote.abstain)?,
         })
     }
 }
@@ -80,7 +76,7 @@ impl TalliedVotes {
             yes: votes.yes,
             no: votes.no + votes.no_with_veto,
             veto: votes.no_with_veto,
-            total: votes.yes + votes.no + votes.no_with_veto + votes.abstain
+            total: votes.yes + votes.no + votes.no_with_veto + votes.abstain,
         }
     }
 }

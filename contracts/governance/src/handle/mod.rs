@@ -1,25 +1,40 @@
-use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use cosmwasm_std::{
+    to_binary,
+    Api,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+};
 use secret_toolkit::snip20::register_receive_msg;
-use shade_protocol::governance::{Config, HandleAnswer, RuntimeState};
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
-use shade_protocol::utils::storage::default::SingletonStorage;
+use shade_protocol::{
+    contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
+    utils::{
+        asset::Contract,
+        generic_response::ResponseStatus,
+        storage::default::SingletonStorage,
+    },
+};
 
 pub mod assembly;
-pub mod proposal;
 pub mod assembly_msg;
-pub mod profile;
 pub mod contract;
+pub mod profile;
+pub mod proposal;
 
 pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     treasury: Option<HumanAddr>,
     vote_token: Option<Contract>,
-    funding_token: Option<Contract>
+    funding_token: Option<Contract>,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized())
+        return Err(StdError::unauthorized());
     }
 
     let mut messages = vec![];
@@ -33,7 +48,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
             None,
             255,
             vote_token.code_hash,
-            vote_token.address
+            vote_token.address,
         )?);
     }
 
@@ -44,7 +59,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
             None,
             255,
             funding_token.code_hash,
-            funding_token.address
+            funding_token.address,
         )?);
     }
 
@@ -65,7 +80,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
 pub fn try_set_runtime_state<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    state: RuntimeState
+    state: RuntimeState,
 ) -> StdResult<HandleResponse> {
     todo!();
     Ok(HandleResponse {

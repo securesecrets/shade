@@ -1,10 +1,19 @@
-use cosmwasm_std::{Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage, to_binary};
 use cosmwasm_math_compat::Uint128;
-use shade_protocol::governance::contract::AllowedContract;
-use shade_protocol::governance::HandleAnswer;
-use shade_protocol::governance::stored_id::ID;
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
+use cosmwasm_std::{
+    to_binary,
+    Api,
+    Env,
+    Extern,
+    HandleResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+};
+use shade_protocol::{
+    contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, HandleAnswer},
+    utils::{asset::Contract, generic_response::ResponseStatus},
+};
 
 pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -12,10 +21,10 @@ pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
     name: String,
     metadata: String,
     contract: Contract,
-    assemblies: Option<Vec<Uint128>>
+    assemblies: Option<Vec<Uint128>>,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized())
+        return Err(StdError::unauthorized());
     }
 
     let id = ID::add_contract(&mut deps.storage)?;
@@ -33,8 +42,9 @@ pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
         name,
         metadata,
         contract,
-        assemblies
-    }.save(&mut deps.storage, &id)?;
+        assemblies,
+    }
+    .save(&mut deps.storage, &id)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -53,14 +63,14 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
     metadata: Option<String>,
     contract: Option<Contract>,
     disable_assemblies: bool,
-    assemblies: Option<Vec<Uint128>>
+    assemblies: Option<Vec<Uint128>>,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized())
+        return Err(StdError::unauthorized());
     }
 
     if id > ID::contract(&deps.storage)? {
-        return Err(StdError::generic_err("AllowedContract not found"))
+        return Err(StdError::generic_err("AllowedContract not found"));
     }
 
     let mut allowed_contract = AllowedContract::load(&mut deps.storage, &id)?;
@@ -79,8 +89,7 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
 
     if disable_assemblies {
         allowed_contract.assemblies = None;
-    }
-    else {
+    } else {
         if let Some(assemblies) = assemblies {
             let assembly_id = ID::assembly(&deps.storage)?;
             for assembly in assemblies.iter() {
@@ -107,14 +116,14 @@ pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     id: Uint128,
-    assemblies: Vec<Uint128>
+    assemblies: Vec<Uint128>,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized())
+        return Err(StdError::unauthorized());
     }
 
     if id > ID::contract(&deps.storage)? {
-        return Err(StdError::generic_err("AllowedContract not found"))
+        return Err(StdError::generic_err("AllowedContract not found"));
     }
 
     let mut allowed_contract = AllowedContract::data(&mut deps.storage, &id)?;
@@ -127,9 +136,10 @@ pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
             }
         }
         allowed_contract.assemblies = Some(old_assemblies);
-    }
-    else {
-        return Err(StdError::generic_err("Assembly support is disabled in this contract"))
+    } else {
+        return Err(StdError::generic_err(
+            "Assembly support is disabled in this contract",
+        ));
     }
 
     AllowedContract::save_data(&mut deps.storage, &id, allowed_contract)?;

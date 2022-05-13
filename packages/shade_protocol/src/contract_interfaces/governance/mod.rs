@@ -1,23 +1,26 @@
-pub mod profile;
 pub mod assembly;
-pub mod proposal;
 pub mod contract;
-pub mod vote;
+pub mod profile;
+pub mod proposal;
 #[cfg(feature = "governance-impl")]
 pub mod stored_id;
+pub mod vote;
 
-use crate::utils::asset::Contract;
-use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, Coin, HumanAddr};
+use crate::{
+    contract_interfaces::governance::{
+        assembly::{Assembly, AssemblyMsg},
+        contract::AllowedContract,
+        profile::{Profile, UpdateProfile},
+        proposal::{Proposal, ProposalMsg},
+        vote::Vote,
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
+};
 use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Binary, Coin, HumanAddr};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
-use crate::governance::assembly::{Assembly, AssemblyMsg};
-use crate::governance::contract::AllowedContract;
-use crate::governance::profile::{Profile, UpdateProfile};
-use crate::governance::proposal::{Proposal, ProposalMsg};
-use crate::governance::vote::Vote;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::SingletonStorage;
@@ -52,7 +55,7 @@ pub struct InitMsg {
     // Public rules
     pub public_profile: Profile,
     pub funding_token: Option<Contract>,
-    pub vote_token: Option<Contract>
+    pub vote_token: Option<Contract>,
 }
 
 impl InitCallback for InitMsg {
@@ -69,7 +72,7 @@ pub enum RuntimeState {
     // Allow only specific assemblys and admin
     SpecificAssemblys { commitees: Vec<Uint128> },
     // Set as admin only
-    AdminOnly
+    AdminOnly,
 }
 
 #[cfg(feature = "governance-impl")]
@@ -85,11 +88,11 @@ pub enum HandleMsg {
         treasury: Option<HumanAddr>,
         funding_token: Option<Contract>,
         vote_token: Option<Contract>,
-        padding: Option<String>
+        padding: Option<String>,
     },
     SetRuntimeState {
         state: RuntimeState,
-        padding: Option<String>
+        padding: Option<String>,
     },
 
     // Proposals
@@ -104,26 +107,26 @@ pub enum HandleMsg {
         // Msg for tx
         msg: Option<String>,
         coins: Option<Vec<Coin>>,
-        padding: Option<String>
+        padding: Option<String>,
     },
 
     // Proposal interaction
     /// Triggers the proposal when the MSG is approved
     Trigger {
         proposal: Uint128,
-        padding: Option<String>
+        padding: Option<String>,
     },
     /// Cancels the proposal if the msg keeps failing
     Cancel {
         proposal: Uint128,
-        padding: Option<String>
+        padding: Option<String>,
     },
     /// Forces a proposal update,
     /// proposals automatically update on interaction
     /// but this is a cheaper alternative
     Update {
         proposal: Uint128,
-        padding: Option<String>
+        padding: Option<String>,
     },
     /// Funds a proposal, msg is a prop ID
     Receive {
@@ -132,23 +135,23 @@ pub enum HandleMsg {
         amount: Uint128,
         msg: Option<Binary>,
         memo: Option<String>,
-        padding: Option<String>
+        padding: Option<String>,
     },
     ClaimFunding {
-        id: Uint128
+        id: Uint128,
     },
     /// Votes on a assembly vote
     AssemblyVote {
         proposal: Uint128,
         vote: Vote,
-        padding: Option<String>
+        padding: Option<String>,
     },
     /// Votes on voting token
     ReceiveBalance {
         sender: HumanAddr,
         msg: Option<Binary>,
         balance: Uint128,
-        memo: Option<String>
+        memo: Option<String>,
     },
 
     // Assemblies
@@ -160,7 +163,7 @@ pub enum HandleMsg {
 
         // Optionals, if none the proposal is assumed to be a text proposal
         msgs: Option<Vec<ProposalMsg>>,
-        padding: Option<String>
+        padding: Option<String>,
     },
 
     /// Creates a new assembly
@@ -169,7 +172,7 @@ pub enum HandleMsg {
         metadata: String,
         members: Vec<HumanAddr>,
         profile: Uint128,
-        padding: Option<String>
+        padding: Option<String>,
     },
     /// Edits an existing assembly
     SetAssembly {
@@ -178,7 +181,7 @@ pub enum HandleMsg {
         metadata: Option<String>,
         members: Option<Vec<HumanAddr>>,
         profile: Option<Uint128>,
-        padding: Option<String>
+        padding: Option<String>,
     },
 
     // AssemblyMsgs
@@ -187,7 +190,7 @@ pub enum HandleMsg {
         name: String,
         msg: String,
         assemblies: Vec<Uint128>,
-        padding: Option<String>
+        padding: Option<String>,
     },
     /// Edits an existing assembly msg
     SetAssemblyMsg {
@@ -195,24 +198,24 @@ pub enum HandleMsg {
         name: Option<String>,
         msg: Option<String>,
         assemblies: Option<Vec<Uint128>>,
-        padding: Option<String>
+        padding: Option<String>,
     },
     AddAssemblyMsgAssemblies {
         id: Uint128,
-        assemblies: Vec<Uint128>
+        assemblies: Vec<Uint128>,
     },
 
     // Profiles
     /// Creates a new profile that can be added to assemblys
     AddProfile {
         profile: Profile,
-        padding: Option<String>
+        padding: Option<String>,
     },
     /// Edits an already existing profile and the assemblys using the profile
     SetProfile {
         id: Uint128,
         profile: UpdateProfile,
-        padding: Option<String>
+        padding: Option<String>,
     },
 
     // Contracts
@@ -221,7 +224,7 @@ pub enum HandleMsg {
         metadata: String,
         contract: Contract,
         assemblies: Option<Vec<Uint128>>,
-        padding: Option<String>
+        padding: Option<String>,
     },
     SetContract {
         id: Uint128,
@@ -230,12 +233,12 @@ pub enum HandleMsg {
         contract: Option<Contract>,
         disable_assemblies: bool,
         assemblies: Option<Vec<Uint128>>,
-        padding: Option<String>
+        padding: Option<String>,
     },
     AddContractAssemblies {
         id: Uint128,
-        assemblies: Vec<Uint128>
-    }
+        assemblies: Vec<Uint128>,
+    },
 }
 
 impl HandleCallback for HandleMsg {
@@ -245,105 +248,52 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    SetConfig {
-        status: ResponseStatus
-    },
-    SetRuntimeState {
-        status: ResponseStatus
-    },
-    Proposal {
-        status: ResponseStatus
-    },
-    ReceiveBalance {
-        status: ResponseStatus
-    },
-    Trigger {
-        status: ResponseStatus
-    },
-    Cancel {
-        status: ResponseStatus
-    },
-    Update {
-        status: ResponseStatus
-    },
-    Receive {
-        status: ResponseStatus
-    },
-    ClaimFunding {
-        status: ResponseStatus
-    },
-    AssemblyVote {
-        status: ResponseStatus
-    },
-    AssemblyProposal {
-        status: ResponseStatus
-    },
-    AddAssembly {
-        status: ResponseStatus
-    },
-    SetAssembly {
-        status: ResponseStatus
-    },
-    AddAssemblyMsg {
-        status: ResponseStatus
-    },
-    SetAssemblyMsg {
-        status: ResponseStatus
-    },
-    AddProfile {
-        status: ResponseStatus
-    },
-    SetProfile {
-        status: ResponseStatus
-    },
-    AddContract {
-        status: ResponseStatus
-    },
-    SetContract {
-        status: ResponseStatus
-    },
+    SetConfig { status: ResponseStatus },
+    SetRuntimeState { status: ResponseStatus },
+    Proposal { status: ResponseStatus },
+    ReceiveBalance { status: ResponseStatus },
+    Trigger { status: ResponseStatus },
+    Cancel { status: ResponseStatus },
+    Update { status: ResponseStatus },
+    Receive { status: ResponseStatus },
+    ClaimFunding { status: ResponseStatus },
+    AssemblyVote { status: ResponseStatus },
+    AssemblyProposal { status: ResponseStatus },
+    AddAssembly { status: ResponseStatus },
+    SetAssembly { status: ResponseStatus },
+    AddAssemblyMsg { status: ResponseStatus },
+    SetAssemblyMsg { status: ResponseStatus },
+    AddProfile { status: ResponseStatus },
+    SetProfile { status: ResponseStatus },
+    AddContract { status: ResponseStatus },
+    SetContract { status: ResponseStatus },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     // TODO: Query individual user vote with VK and permit
-    Config { },
+    Config {},
 
     TotalProposals {},
 
-    Proposals {
-        start: Uint128,
-        end: Uint128
-    },
+    Proposals { start: Uint128, end: Uint128 },
 
     TotalAssemblies {},
 
-    Assemblies {
-        start: Uint128,
-        end: Uint128
-    },
+    Assemblies { start: Uint128, end: Uint128 },
 
     TotalAssemblyMsgs {},
 
-    AssemblyMsgs {
-        start: Uint128,
-        end: Uint128
-    },
+    AssemblyMsgs { start: Uint128, end: Uint128 },
 
     TotalProfiles {},
 
-    Profiles {
-        start: Uint128,
-        end: Uint128
-    },
+    Profiles { start: Uint128, end: Uint128 },
 
     TotalContracts {},
 
-    Contracts {
-        start: Uint128,
-        end: Uint128
-    }
+    Contracts { start: Uint128, end: Uint128 },
 }
 
 impl Query for QueryMsg {
@@ -353,31 +303,17 @@ impl Query for QueryMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
-    Config {
-        config: Config
-    },
+    Config { config: Config },
 
-    Proposals {
-        props: Vec<Proposal>
-    },
+    Proposals { props: Vec<Proposal> },
 
-    Assemblies {
-        assemblies: Vec<Assembly>
-    },
+    Assemblies { assemblies: Vec<Assembly> },
 
-    AssemblyMsgs {
-        msgs: Vec<AssemblyMsg>
-    },
+    AssemblyMsgs { msgs: Vec<AssemblyMsg> },
 
-    Profiles {
-        profiles: Vec<Profile>,
-    },
+    Profiles { profiles: Vec<Profile> },
 
-    Contracts {
-        contracts: Vec<AllowedContract>
-    },
+    Contracts { contracts: Vec<AllowedContract> },
 
-    Total {
-        total: Uint128
-    }
+    Total { total: Uint128 },
 }

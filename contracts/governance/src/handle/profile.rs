@@ -1,18 +1,32 @@
-use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
 use cosmwasm_math_compat::Uint128;
-use shade_protocol::governance::HandleAnswer;
-use shade_protocol::governance::profile::{Profile, UpdateProfile, UpdateVoteProfile, VoteProfile};
-use shade_protocol::governance::stored_id::ID;
-use shade_protocol::utils::generic_response::ResponseStatus;
-use shade_protocol::utils::storage::default::BucketStorage;
+use cosmwasm_std::{
+    to_binary,
+    Api,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+};
+use shade_protocol::{
+    contract_interfaces::governance::{
+        profile::{Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
+        stored_id::ID,
+        HandleAnswer,
+    },
+    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+};
 
 pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    profile: Profile
+    profile: Profile,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized())
+        return Err(StdError::unauthorized());
     }
 
     let id = ID::add_profile(&mut deps.storage)?;
@@ -31,46 +45,40 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     id: Uint128,
-    new_profile: UpdateProfile
+    new_profile: UpdateProfile,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {
-        return Err(StdError::unauthorized())
+        return Err(StdError::unauthorized());
     }
 
-    let mut profile = match Profile::may_load(&mut deps.storage, &id)?{
+    let mut profile = match Profile::may_load(&mut deps.storage, &id)? {
         None => return Err(StdError::generic_err("Profile not found")),
-        Some(p) => p
+        Some(p) => p,
     };
 
     if let Some(name) = new_profile.name {
         profile.name = name;
     }
 
-    if let Some(enabled) = new_profile.enabled{
+    if let Some(enabled) = new_profile.enabled {
         profile.enabled = enabled;
     }
 
     if new_profile.disable_assembly {
         profile.assembly = None;
-    }
-
-    else if let Some(assembly) = new_profile.assembly {
+    } else if let Some(assembly) = new_profile.assembly {
         profile.assembly = Some(assembly.update_profile(&profile.assembly)?)
     }
 
     if new_profile.disable_funding {
         profile.funding = None;
-    }
-
-    else if let Some(funding) = new_profile.funding {
+    } else if let Some(funding) = new_profile.funding {
         profile.funding = Some(funding.update_profile(&profile.funding)?)
     }
 
     if new_profile.disable_token {
         profile.token = None;
-    }
-
-    else if let Some(token) = new_profile.token {
+    } else if let Some(token) = new_profile.token {
         profile.token = Some(token.update_profile(&profile.token)?)
     }
 
