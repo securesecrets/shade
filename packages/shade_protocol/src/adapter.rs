@@ -74,14 +74,10 @@ pub enum SubQueryMsg {
     Unbonding { asset: HumanAddr },
     Claimable { asset: HumanAddr },
     Unbondable { asset: HumanAddr },
-    /* TODO
-     * - LP pool assets
-     * Ratio { asset0: HumanAddr, asset1: HumanAddr },
-     * - things like unbond period
-     * Metadata { asset: HumanAddr }, 
-     * - How much is available to unbond
-     * Unbondable { asset: HumanAddr },
-     */
+    Reserves { asset: HumanAddr },
+    // "reserves" are fully liquid assets that will be sent immediately upon unbond
+    // The rest will be moved to "claimable" as they become available
+    // "claimable" funds do not count towards reserves
 }
 
 /*
@@ -107,6 +103,7 @@ pub enum QueryAnswer {
     Unbonding { amount: Uint128 },
     Claimable { amount: Uint128 },
     Unbondable { amount: Uint128 },
+    Reserves { amount: Uint128 },
 }
 
 pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
@@ -151,6 +148,22 @@ pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
         asset: asset.clone(),
     }).query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
         QueryAnswer::Unbondable { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(
+            format!("Failed to query adapter unbondable from {}", adapter.address)
+        ))
+    }
+}
+
+pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: &HumanAddr,
+    adapter: Contract,
+) -> StdResult<Uint128> {
+
+    match (QueryMsg::Adapter(SubQueryMsg::Reserves {
+        asset: asset.clone(),
+    }).query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
+        QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
             format!("Failed to query adapter unbondable from {}", adapter.address)
         ))

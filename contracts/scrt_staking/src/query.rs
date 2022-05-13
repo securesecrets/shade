@@ -141,11 +141,29 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     };
 
     /*TODO: Query current unbondings
-     * u >= 7 = false
-     * u <  7 = true
+     * u >= 7 = 0
+     * u <  7 = unbondable
      */
     Ok(adapter::QueryAnswer::Unbondable {
         amount: unbondable,
+    })
+}
+
+pub fn reserves<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    if asset != config.sscrt.address {
+        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
+    }
+
+    let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
+
+    Ok(adapter::QueryAnswer::Reserves {
+        amount: scrt_balance + rewards(&deps)?,
     })
 }
 

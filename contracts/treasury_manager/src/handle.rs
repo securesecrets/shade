@@ -12,6 +12,7 @@ use secret_toolkit::{
         increase_allowance_msg, register_receive_msg,
         send_msg, batch_send_from_msg,
         set_viewing_key_msg, batch_send_msg,
+        balance_query,
         batch::{ SendFromAction },
     },
 };
@@ -34,7 +35,7 @@ use crate::{
     query,
     state::{
         allocations_r, allocations_w, asset_list_r, asset_list_w, assets_r, assets_w, config_r,
-        config_w, viewing_key_r,
+        config_w, viewing_key_r, self_address_r,
     },
 };
 use chrono::prelude::*;
@@ -394,8 +395,31 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         };
     }
 
-    // Batch send_from actions
     let mut messages = vec![];
+
+    let mut reserves = balance_query(
+        &deps.querier,
+        self_address_r(&deps.storage).load()?,
+        viewing_key_r(&deps.storage).load()?,
+        1,
+        full_asset.contract.code_hash.clone(),
+        full_asset.contract.address.clone(),
+    )?.amount;
+
+    if reserves > Uint128::zero() {
+        messages.push(
+            send_msg(
+                config.treasury.clone(),
+                reserves,
+                None,
+                None,
+                None,
+                1,
+                full_asset.contract.code_hash.clone(),
+                full_asset.contract.address.clone(),
+            )?
+        );
+    }
 
     let mut allowance = allowance_query(
         &deps.querier,
@@ -408,12 +432,16 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     )?.allowance;
 
     let total = portion_total + allowance;
-
-    let mut total_unbond = Uint128::zero();
+    let mut total_unbond = (amount - reserves)?;
 
     allocations.sort_by(|a, b| a.balance.cmp(&b.balance));
 
     for i in 0..allocations.len() {
+
+        if total_unbond == Uint128::zero() {
+            break;
+        }
+
         match allocations[i].alloc_type {
             // TODO Separate handle for amount refresh
             //      Or just do cycle::constant amounts
@@ -424,14 +452,31 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     total, 10u128.pow(18)
                 );
 
-                messages.push(
-                    adapter::unbond_msg(
-                        asset.clone(),
-                        amount, 
-                        allocations[i].contract.clone()
-                    )?
-                );
+                let unbondable = adapter::unbondable_query(&deps,
+                                      &asset,
+                                      allocations[i].contract.clone(),
+                                      )?;
 
+                if total_unbond > unbondable {
+                    messages.push(
+                        adapter::unbond_msg(
+                            asset.clone(),
+                            unbondable,
+                            allocations[i].contract.clone()
+                        )?
+                    );
+                    total_unbond = (total_unbond - unbondable)?;
+                }
+                else {
+                    messages.push(
+                        adapter::unbond_msg(
+                            asset.clone(),
+                            total_unbond, 
+                            allocations[i].contract.clone()
+                        )?
+                    );
+                    total_unbond = Uint128::zero()
+                }
             },
         };
     }

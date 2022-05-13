@@ -1,6 +1,6 @@
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
 use secret_toolkit::{
-    snip20::allowance_query,
+    snip20::{allowance_query, balance_query},
     utils::Query,
 };
 use shade_protocol::{
@@ -53,26 +53,23 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn balance<S: Storage, A: Api, Q: Querier>(
+pub fn reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
 
     if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        let reserves = balance_query(
+            &deps.querier,
+            self_address_r(&deps.storage).load()?,
+            viewing_key_r(&deps.storage).load()?,
+            1,
+            full_asset.contract.code_hash.clone(),
+            full_asset.contract.address.clone(),
+        )?.amount;
 
-        let allocs = allocations_r(&deps.storage).load(asset.as_str().as_bytes())?;
-
-        let mut total_balance = Uint128::zero();
-
-        for alloc in allocs {
-            total_balance += adapter::balance_query(&deps,
-                                      &asset,
-                                      alloc.contract.clone(),
-                                      )?;
-        }
-
-        return Ok(adapter::QueryAnswer::Balance { 
-            amount: total_balance,
+        return Ok(adapter::QueryAnswer::Reserves { 
+            amount: reserves,
         });
     }
 
@@ -158,20 +155,64 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
-        Some(a) => a,
-        None => { return Err(StdError::generic_err("Not an asset")); }
-    };
+    if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+            Some(a) => a,
+            None => { return Err(StdError::generic_err("Not an asset")); }
+        };
 
-    let mut unbondable = Uint128::zero();
+        let mut unbondable = balance_query(
+            &deps.querier,
+            self_address_r(&deps.storage).load()?,
+            viewing_key_r(&deps.storage).load()?,
+            1,
+            full_asset.contract.code_hash.clone(),
+            full_asset.contract.address.clone(),
+        )?.amount;
 
-    for alloc in allocations {
-        // return true if any
-        unbondable += adapter::unbondable_query(&deps,
-                              &asset, alloc.contract.clone())?;
+        for alloc in allocations {
+            // return true if any
+            unbondable += adapter::unbondable_query(&deps,
+                                  &asset, alloc.contract.clone())?;
+        }
+
+        return Ok(adapter::QueryAnswer::Unbondable {
+            amount: unbondable,
+        });
     }
 
-    Ok(adapter::QueryAnswer::Unbondable {
-        amount: unbondable,
-    })
+    Err(StdError::generic_err("Not a registered asset"))
+}
+
+pub fn balance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+
+    if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+            Some(a) => a,
+            None => { return Err(StdError::generic_err("Not an asset")); }
+        };
+
+        let mut balance = balance_query(
+            &deps.querier,
+            self_address_r(&deps.storage).load()?,
+            viewing_key_r(&deps.storage).load()?,
+            1,
+            full_asset.contract.code_hash.clone(),
+            full_asset.contract.address.clone(),
+        )?.amount;
+
+        for alloc in allocations {
+            // return true if any
+            balance += adapter::balance_query(&deps,
+                                  &asset, alloc.contract.clone())?;
+        }
+
+        return Ok(adapter::QueryAnswer::Balance{
+            amount: balance,
+        });
+    }
+    Err(StdError::generic_err("Not a registered asset"))
 }
