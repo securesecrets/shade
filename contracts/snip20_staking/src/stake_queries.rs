@@ -1,16 +1,23 @@
-use crate::msg::QueryAnswer;
-use crate::stake::{calculate_rewards, shares_per_token};
-use crate::state::ReadonlyBalances;
-use crate::state_staking::{
-    DailyUnbondingQueue, TotalShares, TotalTokens, TotalUnbonding, UnbondingQueue, UserCooldown,
-    UserShares,
-};
-use cosmwasm_std::{
-    to_binary, Api, Binary, Extern, HumanAddr, Querier, StdResult, Storage,
+use crate::{
+    msg::QueryAnswer,
+    stake::{calculate_rewards, shares_per_token},
+    state::ReadonlyBalances,
+    state_staking::{
+        DailyUnbondingQueue,
+        TotalShares,
+        TotalTokens,
+        TotalUnbonding,
+        UnbondingQueue,
+        UserCooldown,
+        UserShares,
+    },
 };
 use cosmwasm_math_compat::Uint128;
-use shade_protocol::snip20_staking::stake::{StakeConfig, VecQueue};
-use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
+use cosmwasm_std::{to_binary, Api, Binary, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::{
+    contract_interfaces::staking::snip20_staking::stake::{StakeConfig, VecQueue},
+    utils::storage::default::{BucketStorage, SingletonStorage},
+};
 
 pub fn stake_config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
     to_binary(&QueryAnswer::StakedConfig {
@@ -91,7 +98,7 @@ pub fn staked<S: Storage, A: Api, Q: Querier>(
     let mut unbonding = Uint128::zero();
     let mut unbonded = Uint128::zero();
 
-    for item in queue.0 .0.iter() {
+    for item in queue.0.0.iter() {
         if let Some(time) = time {
             if item.release <= time {
                 unbonded += item.amount;

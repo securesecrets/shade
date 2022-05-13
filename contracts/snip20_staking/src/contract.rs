@@ -1,44 +1,100 @@
+use crate::{
+    batch,
+    distributors,
+    distributors::{
+        get_distributor,
+        try_add_distributors,
+        try_set_distributors,
+        try_set_distributors_status,
+    },
+    expose_balance::{try_expose_balance, try_expose_balance_with_cooldown},
+    msg::{
+        space_pad,
+        status_level_to_u8,
+        ContractStatusLevel,
+        HandleAnswer,
+        HandleMsg,
+        InitMsg,
+        QueryAnswer,
+        QueryMsg,
+        QueryWithPermit,
+        ResponseStatus::Success,
+    },
+    rand::sha_256,
+    receiver::Snip20ReceiveMsg,
+    stake::{
+        claim_rewards,
+        remove_from_cooldown,
+        shares_per_token,
+        try_claim_rewards,
+        try_claim_unbond,
+        try_receive,
+        try_stake_rewards,
+        try_unbond,
+        try_update_stake_config,
+    },
+    stake_queries,
+    state::{
+        get_receiver_hash,
+        read_allowance,
+        read_viewing_key,
+        set_receiver_hash,
+        write_allowance,
+        write_viewing_key,
+        Balances,
+        Config,
+        Constants,
+        ReadonlyBalances,
+        ReadonlyConfig,
+    },
+    state_staking::{
+        DailyUnbondingQueue,
+        Distributors,
+        DistributorsEnabled,
+        TotalShares,
+        TotalTokens,
+        TotalUnbonding,
+        UnsentStakedTokens,
+        UserCooldown,
+        UserShares,
+    },
+    transaction_history::{get_transfers, get_txs, store_claim_reward, store_mint, store_transfer},
+    viewing_key::{ViewingKey, VIEWING_KEY_SIZE},
+};
+use cosmwasm_math_compat::{Uint128, Uint256};
 /// This contract implements SNIP-20 standard:
 /// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
 use cosmwasm_std::{
-    from_binary, log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern,
-    HandleResponse, HumanAddr, InitResponse, Querier, QueryResult, ReadonlyStorage, StdError,
-    StdResult, Storage,
+    from_binary,
+    log,
+    to_binary,
+    Api,
+    Binary,
+    CanonicalAddr,
+    CosmosMsg,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    InitResponse,
+    Querier,
+    QueryResult,
+    ReadonlyStorage,
+    StdError,
+    StdResult,
+    Storage,
 };
-use crate::distributors::{
-    get_distributor, try_add_distributors, try_set_distributors, try_set_distributors_status,
+use secret_toolkit::{
+    permit::{validate, Permission, Permit, RevokedPermits},
+    snip20::{register_receive_msg, send_msg, token_info_query},
 };
-use crate::expose_balance::{try_expose_balance, try_expose_balance_with_cooldown};
-use crate::msg::{
-    space_pad, ContractStatusLevel, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg,
-    ResponseStatus::Success,
+use shade_protocol::{
+    contract_interfaces::staking::snip20_staking::{
+        stake::{Cooldown, StakeConfig, VecQueue},
+        ReceiveType,
+    },
+    utils::storage::default::{BucketStorage, SingletonStorage},
 };
-use crate::msg::{status_level_to_u8, QueryWithPermit};
-use crate::rand::sha_256;
-use crate::receiver::Snip20ReceiveMsg;
-use crate::stake::{
-    claim_rewards, remove_from_cooldown, shares_per_token, try_claim_rewards, try_claim_unbond,
-    try_receive, try_stake_rewards, try_unbond, try_update_stake_config,
-};
-use crate::state::{
-    get_receiver_hash, read_allowance, read_viewing_key, set_receiver_hash, write_allowance,
-    write_viewing_key, Balances, Config, Constants, ReadonlyBalances, ReadonlyConfig,
-};
-use crate::state_staking::{
-    DailyUnbondingQueue, Distributors, DistributorsEnabled, TotalShares, TotalTokens,
-    TotalUnbonding, UnsentStakedTokens, UserCooldown, UserShares,
-};
-use crate::transaction_history::{
-    get_transfers, get_txs, store_claim_reward, store_mint, store_transfer,
-};
-use crate::viewing_key::{ViewingKey, VIEWING_KEY_SIZE};
-use crate::{batch, distributors, stake_queries};
-use secret_toolkit::permit::{validate, Permission, Permit, RevokedPermits};
-use secret_toolkit::snip20::{register_receive_msg, send_msg, token_info_query};
-use cosmwasm_math_compat::{Uint128, Uint256};
-use shade_protocol::snip20_staking::stake::{Cooldown, StakeConfig, VecQueue};
-use shade_protocol::snip20_staking::ReceiveType;
-use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
 
 /// We make sure that responses from `handle` are padded to a multiple of this size.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -437,7 +493,9 @@ fn permit_queries<S: Storage, A: Api, Q: Querier>(
             if account != owner && account != spender {
                 return Err(StdError::generic_err(format!(
                     "Cannot query allowance. Requires permit for either owner {:?} or spender {:?}, got permit for {:?}",
-                    owner.as_str(), spender.as_str(), account.as_str()
+                    owner.as_str(),
+                    spender.as_str(),
+                    account.as_str()
                 )));
             }
 
@@ -564,7 +622,8 @@ pub fn query_balance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     let address = deps.api.canonical_address(account)?;
 
-    let amount = Uint128::new(ReadonlyBalances::from_storage(&deps.storage).account_amount(&address));
+    let amount =
+        Uint128::new(ReadonlyBalances::from_storage(&deps.storage).account_amount(&address));
     let response = QueryAnswer::Balance { amount };
     to_binary(&response)
 }
@@ -1429,12 +1488,7 @@ fn perform_transfer<T: Storage>(
     let config = StakeConfig::load(store)?;
 
     // calculate shares per token
-    let transfer_shares = shares_per_token(
-        &config,
-        &amount,
-        &total_tokens.0,
-        &total_shares.0,
-    )?;
+    let transfer_shares = shares_per_token(&config, &amount, &total_tokens.0, &total_shares.0)?;
 
     // move shares from one user to another
     let mut from_shares = UserShares::load(store, from.as_str().as_bytes())?;
@@ -1534,13 +1588,21 @@ fn is_valid_symbol(symbol: &str) -> bool {
 #[cfg(test)]
 mod staking_tests {
     use super::*;
-    use crate::msg::InitConfig;
-    use crate::msg::ResponseStatus;
-    use cosmwasm_std::testing::*;
-    use cosmwasm_std::{from_binary, BlockInfo, ContractInfo, MessageInfo, QueryResponse, WasmMsg};
-    use shade_protocol::snip20_staking::ReceiveType;
-    use shade_protocol::utils::asset::Contract;
+    use crate::msg::{InitConfig, ResponseStatus};
     use cosmwasm_math_compat::Uint256;
+    use cosmwasm_std::{
+        from_binary,
+        testing::*,
+        BlockInfo,
+        ContractInfo,
+        MessageInfo,
+        QueryResponse,
+        WasmMsg,
+    };
+    use shade_protocol::{
+        contract_interfaces::staking::snip20_staking::ReceiveType,
+        utils::asset::Contract,
+    };
     use std::any::Any;
 
     fn init_helper_staking() -> (
@@ -2423,8 +2485,18 @@ mod staking_tests {
     #[test]
     fn test_send_with_distributors() {
         let (init_result, mut deps) = init_helper_staking();
-        new_staked_account(&mut deps, "sender", "key", Uint128::new(100 * 10u128.pow(8)));
-        new_staked_account(&mut deps, "distrib", "key", Uint128::new(100 * 10u128.pow(8)));
+        new_staked_account(
+            &mut deps,
+            "sender",
+            "key",
+            Uint128::new(100 * 10u128.pow(8)),
+        );
+        new_staked_account(
+            &mut deps,
+            "distrib",
+            "key",
+            Uint128::new(100 * 10u128.pow(8)),
+        );
         new_staked_account(
             &mut deps,
             "not_distrib",
@@ -2968,14 +3040,22 @@ mod staking_tests {
 #[cfg(test)]
 mod snip20_tests {
     use super::*;
-    use crate::msg::InitConfig;
-    use crate::msg::ResponseStatus;
-    use cosmwasm_std::testing::*;
-    use cosmwasm_std::{from_binary, BlockInfo, ContractInfo, MessageInfo, QueryResponse, WasmMsg};
-    use shade_protocol::snip20_staking::ReceiveType;
-    use shade_protocol::utils::asset::Contract;
+    use crate::msg::{InitConfig, ResponseStatus};
+    use cosmwasm_std::{
+        from_binary,
+        testing::*,
+        BlockInfo,
+        Coin,
+        ContractInfo,
+        MessageInfo,
+        QueryResponse,
+        WasmMsg,
+    };
+    use shade_protocol::{
+        contract_interfaces::staking::snip20_staking::ReceiveType,
+        utils::asset::Contract,
+    };
     use std::any::Any;
-    use cosmwasm_std::Coin;
 
     // Helper functions
     #[derive(Clone)]
@@ -3058,13 +3138,10 @@ mod snip20_tests {
         StdResult<InitResponse>,
         Extern<MockStorage, MockApi, MockQuerier>,
     ) {
-        let mut deps = mock_dependencies(
-            20,
-            &[Coin {
-                denom: "uscrt".to_string(),
-                amount: Uint128::new(contract_bal).into(),
-            }],
-        );
+        let mut deps = mock_dependencies(20, &[Coin {
+            denom: "uscrt".to_string(),
+            amount: Uint128::new(contract_bal).into(),
+        }]);
 
         let env = mock_env("instantiator", &[]);
         let init_config: InitConfig = from_binary(&Binary::from(
@@ -3415,20 +3492,22 @@ mod snip20_tests {
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result.clone()));
-        assert!(result.messages.contains(&CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: HumanAddr("contract".to_string()),
-            callback_code_hash: "this_is_a_hash_of_a_code".to_string(),
-            msg: Snip20ReceiveMsg::new(
-                HumanAddr("bob".to_string()),
-                HumanAddr("bob".to_string()),
-                Uint128::new(100),
-                Some("my memo".to_string()),
-                Some(to_binary("hey hey you you").unwrap())
-            )
-            .into_binary()
-            .unwrap(),
-            send: vec![]
-        })));
+        assert!(
+            result.messages.contains(&CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: HumanAddr("contract".to_string()),
+                callback_code_hash: "this_is_a_hash_of_a_code".to_string(),
+                msg: Snip20ReceiveMsg::new(
+                    HumanAddr("bob".to_string()),
+                    HumanAddr("bob".to_string()),
+                    Uint128::new(100),
+                    Some("my memo".to_string()),
+                    Some(to_binary("hey hey you you").unwrap())
+                )
+                .into_binary()
+                .unwrap(),
+                send: vec![]
+            }))
+        );
     }
 
     #[test]
@@ -3756,11 +3835,13 @@ mod snip20_tests {
             "handle() failed: {}",
             handle_result.err().unwrap()
         );
-        assert!(handle_result.unwrap().messages.contains(
-            &snip20_msg
-                .into_cosmos_msg("lolz".to_string(), HumanAddr("contract".to_string()))
-                .unwrap()
-        ));
+        assert!(
+            handle_result.unwrap().messages.contains(
+                &snip20_msg
+                    .into_cosmos_msg("lolz".to_string(), HumanAddr("contract".to_string()))
+                    .unwrap()
+            )
+        );
         let bob_canonical = deps
             .api
             .canonical_address(&HumanAddr("bob".to_string()))
@@ -3829,13 +3910,10 @@ mod snip20_tests {
             .unwrap();
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
-        assert_eq!(
-            allowance,
-            crate::state::Allowance {
-                amount: 0,
-                expiration: None
-            }
-        );
+        assert_eq!(allowance, crate::state::Allowance {
+            amount: 0,
+            expiration: None
+        });
 
         let handle_msg = HandleMsg::IncreaseAllowance {
             spender: HumanAddr("alice".to_string()),
@@ -3864,13 +3942,10 @@ mod snip20_tests {
         );
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
-        assert_eq!(
-            allowance,
-            crate::state::Allowance {
-                amount: 1950,
-                expiration: None
-            }
-        );
+        assert_eq!(allowance, crate::state::Allowance {
+            amount: 1950,
+            expiration: None
+        });
     }
 
     #[test]
@@ -3909,13 +3984,10 @@ mod snip20_tests {
             .unwrap();
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
-        assert_eq!(
-            allowance,
-            crate::state::Allowance {
-                amount: 2000,
-                expiration: None
-            }
-        );
+        assert_eq!(allowance, crate::state::Allowance {
+            amount: 2000,
+            expiration: None
+        });
 
         let handle_msg = HandleMsg::IncreaseAllowance {
             spender: HumanAddr("alice".to_string()),
@@ -3931,13 +4003,10 @@ mod snip20_tests {
         );
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
-        assert_eq!(
-            allowance,
-            crate::state::Allowance {
-                amount: 4000,
-                expiration: None
-            }
-        );
+        assert_eq!(allowance, crate::state::Allowance {
+            amount: 4000,
+            expiration: None
+        });
     }
 
     #[test]

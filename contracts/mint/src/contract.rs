@@ -1,16 +1,27 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage, Uint128,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
+    Uint128,
 };
 use secret_toolkit::snip20::token_info_query;
 
-use shade_protocol::{
-    mint::{Config, HandleMsg, InitMsg, QueryMsg},
+use shade_protocol::contract_interfaces::{
+    mint::mint::{Config, HandleMsg, InitMsg, QueryMsg},
     snip20::{token_config_query, Snip20Asset},
 };
 
 use crate::{
-    handle, query,
+    handle,
+    query,
     state::{asset_list_w, asset_peg_w, config_w, limit_w, native_asset_w},
 };
 

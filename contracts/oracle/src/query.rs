@@ -1,9 +1,12 @@
 use crate::state::{config_r, dex_pairs_r, index_r};
 use cosmwasm_math_compat::{Uint128, Uint512};
 use cosmwasm_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
-use shade_protocol::{
-    band, dex,
-    oracle::{IndexElement, QueryAnswer},
+use shade_protocol::contract_interfaces::{
+    dex::dex,
+    oracles::{
+        band,
+        oracle::{IndexElement, QueryAnswer},
+    },
 };
 use std::convert::TryFrom;
 
@@ -96,14 +99,16 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
         results[result_index] = data.rate;
     }
 
-    Ok(results.iter().map(|r| cosmwasm_std::Uint128(r.u128())).collect())
+    Ok(results
+        .iter()
+        .map(|r| cosmwasm_std::Uint128(r.u128()))
+        .collect())
 }
 
 pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     index: Vec<IndexElement>,
 ) -> StdResult<cosmwasm_std::Uint128> {
-
     let mut weight_sum = Uint512::zero();
     let mut price = Uint512::zero();
 
@@ -162,6 +167,11 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     }
 
     Ok(cosmwasm_std::Uint128(
-        Uint128::try_from(price.checked_mul(Uint512::from(10u128.pow(18)))?.checked_div(weight_sum)?)?.u128(),
+        Uint128::try_from(
+            price
+                .checked_mul(Uint512::from(10u128.pow(18)))?
+                .checked_div(weight_sum)?,
+        )?
+        .u128(),
     ))
 }

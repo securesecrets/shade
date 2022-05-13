@@ -1,7 +1,6 @@
 use cosmwasm_std::{StdError, StdResult, Storage};
 use secret_storage_plus::{Item, Map, Prefix, PrimaryKey};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
 pub trait ItemStorage: Serialize + DeserializeOwned {
     const ITEM: Item<'static, Self>;
@@ -19,9 +18,9 @@ pub trait ItemStorage: Serialize + DeserializeOwned {
     }
 
     fn update<A, E, S: Storage>(&self, storage: &mut S, action: A) -> Result<Self, E>
-        where
-            A: FnOnce(Self) -> Result<Self, E>,
-            E: From<StdError>,
+    where
+        A: FnOnce(Self) -> Result<Self, E>,
+        E: From<StdError>,
     {
         Self::ITEM.update(storage, action)
     }
@@ -42,11 +41,10 @@ pub trait MapStorage<'a, K: PrimaryKey<'a>>: Serialize + DeserializeOwned {
         Self::MAP.save(storage, key, self)
     }
 
-    fn update<A, E, S: Storage>(&self, storage: &mut S, key: K, action: A
-    ) -> Result<Self, E>
-        where
-            A: FnOnce(Option<Self>) -> Result<Self, E>,
-            E: From<StdError>,
+    fn update<A, E, S: Storage>(&self, storage: &mut S, key: K, action: A) -> Result<Self, E>
+    where
+        A: FnOnce(Option<Self>) -> Result<Self, E>,
+        E: From<StdError>,
     {
         Self::MAP.update(storage, key, action)
     }

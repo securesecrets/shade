@@ -1,37 +1,50 @@
 use crate::{
-    adapter,
-    utils::{
-        asset::Contract, 
-        generic_response::ResponseStatus
-    },
+    contract_interfaces::dao::adapter,
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
+use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Config {
+    pub admin: HumanAddr,
+    pub treasury: HumanAddr,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Reward {
-    pub asset: HumanAddr,
+pub struct Allocation {
+    pub nick: Option<String>,
+    pub contract: Contract,
+    pub alloc_type: AllocationType,
     pub amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Config {
-    pub admins: Vec<HumanAddr>,
-    pub treasury: HumanAddr,
-    pub asset: Contract,
-    pub distributor: HumanAddr,
-    pub rewards: Vec<Reward>,
+pub enum AllocationType {
+    // amount becomes percent * 10^18
+    Portion,
+    Amount,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct AllocationMeta {
+    pub nick: Option<String>,
+    pub contract: Contract,
+    pub amount: Uint128,
+    pub alloc_type: AllocationType,
+    pub balance: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
-    pub config: Config,
+    pub admin: Option<HumanAddr>,
     pub viewing_key: String,
+    pub treasury: HumanAddr,
 }
 
 impl InitCallback for InitMsg {
@@ -41,6 +54,7 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    /*
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
@@ -48,14 +62,16 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    RefillRewards {
-        rewards: Vec<Reward>,
-    },
+    */
     UpdateConfig {
         config: Config,
     },
     RegisterAsset {
-        asset: Contract,
+        contract: Contract,
+    },
+    Allocate {
+        asset: HumanAddr,
+        allocation: Allocation,
     },
     Adapter(adapter::SubHandleMsg),
 }
@@ -71,27 +87,28 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         address: HumanAddr,
     },
-    UpdateConfig {
+    Receive {
         status: ResponseStatus,
     },
-    Receive {
+    UpdateConfig {
         status: ResponseStatus,
     },
     RegisterAsset {
         status: ResponseStatus,
     },
-    RefillRewards {
+    Allocate {
         status: ResponseStatus,
     },
+    Adapter(adapter::HandleAnswer),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    PendingAllowance {
-        asset: HumanAddr,
-    },
+    Assets {},
+    Allocations { asset: HumanAddr },
+    PendingAllowance { asset: HumanAddr },
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -103,5 +120,8 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
+    Assets { assets: Vec<HumanAddr> },
+    Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
+    Adapter(adapter::QueryAnswer),
 }

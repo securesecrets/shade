@@ -9,11 +9,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::{
-    shd_staking,
-    snip20,
+    contract_interfaces::staking::shd_staking,
+    contract_interfaces::snip20,
 };
 use std::{env, fs};
-use shade_protocol::snip20::InitialBalance;
+use shade_protocol::contract_interfaces::snip20::InitialBalance;
 
 fn main() -> Result<()> {
     // Initialize snip20

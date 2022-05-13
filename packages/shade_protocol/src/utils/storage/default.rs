@@ -1,10 +1,15 @@
 use cosmwasm_std::{StdResult, Storage};
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
     Singleton,
 };
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
 pub trait NaiveSingletonStorage: Serialize + DeserializeOwned {
     fn read<'a, S: Storage>(storage: &'a S, namespace: &'a [u8]) -> ReadonlySingleton<'a, S, Self> {
@@ -112,6 +117,7 @@ macro_rules! newtype_deref {
     (() $(pub)* struct $name:ident(pub $t0:ty);) => {
         impl ::std::ops::Deref for $name {
             type Target = $t0;
+
             fn deref(&self) -> &Self::Target {
                 &self.0
             }

@@ -1,17 +1,26 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{Api, Extern, Querier, StdError, StdResult, Storage};
-use shade_protocol::governance::{
+use shade_protocol::contract_interfaces::governance::{
     proposal::{ProposalStatus, QueriedProposal},
     QueryAnswer,
 };
 
 use crate::{
     proposal_state::{
-        proposal_funding_deadline_r, proposal_funding_r, proposal_r, proposal_run_status_r,
-        proposal_status_r, proposal_voting_deadline_r, total_proposal_votes_r, total_proposals_r,
+        proposal_funding_deadline_r,
+        proposal_funding_r,
+        proposal_r,
+        proposal_run_status_r,
+        proposal_status_r,
+        proposal_voting_deadline_r,
+        total_proposal_votes_r,
+        total_proposals_r,
     },
     state::{
-        admin_commands_list_r, admin_commands_r, supported_contract_r, supported_contracts_list_r,
+        admin_commands_list_r,
+        admin_commands_r,
+        supported_contract_r,
+        supported_contracts_list_r,
     },
 };
 

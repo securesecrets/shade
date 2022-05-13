@@ -1,15 +1,23 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::Storage;
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
     Singleton,
 };
 use secret_toolkit::snip20::batch::SendAction;
-use shade_protocol::governance::{
-    proposal::{Proposal, ProposalStatus},
-    vote::VoteTally,
+use shade_protocol::{
+    contract_interfaces::governance::{
+        proposal::{Proposal, ProposalStatus},
+        vote::VoteTally,
+    },
+    utils::generic_response::ResponseStatus,
 };
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 // Proposals
 pub static PROPOSAL_KEY: &[u8] = b"proposals";

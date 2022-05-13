@@ -14,7 +14,10 @@ use secretcli::{
 };
 use serde_json::Result;
 use shade_protocol::{
-    initializer, initializer::Snip20ContractInfo, snip20, snip20::InitialBalance,
+    contract_interfaces::initializer,
+    contract_interfaces::initializer::Snip20ContractInfo,
+    contract_interfaces::snip20,
+    contract_interfaces::snip20::InitialBalance,
 };
 
 pub fn initialize_initializer(

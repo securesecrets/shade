@@ -1,13 +1,26 @@
 use crate::{
-    handle, query,
+    handle,
+    query,
     state::{config_w, shade_w},
 };
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
 };
 use secret_toolkit::utils::InitCallback;
-use shade_protocol::initializer::{Config, HandleMsg, InitMsg, QueryMsg, Snip20InitHistory};
+use shade_protocol::contract_interfaces::{
+    initializer::{Config, HandleMsg, InitMsg, QueryMsg, Snip20InitHistory},
+    snip20,
+};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -22,7 +35,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     config_w(&mut deps.storage).save(&state)?;
 
     // Snip20 configs
-    let coin_config = Some(shade_protocol::snip20::InitConfig {
+    let coin_config = Some(snip20::InitConfig {
         public_total_supply: Option::from(true),
         enable_deposit: Option::from(false),
         enable_redeem: Option::from(false),
@@ -31,7 +44,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     });
 
     // Initialize Shade
-    let shade_init_msg = shade_protocol::snip20::InitMsg {
+    let shade_init_msg = snip20::InitMsg {
         name: "Shade".to_string(),
         admin: Some(
             msg.shade

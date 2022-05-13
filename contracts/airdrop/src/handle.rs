@@ -1,29 +1,65 @@
 use crate::state::{
-    account_r, account_total_claimed_r, account_total_claimed_w, account_viewkey_w, account_w,
-    address_in_account_w, claim_status_r, claim_status_w, config_r, config_w, decay_claimed_w,
-    revoke_permit, total_claimed_r, total_claimed_w, validate_address_permit,
+    account_r,
+    account_total_claimed_r,
+    account_total_claimed_w,
+    account_viewkey_w,
+    account_w,
+    address_in_account_w,
+    claim_status_r,
+    claim_status_w,
+    config_r,
+    config_w,
+    decay_claimed_w,
+    revoke_permit,
+    total_claimed_r,
+    total_claimed_w,
+    validate_address_permit,
 };
 use cosmwasm_math_compat::{Decimal, Uint128};
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdError,
-    StdResult, Storage,
+    from_binary,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use query_authentication::viewing_keys::ViewingKey;
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::airdrop::account::{AccountKey, AddressProofMsg};
-use shade_protocol::airdrop::errors::{
-    account_already_created, account_does_not_exist, address_already_in_account, airdrop_ended,
-    airdrop_not_started, claim_too_high, decay_claimed, decay_not_set, expected_memo,
-    invalid_dates, invalid_partial_tree, invalid_task_percentage, not_admin, nothing_to_claim,
-    permit_rejected, unexpected_error,
+use shade_protocol::{
+    contract_interfaces::airdrop::{
+        account::{Account, AccountKey, AddressProofMsg, AddressProofPermit},
+        claim_info::RequiredTask,
+        errors::{
+            account_already_created,
+            account_does_not_exist,
+            address_already_in_account,
+            airdrop_ended,
+            airdrop_not_started,
+            claim_too_high,
+            decay_claimed,
+            decay_not_set,
+            expected_memo,
+            invalid_dates,
+            invalid_partial_tree,
+            invalid_task_percentage,
+            not_admin,
+            nothing_to_claim,
+            permit_rejected,
+            unexpected_error,
+        },
+        Config,
+        HandleAnswer,
+    },
+    utils::generic_response::ResponseStatus,
 };
-use shade_protocol::airdrop::{
-    account::{Account, AddressProofPermit},
-    claim_info::RequiredTask,
-    Config, HandleAnswer,
-};
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(

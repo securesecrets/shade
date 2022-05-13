@@ -2,12 +2,13 @@ pub mod account;
 pub mod claim_info;
 pub mod errors;
 
-use crate::airdrop::{
-    account::{AccountPermit, AddressProofPermit},
-    claim_info::RequiredTask,
+use crate::{
+    contract_interfaces::airdrop::{
+        account::{AccountPermit, AddressProofPermit},
+        claim_info::RequiredTask,
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::utils::asset::Contract;
-use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;

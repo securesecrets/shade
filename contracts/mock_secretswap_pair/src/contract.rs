@@ -1,14 +1,35 @@
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, HumanAddr, InitResponse, Querier,
-    StdError, StdResult, Storage, Uint128,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
-    band::{InitMsg, ReferenceData},
-    dex,
-    secretswap::{
-        Asset, AssetInfo, PairQuery, PairResponse, PoolResponse, SimulationResponse, Token,
+    contract_interfaces::{
+        dex::{
+            dex,
+            secretswap::{
+                Asset,
+                AssetInfo,
+                PairQuery,
+                PairResponse,
+                PoolResponse,
+                SimulationResponse,
+                Token,
+            },
+        },
+        oracles::band::{InitMsg, ReferenceData},
     },
     utils::asset::Contract,
 };

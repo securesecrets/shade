@@ -1,9 +1,6 @@
-use std::any::type_name;
-use std::convert::TryFrom;
+use std::{any::type_name, convert::TryFrom};
 
-use cosmwasm_std::{
-    CanonicalAddr, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage,
-};
+use cosmwasm_std::{CanonicalAddr, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage};
 use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
 use secret_toolkit::storage::{TypedStore, TypedStoreMut};
@@ -11,8 +8,10 @@ use secret_toolkit::storage::{TypedStore, TypedStoreMut};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::msg::{status_level_to_u8, u8_to_status_level, ContractStatusLevel};
-use crate::viewing_key::ViewingKey;
+use crate::{
+    msg::{status_level_to_u8, u8_to_status_level, ContractStatusLevel},
+    viewing_key::ViewingKey,
+};
 use serde::de::DeserializeOwned;
 
 // Snip20

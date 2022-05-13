@@ -1,6 +1,6 @@
 use cosmwasm_std::{HumanAddr, Storage, Uint128};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use shade_protocol::scrt_staking;
+use shade_protocol::contract_interfaces::dao::scrt_staking;
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SELF_ADDRESS: &[u8] = b"self_address";

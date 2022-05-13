@@ -1,6 +1,7 @@
-use crate::snip20::Snip20Asset;
-use crate::utils::asset::Contract;
-use crate::utils::generic_response::ResponseStatus;
+use crate::{
+    contract_interfaces::snip20::Snip20Asset,
+    utils::{asset::Contract, generic_response::ResponseStatus},
+};
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;

@@ -10,12 +10,12 @@ use serde::Serialize;
 use serde_json::Result;
 use shade_protocol::{
     asset::Contract,
-    band, initializer,
-    initializer::Snip20ContractInfo,
-    mint, mint,
-    mint::MintLimit,
-    oracle, snip20,
-    snip20::{InitConfig, InitialBalance},
+    contract_interfaces::{
+        oracles::{oracle, band},
+        initializer::{self, Snip20ContractInfo},
+        mint::{self, MintLimit},
+        snip20::{self, InitConfig, InitialBalance}
+    },
 };
 use std::fmt::Display;
 

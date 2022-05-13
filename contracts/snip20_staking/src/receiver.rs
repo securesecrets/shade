@@ -3,8 +3,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{to_binary, Binary, CosmosMsg, HumanAddr, StdResult, WasmMsg};
 use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{to_binary, Binary, CosmosMsg, HumanAddr, StdResult, WasmMsg};
 
 use crate::{contract::RESPONSE_BLOCK_SIZE, msg::space_pad};
 

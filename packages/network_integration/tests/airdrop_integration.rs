@@ -27,23 +27,23 @@ use secretcli::secretcli::{
 };
 use serde::Serialize;
 use serde_json::Result;
-use shade_protocol::airdrop::account::{AddressProofPermit, FillerMsg};
+use shade_protocol::contract_interfaces::airdrop::account::{AddressProofPermit, FillerMsg};
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    airdrop::{
+    contract_interfaces::airdrop::{
         self,
         account::{AccountPermitMsg, AddressProofMsg},
         claim_info::RequiredTask,
     },
-    band, governance,
-    governance::{
+    contract_interfaces::governance::{
+        self,
         proposal::ProposalStatus,
         vote::{UserVote, Vote},
     },
-    oracle,
+    contract_interfaces::oracles::{oracle, band},
     snip20::{self, InitConfig, InitialBalance},
-    staking,
+    contract_interfaces::staking,
 };
 use std::{thread, time};
 

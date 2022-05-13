@@ -1,9 +1,16 @@
-use cosmwasm_std::{HumanAddr};
+use cosmwasm_math_compat::{Uint128, Uint256};
+use cosmwasm_std::HumanAddr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_math_compat::{Uint128, Uint256};
-use shade_protocol::snip20_staking::stake::{Cooldown, DailyUnbonding, Unbonding, VecQueue};
-use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
+use shade_protocol::{
+    contract_interfaces::staking::snip20_staking::stake::{
+        Cooldown,
+        DailyUnbonding,
+        Unbonding,
+        VecQueue,
+    },
+    utils::storage::default::{BucketStorage, SingletonStorage},
+};
 
 // used to determine what each token is worth to calculate rewards
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -110,7 +117,8 @@ impl UserCooldown {
                 let item = self.queue.0.remove(index);
                 remaining = remaining.checked_sub(item.amount).unwrap();
             } else {
-                self.queue.0[index].amount = self.queue.0[index].amount.checked_sub(remaining).unwrap();
+                self.queue.0[index].amount =
+                    self.queue.0[index].amount.checked_sub(remaining).unwrap();
                 break;
             }
         }

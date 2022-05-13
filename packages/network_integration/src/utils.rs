@@ -2,7 +2,7 @@ use colored::*;
 use rand::{distributions::Alphanumeric, Rng};
 use secretcli::{cli_types::NetContract, secretcli::query};
 use serde::Serialize;
-use shade_protocol::mint;
+use shade_protocol::contract_interfaces::mint::mint;
 use std::fmt::Display;
 use std::fs;
 

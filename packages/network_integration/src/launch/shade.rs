@@ -3,8 +3,8 @@ use cosmwasm_std::{Binary, HumanAddr};
 use serde::{Deserialize, Serialize};
 use network_integration::utils::{GAS, generate_label, print_contract, print_header, SNIP20_FILE, STORE_GAS};
 use secretcli::secretcli::{account_address, init};
-use shade_protocol::snip20;
-use shade_protocol::snip20::{InitConfig, InitialBalance};
+use shade_protocol::contract_interfaces::snip20;
+use shade_protocol::contract_interfaces::snip20::{InitConfig, InitialBalance};
 
 #[derive(Serialize, Deserialize)]
 struct Args {

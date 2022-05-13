@@ -5,7 +5,7 @@ use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dex::TradingPair,
+    contract_interfaces::dex::dex::TradingPair,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
