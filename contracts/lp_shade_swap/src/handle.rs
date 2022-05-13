@@ -1,18 +1,19 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, Extern,
     HandleResponse, HumanAddr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
-    Validator,
 };
 
 use secret_toolkit::snip20::{balance_query};
 
 use shade_protocol::{
-    lp_shade_swap::{
-        HandleAnswer, Config,
-        is_supported_asset, get_supported_asset,
+    contract_interfaces::dao::{
+        lp_shade_swap::{
+            HandleAnswer, Config,
+            is_supported_asset, get_supported_asset,
+        },
+        treasury::Flag,
+        adapter,
     },
-    treasury::Flag,
-    adapter,
     utils::{
         generic_response::ResponseStatus,
         asset::{

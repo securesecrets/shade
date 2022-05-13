@@ -5,11 +5,15 @@ use cosmwasm_std::{
 };
 
 use shade_protocol::{
-    adapter,
-    shadeswap,
-    lp_shade_swap::{
-        Config, HandleMsg, InitMsg, QueryMsg,
-        is_supported_asset,
+    contract_interfaces::{
+        dao::{
+            adapter,
+            lp_shade_swap::{
+                Config, HandleMsg, InitMsg, QueryMsg,
+                is_supported_asset,
+            },
+        },
+        dex::shadeswap,
     },
     utils::asset::Contract,
 };

@@ -18,25 +18,6 @@ use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum BondStatus {
-    Active,
-    Unbonding,
-    UnbondComplete,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Bond {
-    pub amount: Uint128,
-    pub token: Contract,
-    pub address: HumanAddr,
-    pub status: BondStatus,
-}
-*/
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SubHandleMsg {
@@ -90,12 +71,6 @@ pub enum SubQueryMsg {
     Unbondable { asset: HumanAddr },
     Reserves { asset: HumanAddr },
 }
-
-/*
-impl Query for SubQueryMsg {
-    const BLOCK_SIZE: usize = 256;
-}
-*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

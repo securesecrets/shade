@@ -1,5 +1,5 @@
 use crate::{
-    adapter,
+    contract_interfaces::dao::adapter,
     utils::{
         asset::Contract, 
         generic_response::ResponseStatus

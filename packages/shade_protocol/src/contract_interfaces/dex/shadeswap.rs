@@ -1,11 +1,13 @@
 use crate::{
+    contract_interfaces::{
+        mint,
+        dex,
+        oracles::band,
+    },
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
     },
-    mint,
-    dex,
-    band,
 };
 use cosmwasm_std::{Uint128, HumanAddr, StdResult, StdError, Extern, Querier, Api, Storage};
 use schemars::JsonSchema;

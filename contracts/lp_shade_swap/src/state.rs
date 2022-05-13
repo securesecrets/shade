@@ -1,6 +1,6 @@
 use cosmwasm_std::{HumanAddr, Storage, Uint128};
 use cosmwasm_storage::{bucket, bucket_read, Bucket, ReadonlyBucket, singleton, singleton_read, ReadonlySingleton, Singleton};
-use shade_protocol::lp_shade_swap;
+use shade_protocol::contract_interfaces::dao::lp_shade_swap;
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SELF_ADDRESS: &[u8] = b"self_address";

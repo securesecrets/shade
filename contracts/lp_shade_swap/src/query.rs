@@ -4,9 +4,11 @@ use cosmwasm_std::{
 };
 
 use shade_protocol::{
-    adapter, 
+    contract_interfaces::dao::{
+        adapter, 
+        lp_shade_swap::{is_supported_asset, get_supported_asset, QueryAnswer},
+    },
     utils::asset::scrt_balance,
-    lp_shade_swap::{is_supported_asset, get_supported_asset, QueryAnswer},
 };
 
 use secret_toolkit::snip20::balance_query;
