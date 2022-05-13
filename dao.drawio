@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2022-05-13T03:45:26.893Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36" etag="ZFuRkU6YFBaDE5EBs4J0" version="18.0.3" type="github">
+<mxfile host="app.diagrams.net" modified="2022-05-13T03:49:55.196Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36" etag="xf2ZxYZ2NMhzajICIbZh" version="18.0.3" type="github">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
-    <mxGraphModel dx="2370" dy="2451" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1185" dy="1810" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
@@ -10,7 +10,7 @@
         <mxCell id="gamc50u9EzoZNg_85G7x-42" value="&amp;nbsp; Pending" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;align=left;verticalAlign=top;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="390" y="620" width="150" height="280" as="geometry" />
         </mxCell>
-        <mxCell id="gamc50u9EzoZNg_85G7x-52" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="gamc50u9EzoZNg_85G7x-38" target="gamc50u9EzoZNg_85G7x-44">
+        <mxCell id="gamc50u9EzoZNg_85G7x-52" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;startArrow=none;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="gamc50u9EzoZNg_85G7x-54" target="gamc50u9EzoZNg_85G7x-45">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="gamc50u9EzoZNg_85G7x-53" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="gamc50u9EzoZNg_85G7x-38" target="gamc50u9EzoZNg_85G7x-13">
@@ -420,7 +420,7 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1590" y="698" />
-              <mxPoint x="1590" y="622" />
+              <mxPoint x="1590" y="650" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -432,22 +432,31 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="gamc50u9EzoZNg_85G7x-51" value="Funds" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="gamc50u9EzoZNg_85G7x-50">
+        <mxCell id="gamc50u9EzoZNg_85G7x-51" value="Funds &lt;br&gt;deposit/withdraw" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="gamc50u9EzoZNg_85G7x-50">
           <mxGeometry x="-0.4493" y="1" relative="1" as="geometry">
-            <mxPoint x="-2" y="-17" as="offset" />
+            <mxPoint x="-2" y="-67" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="gamc50u9EzoZNg_85G7x-45" value="Relay" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
-          <mxGeometry x="1390" y="667.5" width="150" height="60" as="geometry" />
+        <mxCell id="gamc50u9EzoZNg_85G7x-45" value="Relay/Port" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1390" y="660" width="150" height="60" as="geometry" />
         </mxCell>
         <mxCell id="gamc50u9EzoZNg_85G7x-46" value="L1 Staking" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="1630" y="692.5" width="150" height="60" as="geometry" />
         </mxCell>
         <mxCell id="gamc50u9EzoZNg_85G7x-47" value="DEX Providing" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
-          <mxGeometry x="1620" y="592.5" width="150" height="60" as="geometry" />
+          <mxGeometry x="1630" y="620" width="150" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="gamc50u9EzoZNg_85G7x-48" value="&lt;p&gt;Maybe need to send funds,&amp;nbsp;&lt;span style=&quot;background-color: initial;&quot;&gt;then execute &quot;update&quot; from bot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;unless there can be a callback from L1 send (or until snip-20 IBC)&lt;/p&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
-          <mxGeometry x="1390" y="752.5" width="360" height="70" as="geometry" />
+        <mxCell id="gamc50u9EzoZNg_85G7x-48" value="&lt;p&gt;Maybe need to send funds,&amp;nbsp;&lt;span style=&quot;background-color: initial;&quot;&gt;then execute &quot;update&quot; from bot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;unless there can be a callback from L1 send (or until snip-20 IBC).&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;Relayer implementation may be needed for &quot;unbond&quot;&lt;/span&gt;&lt;/p&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1390" y="737.5" width="370" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="gamc50u9EzoZNg_85G7x-54" value="Relay/Port" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1130" y="660" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="gamc50u9EzoZNg_85G7x-55" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=none;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="gamc50u9EzoZNg_85G7x-38" target="gamc50u9EzoZNg_85G7x-54">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1080" y="690" as="sourcePoint" />
+            <mxPoint x="1370" y="690" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
