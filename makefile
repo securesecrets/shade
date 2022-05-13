@@ -35,7 +35,7 @@ compress_all: setup
 compress-snip20: setup
 	$(call opt_and_compress,snip20,snip20_reference_impl)
 
-compress-shd_staking: setup
+compress-snip20_staking: setup
 	$(call opt_and_compress,snip20_staking,spip_stkd_0)
 
 compress-%: setup
@@ -55,9 +55,9 @@ test:
 test-%:
 	(cd ${contracts_dir}/$*; cargo test)
 
-shd_staking: setup
-	(cd ${contracts_dir}/shd_staking; ${build-release})
-	@$(MAKE) $(addprefix compress-,shd_staking)
+snip20_staking: setup
+	(cd ${contracts_dir}/snip20_staking; ${build-release})
+	@$(MAKE) $(addprefix compress-,snip20_staking)
 
 setup: $(compiled_dir) $(checksum_dir)
 

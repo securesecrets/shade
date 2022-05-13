@@ -9,11 +9,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::{
-    contract_interfaces::staking::shd_staking,
-    contract_interfaces::snip20,
+    snip20_staking,
+    snip20,
 };
 use std::{env, fs};
-use shade_protocol::contract_interfaces::snip20::InitialBalance;
+use shade_protocol::snip20::InitialBalance;
 
 fn main() -> Result<()> {
     // Initialize snip20
@@ -53,14 +53,14 @@ fn main() -> Result<()> {
 
     // Initialize staker
     print_header("Initializing Staking");
-    let init_msg = shd_staking::InitMsg {
+    let init_msg = snip20_staking::InitMsg {
         name: "StakedShade".to_string(),
         admin: None,
         symbol: "STKSHD".to_string(),
         decimals: Some(8),
         share_decimals: 18,
         prng_seed: Default::default(),
-        config: Some(shd_staking::InitConfig {
+        config: Some(snip20_staking::InitConfig {
             public_total_supply: Some(true),
         }),
         unbond_time: 180,

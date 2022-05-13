@@ -1,11 +1,9 @@
 pub mod contract;
 pub mod handle;
-pub mod proposal_state;
 pub mod query;
-pub mod state;
 
 #[cfg(test)]
-mod test;
+pub mod tests;
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
