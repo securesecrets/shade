@@ -20,6 +20,10 @@ CONTRACTS = \
     oracle initializer snip20 \
 		mock_band mock_secretswap_pair mock_sienna_pair
 
+PACKAGES = \
+	  shade_protocol contract_harness cosmwasm_math_compat \
+		network_integration network_tester secretcli
+
 debug: setup
 	(cd ${contracts_dir}; ${build-debug})
 	@$(MAKE) compress_all
@@ -45,6 +49,9 @@ compress-%: setup
 $(CONTRACTS): setup
 	(cd ${contracts_dir}/$@; ${build-debug})
 	@$(MAKE) $(addprefix compress-,$(@))
+
+$(PACKAGES):
+	(cd packages/$@; cargo build)
 
 snip20: setup
 	(cd ${contracts_dir}/snip20; ${build-release})
