@@ -242,13 +242,13 @@ Get the account's pending bonds using a viewing key
 | Name         | Type       | Description                 | optional |
 |--------------|------------|-----------------------------|----------|
 | account      | HumanAddr  | Accounts address            | yes      |
-| key          | String     | Address's viewing key       | no       |
+| permit       | Permit     | User's signed permit        | no       |
 
 ##### Response
 ```json
 {
   "account": {
-    "pending_bond": "List of pending bonds Vec<PendingBond>",
+    "pending_bonds": "List of pending bonds Vec<PendingBond>",
   }
 }
 ```
