@@ -41,6 +41,7 @@ treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 adapter = []
 snip20_staking = ["utils"]
+sky = ["snip20", "utils","sienna"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
