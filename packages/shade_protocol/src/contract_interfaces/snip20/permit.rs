@@ -3,8 +3,8 @@ use query_authentication::{
     permit::{bech32_to_canonical, Permit},
     transaction::SignedTx,
 };
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 pub type Snip20Permit = Permit<Params>;
 

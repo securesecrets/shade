@@ -1,5 +1,7 @@
-use crate::impl_into_u8;
-use crate::utils::errors::{build_string, CodeType, DetailedError};
+use crate::{
+    impl_into_u8,
+    utils::errors::{build_string, CodeType, DetailedError},
+};
 use cosmwasm_std::StdError;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -68,11 +70,9 @@ impl CodeType for Error {
 const airdrop_target: &str = "airdrop";
 
 pub fn invalid_task_percentage(percentage: &str) -> StdError {
-    DetailedError::from_code(
-        airdrop_target,
-        Error::InvalidTaskPercentage,
-        vec![percentage],
-    )
+    DetailedError::from_code(airdrop_target, Error::InvalidTaskPercentage, vec![
+        percentage,
+    ])
     .to_error()
 }
 
@@ -83,20 +83,20 @@ pub fn invalid_dates(
     item_b: &str,
     item_b_amount: &str,
 ) -> StdError {
-    DetailedError::from_code(
-        airdrop_target,
-        Error::InvalidDates,
-        vec![item_a, item_a_amount, precedence, item_b, item_b_amount],
-    )
+    DetailedError::from_code(airdrop_target, Error::InvalidDates, vec![
+        item_a,
+        item_a_amount,
+        precedence,
+        item_b,
+        item_b_amount,
+    ])
     .to_error()
 }
 
 pub fn permit_contract_mismatch(contract: &str, expected: &str) -> StdError {
-    DetailedError::from_code(
-        airdrop_target,
-        Error::PermitContractMismatch,
-        vec![contract, expected],
-    )
+    DetailedError::from_code(airdrop_target, Error::PermitContractMismatch, vec![
+        contract, expected,
+    ])
     .to_error()
 }
 
@@ -149,11 +149,9 @@ pub fn invalid_partial_tree() -> StdError {
 }
 
 pub fn airdrop_not_started(start: &str, current: &str) -> StdError {
-    DetailedError::from_code(
-        airdrop_target,
-        Error::AirdropNotStarted,
-        vec![start, current],
-    )
+    DetailedError::from_code(airdrop_target, Error::AirdropNotStarted, vec![
+        start, current,
+    ])
     .to_error()
 }
 

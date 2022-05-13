@@ -1,0 +1,25 @@
+[package]
+name = "contract_harness"
+version = "0.1.0"
+authors = [
+    "Guy Garcia <guysebastiangarcia@gmail.com>",
+]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+snip20 = ["dep:snip20-reference-impl"]
+mint = ["dep:mint"]
+oracle = ["dep:oracle"]
+mock_band= ["dep:mock_band"]
+
+[dependencies]
+cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
+fadroma-ensemble = { branch = "v100", git = "https://github.com/hackbg/fadroma.git"}
+snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
+mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
+oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
+mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }

@@ -3,13 +3,18 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::batch;
-use crate::transaction_history::{RichTx, Tx};
-use crate::viewing_key::ViewingKey;
-use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult, Uint128};
+use crate::{
+    batch,
+    transaction_history::{RichTx, Tx},
+    viewing_key::ViewingKey,
+};
+use cosmwasm_math_compat::{Uint128, Uint256};
+use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult};
 use secret_toolkit::permit::Permit;
-use shade_protocol::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue};
-use shade_protocol::utils::asset::Contract;
+use shade_protocol::{
+    contract_interfaces::staking::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue},
+    utils::asset::Contract,
+};
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct InitMsg {
@@ -409,15 +414,15 @@ pub enum QueryAnswer {
     },
     TotalStaked {
         tokens: Uint128,
-        shares: Uint128,
+        shares: Uint256,
     },
     // Shares per token
     StakeRate {
-        shares: Uint128,
+        shares: Uint256,
     },
     Staked {
         tokens: Uint128,
-        shares: Uint128,
+        shares: Uint256,
         pending_rewards: Uint128,
         unbonding: Uint128,
         unbonded: Option<Uint128>,

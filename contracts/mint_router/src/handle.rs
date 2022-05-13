@@ -1,27 +1,51 @@
 use chrono::prelude::*;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HumanAddr, Querier, StdError, StdResult, Storage,
+    debug_print,
+    from_binary,
+    to_binary,
+    Api,
+    Binary,
+    CosmosMsg,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use secret_toolkit::{
     snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
     utils::Query,
 };
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    band::ReferenceData,
-    mint,
-    mint_router::{Config, HandleAnswer},
-    oracle::QueryMsg::Price,
-    snip20::{token_config_query, Snip20Asset, TokenConfig},
+    contract_interfaces::{
+        mint::{
+            mint,
+            mint_router::{Config, HandleAnswer},
+        },
+        oracles::{band::ReferenceData, oracle::QueryMsg::Price},
+        snip20::{token_config_query, Snip20Asset, TokenConfig},
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::state::{
-    asset_path_r, asset_path_w, config_r, config_w, current_assets_r, current_assets_w,
-    final_asset_r, final_asset_w, registered_asset_r, registered_asset_w, user_r, user_w,
+    asset_path_r,
+    asset_path_w,
+    config_r,
+    config_w,
+    current_assets_r,
+    current_assets_w,
+    final_asset_r,
+    final_asset_w,
+    registered_asset_r,
+    registered_asset_w,
+    user_r,
+    user_w,
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(

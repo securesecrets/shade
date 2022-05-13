@@ -1,14 +1,23 @@
 use schemars::JsonSchema;
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
-use std::convert::{TryFrom, TryInto};
-use std::fmt::{self};
-use std::ops;
-use std::str::FromStr;
-
-use crate::errors::{
-    ConversionOverflowError, DivideByZeroError, OverflowError, OverflowOperation, StdError,
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt::{self},
+    ops,
+    str::FromStr,
 };
-use crate::{Uint256, Uint64};
+
+use crate::{
+    errors::{
+        ConversionOverflowError,
+        DivideByZeroError,
+        OverflowError,
+        OverflowOperation,
+        StdError,
+    },
+    Uint256,
+    Uint64,
+};
 
 /// A thin wrapper around u128 that is using strings for JSON encoding/decoding,
 /// such that the full u128 range can be used for clients that convert JSON numbers to floats,
@@ -540,49 +549,43 @@ mod tests {
 
     #[test]
     fn uint128_to_be_bytes_works() {
-        assert_eq!(
-            Uint128::zero().to_be_bytes(),
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        );
-        assert_eq!(
-            Uint128::MAX.to_be_bytes(),
-            [
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                0xff, 0xff
-            ]
-        );
-        assert_eq!(
-            Uint128::new(1).to_be_bytes(),
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
-        );
+        assert_eq!(Uint128::zero().to_be_bytes(), [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]);
+        assert_eq!(Uint128::MAX.to_be_bytes(), [
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff
+        ]);
+        assert_eq!(Uint128::new(1).to_be_bytes(), [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+        ]);
         // Python: `[b for b in (240282366920938463463374607431768124608).to_bytes(16, "big")]`
         assert_eq!(
             Uint128::new(240282366920938463463374607431768124608).to_be_bytes(),
-            [180, 196, 179, 87, 165, 121, 59, 133, 246, 117, 221, 191, 255, 254, 172, 192]
+            [
+                180, 196, 179, 87, 165, 121, 59, 133, 246, 117, 221, 191, 255, 254, 172, 192
+            ]
         );
     }
 
     #[test]
     fn uint128_to_le_bytes_works() {
-        assert_eq!(
-            Uint128::zero().to_le_bytes(),
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        );
-        assert_eq!(
-            Uint128::MAX.to_le_bytes(),
-            [
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                0xff, 0xff
-            ]
-        );
-        assert_eq!(
-            Uint128::new(1).to_le_bytes(),
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        );
+        assert_eq!(Uint128::zero().to_le_bytes(), [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]);
+        assert_eq!(Uint128::MAX.to_le_bytes(), [
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff
+        ]);
+        assert_eq!(Uint128::new(1).to_le_bytes(), [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]);
         // Python: `[b for b in (240282366920938463463374607431768124608).to_bytes(16, "little")]`
         assert_eq!(
             Uint128::new(240282366920938463463374607431768124608).to_le_bytes(),
-            [192, 172, 254, 255, 191, 221, 117, 246, 133, 59, 121, 165, 87, 179, 196, 180]
+            [
+                192, 172, 254, 255, 191, 221, 117, 246, 133, 59, 121, 165, 87, 179, 196, 180
+            ]
         );
     }
 

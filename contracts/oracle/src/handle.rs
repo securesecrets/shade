@@ -1,19 +1,27 @@
-use crate::state::{config_r, config_w, index_w, index_r, dex_pairs_r, dex_pairs_w };
+use crate::state::{config_r, config_w, dex_pairs_r, dex_pairs_w, index_r, index_w};
 use cosmwasm_std::{
-    to_binary, Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage,
+    to_binary,
+    Api,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use secret_toolkit::{
     snip20::{token_info_query, TokenInfo},
     utils::Query,
 };
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    oracle::{HandleAnswer, IndexElement},
-    snip20::Snip20Asset,
-    secretswap,
-    sienna,
-    dex,
+    contract_interfaces::{
+        dex::{dex, secretswap, sienna},
+        oracles::oracle::{HandleAnswer, IndexElement},
+        snip20::Snip20Asset,
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
 pub fn register_pair<S: Storage, A: Api, Q: Querier>(
@@ -21,7 +29,6 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
     env: Env,
     pair: Contract,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
@@ -31,7 +38,6 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
     let mut token_data: Option<(Contract, TokenInfo)> = None;
 
     if secretswap::is_pair(deps, pair.clone())? {
-
         let td = fetch_token_paired_to_sscrt_on_sswap(deps, config.sscrt.address, &pair.clone())?;
         token_data = Some(td.clone());
 
@@ -44,10 +50,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
             },
             dex: dex::Dex::SecretSwap,
         });
-
-    }
-    else if sienna::is_pair(deps, pair.clone())? {
-
+    } else if sienna::is_pair(deps, pair.clone())? {
         let td = fetch_token_paired_to_sscrt_on_sienna(deps, config.sscrt.address, &pair)?;
         token_data = Some(td.clone());
 
@@ -62,28 +65,21 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
         });
     }
 
-
     if let Some(tp) = trading_pair {
         if let Some(td) = token_data {
-
             // If symbol would override an index
             if let Some(_) = index_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
-                return Err(StdError::generic_err("Symbol already registered as an index"));
+                return Err(StdError::generic_err(
+                    "Symbol already registered as an index",
+                ));
             }
 
             if let Some(mut pairs) = dex_pairs_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
                 //TODO: Check pair already registered
                 pairs.push(tp.clone());
-                dex_pairs_w(&mut deps.storage).save(
-                    td.1.symbol.as_bytes(), 
-                    &pairs
-                )?;
-            }
-            else {
-                dex_pairs_w(&mut deps.storage).save(
-                    td.1.symbol.as_bytes(), 
-                    &vec![tp.clone()]
-                )?;
+                dex_pairs_w(&mut deps.storage).save(td.1.symbol.as_bytes(), &pairs)?;
+            } else {
+                dex_pairs_w(&mut deps.storage).save(td.1.symbol.as_bytes(), &vec![tp.clone()])?;
             }
 
             return Ok(HandleResponse {
@@ -108,17 +104,18 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
     symbol: String,
     pair: Contract,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
     if let Some(mut pair_list) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
-
-        if let Some(i) = pair_list.iter().position(|p| p.contract.address == pair.address) {
+        if let Some(i) = pair_list
+            .iter()
+            .position(|p| p.contract.address == pair.address)
+        {
             pair_list.remove(i);
-            
+
             dex_pairs_w(&mut deps.storage).save(symbol.as_bytes(), &pair_list)?;
 
             return Ok(HandleResponse {
@@ -143,10 +140,12 @@ fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
     sscrt_addr: HumanAddr,
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
-
     // Query for snip20's in the pair
-    let response: secretswap::PairResponse =
-        secretswap::PairQuery::Pair {}.query(&deps.querier, pair.code_hash.clone(), pair.address.clone())?;
+    let response: secretswap::PairResponse = secretswap::PairQuery::Pair {}.query(
+        &deps.querier,
+        pair.code_hash.clone(),
+        pair.address.clone(),
+    )?;
 
     let mut token_contract = Contract {
         address: response.asset_infos[0].token.contract_addr.clone(),
@@ -184,41 +183,51 @@ fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
     // Query for snip20's in the pair
-    let response: sienna::PairInfoResponse =
-        (sienna::PairQuery::PairInfo).query(
-            &deps.querier, 
-            pair.code_hash.clone(), 
-            pair.address.clone()
+    let response: sienna::PairInfoResponse = (sienna::PairQuery::PairInfo).query(
+        &deps.querier,
+        pair.code_hash.clone(),
+        pair.address.clone(),
     )?;
 
     let mut token_contract = match response.pair_info.pair.token_0 {
-        sienna::TokenType::CustomToken { contract_addr, token_code_hash } => Contract {
+        sienna::TokenType::CustomToken {
+            contract_addr,
+            token_code_hash,
+        } => Contract {
             address: contract_addr,
             code_hash: token_code_hash,
         },
         sienna::TokenType::NativeToken { denom } => {
-            return Err(StdError::generic_err("Sienna Native Token pairs not supported"));
+            return Err(StdError::generic_err(
+                "Sienna Native Token pairs not supported",
+            ));
         }
     };
 
     // if thats sscrt, switch it
     if token_contract.address == sscrt_addr {
         token_contract = match response.pair_info.pair.token_1 {
-            sienna::TokenType::CustomToken { contract_addr, token_code_hash } => Contract {
+            sienna::TokenType::CustomToken {
+                contract_addr,
+                token_code_hash,
+            } => Contract {
                 address: contract_addr,
                 code_hash: token_code_hash,
             },
             sienna::TokenType::NativeToken { denom: _ } => {
-                return Err(StdError::generic_err("Sienna Native Token pairs not supported"));
+                return Err(StdError::generic_err(
+                    "Sienna Native Token pairs not supported",
+                ));
             }
         };
-
-
     }
     // if its not, make sure other is sscrt
     else {
         match response.pair_info.pair.token_1 {
-            sienna::TokenType::CustomToken { contract_addr, token_code_hash } => {
+            sienna::TokenType::CustomToken {
+                contract_addr,
+                token_code_hash,
+            } => {
                 if contract_addr != sscrt_addr {
                     // if we get here, neither the first or second tokens were sscrt
                     return Err(StdError::NotFound {
@@ -226,9 +235,11 @@ fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
                         backtrace: None,
                     });
                 }
-            },
+            }
             sienna::TokenType::NativeToken { denom: _ } => {
-                return Err(StdError::generic_err("Sienna Native Token pairs not supported"));
+                return Err(StdError::generic_err(
+                    "Sienna Native Token pairs not supported",
+                ));
             }
         }
     }
@@ -256,9 +267,10 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
 
     if let Some(pairs) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
         if pairs.len() > 0 {
-            return Err(StdError::generic_err("Symbol collides with an existing Dex pair"));
+            return Err(StdError::generic_err(
+                "Symbol collides with an existing Dex pair",
+            ));
         }
-        
     }
 
     index_w(&mut deps.storage).save(symbol.as_bytes(), &basket)?;

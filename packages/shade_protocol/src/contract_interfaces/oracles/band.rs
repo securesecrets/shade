@@ -1,5 +1,5 @@
 use crate::utils::asset::Contract;
-use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128,};
+use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage, Uint128};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{InitCallback, Query};
 use serde::{Deserialize, Serialize};

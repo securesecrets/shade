@@ -1,11 +1,15 @@
 use schemars::JsonSchema;
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
-use std::convert::{TryFrom, TryInto};
-use std::fmt::{self};
-use std::ops;
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt::{self},
+    ops,
+};
 
-use crate::errors::{DivideByZeroError, OverflowError, OverflowOperation, StdError};
-use crate::Uint128;
+use crate::{
+    errors::{DivideByZeroError, OverflowError, OverflowOperation, StdError},
+    Uint128,
+};
 
 /// A thin wrapper around u64 that is using strings for JSON encoding/decoding,
 /// such that the full u64 range can be used for clients that convert JSON numbers to floats,
@@ -420,31 +424,27 @@ mod tests {
     #[test]
     fn uint64_to_be_bytes_works() {
         assert_eq!(Uint64::zero().to_be_bytes(), [0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(
-            Uint64::MAX.to_be_bytes(),
-            [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]
-        );
+        assert_eq!(Uint64::MAX.to_be_bytes(), [
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+        ]);
         assert_eq!(Uint64::new(1).to_be_bytes(), [0, 0, 0, 0, 0, 0, 0, 1]);
         // Python: `[b for b in (63374607431768124608).to_bytes(8, "big")]`
-        assert_eq!(
-            Uint64::new(874607431768124608).to_be_bytes(),
-            [12, 35, 58, 211, 72, 116, 172, 192]
-        );
+        assert_eq!(Uint64::new(874607431768124608).to_be_bytes(), [
+            12, 35, 58, 211, 72, 116, 172, 192
+        ]);
     }
 
     #[test]
     fn uint64_to_le_bytes_works() {
         assert_eq!(Uint64::zero().to_le_bytes(), [0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(
-            Uint64::MAX.to_le_bytes(),
-            [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]
-        );
+        assert_eq!(Uint64::MAX.to_le_bytes(), [
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+        ]);
         assert_eq!(Uint64::new(1).to_le_bytes(), [1, 0, 0, 0, 0, 0, 0, 0]);
         // Python: `[b for b in (240282366920938463463374607431768124608).to_bytes(16, "little")]`
-        assert_eq!(
-            Uint64::new(874607431768124608).to_le_bytes(),
-            [192, 172, 116, 72, 211, 58, 35, 12]
-        );
+        assert_eq!(Uint64::new(874607431768124608).to_le_bytes(), [
+            192, 172, 116, 72, 211, 58, 35, 12
+        ]);
     }
 
     #[test]

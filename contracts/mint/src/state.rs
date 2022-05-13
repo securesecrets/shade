@@ -1,12 +1,20 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::Storage;
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
     Singleton,
 };
 use shade_protocol::{
-    mint::{Config, SupportedAsset},
-    snip20::Snip20Asset,
+    contract_interfaces::{
+        mint::mint::{Config, SupportedAsset},
+        snip20::Snip20Asset,
+    },
     utils::asset::Contract,
 };
 

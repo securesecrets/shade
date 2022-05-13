@@ -1,12 +1,7 @@
-use crate::{
-    adapter,
-    utils::{
-        asset::Contract, 
-        generic_response::ResponseStatus
-    },
-};
+use crate::utils::{asset::Contract, generic_response::ResponseStatus};
 use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
 
+use crate::contract_interfaces::dao::adapter;
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
