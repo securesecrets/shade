@@ -98,6 +98,11 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                     amount: Uint128::zero(),
                 }
             ),
+            adapter::SubQueryMsg::Reserves { asset } => to_binary(
+                &adapter::QueryAnswer::Reserves {
+                    amount: Uint128::zero(),
+                }
+            ),
         },
     }
 }

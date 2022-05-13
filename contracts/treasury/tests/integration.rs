@@ -7,6 +7,7 @@ use cosmwasm_std::{
 };
 
 use shade_protocol::{
+    treasury, treasury_manager, scrt_staking,
     mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
     utils::{
         asset::Contract,
@@ -68,7 +69,7 @@ fn single_asset_portion_full_dao_integration(
 
     let treasury = ensemble.instantiate(
         reg_treasury.id,
-        &shade_protocol::treasury::InitMsg {
+        &treasury::InitMsg {
             admin: Some(HumanAddr("admin".into())),
             viewing_key: "viewing_key".to_string(),
         },
@@ -83,7 +84,7 @@ fn single_asset_portion_full_dao_integration(
 
     let manager = ensemble.instantiate(
         reg_manager.id,
-        &shade_protocol::treasury_manager::InitMsg {
+        &treasury_manager::InitMsg {
             admin: Some(HumanAddr("admin".into())),
             treasury: HumanAddr("treasury".into()),
             viewing_key: "viewing_key".to_string(),
@@ -99,7 +100,7 @@ fn single_asset_portion_full_dao_integration(
 
     let scrt_staking = ensemble.instantiate(
         reg_scrt_staking.id,
-        &shade_protocol::scrt_staking::InitMsg {
+        &scrt_staking::InitMsg {
             admin: Some(HumanAddr("admin".into())),
             treasury: HumanAddr("treasury".into()),
             sscrt: Contract {
@@ -121,7 +122,7 @@ fn single_asset_portion_full_dao_integration(
 
     // Register treasury assets
     ensemble.execute(
-        &shade_protocol::treasury::HandleMsg::RegisterAsset {
+        &treasury::HandleMsg::RegisterAsset {
             contract: Contract {
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
@@ -137,7 +138,7 @@ fn single_asset_portion_full_dao_integration(
     
     // Register manager assets
     ensemble.execute(
-        &shade_protocol::treasury_manager::HandleMsg::RegisterAsset {
+        &treasury_manager::HandleMsg::RegisterAsset {
             contract: Contract {
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
@@ -151,7 +152,7 @@ fn single_asset_portion_full_dao_integration(
 
     // Register manager -> treasury
     ensemble.execute(
-        &shade_protocol::treasury::HandleMsg::RegisterManager {
+        &treasury::HandleMsg::RegisterManager {
             contract: Contract {
                 address: manager.address.clone(),
                 code_hash: manager.code_hash.clone(),
@@ -165,31 +166,31 @@ fn single_asset_portion_full_dao_integration(
 
     // Allocate scrt_staking -> manager
     ensemble.execute(
-        &shade_protocol::treasury_manager::HandleMsg::Allocate {
+        &treasury_manager::HandleMsg::Allocate {
             asset: token.address.clone(),
-            allocation: Allocation {
-                nick: "sSCRT Staking".to_string(),
+            allocation: treasury_manager::Allocation {
+                nick: Some("sSCRT Staking".to_string()),
                 contract: Contract {
                     address: scrt_staking.address.clone(),
                     code_hash: scrt_staking.code_hash.clone(),
-                }
-                alloc_type: shade_protocol::treasury::AllocationType::Portion,
+                },
+                alloc_type: treasury_manager::AllocationType::Portion,
                 amount: allocation,
             },
         },
         MockEnv::new(
             "admin", 
-            treasury_manager.clone(),
+            manager.clone(),
         ),
     ).unwrap();
 
     // treasury allowance to manager
     ensemble.execute(
-        &shade_protocol::treasury::HandleMsg::Allowance {
+        &treasury::HandleMsg::Allowance {
             asset: token.address.clone(),
-            allowance: shade_protocol::treasury::Allowance::Portion {
+            allowance: treasury::Allowance::Portion {
                 //nick: "Mid-Stakes-Manager".to_string(),
-                spender: treasury_manager.address.clone(),
+                spender: manager.address.clone(),
                 portion: allowance,
                 // to be removed
                 last_refresh: "".to_string(),
@@ -199,7 +200,7 @@ fn single_asset_portion_full_dao_integration(
         },
         MockEnv::new(
             "admin", 
-            treasury_manager.clone(),
+            treasury.clone(),
         ),
     ).unwrap();
 
@@ -233,8 +234,8 @@ macro_rules! single_asset_portion_full_dao_tests {
 single_asset_portion_full_dao_tests! {
     single_asset_portion_full_dao_0: (
         Uint128(100), // deposit 
-        Uint128(90 * 10u128.pow(18)), // allow 90%
-        Uint128(100 * 10u128.pow(18)), // allocate 100%
+        Uint128(9 * 10u128.pow(17)), // allow 90%
+        Uint128(1 * 10u128.pow(18)), // allocate 100%
         Uint128(10), // treasury 10
         Uint128(0), // manager 0
         Uint128(90), // scrt_staking 90

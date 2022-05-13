@@ -31,10 +31,13 @@ use fadroma::{
        ContractHarness, ContractEnsemble,
     },
 };
-use contract_harness::harness::mint::Mint;
-use contract_harness::harness::mock_band::MockBand;
-use contract_harness::harness::oracle::Oracle;
-use contract_harness::harness::snip20::Snip20;
+
+use contract_harness::harness::{
+    mint::Mint,
+    mock_band::MockBand,
+    oracle::Oracle,
+    snip20::Snip20,
+};
 
 fn test_ensemble(offer_price: Uint128, offer_amount: Uint128, mint_price: Uint128, expected_amount: Uint128) {
 

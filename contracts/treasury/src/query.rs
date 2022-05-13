@@ -60,6 +60,49 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     }
 }
 
+pub fn reserves<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: &HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    //TODO: restrict to admin?
+
+    let managers = managers_r(&deps.storage).load()?;
+
+    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        Some(a) => {
+            let mut reserves = balance_query(
+                &deps.querier,
+                self_address_r(&deps.storage).load()?,
+                viewing_key_r(&deps.storage).load()?,
+                1,
+                a.contract.code_hash.clone(),
+                a.contract.address.clone(),
+            )?.amount;
+
+            for allowance in allowances_r(&deps.storage).load(&asset.as_str().as_bytes())? {
+                match allowance {
+                    treasury::Allowance::Portion { spender, .. } => {
+                        let manager = managers
+                            .clone().into_iter()
+                            .find(|m| m.contract.address == spender).unwrap();
+                        reserves += adapter::reserves_query(
+                            &deps,
+                            asset,
+                            manager.contract
+                        )?;
+                    }
+                    _ => {}
+                };
+            }
+            Ok(adapter::QueryAnswer::Reserves { amount: reserves })
+        }
+        None => Err(StdError::NotFound {
+            kind: asset.to_string(),
+            backtrace: None,
+        }),
+    }
+}
+
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,

@@ -133,3 +133,40 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
         amount: unbondable,
     })
 }
+
+pub fn reserves<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+
+    let config = config_r(&deps.storage).load()?;
+
+    if !is_supported_asset(&config, &asset) {
+        return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
+    }
+
+    let asset_contract = get_supported_asset(&config, &asset);
+
+    let unbonding = unbonding_r(&deps.storage).load(asset.as_str().as_bytes())?;
+
+    let balance = balance_query(
+        &deps.querier,
+        self_address_r(&deps.storage).load()?,
+        viewing_key_r(&deps.storage).load()?,
+        1,
+        asset_contract.code_hash.clone(),
+        asset_contract.address.clone(),
+    )?.amount;
+
+    if unbonding >= balance {
+        return Ok(adapter::QueryAnswer::Reserves {
+            amount: Uint128::zero(),
+        });
+    }
+    else {
+        return Ok(adapter::QueryAnswer::Reserves {
+            amount: (balance - unbonding)?,
+        });
+    }
+
+}
