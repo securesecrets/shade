@@ -16,7 +16,6 @@ use shade_protocol::{
 };
 
 use snip20_reference_impl;
-use oracle;
 use mock_band;
 
 use mint::{

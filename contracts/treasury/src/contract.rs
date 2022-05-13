@@ -78,7 +78,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
         QueryMsg::Allowances { asset } => to_binary(&query::allowances(deps, asset)?),
         QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, &asset, &spender)?),
-        QueryMsg::Accounts { } => to_binary(&query::accounts(&deps)?),
+        QueryMsg::AccountHolders { } => to_binary(&query::account_holders(&deps)?),
         QueryMsg::Account { holder } => to_binary(&query::account(&deps, holder)?),
 
         QueryMsg::Adapter(adapter) => match adapter {

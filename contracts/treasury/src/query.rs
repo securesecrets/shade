@@ -210,7 +210,7 @@ pub fn allowances<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn accounts<S: Storage, A: Api, Q: Querier>(
+pub fn account_holders<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Accounts {

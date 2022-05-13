@@ -41,3 +41,4 @@ chrono = "0.4.19"
 fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git" }
 contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "mint", "oracle", "mock_band", "snip20", ] }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20" }
+mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }

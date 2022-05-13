@@ -171,7 +171,7 @@ pub enum QueryMsg {
         asset: HumanAddr,
         spender: HumanAddr,
     },
-    Accounts { },
+    AccountHolders { },
     Account { 
         holder: HumanAddr,
     },
