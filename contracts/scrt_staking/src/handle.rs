@@ -1,11 +1,12 @@
 use cosmwasm_std::{
+    debug_print,
+    to_binary,
     Api,
     BalanceResponse,
     BankQuery,
     Binary,
     Coin,
     CosmosMsg,
-    debug_print,
     Env,
     Extern,
     HandleResponse,
@@ -15,7 +16,6 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
-    to_binary,
     Uint128,
     Validator,
 };
@@ -23,15 +23,17 @@ use cosmwasm_std::{
 use secret_toolkit::snip20::{deposit_msg, redeem_msg};
 
 use shade_protocol::{
-    contract_interfaces::dao::treasury::Flag,
+    contract_interfaces::dao::{
+        adapter,
+        scrt_staking::{Config, HandleAnswer, ValidatorBounds},
+        treasury::Flag,
+    },
     utils::{
-        asset::{Contract, scrt_balance},
+        asset::{scrt_balance, Contract},
         generic_response::ResponseStatus,
         wrap::{unwrap, wrap_and_send},
     },
 };
-use shade_protocol::contract_interfaces::dao::adapter;
-use shade_protocol::contract_interfaces::dao::scrt_staking::{Config, HandleAnswer, ValidatorBounds};
 
 use crate::{
     query,

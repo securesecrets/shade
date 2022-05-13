@@ -15,9 +15,10 @@ use cosmwasm_std::{
     Uint128,
 };
 
-use shade_protocol::utils::asset::scrt_balance;
-use shade_protocol::contract_interfaces::dao::adapter;
-use shade_protocol::contract_interfaces::dao::scrt_staking::QueryAnswer;
+use shade_protocol::{
+    contract_interfaces::dao::{adapter, scrt_staking::QueryAnswer},
+    utils::asset::scrt_balance,
+};
 
 use crate::state::{config_r, self_address_r, unbonding_r};
 

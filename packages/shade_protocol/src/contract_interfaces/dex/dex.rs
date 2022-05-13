@@ -77,14 +77,13 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
                     .u128(),
                 ));
                 pool_sizes.push(Uint512::from(sienna::pool_cp(&deps, pair)?.u128()));
-            }
-            /*
-            ShadeSwap => {
-                prices.push(shadeswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
-                pool_sizes.push(shadeswap::pool_size(&deps, pair)?);
-                return Err(StdErr::generic_err("ShadeSwap Unavailable"));
-            },
-            */
+            } /*
+              ShadeSwap => {
+                  prices.push(shadeswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
+                  pool_sizes.push(shadeswap::pool_size(&deps, pair)?);
+                  return Err(StdErr::generic_err("ShadeSwap Unavailable"));
+              },
+              */
         }
     }
 

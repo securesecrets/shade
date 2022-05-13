@@ -1,18 +1,18 @@
 use cosmwasm_std::{
     self,
+    from_binary,
+    to_binary,
     Api,
     Binary,
     CosmosMsg,
     Env,
     Extern,
-    from_binary,
     HandleResponse,
     HumanAddr,
     Querier,
     StdError,
     StdResult,
     Storage,
-    to_binary,
     Uint128,
 };
 use secret_toolkit::{
@@ -29,24 +29,22 @@ use secret_toolkit::{
 
 use shade_protocol::{
     contract_interfaces::{
-        snip20,
-        dao::{
-            treasury::{
-                Account,
-                Allowance,
-                Balance,
-                Config,
-                Flag,
-                HandleAnswer,
-                Manager,
-                QueryAnswer,
-                Status,
-            },
+        dao::treasury::{
+            Account,
+            Allowance,
+            Balance,
+            Config,
+            Flag,
+            HandleAnswer,
+            Manager,
+            QueryAnswer,
+            Status,
         },
+        snip20,
     },
     utils::{
         asset::Contract,
-        cycle::{Cycle, exceeds_cycle, parse_utc_datetime},
+        cycle::{exceeds_cycle, parse_utc_datetime, Cycle},
         generic_response::ResponseStatus,
     },
 };

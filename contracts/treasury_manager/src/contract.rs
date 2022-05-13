@@ -1,7 +1,8 @@
 use cosmwasm_std::{
+    debug_print,
+    to_binary,
     Api,
     Binary,
-    debug_print,
     Env,
     Extern,
     HandleResponse,
@@ -10,11 +11,13 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
-    to_binary,
 };
 
-use shade_protocol::contract_interfaces::dao::{
-    treasury_manager::{Config, HandleMsg, InitMsg, QueryMsg},
+use shade_protocol::contract_interfaces::dao::treasury_manager::{
+    Config,
+    HandleMsg,
+    InitMsg,
+    QueryMsg,
 };
 
 use crate::{

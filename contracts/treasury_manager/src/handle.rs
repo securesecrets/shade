@@ -1,18 +1,18 @@
 use cosmwasm_std::{
     self,
+    from_binary,
+    to_binary,
     Api,
     Binary,
     CosmosMsg,
     Env,
     Extern,
-    from_binary,
     HandleResponse,
     HumanAddr,
     Querier,
     StdError,
     StdResult,
     Storage,
-    to_binary,
     Uint128,
     WasmMsg,
 };
@@ -33,17 +33,15 @@ use secret_toolkit::{
 
 use shade_protocol::{
     contract_interfaces::{
-        snip20,
-        dao::{
-            treasury_manager::{
-                Allocation,
-                AllocationMeta,
-                AllocationType,
-                Config,
-                HandleAnswer,
-                QueryAnswer,
-            },
+        dao::treasury_manager::{
+            Allocation,
+            AllocationMeta,
+            AllocationType,
+            Config,
+            HandleAnswer,
+            QueryAnswer,
         },
+        snip20,
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
@@ -63,8 +61,8 @@ use crate::{
     },
 };
 use chrono::prelude::*;
-use std::convert::TryFrom;
 use shade_protocol::contract_interfaces::dao::adapter;
+use std::convert::TryFrom;
 
 /*
 pub fn receive<S: Storage, A: Api, Q: Querier>(
