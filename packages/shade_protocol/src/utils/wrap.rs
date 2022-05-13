@@ -1,26 +1,26 @@
-use cosmwasm_std::{
-    Uint128, StdResult, StdError, Binary,
-    CosmosMsg, Storage, Querier, HumanAddr,
-    Api,
-};
-use crate::{
-    utils::{
-        asset::Contract, 
-        generic_response::ResponseStatus
-    },
-};
+use crate::utils::{asset::Contract, generic_response::ResponseStatus};
 use chrono::prelude::*;
-use serde::{Deserialize, Serialize};
+use cosmwasm_std::{
+    Api,
+    Binary,
+    CosmosMsg,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
+};
 use schemars::JsonSchema;
-use std::convert::TryInto;
 use secret_toolkit::snip20::{deposit_msg, redeem_msg, send_msg};
+use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 
 pub fn wrap(
     amount: Uint128,
     token: Contract,
     //denom: Option<String>,
 ) -> StdResult<CosmosMsg> {
-
     Ok(deposit_msg(
         amount,
         None,
@@ -37,7 +37,6 @@ pub fn wrap_and_send(
     //denom: Option<String>,
     msg: Option<Binary>,
 ) -> StdResult<Vec<CosmosMsg>> {
-
     Ok(vec![
         wrap(amount, token.clone())?,
         send_msg(
@@ -49,7 +48,7 @@ pub fn wrap_and_send(
             256,
             token.code_hash.clone(),
             token.address.clone(),
-        )?
+        )?,
     ])
 }
 
@@ -58,8 +57,6 @@ pub fn unwrap(
     token: Contract,
     //denom: Option<String>,
 ) -> StdResult<CosmosMsg> {
-
-
     Ok(redeem_msg(
         amount,
         None,

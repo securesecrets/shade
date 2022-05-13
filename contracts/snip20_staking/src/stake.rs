@@ -1,24 +1,52 @@
-use crate::contract::check_if_admin;
-use crate::msg::HandleAnswer;
-use crate::msg::ResponseStatus::Success;
-use crate::state::{Balances, Config, ReadonlyConfig};
-use crate::state_staking::{
-    DailyUnbondingQueue, TotalShares, TotalTokens, TotalUnbonding, UnbondingQueue,
-    UnsentStakedTokens, UserCooldown, UserShares,
+use crate::{
+    contract::check_if_admin,
+    msg::{HandleAnswer, ResponseStatus::Success},
+    state::{Balances, Config, ReadonlyConfig},
+    state_staking::{
+        DailyUnbondingQueue,
+        TotalShares,
+        TotalTokens,
+        TotalUnbonding,
+        UnbondingQueue,
+        UnsentStakedTokens,
+        UserCooldown,
+        UserShares,
+    },
+    transaction_history::{
+        store_add_reward,
+        store_claim_reward,
+        store_claim_unbond,
+        store_fund_unbond,
+        store_stake,
+        store_unbond,
+    },
 };
-use crate::transaction_history::{
-    store_add_reward, store_claim_reward, store_claim_unbond, store_fund_unbond, store_stake,
-    store_unbond,
-};
+use cosmwasm_math_compat::{Uint128, Uint256};
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, CanonicalAddr, Decimal, Env, Extern,
-    HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
+    from_binary,
+    to_binary,
+    Api,
+    Binary,
+    CanonicalAddr,
+    Decimal,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
-use ethnum::u256;
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::snip20_staking::stake::{DailyUnbonding, StakeConfig, Unbonding, VecQueue};
-use shade_protocol::snip20_staking::ReceiveType;
-use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
+use shade_protocol::{
+    contract_interfaces::staking::snip20_staking::{
+        stake::{DailyUnbonding, StakeConfig, Unbonding, VecQueue},
+        ReceiveType,
+    },
+    utils::storage::default::{BucketStorage, SingletonStorage},
+};
+use std::convert::TryInto;
 
 //TODO: set errors
 
@@ -46,11 +74,11 @@ pub fn try_update_stake_config<S: Storage, A: Api, Q: Querier>(
     } else if let Some(treasury) = treasury {
         stake_config.treasury = Some(treasury.clone());
 
-        let unsent_tokens = UnsentStakedTokens::load(&deps.storage)?;
-        if unsent_tokens.0 != Uint128::zero() {
+        let unsent_tokens = UnsentStakedTokens::load(&deps.storage)?.0;
+        if unsent_tokens != Uint128::zero() {
             messages.push(send_msg(
                 treasury,
-                unsent_tokens.0,
+                unsent_tokens.into(),
                 None,
                 None,
                 None,
@@ -90,16 +118,16 @@ fn add_balance<S: Storage>(
     stake_config: &StakeConfig,
     sender: &HumanAddr,
     sender_canon: &CanonicalAddr,
-    amount: u128,
+    amount: Uint128,
 ) -> StdResult<()> {
     // Check if user account exists
     let mut user_shares = UserShares::may_load(storage, sender.as_str().as_bytes())?
-        .unwrap_or(UserShares(Uint128::zero()));
+        .unwrap_or(UserShares(Uint256::zero()));
 
     // Update user staked tokens
     let mut balances = Balances::from_storage(storage);
     let mut account_balance = balances.balance(sender_canon);
-    if let Some(new_balance) = account_balance.checked_add(amount) {
+    if let Some(new_balance) = account_balance.checked_add(amount.u128()) {
         account_balance = new_balance;
     } else {
         return Err(StdError::generic_err(
@@ -114,28 +142,23 @@ fn add_balance<S: Storage>(
 
     // Update total staked
     // We do this before reaching shares to get overflows out of the way
-    if let Some(total_staked) = total_tokens.0.u128().checked_add(amount) {
-        TotalTokens(Uint128(total_staked)).save(storage)?;
-    } else {
-        return Err(StdError::generic_err("Total staked tokens overflow"));
-    }
+    match total_tokens.0.checked_add(amount) {
+        Ok(total_staked) => TotalTokens(total_staked).save(storage)?,
+        Err(_) => return Err(StdError::generic_err("Total staked tokens overflow")),
+    };
+
     let supply = ReadonlyConfig::from_storage(storage).total_supply();
-    Config::from_storage(storage).set_total_supply(supply + amount);
+    Config::from_storage(storage).set_total_supply(supply + amount.u128());
 
     // Calculate shares per token supplied
-    let shares = Uint128(shares_per_token(
-        stake_config,
-        &amount,
-        &total_tokens.0.u128(),
-        &total_shares.0.u128(),
-    )?);
+    let shares = shares_per_token(stake_config, &amount, &total_tokens.0, &total_shares.0)?;
 
     // Update total shares
-    if let Some(total_added_shares) = total_shares.0.u128().checked_add(shares.u128()) {
-        total_shares = TotalShares(Uint128(total_added_shares));
-    } else {
-        return Err(StdError::generic_err("Shares overflow"));
-    }
+    match total_shares.0.checked_add(shares) {
+        Ok(total_added_shares) => total_shares = TotalShares(total_added_shares),
+        Err(_) => return Err(StdError::generic_err("Shares overflow")),
+    };
+
     total_shares.save(storage)?;
 
     // Update user's shares - this will not break as total_shares >= user_shares
@@ -151,27 +174,26 @@ fn add_balance<S: Storage>(
 fn subtract_internal_supply<S: Storage>(
     storage: &mut S,
     total_shares: &mut TotalShares,
-    shares: u128,
+    shares: Uint256,
     total_tokens: &mut TotalTokens,
-    tokens: u128,
+    tokens: Uint128,
     remove_supply: bool,
 ) -> StdResult<()> {
     // Update total shares
-    if let Some(total) = total_shares.0.u128().checked_sub(shares) {
-        TotalShares(Uint128(total)).save(storage)?;
-    } else {
-        return Err(StdError::generic_err("Insufficient shares"));
-    }
+    match total_shares.0.checked_sub(shares) {
+        Ok(total) => TotalShares(total).save(storage)?,
+        Err(_) => return Err(StdError::generic_err("Insufficient shares")),
+    };
 
     // Update total staked
-    if let Some(total) = total_tokens.0.u128().checked_sub(tokens) {
-        TotalTokens(Uint128(total)).save(storage)?;
-    } else {
-        return Err(StdError::generic_err("Insufficient tokens"));
-    }
+    match total_tokens.0.checked_sub(tokens) {
+        Ok(total) => TotalTokens(total).save(storage)?,
+        Err(_) => return Err(StdError::generic_err("Insufficient tokens")),
+    };
+
     if remove_supply {
         let supply = ReadonlyConfig::from_storage(storage).total_supply();
-        if let Some(total) = supply.checked_sub(tokens) {
+        if let Some(total) = supply.checked_sub(tokens.u128()) {
             Config::from_storage(storage).set_total_supply(total);
         } else {
             return Err(StdError::generic_err("Insufficient shares"));
@@ -189,7 +211,7 @@ fn remove_balance<S: Storage>(
     stake_config: &StakeConfig,
     account: &HumanAddr,
     account_cannon: &CanonicalAddr,
-    amount: u128,
+    amount: Uint128,
     time: u64,
 ) -> StdResult<()> {
     // Return insufficient funds
@@ -201,18 +223,12 @@ fn remove_balance<S: Storage>(
     let mut total_tokens = TotalTokens::load(storage)?;
 
     // Calculate shares per token supplied
-    let shares = shares_per_token(
-        stake_config,
-        &amount,
-        &total_tokens.0.u128(),
-        &total_shares.0.u128(),
-    )?;
+    let shares = shares_per_token(stake_config, &amount, &total_tokens.0, &total_shares.0)?;
 
     // Update user's shares
-    if let Some(user_shares) = user_shares.0.u128().checked_sub(shares) {
-        UserShares(Uint128(user_shares)).save(storage, account.as_str().as_bytes())?;
-    } else {
-        return Err(StdError::generic_err("Insufficient shares"));
+    match user_shares.0.checked_sub(shares) {
+        Ok(user_shares) => UserShares(user_shares).save(storage, account.as_str().as_bytes())?,
+        Err(_) => return Err(StdError::generic_err("Insufficient shares")),
     }
 
     subtract_internal_supply(
@@ -229,7 +245,7 @@ fn remove_balance<S: Storage>(
     let mut account_balance = balances.balance(account_cannon);
     let account_tokens = account_balance;
 
-    if let Some(new_balance) = account_balance.checked_sub(amount) {
+    if let Some(new_balance) = account_balance.checked_sub(amount.u128()) {
         account_balance = new_balance;
     } else {
         return Err(StdError::generic_err(
@@ -237,13 +253,7 @@ fn remove_balance<S: Storage>(
         ));
     }
     balances.set_account_balance(account_cannon, account_balance);
-    remove_from_cooldown(
-        storage,
-        account,
-        Uint128(account_tokens),
-        Uint128(amount),
-        time,
-    )?;
+    remove_from_cooldown(storage, account, Uint128::new(account_tokens), amount, time)?;
     Ok(())
 }
 
@@ -252,9 +262,8 @@ pub fn claim_rewards<S: Storage>(
     stake_config: &StakeConfig,
     sender: &HumanAddr,
     sender_canon: &CanonicalAddr,
-) -> StdResult<u128> {
-    let user_shares =
-        UserShares::may_load(storage, sender.as_str().as_bytes())?.expect("No funds");
+) -> StdResult<Uint128> {
+    let user_shares = UserShares::may_load(storage, sender.as_str().as_bytes())?.expect("No funds");
 
     let user_balance = Balances::from_storage(storage).balance(sender_canon);
 
@@ -264,22 +273,21 @@ pub fn claim_rewards<S: Storage>(
 
     let (reward_token, reward_shares) = calculate_rewards(
         stake_config,
-        user_balance,
-        user_shares.0.u128(),
-        total_tokens.0.u128(),
-        total_shares.0.u128(),
+        Uint128::new(user_balance),
+        user_shares.0,
+        total_tokens.0,
+        total_shares.0,
     )?;
 
     // Do nothing if no rewards are gonna be claimed
-    if reward_token == 0 {
+    if reward_token.is_zero() {
         return Ok(reward_token);
     }
 
-    if let Some(user_shares) = user_shares.0.u128().checked_sub(reward_shares) {
-        UserShares(Uint128(user_shares)).save(storage, sender.as_str().as_bytes())?;
-    } else {
-        return Err(StdError::generic_err("Insufficient shares"));
-    }
+    match user_shares.0.checked_sub(reward_shares) {
+        Ok(user_shares) => UserShares(user_shares).save(storage, sender.as_str().as_bytes())?,
+        Err(_) => return Err(StdError::generic_err("Insufficient shares")),
+    };
 
     subtract_internal_supply(
         storage,
@@ -295,56 +303,56 @@ pub fn claim_rewards<S: Storage>(
 
 pub fn shares_per_token(
     config: &StakeConfig,
-    token_amount: &u128,
-    total_tokens: &u128,
-    total_shares: &u128,
-) -> StdResult<u128> {
-    let t_tokens = u256::from(*total_tokens);
-    let t_shares = u256::from(*total_shares);
-    let tokens = u256::from(*token_amount);
+    token_amount: &Uint128,
+    total_tokens: &Uint128,
+    total_shares: &Uint256,
+) -> StdResult<Uint256> {
+    let t_tokens = Uint256::from(*total_tokens);
+    let t_shares = *total_shares;
+    let tokens = Uint256::from(*token_amount);
 
-    if *total_tokens == 0 && *total_shares == 0 {
+    if total_tokens.is_zero() && total_shares.is_zero() {
         // Used to normalize the staked token to the stake token
-        let token_multiplier = u256::from(10u16).pow(config.decimal_difference.into());
-        if let Some(shares) = tokens.checked_mul(token_multiplier) {
-            return Ok(shares.as_u128());
-        } else {
-            return Err(StdError::generic_err("Share calculation overflow"));
-        }
+        let token_multiplier =
+            Uint256::from(10u128).checked_pow(config.decimal_difference.into())?;
+
+        return match tokens.checked_mul(token_multiplier) {
+            Ok(shares) => Ok(shares),
+            Err(_) => Err(StdError::generic_err("Share calculation overflow")),
+        };
     }
 
-    if let Some(shares) = tokens.checked_mul(t_shares) {
-        return Ok((shares / t_tokens).as_u128());
-    } else {
-        return Err(StdError::generic_err("Share calculation overflow"));
-    }
+    return match tokens.checked_mul(t_shares) {
+        Ok(shares) => Ok(shares.checked_div(t_tokens)?),
+        Err(_) => Err(StdError::generic_err("Share calculation overflow")),
+    };
 }
 
 pub fn tokens_per_share(
     config: &StakeConfig,
-    shares_amount: &u128,
-    total_tokens: &u128,
-    total_shares: &u128,
-) -> StdResult<u128> {
-    let t_tokens = u256::from(*total_tokens);
-    let t_shares = u256::from(*total_shares);
-    let shares = u256::from(*shares_amount);
+    shares_amount: &Uint256,
+    total_tokens: &Uint128,
+    total_shares: &Uint256,
+) -> StdResult<Uint128> {
+    let t_tokens = Uint256::from(*total_tokens);
+    let t_shares = *total_shares;
+    let shares = *shares_amount;
 
-    if *total_tokens == 0 && *total_shares == 0 {
+    if total_tokens.is_zero() && total_shares.is_zero() {
         // Used to normalize the staked token to the stake tokes
-        let token_multiplier = u256::from(10u16).pow(config.decimal_difference.into());
-        if let Some(tokens) = shares.checked_div(token_multiplier) {
-            return Ok(tokens.as_u128());
-        } else {
-            return Err(StdError::generic_err("Token calculation overflow"));
-        }
+        let token_multiplier =
+            Uint256::from(10u128).checked_pow(config.decimal_difference.try_into().unwrap())?;
+
+        return match shares.checked_div(token_multiplier) {
+            Ok(tokens) => Ok(tokens.try_into()?),
+            Err(_) => Err(StdError::generic_err("Token calculation overflow")),
+        };
     }
 
-    if let Some(tokens) = shares.checked_mul(t_tokens) {
-        return Ok((tokens / t_shares).as_u128());
-    } else {
-        return Err(StdError::generic_err("Token calculation overflow"));
-    }
+    return match shares.checked_mul(t_tokens) {
+        Ok(tokens) => Ok(tokens.checked_div(t_shares)?.try_into()?),
+        Err(_) => Err(StdError::generic_err("Token calculation overflow")),
+    };
 }
 
 ///
@@ -352,12 +360,13 @@ pub fn tokens_per_share(
 ///
 pub fn calculate_rewards(
     config: &StakeConfig,
-    tokens: u128,
-    shares: u128,
-    total_tokens: u128,
-    total_shares: u128,
-) -> StdResult<(u128, u128)> {
-    let token_reward = tokens_per_share(config, &shares, &total_tokens, &total_shares)? - tokens;
+    tokens: Uint128,
+    shares: Uint256,
+    total_tokens: Uint128,
+    total_shares: Uint256,
+) -> StdResult<(Uint128, Uint256)> {
+    let token_reward = tokens_per_share(config, &shares, &total_tokens, &total_shares)?
+        .checked_sub(tokens.into())?;
     Ok((
         token_reward,
         shares_per_token(config, &token_reward, &total_tokens, &total_shares)?,
@@ -409,7 +418,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
                 &stake_config,
                 &target,
                 &target_canon,
-                amount.u128(),
+                amount,
             )?;
 
             // Store data
@@ -426,7 +435,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             if let Some(treasury) = stake_config.treasury {
                 messages.push(send_msg(
                     treasury,
-                    amount,
+                    amount.into(),
                     None,
                     None,
                     None,
@@ -462,10 +471,10 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
             let mut daily_unbond_queue = DailyUnbondingQueue::load(&deps.storage)?;
 
-            while !daily_unbond_queue.0 .0.is_empty() {
-                remaining_amount = daily_unbond_queue.0 .0[0].fund(remaining_amount);
-                if daily_unbond_queue.0 .0[0].is_funded() {
-                    daily_unbond_queue.0 .0.pop();
+            while !daily_unbond_queue.0.0.is_empty() {
+                remaining_amount = daily_unbond_queue.0.0[0].fund(remaining_amount);
+                if daily_unbond_queue.0.0[0].is_funded() {
+                    daily_unbond_queue.0.0.pop();
                 }
                 if remaining_amount == Uint128::zero() {
                     break;
@@ -478,7 +487,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             if remaining_amount > Uint128::zero() {
                 messages.push(send_msg(
                     sender,
-                    remaining_amount,
+                    remaining_amount.into(),
                     None,
                     None,
                     None,
@@ -491,7 +500,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             store_fund_unbond(
                 &mut deps.storage,
                 &sender_canon,
-                (amount - remaining_amount)?,
+                amount.checked_sub(remaining_amount)?,
                 symbol,
                 None,
                 &env.block,
@@ -521,9 +530,9 @@ pub fn remove_from_cooldown<S: Storage>(
 
     cooldown.update(time);
 
-    let unlocked_tokens = (user_tokens - cooldown.total)?;
+    let unlocked_tokens = user_tokens.checked_sub(cooldown.total)?;
     if remove_amount > unlocked_tokens {
-        cooldown.remove_cooldown((remove_amount - unlocked_tokens)?);
+        cooldown.remove_cooldown(remove_amount.checked_sub(unlocked_tokens)?);
     }
     cooldown.save(store, user.as_str().as_bytes())?;
 
@@ -549,7 +558,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         &stake_config,
         &sender,
         &sender_canon,
-        amount.u128(),
+        amount,
         env.block.time,
     )?;
 
@@ -585,10 +594,10 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         .constants()?
         .symbol;
     let mut messages = vec![];
-    if claim != 0 {
+    if !claim.is_zero() {
         messages.push(send_msg(
             sender.clone(),
-            Uint128(claim),
+            claim.into(),
             None,
             None,
             None,
@@ -600,7 +609,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         store_claim_reward(
             &mut deps.storage,
             &sender_canon,
-            Uint128(claim),
+            claim,
             symbol.clone(),
             None,
             &env.block,
@@ -642,16 +651,16 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
 
     let mut total = Uint128::zero();
     // Iterate over the sorted queue
-    while !unbond_queue.0 .0.is_empty() {
+    while !unbond_queue.0.0.is_empty() {
         // Since the queue is sorted, the moment we find a date above the current then we assume
         // that no other item in the queue is eligible
-        if unbond_queue.0 .0[0].release <= env.block.time {
+        if unbond_queue.0.0[0].release <= env.block.time {
             // Daily unbond queue is also sorted, therefore as long as its next item is greater
             // than the unbond then we assume its funded
             if daily_unbond_queue.0.is_empty()
-                || round_date(unbond_queue.0 .0[0].release) < daily_unbond_queue.0[0].release
+                || round_date(unbond_queue.0.0[0].release) < daily_unbond_queue.0[0].release
             {
-                total += unbond_queue.0 .0[0].amount;
+                total += unbond_queue.0.0[0].amount;
                 unbond_queue.0.pop();
             } else {
                 break;
@@ -666,7 +675,7 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
     }
 
     unbond_queue.save(&mut deps.storage, sender.as_str().as_bytes())?;
-    total_unbonding.0 = (total_unbonding.0 - total)?;
+    total_unbonding.0 = total_unbonding.0.checked_sub(total)?;
     total_unbonding.save(&mut deps.storage)?;
 
     let symbol = ReadonlyConfig::from_storage(&deps.storage)
@@ -683,7 +692,7 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
 
     let messages = vec![send_msg(
         sender.clone(),
-        total,
+        total.into(),
         None,
         None,
         None,
@@ -710,13 +719,13 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
 
     let claim = claim_rewards(&mut deps.storage, &stake_config, sender, sender_canon)?;
 
-    if claim == 0 {
+    if claim.is_zero() {
         return Err(StdError::generic_err("Nothing to claim"));
     }
 
     let messages = vec![send_msg(
         sender.clone(),
-        Uint128(claim),
+        claim.into(),
         None,
         None,
         None,
@@ -731,7 +740,7 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
     store_claim_reward(
         &mut deps.storage,
         sender_canon,
-        Uint128(claim),
+        claim,
         symbol,
         None,
         &env.block,
@@ -757,12 +766,7 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
     let sender = &env.message.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
 
-    let claim = Uint128(claim_rewards(
-        &mut deps.storage,
-        &stake_config,
-        sender,
-        sender_canon,
-    )?);
+    let claim = claim_rewards(&mut deps.storage, &stake_config, sender, sender_canon)?;
 
     store_claim_reward(
         &mut deps.storage,
@@ -780,7 +784,7 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
         &stake_config,
         sender,
         sender_canon,
-        claim.u128(),
+        claim,
     )?;
 
     // Store data
@@ -800,7 +804,7 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
     if let Some(treasury) = stake_config.treasury {
         messages.push(send_msg(
             treasury,
-            claim,
+            claim.into(),
             None,
             None,
             None,
@@ -824,8 +828,10 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
 #[cfg(test)]
 mod tests {
     use crate::stake::{calculate_rewards, round_date, shares_per_token, tokens_per_share};
-    use shade_protocol::snip20_staking::stake::StakeConfig;
-    use shade_protocol::utils::asset::Contract;
+    use shade_protocol::{
+        contract_interfaces::staking::snip20_staking::stake::StakeConfig,
+        utils::asset::Contract,
+    };
 
     fn init_config(token_decimals: u8, shares_decimals: u8) -> StakeConfig {
         StakeConfig {
@@ -845,12 +851,12 @@ mod tests {
         let shares_decimals = 18;
         let config = init_config(token_decimals, shares_decimals);
 
-        let token_1 = 10000000 * 10u128.pow(token_decimals.into());
-        let share_1 = 10000000 * 10u128.pow(shares_decimals.into());
+        let token_1 = Uint128::new(10000000 * 10u128.pow(token_decimals.into()));
+        let share_1 = Uint256::from(10000000 * 10u128.pow(shares_decimals.into()));
 
         // Check for proper init
         assert_eq!(
-            tokens_per_share(&config, &share_1, &0, &0).unwrap(),
+            tokens_per_share(&config, &share_1, &Uint128::zero(), &Uint256::zero()).unwrap(),
             token_1
         );
 
@@ -860,15 +866,33 @@ mod tests {
             token_1
         );
         assert_eq!(
-            tokens_per_share(&config, &share_1, &(token_1 * 2), &(share_1 * 2)).unwrap(),
+            tokens_per_share(
+                &config,
+                &share_1,
+                &(token_1 * Uint128::new(2)),
+                &(share_1 * Uint256::from(2u32))
+            )
+            .unwrap(),
             token_1
         );
 
         // check that shares increase when tokens decrease
-        assert!(tokens_per_share(&config, &share_1, &(token_1 * 2), &share_1).unwrap() > token_1);
+        assert!(
+            tokens_per_share(&config, &share_1, &(token_1 * Uint128::new(2)), &share_1).unwrap()
+                > token_1
+        );
 
         // check that shares decrease when tokens increase
-        assert!(tokens_per_share(&config, &share_1, &token_1, &(share_1 * 2)).unwrap() < token_1);
+        assert!(
+            tokens_per_share(
+                &config,
+                &share_1,
+                &token_1,
+                &(share_1 * Uint256::from(2u32))
+            )
+            .unwrap()
+                < token_1
+        );
     }
 
     #[test]
@@ -877,12 +901,12 @@ mod tests {
         let shares_decimals = 18;
         let config = init_config(token_decimals, shares_decimals);
 
-        let token_1 = 100 * 10u128.pow(token_decimals.into());
-        let share_1 = 100 * 10u128.pow(shares_decimals.into());
+        let token_1 = Uint128::new(100 * 10u128.pow(token_decimals.into()));
+        let share_1 = Uint256::from(100 * 10u128.pow(shares_decimals.into()));
 
         // Check for proper init
         assert_eq!(
-            shares_per_token(&config, &token_1, &0, &0).unwrap(),
+            shares_per_token(&config, &token_1, &Uint128::zero(), &Uint256::zero()).unwrap(),
             share_1
         );
 
@@ -892,15 +916,33 @@ mod tests {
             share_1
         );
         assert_eq!(
-            shares_per_token(&config, &token_1, &(token_1 * 2), &(share_1 * 2)).unwrap(),
+            shares_per_token(
+                &config,
+                &token_1,
+                &(token_1 * Uint128::new(2)),
+                &(share_1 * Uint256::from(2u32))
+            )
+            .unwrap(),
             share_1
         );
 
         // check that shares increase when tokens decrease
-        assert!(shares_per_token(&config, &token_1, &(token_1 * 2), &share_1).unwrap() < share_1);
+        assert!(
+            shares_per_token(&config, &token_1, &(token_1 * Uint128::new(2)), &share_1).unwrap()
+                < share_1
+        );
 
         // check that shares decrease when tokens increase
-        assert!(shares_per_token(&config, &token_1, &token_1, &(share_1 * 2)).unwrap() > share_1);
+        assert!(
+            shares_per_token(
+                &config,
+                &token_1,
+                &token_1,
+                &(share_1 * Uint256::from(2u32))
+            )
+            .unwrap()
+                > share_1
+        );
     }
 
     #[test]
@@ -917,35 +959,35 @@ mod tests {
         // Tester has 100 tokens
         // Other user has 50
 
-        let u_t = 100 * 10u128.pow(token_decimals.into());
-        let mut u_s = 100 * 10u128.pow(shares_decimals.into());
-        let mut t_t = 150 * 10u128.pow(token_decimals.into());
-        let mut t_s = 150 * 10u128.pow(shares_decimals.into());
+        let u_t = Uint128::new(100 * 10u128.pow(token_decimals.into()));
+        let mut u_s = Uint256::from(100 * 10u128.pow(shares_decimals.into()));
+        let mut t_t = Uint128::new(150 * 10u128.pow(token_decimals.into()));
+        let mut t_s = Uint256::from(150 * 10u128.pow(shares_decimals.into()));
 
         // No rewards
         let (tokens, shares) = calculate_rewards(&config, u_t, u_s, t_t, t_s).unwrap();
 
-        assert_eq!(tokens, 0);
-        assert_eq!(shares, 0);
+        assert_eq!(tokens, Uint128::zero());
+        assert_eq!(shares, Uint256::zero());
 
         // Some rewards
         // We add 300 tokens, tester should get 200 tokens
         let reward = 300 * 10u128.pow(token_decimals.into());
-        t_t += reward;
+        t_t += Uint128::new(reward);
         let (tokens, shares) = calculate_rewards(&config, u_t, u_s, t_t, t_s).unwrap();
 
-        assert_eq!(tokens, reward * 2 / 3);
+        assert_eq!(tokens.u128(), reward * 2 / 3);
         t_t = t_t - tokens;
         // We should receive 2/3 of current shares
-        assert_eq!(shares, u_s * 2 / 3);
+        assert_eq!(shares, u_s * Uint256::from(2u32) / Uint256::from(3u32));
         u_s = u_s - shares;
         t_s = t_s - shares;
 
         // After claiming
         let (tokens, shares) = calculate_rewards(&config, u_t, u_s, t_t, t_s).unwrap();
 
-        assert_eq!(tokens, 0);
-        assert_eq!(shares, 0);
+        assert_eq!(tokens, Uint128::zero());
+        assert_eq!(shares, Uint256::zero());
     }
 
     #[test]
@@ -953,28 +995,28 @@ mod tests {
         let token_decimals = 8;
         let shares_decimals = 18;
         let config = init_config(token_decimals, shares_decimals);
-        let mut user_shares = Uint128::new(50000000000000);
+        let mut user_shares = Uint256::from(50000000000000u128);
 
-        let user_balance = 5000;
+        let user_balance = Uint128::new(5000);
 
         // Get total supplied tokens
-        let mut total_shares = Uint128::new(50000000000000);
+        let mut total_shares = Uint256::from(50000000000000u128);
         let mut total_tokens = Uint128::new(5000);
 
         let (reward_token, reward_shares) = calculate_rewards(
             &config,
             user_balance,
-            user_shares.u128(),
-            total_tokens.u128(),
-            total_shares.u128(),
+            user_shares,
+            total_tokens,
+            total_shares,
         )
         .unwrap();
 
-        assert_eq!(reward_token, 0);
+        assert_eq!(reward_token, Uint128::zero());
     }
 
+    use cosmwasm_math_compat::{Uint128, Uint256};
     use rand::Rng;
-    use cosmwasm_math_compat::Uint128;
 
     #[test]
     fn staking_simulation() {
@@ -982,8 +1024,8 @@ mod tests {
         let shares_decimals = 18;
         let config = init_config(token_decimals, shares_decimals);
 
-        let mut t_t = 0;
-        let mut t_s = 0;
+        let mut t_t = Uint128::zero();
+        let mut t_s = Uint256::zero();
         let mut rand = rand::thread_rng();
 
         let mut stakers = vec![];
@@ -991,7 +1033,8 @@ mod tests {
         for _ in 0..10 {
             // Generate stakers in this round
             for _ in 0..rand.gen_range(1..=4) {
-                let tokens = rand.gen_range(1..100 * 10u128.pow(token_decimals.into()));
+                let tokens =
+                    Uint128::new(rand.gen_range(1..100 * 10u128.pow(token_decimals.into())));
 
                 let shares = shares_per_token(&config, &tokens, &t_t, &t_s).unwrap();
 
@@ -1002,7 +1045,7 @@ mod tests {
             }
 
             // Add random rewards
-            t_t += rand.gen_range(1..t_t / 2);
+            t_t += Uint128::new(rand.gen_range(1u128..t_t.u128() / 2u128));
 
             // Claim and unstake
             for _ in 0..rand.gen_range(0..=stakers.len() / 2) {
@@ -1016,8 +1059,8 @@ mod tests {
 
                 let (r_tokens, r_shares) =
                     calculate_rewards(&config, tokens, shares, t_t, t_s).unwrap();
-                assert_eq!(r_tokens, 0);
-                assert_eq!(r_shares, 0);
+                assert_eq!(r_tokens, Uint128::zero());
+                assert_eq!(r_shares, Uint256::zero());
 
                 // Unstake
                 t_t -= tokens;
@@ -1036,8 +1079,8 @@ mod tests {
 
                 let (r_tokens, r_shares) =
                     calculate_rewards(&config, tokens, shares, t_t, t_s).unwrap();
-                assert_eq!(r_tokens, 0);
-                assert_eq!(r_shares, 0);
+                assert_eq!(r_tokens, Uint128::zero());
+                assert_eq!(r_shares, Uint256::zero());
             }
         }
     }

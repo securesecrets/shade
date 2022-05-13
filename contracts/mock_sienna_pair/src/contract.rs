@@ -1,15 +1,34 @@
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, HumanAddr, InitResponse, Querier,
-    StdError, StdResult, Storage, Uint128,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
 };
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{InitCallback, Query};
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
-    dex::pool_take_amount,
-    sienna::{
-        Pair, PairInfo, PairInfoResponse, PairQuery, SimulationResponse, TokenType, TokenTypeAmount,
+    contract_interfaces::dex::{
+        dex::pool_take_amount,
+        sienna::{
+            Pair,
+            PairInfo,
+            PairInfoResponse,
+            PairQuery,
+            SimulationResponse,
+            TokenType,
+            TokenTypeAmount,
+        },
     },
     utils::asset::Contract,
 };

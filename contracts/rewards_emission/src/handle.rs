@@ -1,40 +1,52 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, Extern,
-    HandleResponse, HumanAddr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
+    debug_print,
+    to_binary,
+    Api,
+    BalanceResponse,
+    BankQuery,
+    Binary,
+    Coin,
+    CosmosMsg,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StakingMsg,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
     Validator,
 };
 
 use secret_toolkit::snip20::{
-    deposit_msg, redeem_msg, send_from_msg,
-    batch_send_from_msg, register_receive_msg,
-    set_viewing_key_msg,
     batch::SendFromAction,
+    batch_send_from_msg,
+    deposit_msg,
+    redeem_msg,
+    register_receive_msg,
+    send_from_msg,
+    set_viewing_key_msg,
 };
 
 use shade_protocol::{
-    rewards_emission::{
-        Config, Reward, HandleAnswer,
+    contract_interfaces::{
+        dao::{
+            adapter,
+            rewards_emission::{Config, HandleAnswer, Reward},
+        },
+        snip20::{fetch_snip20, Snip20Asset},
     },
-    adapter,
     utils::{
+        asset::{scrt_balance, Contract},
         generic_response::ResponseStatus,
-        asset::{
-            Contract,
-            scrt_balance,
-        }
     },
-    snip20::{Snip20Asset, fetch_snip20},
 };
 
 use crate::{
     query,
-    state::{
-        config_r, config_w,
-        self_address_r, 
-        asset_r, asset_w,
-        assets_w,
-        viewing_key_r, 
-    },
+    state::{asset_r, asset_w, assets_w, config_r, config_w, self_address_r, viewing_key_r},
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
@@ -45,7 +57,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-
     //TODO: forward to distributor (quick fix mechanism)
 
     Ok(HandleResponse {
@@ -133,7 +144,6 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
     env: Env,
     rewards: Vec<Reward>,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.distributor {
@@ -143,27 +153,27 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     for reward in rewards {
-
         let full_asset = match asset_r(&deps.storage).may_load(&reward.asset.as_str().as_bytes())? {
             Some(a) => a,
             None => {
-                return Err(StdError::generic_err(format!("Unrecognized Asset {}", reward.asset)));
+                return Err(StdError::generic_err(format!(
+                    "Unrecognized Asset {}",
+                    reward.asset
+                )));
             }
         };
 
-        messages.push(
-            send_from_msg(
-                config.treasury.clone(),
-                config.distributor.clone(),
-                reward.amount,
-                None,
-                None,
-                None,
-                1,
-                full_asset.contract.code_hash.clone(),
-                full_asset.contract.address.clone(),
-            )?
-        );
+        messages.push(send_from_msg(
+            config.treasury.clone(),
+            config.distributor.clone(),
+            reward.amount,
+            None,
+            None,
+            None,
+            1,
+            full_asset.contract.code_hash.clone(),
+            full_asset.contract.address.clone(),
+        )?);
     }
 
     Ok(HandleResponse {
@@ -173,7 +183,6 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success,
         })?),
     })
-
 }
 
 pub fn update<S: Storage, A: Api, Q: Querier>(
@@ -181,7 +190,6 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     env: Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
-
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
@@ -196,21 +204,18 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     _env: Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
-
     match asset_r(&deps.storage).may_load(&asset.as_str().as_bytes())? {
-        Some(_) => {
-            Ok(HandleResponse {
-                messages: vec![],
-                log: vec![],
-                data: Some(to_binary(&adapter::HandleAnswer::Claim {
-                    status: ResponseStatus::Success,
-                    amount: Uint128::zero(),
-                })?),
-            })
-        },
-        None => {
-            Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)))
-        }
+        Some(_) => Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(to_binary(&adapter::HandleAnswer::Claim {
+                status: ResponseStatus::Success,
+                amount: Uint128::zero(),
+            })?),
+        }),
+        None => Err(StdError::generic_err(format!(
+            "Unrecognized Asset {}",
+            asset
+        ))),
     }
-
 }

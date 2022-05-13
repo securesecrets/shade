@@ -1,23 +1,33 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, StdError,
-    Storage, Uint128,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
 };
 
-use shade_protocol::{
-    adapter,
-    scrt_staking::{Config, HandleMsg, InitMsg, QueryMsg},
+use shade_protocol::contract_interfaces::dao::scrt_staking::{
+    Config,
+    HandleMsg,
+    InitMsg,
+    QueryMsg,
 };
 
 use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
+use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{
-    handle, query,
-    state::{
-        config_w, self_address_w, 
-        viewing_key_r, viewing_key_w,
-        unbonding_w,
-    },
+    handle,
+    query,
+    state::{config_w, self_address_w, unbonding_w, viewing_key_r, viewing_key_w},
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -25,7 +35,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
     let config = Config {
         admin: match msg.admin {
             None => env.message.sender.clone(),
@@ -80,7 +89,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
         HandleMsg::Adapter(adapter) => match adapter {
-            adapter::SubHandleMsg::Unbond { asset, amount } => handle::unbond(deps, env, asset, amount),
+            adapter::SubHandleMsg::Unbond { asset, amount } => {
+                handle::unbond(deps, env, asset, amount)
+            }
             adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
             adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, asset),
         },

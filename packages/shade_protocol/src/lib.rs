@@ -16,8 +16,6 @@ pub mod dex;
 #[cfg(feature = "snip20")]
 pub mod snip20;
 
-pub mod utils;
-
 // Protocol init libraries
 #[cfg(feature = "airdrop")]
 pub mod airdrop;
@@ -58,3 +56,6 @@ pub mod treasury_manager;
 
 #[cfg(feature = "rewards_emission")]
 pub mod rewards_emission;
+pub mod contract_interfaces;
+
+pub mod utils;

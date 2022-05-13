@@ -1,6 +1,13 @@
 use cosmwasm_std::{
-    HumanAddr, Uint128, BankQuery, BalanceResponse,
-    Extern, Storage, Api, Querier, StdResult,
+    Api,
+    BalanceResponse,
+    BankQuery,
+    Extern,
+    HumanAddr,
+    Querier,
+    StdResult,
+    Storage,
+    Uint128,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -16,7 +23,6 @@ pub fn scrt_balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     address: HumanAddr,
 ) -> StdResult<Uint128> {
-
     let resp: BalanceResponse = deps.querier.query(
         &BankQuery::Balance {
             address,
@@ -27,4 +33,3 @@ pub fn scrt_balance<S: Storage, A: Api, Q: Querier>(
 
     Ok(resp.amount.amount)
 }
-

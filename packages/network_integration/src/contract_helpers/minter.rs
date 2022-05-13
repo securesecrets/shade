@@ -11,7 +11,10 @@ use secretcli::{
 };
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
-use shade_protocol::{mint, snip20};
+use shade_protocol::{
+    contract_interfaces::mint::mint,
+    contract_interfaces::snip20
+};
 
 pub fn initialize_minter(
     governance: &NetContract,

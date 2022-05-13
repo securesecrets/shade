@@ -1,19 +1,28 @@
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std;
 use cosmwasm_std::{
-    coins, from_binary, to_binary,
-    Extern, HumanAddr, StdError,
-    Binary, StdResult, HandleResponse, Env,
+    self,
+    coins,
+    from_binary,
+    to_binary,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
     InitResponse,
+    StdError,
+    StdResult,
 };
 
 use shade_protocol::{
-    mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+    contract_interfaces::{
+        mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+        oracles::band::{BandQuery, ReferenceData},
+    },
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
     },
-    band::{ ReferenceData, BandQuery },
 };
 
 #[test]

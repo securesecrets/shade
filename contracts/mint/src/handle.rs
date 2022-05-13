@@ -1,26 +1,50 @@
 use chrono::prelude::*;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HumanAddr, Querier, StdError, StdResult, Storage,
+    debug_print,
+    from_binary,
+    to_binary,
+    Api,
+    Binary,
+    CosmosMsg,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use secret_toolkit::{
     snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
     utils::Query,
 };
-use shade_protocol::utils::asset::Contract;
-use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::{
-    band::ReferenceData,
-    mint::{Config, HandleAnswer, Limit, MintMsgHook, SupportedAsset},
-    oracle::QueryMsg::Price,
-    snip20::{token_config_query, Snip20Asset, TokenConfig},
+    contract_interfaces::{
+        mint::mint::{Config, HandleAnswer, Limit, MintMsgHook, SupportedAsset},
+        oracles::{band::ReferenceData, oracle::QueryMsg::Price},
+        snip20::{token_config_query, Snip20Asset, TokenConfig},
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::state::{
-    asset_list_w, asset_peg_r, assets_r, assets_w, config_r, config_w, limit_r, limit_refresh_r,
-    limit_refresh_w, limit_w, minted_r, minted_w, native_asset_r, total_burned_w,
+    asset_list_w,
+    asset_peg_r,
+    assets_r,
+    assets_w,
+    config_r,
+    config_w,
+    limit_r,
+    limit_refresh_r,
+    limit_refresh_w,
+    limit_w,
+    minted_r,
+    minted_w,
+    native_asset_r,
+    total_burned_w,
 };
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
@@ -337,29 +361,26 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         };
 
     debug_print!("Registering {}", asset_info.symbol);
-    assets_w(&mut deps.storage).save(
-        contract_str.as_bytes(),
-        &SupportedAsset {
-            asset: Snip20Asset {
-                contract: contract.clone(),
-                token_info: asset_info,
-                token_config: asset_config,
-            },
-            // If capture is not set then default to 0
-            capture: match capture {
-                None => Uint128::zero(),
-                Some(value) => value,
-            },
-            fee: match fee {
-                None => Uint128::zero(),
-                Some(value) => value,
-            },
-            unlimited: match unlimited {
-                None => false,
-                Some(u) => u,
-            },
+    assets_w(&mut deps.storage).save(contract_str.as_bytes(), &SupportedAsset {
+        asset: Snip20Asset {
+            contract: contract.clone(),
+            token_info: asset_info,
+            token_config: asset_config,
         },
-    )?;
+        // If capture is not set then default to 0
+        capture: match capture {
+            None => Uint128::zero(),
+            Some(value) => value,
+        },
+        fee: match fee {
+            None => Uint128::zero(),
+            Some(value) => value,
+        },
+        unlimited: match unlimited {
+            None => false,
+            Some(u) => u,
+        },
+    })?;
 
     total_burned_w(&mut deps.storage).save(contract_str.as_bytes(), &Uint128::zero())?;
 
@@ -487,7 +508,7 @@ pub fn calculate_mint(
 /*
 pub fn calculate_fee_curve(
     // "Centered"
-    base_fee: Uint128, 
+    base_fee: Uint128,
     // How far off from where we want (abs(desired_price - cur_price))
     price_skew: Uint128,
     // skew we should never reach (where fee maxes out)

@@ -1,14 +1,15 @@
 use cosmwasm_std::{HumanAddr, Storage, Uint128};
 use cosmwasm_storage::{
-    singleton, singleton_read, 
-    ReadonlySingleton, Singleton,
-    bucket, bucket_read,
-    ReadonlyBucket, Bucket,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
+    Singleton,
 };
-use shade_protocol::{
-    rewards_emission,
-    snip20::Snip20Asset,
-};
+use shade_protocol::contract_interfaces::{dao::rewards_emission, snip20::Snip20Asset};
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SELF_ADDRESS: &[u8] = b"self_address";

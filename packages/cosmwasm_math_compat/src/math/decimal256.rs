@@ -1,18 +1,17 @@
 use schemars::JsonSchema;
 use serde::{de, ser, Deserialize, Deserializer, Serialize};
 use snafu::Snafu;
-use std::cmp::Ordering;
-use std::convert::TryInto;
-use std::fmt::{self, Write};
-use std::ops;
-use std::str::FromStr;
+use std::{
+    cmp::Ordering,
+    convert::TryInto,
+    fmt::{self, Write},
+    ops,
+    str::FromStr,
+};
 
-use crate::errors::StdError;
-use crate::Uint512;
+use crate::{errors::StdError, Uint512};
 
-use super::Fraction;
-use super::Isqrt;
-use super::Uint256;
+use super::{Fraction, Isqrt, Uint256};
 
 /// A fixed-point decimal value with 18 fractional digits, i.e. Decimal256(1_000_000_000_000_000_000) == 1.0
 ///
@@ -27,7 +26,6 @@ pub struct Decimal256(#[schemars(with = "String")] Uint256);
 pub struct Decimal256RangeExceeded;
 
 impl Decimal256 {
-    const DECIMAL_PLACES: usize = 18;
     const DECIMAL_FRACTIONAL: Uint256 = // 1*10**18
         Uint256::from_be_bytes([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 224, 182,
@@ -38,7 +36,7 @@ impl Decimal256 {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 151, 206, 123, 201, 7, 21, 179,
             75, 159, 16, 0, 0, 0, 0,
         ]);
-
+    const DECIMAL_PLACES: usize = 18;
     pub const MAX: Self = Self(Uint256::MAX);
 
     /// Create a 1.0 Decimal256

@@ -1,44 +1,67 @@
-use cosmwasm_std;
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, WasmMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage, Uint128,
+    self,
+    from_binary,
+    to_binary,
+    Api,
+    Binary,
+    CosmosMsg,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
+    WasmMsg,
 };
 use secret_toolkit::{
-    utils::{
-        Query, HandleCallback,
-    },
     snip20::{
-        allowance_query, decrease_allowance_msg,
-        increase_allowance_msg, register_receive_msg,
-        send_msg, batch_send_from_msg,
-        set_viewing_key_msg, batch_send_msg,
-        balance_query,
-        batch::{ SendFromAction },
+        allowance_query,
+        batch::SendFromAction,
+        batch_send_from_msg,
+        batch_send_msg,
+        decrease_allowance_msg,
+        increase_allowance_msg,
+        register_receive_msg,
+        send_msg,
+        set_viewing_key_msg,
     },
+    utils::{HandleCallback, Query},
 };
 
 use shade_protocol::{
-    snip20,
-    adapter,
-    treasury_manager::{
-        Allocation, AllocationMeta,
-        AllocationType, Config, 
-        HandleAnswer, QueryAnswer,
+    contract_interfaces::{
+        dao::treasury_manager::{
+            Allocation,
+            AllocationMeta,
+            AllocationType,
+            Config,
+            HandleAnswer,
+            QueryAnswer,
+        },
+        snip20,
     },
-    utils::{
-        asset::Contract,
-        generic_response::ResponseStatus
-    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
 use crate::{
     query,
     state::{
-        allocations_r, allocations_w, asset_list_r, asset_list_w, assets_r, assets_w, config_r,
-        config_w, viewing_key_r, self_address_r,
+        allocations_r,
+        allocations_w,
+        asset_list_r,
+        asset_list_w,
+        assets_r,
+        assets_w,
+        config_r,
+        config_w,
+        viewing_key_r,
     },
 };
 use chrono::prelude::*;
+use shade_protocol::contract_interfaces::dao::adapter;
 use std::convert::TryFrom;
 
 /*
@@ -107,7 +130,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     contract: &Contract,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin {
@@ -158,7 +180,6 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
     allocation: Allocation,
 ) -> StdResult<HandleResponse> {
-
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
     let config = config_r(&deps.storage).load()?;
@@ -174,30 +195,37 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
         .may_load(key)?
         .unwrap_or_default();
 
-    let stale_alloc = apps.iter().position(|a| a.contract.address == allocation.contract.address);
+    let stale_alloc = apps
+        .iter()
+        .position(|a| a.contract.address == allocation.contract.address);
 
     match stale_alloc {
-        Some(i) => { apps.remove(i); }
-        None => { }
+        Some(i) => {
+            apps.remove(i);
+        }
+        None => {}
     };
 
-    apps.push(
-        AllocationMeta {
-            nick: allocation.nick,
-            contract: allocation.contract,
-            amount: allocation.amount,
-            alloc_type: allocation.alloc_type,
-            balance: Uint128::zero(),
-        }
-    );
+    apps.push(AllocationMeta {
+        nick: allocation.nick,
+        contract: allocation.contract,
+        amount: allocation.amount,
+        alloc_type: allocation.alloc_type,
+        balance: Uint128::zero(),
+    });
 
-    if (apps.iter().map(|a| {
-        if a.alloc_type == AllocationType::Portion {
-            a.amount.u128()
-        } else {
-            0
-        }
-    }).sum::<u128>()) > ONE_HUNDRED_PERCENT {
+    if (apps
+        .iter()
+        .map(|a| {
+            if a.alloc_type == AllocationType::Portion {
+                a.amount.u128()
+            } else {
+                0
+            }
+        })
+        .sum::<u128>())
+        > ONE_HUNDRED_PERCENT
+    {
         return Err(StdError::generic_err(
             "Invalid allocation total exceeding 100%",
         ));
@@ -208,7 +236,7 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::Allocate{
+        data: Some(to_binary(&HandleAnswer::Allocate {
             status: ResponseStatus::Success,
         })?),
     })
@@ -219,8 +247,10 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
-
-    if assets_r(&deps.storage).may_load(asset.as_str().as_bytes())?.is_none() {
+    if assets_r(&deps.storage)
+        .may_load(asset.as_str().as_bytes())?
+        .is_none()
+    {
         return Err(StdError::generic_err("Not an asset"));
     }
 
@@ -228,7 +258,6 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     for alloc in allocations_r(&deps.storage).load(asset.to_string().as_bytes())? {
-
         let claim = adapter::claimable_query(deps, &asset.clone(), alloc.contract.clone())?;
 
         if claim > Uint128::zero() {
@@ -252,7 +281,6 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
@@ -267,9 +295,11 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
         match allocations[i].alloc_type {
             AllocationType::Amount => amount_total += allocations[i].balance,
             AllocationType::Portion => {
-                allocations[i].balance = adapter::balance_query(deps, 
-                                                   &full_asset.contract.address,
-                                                   allocations[i].contract.clone())?;
+                allocations[i].balance = adapter::balance_query(
+                    deps,
+                    &full_asset.contract.address,
+                    allocations[i].contract.clone(),
+                )?;
                 portion_total += allocations[i].balance;
             }
         };
@@ -287,7 +317,8 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),
-    )?.allowance;
+    )?
+    .allowance;
 
     let total = portion_total + allowance;
 
@@ -297,12 +328,9 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     for adapter in allocations.clone() {
         match adapter.alloc_type {
             // TODO Separate handle for amount refresh
-            AllocationType::Amount => { },
+            AllocationType::Amount => {}
             AllocationType::Portion => {
-
-                let desired_amount = adapter.amount.multiply_ratio(
-                    total, 10u128.pow(18)
-                );
+                let desired_amount = adapter.amount.multiply_ratio(total, 10u128.pow(18));
 
                 // .05 || 5%
                 //let REBALANCE_THRESHOLD = Uint128(5u128 * 10u128.pow(16));
@@ -313,19 +341,16 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 
                     if input_amount <= allowance {
                         total_input += input_amount;
-                        send_actions.push(
-                            SendFromAction {
-                                owner: config.treasury.clone(),
-                                recipient: adapter.contract.address,
-                                recipient_code_hash: Some(adapter.contract.code_hash),
-                                amount: input_amount,
-                                msg: None,
-                                memo: None,
-                            }
-                        );
+                        send_actions.push(SendFromAction {
+                            owner: config.treasury.clone(),
+                            recipient: adapter.contract.address,
+                            recipient_code_hash: Some(adapter.contract.code_hash),
+                            amount: input_amount,
+                            msg: None,
+                            memo: None,
+                        });
                         allowance = (allowance - input_amount)?;
-                    }
-                    else {
+                    } else {
                         total_input += allowance;
                         // Send all allowance
                         send_actions.push(SendFromAction {
@@ -341,20 +366,18 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
                         break;
                     }
                 }
-            },
+            }
         };
     }
 
     if !send_actions.is_empty() {
-        messages.push(
-            batch_send_from_msg(
-                send_actions,
-                None,
-                1,
-                full_asset.contract.code_hash.clone(),
-                full_asset.contract.address.clone(),
-            )?
-        );
+        messages.push(batch_send_from_msg(
+            send_actions,
+            None,
+            1,
+            full_asset.contract.code_hash.clone(),
+            full_asset.contract.address.clone(),
+        )?);
     }
 
     Ok(HandleResponse {
@@ -372,7 +395,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
-
     let config = config_r(&deps.storage).load()?;
 
     let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
@@ -387,9 +409,11 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         match allocations[i].alloc_type {
             AllocationType::Amount => amount_total += allocations[i].balance,
             AllocationType::Portion => {
-                allocations[i].balance = adapter::balance_query(deps, 
-                                                   &full_asset.contract.address,
-                                                   allocations[i].contract.clone())?;
+                allocations[i].balance = adapter::balance_query(
+                    deps,
+                    &full_asset.contract.address,
+                    allocations[i].contract.clone(),
+                )?;
                 portion_total += allocations[i].balance;
             }
         };
@@ -429,7 +453,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),
-    )?.allowance;
+    )?
+    .allowance;
 
     let total = portion_total + allowance;
     let mut total_unbond = (amount - reserves)?;
@@ -445,8 +470,9 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         match allocations[i].alloc_type {
             // TODO Separate handle for amount refresh
             //      Or just do cycle::constant amounts
-            AllocationType::Amount => { },
+            AllocationType::Amount => {}
             AllocationType::Portion => {
+                let desired_amount = allocations[i].amount.multiply_ratio(total, 10u128.pow(18));
 
                 let desired_amount = allocations[i].amount.multiply_ratio(
                     total, 10u128.pow(18)
@@ -481,13 +507,12 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         };
     }
 
-
     Ok(HandleResponse {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
-            amount: total_unbond
+            amount: total_unbond,
         })?),
     })
 }

@@ -3,7 +3,7 @@ use chrono::prelude::*;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
 use secret_toolkit::{snip20::token_info_query, utils::Query};
-use shade_protocol::{
+use shade_protocol::contract_interfaces::mint::{
     mint,
     mint_router::{PathNode, QueryAnswer},
 };

@@ -40,10 +40,10 @@ struct CrateSource {
 
 impl CrateSource {
     // ensure the crate is valid,
-    // i.e. it's src directory exists and contains a lib.rs file
+    // i.e. it's src directory exists and contains a mod file
     fn new(crate_dir: &str) -> Result<CrateSource> {
         let crate_src_dir = format!("{}/src", crate_dir);
-        let lib_rs_path = format!("{}/lib.rs", crate_src_dir);
+        let lib_rs_path = format!("{}/mod", crate_src_dir);
 
         if std::fs::metadata(&crate_src_dir).is_err() {
             return Err(Error::CrateSourceDirNotFound(crate_src_dir));
@@ -155,14 +155,14 @@ where
     Ok(())
 }
 
-// start with the crate root, lib.rs
+// start with the crate root, mod
 // scrape code comments and with each public module inserted in the order they appear
 fn process_crate<I>(input: I, output: &mut Output) -> Result<()>
 where
     I: ReadSource,
 {
     let lib_rs_path = input.lib_rs_path();
-    eprintln!("Processing lib.rs file: {}", lib_rs_path);
+    eprintln!("Processing mod file: {}", lib_rs_path);
 
     for line in input.lines_from_path(lib_rs_path)? {
         let line = line?;
@@ -290,7 +290,7 @@ pub struct Contract {
         type Src = BufReader<&'static [u8]>;
 
         fn lib_rs_path(&self) -> &str {
-            "src/lib.rs"
+            "src/mod"
         }
 
         fn module_path_from_name(&self, module: &str) -> String {
@@ -299,7 +299,7 @@ pub struct Contract {
 
         fn lines_from_path(&self, src_path: &str) -> Result<Lines<Self::Src>> {
             let s: &'static str = match src_path {
-                "src/lib.rs" => LIB_RS,
+                "src/mod" => LIB_RS,
                 "src/common_types.rs" => COMMON_TYPES_RS,
                 "src/helper_mod.rs" => "",
                 _ => panic!("Unexpected path: {}", src_path),

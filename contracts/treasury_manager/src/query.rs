@@ -4,14 +4,19 @@ use secret_toolkit::{
     utils::Query,
 };
 use shade_protocol::{
-    snip20,
-    treasury_manager,
-    adapter,
+    contract_interfaces::{
+        dao::{adapter, treasury_manager},
+        snip20,
+    },
     utils::asset::Contract,
 };
 
 use crate::state::{
-    allocations_r, asset_list_r, assets_r, config_r, self_address_r,
+    allocations_r,
+    asset_list_r,
+    assets_r,
+    config_r,
+    self_address_r,
     viewing_key_r,
 };
 
@@ -23,13 +28,10 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-
-
 pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
-
     let config = config_r(&deps.storage).load()?;
     let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
         Some(a) => a,
@@ -48,8 +50,8 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
         full_asset.contract.address.clone(),
     )?;
 
-    Ok(treasury_manager::QueryAnswer::PendingAllowance { 
-        amount: allowance.allowance
+    Ok(treasury_manager::QueryAnswer::PendingAllowance {
+        amount: allowance.allowance,
     })
 }
 
@@ -57,7 +59,6 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-
     if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         let reserves = balance_query(
             &deps.querier,
@@ -79,7 +80,6 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
 pub fn assets<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury_manager::QueryAnswer> {
-
     Ok(treasury_manager::QueryAnswer::Assets {
         assets: asset_list_r(&deps.storage).load()?,
     })
@@ -89,7 +89,6 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
-
     Ok(treasury_manager::QueryAnswer::Allocations {
         allocations: match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
             None => vec![],
@@ -102,51 +101,43 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-
     let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => a,
-        None => { return Err(StdError::generic_err("Not an asset")); }
+        None => {
+            return Err(StdError::generic_err("Not an asset"));
+        }
     };
 
     let mut claimable = Uint128::zero();
 
     for alloc in allocations {
-        claimable += adapter::claimable_query(&deps,
-                                  &asset,
-                                  alloc.contract.clone(),
-                                  )?;
+        claimable += adapter::claimable_query(&deps, &asset, alloc.contract.clone())?;
     }
 
-    Ok(adapter::QueryAnswer::Claimable {
-        amount: claimable,
-    })
+    Ok(adapter::QueryAnswer::Claimable { amount: claimable })
 }
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-
     let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => a,
-        None => { return Err(StdError::generic_err("Not an asset")); }
+        None => {
+            return Err(StdError::generic_err("Not an asset"));
+        }
     };
 
     let mut unbonding = Uint128::zero();
 
     for alloc in allocations {
-        unbonding += adapter::unbonding_query(&deps,
-                                  &asset,
-                                  alloc.contract.clone(),
-                                  )?;
+        unbonding += adapter::unbonding_query(&deps, &asset, alloc.contract.clone())?;
     }
 
-    Ok(adapter::QueryAnswer::Unbonding {
-        amount: unbonding,
-    })
+    Ok(adapter::QueryAnswer::Unbonding { amount: unbonding })
 }
 
-/*NOTE Could be a situation where can_unbond returns true 
+/*NOTE Could be a situation where can_unbond returns true
  * but only partial balance available for unbond resulting
  * in stalled treasury trying to unbond more than is available
  */

@@ -6,9 +6,12 @@
 
 # Build results
 target/
-# this is moved to vm/testdata, others are present locally
-contracts/hackatom/contract.wasm
-contracts/hackatom/hash.txt
+
+# Testing configs
+*.json
+
+# Code coverage stuff
+*.profraw
 
 # IDEs
 .vscode/

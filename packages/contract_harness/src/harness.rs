@@ -1,7 +1,7 @@
 #[cfg(feature = "snip20")]
 pub mod snip20 {
-    use snip20_reference_impl;
     use crate::harness_macro;
+    use snip20_reference_impl;
 
     pub struct Snip20;
     harness_macro::implement_harness!(Snip20, snip20_reference_impl);
@@ -9,8 +9,8 @@ pub mod snip20 {
 
 #[cfg(feature = "mint")]
 pub mod mint {
-    use mint;
     use crate::harness_macro;
+    use mint;
 
     pub struct Mint;
     harness_macro::implement_harness!(Mint, mint);
@@ -18,8 +18,8 @@ pub mod mint {
 
 #[cfg(feature = "oracle")]
 pub mod oracle {
-    use oracle;
     use crate::harness_macro;
+    use oracle;
 
     pub struct Oracle;
     harness_macro::implement_harness!(Oracle, oracle);
@@ -27,8 +27,8 @@ pub mod oracle {
 
 #[cfg(feature = "mock_band")]
 pub mod mock_band {
-    use mock_band;
     use crate::harness_macro;
+    use mock_band;
 
     pub struct MockBand;
     harness_macro::implement_harness!(MockBand, mock_band);
@@ -59,4 +59,21 @@ pub mod scrt_staking {
 
     pub struct ScrtStaking;
     harness_macro::implement_harness!(ScrtStaking, scrt_staking);
+
+#[cfg(feature = "governance")]
+pub mod governance {
+    use crate::harness_macro;
+    use governance;
+
+    pub struct Governance;
+    harness_macro::implement_harness!(Governance, governance);
+}
+
+#[cfg(feature = "snip20_staking")]
+pub mod snip20_staking {
+    use crate::harness_macro;
+    use spip_stkd_0;
+
+    pub struct Snip20Staking;
+    harness_macro::implement_harness!(Snip20Staking, spip_stkd_0);
 }

@@ -1,43 +1,100 @@
+use crate::{
+    batch,
+    distributors,
+    distributors::{
+        get_distributor,
+        try_add_distributors,
+        try_set_distributors,
+        try_set_distributors_status,
+    },
+    expose_balance::{try_expose_balance, try_expose_balance_with_cooldown},
+    msg::{
+        space_pad,
+        status_level_to_u8,
+        ContractStatusLevel,
+        HandleAnswer,
+        HandleMsg,
+        InitMsg,
+        QueryAnswer,
+        QueryMsg,
+        QueryWithPermit,
+        ResponseStatus::Success,
+    },
+    rand::sha_256,
+    receiver::Snip20ReceiveMsg,
+    stake::{
+        claim_rewards,
+        remove_from_cooldown,
+        shares_per_token,
+        try_claim_rewards,
+        try_claim_unbond,
+        try_receive,
+        try_stake_rewards,
+        try_unbond,
+        try_update_stake_config,
+    },
+    stake_queries,
+    state::{
+        get_receiver_hash,
+        read_allowance,
+        read_viewing_key,
+        set_receiver_hash,
+        write_allowance,
+        write_viewing_key,
+        Balances,
+        Config,
+        Constants,
+        ReadonlyBalances,
+        ReadonlyConfig,
+    },
+    state_staking::{
+        DailyUnbondingQueue,
+        Distributors,
+        DistributorsEnabled,
+        TotalShares,
+        TotalTokens,
+        TotalUnbonding,
+        UnsentStakedTokens,
+        UserCooldown,
+        UserShares,
+    },
+    transaction_history::{get_transfers, get_txs, store_claim_reward, store_mint, store_transfer},
+    viewing_key::{ViewingKey, VIEWING_KEY_SIZE},
+};
+use cosmwasm_math_compat::{Uint128, Uint256};
 /// This contract implements SNIP-20 standard:
 /// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
 use cosmwasm_std::{
-    from_binary, log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern,
-    HandleResponse, HumanAddr, InitResponse, Querier, QueryResult, ReadonlyStorage, StdError,
-    StdResult, Storage, Uint128,
+    from_binary,
+    log,
+    to_binary,
+    Api,
+    Binary,
+    CanonicalAddr,
+    CosmosMsg,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    InitResponse,
+    Querier,
+    QueryResult,
+    ReadonlyStorage,
+    StdError,
+    StdResult,
+    Storage,
 };
-use crate::distributors::{
-    get_distributor, try_add_distributors, try_set_distributors, try_set_distributors_status,
+use secret_toolkit::{
+    permit::{validate, Permission, Permit, RevokedPermits},
+    snip20::{register_receive_msg, send_msg, token_info_query},
 };
-use crate::expose_balance::{try_expose_balance, try_expose_balance_with_cooldown};
-use crate::msg::{
-    space_pad, ContractStatusLevel, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg,
-    ResponseStatus::Success,
+use shade_protocol::{
+    contract_interfaces::staking::snip20_staking::{
+        stake::{Cooldown, StakeConfig, VecQueue},
+        ReceiveType,
+    },
+    utils::storage::default::{BucketStorage, SingletonStorage},
 };
-use crate::msg::{status_level_to_u8, QueryWithPermit};
-use crate::rand::sha_256;
-use crate::receiver::Snip20ReceiveMsg;
-use crate::stake::{
-    claim_rewards, remove_from_cooldown, shares_per_token, try_claim_rewards, try_claim_unbond,
-    try_receive, try_stake_rewards, try_unbond, try_update_stake_config,
-};
-use crate::state::{
-    get_receiver_hash, read_allowance, read_viewing_key, set_receiver_hash, write_allowance,
-    write_viewing_key, Balances, Config, Constants, ReadonlyBalances, ReadonlyConfig,
-};
-use crate::state_staking::{
-    DailyUnbondingQueue, Distributors, DistributorsEnabled, TotalShares, TotalTokens,
-    TotalUnbonding, UnsentStakedTokens, UserCooldown, UserShares,
-};
-use crate::transaction_history::{
-    get_transfers, get_txs, store_claim_reward, store_mint, store_transfer,
-};
-use crate::viewing_key::{ViewingKey, VIEWING_KEY_SIZE};
-use crate::{batch, distributors, stake_queries};
-use secret_toolkit::permit::{validate, Permission, Permit, RevokedPermits};
-use secret_toolkit::snip20::{register_receive_msg, send_msg, token_info_query};
-use shade_protocol::snip20_staking::stake::{Cooldown, StakeConfig, VecQueue};
-use shade_protocol::snip20_staking::ReceiveType;
-use shade_protocol::utils::storage::default::{BucketStorage, SingletonStorage};
 
 /// We make sure that responses from `handle` are padded to a multiple of this size.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -113,7 +170,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     .save(&mut deps.storage)?;
 
     // Set shares state to 0
-    TotalShares(Uint128::zero()).save(&mut deps.storage)?;
+    TotalShares(Uint256::zero()).save(&mut deps.storage)?;
 
     // Initialize unbonding queue
     DailyUnbondingQueue(VecQueue::new(vec![])).save(&mut deps.storage)?;
@@ -436,7 +493,9 @@ fn permit_queries<S: Storage, A: Api, Q: Querier>(
             if account != owner && account != spender {
                 return Err(StdError::generic_err(format!(
                     "Cannot query allowance. Requires permit for either owner {:?} or spender {:?}, got permit for {:?}",
-                    owner.as_str(), spender.as_str(), account.as_str()
+                    owner.as_str(),
+                    spender.as_str(),
+                    account.as_str()
                 )));
             }
 
@@ -495,7 +554,7 @@ fn query_token_info<S: ReadonlyStorage>(storage: &S) -> QueryResult {
     let constants = config.constants()?;
 
     let total_supply = if constants.total_supply_is_public {
-        Some(Uint128(config.total_supply()))
+        Some(Uint128::new(config.total_supply()))
     } else {
         None
     };
@@ -563,7 +622,8 @@ pub fn query_balance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     let address = deps.api.canonical_address(account)?;
 
-    let amount = Uint128(ReadonlyBalances::from_storage(&deps.storage).account_amount(&address));
+    let amount =
+        Uint128::new(ReadonlyBalances::from_storage(&deps.storage).account_amount(&address));
     let response = QueryAnswer::Balance { amount };
     to_binary(&response)
 }
@@ -692,7 +752,7 @@ pub fn query_allowance<S: Storage, A: Api, Q: Querier>(
     let response = QueryAnswer::Allowance {
         owner,
         spender,
-        allowance: Uint128(allowance.amount),
+        allowance: Uint128::new(allowance.amount),
         expiration: allowance.expiration,
     };
     to_binary(&response)
@@ -724,10 +784,10 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
 
     let stake_config = StakeConfig::load(&deps.storage)?;
     let claim = claim_rewards(&mut deps.storage, &stake_config, sender, sender_canon)?;
-    if claim != 0 {
+    if !claim.is_zero() {
         messages.push(send_msg(
             sender.clone(),
-            Uint128(claim),
+            claim.into(),
             None,
             None,
             None,
@@ -739,7 +799,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
         store_claim_reward(
             &mut deps.storage,
             sender_canon,
-            Uint128(claim),
+            claim,
             symbol.clone(),
             None,
             block,
@@ -752,7 +812,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
         sender_canon,
         recipient,
         recipient_canon,
-        amount.u128(),
+        amount,
         time,
     )?;
 
@@ -1084,7 +1144,7 @@ fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
         owner_canon,
         recipient,
         recipient_canon,
-        raw_amount,
+        amount,
         time,
     )?;
 
@@ -1339,7 +1399,7 @@ fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
         data: Some(to_binary(&HandleAnswer::IncreaseAllowance {
             owner: env.message.sender,
             spender,
-            allowance: Uint128(new_amount),
+            allowance: Uint128::new(new_amount),
         })?),
     };
     Ok(res)
@@ -1384,7 +1444,7 @@ fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
         data: Some(to_binary(&HandleAnswer::DecreaseAllowance {
             owner: env.message.sender,
             spender,
-            allowance: Uint128(new_amount),
+            allowance: Uint128::new(new_amount),
         })?),
     };
     Ok(res)
@@ -1396,7 +1456,7 @@ fn perform_transfer<T: Storage>(
     from_canon: &CanonicalAddr,
     to: &HumanAddr,
     to_canon: &CanonicalAddr,
-    amount: u128,
+    amount: Uint128,
     time: u64,
 ) -> StdResult<()> {
     let mut balances = Balances::from_storage(store);
@@ -1404,7 +1464,7 @@ fn perform_transfer<T: Storage>(
     let mut from_balance = balances.balance(from_canon);
     let from_tokens = from_balance;
 
-    if let Some(new_from_balance) = from_balance.checked_sub(amount) {
+    if let Some(new_from_balance) = from_balance.checked_sub(amount.u128()) {
         from_balance = new_from_balance;
     } else {
         return Err(StdError::generic_err(format!(
@@ -1416,7 +1476,7 @@ fn perform_transfer<T: Storage>(
 
     let mut to_balance = balances.balance(to_canon);
 
-    to_balance = to_balance.checked_add(amount).ok_or_else(|| {
+    to_balance = to_balance.checked_add(amount.u128()).ok_or_else(|| {
         StdError::generic_err("This tx will literally make them too rich. Try transferring less")
     })?;
     balances.set_account_balance(to_canon, to_balance);
@@ -1428,29 +1488,24 @@ fn perform_transfer<T: Storage>(
     let config = StakeConfig::load(store)?;
 
     // calculate shares per token
-    let transfer_shares = Uint128(shares_per_token(
-        &config,
-        &amount,
-        &total_tokens.0.u128(),
-        &total_shares.0.u128(),
-    )?);
+    let transfer_shares = shares_per_token(&config, &amount, &total_tokens.0, &total_shares.0)?;
 
     // move shares from one user to another
     let mut from_shares = UserShares::load(store, from.as_str().as_bytes())?;
 
-    from_shares.0 = (from_shares.0 - transfer_shares)?;
+    from_shares.0 = from_shares.0.checked_sub(transfer_shares)?;
     from_shares.save(store, from.as_str().as_bytes())?;
 
     let mut to_shares =
-        UserShares::may_load(store, to.as_str().as_bytes())?.unwrap_or(UserShares(Uint128::zero()));
+        UserShares::may_load(store, to.as_str().as_bytes())?.unwrap_or(UserShares(Uint256::zero()));
     to_shares.0 += transfer_shares;
     to_shares.save(store, to.as_str().as_bytes())?;
 
     // check for what should be removed from the queue
-    let wrapped_amount = Uint128(amount);
+    let wrapped_amount = amount;
 
     // Update from cooldown
-    remove_from_cooldown(store, from, Uint128(from_tokens), wrapped_amount, time)?;
+    remove_from_cooldown(store, from, Uint128::new(from_tokens), wrapped_amount, time)?;
 
     // Update to cooldown
     {
@@ -1533,12 +1588,21 @@ fn is_valid_symbol(symbol: &str) -> bool {
 #[cfg(test)]
 mod staking_tests {
     use super::*;
-    use crate::msg::InitConfig;
-    use crate::msg::ResponseStatus;
-    use cosmwasm_std::testing::*;
-    use cosmwasm_std::{from_binary, BlockInfo, ContractInfo, MessageInfo, QueryResponse, WasmMsg};
-    use shade_protocol::snip20_staking::ReceiveType;
-    use shade_protocol::utils::asset::Contract;
+    use crate::msg::{InitConfig, ResponseStatus};
+    use cosmwasm_math_compat::Uint256;
+    use cosmwasm_std::{
+        from_binary,
+        testing::*,
+        BlockInfo,
+        ContractInfo,
+        MessageInfo,
+        QueryResponse,
+        WasmMsg,
+    };
+    use shade_protocol::{
+        contract_interfaces::staking::snip20_staking::ReceiveType,
+        utils::asset::Contract,
+    };
     use std::any::Any;
 
     fn init_helper_staking() -> (
@@ -1547,7 +1611,6 @@ mod staking_tests {
     ) {
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("instantiator", &[]);
-
         let init_msg = InitMsg {
             name: "sec-sec".to_string(),
             admin: Some(HumanAddr("admin".to_string())),
@@ -1627,7 +1690,7 @@ mod staking_tests {
     fn check_staked_state(
         deps: &Extern<MockStorage, MockApi, MockQuerier>,
         expected_tokens: Uint128,
-        expected_shares: Uint128,
+        expected_shares: Uint256,
     ) {
         let query_balance_msg = QueryMsg::TotalStaked {};
 
@@ -1648,7 +1711,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("foo".to_string()),
             from: Default::default(),
-            amount: Uint128(100 * 10u128.pow(8)),
+            amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
@@ -1668,11 +1731,11 @@ mod staking_tests {
 
         check_staked_state(
             &deps,
-            Uint128(100 * 10u128.pow(8)),
-            Uint128(100 * 10u128.pow(18)),
+            Uint128::new(100 * 10u128.pow(8)),
+            Uint256::from(100 * 10u128.pow(18)),
         );
 
-        new_staked_account(&mut deps, "bar", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "bar", "key", Uint128::new(100 * 10u128.pow(8)));
         // Query user stake
         let query_balance_msg = QueryMsg::Staked {
             address: HumanAddr("bar".to_string()),
@@ -1690,8 +1753,8 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(100 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(100 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(100 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(100 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
@@ -1700,8 +1763,8 @@ mod staking_tests {
         };
         check_staked_state(
             &deps,
-            Uint128(200 * 10u128.pow(8)),
-            Uint128(200 * 10u128.pow(18)),
+            Uint128::new(200 * 10u128.pow(8)),
+            Uint256::from(200 * 10u128.pow(18)),
         );
     }
 
@@ -1709,7 +1772,7 @@ mod staking_tests {
     fn test_handle_unbond() {
         let (init_result, mut deps) = init_helper_staking();
 
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
         // Query unbonding queue
         let query_msg = QueryMsg::Unbonding {};
@@ -1724,7 +1787,7 @@ mod staking_tests {
 
         // Unbond more than allowed
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(1000 * 10u128.pow(8)),
+            amount: Uint128::new(1000 * 10u128.pow(8)),
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
@@ -1732,7 +1795,7 @@ mod staking_tests {
 
         // Unbond
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(50 * 10u128.pow(8)),
+            amount: Uint128::new(50 * 10u128.pow(8)),
             padding: None,
         };
         // Set time for ease of prediction
@@ -1747,7 +1810,7 @@ mod staking_tests {
         let query_response = query(&deps, query_msg).unwrap();
         match from_binary(&query_response).unwrap() {
             QueryAnswer::Unbonding { total } => {
-                assert_eq!(total, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(total, Uint128::new(50 * 10u128.pow(8)));
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -1758,7 +1821,7 @@ mod staking_tests {
         let query_response = query(&deps, query_msg).unwrap();
         match from_binary(&query_response).unwrap() {
             QueryAnswer::Unfunded { total } => {
-                assert_eq!(total, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(total, Uint128::new(50 * 10u128.pow(8)));
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -1780,18 +1843,18 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(50 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(50 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(50 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(50 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
-                assert_eq!(unbonding, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(unbonding, Uint128::new(50 * 10u128.pow(8)));
                 assert_eq!(unbonded, None);
             }
             _ => panic!("Unexpected result from query"),
         };
         check_staked_state(
             &deps,
-            Uint128(50 * 10u128.pow(8)),
-            Uint128(50 * 10u128.pow(18)),
+            Uint128::new(50 * 10u128.pow(8)),
+            Uint256::from(50 * 10u128.pow(18)),
         );
     }
 
@@ -1799,12 +1862,12 @@ mod staking_tests {
     fn test_handle_fund_unbond() {
         let (init_result, mut deps) = init_helper_staking();
 
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
         // Bond some amount
         // Unbond
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(50 * 10u128.pow(8)),
+            amount: Uint128::new(50 * 10u128.pow(8)),
             padding: None,
         };
         // Set time for ease of prediction
@@ -1819,7 +1882,7 @@ mod staking_tests {
         let query_response = query(&deps, query_msg).unwrap();
         match from_binary(&query_response).unwrap() {
             QueryAnswer::Unfunded { total } => {
-                assert_eq!(total, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(total, Uint128::new(50 * 10u128.pow(8)));
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -1828,7 +1891,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("treasury".to_string()),
             from: Default::default(),
-            amount: Uint128(25 * 10u128.pow(8)),
+            amount: Uint128::new(25 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Unbond).unwrap()),
             memo: None,
             padding: None,
@@ -1842,14 +1905,14 @@ mod staking_tests {
         let query_response = query(&deps, query_msg).unwrap();
         match from_binary(&query_response).unwrap() {
             QueryAnswer::Unfunded { total } => {
-                assert_eq!(total, Uint128(25 * 10u128.pow(8)));
+                assert_eq!(total, Uint128::new(25 * 10u128.pow(8)));
             }
             _ => panic!("Unexpected result from query"),
         };
 
         // Unbond in the middle of funding
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(25 * 10u128.pow(8)),
+            amount: Uint128::new(25 * 10u128.pow(8)),
             padding: None,
         };
         // Set time for ease of prediction
@@ -1864,7 +1927,7 @@ mod staking_tests {
         let query_response = query(&deps, query_msg).unwrap();
         match from_binary(&query_response).unwrap() {
             QueryAnswer::Unfunded { total } => {
-                assert_eq!(total, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(total, Uint128::new(50 * 10u128.pow(8)));
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -1873,7 +1936,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("treasury".to_string()),
             from: Default::default(),
-            amount: Uint128(500 * 10u128.pow(8)),
+            amount: Uint128::new(500 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Unbond).unwrap()),
             memo: None,
             padding: None,
@@ -1897,12 +1960,12 @@ mod staking_tests {
     fn test_handle_claim_unbond() {
         let (init_result, mut deps) = init_helper_staking();
 
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
         // Bond some amount
         // Unbond
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(25 * 10u128.pow(8)),
+            amount: Uint128::new(25 * 10u128.pow(8)),
             padding: None,
         };
         // Set time for ease of prediction
@@ -1915,7 +1978,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("treasury".to_string()),
             from: Default::default(),
-            amount: Uint128(25 * 10u128.pow(8)),
+            amount: Uint128::new(25 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Unbond).unwrap()),
             memo: None,
             padding: None,
@@ -1940,10 +2003,10 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(75 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(75 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(75 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(75 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
-                assert_eq!(unbonding, Uint128(25 * 10u128.pow(8)));
+                assert_eq!(unbonding, Uint128::new(25 * 10u128.pow(8)));
                 assert_eq!(unbonded, None);
             }
             _ => panic!("Unexpected result from query"),
@@ -1973,11 +2036,11 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(75 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(75 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(75 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(75 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
-                assert_eq!(unbonded, Some(Uint128(25 * 10u128.pow(8))));
+                assert_eq!(unbonded, Some(Uint128::new(25 * 10u128.pow(8))));
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -2006,8 +2069,8 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(75 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(75 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(75 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(75 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, Some(Uint128::zero()));
@@ -2017,7 +2080,7 @@ mod staking_tests {
 
         // Try to claim when its not funded and the date has been reached
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(25 * 10u128.pow(8)),
+            amount: Uint128::new(25 * 10u128.pow(8)),
             padding: None,
         };
         // Set time for ease of prediction
@@ -2039,8 +2102,8 @@ mod staking_tests {
         let (init_result, mut deps) = init_helper_staking();
 
         // Foo should get 2x more rewards than bar
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
-        new_staked_account(&mut deps, "bar", "key", Uint128(50 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "bar", "key", Uint128::new(50 * 10u128.pow(8)));
 
         // Claim rewards
         let handle_msg = HandleMsg::ClaimRewards { padding: None };
@@ -2052,7 +2115,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("treasury".to_string()),
             from: Default::default(),
-            amount: Uint128(75 * 10u128.pow(8)),
+            amount: Uint128::new(75 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
             memo: None,
             padding: None,
@@ -2077,9 +2140,9 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(100 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(100 * 10u128.pow(18)));
-                assert_eq!(pending_rewards, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(tokens, Uint128::new(100 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(100 * 10u128.pow(18)));
+                assert_eq!(pending_rewards, Uint128::new(50 * 10u128.pow(8)));
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
             }
@@ -2103,9 +2166,9 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(50 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(50 * 10u128.pow(18)));
-                assert_eq!(pending_rewards, Uint128(25 * 10u128.pow(8)));
+                assert_eq!(tokens, Uint128::new(50 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(50 * 10u128.pow(18)));
+                assert_eq!(pending_rewards, Uint128::new(25 * 10u128.pow(8)));
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
             }
@@ -2115,8 +2178,8 @@ mod staking_tests {
         // Total tokens should be total staked plus the rewards
         check_staked_state(
             &deps,
-            Uint128(225 * 10u128.pow(8)),
-            Uint128(150 * 10u128.pow(18)),
+            Uint128::new(225 * 10u128.pow(8)),
+            Uint256::from(150 * 10u128.pow(18)),
         );
 
         // Claim rewards
@@ -2141,8 +2204,8 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(100 * 10u128.pow(8)));
-                assert!(shares < Uint128(100 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(100 * 10u128.pow(8)));
+                assert!(shares < Uint256::from(100 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
@@ -2155,13 +2218,13 @@ mod staking_tests {
     fn test_handle_stake_rewards() {
         let (init_result, mut deps) = init_helper_staking();
 
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
         // Add rewards
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("treasury".to_string()),
             from: Default::default(),
-            amount: Uint128(50 * 10u128.pow(8)),
+            amount: Uint128::new(50 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
             memo: None,
             padding: None,
@@ -2186,9 +2249,9 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(100 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(100 * 10u128.pow(18)));
-                assert_eq!(pending_rewards, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(tokens, Uint128::new(100 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(100 * 10u128.pow(18)));
+                assert_eq!(pending_rewards, Uint128::new(50 * 10u128.pow(8)));
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
             }
@@ -2215,8 +2278,8 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(150 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(100 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(150 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(100 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
@@ -2230,14 +2293,14 @@ mod staking_tests {
         let (init_result, mut deps) = init_helper_staking();
 
         // Foo should get 2x more rewards than bar
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
-        new_staked_account(&mut deps, "bar", "key", Uint128(50 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "bar", "key", Uint128::new(50 * 10u128.pow(8)));
 
         // Add rewards; foo should get 50 tkn and bar 25
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("treasury".to_string()),
             from: Default::default(),
-            amount: Uint128(75 * 10u128.pow(8)),
+            amount: Uint128::new(75 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
             memo: None,
             padding: None,
@@ -2262,9 +2325,9 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(100 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(100 * 10u128.pow(18)));
-                assert_eq!(pending_rewards, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(tokens, Uint128::new(100 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(100 * 10u128.pow(18)));
+                assert_eq!(pending_rewards, Uint128::new(50 * 10u128.pow(8)));
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
             }
@@ -2288,9 +2351,9 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(50 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(50 * 10u128.pow(18)));
-                assert_eq!(pending_rewards, Uint128(25 * 10u128.pow(8)));
+                assert_eq!(tokens, Uint128::new(50 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(50 * 10u128.pow(18)));
+                assert_eq!(pending_rewards, Uint128::new(25 * 10u128.pow(8)));
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
             }
@@ -2300,13 +2363,13 @@ mod staking_tests {
         // Total tokens should be total staked plus the rewards
         check_staked_state(
             &deps,
-            Uint128(225 * 10u128.pow(8)),
-            Uint128(150 * 10u128.pow(18)),
+            Uint128::new(225 * 10u128.pow(8)),
+            Uint256::from(150 * 10u128.pow(18)),
         );
 
         // Unbond more than allowed
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(50 * 10u128.pow(8)),
+            amount: Uint128::new(50 * 10u128.pow(8)),
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
@@ -2328,10 +2391,10 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(50 * 10u128.pow(8)));
-                assert!(shares < Uint128(50 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(50 * 10u128.pow(8)));
+                assert!(shares < Uint256::from(50 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
-                assert_eq!(unbonding, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(unbonding, Uint128::new(50 * 10u128.pow(8)));
                 assert_eq!(unbonded, None);
             }
             _ => panic!("Unexpected result from query"),
@@ -2341,7 +2404,7 @@ mod staking_tests {
     #[test]
     fn test_handle_set_distributors_status() {
         let (init_result, mut deps) = init_helper_staking();
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
         let handle_msg = HandleMsg::SetDistributorsStatus {
             enabled: false,
@@ -2422,13 +2485,23 @@ mod staking_tests {
     #[test]
     fn test_send_with_distributors() {
         let (init_result, mut deps) = init_helper_staking();
-        new_staked_account(&mut deps, "sender", "key", Uint128(100 * 10u128.pow(8)));
-        new_staked_account(&mut deps, "distrib", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(
+            &mut deps,
+            "sender",
+            "key",
+            Uint128::new(100 * 10u128.pow(8)),
+        );
+        new_staked_account(
+            &mut deps,
+            "distrib",
+            "key",
+            Uint128::new(100 * 10u128.pow(8)),
+        );
         new_staked_account(
             &mut deps,
             "not_distrib",
             "key",
-            Uint128(100 * 10u128.pow(8)),
+            Uint128::new(100 * 10u128.pow(8)),
         );
 
         let handle_msg = HandleMsg::SetDistributors {
@@ -2443,7 +2516,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Send {
             recipient: HumanAddr("someone".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
             memo: None,
             padding: None,
@@ -2459,7 +2532,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Send {
             recipient: HumanAddr("distrib".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
             memo: None,
             padding: None,
@@ -2471,7 +2544,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Send {
             recipient: HumanAddr("not_distrib".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
             memo: None,
             padding: None,
@@ -2484,7 +2557,7 @@ mod staking_tests {
     #[test]
     fn test_handle_send_with_rewards() {
         let (init_result, mut deps) = init_helper_staking();
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
         let handle_msg = HandleMsg::SetDistributorsStatus {
             enabled: false,
@@ -2498,7 +2571,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("treasury".to_string()),
             from: Default::default(),
-            amount: Uint128(50 * 10u128.pow(8)),
+            amount: Uint128::new(50 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
             memo: None,
             padding: None,
@@ -2523,9 +2596,9 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(100 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(100 * 10u128.pow(18)));
-                assert_eq!(pending_rewards, Uint128(50 * 10u128.pow(8)));
+                assert_eq!(tokens, Uint128::new(100 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(100 * 10u128.pow(18)));
+                assert_eq!(pending_rewards, Uint128::new(50 * 10u128.pow(8)));
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
             }
@@ -2536,7 +2609,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Send {
             recipient: HumanAddr("other".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
             memo: None,
             padding: None,
@@ -2561,8 +2634,8 @@ mod staking_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(90 * 10u128.pow(8)));
-                assert!(shares < Uint128(90 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(90 * 10u128.pow(8)));
+                assert!(shares < Uint256::from(90 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
@@ -2574,8 +2647,8 @@ mod staking_tests {
     #[test]
     fn test_handle_send_cooldown() {
         let (init_result, mut deps) = init_helper_staking();
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
-        new_staked_account(&mut deps, "bar", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "bar", "key", Uint128::new(100 * 10u128.pow(8)));
 
         let handle_msg = HandleMsg::SetDistributorsStatus {
             enabled: false,
@@ -2589,7 +2662,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Send {
             recipient: HumanAddr("bar".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
             memo: None,
             padding: None,
@@ -2615,13 +2688,13 @@ mod staking_tests {
                 cooldown,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(110 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(110 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(110 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(110 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
                 assert_eq!(cooldown.0.len(), 1);
-                assert_eq!(cooldown.0[0].amount, Uint128(10 * 10u128.pow(8)));
+                assert_eq!(cooldown.0[0].amount, Uint128::new(10 * 10u128.pow(8)));
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -2630,7 +2703,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Send {
             recipient: HumanAddr("foo".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(100 * 10u128.pow(8)),
+            amount: Uint128::new(100 * 10u128.pow(8)),
             msg: None,
             memo: None,
             padding: None,
@@ -2656,13 +2729,13 @@ mod staking_tests {
                 cooldown,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(10 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(10 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(10 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(10 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
                 assert_eq!(cooldown.0.len(), 1);
-                assert_eq!(cooldown.0[0].amount, Uint128(10 * 10u128.pow(8)));
+                assert_eq!(cooldown.0[0].amount, Uint128::new(10 * 10u128.pow(8)));
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -2671,7 +2744,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Send {
             recipient: HumanAddr("foo".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
             memo: None,
             padding: None,
@@ -2698,7 +2771,7 @@ mod staking_tests {
                 ..
             } => {
                 assert_eq!(tokens, Uint128::zero());
-                assert_eq!(shares, Uint128::zero());
+                assert_eq!(shares, Uint256::zero());
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
@@ -2711,8 +2784,8 @@ mod staking_tests {
     #[test]
     fn test_handle_unbond_cooldown() {
         let (init_result, mut deps) = init_helper_staking();
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
-        new_staked_account(&mut deps, "bar", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "bar", "key", Uint128::new(100 * 10u128.pow(8)));
 
         let handle_msg = HandleMsg::SetDistributorsStatus {
             enabled: false,
@@ -2726,7 +2799,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Send {
             recipient: HumanAddr("bar".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
             memo: None,
             padding: None,
@@ -2752,20 +2825,20 @@ mod staking_tests {
                 cooldown,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(110 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(110 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(110 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(110 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
                 assert_eq!(cooldown.0.len(), 1);
-                assert_eq!(cooldown.0[0].amount, Uint128(10 * 10u128.pow(8)));
+                assert_eq!(cooldown.0[0].amount, Uint128::new(10 * 10u128.pow(8)));
             }
             _ => panic!("Unexpected result from query"),
         };
 
         // Unbond
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(100 * 10u128.pow(8)),
+            amount: Uint128::new(100 * 10u128.pow(8)),
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("bar", &[]), handle_msg.clone());
@@ -2789,20 +2862,20 @@ mod staking_tests {
                 cooldown,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(10 * 10u128.pow(8)));
-                assert_eq!(shares, Uint128(10 * 10u128.pow(18)));
+                assert_eq!(tokens, Uint128::new(10 * 10u128.pow(8)));
+                assert_eq!(shares, Uint256::from(10 * 10u128.pow(18)));
                 assert_eq!(pending_rewards, Uint128::zero());
-                assert_eq!(unbonding, Uint128(100 * 10u128.pow(8)));
+                assert_eq!(unbonding, Uint128::new(100 * 10u128.pow(8)));
                 assert_eq!(unbonded, None);
                 assert_eq!(cooldown.0.len(), 1);
-                assert_eq!(cooldown.0[0].amount, Uint128(10 * 10u128.pow(8)));
+                assert_eq!(cooldown.0[0].amount, Uint128::new(10 * 10u128.pow(8)));
             }
             _ => panic!("Unexpected result from query"),
         };
 
         // Unbond
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("bar", &[]), handle_msg.clone());
@@ -2827,9 +2900,9 @@ mod staking_tests {
                 ..
             } => {
                 assert_eq!(tokens, Uint128::zero());
-                assert_eq!(shares, Uint128::zero());
+                assert_eq!(shares, Uint256::zero());
                 assert_eq!(pending_rewards, Uint128::zero());
-                assert_eq!(unbonding, Uint128(110 * 10u128.pow(8)));
+                assert_eq!(unbonding, Uint128::new(110 * 10u128.pow(8)));
                 assert_eq!(unbonded, None);
                 assert_eq!(cooldown.0.len(), 0);
             }
@@ -2840,7 +2913,7 @@ mod staking_tests {
     #[test]
     fn test_handle_stop_bonding() {
         let (init_result, mut deps) = init_helper_staking();
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
         let handle_msg = HandleMsg::SetDistributorsStatus {
             enabled: false,
@@ -2860,7 +2933,7 @@ mod staking_tests {
 
         let send_msg = HandleMsg::Transfer {
             recipient: HumanAddr("account".to_string()),
-            amount: Uint128(123),
+            amount: Uint128::new(123),
             memo: None,
             padding: None,
         };
@@ -2870,7 +2943,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("foo".to_string()),
             from: Default::default(),
-            amount: Uint128(100 * 10u128.pow(8)),
+            amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
@@ -2882,7 +2955,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("foo".to_string()),
             from: Default::default(),
-            amount: Uint128(100 * 10u128.pow(8)),
+            amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
             memo: None,
             padding: None,
@@ -2892,7 +2965,7 @@ mod staking_tests {
         assert!(handle_result.is_err());
 
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             padding: None,
         };
         // Bond tokens
@@ -2903,7 +2976,7 @@ mod staking_tests {
     #[test]
     fn test_handle_stop_all_but_unbond() {
         let (init_result, mut deps) = init_helper_staking();
-        new_staked_account(&mut deps, "foo", "key", Uint128(100 * 10u128.pow(8)));
+        new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
         let handle_msg = HandleMsg::SetDistributorsStatus {
             enabled: false,
@@ -2923,7 +2996,7 @@ mod staking_tests {
 
         let send_msg = HandleMsg::Transfer {
             recipient: HumanAddr("account".to_string()),
-            amount: Uint128(123),
+            amount: Uint128::new(123),
             memo: None,
             padding: None,
         };
@@ -2933,7 +3006,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("foo".to_string()),
             from: Default::default(),
-            amount: Uint128(100 * 10u128.pow(8)),
+            amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
@@ -2945,7 +3018,7 @@ mod staking_tests {
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("foo".to_string()),
             from: Default::default(),
-            amount: Uint128(100 * 10u128.pow(8)),
+            amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
             memo: None,
             padding: None,
@@ -2955,7 +3028,7 @@ mod staking_tests {
         assert!(handle_result.is_err());
 
         let handle_msg = HandleMsg::Unbond {
-            amount: Uint128(10 * 10u128.pow(8)),
+            amount: Uint128::new(10 * 10u128.pow(8)),
             padding: None,
         };
         // Bond tokens
@@ -2967,14 +3040,22 @@ mod staking_tests {
 #[cfg(test)]
 mod snip20_tests {
     use super::*;
-    use crate::msg::InitConfig;
-    use crate::msg::ResponseStatus;
-    use cosmwasm_std::testing::*;
-    use cosmwasm_std::{from_binary, BlockInfo, ContractInfo, MessageInfo, QueryResponse, WasmMsg};
-    use shade_protocol::snip20_staking::ReceiveType;
-    use shade_protocol::utils::asset::Contract;
+    use crate::msg::{InitConfig, ResponseStatus};
+    use cosmwasm_std::{
+        from_binary,
+        testing::*,
+        BlockInfo,
+        Coin,
+        ContractInfo,
+        MessageInfo,
+        QueryResponse,
+        WasmMsg,
+    };
+    use shade_protocol::{
+        contract_interfaces::staking::snip20_staking::ReceiveType,
+        utils::asset::Contract,
+    };
     use std::any::Any;
-    use cosmwasm_std::Coin;
 
     // Helper functions
     #[derive(Clone)]
@@ -3057,13 +3138,10 @@ mod snip20_tests {
         StdResult<InitResponse>,
         Extern<MockStorage, MockApi, MockQuerier>,
     ) {
-        let mut deps = mock_dependencies(
-            20,
-            &[Coin {
-                denom: "uscrt".to_string(),
-                amount: Uint128(contract_bal),
-            }],
-        );
+        let mut deps = mock_dependencies(20, &[Coin {
+            denom: "uscrt".to_string(),
+            amount: Uint128::new(contract_bal).into(),
+        }]);
 
         let env = mock_env("instantiator", &[]);
         let init_config: InitConfig = from_binary(&Binary::from(
@@ -3186,7 +3264,7 @@ mod snip20_tests {
         let (init_result, deps) = init_helper(vec![InitBalance {
             acc: "lebron",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
 
         let config = ReadonlyConfig::from_storage(&deps.storage);
@@ -3210,7 +3288,7 @@ mod snip20_tests {
             vec![InitBalance {
                 acc: "lebron",
                 pwd: "pwd",
-                stake: Uint128(5000),
+                stake: Uint128::new(5000),
             }],
             true,
             true,
@@ -3239,7 +3317,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "lebron",
             pwd: "pwd",
-            stake: Uint128(u128::MAX),
+            stake: Uint128::new(u128::MAX),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3250,12 +3328,12 @@ mod snip20_tests {
         let (init_result, _deps) = init_helper(vec![InitBalance {
             acc: "lebron",
             pwd: "pwd",
-            stake: Uint128(u128::MAX),
+            stake: Uint128::new(u128::MAX),
         }]);
         let handle_msg = HandleMsg::Receive {
             sender: HumanAddr("giannis".to_string()),
             from: Default::default(),
-            amount: Uint128(1),
+            amount: Uint128::new(1),
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
             memo: None,
             padding: None,
@@ -3270,7 +3348,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3294,8 +3372,8 @@ mod snip20_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(5000));
-                assert_eq!(shares, Uint128(50000000000000));
+                assert_eq!(tokens, Uint128::new(5000));
+                assert_eq!(shares, Uint256::from(50000000000000u128));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
@@ -3308,15 +3386,15 @@ mod snip20_tests {
         let query_response = query(&deps, query_balance_msg).unwrap();
         match from_binary(&query_response).unwrap() {
             QueryAnswer::TotalStaked { shares, tokens } => {
-                assert_eq!(tokens, Uint128(5000));
-                assert_eq!(shares, Uint128(50000000000000))
+                assert_eq!(tokens, Uint128::new(5000));
+                assert_eq!(shares, Uint256::from(50000000000000u128))
             }
             _ => panic!("Unexpected result from query"),
         };
 
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("alice".to_string()),
-            amount: Uint128(1000),
+            amount: Uint128::new(1000),
             memo: None,
             padding: None,
         };
@@ -3337,7 +3415,7 @@ mod snip20_tests {
 
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("alice".to_string()),
-            amount: Uint128(10000),
+            amount: Uint128::new(10000),
             memo: None,
             padding: None,
         };
@@ -3361,8 +3439,8 @@ mod snip20_tests {
                 unbonded,
                 ..
             } => {
-                assert_eq!(tokens, Uint128(4000));
-                assert_eq!(shares, Uint128(40000000000000));
+                assert_eq!(tokens, Uint128::new(4000));
+                assert_eq!(shares, Uint256::from(40000000000000u128));
                 assert_eq!(pending_rewards, Uint128::zero());
                 assert_eq!(unbonding, Uint128::zero());
                 assert_eq!(unbonded, None);
@@ -3375,8 +3453,8 @@ mod snip20_tests {
         let query_response = query(&deps, query_balance_msg).unwrap();
         match from_binary(&query_response).unwrap() {
             QueryAnswer::TotalStaked { shares, tokens } => {
-                assert_eq!(tokens, Uint128(5000));
-                assert_eq!(shares, Uint128(50000000000000))
+                assert_eq!(tokens, Uint128::new(5000));
+                assert_eq!(shares, Uint256::from(50000000000000u128))
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -3387,7 +3465,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3406,7 +3484,7 @@ mod snip20_tests {
         let handle_msg = HandleMsg::Send {
             recipient: HumanAddr("contract".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(100),
+            amount: Uint128::new(100),
             memo: Some("my memo".to_string()),
             padding: None,
             msg: Some(to_binary("hey hey you you").unwrap()),
@@ -3414,20 +3492,22 @@ mod snip20_tests {
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result.clone()));
-        assert!(result.messages.contains(&CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: HumanAddr("contract".to_string()),
-            callback_code_hash: "this_is_a_hash_of_a_code".to_string(),
-            msg: Snip20ReceiveMsg::new(
-                HumanAddr("bob".to_string()),
-                HumanAddr("bob".to_string()),
-                Uint128(100),
-                Some("my memo".to_string()),
-                Some(to_binary("hey hey you you").unwrap())
-            )
-            .into_binary()
-            .unwrap(),
-            send: vec![]
-        })));
+        assert!(
+            result.messages.contains(&CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: HumanAddr("contract".to_string()),
+                callback_code_hash: "this_is_a_hash_of_a_code".to_string(),
+                msg: Snip20ReceiveMsg::new(
+                    HumanAddr("bob".to_string()),
+                    HumanAddr("bob".to_string()),
+                    Uint128::new(100),
+                    Some("my memo".to_string()),
+                    Some(to_binary("hey hey you you").unwrap())
+                )
+                .into_binary()
+                .unwrap(),
+                send: vec![]
+            }))
+        );
     }
 
     #[test]
@@ -3435,7 +3515,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3462,7 +3542,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3499,7 +3579,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3549,7 +3629,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3561,7 +3641,7 @@ mod snip20_tests {
         let handle_msg = HandleMsg::TransferFrom {
             owner: HumanAddr("bob".to_string()),
             recipient: HumanAddr("alice".to_string()),
-            amount: Uint128(2500),
+            amount: Uint128::new(2500),
             memo: None,
             padding: None,
         };
@@ -3572,7 +3652,7 @@ mod snip20_tests {
         // Transfer more than allowance
         let handle_msg = HandleMsg::IncreaseAllowance {
             spender: HumanAddr("alice".to_string()),
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             padding: None,
             expiration: Some(1_571_797_420),
         };
@@ -3585,7 +3665,7 @@ mod snip20_tests {
         let handle_msg = HandleMsg::TransferFrom {
             owner: HumanAddr("bob".to_string()),
             recipient: HumanAddr("alice".to_string()),
-            amount: Uint128(2500),
+            amount: Uint128::new(2500),
             memo: None,
             padding: None,
         };
@@ -3597,7 +3677,7 @@ mod snip20_tests {
         let handle_msg = HandleMsg::TransferFrom {
             owner: HumanAddr("bob".to_string()),
             recipient: HumanAddr("alice".to_string()),
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             memo: None,
             padding: None,
         };
@@ -3628,7 +3708,7 @@ mod snip20_tests {
         let handle_msg = HandleMsg::TransferFrom {
             owner: HumanAddr("bob".to_string()),
             recipient: HumanAddr("alice".to_string()),
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             memo: None,
             padding: None,
         };
@@ -3659,7 +3739,7 @@ mod snip20_tests {
         let handle_msg = HandleMsg::TransferFrom {
             owner: HumanAddr("bob".to_string()),
             recipient: HumanAddr("alice".to_string()),
-            amount: Uint128(1),
+            amount: Uint128::new(1),
             memo: None,
             padding: None,
         };
@@ -3673,7 +3753,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3686,7 +3766,7 @@ mod snip20_tests {
             owner: HumanAddr("bob".to_string()),
             recipient: HumanAddr("alice".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(2500),
+            amount: Uint128::new(2500),
             memo: None,
             msg: None,
             padding: None,
@@ -3698,7 +3778,7 @@ mod snip20_tests {
         // Send more than allowance
         let handle_msg = HandleMsg::IncreaseAllowance {
             spender: HumanAddr("alice".to_string()),
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             padding: None,
             expiration: None,
         };
@@ -3712,7 +3792,7 @@ mod snip20_tests {
             owner: HumanAddr("bob".to_string()),
             recipient: HumanAddr("alice".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(2500),
+            amount: Uint128::new(2500),
             memo: None,
             msg: None,
             padding: None,
@@ -3736,7 +3816,7 @@ mod snip20_tests {
         let snip20_msg = Snip20ReceiveMsg::new(
             HumanAddr("alice".to_string()),
             HumanAddr("bob".to_string()),
-            Uint128(2000),
+            Uint128::new(2000),
             Some("my memo".to_string()),
             Some(send_msg.clone()),
         );
@@ -3744,7 +3824,7 @@ mod snip20_tests {
             owner: HumanAddr("bob".to_string()),
             recipient: HumanAddr("contract".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             memo: Some("my memo".to_string()),
             msg: Some(send_msg),
             padding: None,
@@ -3755,11 +3835,13 @@ mod snip20_tests {
             "handle() failed: {}",
             handle_result.err().unwrap()
         );
-        assert!(handle_result.unwrap().messages.contains(
-            &snip20_msg
-                .into_cosmos_msg("lolz".to_string(), HumanAddr("contract".to_string()))
-                .unwrap()
-        ));
+        assert!(
+            handle_result.unwrap().messages.contains(
+                &snip20_msg
+                    .into_cosmos_msg("lolz".to_string(), HumanAddr("contract".to_string()))
+                    .unwrap()
+            )
+        );
         let bob_canonical = deps
             .api
             .canonical_address(&HumanAddr("bob".to_string()))
@@ -3782,7 +3864,7 @@ mod snip20_tests {
             owner: HumanAddr("bob".to_string()),
             recipient: HumanAddr("alice".to_string()),
             recipient_code_hash: None,
-            amount: Uint128(1),
+            amount: Uint128::new(1),
             memo: None,
             msg: None,
             padding: None,
@@ -3797,7 +3879,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3807,7 +3889,7 @@ mod snip20_tests {
 
         let handle_msg = HandleMsg::DecreaseAllowance {
             spender: HumanAddr("alice".to_string()),
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             padding: None,
             expiration: None,
         };
@@ -3828,17 +3910,14 @@ mod snip20_tests {
             .unwrap();
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
-        assert_eq!(
-            allowance,
-            crate::state::Allowance {
-                amount: 0,
-                expiration: None
-            }
-        );
+        assert_eq!(allowance, crate::state::Allowance {
+            amount: 0,
+            expiration: None
+        });
 
         let handle_msg = HandleMsg::IncreaseAllowance {
             spender: HumanAddr("alice".to_string()),
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             padding: None,
             expiration: None,
         };
@@ -3851,7 +3930,7 @@ mod snip20_tests {
 
         let handle_msg = HandleMsg::DecreaseAllowance {
             spender: HumanAddr("alice".to_string()),
-            amount: Uint128(50),
+            amount: Uint128::new(50),
             padding: None,
             expiration: None,
         };
@@ -3863,13 +3942,10 @@ mod snip20_tests {
         );
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
-        assert_eq!(
-            allowance,
-            crate::state::Allowance {
-                amount: 1950,
-                expiration: None
-            }
-        );
+        assert_eq!(allowance, crate::state::Allowance {
+            amount: 1950,
+            expiration: None
+        });
     }
 
     #[test]
@@ -3877,7 +3953,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3887,7 +3963,7 @@ mod snip20_tests {
 
         let handle_msg = HandleMsg::IncreaseAllowance {
             spender: HumanAddr("alice".to_string()),
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             padding: None,
             expiration: None,
         };
@@ -3908,17 +3984,14 @@ mod snip20_tests {
             .unwrap();
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
-        assert_eq!(
-            allowance,
-            crate::state::Allowance {
-                amount: 2000,
-                expiration: None
-            }
-        );
+        assert_eq!(allowance, crate::state::Allowance {
+            amount: 2000,
+            expiration: None
+        });
 
         let handle_msg = HandleMsg::IncreaseAllowance {
             spender: HumanAddr("alice".to_string()),
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             padding: None,
             expiration: None,
         };
@@ -3930,13 +4003,10 @@ mod snip20_tests {
         );
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
-        assert_eq!(
-            allowance,
-            crate::state::Allowance {
-                amount: 4000,
-                expiration: None
-            }
-        );
+        assert_eq!(allowance, crate::state::Allowance {
+            amount: 4000,
+            expiration: None
+        });
     }
 
     #[test]
@@ -3944,7 +4014,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -3975,7 +4045,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "admin",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -4008,7 +4078,7 @@ mod snip20_tests {
             vec![InitBalance {
                 acc: "lebron",
                 pwd: "pwd",
-                stake: Uint128(5000),
+                stake: Uint128::new(5000),
             }],
             false,
             false,
@@ -4044,7 +4114,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "lebron",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -4066,7 +4136,7 @@ mod snip20_tests {
 
         let send_msg = HandleMsg::Transfer {
             recipient: HumanAddr("account".to_string()),
-            amount: Uint128(123),
+            amount: Uint128::new(123),
             memo: None,
             padding: None,
         };
@@ -4085,7 +4155,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "giannis",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -4124,7 +4194,7 @@ mod snip20_tests {
             QueryAnswer::Balance { amount } => amount,
             _ => panic!("Unexpected result from query"),
         };
-        assert_eq!(balance, Uint128(5000));
+        assert_eq!(balance, Uint128::new(5000));
 
         let wrong_vk_query_msg = QueryMsg::Balance {
             address: HumanAddr("giannis".to_string()),
@@ -4148,7 +4218,7 @@ mod snip20_tests {
             r#"{ "public_total_supply": true }"#.as_bytes(),
         ))
         .unwrap();
-        let init_supply = Uint128(5000);
+        let init_supply = Uint128::new(5000);
 
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("instantiator", &[]);
@@ -4197,7 +4267,7 @@ mod snip20_tests {
                 assert_eq!(name, init_name);
                 assert_eq!(symbol, "STKD-".to_string() + &init_symbol);
                 assert_eq!(decimals, init_decimals);
-                assert_eq!(total_supply, Some(Uint128(5000)));
+                assert_eq!(total_supply, Some(Uint128::new(5000)));
             }
             _ => panic!("unexpected"),
         }
@@ -4220,7 +4290,7 @@ mod snip20_tests {
         ))
         .unwrap();
 
-        let init_supply = Uint128(5000);
+        let init_supply = Uint128::new(5000);
 
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("instantiator", &[]);
@@ -4274,7 +4344,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "giannis",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -4284,7 +4354,7 @@ mod snip20_tests {
 
         let handle_msg = HandleMsg::IncreaseAllowance {
             spender: HumanAddr("lebron".to_string()),
-            amount: Uint128(2000),
+            amount: Uint128::new(2000),
             padding: None,
             expiration: None,
         };
@@ -4352,7 +4422,7 @@ mod snip20_tests {
             QueryAnswer::Allowance { allowance, .. } => allowance,
             _ => panic!("Unexpected"),
         };
-        assert_eq!(allowance, Uint128(2000));
+        assert_eq!(allowance, Uint128::new(2000));
 
         let query_msg = QueryMsg::Allowance {
             owner: HumanAddr("giannis".to_string()),
@@ -4364,7 +4434,7 @@ mod snip20_tests {
             QueryAnswer::Allowance { allowance, .. } => allowance,
             _ => panic!("Unexpected"),
         };
-        assert_eq!(allowance, Uint128(2000));
+        assert_eq!(allowance, Uint128::new(2000));
 
         let query_msg = QueryMsg::Allowance {
             owner: HumanAddr("lebron".to_string()),
@@ -4376,7 +4446,7 @@ mod snip20_tests {
             QueryAnswer::Allowance { allowance, .. } => allowance,
             _ => panic!("Unexpected"),
         };
-        assert_eq!(allowance, Uint128(0));
+        assert_eq!(allowance, Uint128::new(0));
     }
 
     #[test]
@@ -4384,7 +4454,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -4424,7 +4494,7 @@ mod snip20_tests {
             QueryAnswer::Balance { amount } => amount,
             _ => panic!("Unexpected"),
         };
-        assert_eq!(balance, Uint128(5000));
+        assert_eq!(balance, Uint128::new(5000));
     }
 
     #[test]
@@ -4432,7 +4502,7 @@ mod snip20_tests {
         let (init_result, mut deps) = init_helper(vec![InitBalance {
             acc: "bob",
             pwd: "pwd",
-            stake: Uint128(5000),
+            stake: Uint128::new(5000),
         }]);
         assert!(
             init_result.is_ok(),
@@ -4449,7 +4519,7 @@ mod snip20_tests {
 
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("alice".to_string()),
-            amount: Uint128(1000),
+            amount: Uint128::new(1000),
             memo: None,
             padding: None,
         };
@@ -4458,7 +4528,7 @@ mod snip20_tests {
         assert!(ensure_success(result));
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("banana".to_string()),
-            amount: Uint128(500),
+            amount: Uint128::new(500),
             memo: None,
             padding: None,
         };
@@ -4467,7 +4537,7 @@ mod snip20_tests {
         assert!(ensure_success(result));
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("mango".to_string()),
-            amount: Uint128(2500),
+            amount: Uint128::new(2500),
             memo: None,
             padding: None,
         };
@@ -4536,7 +4606,7 @@ mod snip20_tests {
             vec![InitBalance {
                 acc: "bob",
                 pwd: "pwd",
-                stake: Uint128(10000),
+                stake: Uint128::new(10000),
             }],
             true,
             true,
@@ -4559,7 +4629,7 @@ mod snip20_tests {
 
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("alice".to_string()),
-            amount: Uint128(1000),
+            amount: Uint128::new(1000),
             memo: Some("my transfer message #1".to_string()),
             padding: None,
         };
@@ -4569,7 +4639,7 @@ mod snip20_tests {
 
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("banana".to_string()),
-            amount: Uint128(500),
+            amount: Uint128::new(500),
             memo: Some("my transfer message #2".to_string()),
             padding: None,
         };
@@ -4579,7 +4649,7 @@ mod snip20_tests {
 
         let handle_msg = HandleMsg::Transfer {
             recipient: HumanAddr("mango".to_string()),
-            amount: Uint128(2500),
+            amount: Uint128::new(2500),
             memo: Some("my transfer message #3".to_string()),
             padding: None,
         };
@@ -4623,7 +4693,7 @@ mod snip20_tests {
                 },
                 coins: Coin {
                     denom: "STKD-SECSEC".to_string(),
-                    amount: Uint128(2500),
+                    amount: Uint128::new(2500).into(),
                 },
                 memo: Some("my transfer message #3".to_string()),
                 block_time: 1571797419,
@@ -4638,7 +4708,7 @@ mod snip20_tests {
                 },
                 coins: Coin {
                     denom: "STKD-SECSEC".to_string(),
-                    amount: Uint128(500),
+                    amount: Uint128::new(500).into(),
                 },
                 memo: Some("my transfer message #2".to_string()),
                 block_time: 1571797419,
@@ -4653,7 +4723,7 @@ mod snip20_tests {
                 },
                 coins: Coin {
                     denom: "STKD-SECSEC".to_string(),
-                    amount: Uint128(1000),
+                    amount: Uint128::new(1000).into(),
                 },
                 memo: Some("my transfer message #1".to_string()),
                 block_time: 1571797419,
@@ -4666,7 +4736,7 @@ mod snip20_tests {
                 },
                 coins: Coin {
                     denom: "STKD-SECSEC".to_string(),
-                    amount: Uint128(10000),
+                    amount: Uint128::new(10000).into(),
                 },
                 memo: None,
                 block_time: 1571797419,

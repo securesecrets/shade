@@ -29,7 +29,8 @@ cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
 cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "governance",
+  "governance-impl",
+  "snip20_staking"
 ] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
@@ -39,3 +40,8 @@ snafu = { version = "0.6.3" }
 serde_json = { version = "1.0.67" }
 mockall = "0.10.2"
 mockall_double = "0.2.0"
+fadroma-ensemble = { branch = "v100", git = "https://github.com/hackbg/fadroma.git" }
+fadroma-platform-scrt = { branch = "v100",  git = "https://github.com/hackbg/fadroma.git" }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "governance", "snip20_staking", "snip20"  ] }
+snip20-reference-impl = { version = "0.1.0", path = "../snip20" }
+spip_stkd_0 = { version = "0.1.0", path = "../snip20_staking" }

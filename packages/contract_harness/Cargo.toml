@@ -18,6 +18,8 @@ mock_band = ["dep:mock_band"]
 treasury = ["dep:treasury"]
 treasury_manager = ["dep:treasury_manager"]
 scrt_staking = ["dep:scrt_staking"]
+governance = ["dep:governance"]
+snip20_staking = ["dep:spip_stkd_0"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
@@ -30,3 +32,5 @@ mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = 
 treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
 treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
 scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optional = true }
+governance = { version = "0.1.0", path = "../../contracts/governance", optional = true }
+spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
