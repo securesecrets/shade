@@ -7,9 +7,10 @@ use crate::state::{get_receiver_hash, Balances};
 use crate::state_staking::UserCooldown;
 use cosmwasm_std::{
     to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr, Querier, StdError,
-    StdResult, Storage, Uint128,
+    StdResult, Storage,
 };
 use secret_toolkit::utils::HandleCallback;
+use cosmwasm_math_compat::Uint128;
 use shade_protocol::snip20_staking::stake::VecQueue;
 use shade_protocol::utils::storage::default::BucketStorage;
 
@@ -36,7 +37,7 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
 
     let messages =
         vec![
-            Snip20BalanceReceiverMsg::new(env.message.sender, Uint128(balance), memo, msg)
+            Snip20BalanceReceiverMsg::new(env.message.sender, Uint128::new(balance), memo, msg)
                 .to_cosmos_msg(receiver_hash, recipient)?,
         ];
 
@@ -79,7 +80,7 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
 
     let messages = vec![Snip20BalanceReceiverMsg::new(
         env.message.sender,
-        (Uint128(balance) - cooldown.total)?,
+        Uint128::new(balance).checked_sub(cooldown.total)?,
         memo,
         msg,
     )
