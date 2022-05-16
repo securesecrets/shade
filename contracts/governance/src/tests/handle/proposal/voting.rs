@@ -1,13 +1,15 @@
 use crate::tests::{get_proposals, init_governance};
-use contract_harness::harness::{
-    governance::Governance,
-    snip20::Snip20,
-    snip20_staking::Snip20Staking,
+use contract_harness::{
+    Governance,
+    Snip20,
+    Snip20Staking,
 };
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, HumanAddr, StdResult};
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use fadroma::platform_scrt::ContractLink;
+use fadroma::{
+    ensemble::{ContractEnsemble, MockEnv},
+    ContractLink,
+};
 use shade_protocol::{
     contract_interfaces::{
         governance,

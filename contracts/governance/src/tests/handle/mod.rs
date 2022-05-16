@@ -5,10 +5,12 @@ pub mod profile;
 pub mod proposal;
 
 use crate::tests::{admin_only_governance, get_config};
-use contract_harness::harness::snip20::Snip20;
+use contract_harness::Snip20;
 use cosmwasm_std::HumanAddr;
-use fadroma_ensemble::MockEnv;
-use fadroma_platform_scrt::ContractLink;
+use fadroma::{
+    ensemble::MockEnv,
+    ContractLink,
+};
 use shade_protocol::{contract_interfaces::governance, utils::asset::Contract};
 
 #[test]
