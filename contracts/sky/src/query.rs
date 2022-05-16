@@ -3,7 +3,7 @@ use cosmwasm_std::{
 };
 use secret_toolkit::utils::Query;
 use crate::state::{config_r, viewing_key_r, self_address_r};
-use shade_protocol::{
+use shade_protocol::contract_interfaces::{
     sky::{QueryAnswer, Config},
     mint::{QueryMsg, self},
     sienna::{PairInfoResponse, PairQuery, TokenType, PairInfo},

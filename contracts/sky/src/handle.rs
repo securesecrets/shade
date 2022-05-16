@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Storage, Api, Querier, Extern, Env, StdResult, HandleResponse, to_binary, 
     Uint128, StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
 };
-use shade_protocol::{
+use shade_protocol::contract_interfaces::{
     sky::{
         Config, HandleAnswer, self
     },

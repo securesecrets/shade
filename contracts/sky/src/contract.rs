@@ -9,7 +9,7 @@ use crate::{
     state::{config_w, viewing_key_w, self_address_w},
 };
 
-use shade_protocol::sky::{Config, InitMsg, HandleMsg, QueryMsg};
+use shade_protocol::contract_interfaces::sky::{Config, InitMsg, HandleMsg, QueryMsg};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -66,7 +66,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::UpdateConfig{ config } => handle::try_update_config(deps, env, config),
-        HandleMsg::ArbPeg{amount} => handle::try_execute(deps, env, amount),
+        HandleMsg::ArbPeg{ amount } => handle::try_execute(deps, env, amount),
     }
 }
 
