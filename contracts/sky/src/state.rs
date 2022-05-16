@@ -5,7 +5,7 @@ use cosmwasm_std::{CanonicalAddr, HumanAddr, Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 
 use shade_protocol::contract_interfaces::{
-    sky::Config,
+    sky::sky::Config,
     snip20::Snip20Asset
 };
 

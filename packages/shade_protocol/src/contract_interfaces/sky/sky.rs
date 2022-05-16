@@ -1,8 +1,8 @@
-use crate::sienna::{PairInfoResponse, TokenType, PairInfo};
-use crate::{snip20::Snip20Asset, sienna::PairQuery};
-use crate::utils::asset::Contract;
+use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery, TokenType};
+use crate::{utils::asset::Contract, contract_interfaces::snip20::Snip20Asset};
 use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_std::{Binary, HumanAddr, Uint128, StdResult, Env, Extern, Querier, Api, Storage};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Binary, HumanAddr, StdResult, Env, Extern, Querier, Api, Storage};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
@@ -110,7 +110,7 @@ pub struct ArbPair {
     token2_amount: Uint128,
 }
 
-impl ArbPair {
+/*impl ArbPair {
     fn init<S: Storage, A: Api, Q: Querier>(&mut self, deps: &mut Extern<S, A, Q>,env: Env) -> StdResult<bool> {
         if self.dex_id.eq(&"sienna".to_string()) {
             let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
@@ -149,4 +149,4 @@ impl ArbPair {
         }
 
     }
-}
+}*/

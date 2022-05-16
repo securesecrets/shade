@@ -1,16 +1,16 @@
 use cosmwasm_std::{
-    Storage, Api, Querier, Extern, StdResult, Uint128, StdError, debug_print,
+    Storage, Api, Querier, Extern, StdResult, StdError, debug_print,
 };
+use cosmwasm_math_compat::Uint128;
 use secret_toolkit::utils::Query;
 use crate::state::{config_r, viewing_key_r, self_address_r};
-use shade_protocol::contract_interfaces::{
-    sky::{QueryAnswer, Config},
-    mint::{QueryMsg, self},
-    sienna::{PairInfoResponse, PairQuery, TokenType, PairInfo},
-    utils::{math::{div, mult}},
-    dex::pool_take_amount,
+use shade_protocol::{
+    contract_interfaces::{
+        sky::sky::{QueryAnswer, Config},
+        mint::mint::{QueryMsg, self},
+        dex::{dex::pool_take_amount, sienna::{PairInfoResponse, PairQuery, TokenType, PairInfo},},
     snip20,
-};
+}};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>
@@ -28,22 +28,22 @@ pub fn market_rate<S: Storage, A: Api, Q: Querier>(
     //Query mint contract
     let mint_info: mint::QueryAnswer = QueryMsg::Mint{
         offer_asset: config.shd_token.contract.address.clone(),
-        amount: Uint128(100000000), //1 SHD
+        amount: Uint128::new(100000000), //1 SHD
     }.query(
         &deps.querier,
         config.mint_addr.code_hash.clone(),
         config.mint_addr.address.clone(),
     )?;
-    let mut mint_price: Uint128 = Uint128(0); // SILK/SHD
+    let mut mint_price: Uint128 = Uint128::new(0); // SILK/SHD
     match mint_info{
         mint::QueryAnswer::Mint {
             asset: _,
             amount,
         } => {
-            mint_price = mult(amount, Uint128(100)); // times 100 to make it have 8 decimals
+            mint_price = amount.checked_mul(Uint128::new(100)).unwrap(); // times 100 to make it have 8 decimals
         },
         _ => {
-            mint_price = Uint128(0);
+            mint_price = Uint128::new(0);
         },
     };
 
@@ -83,9 +83,9 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    let mut shd_amount: Uint128 = Uint128(1);
-    let mut silk_amount: Uint128 = Uint128(1);
-    let mut silk_8d: Uint128 = Uint128(1);
+    let mut shd_amount: Uint128 = Uint128::new(1);
+    let mut silk_amount: Uint128 = Uint128::new(1);
+    let mut silk_8d: Uint128 = Uint128::new(1);
 
     match pool_info.pair_info.pair.token_0{
         TokenType::CustomToken {
@@ -95,11 +95,11 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
             if contract_addr.eq(&config.shd_token.contract.address) {
                 shd_amount = pool_info.pair_info.amount_0;
                 silk_amount = pool_info.pair_info.amount_1;
-                silk_8d = mult(silk_amount, Uint128(100));
+                silk_8d = silk_amount.checked_mul(Uint128::new(100)).unwrap();
             } else {
                 shd_amount = pool_info.pair_info.amount_1;
                 silk_amount = pool_info.pair_info.amount_0;
-                silk_8d = mult(silk_amount, Uint128(100));
+                silk_8d = silk_amount.checked_mul(Uint128::new(100)).unwrap();
             }
         }
         _ => {
@@ -107,27 +107,20 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let dex_price: Uint128 = div(
-        mult(silk_8d.clone(),Uint128(100000000)),
-        shd_amount.clone(),
-    ).unwrap();    
+    let div_silk_8d: Uint128 = silk_8d.checked_mul(Uint128::new(100000000)).unwrap();
+    let dex_price: Uint128 = div_silk_8d.checked_div(shd_amount.clone()).unwrap();    
 
 
-    let mut first_swap_amount: Uint128 = Uint128(0);
-    let mut second_swap_amount: Uint128 = Uint128(0);
+    let mut first_swap_amount: Uint128 = Uint128::new(0);
+    let mut second_swap_amount: Uint128 = Uint128::new(0);
     let mut mint_first: bool = false;
 
     if mint_price.gt(&dex_price) {
         mint_first = true;
-        first_swap_amount = div(
-            mult(mint_price, amount),
-            Uint128(100000000),
-        ).unwrap();
-        let mut first_swap_less_fee = div(
-            first_swap_amount.clone(),
-            Uint128(325)
-        ).unwrap();
-        first_swap_less_fee = Uint128(first_swap_amount.u128() - first_swap_less_fee.u128());
+        let mul_mint_price: Uint128 = mint_price.checked_mul(amount).unwrap();
+        first_swap_amount = mul_mint_price.checked_div(Uint128::new(100000000)).unwrap();
+        let mut first_swap_less_fee = first_swap_amount.checked_div(Uint128::new(325)).unwrap();
+        first_swap_less_fee = Uint128::new(first_swap_amount.u128() - first_swap_less_fee.u128());
         second_swap_amount = pool_take_amount(
             amount, 
             silk_8d, 
@@ -135,20 +128,15 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
         );
     } else {
         mint_first = false;
-        let mut amount_less_fee: Uint128 = div(
-            amount.clone(),
-            Uint128(325)
-        ).unwrap();
-        amount_less_fee = Uint128(amount.u128() - amount_less_fee.u128());
+        let mut amount_less_fee: Uint128 = amount.checked_div(Uint128::new(325)).unwrap();
+        amount_less_fee = Uint128::new(amount.u128() - amount_less_fee.u128());
         first_swap_amount = pool_take_amount(
             amount_less_fee, 
             shd_amount,
             silk_8d,
         );
-        second_swap_amount = div(
-            mult(first_swap_amount, Uint128(100000000)),
-            mint_price
-        ).unwrap();
+        let mul_first_swap = first_swap_amount.checked_mul(Uint128::new(100000000)).unwrap();
+        second_swap_amount = mul_first_swap.checked_div(mint_price).unwrap();
     }
 
     let is_profitable = second_swap_amount.gt(&amount);
@@ -183,7 +171,7 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
 
     debug_print!("{}", viewing_key);
 
-    let mut shd_bal = Uint128(0);
+    let mut shd_bal = Uint128::new(0);
 
     match res {
         snip20::QueryAnswer::Balance {amount } => {
@@ -201,7 +189,7 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         config.silk_token.contract.address.clone()
     )?;
 
-    let mut silk_bal = Uint128(0);
+    let mut silk_bal = Uint128::new(0);
 
     match res {
         snip20::QueryAnswer::Balance { amount  } => {

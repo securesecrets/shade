@@ -1,18 +1,18 @@
-use std::ptr::null;
-
 use cosmwasm_std::{
     Storage, Api, Querier, Extern, Env, StdResult, HandleResponse, to_binary, 
-    Uint128, StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
+    StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
 };
-use shade_protocol::contract_interfaces::{
-    sky::{
+use cosmwasm_math_compat::Uint128;
+use shade_protocol::{
+    utils::{asset::Contract},
+    contract_interfaces::{
+    sky::sky::{
         Config, HandleAnswer, self
     },
-    sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
-    mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self}, 
-    utils::{math::div, asset::Contract}, 
+    dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
+    mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
     snip20::Snip20Asset,
-};
+}};
 use secret_toolkit::utils::Query;
 use crate::{state::config_r, query::trade_profitability};
 
@@ -44,13 +44,13 @@ pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>(
     let test_amount: u128 = 100000000;
     let mint_info: QueryAnswer = QueryMsg::Mint{
         offer_asset: config.shd_token.contract.address.clone(),
-        amount: Uint128(test_amount),
+        amount: Uint128::new(test_amount),
     }.query(
         &deps.querier,
         env.contract_code_hash.clone(),
         config.mint_addr.address.clone(),
     )?;
-    let mut mint_price: Uint128 = Uint128(0);
+    let mut mint_price: Uint128 = Uint128::new(0);
     match mint_info{
         QueryAnswer::Mint {
             asset,
@@ -59,26 +59,26 @@ pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>(
             mint_price = amount;
         },
         _ => {
-            mint_price = Uint128(0);
+            mint_price = Uint128::new(0);
         },
     };
-    let mut nom = Uint128(0);
-    let mut denom = Uint128(0);
+    let mut nom = Uint128::new(0);
+    let mut denom = Uint128::new(0);
     if pool_info.pair_info.amount_0.u128().lt(&pool_info.pair_info.amount_1.u128()) {
-        nom = Uint128(pool_info.pair_info.amount_1.u128().clone() * 100000000);
+        nom = Uint128::new(pool_info.pair_info.amount_1.u128().clone() * 100000000);
         denom = pool_info.pair_info.amount_0.clone();
     } else {
-        nom = Uint128(pool_info.pair_info.amount_0.u128().clone() * 100000000);
+        nom = Uint128::new(pool_info.pair_info.amount_0.u128().clone() * 100000000);
         denom = pool_info.pair_info.amount_1.clone();
     }
-    let mut market_price: Uint128 = div(nom, denom)?; // silk/shd
+    let mut market_price: Uint128 = nom.checked_mul(denom).unwrap(); // silk/shd
     
 
     let mut messages = vec![];
     if mint_price.lt(&market_price) { //swap then mint
         //take out swap fees here
-        let first_swap = constant_product(amount.clone(), div(nom.clone(), Uint128(100000000)).unwrap(), denom.clone()).unwrap();
-        let second_swap = div(first_swap.clone(), mint_price.clone()).unwrap();
+        let first_swap = constant_product(amount.clone(), nom.checked_div(Uint128::new(100000000)).unwrap(), denom.clone()).unwrap();
+        let second_swap = first_swap.checked_div(mint_price).unwrap();
         let mut msg = Swap{
             send: SwapOffer{
                 recipient: config.market_swap_addr.address.clone(),
@@ -153,10 +153,10 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
     let mut profitable = false;
     let mut is_mint_first = false;
-    let mut pool_shd_amount = Uint128(0);
-    let mut pool_silk_amount = Uint128(0);
-    let mut first_swap_min_expected = Uint128(0);
-    let mut second_swap_min_expected = Uint128(0);
+    let mut pool_shd_amount = Uint128::new(0);
+    let mut pool_silk_amount = Uint128::new(0);
+    let mut first_swap_min_expected = Uint128::new(0);
+    let mut second_swap_min_expected = Uint128::new(0);
     match res {
         sky::QueryAnswer::TestProfitability{
             is_profitable, 
@@ -257,9 +257,14 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn constant_product(swap_amount: Uint128, pool_buy: Uint128, pool_sell: Uint128) -> StdResult<Uint128> {
-    let cp = pool_buy.u128().clone() * pool_sell.u128().clone();
-    let lpb = pool_sell.u128().clone() + swap_amount.u128().clone();
-    let ncp = div(Uint128(cp.clone()), Uint128(lpb.clone())).unwrap();
-    let result = pool_buy.u128().clone() - ncp.u128().clone();
-    Ok(Uint128(result))
+    //let cp = pool_buy.u128().clone() * pool_sell.u128().clone();
+    //let lpb = pool_sell.u128().clone() + swap_amount.u128().clone();
+    //let ncp = div(Uint128::new(cp.clone()), Uint128::new(lpb.clone())).unwrap();
+    //let result = pool_buy.u128().clone() - ncp.u128().clone();
+    let cp = pool_buy.checked_mul(pool_sell).unwrap();
+    let lpb = pool_sell.checked_add(swap_amount).unwrap();
+    let ncp = cp.checked_div(lpb).unwrap();
+    let result = pool_buy.checked_sub(ncp).unwrap();
+
+    Ok(result)
 }

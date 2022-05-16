@@ -10,11 +10,11 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
-    Uint128,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::contract_interfaces::oracles::band::{InitMsg, ReferenceData};
+use cosmwasm_math_compat::Uint128;
 
 use cosmwasm_storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
 

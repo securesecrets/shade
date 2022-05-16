@@ -37,11 +37,11 @@ pub struct TradingPair {
  */
 
 pub fn pool_take_amount(
-    give_amount: cosmwasm_std::Uint128,
-    give_pool: cosmwasm_std::Uint128,
-    take_pool: cosmwasm_std::Uint128,
-) -> cosmwasm_std::Uint128 {
-    cosmwasm_std::Uint128(
+    give_amount: Uint128,
+    give_pool: Uint128,
+    take_pool: Uint128,
+) -> Uint128 {
+    Uint128::new(
         take_pool.u128() - give_pool.u128() * take_pool.u128() / (give_pool + give_amount).u128(),
     )
 }
@@ -51,7 +51,7 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
-) -> StdResult<cosmwasm_std::Uint128> {
+) -> StdResult<Uint128> {
     // indices will align with <pairs>
     let mut amounts_per_scrt = vec![];
     let mut pool_sizes: Vec<Uint512> = vec![];
@@ -99,7 +99,7 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
     // And normalize to <price> * 10^18
     let price = translate_price(
         band::reference_data(deps, "SCRT".to_string(), "USD".to_string(), band)?.rate,
-        cosmwasm_std::Uint128(Uint128::try_from(weighted_sum)?.u128()),
+        Uint128::new(Uint128::try_from(weighted_sum)?.u128()),
     );
 
     Ok(price)
@@ -110,7 +110,7 @@ pub fn best_price<S: Storage, A: Api, Q: Querier>(
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
-) -> StdResult<(cosmwasm_std::Uint128, TradingPair)> {
+) -> StdResult<(Uint128, TradingPair)> {
     // indices will align with <pairs>
     let mut results = vec![];
 
@@ -153,7 +153,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     pair: TradingPair,
     sscrt: Contract,
     band: Contract,
-) -> StdResult<cosmwasm_std::Uint128> {
+) -> StdResult<Uint128> {
     match pair.clone().dex {
         Dex::SecretSwap => Ok(secretswap::price(
             &deps,

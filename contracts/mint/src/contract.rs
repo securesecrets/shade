@@ -10,7 +10,6 @@ use cosmwasm_std::{
     Querier,
     StdResult,
     Storage,
-    Uint128,
 };
 use secret_toolkit::snip20::token_info_query;
 

@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdError, StdResult, Storage,
+    StdError, StdResult, Storage, self,
 };
 use secret_toolkit::snip20::set_viewing_key_msg;
 
@@ -9,7 +9,7 @@ use crate::{
     state::{config_w, viewing_key_w, self_address_w},
 };
 
-use shade_protocol::contract_interfaces::sky::{Config, InitMsg, HandleMsg, QueryMsg};
+use shade_protocol::contract_interfaces::sky::sky::{Config, InitMsg, HandleMsg, QueryMsg};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
