@@ -249,6 +249,7 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+// TODO: Consider holders
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -396,6 +397,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+// TODO: Consider holders
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
