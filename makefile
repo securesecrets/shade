@@ -24,10 +24,6 @@ PACKAGES = \
 	  shade_protocol contract_harness cosmwasm_math_compat \
 		network_integration network_tester secretcli
 
-debug: setup
-	(cd ${contracts_dir}; ${build-debug})
-	@$(MAKE) compress_all
-
 release: setup
 	(cd ${contracts_dir}; ${build-release})
 	@$(MAKE) compress_all
@@ -47,7 +43,7 @@ compress-%: setup
 	$(call opt_and_compress,$*,$*)
 
 $(CONTRACTS): setup
-	(cd ${contracts_dir}/$@; ${build-debug})
+	(cd ${contracts_dir}/$@; ${build-release})
 	@$(MAKE) $(addprefix compress-,$(@))
 
 $(PACKAGES):
