@@ -47,10 +47,10 @@ fn setup_contracts(
 
     print_header("Set up account_addresses");
     print_header("Initializing snip20s");
-    let mint_snip_init_msg = snip20::InitMsg {
-        name: "test_mint".to_string(),
+    let issu_snip_init_msg = snip20::InitMsg {
+        name: "test_issu".to_string(),
         admin: None,
-        symbol: "MINT".to_string(),
+        symbol: "ISSU".to_string(),
         decimals: 6,
         initial_balances: None,
         prng_seed: Default::default(),
@@ -63,9 +63,9 @@ fn setup_contracts(
         }),
     };
 
-    print_header("Mint snip init");
-    let mint_snip = init(
-        &mint_snip_init_msg,
+    print_header("Issued snip init");
+    let issu_snip = init(
+        &issu_snip_init_msg,
         SNIP20_FILE,
         &*generate_label(8),
         ACCOUNT_KEY,
@@ -75,7 +75,7 @@ fn setup_contracts(
         reports,
     )?;
 
-    print_header("Mint snip initiated");
+    print_header("Issued snip initiated");
 
     let collat_snip_init_msg = snip20::InitMsg {
         name: "test_collat".to_string(),
@@ -157,9 +157,9 @@ fn setup_contracts(
         },
         treasury: HumanAddr::from(account_admin),
         issued_asset: Contract {
-            address: HumanAddr::from(mint_snip.address.clone()),
+            address: HumanAddr::from(issu_snip.address.clone()),
             //address: HumanAddr::from("hehe"),
-            code_hash: mint_snip.code_hash.clone(),
+            code_hash: issu_snip.code_hash.clone(),
             //code_hash: "hehe".to_string(),
         },
         activated,
@@ -184,10 +184,10 @@ fn setup_contracts(
 
     let msg = snip20::HandleMsg::SetViewingKey { key: String::from(VIEW_KEY), padding: None };
 
-    handle(&msg, &mint_snip, ACCOUNT_KEY, Some(GAS), Some("test"), None, reports, None)?;
+    handle(&msg, &issu_snip, ACCOUNT_KEY, Some(GAS), Some("test"), None, reports, None)?;
     handle(&msg, &collateral_snip, ACCOUNT_KEY, Some(GAS), Some("test"), None, reports, None)?;
 
-    Ok((bonds, mint_snip, collateral_snip, mockband, oracle))
+    Ok((bonds, issu_snip, collateral_snip, mockband, oracle))
 }
 
 fn setup_contracts_allowance(
@@ -1046,7 +1046,7 @@ fn run_bonds_singular() -> Result<()> {
     if let snip20::QueryAnswer::Balance { amount, 
     } = issued_snip_query
     {
-        println!("Account A Current MINT Balance: {}\n", amount);
+        println!("Account A Current ISSU Balance: {}\n", amount);
         assert_eq!(amount, Uint128(265_957_446));
         io::stdout().flush().unwrap();
     }
@@ -1197,7 +1197,7 @@ fn run_bonds_multiple_opps() -> Result<()> {
     } = issued_snip_query
     {
         assert_eq!(amount, Uint128(265_957_446));
-        println!("Account A Current MINT Balance: {}\n", amount);
+        println!("Account A Current ISSU Balance: {}\n", amount);
         io::stdout().flush().unwrap();
     }
 

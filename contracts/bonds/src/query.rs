@@ -1,5 +1,3 @@
-use std::arch::global_asm;
-
 use crate::{
     state::{
         config_r, global_total_issued_r, global_total_claimed_r, account_viewkey_r, account_r, bond_opportunity_r, collateral_assets_r, issued_asset_r, validate_account_permit,
@@ -13,9 +11,6 @@ use secret_toolkit::snip20::allowance_query;
 
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
 use shade_protocol::{bonds::{QueryAnswer, AccountKey, BondOpportunity, AccountPermit}, snip20::Snip20Asset, oracle};
-use shade_protocol::bonds::errors::incorrect_viewing_key;
-use query_authentication::viewing_keys::ViewingKey;
-
 
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
