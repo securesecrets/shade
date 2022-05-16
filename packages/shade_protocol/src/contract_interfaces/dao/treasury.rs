@@ -42,6 +42,7 @@ pub enum Allowance {
     },
 }
 
+//TODO rename to Adapter
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Manager {
@@ -50,6 +51,7 @@ pub struct Manager {
     pub desired: Uint128,
 }
 
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Balance {
@@ -75,6 +77,7 @@ pub struct Account {
     pub claimable: Vec<Balance>,
     pub status: Status,
 }
+*/
 
 // Flag to be sent with funds
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -155,12 +158,14 @@ pub enum HandleAnswer {
     Allowance {
         status: ResponseStatus,
     },
+    /*
     AddAccount {
         status: ResponseStatus,
     },
     RemoveAccount {
         status: ResponseStatus,
     },
+    */
     Rebalance {
         status: ResponseStatus,
     },
@@ -183,10 +188,12 @@ pub enum QueryMsg {
         asset: HumanAddr,
         spender: HumanAddr,
     },
+    /*
     AccountHolders { },
     Account { 
         holder: HumanAddr,
     },
+    */
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -202,6 +209,6 @@ pub enum QueryAnswer {
     Allowances { allowances: Vec<Allowance> },
     CurrentAllowances { allowances: Vec<Allowance> },
     Allowance { allowance: Uint128 },
-    Accounts { accounts: Vec<HumanAddr> },
-    Account { account: Account },
+    //Accounts { accounts: Vec<HumanAddr> },
+    //Account { account: Account },
 }

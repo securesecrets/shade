@@ -16,6 +16,32 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct Balance {
+    pub token: HumanAddr,
+    pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Status {
+    Active,
+    Disabled,
+    Closed,
+    Transferred,
+}
+
+//TODO: move accounts to treasury manager
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Holder {
+    pub balances: Vec<Balance>,
+    pub unbondings: Vec<Balance>,
+    pub claimable: Vec<Balance>,
+    pub status: Status,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Allocation {
     pub nick: Option<String>,
     pub contract: Contract,
@@ -110,6 +136,10 @@ pub enum QueryMsg {
     Assets {},
     Allocations { asset: HumanAddr },
     PendingAllowance { asset: HumanAddr },
+    Holders { },
+    Holder { 
+        holder: HumanAddr,
+    },
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -124,5 +154,7 @@ pub enum QueryAnswer {
     Assets { assets: Vec<HumanAddr> },
     Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
+    Holders { holders: Vec<HumanAddr> },
+    Holder { holder: Holder },
     Adapter(adapter::QueryAnswer),
 }

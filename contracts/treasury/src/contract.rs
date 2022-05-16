@@ -20,7 +20,7 @@ use crate::{
     handle,
     query,
     state::{
-        account_list_w,
+        //account_list_w,
         allowances_w,
         asset_list_w,
         config_w,
@@ -46,7 +46,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     asset_list_w(&mut deps.storage).save(&Vec::new())?;
     managers_w(&mut deps.storage).save(&Vec::new())?;
-    account_list_w(&mut deps.storage).save(&Vec::new())?;
+    //account_list_w(&mut deps.storage).save(&Vec::new())?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -79,8 +79,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::Allowance { asset, allowance } => {
             handle::allowance(deps, &env, asset, allowance)
         }
-        HandleMsg::AddAccount { holder } => handle::add_account(deps, &env, holder),
-        HandleMsg::CloseAccount { holder } => handle::close_account(deps, &env, holder),
+        //HandleMsg::AddAccount { holder } => handle::add_account(deps, &env, holder),
+        //HandleMsg::CloseAccount { holder } => handle::close_account(deps, &env, holder),
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Update { asset } => handle::rebalance(deps, &env, asset),
             adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),

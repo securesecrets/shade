@@ -17,8 +17,8 @@ pub static ASSET_LIST: &[u8] = b"asset_list";
 pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static ALLOCATIONS: &[u8] = b"allocations";
-//pub static ALLOWANCE_REFRESH: &[u8] = b"allowance_refresh";
-//pub static REWARDS: &[u8] = b"rewards_tracking";
+pub static HOLDERS: &[u8] = b"holders";
+pub static HOLDER: &[u8] = b"holder";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury_manager::Config> {
     singleton(storage, CONFIG_KEY)
@@ -70,4 +70,19 @@ pub fn allocations_w<S: Storage>(
     storage: &mut S,
 ) -> Bucket<S, Vec<treasury_manager::AllocationMeta>> {
     bucket(ALLOCATIONS, storage)
+}
+
+pub fn account_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<HumanAddr>> {
+    singleton_read(storage, HOLDERS)
+}
+pub fn account_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<HumanAddr>> {
+    singleton(storage, HOLDERS)
+}
+
+pub fn account_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury::Holder> {
+    bucket_read(HOLDER, storage)
+}
+
+pub fn account_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury::Holder> {
+    bucket(HOLDER, storage)
 }

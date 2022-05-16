@@ -516,3 +516,66 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         })?),
     })
 }
+
+pub fn add_holder<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    holder: HumanAddr,
+) -> StdResult<HandleResponse> {
+    if env.message.sender != config_r(&deps.storage).load()?.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    let key = holder.as_str().as_bytes();
+
+    holders_w(&mut deps.storage).update(|mut h| {
+        if h.contains(&holder.clone()) {
+            return Err(StdError::generic_err("Account already exists"));
+        }
+        h.push(holder.clone());
+        Ok(h)
+    })?;
+
+    holder_w(&mut deps.storage).save(key, &Account {
+        balances: Vec::new(),
+        unbondings: Vec::new(),
+        claimable: Vec::new(),
+        status: Status::Active,
+    })?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::AddAccount {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}
+
+pub fn remove_holder<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    holder: HumanAddr,
+    status: Status,
+) -> StdResult<HandleResponse> {
+    if env.message.sender != config_r(&deps.storage).load()?.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    let key = holder.as_str().as_bytes();
+
+    if let Some(mut holder) = holder_r(&deps.storage).may_load(key)? {
+        holder.status = Status::Closed;
+        holder_w(&mut deps.storage).save(key, &holder)?;
+    } else {
+        return Err(StdError::generic_err("Not an authorized holder"));
+    }
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::RemoveHolder {
+            status: ResponseStatus::Success,
+        })?),
+    })
+}

@@ -207,3 +207,21 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     }
     Err(StdError::generic_err("Not a registered asset"))
 }
+
+pub fn account_holders<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<treasury::QueryAnswer> {
+    Ok(treasury::QueryAnswer::Accounts {
+        accounts: account_list_r(&deps.storage).load()?,
+    })
+}
+
+pub fn account<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    holder: HumanAddr,
+) -> StdResult<treasury::QueryAnswer> {
+    match account_r(&deps.storage).may_load(holder.as_str().as_bytes())? {
+        Some(a) => Ok(treasury::QueryAnswer::Account { account: a }),
+        None => Err(StdError::generic_err("Not an account holder")),
+    }
+}

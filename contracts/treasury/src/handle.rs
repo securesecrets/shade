@@ -52,10 +52,10 @@ use shade_protocol::{
 use crate::{
     query,
     state::{
-        account_list_r,
-        account_list_w,
-        account_r,
-        account_w,
+        //account_list_r,
+        //account_list_w,
+        //account_r,
+        //account_w,
         allowances_r,
         allowances_w,
         asset_list_r,
@@ -85,6 +85,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let key = sender.as_str().as_bytes();
 
+    /*
     if let Some(mut account) = account_r(&deps.storage).may_load(&key)? {
         if let Some(i) = account
             .balances
@@ -101,6 +102,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
         account_w(&mut deps.storage).save(&key, &account)?;
     }
+    */
 
     Ok(HandleResponse {
         messages: vec![],
@@ -179,6 +181,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     )?
     .amount;
 
+    /*
     let mut account_unbonding = Uint128::zero();
 
     for holder in account_list_r(&deps.storage).load()? {
@@ -197,6 +200,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 .sum(),
         );
     }
+    */
 
     let mut amount_total = Uint128::zero();
     let mut out_balance = Uint128::zero();
@@ -214,7 +218,12 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             } => {
                 //TODO: Query allowance
                 amount_total += *amount;
-            }
+                managers[i].balance = adapter::balance_query(
+                    &deps,
+                    &full_asset.contract.address.clone(),
+                    managers[i].contract.clone(),
+                )?;
+            },
             Allowance::Portion {
                 spender,
                 portion,
@@ -236,7 +245,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let mut portion_total = ((balance + out_balance) - (amount_total + account_unbonding))?;
+    let mut portion_total = ((balance + out_balance) - amount_total)?;// + account_unbonding))?;
 
     managers_w(&mut deps.storage).save(&managers)?;
     let config = config_r(&deps.storage).load()?;
@@ -273,7 +282,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             } => {
                 let desired_amount = portion_total.multiply_ratio(portion, 10u128.pow(18));
 
-                let threshold = (balance + out_balance).multiply_ratio(tolerance, 10u128.pow(18));
+                let threshold = balance.multiply_ratio(tolerance, 10u128.pow(18));
 
                 let adapter = managers
                     .clone()
@@ -650,79 +659,19 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn add_account<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    holder: HumanAddr,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != config_r(&deps.storage).load()?.admin {
-        return Err(StdError::unauthorized());
-    }
-
-    let key = holder.as_str().as_bytes();
-
-    account_list_w(&mut deps.storage).update(|mut accounts| {
-        if accounts.contains(&holder.clone()) {
-            return Err(StdError::generic_err("Account already exists"));
-        }
-        accounts.push(holder.clone());
-        Ok(accounts)
-    })?;
-
-    account_w(&mut deps.storage).save(key, &Account {
-        balances: Vec::new(),
-        unbondings: Vec::new(),
-        claimable: Vec::new(),
-        status: Status::Active,
-    })?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddAccount {
-            status: ResponseStatus::Success,
-        })?),
-    })
-}
-
-pub fn close_account<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    holder: HumanAddr,
-) -> StdResult<HandleResponse> {
-    if env.message.sender != config_r(&deps.storage).load()?.admin {
-        return Err(StdError::unauthorized());
-    }
-
-    let key = holder.as_str().as_bytes();
-
-    if let Some(mut account) = account_r(&deps.storage).may_load(key)? {
-        account.status = Status::Closed;
-        account_w(&mut deps.storage).save(key, &account)?;
-    } else {
-        return Err(StdError::generic_err("Account doesn't exist"));
-    }
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveAccount {
-            status: ResponseStatus::Success,
-        })?),
-    })
-}
-
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
+    /*
     if !account_list_r(&deps.storage)
         .load()?
         .contains(&env.message.sender)
     {
         return Err(StdError::unauthorized());
     }
+    */
 
     let key = asset.as_str().as_bytes();
 
@@ -772,6 +721,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     }
     */
 
+    /*
     let account =
         match account_r(&deps.storage).may_load(&env.message.sender.as_str().as_bytes())? {
             Some(a) => a,
@@ -779,6 +729,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                 return Err(StdError::unauthorized());
             }
         };
+    */
 
     let managers = managers_r(&deps.storage).load()?;
 
@@ -826,6 +777,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     }
 
     //TODO: update unbondings/balances, maybe not claimable?
+    /*
     match account.unbondings.iter_mut().find(|u| u.token == asset) {
         Some(unbonding) => {
             unbonding.amount += unbonded;
@@ -838,6 +790,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             });
         }
     }
+    */
 
     // TODO: Shouldn't be an error, need to log somehow
     if unbond_amount > Uint128::zero() {
