@@ -69,7 +69,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::RegisterAsset { contract } => handle::try_register_asset(deps, &env, &contract),
         HandleMsg::Allocate { asset, allocation } => {
             handle::allocate(deps, &env, asset, allocation)
-        }
+        },
+        HandleMsg::AddHolder { holder } => handle::add_holder(deps, &env, holder),
+        HandleMsg::RemoveHolder { holder } => handle::remove_holder(deps, &env, holder),
         HandleMsg::Adapter(a) => match a {
             adapter::SubHandleMsg::Unbond { asset, amount } => {
                 handle::unbond(deps, &env, asset, amount)
@@ -89,8 +91,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
         QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
         QueryMsg::PendingAllowance { asset } => to_binary(&query::pending_allowance(deps, asset)?),
+        QueryMsg::Holders {} => to_binary(&query::holders(deps)),
+        QueryMsg::Holder { holder } => to_binary(&query::holder(deps, holder)),
         QueryMsg::Adapter(a) => match a {
-            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, &asset)?),
+            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
             adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
             adapter::SubQueryMsg::Unbondable { asset } => {
                 to_binary(&query::unbondable(deps, asset)?)

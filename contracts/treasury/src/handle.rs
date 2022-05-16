@@ -30,15 +30,12 @@ use secret_toolkit::{
 use shade_protocol::{
     contract_interfaces::{
         dao::treasury::{
-            Account,
             Allowance,
-            Balance,
             Config,
             Flag,
             HandleAnswer,
             Manager,
             QueryAnswer,
-            Status,
         },
         snip20,
     },
@@ -52,10 +49,6 @@ use shade_protocol::{
 use crate::{
     query,
     state::{
-        //account_list_r,
-        //account_list_w,
-        //account_r,
-        //account_w,
         allowances_r,
         allowances_w,
         asset_list_r,
@@ -218,6 +211,10 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             } => {
                 //TODO: Query allowance
                 amount_total += *amount;
+                let i = managers
+                    .iter()
+                    .position(|m| m.contract.address == *spender)
+                    .unwrap();
                 managers[i].balance = adapter::balance_query(
                     &deps,
                     &full_asset.contract.address.clone(),

@@ -9,8 +9,6 @@ use shade_protocol::contract_interfaces::{
 };
 
 use crate::state::{
-    //account_list_r,
-    //account_r,
     allowances_r,
     asset_list_r,
     assets_r,

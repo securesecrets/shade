@@ -121,13 +121,6 @@ pub enum HandleMsg {
         asset: HumanAddr,
         allowance: Allowance,
     },
-    AddAccount {
-        holder: HumanAddr,
-    },
-    CloseAccount {
-        holder: HumanAddr,
-    },
-
     /* TODO: Maybe?
     TransferAccount {
     },
@@ -158,14 +151,6 @@ pub enum HandleAnswer {
     Allowance {
         status: ResponseStatus,
     },
-    /*
-    AddAccount {
-        status: ResponseStatus,
-    },
-    RemoveAccount {
-        status: ResponseStatus,
-    },
-    */
     Rebalance {
         status: ResponseStatus,
     },

@@ -20,6 +20,7 @@ use secret_toolkit::{
     snip20::{
         allowance_query,
         batch::SendFromAction,
+        balance_query,
         batch_send_from_msg,
         batch_send_msg,
         decrease_allowance_msg,
@@ -40,6 +41,9 @@ use shade_protocol::{
             Config,
             HandleAnswer,
             QueryAnswer,
+            Holder,
+            Balance,
+            Status,
         },
         snip20,
     },
@@ -58,6 +62,9 @@ use crate::{
         config_r,
         config_w,
         viewing_key_r,
+        holder_r, holder_w,
+        holders_r, holders_w,
+        self_address_r,
     },
 };
 use chrono::prelude::*;
@@ -530,13 +537,13 @@ pub fn add_holder<S: Storage, A: Api, Q: Querier>(
 
     holders_w(&mut deps.storage).update(|mut h| {
         if h.contains(&holder.clone()) {
-            return Err(StdError::generic_err("Account already exists"));
+            return Err(StdError::generic_err("Holder already exists"));
         }
         h.push(holder.clone());
         Ok(h)
     })?;
 
-    holder_w(&mut deps.storage).save(key, &Account {
+    holder_w(&mut deps.storage).save(key, &Holder {
         balances: Vec::new(),
         unbondings: Vec::new(),
         claimable: Vec::new(),
@@ -546,7 +553,7 @@ pub fn add_holder<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddAccount {
+        data: Some(to_binary(&HandleAnswer::AddHolder {
             status: ResponseStatus::Success,
         })?),
     })
@@ -556,7 +563,6 @@ pub fn remove_holder<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     holder: HumanAddr,
-    status: Status,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != config_r(&deps.storage).load()?.admin {
         return Err(StdError::unauthorized());

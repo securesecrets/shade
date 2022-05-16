@@ -100,6 +100,12 @@ pub enum HandleMsg {
         asset: HumanAddr,
         allocation: Allocation,
     },
+    AddHolder {
+        holder: HumanAddr,
+    },
+    RemoveHolder {
+        holder: HumanAddr,
+    },
     Adapter(adapter::SubHandleMsg),
 }
 
@@ -124,6 +130,12 @@ pub enum HandleAnswer {
         status: ResponseStatus,
     },
     Allocate {
+        status: ResponseStatus,
+    },
+    AddHolder {
+        status: ResponseStatus,
+    },
+    RemoveHolder {
         status: ResponseStatus,
     },
     Adapter(adapter::HandleAnswer),

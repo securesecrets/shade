@@ -67,4 +67,3 @@ query-authentication = { git = "https://github.com/securesecrets/query-authentic
 remain = { version = "0.2.2", optional = true }
 # storage plus implementation
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }
-

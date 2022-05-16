@@ -5,7 +5,15 @@ use secret_toolkit::{
 };
 use shade_protocol::{
     contract_interfaces::{
-        dao::{adapter, treasury_manager},
+        dao::{
+            adapter,
+            treasury_manager::{
+                self,
+                Status,
+                Holder,
+                Balance
+            },
+        },
         snip20,
     },
     utils::asset::Contract,
@@ -18,6 +26,8 @@ use crate::state::{
     config_r,
     self_address_r,
     viewing_key_r,
+    holder_r,
+    holders_r,
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
@@ -208,20 +218,20 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     Err(StdError::generic_err("Not a registered asset"))
 }
 
-pub fn account_holders<S: Storage, A: Api, Q: Querier>(
+pub fn holders<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-) -> StdResult<treasury::QueryAnswer> {
-    Ok(treasury::QueryAnswer::Accounts {
-        accounts: account_list_r(&deps.storage).load()?,
+) -> StdResult<treasury_manager::QueryAnswer> {
+    Ok(treasury_manager::QueryAnswer::Holders {
+        holders: holders_r(&deps.storage).load()?,
     })
 }
 
-pub fn account<S: Storage, A: Api, Q: Querier>(
+pub fn holder<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     holder: HumanAddr,
-) -> StdResult<treasury::QueryAnswer> {
-    match account_r(&deps.storage).may_load(holder.as_str().as_bytes())? {
-        Some(a) => Ok(treasury::QueryAnswer::Account { account: a }),
-        None => Err(StdError::generic_err("Not an account holder")),
+) -> StdResult<treasury_manager::QueryAnswer> {
+    match holder_r(&deps.storage).may_load(holder.as_str().as_bytes())? {
+        Some(h) => Ok(treasury_manager::QueryAnswer::Holder { holder: h }),
+        None => Err(StdError::generic_err("Not a holder")),
     }
 }

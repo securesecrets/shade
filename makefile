@@ -3,7 +3,7 @@ compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
 build-release=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
-build-debug=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print"
+# build-debug=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print"
 
 # args (no extensions): wasm_name, contract_dir_name
 define opt_and_compress = 
@@ -25,7 +25,7 @@ PACKAGES = \
 		network_integration network_tester secretcli
 
 release: setup
-	(cd ${contracts_dir}; ${build-release})
+	${build-release}
 	@$(MAKE) compress_all
 
 dao: treasury treasury_manager scrt_staking rewards_emission
@@ -53,15 +53,15 @@ snip20: setup
 	(cd ${contracts_dir}/snip20; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20)
 
-test:
-	@$(MAKE) $(addprefix test-,$(CONTRACTS))
-
-test-%:
-	(cd ${contracts_dir}/$*; cargo test)
-
 snip20_staking: setup
 	(cd ${contracts_dir}/snip20_staking; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20_staking)
+
+test:
+	@$(MAKE) $(addprefix test-,$(CONTRACTS))
+
+test-%: %
+	(cd ${contracts_dir}/$*; cargo test)
 
 setup: $(compiled_dir) $(checksum_dir)
 
@@ -76,6 +76,7 @@ clippy:
 
 clean:
 	find . -name "Cargo.lock" -delete
+	rm -rf target
 	rm -r $(compiled_dir)
 
 format:

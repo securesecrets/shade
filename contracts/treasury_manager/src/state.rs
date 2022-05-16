@@ -72,17 +72,18 @@ pub fn allocations_w<S: Storage>(
     bucket(ALLOCATIONS, storage)
 }
 
-pub fn account_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<HumanAddr>> {
+pub fn holders_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<HumanAddr>> {
     singleton_read(storage, HOLDERS)
 }
-pub fn account_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<HumanAddr>> {
+
+pub fn holders_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<HumanAddr>> {
     singleton(storage, HOLDERS)
 }
 
-pub fn account_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury::Holder> {
+pub fn holder_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury_manager::Holder> {
     bucket_read(HOLDER, storage)
 }
 
-pub fn account_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury::Holder> {
+pub fn holder_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury_manager::Holder> {
     bucket(HOLDER, storage)
 }
