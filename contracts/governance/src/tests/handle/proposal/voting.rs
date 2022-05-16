@@ -6,8 +6,8 @@ use contract_harness::harness::{
 };
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, HumanAddr, StdResult};
-use fadroma_ensemble::{ContractEnsemble, MockEnv};
-use fadroma_platform_scrt::ContractLink;
+use fadroma::ensemble::{ContractEnsemble, MockEnv};
+use fadroma::platform_scrt::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
         governance,
