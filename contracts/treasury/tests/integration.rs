@@ -9,8 +9,8 @@ use cosmwasm_std::{
 use shade_protocol::{
     contract_interfaces::{
         dao::{
-            treasury, 
-            treasury_manager, 
+            treasury,
+            treasury_manager,
             scrt_staking,
         },
         mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
