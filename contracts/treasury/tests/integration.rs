@@ -7,16 +7,24 @@ use cosmwasm_std::{
 };
 
 use shade_protocol::{
-    treasury, treasury_manager, scrt_staking,
-    mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+    contract_interfaces::{
+        dao::{
+            treasury, 
+            treasury_manager, 
+            scrt_staking,
+        },
+        mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+        oracles::band::{ ReferenceData, BandQuery },
+    },
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
     },
-    band::{ ReferenceData, BandQuery },
 };
 
-use contract_harness::harness;
+use contract_harness::{
+    Treasury, TreasuryManager, ScrtStaking, Snip20,
+};
 
 use fadroma::{
     ContractLink, 
@@ -42,10 +50,10 @@ fn single_asset_portion_full_dao_integration(
 
     let mut ensemble = ContractEnsemble::new(50);
 
-    let reg_treasury = ensemble.register(Box::new(harness::treasury::Treasury));
-    let reg_manager = ensemble.register(Box::new(harness::treasury_manager::TreasuryManager));
-    let reg_scrt_staking = ensemble.register(Box::new(harness::scrt_staking::ScrtStaking));
-    let reg_snip20 = ensemble.register(Box::new(harness::snip20::Snip20));
+    let reg_treasury = ensemble.register(Box::new(Treasury));
+    let reg_manager = ensemble.register(Box::new(TreasuryManager));
+    let reg_scrt_staking = ensemble.register(Box::new(ScrtStaking));
+    let reg_snip20 = ensemble.register(Box::new(Snip20));
 
     let token = ensemble.instantiate(
         reg_snip20.id,
