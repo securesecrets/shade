@@ -3,11 +3,11 @@ use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{
+use shade_protocol::{contract_interfaces::{
     bonds::{Config, Account, BondOpportunity, AccountPermit, AddressProofPermit,
             errors::{permit_contract_mismatch, permit_key_revoked}},
-    snip20::Snip20Asset,
-    utils::asset::Contract,
+    snip20::Snip20Asset},
+    utils::asset::Contract
 };
 
 pub static CONFIG: &[u8] = b"config";

@@ -6,7 +6,7 @@ mod test{
     use crate::query;
     use cosmwasm_std::{coins, from_binary, testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage}, Extern, StdError, Uint128, HumanAddr};
     use crate::contract;
-    use shade_protocol::{bonds::{self, Config, QueryAnswer, QueryMsg, InitMsg, errors::*}, treasury, utils::asset::Contract, airdrop::errors::address_already_in_account};
+    use shade_protocol::{contract_interfaces::{bonds::{self, Config, QueryAnswer, QueryMsg, InitMsg, errors::*}, dao, airdrop::errors::address_already_in_account}, utils::asset::Contract};
     use shade_protocol::utils::errors::DetailedError;
 
     // #[test]

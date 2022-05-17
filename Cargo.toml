@@ -13,7 +13,6 @@ members = [
   # Protocol contracts
   "contracts/governance",
   "contracts/bonds",
-  "contracts/staking",
   "contracts/mint",
   "contracts/mint_router",
   "contracts/oracle",

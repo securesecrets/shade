@@ -5,12 +5,12 @@ use crate::{
     }, handle::oracle,
 };
 
-use shade_protocol::bonds::errors::{not_treasury_bond};
+use shade_protocol::contract_interfaces::bonds::errors::{not_treasury_bond};
 
 use secret_toolkit::snip20::allowance_query;
 
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::{bonds::{QueryAnswer, AccountKey, BondOpportunity, AccountPermit}, snip20::Snip20Asset, oracle};
+use shade_protocol::contract_interfaces::{bonds::{QueryAnswer, AccountKey, BondOpportunity, AccountPermit}, snip20::Snip20Asset, oracles};
 
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {

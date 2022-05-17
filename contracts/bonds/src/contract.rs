@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use secret_toolkit::snip20::{token_info_query, set_viewing_key_msg};
 
-use shade_protocol::{
+use shade_protocol::contract_interfaces::{
     bonds::{Config, InitMsg, HandleMsg, QueryMsg, SnipViewingKey},
     snip20::{token_config_query, Snip20Asset, HandleMsg as SnipHandle, self},
 };

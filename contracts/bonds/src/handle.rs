@@ -11,15 +11,15 @@ use secret_toolkit::{
     utils::Query,
 };
 
-use shade_protocol::bonds::{
+use shade_protocol::contract_interfaces::bonds::{
     errors::*,
     {Config, HandleAnswer, PendingBond, Account, AccountKey}, BondOpportunity, SlipMsg};
 use shade_protocol::utils::generic_response::ResponseStatus;
 use shade_protocol::utils::asset::Contract;
-use shade_protocol::{
+use shade_protocol::contract_interfaces::{
     snip20::{token_config_query, Snip20Asset, TokenConfig, HandleMsg},
-    oracle::QueryMsg::Price,
-    band::ReferenceData,
+    oracles::oracle::QueryMsg::Price,
+    oracles::band::ReferenceData,
 };
 
 use std::{cmp::Ordering, convert::TryFrom, ops::Add};
@@ -342,6 +342,8 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
             total = total.add(bond.claim_amount);
         }
     }
+
+    // Add case for if total is 0, error out
 
     // Remove claimed bonds from vector and save back to the account
     pending_bonds.retain(|bond|

@@ -8,15 +8,15 @@ use query_authentication::viewing_keys::ViewingKey;
 use query_authentication::{
     permit::{Permit, bech32_to_canonical}};
     
-use crate::bonds::utils::{create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE};
+use crate::contract_interfaces::bonds::utils::{create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE};
 use crate::utils::generic_response::ResponseStatus;
 use crate::utils::asset::Contract;
-use crate::bonds::rand::{sha_256, Prng};
-use crate::bonds::errors::{permit_rejected};
+use crate::contract_interfaces::bonds::rand::{sha_256, Prng};
+use crate::contract_interfaces::bonds::errors::{permit_rejected};
 use cosmwasm_std::{Binary, HumanAddr, Uint128, StdResult, StdError};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::snip20::Snip20Asset;
+use crate::contract_interfaces::snip20::Snip20Asset;
 use secret_toolkit::utils::{HandleCallback};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
