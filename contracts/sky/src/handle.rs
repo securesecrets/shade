@@ -3,6 +3,7 @@ use cosmwasm_std::{
     StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
 };
 use cosmwasm_math_compat::Uint128;
+use fadroma::to_cosmos_msg;
 use shade_protocol::{
     utils::{asset::Contract, storage::plus::ItemStorage},
     contract_interfaces::{
@@ -14,6 +15,7 @@ use shade_protocol::{
     snip20::Snip20Asset,
 }};
 use secret_toolkit::utils::Query;
+use secret_toolkit::snip20::send_msg;
 use crate::{query::trade_profitability};
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
@@ -34,7 +36,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>(
+pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>( //DEPRECIATED
     deps: &mut Extern<S, A, Q>,
     env: Env,
     amount: Uint128,
@@ -192,70 +194,60 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     let mut sienna_msg: Swap;
 
     if is_mint_first {
-        mint_msg = mint::HandleMsg::Receive{
-            sender: env.contract.address.clone(),
-            from: config.shd_token.contract.address.clone(),
-            amount: amount.clone(),
-            memo: Some(to_binary(&"".to_string()).unwrap()),
-            msg: Some(to_binary(&mint::MintMsgHook{
-                minimum_expected_amount: first_swap_min_expected
-            }).unwrap())
-        };
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute{
-            contract_addr: config.mint_addr.address.clone(),
-            callback_code_hash: config.mint_addr.code_hash.clone(),
-            msg: to_binary(&mint_msg).unwrap(),
-            send: vec![],
-        }));
-
-        sienna_msg = Swap{
-            send: SwapOffer {
-                recipient: config.market_swap_addr.address.clone(),
-                amount: first_swap_min_expected.clone(),
-                msg: to_binary(&CallbackSwap{
-                    expected_return: second_swap_min_expected.clone(),
-                }).unwrap(),
+        messages.push(to_cosmos_msg(
+            config.mint_addr.address.clone(),
+            config.mint_addr.code_hash.clone(),
+            &mint::HandleMsg::Receive{
+                sender: env.contract.address.clone(),
+                from: config.shd_token.contract.address.clone(),
+                amount: amount.clone(),
+                memo: Some(to_binary(&"".to_string()).unwrap()),
+                msg: Some(to_binary(&mint::MintMsgHook{
+                    minimum_expected_amount: first_swap_min_expected
+                }).unwrap())
             },
-        };
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute { 
-            contract_addr: config.silk_token.contract.address.clone(),
-            callback_code_hash: config.silk_token.contract.code_hash.clone(),
-            msg: to_binary(&sienna_msg).unwrap(), 
-            send: vec![] 
-        }));
+        ).unwrap());
+
+        messages.push(send_msg(
+            config.market_swap_addr.address.clone(),
+            cosmwasm_std::Uint128(first_swap_min_expected.clone().u128()),
+            Some(to_binary(&CallbackSwap{
+                expected_return: second_swap_min_expected.clone(),
+            }).unwrap()),
+            None,
+            None,
+            256,
+            config.silk_token.contract.code_hash.clone(),
+            config.silk_token.contract.address.clone(),
+        )?);
     }
     else {
-        sienna_msg = Swap{
-            send: SwapOffer { 
-                recipient: config.market_swap_addr.address.clone(),
-                amount, 
-                msg: to_binary(&CallbackSwap{
-                    expected_return: first_swap_min_expected
-                }).unwrap()
-            }
-        };
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute { 
-            contract_addr: config.shd_token.contract.address.clone(), 
-            callback_code_hash: config.shd_token.contract.code_hash.clone(), 
-            msg: to_binary(&sienna_msg).unwrap(), 
-            send: vec![]
-        }));
+        messages.push(send_msg(
+            config.market_swap_addr.address.clone(),
+            cosmwasm_std::Uint128(amount.u128()),
+            Some(to_binary(&CallbackSwap{
+                expected_return: first_swap_min_expected,
+            }).unwrap()),
+            None,
+            None,
+            256,
+            config.shd_token.contract.code_hash.clone(),
+            config.shd_token.contract.address.clone(),
+        )?);
 
-        mint_msg = mint::HandleMsg::Receive { 
-            sender: env.contract.address.clone(), 
-            from: config.silk_token.contract.address.clone(), 
-            amount: first_swap_min_expected, 
-            memo: Some(to_binary(&"".to_string()).unwrap()),
-            msg: Some(to_binary(&mint::MintMsgHook{
-                minimum_expected_amount: second_swap_min_expected
-            }).unwrap()) 
-        };
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute{
-            contract_addr: config.mint_addr.address.clone(),
-            callback_code_hash: config.mint_addr.code_hash.clone(),
-            msg: to_binary(&mint_msg).unwrap(),
-            send: vec![],
-        }));
+        messages.push(to_cosmos_msg(
+            config.mint_addr.address.clone(),
+            config.mint_addr.code_hash.clone(),
+            &mint::HandleMsg::Receive{
+                sender: env.contract.address.clone(),
+                from: config.silk_token.contract.address.clone(),
+                amount: first_swap_min_expected,
+                memo: Some(to_binary(&"".to_string()).unwrap()),
+                msg: Some(to_binary(&mint::MintMsgHook{
+                    minimum_expected_amount: second_swap_min_expected
+                }).unwrap())
+            },
+        ).unwrap());
     }
 
     Ok(HandleResponse{
