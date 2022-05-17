@@ -413,12 +413,55 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     };
 
+    let mut messages = vec![];
+
+    // Check whether previous bond for this asset exists
+    match bond_opportunity_r(&deps.storage).may_load(collateral_asset.address.as_str().as_bytes())?{
+        Some(prev_opp) => {
+            debug_print!(
+                "Found Previous Bond Opportuntiy: {} {}",
+                &prev_opp.deposit_denom.token_info.symbol,
+                prev_opp.deposit_denom.contract.address.to_string()
+            );
+            
+            let unspent = (prev_opp.issuance_limit - prev_opp.amount_issued)?;
+            global_total_issued_w(&mut deps.storage).update(|issued| {
+                Ok((issued - unspent.clone())?)
+            })?;
+
+            if !config.minting_bond{
+                // Unallocate allowance that wasn't issued
+                
+                allocated_allowance_w(&mut deps.storage).update(|allocated| {
+                    Ok((allocated - unspent)?)
+                })?;
+            }
+            
+        }
+        None => {
+            // Save to list of current collateral addresses
+            if None == collateral_assets_r(&deps.storage).may_load()?{
+                let assets = vec![collateral_asset.address.clone()];
+                collateral_assets_w(&mut deps.storage).save(&assets)?;
+            } else {
+                collateral_assets_w(&mut deps.storage).update(|mut assets|{
+                    assets.push(collateral_asset.address.clone());
+                    Ok(assets)
+                })?;
+            };
+
+            // Prepare register_receive message for new asset
+            messages.push(register_receive(&env, &collateral_asset)?);
+        }
+    };
+
     // Check optional fields, setting to config defaults if None
     let limit = bond_issuance_limit.unwrap_or(config.bond_issuance_limit);
     let period = bonding_period.unwrap_or(config.bonding_period);
     let discount = discount.unwrap_or(config.discount);
 
     check_against_limits(&deps, limit, period, discount)?;
+
 
     if !config.minting_bond{
     // Check bond issuance amount against snip20 allowance and allocated_allowance
@@ -468,33 +511,45 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         token_config: asset_config,
     };
 
-    let mut messages = vec![];
+    // // Check whether previous bond for this asset exists
+    // match bond_opportunity_r(&deps.storage).may_load(collateral_asset.address.as_str().as_bytes())?{
+    //     Some(prev_opp) => {
+    //         debug_print!(
+    //             "Found Previous Bond Opportuntiy: {} {}",
+    //             &prev_opp.deposit_denom.token_info.symbol,
+    //             prev_opp.deposit_denom.contract.address.to_string()
+    //         );
+            
+    //         let unspent = (prev_opp.issuance_limit - prev_opp.amount_issued)?;
+    //         global_total_issued_w(&mut deps.storage).update(|issued| {
+    //             Ok((issued - unspent.clone())?)
+    //         })?;
 
-    // Check whether previous bond for this asset exists
-    match bond_opportunity_r(&deps.storage).may_load(collateral_asset.address.as_str().as_bytes())?{
-        Some(prev_opp) => {
-            debug_print!(
-                "Found Previous Bond Opportuntiy: {} {}",
-                &prev_opp.deposit_denom.token_info.symbol,
-                prev_opp.deposit_denom.contract.address.to_string()
-            );
-        }
-        None => {
-            // Save to list of current collateral addresses
-            if None == collateral_assets_r(&deps.storage).may_load()?{
-                let assets = vec![collateral_asset.address.clone()];
-                collateral_assets_w(&mut deps.storage).save(&assets)?;
-            } else {
-                collateral_assets_w(&mut deps.storage).update(|mut assets|{
-                    assets.push(collateral_asset.address.clone());
-                    Ok(assets)
-                })?;
-            };
+    //         if !config.minting_bond{
+    //             // Unallocate allowance that wasn't issued
+                
+    //             allocated_allowance_w(&mut deps.storage).update(|allocated| {
+    //                 Ok((allocated - unspent)?)
+    //             })?;
+    //         }
+            
+    //     }
+    //     None => {
+    //         // Save to list of current collateral addresses
+    //         if None == collateral_assets_r(&deps.storage).may_load()?{
+    //             let assets = vec![collateral_asset.address.clone()];
+    //             collateral_assets_w(&mut deps.storage).save(&assets)?;
+    //         } else {
+    //             collateral_assets_w(&mut deps.storage).update(|mut assets|{
+    //                 assets.push(collateral_asset.address.clone());
+    //                 Ok(assets)
+    //             })?;
+    //         };
 
-            // Prepare register_receive message for new asset
-            messages.push(register_receive(&env, &collateral_asset)?);
-        }
-    };
+    //         // Prepare register_receive message for new asset
+    //         messages.push(register_receive(&env, &collateral_asset)?);
+    //     }
+    // };
     
     // Generate bond opportunity
     let bond_opportunity = BondOpportunity {
@@ -705,8 +760,8 @@ pub fn calculate_issuance(
     //                             (p1 * 10^18)
     // (a1 * 10^x) * ------------------------------------ = (a2 * 10^y)
     //                      (p2 * 10^18) * ((100 - d1))
-    let percent_disc = 100u128 - discount.multiply_ratio(1u128, 1_000_000_000_000_000_000u128).u128();
-    let discount_price = issued_price.multiply_ratio(percent_disc, 100u128);
+    let percent_disc = 100_000u128 - discount.u128(); // - discount.multiply_ratio(1000u128, 1_000_000_000_000_000_000u128).u128();
+    let discount_price = issued_price.multiply_ratio(percent_disc, 100000u128);
     let issued_amount = collateral_amount.multiply_ratio(collateral_price, discount_price);
     let difference: i32 = issued_decimals as i32 - collateral_decimals as i32;
 

@@ -67,6 +67,7 @@ pub enum HandleMsg {
         global_maximum_discount: Option<Uint128>,
         reset_total_issued: Option<bool>,
         reset_total_claimed: Option<bool>,
+        padding: Option<String>,
     },
     UpdateConfig {
         admin: Option<HumanAddr>,
@@ -80,6 +81,7 @@ pub enum HandleMsg {
         discount: Option<Uint128>,
         global_minimum_issued_price: Option<Uint128>,
         allowance_key: Option<String>,
+        padding: Option<String>,
     },
     OpenBond {
         collateral_asset: Contract,
@@ -90,17 +92,21 @@ pub enum HandleMsg {
         discount: Option<Uint128>,
         max_accepted_collateral_price: Uint128,
         err_collateral_price: Uint128,
+        padding: Option<String>,
     },
     CloseBond {
         collateral_asset: Contract,
+        padding: Option<String>,
     },
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
         amount: Uint128,
         msg: Option<Binary>,
+        padding: Option<String>,
     },
     Claim {
+        padding: Option<String>,
     },
 }
 

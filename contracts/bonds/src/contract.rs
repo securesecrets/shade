@@ -102,6 +102,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 global_maximum_discount,
                 reset_total_issued,
                 reset_total_claimed,
+                ..
             } => handle::try_update_limit_config(deps, env, limit_admin, global_issuance_limit, global_minimum_bonding_period, global_maximum_discount, reset_total_issued, reset_total_claimed),
             HandleMsg::UpdateConfig { 
                 admin,
@@ -115,6 +116,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 discount,
                 global_minimum_issued_price,
                 allowance_key,
+                ..
             } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset, minting_bond, bond_issuance_limit, bonding_period, discount, global_minimum_issued_price, allowance_key),
             HandleMsg::OpenBond{
                 collateral_asset,
@@ -125,17 +127,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 discount,
                 max_accepted_collateral_price,
                 err_collateral_price,
+                ..
             } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period, discount, max_accepted_collateral_price, err_collateral_price),
             HandleMsg::CloseBond{
-                collateral_asset
+                collateral_asset,
+                ..
             } => handle::try_close_bond(deps, env, collateral_asset),
             HandleMsg::Receive { 
                 sender,
                 from,
                 amount,
                 msg,
+                ..
             } => handle::try_deposit(deps, &env, sender, from, amount, msg),
-            HandleMsg::Claim {} => handle::try_claim(deps, env),
+            HandleMsg::Claim {..} => handle::try_claim(deps, env),
             }, 
         RESPONSE_BLOCK_SIZE)
     
