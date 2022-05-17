@@ -6,10 +6,12 @@ use secret_toolkit::snip20::set_viewing_key_msg;
 
 use crate::{
     handle, query,
-    state::{config_w, viewing_key_w, self_address_w},
 };
 
-use shade_protocol::contract_interfaces::sky::sky::{Config, InitMsg, HandleMsg, QueryMsg};
+use shade_protocol::{
+    contract_interfaces::sky::sky::{Config, InitMsg, HandleMsg, QueryMsg, ViewingKeys, SelfAddr},
+    utils::storage::plus::ItemStorage,
+};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -29,8 +31,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         limit: msg.limit,
     };
 
-    config_w(&mut deps.storage).save(&state)?;
-    self_address_w(&mut deps.storage).save(&env.contract.address)?;
+    state.save(&mut deps.storage)?;
+    SelfAddr(env.contract.address).save(&mut deps.storage)?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -51,7 +53,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         ).unwrap()
     ];
 
-    viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
+    ViewingKeys(msg.viewing_key).save(&mut deps.storage)?;
 
     Ok(InitResponse{
         messages,

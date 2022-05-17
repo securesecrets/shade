@@ -1,29 +1,50 @@
+use std::marker::PhantomData;
+
 use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery, TokenType};
 use crate::{utils::asset::Contract, contract_interfaces::snip20::Snip20Asset};
 use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{Binary, HumanAddr, StdResult, Env, Extern, Querier, Api, Storage};
 use schemars::JsonSchema;
+use secret_storage_plus::Item;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "sky-impl")]
-use crate::utils::storage::SingletonStorage;
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct TokenContract{
+    pub contract: Contract,
+    pub decimals: Uint128,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub admin: HumanAddr,
     pub mint_addr: Contract,
     pub market_swap_addr: Contract,
-    pub shd_token: Snip20Asset,
-    pub silk_token: Snip20Asset,
+    pub shd_token: TokenContract,
+    pub silk_token: TokenContract,
     pub treasury: HumanAddr,
     pub limit: Option<String>,
 }
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct ViewingKeys(pub String);
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct SelfAddr(pub HumanAddr);
 
 #[cfg(feature = "sky-impl")]
-impl SingletonStorage for Config {
-    const NAMESPACE: &'static [u8] = b"config-";
+use crate::utils::storage::plus::ItemStorage;
+impl ItemStorage for Config {
+    const ITEM: Item<'static, Config> = Item::new("item_config");
+}
+impl ItemStorage for ViewingKeys{
+    const ITEM: Item<'static, ViewingKeys> = Item::new("item_view_keys");
+}
+impl ItemStorage for SelfAddr{
+    const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -31,8 +52,8 @@ pub struct InitMsg{
     pub admin: Option<HumanAddr>,
     pub mint_addr: Contract,
     pub market_swap_addr: Contract,
-    pub shd_token: Snip20Asset,
-    pub silk_token: Snip20Asset,
+    pub shd_token: TokenContract,
+    pub silk_token: TokenContract,
     pub treasury: HumanAddr,
     pub viewing_key: String,
     pub limit: Option<String>,

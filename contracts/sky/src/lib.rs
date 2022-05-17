@@ -1,6 +1,5 @@
 pub mod contract;
 pub mod handle;
-pub mod state;
 pub mod query;
 
 #[cfg(target_arch = "wasm32")]

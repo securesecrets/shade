@@ -3,27 +3,28 @@ use cosmwasm_std::{
 };
 use cosmwasm_math_compat::Uint128;
 use secret_toolkit::utils::Query;
-use crate::state::{config_r, viewing_key_r, self_address_r};
 use shade_protocol::{
     contract_interfaces::{
-        sky::sky::{QueryAnswer, Config},
+        sky::sky::{QueryAnswer, Config, ViewingKeys, SelfAddr},
         mint::mint::{QueryMsg, self},
         dex::{dex::pool_take_amount, sienna::{PairInfoResponse, PairQuery, TokenType, PairInfo},},
     snip20,
-}};
+    },
+    utils::storage::plus::ItemStorage,
+};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: Config::load(&deps.storage)?,
     })
 }
 
 pub fn market_rate<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>
 ) -> StdResult<QueryAnswer> {
-    let config: Config = config_r(&deps.storage).load()?;
+    let config: Config = Config::load(&deps.storage)?;
 
     //Query mint contract
     let mint_info: mint::QueryAnswer = QueryMsg::Mint{
@@ -64,7 +65,7 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {
-    let config: Config = config_r(&deps.storage).load()?;
+    let config: Config = Config::load(&deps.storage)?;
 
     let market_query = market_rate(&deps)?;
     let mint_price: Uint128;
@@ -155,9 +156,9 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>
 ) -> StdResult<QueryAnswer> {
 
-    let viewing_key = viewing_key_r(&deps.storage).load()?;
-    let self_addr = self_address_r(&deps.storage).load()?;
-    let config = config_r(&deps.storage).load()?;
+    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
+    let self_addr = SelfAddr::load(&deps.storage)?.0;
+    let config = Config::load(&deps.storage)?;
     let mut is_error = false;
 
     let mut res = snip20::QueryMsg::Balance {
