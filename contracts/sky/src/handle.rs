@@ -36,7 +36,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>( //DEPRECIATED
+/*pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>( //DEPRECIATED
     deps: &mut Extern<S, A, Q>,
     env: Env,
     amount: Uint128,
@@ -150,7 +150,7 @@ pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>( //DEPRECIATED
             status: true,
         })?)
     })
-}
+}*/
 
 pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -201,7 +201,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
                 sender: env.contract.address.clone(),
                 from: config.shd_token.contract.address.clone(),
                 amount: amount.clone(),
-                memo: Some(to_binary(&"".to_string()).unwrap()),
+                memo: None,
                 msg: Some(to_binary(&mint::MintMsgHook{
                     minimum_expected_amount: first_swap_min_expected
                 }).unwrap())
@@ -242,7 +242,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
                 sender: env.contract.address.clone(),
                 from: config.silk_token.contract.address.clone(),
                 amount: first_swap_min_expected,
-                memo: Some(to_binary(&"".to_string()).unwrap()),
+                memo: None,
                 msg: Some(to_binary(&mint::MintMsgHook{
                     minimum_expected_amount: second_swap_min_expected
                 }).unwrap())
