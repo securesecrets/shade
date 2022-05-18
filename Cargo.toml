@@ -16,6 +16,7 @@ members = [
   "contracts/mint_router",
   "contracts/oracle",
   "contracts/snip20",
+  "contracts/sky",
 
   # DAO
   # - Core

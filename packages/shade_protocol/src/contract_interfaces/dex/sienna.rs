@@ -5,10 +5,11 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
+use cosmwasm_math_compat::Uint128;
 
 use schemars::JsonSchema;
-use secret_toolkit::utils::Query;
+use secret_toolkit::{utils::Query, serialization::Base64};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -43,6 +44,32 @@ pub struct AssetInfo {
 pub struct TokenTypeAmount {
     pub amount: Uint128,
     pub token: TokenType,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Swap {
+    pub send: SwapOffer,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct SwapOffer {
+    pub recipient: HumanAddr,
+    pub amount: Uint128,
+    pub msg: Base64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CallbackMsg {
+    pub swap: CallbackSwap,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CallbackSwap {
+    pub expected_return: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -133,7 +160,7 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Uint128> {
     let response: SimulationResponse = PairQuery::SwapSimulation {
         offer: TokenTypeAmount {
-            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
+            amount: Uint128::new(1_000_000), // 1 sSCRT (6 decimals)
             token: TokenType::CustomToken {
                 contract_addr: sscrt.address,
                 token_code_hash: sscrt.code_hash,
@@ -160,7 +187,7 @@ pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
     )?;
 
     // Constant Product
-    Ok(Uint128(
+    Ok(Uint128::new(
         pair_info.pair_info.amount_0.u128() * pair_info.pair_info.amount_1.u128(),
     ))
 }

@@ -11,7 +11,6 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
-    Uint128,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -33,6 +32,7 @@ use shade_protocol::{
     },
     utils::asset::Contract,
 };
+use cosmwasm_math_compat::Uint128;
 
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 

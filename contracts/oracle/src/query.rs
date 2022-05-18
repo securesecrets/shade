@@ -51,10 +51,10 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
 pub fn prices<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     symbols: Vec<String>,
-) -> StdResult<Vec<cosmwasm_std::Uint128>> {
+) -> StdResult<Vec<Uint128>> {
     let mut band_symbols = vec![];
     let mut band_quotes = vec![];
-    let mut results = vec![cosmwasm_std::Uint128::zero(); symbols.len()];
+    let mut results = vec![Uint128::zero(); symbols.len()];
 
     let config = config_r(&deps.storage).load()?;
 
@@ -101,14 +101,14 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
 
     Ok(results
         .iter()
-        .map(|r| cosmwasm_std::Uint128(r.u128()))
+        .map(|r| Uint128::new(r.u128()))
         .collect())
 }
 
 pub fn eval_index<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     index: Vec<IndexElement>,
-) -> StdResult<cosmwasm_std::Uint128> {
+) -> StdResult<Uint128> {
     let mut weight_sum = Uint512::zero();
     let mut price = Uint512::zero();
 
@@ -166,7 +166,7 @@ pub fn eval_index<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Ok(cosmwasm_std::Uint128(
+    Ok(Uint128::new(
         Uint128::try_from(
             price
                 .checked_mul(Uint512::from(10u128.pow(18)))?
