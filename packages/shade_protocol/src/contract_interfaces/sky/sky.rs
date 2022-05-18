@@ -40,9 +40,11 @@ use crate::utils::storage::plus::ItemStorage;
 impl ItemStorage for Config {
     const ITEM: Item<'static, Config> = Item::new("item_config");
 }
+#[cfg(feature = "sky-impl")]
 impl ItemStorage for ViewingKeys{
     const ITEM: Item<'static, ViewingKeys> = Item::new("item_view_keys");
 }
+#[cfg(feature = "sky-impl")]
 impl ItemStorage for SelfAddr{
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }

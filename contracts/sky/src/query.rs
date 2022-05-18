@@ -121,7 +121,7 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
         let mul_mint_price: Uint128 = mint_price.checked_mul(amount)?;
         first_swap_amount = mul_mint_price.checked_div(Uint128::new(100000000))?;
         let mut first_swap_less_fee = first_swap_amount.checked_div(Uint128::new(325))?;
-        first_swap_less_fee = Uint128::new(first_swap_amount.u128() - first_swap_less_fee.u128());
+        first_swap_less_fee = first_swap_amount.checked_sub(first_swap_less_fee)?;
         second_swap_amount = pool_take_amount(
             amount, 
             silk_8d, 
@@ -130,7 +130,7 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
     } else {
         mint_first = false;
         let mut amount_less_fee: Uint128 = amount.checked_div(Uint128::new(325))?;
-        amount_less_fee = Uint128::new(amount.u128() - amount_less_fee.u128());
+        amount_less_fee = amount.checked_sub(amount_less_fee)?;
         first_swap_amount = pool_take_amount(
             amount_less_fee, 
             shd_amount,
