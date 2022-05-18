@@ -96,13 +96,13 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             send: SwapOffer{
                 recipient: config.market_swap_addr.address.clone(),
                 amount,
-                msg: to_binary(&{}).unwrap()
+                msg: to_binary(&{})?
             }
         };
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute{ //swap
             contract_addr: config.shd_token.contract.address.clone(),
             callback_code_hash: env.contract_code_hash.clone(),
-            msg: to_binary(&msg).unwrap(),
+            msg: to_binary(&msg)?,
             send: vec![],
         }));
         //let expected = {
@@ -111,11 +111,11 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         let msg = Receive{
             amount: first_swap.clone(),
             from: config.silk_token.contract.address.clone(),
-            memo: Some(to_binary("").unwrap()),
+            memo: Some(to_binary("")?),
             sender:  env.contract.address.clone(),
-            msg: Some(to_binary(&"TODO".to_string()).unwrap()),
+            msg: Some(to_binary(&"TODO".to_string())?),
         };
-        let data = to_binary(&msg).unwrap();
+        let data = to_binary(&msg)?;
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute{ //mint
             contract_addr: config.mint_addr.address.clone(),
             callback_code_hash: "".to_string(),
@@ -162,7 +162,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
     //if amount.gt(env.)
     
-    let res = trade_profitability( deps, amount ).unwrap();
+    let res = trade_profitability( deps, amount )?;
 
     let mut profitable = false;
     let mut is_mint_first = false;
@@ -204,16 +204,16 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
                 memo: None,
                 msg: Some(to_binary(&mint::MintMsgHook{
                     minimum_expected_amount: first_swap_min_expected
-                }).unwrap())
+                })?)
             },
-        ).unwrap());
+        )?);
 
         messages.push(send_msg(
             config.market_swap_addr.address.clone(),
             cosmwasm_std::Uint128(first_swap_min_expected.clone().u128()),
             Some(to_binary(&CallbackSwap{
                 expected_return: second_swap_min_expected.clone(),
-            }).unwrap()),
+            })?),
             None,
             None,
             256,
@@ -227,7 +227,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
             cosmwasm_std::Uint128(amount.u128()),
             Some(to_binary(&CallbackSwap{
                 expected_return: first_swap_min_expected,
-            }).unwrap()),
+            })?),
             None,
             None,
             256,
@@ -245,9 +245,9 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
                 memo: None,
                 msg: Some(to_binary(&mint::MintMsgHook{
                     minimum_expected_amount: second_swap_min_expected
-                }).unwrap())
+                })?)
             },
-        ).unwrap());
+        )?);
     }
 
     Ok(HandleResponse{
@@ -262,7 +262,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 pub fn constant_product(swap_amount: Uint128, pool_buy: Uint128, pool_sell: Uint128) -> StdResult<Uint128> {
     //let cp = pool_buy.u128().clone() * pool_sell.u128().clone();
     //let lpb = pool_sell.u128().clone() + swap_amount.u128().clone();
-    //let ncp = div(Uint128::new(cp.clone()), Uint128::new(lpb.clone())).unwrap();
+    //let ncp = div(Uint128::new(cp.clone()), Uint128::new(lpb.clone()))?;
     //let result = pool_buy.u128().clone() - ncp.u128().clone();
     let cp = pool_buy.checked_mul(pool_sell)?;
     let lpb = pool_sell.checked_add(swap_amount)?;

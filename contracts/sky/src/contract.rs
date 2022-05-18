@@ -43,14 +43,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             1, 
             msg.shd_token.contract.code_hash.clone(), 
             msg.shd_token.contract.address.clone(),    
-        ).unwrap(),
+        )?,
         set_viewing_key_msg(
             msg.viewing_key.clone(), 
             None, 
             1, 
             msg.silk_token.contract.code_hash.clone(), 
             msg.silk_token.contract.address.clone()
-        ).unwrap()
+        )?
     ];
 
     ViewingKeys(msg.viewing_key).save(&mut deps.storage)?;

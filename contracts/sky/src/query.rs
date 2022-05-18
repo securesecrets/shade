@@ -41,7 +41,7 @@ pub fn market_rate<S: Storage, A: Api, Q: Querier>(
             asset: _,
             amount,
         } => {
-            mint_price = amount.checked_mul(Uint128::new(100)).unwrap(); // times 100 to make it have 8 decimals
+            mint_price = amount.checked_mul(Uint128::new(100))?; // times 100 to make it have 8 decimals
         },
         _ => {
             mint_price = Uint128::new(0);
@@ -96,11 +96,11 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
             if contract_addr.eq(&config.shd_token.contract.address) {
                 shd_amount = pool_info.pair_info.amount_0;
                 silk_amount = pool_info.pair_info.amount_1;
-                silk_8d = silk_amount.checked_mul(Uint128::new(100)).unwrap();
+                silk_8d = silk_amount.checked_mul(Uint128::new(100))?;
             } else {
                 shd_amount = pool_info.pair_info.amount_1;
                 silk_amount = pool_info.pair_info.amount_0;
-                silk_8d = silk_amount.checked_mul(Uint128::new(100)).unwrap();
+                silk_8d = silk_amount.checked_mul(Uint128::new(100))?;
             }
         }
         _ => {
@@ -108,8 +108,8 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let div_silk_8d: Uint128 = silk_8d.checked_mul(Uint128::new(100000000)).unwrap();
-    let dex_price: Uint128 = div_silk_8d.checked_div(shd_amount.clone()).unwrap();    
+    let div_silk_8d: Uint128 = silk_8d.checked_mul(Uint128::new(100000000))?;
+    let dex_price: Uint128 = div_silk_8d.checked_div(shd_amount.clone())?;    
 
 
     let mut first_swap_amount: Uint128 = Uint128::new(0);
@@ -118,9 +118,9 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
 
     if mint_price.gt(&dex_price) {
         mint_first = true;
-        let mul_mint_price: Uint128 = mint_price.checked_mul(amount).unwrap();
-        first_swap_amount = mul_mint_price.checked_div(Uint128::new(100000000)).unwrap();
-        let mut first_swap_less_fee = first_swap_amount.checked_div(Uint128::new(325)).unwrap();
+        let mul_mint_price: Uint128 = mint_price.checked_mul(amount)?;
+        first_swap_amount = mul_mint_price.checked_div(Uint128::new(100000000))?;
+        let mut first_swap_less_fee = first_swap_amount.checked_div(Uint128::new(325))?;
         first_swap_less_fee = Uint128::new(first_swap_amount.u128() - first_swap_less_fee.u128());
         second_swap_amount = pool_take_amount(
             amount, 
@@ -129,15 +129,15 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
         );
     } else {
         mint_first = false;
-        let mut amount_less_fee: Uint128 = amount.checked_div(Uint128::new(325)).unwrap();
+        let mut amount_less_fee: Uint128 = amount.checked_div(Uint128::new(325))?;
         amount_less_fee = Uint128::new(amount.u128() - amount_less_fee.u128());
         first_swap_amount = pool_take_amount(
             amount_less_fee, 
             shd_amount,
             silk_8d,
         );
-        let mul_first_swap = first_swap_amount.checked_mul(Uint128::new(100000000)).unwrap();
-        second_swap_amount = mul_first_swap.checked_div(mint_price).unwrap();
+        let mul_first_swap = first_swap_amount.checked_mul(Uint128::new(100000000))?;
+        second_swap_amount = mul_first_swap.checked_div(mint_price)?;
     }
 
     let is_profitable = second_swap_amount.gt(&amount);
