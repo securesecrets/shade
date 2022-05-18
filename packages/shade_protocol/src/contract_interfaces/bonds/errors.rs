@@ -31,6 +31,7 @@ pub enum Error{
     Blacklisted,
     IssuedAssetDeposit,
     NotTreasuryBond,
+    NoBondsClaimable,
 }
 
 impl_into_u8!(Error);
@@ -106,6 +107,9 @@ impl CodeType for Error {
             }
             Error::NotTreasuryBond => {
                 build_string("Cannot perform function since this is not a treasury bond", context)
+            }
+            Error::NoBondsClaimable => {
+                build_string("Pending bonds not redeemable, nothing claimed", context)
             }
         }
     }
@@ -258,4 +262,8 @@ pub fn issued_asset_deposit() -> StdError {
 
 pub fn not_treasury_bond() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::NotTreasuryBond, vec![]).to_error()
+}
+
+pub fn no_bonds_claimable() -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::NoBondsClaimable, vec![]).to_error()
 }

@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
     StdResult, Storage, Uint128, HumanAddr,
 };
 use secret_toolkit::snip20::{token_info_query, set_viewing_key_msg};
@@ -43,7 +43,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     
     let mut messages = vec![];
 
-
     if !msg.minting_bond{
         match msg.allowance_key_entropy {
             Some(entropy) => {
@@ -66,7 +65,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     let token_config = token_config_query(&deps.querier, state.issued_asset.clone())?;
 
-    debug_print!("Setting minted asset");
     issued_asset_w(&mut deps.storage).save(&Snip20Asset {
         contract: state.issued_asset.clone(),
         token_info,
@@ -77,10 +75,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     global_total_issued_w(&mut deps.storage).save(&Uint128(0))?;
     global_total_claimed_w(&mut deps.storage).save(&Uint128(0))?;
     allocated_allowance_w(&mut deps.storage).save(&Uint128(0))?;
-    let assets: Vec<HumanAddr> = vec![];
-    collateral_assets_w(&mut deps.storage).save(&assets)?;
-
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    collateral_assets_w(&mut deps.storage).save(&vec![])?;
 
     Ok(InitResponse {
         messages,

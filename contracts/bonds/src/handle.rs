@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use cosmwasm_std::{
-    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
     HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
 };
 
@@ -144,8 +144,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         Ok(state)
     })?;
 
-    
-
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
@@ -188,11 +186,6 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     let bond_opportunity = 
         match bond_opportunity_r(&deps.storage).may_load(env.message.sender.to_string().as_bytes())?{
             Some(prev_opp) => {
-                debug_print!(
-                    "Found Previous Bond Opportuntiy: {} {}",
-                    &prev_opp.deposit_denom.token_info.symbol,
-                    prev_opp.deposit_denom.contract.address.to_string()
-                );
                 bond_active(&env, &prev_opp)?;
                 prev_opp
             }
@@ -201,14 +194,27 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
             }
         };
 
-
     let available = (bond_opportunity.issuance_limit - bond_opportunity.amount_issued).unwrap();
     
     // Load mint asset information
     let issuance_asset = issued_asset_r(&deps.storage).load()?;
     
     // Calculate conversion of collateral to SHD
-    let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(&deps, deposit_amount, available, bond_opportunity.deposit_denom.clone(), issuance_asset, bond_opportunity.discount, bond_opportunity.max_accepted_collateral_price, bond_opportunity.err_collateral_price, config.global_minimum_issued_price)?;
+    let (amount_to_issue, 
+        deposit_price, 
+        claim_price, 
+        discount_price) 
+        = amount_to_issue(
+            &deps, 
+            deposit_amount, 
+            available, 
+            bond_opportunity.deposit_denom.clone(), 
+            issuance_asset, 
+            bond_opportunity.discount, 
+            bond_opportunity.max_accepted_collateral_price, 
+            bond_opportunity.err_collateral_price, 
+            config.global_minimum_issued_price
+        )?;
     
     if let Some(message) = msg {
         let msg: SlipMsg = from_binary(&message)?;
@@ -344,6 +350,9 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     }
 
     // Add case for if total is 0, error out
+    if total==Uint128(0){
+        return Err(no_bonds_claimable())
+    }
 
     // Remove claimed bonds from vector and save back to the account
     pending_bonds.retain(|bond|
@@ -420,12 +429,6 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     // Check whether previous bond for this asset exists
     match bond_opportunity_r(&deps.storage).may_load(collateral_asset.address.as_str().as_bytes())?{
         Some(prev_opp) => {
-            debug_print!(
-                "Found Previous Bond Opportuntiy: {} {}",
-                &prev_opp.deposit_denom.token_info.symbol,
-                prev_opp.deposit_denom.contract.address.to_string()
-            );
-            
             let unspent = (prev_opp.issuance_limit - prev_opp.amount_issued)?;
             global_total_issued_w(&mut deps.storage).update(|issued| {
                 Ok((issued - unspent.clone())?)
@@ -438,7 +441,6 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
                     Ok((allocated - unspent)?)
                 })?;
             }
-            
         }
         None => {
             // Save to list of current collateral addresses
@@ -476,8 +478,6 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             config.issued_asset.code_hash,
             config.issued_asset.address,
         )?;
-    
-        debug_print!("Allowance according to query is {}", snip20_allowance.allowance.clone());
 
         let allocated_allowance = allocated_allowance_r(&deps.storage).load()?;
 
@@ -512,46 +512,6 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         token_info: asset_info,
         token_config: asset_config,
     };
-
-    // // Check whether previous bond for this asset exists
-    // match bond_opportunity_r(&deps.storage).may_load(collateral_asset.address.as_str().as_bytes())?{
-    //     Some(prev_opp) => {
-    //         debug_print!(
-    //             "Found Previous Bond Opportuntiy: {} {}",
-    //             &prev_opp.deposit_denom.token_info.symbol,
-    //             prev_opp.deposit_denom.contract.address.to_string()
-    //         );
-            
-    //         let unspent = (prev_opp.issuance_limit - prev_opp.amount_issued)?;
-    //         global_total_issued_w(&mut deps.storage).update(|issued| {
-    //             Ok((issued - unspent.clone())?)
-    //         })?;
-
-    //         if !config.minting_bond{
-    //             // Unallocate allowance that wasn't issued
-                
-    //             allocated_allowance_w(&mut deps.storage).update(|allocated| {
-    //                 Ok((allocated - unspent)?)
-    //             })?;
-    //         }
-            
-    //     }
-    //     None => {
-    //         // Save to list of current collateral addresses
-    //         if None == collateral_assets_r(&deps.storage).may_load()?{
-    //             let assets = vec![collateral_asset.address.clone()];
-    //             collateral_assets_w(&mut deps.storage).save(&assets)?;
-    //         } else {
-    //             collateral_assets_w(&mut deps.storage).update(|mut assets|{
-    //                 assets.push(collateral_asset.address.clone());
-    //                 Ok(assets)
-    //             })?;
-    //         };
-
-    //         // Prepare register_receive message for new asset
-    //         messages.push(register_receive(&env, &collateral_asset)?);
-    //     }
-    // };
     
     // Generate bond opportunity
     let bond_opportunity = BondOpportunity {
@@ -608,11 +568,6 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
 
     match bond_opportunity_r(&deps.storage).may_load(collateral_asset.address.as_str().as_bytes())?{
         Some(prev_opp) => {
-            debug_print!(
-                "Found Previous Bond Opportuntiy: {} {}",
-                &prev_opp.deposit_denom.token_info.symbol,
-                prev_opp.deposit_denom.contract.address.to_string()
-            );
             bond_opportunity_w(&mut deps.storage).remove(collateral_asset.address.as_str().as_bytes());
             
             // Remove asset from address list
