@@ -99,7 +99,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     bond_issuance_limit: Option<Uint128>,
     bonding_period: Option<u64>,
     discount: Option<Uint128>,
-    global_minimum_issued_price: Option<Uint128>,
+    global_min_accepted_issued_price: Option<Uint128>,
+    global_err_issued_price: Option<Uint128>,
     allowance_key: Option<String>,
 ) -> StdResult<HandleResponse> {
     let cur_config = config_r(&deps.storage).load()?;
@@ -108,6 +109,10 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     if env.message.sender != cur_config.admin {
         return Err(StdError::unauthorized());
     }
+
+    if let Some(allowance_key) = allowance_key {
+        allowance_key_w(&mut deps.storage).save(&allowance_key)?;
+    };
 
     let mut config = config_w(&mut deps.storage);
     config.update(|mut state| {
@@ -138,8 +143,11 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         if let Some(discount) = discount {
             state.discount = discount;
         }
-        if let Some(global_minimum_issued_price) = global_minimum_issued_price {
-            state.global_minimum_issued_price = global_minimum_issued_price;
+        if let Some(global_min_accepted_issued_price) = global_min_accepted_issued_price {
+            state.global_min_accepted_issued_price = global_min_accepted_issued_price;
+        }
+        if let Some(global_err_issued_price) = global_err_issued_price {
+            state.global_err_issued_price = global_err_issued_price;
         }
         Ok(state)
     })?;
@@ -213,7 +221,8 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
             bond_opportunity.discount, 
             bond_opportunity.max_accepted_collateral_price, 
             bond_opportunity.err_collateral_price, 
-            config.global_minimum_issued_price
+            config.global_min_accepted_issued_price,
+            config.global_err_issued_price,
         )?;
     
     if let Some(message) = msg {
@@ -668,7 +677,8 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     discount: Uint128,
     max_accepted_collateral_price: Uint128,
     err_collateral_price: Uint128,
-    min_issued_price: Uint128,
+    min_accepted_issued_price: Uint128,
+    err_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
     let mut collateral_price = oracle(&deps, collateral_asset.token_info.symbol.clone())?;// Placeholder for Oracle lookup
     if collateral_price > max_accepted_collateral_price {
@@ -677,9 +687,12 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
         }
         collateral_price = max_accepted_collateral_price;
     }
-    let issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?; // Placeholder for minted asset price lookup
-    if issued_price < min_issued_price {
-        return Err(issued_price_below_minimum(issued_price.clone(), min_issued_price.clone()))
+    let mut issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?; // Placeholder for minted asset price lookup
+    if issued_price < min_accepted_issued_price {
+        if issued_price < err_issued_price {
+            return Err(issued_price_below_minimum(issued_price.clone(), err_issued_price.clone()))
+        }
+        issued_price = min_accepted_issued_price;
     }
     let (issued_amount, discount_price) = calculate_issuance(
         collateral_price.clone(), 

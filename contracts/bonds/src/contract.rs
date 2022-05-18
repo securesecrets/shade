@@ -35,7 +35,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         discount: msg.discount,
         bond_issuance_limit: msg.bond_issuance_limit,
         bonding_period: msg.bonding_period,
-        global_minimum_issued_price: msg.global_minimum_issued_price,
+        global_min_accepted_issued_price: msg.global_min_accepted_issued_price,
+        global_err_issued_price: msg.global_err_issued_price,
         contract: env.contract.address.clone(),
         };
 
@@ -109,10 +110,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 bond_issuance_limit,
                 bonding_period,
                 discount,
-                global_minimum_issued_price,
+                global_min_accepted_issued_price,
+                global_err_issued_price,
                 allowance_key,
                 ..
-            } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset, minting_bond, bond_issuance_limit, bonding_period, discount, global_minimum_issued_price, allowance_key),
+            } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset, minting_bond, bond_issuance_limit, bonding_period, discount, global_min_accepted_issued_price, global_err_issued_price, allowance_key),
             HandleMsg::OpenBond{
                 collateral_asset,
                 start_time,

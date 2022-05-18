@@ -34,7 +34,8 @@ pub struct Config {
     pub global_issuance_limit: Uint128,
     pub global_minimum_bonding_period: u64,
     pub global_maximum_discount: Uint128,
-    pub global_minimum_issued_price: Uint128,
+    pub global_min_accepted_issued_price: Uint128,
+    pub global_err_issued_price: Uint128,
     pub contract: HumanAddr,
 }
 
@@ -53,7 +54,8 @@ pub struct InitMsg {
     pub bond_issuance_limit: Uint128,
     pub bonding_period: u64,
     pub discount: Uint128,
-    pub global_minimum_issued_price: Uint128,
+    pub global_min_accepted_issued_price: Uint128,
+    pub global_err_issued_price: Uint128,
     pub allowance_key_entropy: Option<String>,
 }
 
@@ -79,7 +81,8 @@ pub enum HandleMsg {
         bond_issuance_limit: Option<Uint128>,
         bonding_period: Option<u64>,
         discount: Option<Uint128>,
-        global_minimum_issued_price: Option<Uint128>,
+        global_min_accepted_issued_price: Option<Uint128>,
+        global_err_issued_price: Option<Uint128>,
         allowance_key: Option<String>,
         padding: Option<String>,
     },
