@@ -60,8 +60,6 @@ use crate::{
         managers_r,
         managers_w,
         self_address_r,
-        total_unbonding_r,
-        total_unbonding_w,
         viewing_key_r,
     },
 };
@@ -421,8 +419,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     )?;
 
     allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
-    total_unbonding_w(&mut deps.storage)
-        .save(contract.address.as_str().as_bytes(), &Uint128::zero())?;
 
     Ok(HandleResponse {
         messages: vec![
@@ -732,10 +728,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             (amount - unbond_amount)?
         )));
     }
-
-    total_unbonding_w(&mut deps.storage).update(asset.as_str().as_bytes(), |u| {
-        Ok(u.or(Some(Uint128::zero())).unwrap() + amount)
-    })?;
 
     Ok(HandleResponse {
         messages,

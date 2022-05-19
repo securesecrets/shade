@@ -91,7 +91,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let cur_config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != cur_config.admin {
+    if cur_config.admins.contains(&env.message.sender) {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -180,7 +180,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
     */
-    if !config.admins.contains(env.message.sender) || config.owner != env.message.sender {
+    if !config.admins.contains(&env.message.sender) || config.owner != env.message.sender {
         return Err(StdError::unauthorized());
     }
 
@@ -351,7 +351,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    if !config.admins.contains(env.message.sender) || !config.owner == env.message.sender {
+    if !config.admins.contains(&env.message.sender) || !(config.owner == env.message.sender) {
         return Err(StdError::unauthorized());
     }
 

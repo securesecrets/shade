@@ -20,13 +20,11 @@ use crate::{
     handle,
     query,
     state::{
-        //account_list_w,
         allowances_w,
         asset_list_w,
         config_w,
         managers_w,
         self_address_w,
-        total_unbonding_w,
         viewing_key_w,
     },
 };

@@ -41,13 +41,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(env.message.sender.clone()),
-        treasury: msg.treasury,
+        treasury: msg.treasury.clone(),
     })?;
 
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     asset_list_w(&mut deps.storage).save(&Vec::new())?;
-    holders_w(&mut deps.storage).save(&vec![msg.treasury])?;
+    holders_w(&mut deps.storage).save(&vec![msg.treasury.clone()])?;
     holder_w(&mut deps.storage).save(
         msg.treasury.as_str().as_bytes(),
         &Holder {
@@ -106,17 +106,17 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Holder { holder } => to_binary(&query::holder(deps, holder)),
 
         // For holder specific queries
-        QueryMsg::Balance { asset, holder } => to_binary(&query::balance(deps, asset, holder)?),
-        QueryMsg::Unbonding { asset, holder } => to_binary(&query::unbonding(deps, asset, holder)?),
-        QueryMsg::Unbondable { asset, holder } => to_binary(&query::unbondable(deps, asset, holder)?),
-        QueryMsg::Claimable { asset, holder } => to_binary(&query::claimable(deps, asset, holder)?),
+        QueryMsg::Balance { asset, holder } => to_binary(&query::balance(deps, asset, Some(holder))?),
+        QueryMsg::Unbonding { asset, holder } => to_binary(&query::unbonding(deps, asset, Some(holder))?),
+        QueryMsg::Unbondable { asset, holder } => to_binary(&query::unbondable(deps, asset, Some(holder))?),
+        QueryMsg::Claimable { asset, holder } => to_binary(&query::claimable(deps, asset, Some(holder))?),
 
         QueryMsg::Adapter(a) => match a {
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset, None)?),
             adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset, None)?),
             adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(deps, asset, None)?),
             adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset, None)?),
-            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(deps, &asset, None)?),
+            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(deps, &asset)?),
         }
     }
 }

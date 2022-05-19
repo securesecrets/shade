@@ -128,9 +128,9 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     let mut claimer = match holder {
         Some(h) => h,
         None => config.treasury,
-    }
+    };
 
-    match holder_r(&deps.storage).may_load(&claimer.as_str().as_bytes()) {
+    match holder_r(&deps.storage).may_load(&claimer.as_str().as_bytes())? {
         Some(h) => {
             if let Some(u) = h.unbondings.iter().find(|u| u.token == asset) {
                 unbonding += u.amount;
@@ -174,16 +174,21 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
         }
     };
 
+    let config = config_r(&deps.storage).load()?;
+
     let mut unbonder = match holder {
         Some(h) => h,
         None => config.treasury,
-    }
+    };
 
-    match holder_r(&deps.storage).may_load(&unbonder.as_str().as_bytes()) {
+    match holder_r(&deps.storage).may_load(&unbonder.as_str().as_bytes())? {
         Some(h) => {
-            if let Some(u) = h.unbondings.iter().find(|u| u.token == asset) {
-                Ok(adapter::QueryAnswer::Unbonding { amount: u.amount })
-            }
+            Ok(adapter::QueryAnswer::Unbonding {
+                amount: match h.unbondings.iter().find(|u| u.token == asset) {
+                    Some(u) => u.amount,
+                    None => Uint128::zero(),
+                }
+            })
         }
         None => {
             return Err(StdError::generic_err("Invalid holder"));
@@ -202,6 +207,7 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<adapter::QueryAnswer> {
 
     if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        let config = config_r(&deps.storage).load()?;
         let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
             Some(a) => a,
             None => { return Err(StdError::generic_err("Not an asset")); }
@@ -210,12 +216,12 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
         let mut unbonder = match holder {
             Some(h) => h,
             None => config.treasury,
-        }
+        };
 
         let mut balance = Uint128::zero();
         let mut unbonding = Uint128::zero();
 
-        match holder_r(&deps.storage).may_load(&unbonder.as_str().as_bytes()) {
+        match holder_r(&deps.storage).may_load(&unbonder.as_str().as_bytes())? {
             Some(h) => {
                 if let Some(u) = h.unbondings.iter().find(|u| u.token == asset) {
                     unbonding += u.amount;

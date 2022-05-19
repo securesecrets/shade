@@ -39,7 +39,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         admins: match msg.admins {
             None => vec![env.message.sender.clone()],
             Some(mut admins) => {
-                if !admins.contains(env.message.sender) {
+                if !admins.contains(&env.message.sender) {
                     admins.push(env.message.sender);
                 }
                 admins
@@ -55,8 +55,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
     unbonding_w(&mut deps.storage).save(&Uint128::zero())?;
-
-    debug_print!("Contract was initialized by {}", env.message.sender);
 
     Ok(InitResponse {
         messages: vec![
