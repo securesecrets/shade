@@ -109,8 +109,8 @@ fn single_asset_portion_full_dao_integration(
     let scrt_staking = ensemble.instantiate(
         reg_scrt_staking.id,
         &scrt_staking::InitMsg {
-            admin: Some(HumanAddr("admin".into())),
-            treasury: HumanAddr("treasury".into()),
+            admins: Some(vec![HumanAddr("admin".into())]),
+            owner: HumanAddr("manager".into()),
             sscrt: Contract {
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
@@ -184,6 +184,7 @@ fn single_asset_portion_full_dao_integration(
                 },
                 alloc_type: treasury_manager::AllocationType::Portion,
                 amount: allocation,
+                tolerance: Uint128::zero(),
             },
         },
         MockEnv::new(
