@@ -95,7 +95,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     treasury: Option<HumanAddr>,
     activated: Option<bool>,
     issuance_asset: Option<Contract>,
-    minting_bond: Option<bool>,
     bond_issuance_limit: Option<Uint128>,
     bonding_period: Option<u64>,
     discount: Option<Uint128>,
@@ -130,9 +129,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
         if let Some(issuance_asset) = issuance_asset {
             state.issued_asset = issuance_asset;
-        }
-        if let Some(minting_bond) = minting_bond {
-            state.minting_bond = minting_bond;
         }
         if let Some(bond_issuance_limit) = bond_issuance_limit {
             state.bond_issuance_limit = bond_issuance_limit;
@@ -288,7 +284,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     account_w(&mut deps.storage).save(account.address.as_str().as_bytes(), &account)?;
 
 
-    if !config.minting_bond {
+    if !bond_opportunity.minting_bond {
         // Decrease AllocatedAllowance since user is claiming
         allocated_allowance_w(&mut deps.storage).update(|allocated| allocated - amount_to_issue.clone())?;
 
@@ -303,6 +299,16 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         config.issued_asset.code_hash.clone(),
         config.issued_asset.address,
     )?);
+    } else {
+        messages.push(mint_msg(
+            config.contract,
+            amount_to_issue,
+            None,
+            None,
+            256,
+            config.issued_asset.code_hash,
+            config.issued_asset.address,
+        )?);
     }
     
 
@@ -378,30 +384,28 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     //Set up empty message vec
     let mut messages = vec![];
 
-    // Decide via config boolean whether or not the contract is a minting bond
-    if config.minting_bond {
-        // Mint out the total using snip20 to the user
-        messages.push(mint_msg(
-            env.message.sender,
-            total,
-            None,
-            None,
-            256,
-            config.issued_asset.code_hash.clone(),
-            config.issued_asset.address,
-        )?);
-    } else {
-        messages.push(transfer_msg(
-            env.message.sender, 
-            total,
-            None, 
-            None, 
-            256, 
-            config.issued_asset.code_hash.clone(), 
-            config.issued_asset.address,
+    // // Decide via config boolean whether or not the contract is a minting bond
+    // if config.minting_bond {
+    //     // Mint out the total using snip20 to the user
+    //     messages.push(mint_msg(
+    //         env.message.sender,
+    //         total,
+    //         None,
+    //         None,
+    //         256,
+    //         config.issued_asset.code_hash.clone(),
+    //         config.issued_asset.address,
+    //     )?);
+    // } else {
+    messages.push(transfer_msg(
+        env.message.sender, 
+        total,
+        None, 
+        None, 
+        256, 
+        config.issued_asset.code_hash.clone(), 
+        config.issued_asset.address,
     )?);
-    }
-
 
     // Return Success response
     Ok(HandleResponse {
@@ -425,6 +429,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     discount: Option<Uint128>,
     max_accepted_collateral_price: Uint128,
     err_collateral_price: Uint128,
+    minting_bond: bool,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 
@@ -443,7 +448,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
                 Ok((issued - unspent.clone())?)
             })?;
 
-            if !config.minting_bond{
+            if !prev_opp.minting_bond{
                 // Unallocate allowance that wasn't issued
                 
                 allocated_allowance_w(&mut deps.storage).update(|allocated| {
@@ -476,7 +481,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     check_against_limits(&deps, limit, period, discount)?;
 
 
-    if !config.minting_bond{
+    if !minting_bond{
     // Check bond issuance amount against snip20 allowance and allocated_allowance
     let snip20_allowance = allowance_query(
         &deps.querier,
@@ -532,7 +537,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         bonding_period: period,  
         amount_issued: Uint128(0),  
         max_accepted_collateral_price,
-        err_collateral_price,               
+        err_collateral_price, 
+        minting_bond,              
     };
     
     // Save bond opportunity
@@ -557,6 +563,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             discount: bond_opportunity.discount,
             max_accepted_collateral_price: bond_opportunity.max_accepted_collateral_price,
             err_collateral_price: bond_opportunity.err_collateral_price,
+            minting_bond: bond_opportunity.minting_bond,
         })?),
     })
 }
@@ -590,7 +597,7 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
                 Ok((issued - unspent.clone())?)
             })?;
 
-            if !config.minting_bond{
+            if !prev_opp.minting_bond{
                 // Unallocate allowance that wasn't issued
                 
                 allocated_allowance_w(&mut deps.storage).update(|allocated| {
@@ -680,6 +687,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     min_accepted_issued_price: Uint128,
     err_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
+    let mut disc = discount;
     let mut collateral_price = oracle(&deps, collateral_asset.token_info.symbol.clone())?;// Placeholder for Oracle lookup
     if collateral_price > max_accepted_collateral_price {
         if collateral_price > err_collateral_price {
@@ -688,10 +696,11 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
         collateral_price = max_accepted_collateral_price;
     }
     let mut issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?; // Placeholder for minted asset price lookup
+    if issued_price < err_issued_price {
+        return Err(issued_price_below_minimum(issued_price.clone(), err_issued_price.clone()))
+    }
     if issued_price < min_accepted_issued_price {
-        if issued_price < err_issued_price {
-            return Err(issued_price_below_minimum(issued_price.clone(), err_issued_price.clone()))
-        }
+        disc = Uint128(0);
         issued_price = min_accepted_issued_price;
     }
     let (issued_amount, discount_price) = calculate_issuance(
@@ -700,7 +709,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
         collateral_asset.token_info.decimals,
         issued_price,
         issuance_asset.token_info.decimals,
-        discount,
+        disc,
     );
     if issued_amount > available {
         return Err(mint_exceeds_limit(issued_amount, available))

@@ -11,7 +11,7 @@ use shade_protocol::contract_interfaces::{
 
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 
-use crate::{handle::{self}, query, state::{config_w, issued_asset_w, global_total_issued_w, collateral_assets_w, global_total_claimed_w, allocated_allowance_w, allowance_key_w}};
+use crate::{handle::{self, register_receive}, query, state::{config_w, issued_asset_w, global_total_issued_w, collateral_assets_w, global_total_claimed_w, allocated_allowance_w, allowance_key_w}};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -31,7 +31,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         global_minimum_bonding_period: msg.global_minimum_bonding_period,
         global_maximum_discount: msg.global_maximum_discount,
         activated: msg.activated,
-        minting_bond: msg.minting_bond,
         discount: msg.discount,
         bond_issuance_limit: msg.bond_issuance_limit,
         bonding_period: msg.bonding_period,
@@ -44,18 +43,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     
     let mut messages = vec![];
 
-    if !msg.minting_bond{
-        match msg.allowance_key_entropy {
-            Some(entropy) => {
-                let allowance_key: SnipViewingKey = SnipViewingKey::new(&env, Default::default(), entropy.as_ref());
-                messages.push(set_viewing_key_msg(allowance_key.0.clone(), None, 256, state.issued_asset.code_hash.clone(), state.issued_asset.address.clone())?);
-                allowance_key_w(&mut deps.storage).save(&allowance_key.0)?;
-            }
-            None => {
-
-            }
-        }
-    }
+    let allowance_key: SnipViewingKey = SnipViewingKey::new(&env, Default::default(), msg.allowance_key_entropy.as_ref());
+    messages.push(set_viewing_key_msg(allowance_key.0.clone(), None, 256, state.issued_asset.code_hash.clone(), state.issued_asset.address.clone())?);
+    allowance_key_w(&mut deps.storage).save(&allowance_key.0)?;
 
     let token_info = token_info_query(
         &deps.querier,
@@ -71,6 +61,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         token_info,
         token_config: Option::from(token_config),
     })?;
+
+    messages.push(register_receive(&env, &state.issued_asset)?);
 
     // Write initial values to storage
     global_total_issued_w(&mut deps.storage).save(&Uint128(0))?;
@@ -106,7 +98,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 treasury,
                 issued_asset,
                 activated,
-                minting_bond,
                 bond_issuance_limit,
                 bonding_period,
                 discount,
@@ -114,7 +105,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 global_err_issued_price,
                 allowance_key,
                 ..
-            } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset, minting_bond, bond_issuance_limit, bonding_period, discount, global_min_accepted_issued_price, global_err_issued_price, allowance_key),
+            } => handle::try_update_config(deps, env, admin, oracle, treasury, activated, issued_asset, bond_issuance_limit, bonding_period, discount, global_min_accepted_issued_price, global_err_issued_price, allowance_key),
             HandleMsg::OpenBond{
                 collateral_asset,
                 start_time,
@@ -124,8 +115,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 discount,
                 max_accepted_collateral_price,
                 err_collateral_price,
+                minting_bond,
                 ..
-            } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period, discount, max_accepted_collateral_price, err_collateral_price),
+            } => handle::try_open_bond(deps, env, collateral_asset, start_time, end_time, bond_issuance_limit, bonding_period, discount, max_accepted_collateral_price, err_collateral_price, minting_bond),
             HandleMsg::CloseBond{
                 collateral_asset,
                 ..
@@ -156,6 +148,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::PriceCheck { asset } => to_binary(&query::price_check(asset, deps)?),
             QueryMsg::BondInfo {} => to_binary(&query::bond_info(deps)?),
             QueryMsg::CheckAllowance {} => to_binary(&query::check_allowance(deps)?),
+            QueryMsg::CheckBalance {} => to_binary(&query::check_balance(deps)?),
         },
         RESPONSE_BLOCK_SIZE,    
     )

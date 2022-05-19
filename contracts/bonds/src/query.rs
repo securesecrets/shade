@@ -7,7 +7,7 @@ use crate::{
 
 use shade_protocol::contract_interfaces::bonds::errors::{not_treasury_bond};
 
-use secret_toolkit::snip20::allowance_query;
+use secret_toolkit::snip20::{allowance_query, balance_query};
 
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
 use shade_protocol::contract_interfaces::{bonds::{QueryAnswer, AccountKey, BondOpportunity, AccountPermit}, snip20::Snip20Asset, oracles};
@@ -100,10 +100,6 @@ pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
     
-    if config.minting_bond{
-        return Err(not_treasury_bond());
-    }
-    
     // Check bond issuance amount against snip20 allowance and allocated_allowance
     let snip20_allowance = allowance_query(
         &deps.querier,
@@ -117,5 +113,24 @@ pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
 
     Ok(QueryAnswer::CheckAllowance {
         allowance: snip20_allowance.allowance
+    })
+}
+
+pub fn check_balance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<QueryAnswer> {
+    let config = config_r(&deps.storage).load()?;
+
+    let balance = balance_query(
+        &deps.querier,
+        config.contract,
+        allowance_key_r(&deps.storage).load()?,
+        256,
+        config.issued_asset.code_hash,
+        config.issued_asset.address,
+    )?;
+
+    Ok(QueryAnswer::CheckBalance {
+        balance: balance.amount
     })
 }

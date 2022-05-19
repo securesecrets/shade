@@ -27,7 +27,6 @@ pub struct Config {
     pub treasury: HumanAddr,
     pub issued_asset: Contract,
     pub activated: bool,
-    pub minting_bond: bool,
     pub bond_issuance_limit: Uint128,
     pub bonding_period: u64,
     pub discount: Uint128,
@@ -50,13 +49,12 @@ pub struct InitMsg {
     pub treasury: HumanAddr,
     pub issued_asset: Contract,
     pub activated: bool,
-    pub minting_bond: bool,
     pub bond_issuance_limit: Uint128,
     pub bonding_period: u64,
     pub discount: Uint128,
     pub global_min_accepted_issued_price: Uint128,
     pub global_err_issued_price: Uint128,
-    pub allowance_key_entropy: Option<String>,
+    pub allowance_key_entropy: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -77,7 +75,6 @@ pub enum HandleMsg {
         treasury: Option<HumanAddr>,
         issued_asset: Option<Contract>,
         activated: Option<bool>,
-        minting_bond: Option<bool>,
         bond_issuance_limit: Option<Uint128>,
         bonding_period: Option<u64>,
         discount: Option<Uint128>,
@@ -95,6 +92,7 @@ pub enum HandleMsg {
         discount: Option<Uint128>,
         max_accepted_collateral_price: Uint128,
         err_collateral_price: Uint128,
+        minting_bond: bool,
         padding: Option<String>,
     },
     CloseBond {
@@ -146,6 +144,7 @@ pub enum HandleAnswer {
         discount: Uint128,
         max_accepted_collateral_price: Uint128,
         err_collateral_price: Uint128,
+        minting_bond: bool,
     },
     ClosedBond {
         status: ResponseStatus,
@@ -167,6 +166,7 @@ pub enum QueryMsg {
     },
     BondInfo {},
     CheckAllowance {},
+    CheckBalance {},
 }   
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -194,6 +194,9 @@ pub enum QueryAnswer {
     },
     CheckAllowance {
         allowance: Uint128,
+    },
+    CheckBalance {
+        balance: Uint128,
     }
 }
 
@@ -348,6 +351,7 @@ pub struct BondOpportunity {
     pub discount: Uint128,
     pub max_accepted_collateral_price: Uint128,
     pub err_collateral_price: Uint128,
+    pub minting_bond: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
