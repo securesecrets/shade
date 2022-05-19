@@ -9,8 +9,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admin: HumanAddr,
-    pub treasury: HumanAddr,
+    pub admins: Vec<HumanAddr>,
+    //pub treasury: HumanAddr,
+    // This is the contract that will "unbond" funds
+    pub owner: HumanAddr,
     pub sscrt: Contract,
     pub validator_bounds: Option<ValidatorBounds>,
 }
@@ -26,8 +28,8 @@ pub struct ValidatorBounds {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
-    pub treasury: HumanAddr,
+    pub admins: Option<Vec<HumanAddr>>,
+    pub owner: HumanAddr,
     pub sscrt: Contract,
     pub validator_bounds: Option<ValidatorBounds>,
     pub viewing_key: String,

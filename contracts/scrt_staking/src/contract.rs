@@ -36,12 +36,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let config = Config {
-        admin: match msg.admin {
-            None => env.message.sender.clone(),
-            Some(admin) => admin,
+        admins: match msg.admins {
+            None => vec![env.message.sender.clone()],
+            Some(mut admins) => {
+                if !admins.contains(env.message.sender) {
+                    admins.push(env.message.sender);
+                }
+                admins
+            }
         },
         sscrt: msg.sscrt,
-        treasury: msg.treasury,
+        owner: msg.owner,
         validator_bounds: msg.validator_bounds,
     };
 

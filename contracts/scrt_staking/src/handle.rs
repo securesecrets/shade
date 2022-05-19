@@ -180,6 +180,9 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
     */
+    if !config.admins.contains(env.message.sender) || config.owner != env.message.sender {
+        return Err(StdError::unauthorized());
+    }
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err("Unrecognized Asset"));
@@ -215,7 +218,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     // Send full unbonding
     if unbonding < reserves {
         messages.append(&mut wrap_and_send(unbonding, 
-                                           config.treasury, 
+                                           config.owner, 
                                            config.sscrt, 
                                            None)?);
         reserves = (reserves - unbonding)?;
@@ -224,7 +227,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     // Send all reserves
     else {
         messages.append(&mut wrap_and_send(reserves, 
-                                           config.treasury, 
+                                           config.owner, 
                                            config.sscrt, 
                                            None)?);
         reserves = Uint128::zero();
@@ -339,7 +342,7 @@ pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
  */
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    _env: Env,
+    env: Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
@@ -348,8 +351,11 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
+    if !config.admins.contains(env.message.sender) || !config.owner == env.message.sender {
+        return Err(StdError::unauthorized());
+    }
+
     let mut messages = vec![];
-    //let address = self_address_r(&deps.storage).load()?;
 
     let unbond_amount = unbonding_r(&deps.storage).load()?;
     let mut claim_amount = Uint128::zero();
@@ -373,14 +379,14 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
-
     messages.append(&mut wrap_and_send(
         claim_amount,
-        config.treasury,
+        config.owner,
         config.sscrt,
         None,
     )?);
+
+    unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
 
     Ok(HandleResponse {
         messages,

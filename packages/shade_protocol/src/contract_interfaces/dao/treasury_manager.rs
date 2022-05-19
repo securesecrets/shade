@@ -36,7 +36,7 @@ pub enum Status {
 pub struct Holder {
     pub balances: Vec<Balance>,
     pub unbondings: Vec<Balance>,
-    pub claimable: Vec<Balance>,
+    //pub claimable: Vec<Balance>,
     pub status: Status,
 }
 
@@ -47,6 +47,7 @@ pub struct Allocation {
     pub contract: Contract,
     pub alloc_type: AllocationType,
     pub amount: Uint128,
+    pub tolerance: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -62,8 +63,9 @@ pub enum AllocationType {
 pub struct AllocationMeta {
     pub nick: Option<String>,
     pub contract: Contract,
-    pub amount: Uint128,
     pub alloc_type: AllocationType,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
     pub balance: Uint128,
 }
 
@@ -81,7 +83,6 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    /*
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
@@ -89,7 +90,6 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    */
     UpdateConfig {
         config: Config,
     },
@@ -149,9 +149,11 @@ pub enum QueryMsg {
     Allocations { asset: HumanAddr },
     PendingAllowance { asset: HumanAddr },
     Holders { },
-    Holder { 
-        holder: HumanAddr,
-    },
+    Holder { holder: HumanAddr },
+    Balance { asset: HumanAddr, holder: HumanAddr },
+    Unbonding { asset: HumanAddr, holder: HumanAddr },
+    Unbondable { asset: HumanAddr, holder: HumanAddr },
+    Claimable { asset: HumanAddr, holder: HumanAddr },
     Adapter(adapter::SubQueryMsg),
 }
 

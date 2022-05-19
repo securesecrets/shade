@@ -78,25 +78,6 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let key = sender.as_str().as_bytes();
 
-    /*
-    if let Some(mut account) = account_r(&deps.storage).may_load(&key)? {
-        if let Some(i) = account
-            .balances
-            .iter()
-            .position(|b| b.token == env.message.sender)
-        {
-            account.balances[i].amount += amount;
-        } else {
-            account.balances.push(Balance {
-                token: env.message.sender,
-                amount,
-            });
-        }
-
-        account_w(&mut deps.storage).save(&key, &account)?;
-    }
-    */
-
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
@@ -164,7 +145,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     };
     let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
-    let balance = balance_query(
+    let mut balance = balance_query(
         &deps.querier,
         self_address,
         key.clone(),
@@ -175,23 +156,12 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     .amount;
 
     /*
-    let mut account_unbonding = Uint128::zero();
-
-    for holder in account_list_r(&deps.storage).load()? {
-        let account = account_r(&deps.storage).load(holder.as_str().as_bytes())?;
-        account_unbonding += Uint128(
-            account
-                .unbondings
-                .iter()
-                .map(|u| {
-                    if u.token == asset {
-                        u.amount.u128()
-                    } else {
-                        0u128
-                    }
-                })
-                .sum(),
-        );
+    let unbonding = unbonding_r(&deps.storage).load(&asset.as_str().as_bytes())?;
+    if unbonding > balance {
+        balance = Uint128::zero();
+    }
+    else {
+        balance = (balance - unbonding)?;
     }
     */
 
@@ -220,6 +190,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                     &full_asset.contract.address.clone(),
                     managers[i].contract.clone(),
                 )?;
+                out_balance += managers[i].balance;
             },
             Allowance::Portion {
                 spender,
@@ -227,7 +198,6 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 last_refresh,
                 tolerance,
             } => {
-                //portion_total += *portion;
                 let i = managers
                     .iter()
                     .position(|m| m.contract.address == *spender)
@@ -242,7 +212,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let mut portion_total = ((balance + out_balance) - amount_total)?;// + account_unbonding))?;
+    let mut portion_total = ((balance + out_balance) - amount_total)?;
 
     managers_w(&mut deps.storage).save(&managers)?;
     let config = config_r(&deps.storage).load()?;
@@ -278,8 +248,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 tolerance,
             } => {
                 let desired_amount = portion_total.multiply_ratio(portion, 10u128.pow(18));
-
-                let threshold = balance.multiply_ratio(tolerance, 10u128.pow(18));
+                let threshold = desired_amount.multiply_ratio(tolerance, 10u128.pow(18));
 
                 let adapter = managers
                     .clone()
@@ -289,7 +258,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 
                 /* NOTE: remove claiming if rebalance tx becomes too heavy
                  * alternatives:
-                 * - separate rebalance & update,
+                 *  - separate rebalance & update,
                  *  - update could do an adapter.update on all "children"
                  *  - rebalance can be unique as its not needed as an adapter
                  */
@@ -661,14 +630,6 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
-    /*
-    if !account_list_r(&deps.storage)
-        .load()?
-        .contains(&env.message.sender)
-    {
-        return Err(StdError::unauthorized());
-    }
-    */
 
     let key = asset.as_str().as_bytes();
 
@@ -718,16 +679,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     }
     */
 
-    /*
-    let account =
-        match account_r(&deps.storage).may_load(&env.message.sender.as_str().as_bytes())? {
-            Some(a) => a,
-            None => {
-                return Err(StdError::unauthorized());
-            }
-        };
-    */
-
     let managers = managers_r(&deps.storage).load()?;
 
     let mut messages = vec![];
@@ -772,22 +723,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             break;
         }
     }
-
-    //TODO: update unbondings/balances, maybe not claimable?
-    /*
-    match account.unbondings.iter_mut().find(|u| u.token == asset) {
-        Some(unbonding) => {
-            unbonding.amount += unbonded;
-        },
-        None => {
-            account.unbondings.push(
-                Balance {
-                    token: asset.clone(),
-                    amount: unbonded,
-            });
-        }
-    }
-    */
 
     // TODO: Shouldn't be an error, need to log somehow
     if unbond_amount > Uint128::zero() {

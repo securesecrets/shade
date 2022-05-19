@@ -92,7 +92,7 @@ pub fn managers_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<treasury::Man
 
 
 // Total unbonding per asset, to be used in rebalance
-// TODO: remove?
+/*
 pub fn total_unbonding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
     bucket_read(UNBONDING, storage)
 }
@@ -109,3 +109,4 @@ pub fn unbondings_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
 pub fn unbondings_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
     bucket(UNBONDING, storage)
 }
+*/

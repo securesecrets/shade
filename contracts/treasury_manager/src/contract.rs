@@ -18,12 +18,17 @@ use shade_protocol::contract_interfaces::dao::treasury_manager::{
     HandleMsg,
     InitMsg,
     QueryMsg,
+    Holder,
+    Status,
 };
 
 use crate::{
     handle,
     query,
-    state::{allocations_w, asset_list_w, config_w, self_address_w, viewing_key_w},
+    state::{
+        allocations_w, asset_list_w, config_w, self_address_w, viewing_key_w,
+        holders_w, holder_w,
+    },
 };
 use chrono::prelude::*;
 use shade_protocol::contract_interfaces::dao::adapter;
@@ -33,6 +38,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
+
     config_w(&mut deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(env.message.sender.clone()),
         treasury: msg.treasury,
@@ -41,8 +47,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     asset_list_w(&mut deps.storage).save(&Vec::new())?;
-
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    holders_w(&mut deps.storage).save(&vec![msg.treasury])?;
+    holder_w(&mut deps.storage).save(
+        msg.treasury.as_str().as_bytes(),
+        &Holder {
+            balances: vec![],
+            unbondings: vec![],
+            status: Status::Active,
+        },
+    )?;
 
     Ok(InitResponse {
         messages: vec![],
@@ -56,7 +69,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        /*
         HandleMsg::Receive {
             sender,
             from,
@@ -64,7 +76,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg,
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
-        */
         HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
         HandleMsg::RegisterAsset { contract } => handle::try_register_asset(deps, &env, &contract),
         HandleMsg::Allocate { asset, allocation } => {
@@ -93,14 +104,19 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::PendingAllowance { asset } => to_binary(&query::pending_allowance(deps, asset)?),
         QueryMsg::Holders {} => to_binary(&query::holders(deps)),
         QueryMsg::Holder { holder } => to_binary(&query::holder(deps, holder)),
+
+        // For holder specific queries
+        QueryMsg::Balance { asset, holder } => to_binary(&query::balance(deps, asset, holder)?),
+        QueryMsg::Unbonding { asset, holder } => to_binary(&query::unbonding(deps, asset, holder)?),
+        QueryMsg::Unbondable { asset, holder } => to_binary(&query::unbondable(deps, asset, holder)?),
+        QueryMsg::Claimable { asset, holder } => to_binary(&query::claimable(deps, asset, holder)?),
+
         QueryMsg::Adapter(a) => match a {
-            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
-            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
-            adapter::SubQueryMsg::Unbondable { asset } => {
-                to_binary(&query::unbondable(deps, asset)?)
-            }
-            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
-            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(deps, &asset)?),
+            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset, None)?),
+            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset, None)?),
+            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(deps, asset, None)?),
+            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset, None)?),
+            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(deps, &asset, None)?),
         }
     }
 }

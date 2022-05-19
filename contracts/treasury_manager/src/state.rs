@@ -19,6 +19,7 @@ pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static ALLOCATIONS: &[u8] = b"allocations";
 pub static HOLDERS: &[u8] = b"holders";
 pub static HOLDER: &[u8] = b"holder";
+pub static UNBONDING: &[u8] = b"unbonding";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury_manager::Config> {
     singleton(storage, CONFIG_KEY)
@@ -87,3 +88,13 @@ pub fn holder_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury_manager::
 pub fn holder_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury_manager::Holder> {
     bucket(HOLDER, storage)
 }
+
+/*
+pub fn unbonding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
+    bucket_read(UNBONDING, storage)
+}
+
+pub fn unbonding_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
+    bucket(UNBONDING, storage)
+}
+*/
