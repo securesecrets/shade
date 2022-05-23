@@ -517,7 +517,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     // Acquiring TokenConfig
     let asset_config: Option<TokenConfig> = 
         match token_config_query(&deps.querier, collateral_asset.clone()) {
-            Ok(c) => Option::from(c),
+            Ok(c) => Some(c),
             Err(_) => None,
         };
 
