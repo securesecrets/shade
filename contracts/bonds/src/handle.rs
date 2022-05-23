@@ -362,8 +362,8 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     }
 
     // Add case for if total is 0, error out
-    if total == Uint128(0) {
-        return Err(no_bonds_claimable());
+    if total.is_zero() {
+        return Err(no_bonds_claimable())
     }
 
     // Remove claimed bonds from vector and save back to the account
