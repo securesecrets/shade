@@ -1,6 +1,7 @@
 use cosmwasm_std::{Api, Binary, Env, Extern, from_binary, HandleResponse, HandleResult, InitResponse, Querier, StdError, StdResult, Storage, to_binary};
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::contract_interfaces::snip20_test::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, Extended};
+use crate::handle::transfers::{try_batch_transfer, try_transfer};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -11,7 +12,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
+    msg.save(&mut deps.storage, env)?;
     Ok(InitResponse {
         messages: vec![],
         log: vec![],

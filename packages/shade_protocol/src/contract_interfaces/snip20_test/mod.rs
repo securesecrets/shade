@@ -63,7 +63,7 @@ impl InitMsg {
             return Err(StdError::generic_err("Decimals must not exceed 18"));
         }
 
-        let config = self.config.clone().unwrap_or(InitConfig::default());
+        let config = self.config.clone().unwrap_or_default();
         config.save(storage)?;
 
         CoinInfo {

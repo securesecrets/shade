@@ -183,14 +183,36 @@ impl Balance {
         Balance(amount).save(storage, addr.clone())
     }
     pub fn add<S: Storage>(storage: &mut S, amount: Uint128, addr: &HumanAddr) -> StdResult<Uint128> {
-        let supply = Balance::load(storage, addr.clone())?.0.checked_add(amount)?;
+        let supply = Self::may_load(storage, addr.clone())?
+            .unwrap_or(Self(Uint128::zero())).0
+            .checked_add(amount)?;
+
         Balance::set(storage, supply, addr)?;
         Ok(supply)
     }
     pub fn sub<S: Storage>(storage: &mut S, amount: Uint128, addr: &HumanAddr) -> StdResult<Uint128> {
-        let supply = Balance::load(storage, addr.clone())?.0.checked_sub(amount)?;
+        let subtractee = match Self::load(storage, addr.clone()) {
+            Ok(amount) => amount.0,
+            // TODO: impl error
+            Err(_) => return Err(StdError::generic_err("Account has no funds"))
+        };
+        let supply = match subtractee.checked_sub(amount) {
+            Ok(supply) => supply,
+            // TODO: impl error
+            Err(_) => return Err(StdError::generic_err("Account doesnt have enough funds"))
+        };
         Balance::set(storage, supply, addr)?;
         Ok(supply)
+    }
+    pub fn transfer<S: Storage>(
+        storage: &mut S,
+        amount: Uint128,
+        sender: &HumanAddr,
+        recipient: &HumanAddr
+    ) -> StdResult<()> {
+        Self::sub(storage, amount, sender)?;
+        Self::add(storage, amount, recipient)?;
+        Ok(())
     }
 }
 
