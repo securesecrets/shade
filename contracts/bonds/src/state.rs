@@ -1,13 +1,17 @@
-use cosmwasm_std::{Storage, Api, Querier, Uint128, HumanAddr, Extern, StdResult};
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage, Uint128};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{contract_interfaces::{
-    bonds::{Config, Account, BondOpportunity, AccountPermit, AddressProofPermit,
-            errors::{permit_contract_mismatch, permit_key_revoked}},
-    snip20::Snip20Asset},
-    utils::asset::Contract
+use shade_protocol::{
+    contract_interfaces::{
+        bonds::{
+            errors::{permit_contract_mismatch, permit_key_revoked},
+            Account, AccountPermit, AddressProofPermit, BondOpportunity, Config,
+        },
+        snip20::Snip20Asset,
+    },
+    utils::asset::Contract,
 };
 
 pub static CONFIG: &[u8] = b"config";
@@ -66,7 +70,7 @@ pub fn issued_asset_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Snip20Ass
     singleton_read(storage, ISSUED_ASSET)
 }
 
-// Bond account 
+// Bond account
 pub fn account_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Account> {
     bucket_read(ACCOUNTS_KEY, storage)
 }

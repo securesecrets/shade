@@ -1,17 +1,22 @@
 use crate::{
+    handle::oracle,
     state::{
-        config_r, global_total_issued_r, global_total_claimed_r, account_viewkey_r, account_r, bond_opportunity_r, collateral_assets_r, issued_asset_r, validate_account_permit,
-        allowance_key_r
-    }, handle::oracle,
+        account_r, account_viewkey_r, allowance_key_r, bond_opportunity_r, collateral_assets_r,
+        config_r, global_total_claimed_r, global_total_issued_r, issued_asset_r,
+        validate_account_permit,
+    },
 };
 
-use shade_protocol::contract_interfaces::bonds::errors::{not_treasury_bond};
+use shade_protocol::contract_interfaces::bonds::errors::not_treasury_bond;
 
 use secret_toolkit::snip20::{allowance_query, balance_query};
 
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::contract_interfaces::{bonds::{QueryAnswer, AccountKey, BondOpportunity, AccountPermit}, snip20::Snip20Asset, oracles};
-
+use shade_protocol::contract_interfaces::{
+    bonds::{AccountKey, AccountPermit, BondOpportunity, QueryAnswer},
+    oracles,
+    snip20::Snip20Asset,
+};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -38,8 +43,8 @@ fn account_information<S: Storage, A: Api, Q: Querier>(
 
     // Return pending bonds
 
-    Ok(QueryAnswer::Account { 
-        pending_bonds: account.pending_bonds 
+    Ok(QueryAnswer::Account {
+        pending_bonds: account.pending_bonds,
     })
 }
 
@@ -47,32 +52,29 @@ pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
     let collateral_assets = collateral_assets_r(&deps.storage).load()?;
-    if collateral_assets.is_empty(){
+    if collateral_assets.is_empty() {
         return Ok(QueryAnswer::BondOpportunities {
-            bond_opportunities: vec![]
-        })
+            bond_opportunities: vec![],
+        });
     } else {
         let iter = collateral_assets.iter();
         let mut bond_opportunities: Vec<BondOpportunity> = vec![];
         for asset in iter {
-            bond_opportunities.push(bond_opportunity_r(&deps.storage).load(asset.as_str().as_bytes())?);
+            bond_opportunities
+                .push(bond_opportunity_r(&deps.storage).load(asset.as_str().as_bytes())?);
         }
-        return Ok(QueryAnswer::BondOpportunities {
-            bond_opportunities: bond_opportunities
-        })
+        return Ok(QueryAnswer::BondOpportunities { bond_opportunities });
     }
 }
 
-pub fn bond_info<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<QueryAnswer> {
+pub fn bond_info<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     let global_total_issued = global_total_issued_r(&deps.storage).load()?;
     let global_total_claimed = global_total_claimed_r(&deps.storage).load()?;
     let issued_asset = issued_asset_r(&deps.storage).load()?;
     Ok(QueryAnswer::BondInfo {
-        global_total_issued: global_total_issued,
-        global_total_claimed: global_total_claimed,
-        issued_asset: issued_asset,
+        global_total_issued,
+        global_total_claimed,
+        issued_asset,
     })
 }
 
@@ -81,7 +83,7 @@ pub fn list_collateral_addresses<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<QueryAnswer> {
     let collateral_addresses = collateral_assets_r(&deps.storage).load()?;
     Ok(QueryAnswer::CollateralAddresses {
-        collateral_addresses: collateral_addresses
+        collateral_addresses,
     })
 }
 
@@ -90,20 +92,18 @@ pub fn price_check<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
     let price = oracle(deps, asset)?;
-    Ok(QueryAnswer::PriceCheck {
-        price: price
-    })
+    Ok(QueryAnswer::PriceCheck { price })
 }
 
 pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
-    
+
     // Check bond issuance amount against snip20 allowance and allocated_allowance
     let snip20_allowance = allowance_query(
         &deps.querier,
-        config.treasury, 
+        config.treasury,
         config.contract,
         allowance_key_r(&deps.storage).load()?.to_string(),
         1,
@@ -112,7 +112,7 @@ pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
     )?;
 
     Ok(QueryAnswer::CheckAllowance {
-        allowance: snip20_allowance.allowance
+        allowance: snip20_allowance.allowance,
     })
 }
 
@@ -131,6 +131,6 @@ pub fn check_balance<S: Storage, A: Api, Q: Querier>(
     )?;
 
     Ok(QueryAnswer::CheckBalance {
-        balance: balance.amount
+        balance: balance.amount,
     })
 }

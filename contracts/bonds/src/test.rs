@@ -1,13 +1,22 @@
-
-
-mod test{
-    use std::ops::Add;
-    use crate::handle::{calculate_claim_date, calculate_issuance, active};
-    use crate::query;
-    use cosmwasm_std::{coins, from_binary, testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage}, Extern, StdError, Uint128, HumanAddr};
+mod test {
     use crate::contract;
-    use shade_protocol::{contract_interfaces::{bonds::{self, Config, QueryAnswer, QueryMsg, InitMsg, errors::*}, dao, airdrop::errors::address_already_in_account}, utils::asset::Contract};
+    use crate::handle::{active, calculate_claim_date, calculate_issuance};
+    use crate::query;
+    use cosmwasm_std::{
+        coins, from_binary,
+        testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
+        Extern, HumanAddr, StdError, Uint128,
+    };
     use shade_protocol::utils::errors::DetailedError;
+    use shade_protocol::{
+        contract_interfaces::{
+            airdrop::errors::address_already_in_account,
+            bonds::{self, errors::*, Config, InitMsg, QueryAnswer, QueryMsg},
+            dao,
+        },
+        utils::asset::Contract,
+    };
+    use std::ops::Add;
 
     // #[test]
     // fn test_config(){
@@ -73,15 +82,19 @@ mod test{
     // }
 
     #[test]
-    fn checking_limits() {
-        
-    }
+    fn checking_limits() {}
 
     #[test]
     fn check_active() {
         assert_eq!(active(&true, &Uint128(10), &Uint128(9)), Ok(()));
-        assert_eq!(active(&false, &Uint128(10), &Uint128(9)), Err(contract_not_active()));
-        assert_eq!(active(&true, &Uint128(10), &Uint128(10)), Err(global_limit_reached(Uint128(10))));
+        assert_eq!(
+            active(&false, &Uint128(10), &Uint128(9)),
+            Err(contract_not_active())
+        );
+        assert_eq!(
+            active(&true, &Uint128(10), &Uint128(10)),
+            Err(global_limit_reached(Uint128(10)))
+        );
     }
 
     #[test]
@@ -93,28 +106,34 @@ mod test{
     #[test]
     fn calc_mint() {
         let result = calculate_issuance(
-            Uint128(7_000_000_000_000_000_000), 
-            Uint128(10_000_000), 
-            6, 
-            Uint128(5_000_000_000_000_000_000), 
-            6, 
-            Uint128(7_000));
+            Uint128(7_000_000_000_000_000_000),
+            Uint128(10_000_000),
+            6,
+            Uint128(5_000_000_000_000_000_000),
+            6,
+            Uint128(7_000),
+            Uint128(0),
+        );
         assert_eq!(result.0, Uint128(15_053_763));
         let result2 = calculate_issuance(
-            Uint128(10_000_000_000_000_000_000), 
-            Uint128(50_000_000), 
-            6, 
-            Uint128(50_000_000_000_000_000_000), 
-            8, 
-            Uint128(9_000),);
+            Uint128(10_000_000_000_000_000_000),
+            Uint128(50_000_000),
+            6,
+            Uint128(50_000_000_000_000_000_000),
+            8,
+            Uint128(9_000),
+            Uint128(0),
+        );
         assert_eq!(result2.0, Uint128(1_098_901_000));
         let result3 = calculate_issuance(
-            Uint128(10_000_000_000_000_000_000), 
-            Uint128(5_000_000_000), 
-            8, 
-            Uint128(50_000_000_000_000_000_000), 
-            6, 
-            Uint128(9_000),);
+            Uint128(10_000_000_000_000_000_000),
+            Uint128(5_000_000_000),
+            8,
+            Uint128(50_000_000_000_000_000_000),
+            6,
+            Uint128(9_000),
+            Uint128(0),
+        );
         assert_eq!(result3.0, Uint128(10989010));
     }
 }
