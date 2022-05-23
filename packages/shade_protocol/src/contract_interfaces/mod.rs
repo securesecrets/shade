@@ -23,3 +23,6 @@ pub mod initializer;
 // Protocol libraries
 #[cfg(feature = "governance")]
 pub mod governance;
+
+#[cfg(feature = "snip20_test")]
+pub mod snip20_test;

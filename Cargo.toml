@@ -11,6 +11,7 @@ members = [
   "contracts/airdrop",
 
   # Protocol contracts
+  "contracts/snip20_t",
   "contracts/governance",
   "contracts/mint",
   "contracts/mint_router",

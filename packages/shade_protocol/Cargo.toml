@@ -26,7 +26,7 @@ errors = []
 flexible_msg = []
 math = []
 storage = ["cosmwasm-storage/iterator"]
-storage_plus = ["dep:secret-storage-plus"]
+storage_plus = ["storage", "dep:secret-storage-plus"]
 
 # Protocol contracts
 airdrop = ["utils", "errors", "dep:remain", "dep:query-authentication"]
@@ -40,6 +40,7 @@ treasury = ["utils", "adapter", "snip20"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 adapter = []
+snip20_test = ["utils", "errors", "storage_plus", "dep:query-authentication"]
 snip20_staking = ["utils"]
 sky = ["snip20", "utils", "sienna"]
 
