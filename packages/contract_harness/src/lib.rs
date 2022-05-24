@@ -1,3 +1,6 @@
+use cosmwasm_std::{from_binary, Binary, Env, HandleResponse, InitResponse, StdResult};
+use fadroma::ensemble::{ContractHarness, MockDeps};
+
 macro_rules! implement_harness {
     ($x:ident, $s:ident) => {
         impl ContractHarness for $x {
@@ -20,9 +23,6 @@ macro_rules! implement_harness {
         }
     };
 }
-
-use cosmwasm_std::{from_binary, Binary, Env, HandleResponse, InitResponse, StdResult};
-use fadroma::ensemble::{ContractHarness, MockDeps};
 
 use snip20_reference_impl;
 pub struct Snip20;
