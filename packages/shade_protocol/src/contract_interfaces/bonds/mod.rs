@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub limit_admin: HumanAddr,
-    pub admin: HumanAddr,
+    pub admin: Vec<HumanAddr>,
     pub oracle: Contract,
     pub treasury: HumanAddr,
     pub issued_asset: Contract,
@@ -47,7 +47,7 @@ pub struct InitMsg {
     pub global_issuance_limit: Uint128,
     pub global_minimum_bonding_period: u64,
     pub global_maximum_discount: Uint128,
-    pub admin: HumanAddr,
+    pub admin: Vec<HumanAddr>,
     pub oracle: Contract,
     pub treasury: HumanAddr,
     pub issued_asset: Contract,
@@ -73,8 +73,15 @@ pub enum HandleMsg {
         reset_total_claimed: Option<bool>,
         padding: Option<String>,
     },
+    RemoveAdmin {
+        admin_to_remove: HumanAddr,
+        padding: Option<String>,
+    },
+    AddAdmin {
+        admin_to_add: HumanAddr,
+        padding: Option<String>,
+    },
     UpdateConfig {
-        admin: Option<HumanAddr>,
         oracle: Option<Contract>,
         treasury: Option<HumanAddr>,
         issued_asset: Option<Contract>,
@@ -127,6 +134,12 @@ pub enum HandleAnswer {
         status: ResponseStatus,
     },
     UpdateConfig {
+        status: ResponseStatus,
+    },
+    RemoveAdmin {
+        status: ResponseStatus,
+    },
+    AddAdmin {
         status: ResponseStatus,
     },
     Deposit {
@@ -267,7 +280,7 @@ pub type AccountPermit = Permit<AccountPermitMsg>;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AccountPermitMsg {
-    pub contract: HumanAddr,
+    pub contracts: Vec<HumanAddr>,
     pub key: String,
 }
 

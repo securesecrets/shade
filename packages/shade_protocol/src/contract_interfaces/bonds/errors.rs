@@ -92,7 +92,7 @@ impl CodeType for Error {
                 build_string("Calculated issuance amount of {} is below minimum accepted value of {}", context)
             }
             Error::PermitContractMismatch => {
-                build_string("Permit is valid for {}, expected {}", context)
+                build_string("Permit isn't valid for {}", context)
             }
             Error::PermitKeyRevoked => {
                 build_string("Permit key {} revoked", context)
@@ -304,11 +304,11 @@ pub fn slippage_tolerance_exceeded(
     .to_error()
 }
 
-pub fn permit_contract_mismatch(contract: &str, expected: &str) -> StdError {
+pub fn permit_contract_mismatch(expected: &str) -> StdError {
     DetailedError::from_code(
         BOND_TARGET,
         Error::PermitContractMismatch,
-        vec![contract, expected],
+        vec![expected],
     )
     .to_error()
 }

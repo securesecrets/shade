@@ -152,9 +152,8 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
     contract: HumanAddr,
 ) -> StdResult<HumanAddr> {
     // Check that contract matches
-    if permit.params.contract != contract {
+    if !permit.params.contracts.contains(&contract) {
         return Err(permit_contract_mismatch(
-            permit.params.contract.as_str(),
             contract.as_str(),
         ));
     }

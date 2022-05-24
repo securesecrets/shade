@@ -119,7 +119,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 reset_total_claimed,
             ),
             HandleMsg::UpdateConfig {
-                admin,
                 oracle,
                 treasury,
                 issued_asset,
@@ -134,7 +133,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             } => handle::try_update_config(
                 deps,
                 env,
-                admin,
                 oracle,
                 treasury,
                 activated,
@@ -146,6 +144,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 global_err_issued_price,
                 allowance_key,
             ),
+            HandleMsg::RemoveAdmin { 
+                admin_to_remove , ..
+            } => handle::try_remove_admin(deps, &env, admin_to_remove),
+            HandleMsg::AddAdmin { 
+                admin_to_add, ..
+            } => handle::try_add_admin(deps, &env, admin_to_add),
             HandleMsg::OpenBond {
                 collateral_asset,
                 start_time,

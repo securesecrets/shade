@@ -98,7 +98,6 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    admin: Option<HumanAddr>,
     oracle: Option<Contract>,
     treasury: Option<HumanAddr>,
     activated: Option<bool>,
@@ -113,7 +112,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     let cur_config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if env.message.sender != cur_config.admin {
+    if !cur_config.admin.contains(&env.message.sender) {
         return Err(StdError::unauthorized());
     }
 
@@ -123,9 +122,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
     let mut config = config_w(&mut deps.storage);
     config.update(|mut state| {
-        if let Some(admin) = admin {
-            state.admin = admin;
-        }
         if let Some(oracle) = oracle {
             state.oracle = oracle;
         }
@@ -165,6 +161,54 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn try_remove_admin<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    admin_to_remove: HumanAddr
+) -> StdResult<HandleResponse> {
+    let mut config = config_r(&deps.storage).load()?;
+
+    if env.message.sender != config.limit_admin {
+        return Err(not_limit_admin())
+    }
+
+    // Retain only admin addresses that don't match the one to remove
+    config.admin.retain(
+    |admin| admin != &admin_to_remove,
+    );
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::RemoveAdmin { 
+            status: ResponseStatus::Success, 
+        })?),
+    })
+}
+
+pub fn try_add_admin<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    admin_to_add: HumanAddr
+) -> StdResult<HandleResponse> {
+    let mut config = config_r(&deps.storage).load()?;
+
+    if env.message.sender != config.limit_admin {
+        return Err(not_limit_admin())
+    }
+
+    // Add the new admin address
+    config.admin.push(admin_to_add);
+    
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::RemoveAdmin { 
+            status: ResponseStatus::Success, 
+        })?),
+    })
+}
+
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -184,8 +228,8 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         return Err(blacklisted(config.contract));
     }
 
-    // Check that sender isn't bonds assembly
-    if config.admin == sender {
+    // Check that sender isn't an admin
+    if config.admin.contains(&sender) {
         return Err(blacklisted(sender));
     }
 
@@ -241,10 +285,11 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    let mut opp =
-        bond_opportunity_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
-    opp.amount_issued += amount_to_issue;
-    bond_opportunity_w(&mut deps.storage).save(env.message.sender.to_string().as_bytes(), &opp)?;
+    bond_opportunity_w(&mut deps.storage).update(env.message.sender.to_string().as_bytes(), |opp| {
+        let o = opp.unwrap();
+        o.amount_issued.checked_add(amount_to_issue)?;
+        Ok(o)
+    })?;
 
     let mut messages = vec![];
 
@@ -453,7 +498,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if env.message.sender != config.admin {
+    if !config.admin.contains(&env.message.sender) {
         return Err(StdError::unauthorized());
     };
 
@@ -479,14 +524,17 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         }
         None => {
             // Save to list of current collateral addresses
-            if None == collateral_assets_r(&deps.storage).may_load()? {
-                let assets = vec![collateral_asset.address.clone()];
-                collateral_assets_w(&mut deps.storage).save(&assets)?;
-            } else {
-                collateral_assets_w(&mut deps.storage).update(|mut assets| {
-                    assets.push(collateral_asset.address.clone());
-                    Ok(assets)
-                })?;
+            match collateral_assets_r(&deps.storage).may_load()? {
+                None => {
+                    let assets = vec![collateral_asset.address.clone()];
+                    collateral_assets_w(&mut deps.storage).save(&assets)?;
+                },
+                Some(_assets) => {
+                    collateral_assets_w(&mut deps.storage).update(|mut assets| {
+                        assets.push(collateral_asset.address.clone());
+                        Ok(assets)
+                    })?;
+                }
             };
 
             // Prepare register_receive message for new asset
@@ -583,7 +631,7 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if env.message.sender != config.admin {
+    if !config.admin.contains(&env.message.sender) {
         return Err(StdError::unauthorized());
     };
 
