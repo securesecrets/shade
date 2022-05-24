@@ -107,6 +107,7 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+/*
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
@@ -160,6 +161,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     }
     Ok(adapter::QueryAnswer::Claimable { amount: claimable })
 }
+*/
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -167,31 +169,121 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     holder: Option<HumanAddr>,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+    if assets_r(&deps.storage).may_load(asset.to_string().as_bytes())?.is_none() {
+        return Err(StdError::generic_err("Not an asset"));
+    }
+
+    //let allocations = allocations_r(&deps.storage).load(asset.to_string().as_bytes())?;
+
+    let config = config_r(&deps.storage).load()?;
+
+    match holder {
+        Some(h) => {
+            match holder_r(&deps.storage).may_load(&h.as_str().as_bytes())? {
+                Some(holder) => {
+                    Ok(adapter::QueryAnswer::Unbonding {
+                        amount: match holder.unbondings.iter().find(|u| u.token == asset) {
+                            Some(u) => u.amount,
+                            None => Uint128::zero(),
+                        }
+                    })
+                }
+                None => {
+                    return Err(StdError::generic_err("Invalid holder"));
+                }
+            }
+        }
+        None => {
+            let mut unbonding = Uint128::zero();
+            for addr in holders_r(&deps.storage).load()? {
+                let holder = holder_r(&deps.storage).load(&addr.as_str().as_bytes())?;
+                unbonding += match holder.unbondings.iter().find(|u| u.token == asset) {
+                    Some(u) => u.amount,
+                    None => Uint128::zero(),
+                }
+            }
+
+            Ok(adapter::QueryAnswer::Unbonding {
+                amount: unbonding,
+            })
+        }
+    }
+}
+
+pub fn claimable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+    holder: Option<HumanAddr>,
+) -> StdResult<adapter::QueryAnswer> {
+
+    let full_asset = match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err("Not an asset"));
         }
     };
+    //TODO claiming needs ordered unbondings so other holders don't get bumped
+
+    let mut reserves = balance_query(
+        &deps.querier,
+        self_address_r(&deps.storage).load()?,
+        viewing_key_r(&deps.storage).load()?,
+        1,
+        full_asset.contract.code_hash.clone(),
+        full_asset.contract.address.clone(),
+    )?.amount;
 
     let config = config_r(&deps.storage).load()?;
 
-    let mut unbonder = match holder {
-        Some(h) => h,
-        None => config.treasury,
-    };
+    let other_unbondings = Uint128::zero();
 
-    match holder_r(&deps.storage).may_load(&unbonder.as_str().as_bytes())? {
+    //TODO other unbondings
+    match holder {
         Some(h) => {
-            Ok(adapter::QueryAnswer::Unbonding {
-                amount: match h.unbondings.iter().find(|u| u.token == asset) {
+            match holder_r(&deps.storage).may_load(&h.as_str().as_bytes())? {
+                Some(holder) => {
+                    let mut unbonding = match holder.unbondings.iter().find(|u| u.token == asset) {
+                        Some(u) => u.amount,
+                        None => Uint128::zero(),
+                    };
+                    if reserves > unbonding {
+                        Ok(adapter::QueryAnswer::Claimable {
+                            amount: unbonding,
+                        })
+                    }
+                    else {
+                        Ok(adapter::QueryAnswer::Claimable {
+                            amount: (reserves - unbonding)?,
+                        })
+                    }
+                }
+                None => {
+                    return Err(StdError::generic_err("Invalid holder"));
+                }
+            }
+        }
+        None => {
+            //TODO just reference holder unbondings
+            let mut unbonding = Uint128::zero();
+            for addr in holders_r(&deps.storage).load()? {
+                let holder = holder_r(&deps.storage).load(&addr.as_str().as_bytes())?;
+                unbonding += match holder.unbondings.iter().find(|u| u.token == asset) {
                     Some(u) => u.amount,
                     None => Uint128::zero(),
                 }
-            })
-        }
-        None => {
-            return Err(StdError::generic_err("Invalid holder"));
+            }
+
+            if reserves > unbonding {
+                Ok(adapter::QueryAnswer::Claimable {
+                    amount: unbonding,
+                })
+            }
+            else {
+                Ok(adapter::QueryAnswer::Claimable {
+                    amount: reserves,
+                })
+            }
+
         }
     }
 }
@@ -267,32 +359,48 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     holder: Option<HumanAddr>,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
-        let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
-            Some(a) => a,
-            None => { return Err(StdError::generic_err("Not an asset")); }
-        };
-        //TODO Holder
+    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        Some(asset) => {
+            let allocations = match allocations_r(&deps.storage).may_load(asset.contract.address.to_string().as_bytes())? {
+                Some(a) => a,
+                None => { return Err(StdError::generic_err("Not an asset")); }
+            };
 
-        let mut balance = balance_query(
-            &deps.querier,
-            self_address_r(&deps.storage).load()?,
-            viewing_key_r(&deps.storage).load()?,
-            1,
-            full_asset.contract.code_hash.clone(),
-            full_asset.contract.address.clone(),
-        )?.amount;
 
-        for alloc in allocations {
-            balance += adapter::balance_query(&deps,
-                                  &asset, alloc.contract.clone())?;
+            match holder {
+                Some(h) => {
+                    let mut balance = Uint128::zero();
+                    let holder = holder_r(&deps.storage).load(&h.as_str().as_bytes())?;
+                    if let Some(u) = holder.balances.iter().find(|u| u.token == asset.contract.address) {
+                        balance += u.amount;
+                    }
+                    Ok(adapter::QueryAnswer::Balance {
+                        amount: balance,
+                    })
+                }
+                None => {
+                    let mut balance = balance_query(
+                        &deps.querier,
+                        self_address_r(&deps.storage).load()?,
+                        viewing_key_r(&deps.storage).load()?,
+                        1,
+                        asset.contract.code_hash.clone(),
+                        asset.contract.address.clone(),
+                    )?.amount;
+
+                    for alloc in allocations {
+                        balance += adapter::balance_query(&deps,
+                                              &asset.contract.address, alloc.contract.clone())?;
+                    }
+
+                    Ok(adapter::QueryAnswer::Balance{
+                        amount: balance,
+                    })
+                }
+            }
         }
-
-        return Ok(adapter::QueryAnswer::Balance{
-            amount: balance,
-        });
+        None => Err(StdError::generic_err("Not a registered asset"))
     }
-    Err(StdError::generic_err("Not a registered asset"))
 }
 
 pub fn holders<S: Storage, A: Api, Q: Querier>(

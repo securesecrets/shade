@@ -491,7 +491,6 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-// TODO: Consider holders
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -511,7 +510,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     let holders = holders_r(&deps.storage).load()?;
 
-    // Check holder
+    // Adjust holder balance
     if holders.contains(&unbonder) {
         let mut holder = holder_r(&deps.storage).load(unbonder.as_str().as_bytes())?;
 
@@ -564,7 +563,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    // Send out available reserves
+    // Reserves to be sent immediately
     let mut reserves = balance_query(
         &deps.querier,
         self_address_r(&deps.storage).load()?,
@@ -574,7 +573,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         full_asset.contract.address.clone(),
     )?.amount;
 
-    // Save reserves for other pending unbondings
+    // Remove pending unbondings from reserves
     if reserves > other_unbondings {
         reserves = (reserves - other_unbondings)?;
     }
@@ -586,7 +585,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     // Send available reserves to unbonder
     if reserves > Uint128::zero() {
-        if reserves < amount {
+
+        if reserves < unbond_amount {
             messages.push(
                 send_msg(
                     unbonder.clone(),
@@ -642,86 +642,88 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
+    if unbond_amount >= Uint128::zero() {
 
-    let mut allocations = allocations_r(&mut deps.storage).load(asset.to_string().as_bytes())?;
+        let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
 
-    // Build metadata
-    let mut amount_total = Uint128::zero();
-    let mut portion_total = Uint128::zero();
+        let mut allocations = allocations_r(&mut deps.storage).load(asset.to_string().as_bytes())?;
 
-    // Gather adapter outstanding amounts
-    for i in 0..allocations.len() {
+        // Build metadata
+        let mut amount_total = Uint128::zero();
+        let mut portion_total = Uint128::zero();
 
-        allocations[i].balance = adapter::balance_query(
-            deps,
-            &full_asset.contract.address,
-            allocations[i].contract.clone(),
-        )?;
+        // Gather adapter outstanding amounts
+        for i in 0..allocations.len() {
 
-        match allocations[i].alloc_type {
-            AllocationType::Amount => amount_total += allocations[i].balance,
-            AllocationType::Portion => portion_total += allocations[i].balance,
-        };
-    }
+            allocations[i].balance = adapter::balance_query(
+                deps,
+                &full_asset.contract.address,
+                allocations[i].contract.clone(),
+            )?;
 
-    let mut messages = vec![];
-
-    let mut allowance = allowance_query(
-        &deps.querier,
-        config.treasury.clone(),
-        env.contract.address.clone(),
-        viewing_key_r(&deps.storage).load()?,
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
-    )?.allowance;
-
-    let total = portion_total + allowance;
-
-    allocations.sort_by(|a, b| a.balance.cmp(&b.balance));
-
-    for i in 0..allocations.len() {
-
-        if unbond_amount == Uint128::zero() {
-            break;
+            match allocations[i].alloc_type {
+                AllocationType::Amount => amount_total += allocations[i].balance,
+                AllocationType::Portion => portion_total += allocations[i].balance,
+            };
         }
 
-        match allocations[i].alloc_type {
-            AllocationType::Amount => {
-                //TODO: unbond back to desired amount
+        let mut allowance = allowance_query(
+            &deps.querier,
+            config.treasury.clone(),
+            env.contract.address.clone(),
+            viewing_key_r(&deps.storage).load()?,
+            1,
+            full_asset.contract.code_hash.clone(),
+            full_asset.contract.address.clone(),
+        )?.allowance;
+
+        let total = portion_total + allowance;
+
+        allocations.sort_by(|a, b| a.balance.cmp(&b.balance));
+
+        // Unbond from adapters
+        for i in 0..allocations.len() {
+
+            if unbond_amount == Uint128::zero() {
+                break;
             }
-            AllocationType::Portion => {
-                let desired_amount = total.multiply_ratio(
-                    allocations[i].amount, 10u128.pow(18)
-                );
 
-                let unbondable = adapter::unbondable_query(&deps,
-                                      &asset,
-                                      allocations[i].contract.clone())?;
+            match allocations[i].alloc_type {
+                AllocationType::Amount => {
+                    //TODO: unbond back to desired amount
+                }
+                AllocationType::Portion => {
+                    let desired_amount = total.multiply_ratio(
+                        allocations[i].amount, 10u128.pow(18)
+                    );
 
-                if unbond_amount > unbondable {
-                    messages.push(
-                        adapter::unbond_msg(
-                            asset.clone(),
-                            unbondable,
-                            allocations[i].contract.clone()
-                        )?
-                    );
-                    unbond_amount = (unbond_amount - unbondable)?;
-                }
-                else {
-                    messages.push(
-                        adapter::unbond_msg(
-                            asset.clone(),
-                            unbond_amount, 
-                            allocations[i].contract.clone()
-                        )?
-                    );
-                    unbond_amount = Uint128::zero()
-                }
-            },
-        };
+                    let unbondable = adapter::unbondable_query(&deps,
+                                          &asset,
+                                          allocations[i].contract.clone())?;
+
+                    if unbond_amount > unbondable {
+                        messages.push(
+                            adapter::unbond_msg(
+                                asset.clone(),
+                                unbondable,
+                                allocations[i].contract.clone()
+                            )?
+                        );
+                        unbond_amount = (unbond_amount - unbondable)?;
+                    }
+                    else {
+                        messages.push(
+                            adapter::unbond_msg(
+                                asset.clone(),
+                                unbond_amount, 
+                                allocations[i].contract.clone()
+                            )?
+                        );
+                        unbond_amount = Uint128::zero()
+                    }
+                },
+            };
+        }
     }
 
     Ok(HandleResponse {
