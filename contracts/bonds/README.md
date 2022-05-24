@@ -15,7 +15,6 @@
         * Messages
             * [Receive](#Receive)
             * [Claim](#Claim)
-            * [SetViewingKey](#SetViewingKey)
         * Queries
             * [Config](#Config)
             * [BondOpportunities](#BondOpportunities)
@@ -23,31 +22,33 @@
             * [CollateralAddresses](#CollateralAddresses)
             * [BondInfo](#BondInfo)
             * [PriceCheck](#PriceCheck)
+            * [CheckAllowance](#CheckAllowance)
+            * [CheckBalance](#CheckBalance)
 
 # Introduction
-Contract responsible to handle snip20 airdrop
-
+Generic contract responsible for protocol and treasury bond opportunities
 # Sections
 
 ## Init
 ##### Request
-| Name                            | Type      | Description                                                                | optional |
-|---------------------------------|-----------|----------------------------------------------------------------------------|----------|
-| limit_admin                     | HumanAddr | New contract owner; SHOULD be a valid bech32 address                       | no       |
-| global_issuance_limit           | Uint128   | Where the decay amount will be sent                                        | no       |
-| global_minimum_bonding_period   | u64       | The token that will be airdropped                                          | no       |
-| global_maximum_discount         | Uint128   | Total airdrop amount to be claimed                                         | no       |
-| admin                           | HumanAddr | When the airdrop starts in UNIX time                                       | mo       |
-| oracle                          | Contract  | When the airdrop ends in UNIX time                                         | no       |
-| treasury                        | HumanAddr | When the airdrop decay starts in UNIX time                                 | no       |
-| issued_asset                    | Contract  | Base 64 encoded merkle root of the airdrop data tree                       | no       |
-| activated                       | bool      | Total accounts in airdrop (needed for merkle proof)                        | no       |
-| minting_bond                    | bool      | Used to limit the user permit amounts (lowers exploit possibility)         | no       |
-| bond_issuance_limit             | Uint128   | The default amount to be gifted regardless of tasks                        | no       |
-| bonding_period                  | u64       | The amounts per tasks to gift                                              | no       |
-| discount                        | Uint128   | To prevent leaking information, total claimed is rounded off to this value | no       |
-| global_minimum_issued_price     | Uint128   | To prevent leaking information, total claimed is rounded off to this value | no       |
-| allowance_key                   | String    | To prevent leaking information, total claimed is rounded off to this value | yes      |
+| Name                              | Type      | Description                                                                | optional |
+|-----------------------------------|-----------|----------------------------------------------------------------------------|----------|
+| limit_admin                       | HumanAddr | Limit Assembly/Admin; SHOULD be a valid bech32 address                     | no       |
+| global_issuance_limit             | Uint128   | Total number of tokens this contract can issue before limit reset          | no       |
+| global_minimum_bonding_period     | u64       | Minimum amount of time before any pending bonds can be claimed.            | no       |
+| global_maximum_discount           | Uint128   | Maximum allowed discount for any bond opportunities                        | no       |
+| admin                             | HumanAddr | Bonds Assembly/Admin; SHOULD be a valid bech32 address                     | no       |
+| oracle                            | Contract  | Oracle contract                                                            | no       |
+| treasury                          | HumanAddr | Treasury address for allowance and collateral assets                       | no       |
+| issued_asset                      | Contract  | Issued asset for this bonds contract                                       | no       |
+| activated                         | bool      | Turns entering opportunities contract-wide on/off                          | no       |
+| bond_issuance_limit               | Uint128   | Default issuance limit for new bond opportunities                          | no       |
+| bonding_period                    | u64       | Default time for new opportunity before its pending bonds can be claimed   | no       |
+| discount                          | Uint128   | Default percent discount on issued asset for new bond opportunities        | no       |
+| global_min_accepted_issued_price  | Uint128   | Min price for issued asset. Opps will never issue at lower price than this | no       |
+| global_err_issued_price           | Uint128   | Asset price that will fail transaction due to risk                         | no       |
+| allowance_key                     | String    | Entropy for generating snip20 viewing key for issued asset. Arbitrary.     | no       |
+| airdrop                           | Contract  | Airdrop contract for completing bond task and unlocking % of drop          | yes      |
 
 ## Admin
 
@@ -56,18 +57,20 @@ Contract responsible to handle snip20 airdrop
 #### UpdateConfig
 Updates the given values
 ##### Request
-| Name                        | Type      | Description                                                                                   | optional  |
-|-----------------------------|-----------|-----------------------------------------------------------------------------------------------|-----------|
-| admin                       | HumanAddr | New contract admin; SHOULD be a valid bech32 address                                          | yes       |
-| oracle                      | Contract  | Oracle address                                                                                | yes       |
-| treasury                    | HumanAddr | Treasury address                                                                              | yes       |
-| issued_asset                | Contract  | The asset this bond contract will issue to users                                              | yes       |
-| activated                   | bool      | If true, bond opportunities can be entered into                                               | yes       |
-| minting_bond                | bool      | If true, bond is minting issued asset. If false, bond is spending on allowance from treasury  | yes       |
-| bond_issuance_limit         | Uint128   | Default issuance limit for any new opportunities                                              | yes       |
-| bonding_period              | Uint128   | Default bonding period in UNIX time for any new opportunities                                 | yes       |
-| discount                    | Uint128   | Default discount % for any new opportunities                                                  | yes       |
-| global_minimum_issued_price | Uint128   | Sets the floor price the issued asset can be at before all bond opportunities lock            | yes       |
+| Name                              | Type      | Description                                                                                   | optional  |
+|-----------------------------------|-----------|-----------------------------------------------------------------------------------------------|-----------|
+| admin                             | HumanAddr | New contract admin; SHOULD be a valid bech32 address                                          | yes       |
+| oracle                            | Contract  | Oracle address                                                                                | yes       |
+| treasury                          | HumanAddr | Treasury address                                                                              | yes       |
+| issued_asset                      | Contract  | The asset this bond contract will issue to users                                              | yes       |
+| activated                         | bool      | If true, bond opportunities can be entered into                                               | yes       |
+| minting_bond                      | bool      | If true, bond is minting issued asset. If false, bond is spending on allowance from treasury  | yes       |
+| bond_issuance_limit               | Uint128   | Default issuance limit for any new opportunities                                              | yes       |
+| bonding_period                    | Uint128   | Default bonding period in UNIX time for any new opportunities                                 | yes       |
+| discount                          | Uint128   | Default discount % for any new opportunities                                                  | yes       |
+| global_min_accepted_issued_price  | Uint128   | SMin price for issued asset. Opps will never issue at lower price than this                   | yes       |
+| global_err_issued_price           | Uint128   | Asset price that will fail transaction due to risk                                            | yes       |
+| airdrop                           | Contract  | Airdrop contract for completing bond task and unlocking % of drop                             | yes      |
 
 ##### Response
 ``` json
@@ -85,13 +88,14 @@ Opens new bond opportunity for a unique asset
 | Name                          | Type      | Description                                       | optional  |
 |-------------------------------|-----------|---------------------------------------------------|-----------|
 | collateral_asset              | Contract  | Contract for collateral asset                     | no        |
-| start_time                    | u64       | When the opportunity opens in UNIX time           | yes       |
-| end_time                      | u64       | When the opportunity closes in UNIX time          | yes       |
+| start_time                    | u64       | When the opportunity opens in UNIX time           | no        |
+| end_time                      | u64       | When the opportunity closes in UNIX time          | no        |
 | bond_issuance_limit           | Uint128   | Issuance limit for this opportunity               | yes       |
 | bonding_period                | u64       | Bonding period for this opportunity in UNIX time  | yes       |
 | discount                      | Uint128   | Discount % for this opportunity                   | yes       |
 | max_accepted_collateral_price | Uint128   | Maximum accepted price for collateral asset       | no        |
 | err_collateral_price          | Uint128   | Price for collateral asset that causes error      | no        |
+| minting_bond                  | bool      | True for minting from snip20, false for allowance | no        |
 ##### Response
 ```json
 {
@@ -105,6 +109,7 @@ Opens new bond opportunity for a unique asset
     "discount": "opportunity discount percentage Uint128",
     "max_accepted_collateral_price": "maximum price accepted for collateral asset Uint128",
     "err_collateral_price": "error-causing price limit for collateral asset Uint128",
+    "minting_bond": "bool whether bond opp is a minting bond or not"
   }
 }
 ```
@@ -121,7 +126,8 @@ Closes bond opportunity for a given asset
 ```json
 {
   "close_bond": {
-    "status": "success"
+    "status": "success",
+    "collateral_asset": "contract for asset who's opportunity was just closed"
   }
 }
 ```
@@ -183,28 +189,6 @@ The user doesn't need to pass any parameters to claim. Claiming redeems all of a
   "claim": {
     "status": "success",
     "amount": "claim amount Uint128",
-  }
-}
-```
-
-#### SetViewingKey
-Set's the user's viewing key for their account to whatever string  is passed.
-
-##### Request
-| Name         | Type    | Description                                | optional |
-|--------------|---------|--------------------------------------------|----------|
-| key          | String  | Proof that the user owns those addresses   | no       |
-
-##### Response
-```json
-{
-  "account": {
-    "status": "success",
-    "total": "Total airdrop amount",
-    "claimed": "Claimed amount",
-    "unclaimed": "Amount available to claim",
-    "finished_tasks": "All of the finished tasks",
-    "addresses": ["claimed addresses"]
   }
 }
 ```
@@ -273,8 +257,10 @@ Gets this contracts issuance and claimed totals, as well as the issued asset
 {
   "bond_info": {
     "global_total_issued": "global total issued Uint128",
-    "global_total_claimed": "global_total_claimed Uint128",
+    "global_total_claimed": "global total claimed Uint128",
     "issued_asset": "native/issued asset Snip20Asset",
+    "global_min_accepted_issued_price": "global minimum accepted price for issued asset Uint128",
+    "global_err_issued_price": "global error limit price for issued asset Uint128"
   }
 }
 ```
@@ -287,6 +273,30 @@ Gets the price for the passed asset by querying the oracle registered in the con
 {
   "price_check": {
     "price": "price of passed asset in dollars Uint128",
+  }
+}
+```
+
+#### CheckAllowance
+Views this bond contract's allowance from its current Treasury address
+
+##### Response
+```json
+{
+  "check_allowance": {
+    "allowance": "current queried allowance Uint128"
+  }
+}
+```
+
+#### CheckBalance
+Views this bond contract's current balance for its issued asset
+
+##### Response
+```json
+{
+  "check_balance": {
+    "check_balance": "current balance Uint128"
   }
 }
 ```
@@ -333,7 +343,8 @@ NOTE: The parameters must be in order
 | bonding_period                | u64         | Time that users that enter the opportunity must wait before claiming  | no        |
 | discount                      | Uint128     | Discount of issued asset when opportunity was purchased               | no        |
 | max_accepted_collateral_price | Uint128     | Maximum accepted price for collateral asset                           | no        |
-| err_collateral_price          | Uint128     | Error-causing limit price for collateral                      | no        |
+| err_collateral_price          | Uint128     | Error-causing limit price for collateral                              | no        |
+| minting_bond                  | bool        | True for minting from snip20, false for allowance                     | no        |
 
 ## SlipMsg
 Stores the user's slippage limit when entering bond opportunities

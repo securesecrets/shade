@@ -1,7 +1,8 @@
 use chrono::prelude::*;
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
-    Querier, StdError, StdResult, Storage, Uint128,
+    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    HumanAddr, Querier, StdError, StdResult, Storage, Uint128 as prevUint128, WasmMsg,
 };
 
 use query_authentication::viewing_keys::ViewingKey;
@@ -11,17 +12,21 @@ use secret_toolkit::{
         allowance_query, mint_msg, register_receive_msg, send_msg, token_info_query,
         transfer_from_msg, transfer_msg, Allowance,
     },
-    utils::Query,
+    utils::{HandleCallback, InitCallback, Query},
 };
 
-use shade_protocol::contract_interfaces::{bonds::{
-    errors::*,
-    BondOpportunity, SlipMsg, {Account, AccountKey, Config, HandleAnswer, PendingBond},
-}, snip20::fetch_snip20};
 use shade_protocol::contract_interfaces::{
+    airdrop::HandleMsg::CompleteTask,
     oracles::band::ReferenceData,
     oracles::oracle::QueryMsg::Price,
     snip20::{token_config_query, HandleMsg, Snip20Asset, TokenConfig},
+};
+use shade_protocol::contract_interfaces::{
+    bonds::{
+        errors::*,
+        BondOpportunity, SlipMsg, {Account, AccountKey, Config, HandleAnswer, PendingBond},
+    },
+    snip20::fetch_snip20,
 };
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
@@ -71,13 +76,13 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
 
     if let Some(reset_total_issued) = reset_total_issued {
         if reset_total_issued {
-            global_total_issued_w(&mut deps.storage).save(&Uint128(0))?;
+            global_total_issued_w(&mut deps.storage).save(&Uint128::zero())?;
         }
     }
 
     if let Some(reset_total_claimed) = reset_total_claimed {
         if reset_total_claimed {
-            global_total_claimed_w(&mut deps.storage).save(&Uint128(0))?;
+            global_total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
         }
     }
 
@@ -202,7 +207,10 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    let available = (bond_opportunity.issuance_limit - bond_opportunity.amount_issued).unwrap();
+    let available = bond_opportunity
+        .issuance_limit
+        .checked_sub(bond_opportunity.amount_issued)
+        .unwrap();
 
     // Load mint asset information
     let issuance_asset = issued_asset_r(&deps.storage).load()?;
@@ -243,7 +251,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     // Collateral to treasury
     messages.push(send_msg(
         config.treasury.clone(),
-        deposit_amount,
+        prevUint128(deposit_amount.u128()),
         None,
         None,
         None,
@@ -269,10 +277,24 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 
     // Find user account, create if it doesn't exist
     let mut account = match account_r(&deps.storage).may_load(sender.as_str().as_bytes())? {
-        None => Account {
-            address: sender,
-            pending_bonds: vec![],
-        },
+        None => {
+            // Airdrop task
+            match config.airdrop {
+                None => {}
+                Some(airdrop) => {
+                    let msg = CompleteTask {
+                        address: sender.clone(),
+                        padding: None,
+                    };
+                    messages.push(msg.to_cosmos_msg(airdrop.code_hash, airdrop.address, None)?);
+                }
+            }
+
+            Account {
+                address: sender,
+                pending_bonds: vec![],
+            }
+        }
         Some(acc) => acc,
     };
 
@@ -285,13 +307,13 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     if !bond_opportunity.minting_bond {
         // Decrease AllocatedAllowance since user is claiming
         allocated_allowance_w(&mut deps.storage)
-            .update(|allocated| allocated - amount_to_issue.clone())?;
+            .update(|allocated| Ok(allocated.checked_sub(amount_to_issue.clone())?))?;
 
         // Transfer funds using allowance to bonds
         messages.push(transfer_from_msg(
             config.treasury.clone(),
             env.contract.address.clone(),
-            amount_to_issue,
+            prevUint128(amount_to_issue.u128()),
             None,
             None,
             256,
@@ -301,7 +323,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     } else {
         messages.push(mint_msg(
             config.contract,
-            amount_to_issue,
+            prevUint128(amount_to_issue.u128()),
             None,
             None,
             256,
@@ -351,7 +373,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 
     // Set up loop comparison values.
     let now = env.block.time; // Current time in seconds
-    let mut total = Uint128(0);
+    let mut total = Uint128::zero();
 
     // Iterate through pending bonds and compare one's end to current time
     for bond in pending_bonds.iter() {
@@ -363,7 +385,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 
     // Add case for if total is 0, error out
     if total.is_zero() {
-        return Err(no_bonds_claimable())
+        return Err(no_bonds_claimable());
     }
 
     // Remove claimed bonds from vector and save back to the account
@@ -375,7 +397,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     account_w(&mut deps.storage).save(env.message.sender.as_str().as_bytes(), &account)?;
 
     global_total_claimed_w(&mut deps.storage)
-        .update(|global_total_claimed| Ok(global_total_claimed + total.clone()))?;
+        .update(|global_total_claimed| Ok(global_total_claimed.checked_add(total.clone())?))?;
 
     //Set up empty message vec
     let mut messages = vec![];
@@ -395,7 +417,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     // } else {
     messages.push(send_msg(
         env.message.sender,
-        total,
+        prevUint128(total.u128()),
         None,
         None,
         None,
@@ -442,15 +464,17 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         .may_load(collateral_asset.address.as_str().as_bytes())?
     {
         Some(prev_opp) => {
-            let unspent = (prev_opp.issuance_limit - prev_opp.amount_issued)?;
+            let unspent = prev_opp
+                .issuance_limit
+                .checked_sub(prev_opp.amount_issued)?;
             global_total_issued_w(&mut deps.storage)
-                .update(|issued| Ok((issued - unspent.clone())?))?;
+                .update(|issued| Ok(issued.checked_sub(unspent.clone())?))?;
 
             if !prev_opp.minting_bond {
                 // Unallocate allowance that wasn't issued
 
                 allocated_allowance_w(&mut deps.storage)
-                    .update(|allocated| Ok((allocated - unspent)?))?;
+                    .update(|allocated| Ok(allocated.checked_sub(unspent)?))?;
             }
         }
         None => {
@@ -490,11 +514,13 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         )?;
 
         let allocated_allowance = allocated_allowance_r(&deps.storage).load()?;
+        // Declaring again so 1.0 Uint128 works
+        let snip_allowance = Uint128::from(snip20_allowance.allowance.u128());
 
         // Error out if allowance doesn't allow bond opportunity
-        if (snip20_allowance.allowance - allocated_allowance)? < limit {
+        if snip_allowance.checked_sub(allocated_allowance)? < limit {
             return Err(bond_issuance_exceeds_allowance(
-                snip20_allowance.allowance,
+                snip_allowance,
                 allocated_allowance,
                 limit,
             ));
@@ -514,7 +540,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         end_time,
         discount,
         bonding_period: period,
-        amount_issued: Uint128(0),
+        amount_issued: Uint128::zero(),
         max_accepted_collateral_price,
         err_collateral_price,
         minting_bond,
@@ -576,15 +602,17 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
                 Ok(assets)
             })?;
 
-            let unspent = (prev_opp.issuance_limit - prev_opp.amount_issued)?;
+            let unspent = prev_opp
+                .issuance_limit
+                .checked_sub(prev_opp.amount_issued)?;
             global_total_issued_w(&mut deps.storage)
-                .update(|issued| Ok((issued - unspent.clone())?))?;
+                .update(|issued| Ok(issued.checked_sub(unspent.clone())?))?;
 
             if !prev_opp.minting_bond {
                 // Unallocate allowance that wasn't issued
 
                 allocated_allowance_w(&mut deps.storage)
-                    .update(|allocated| Ok((allocated - unspent)?))?;
+                    .update(|allocated| Ok(allocated.checked_sub(unspent)?))?;
             }
         }
         None => {
@@ -705,7 +733,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
         ));
     }
     if issued_price < min_accepted_issued_price {
-        disc = Uint128(0);
+        disc = Uint128::zero();
         issued_price = min_accepted_issued_price;
     }
     let (issued_amount, discount_price) = calculate_issuance(
@@ -758,10 +786,9 @@ pub fn calculate_issuance(
     }
     let issued_amount = collateral_amount.multiply_ratio(collateral_price, discount_price);
     let difference: i32 = issued_decimals as i32 - collateral_decimals as i32;
-
     match difference.cmp(&0) {
         Ordering::Greater => (
-            Uint128(issued_amount.u128() * 10u128.pow(u32::try_from(difference).unwrap())),
+            Uint128::from(issued_amount.u128() * 10u128.pow(u32::try_from(difference).unwrap())),
             discount_price,
         ),
         Ordering::Less => (
@@ -802,5 +829,5 @@ pub fn oracle<S: Storage, A: Api, Q: Querier>(
         config.oracle.code_hash,
         config.oracle.address,
     )?;
-    Ok(answer.rate)
+    Ok(Uint128::from(answer.rate))
 }

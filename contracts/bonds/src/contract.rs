@@ -1,7 +1,9 @@
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, HumanAddr, InitResponse, Querier,
-    StdResult, Storage, Uint128,
+    StdResult, Storage,
 };
+
 use secret_toolkit::snip20::{set_viewing_key_msg, token_info_query};
 
 use shade_protocol::contract_interfaces::{
@@ -44,6 +46,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         global_min_accepted_issued_price: msg.global_min_accepted_issued_price,
         global_err_issued_price: msg.global_err_issued_price,
         contract: env.contract.address.clone(),
+        airdrop: msg.airdrop,
     };
 
     config_w(&mut deps.storage).save(&state)?;

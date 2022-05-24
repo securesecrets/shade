@@ -1,5 +1,5 @@
-use std::convert::TryInto;
 use sha2::{Digest, Sha256};
+use std::convert::TryInto;
 use subtle::ConstantTimeEq;
 
 pub const VIEWING_KEY_SIZE: usize = 32;

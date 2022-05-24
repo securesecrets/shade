@@ -1,15 +1,14 @@
 use crate::cli_types::{
-    ListCodeResponse,
-    ListContractCode,
-    NetContract,
-    SignedTx,
-    TxCompute,
-    TxQuery,
-    TxResponse,
+    ListCodeResponse, ListContractCode, NetContract, SignedTx, TxCompute, TxQuery, TxResponse,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
-use std::{fs::File, io::{self, Write}, process::Command, thread, time};
+use std::{
+    fs::File,
+    io::{self, Write},
+    process::Command,
+    thread, time,
+};
 
 //secretcli tx sign-doc tx_to_sign --from sign-test
 
@@ -473,69 +472,4 @@ pub fn create_permit<Tx: serde::Serialize>(tx: Tx, signer: &str) -> Result<Signe
         serde_json::from_value(secretcli_run(vec_str_to_vec_string(command), None)?)?;
 
     Ok(response)
-}
-
-pub fn start_loaded_local_testnet() -> Result<TxResponse> {
-    let command_arr = vec![
-        "run",
-        "-it",
-        "--rm",
-        "-p",
-        "26657:26657",
-        "-p",
-        "26656:26656",
-        "-p",
-        "1337:1337",
-        "-v",
-        "~/shade/shade/compiled:/root/code",
-        "--name",
-        "secretdev",
-        "enigmampc/secret-network-sw-dev",
-    ];
-
-    let command = vec_str_to_vec_string(command_arr);
-    let json = docker_run(command, None)?;
-    let out: Result<TxResponse> = serde_json::from_value(json);
-    out
-}
-
-fn docker_run(command: Vec<String>, max_retry: Option<i32>) -> Result<Value> {
-    let retry = max_retry.unwrap_or(100);
-    let mut commands = command;
-    let mut cli = Command::new("docker".to_string());
-    if !commands.is_empty() {
-        cli.args(commands);
-    }
-
-    let mut result = cli.output().expect("Unexpected error");
-    let out = result.stdout;
-    serde_json::from_str(&String::from_utf8_lossy(&out))
-}
-
-pub fn enter_test_container() -> Result<TxResponse> {
-    let command_arr = vec![
-        "exec",
-        "-it",
-        "secretdev",
-        "/bin/bash",
-    ];
-
-    let command = vec_str_to_vec_string(command_arr);
-    let json = docker_run(command, None)?;
-    let out: Result<TxResponse> = serde_json::from_value(json);
-    out
-}
-
-pub fn move_to_code() -> Result<TxResponse> {
-    let command_arr = vec![
-        "cd",
-        "code",
-        "secretdev",
-        "/bin/bash",
-    ];
-
-    let command = vec_str_to_vec_string(command_arr);
-    let json = docker_run(command, None)?;
-    let out: Result<TxResponse> = serde_json::from_value(json);
-    out
 }

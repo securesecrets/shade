@@ -32,7 +32,7 @@ storage_plus = ["dep:secret-storage-plus"]
 # Protocol contracts
 airdrop = ["utils", "errors", "dep:remain", "dep:query-authentication"]
 initializer = ["snip20", "utils"]
-bonds = ["utils", "errors", "dep:remain", "oracle", "dep:query-authentication", "snip20"]
+bonds = ["utils", "errors", "dep:remain", "oracle", "airdrop", "dep:query-authentication", "snip20"]
 governance = ["utils", "flexible_msg"]
 mint = ["utils", "snip20"]
 mint_router = ["utils", "snip20"]
@@ -73,4 +73,3 @@ rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
 base64 = "0.12.3"
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }
-

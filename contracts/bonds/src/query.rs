@@ -7,11 +7,13 @@ use crate::{
     },
 };
 
+use cosmwasm_math_compat::Uint128;
+
 use shade_protocol::contract_interfaces::bonds::errors::not_treasury_bond;
 
 use secret_toolkit::snip20::{allowance_query, balance_query};
 
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
 use shade_protocol::contract_interfaces::{
     bonds::{AccountKey, AccountPermit, BondOpportunity, QueryAnswer},
     oracles,
@@ -71,10 +73,13 @@ pub fn bond_info<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdR
     let global_total_issued = global_total_issued_r(&deps.storage).load()?;
     let global_total_claimed = global_total_claimed_r(&deps.storage).load()?;
     let issued_asset = issued_asset_r(&deps.storage).load()?;
+    let config = config_r(&deps.storage).load()?;
     Ok(QueryAnswer::BondInfo {
         global_total_issued,
         global_total_claimed,
         issued_asset,
+        global_min_accepted_issued_price: config.global_min_accepted_issued_price,
+        global_err_issued_price: config.global_err_issued_price,
     })
 }
 
@@ -112,7 +117,7 @@ pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
     )?;
 
     Ok(QueryAnswer::CheckAllowance {
-        allowance: snip20_allowance.allowance,
+        allowance: Uint128::from(snip20_allowance.allowance),
     })
 }
 
@@ -131,6 +136,6 @@ pub fn check_balance<S: Storage, A: Api, Q: Querier>(
     )?;
 
     Ok(QueryAnswer::CheckBalance {
-        balance: balance.amount,
+        balance: Uint128::from(balance.amount),
     })
 }

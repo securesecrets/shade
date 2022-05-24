@@ -2,10 +2,11 @@ mod test {
     use crate::contract;
     use crate::handle::{active, calculate_claim_date, calculate_issuance};
     use crate::query;
+    use cosmwasm_math_compat::Uint128;
     use cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-        Extern, HumanAddr, StdError, Uint128,
+        Extern, HumanAddr, StdError,
     };
     use shade_protocol::utils::errors::DetailedError;
     use shade_protocol::{
@@ -86,14 +87,14 @@ mod test {
 
     #[test]
     fn check_active() {
-        assert_eq!(active(&true, &Uint128(10), &Uint128(9)), Ok(()));
+        assert_eq!(active(&true, &Uint128::new(10), &Uint128::new(9)), Ok(()));
         assert_eq!(
-            active(&false, &Uint128(10), &Uint128(9)),
+            active(&false, &Uint128::new(10), &Uint128::new(9)),
             Err(contract_not_active())
         );
         assert_eq!(
-            active(&true, &Uint128(10), &Uint128(10)),
-            Err(global_limit_reached(Uint128(10)))
+            active(&true, &Uint128::new(10), &Uint128::new(10)),
+            Err(global_limit_reached(Uint128::new(10)))
         );
     }
 
@@ -106,34 +107,34 @@ mod test {
     #[test]
     fn calc_mint() {
         let result = calculate_issuance(
-            Uint128(7_000_000_000_000_000_000),
-            Uint128(10_000_000),
+            Uint128::new(7_000_000_000_000_000_000),
+            Uint128::new(10_000_000),
             6,
-            Uint128(5_000_000_000_000_000_000),
+            Uint128::new(5_000_000_000_000_000_000),
             6,
-            Uint128(7_000),
-            Uint128(0),
+            Uint128::new(7_000),
+            Uint128::new(0),
         );
-        assert_eq!(result.0, Uint128(15_053_763));
+        assert_eq!(result.0, Uint128::new(15_053_763));
         let result2 = calculate_issuance(
-            Uint128(10_000_000_000_000_000_000),
-            Uint128(50_000_000),
+            Uint128::new(10_000_000_000_000_000_000),
+            Uint128::new(50_000_000),
             6,
-            Uint128(50_000_000_000_000_000_000),
+            Uint128::new(50_000_000_000_000_000_000),
             8,
-            Uint128(9_000),
-            Uint128(0),
+            Uint128::new(9_000),
+            Uint128::new(0),
         );
-        assert_eq!(result2.0, Uint128(1_098_901_000));
+        assert_eq!(result2.0, Uint128::new(1_098_901_000));
         let result3 = calculate_issuance(
-            Uint128(10_000_000_000_000_000_000),
-            Uint128(5_000_000_000),
+            Uint128::new(10_000_000_000_000_000_000),
+            Uint128::new(5_000_000_000),
             8,
-            Uint128(50_000_000_000_000_000_000),
+            Uint128::new(50_000_000_000_000_000_000),
             6,
-            Uint128(9_000),
-            Uint128(0),
+            Uint128::new(9_000),
+            Uint128::new(0),
         );
-        assert_eq!(result3.0, Uint128(10989010));
+        assert_eq!(result3.0, Uint128::new(10989010));
     }
 }

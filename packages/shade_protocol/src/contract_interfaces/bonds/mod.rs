@@ -1,23 +1,25 @@
 pub mod errors;
-pub mod utils;
 pub mod rand;
+pub mod utils;
 
 use cosmwasm_std::Env;
 
+use query_authentication::permit::{bech32_to_canonical, Permit};
 use query_authentication::viewing_keys::ViewingKey;
-use query_authentication::{
-    permit::{Permit, bech32_to_canonical}};
-    
-use crate::contract_interfaces::bonds::utils::{create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE};
-use crate::utils::generic_response::ResponseStatus;
-use crate::utils::asset::Contract;
+
+use crate::contract_interfaces::bonds::errors::permit_rejected;
 use crate::contract_interfaces::bonds::rand::{sha_256, Prng};
-use crate::contract_interfaces::bonds::errors::{permit_rejected};
-use cosmwasm_std::{Binary, HumanAddr, Uint128, StdResult, StdError};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::contract_interfaces::bonds::utils::{
+    create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE,
+};
 use crate::contract_interfaces::snip20::Snip20Asset;
-use secret_toolkit::utils::{HandleCallback};
+use crate::utils::asset::Contract;
+use crate::utils::generic_response::ResponseStatus;
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult};
+use schemars::JsonSchema;
+use secret_toolkit::utils::HandleCallback;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -36,6 +38,7 @@ pub struct Config {
     pub global_min_accepted_issued_price: Uint128,
     pub global_err_issued_price: Uint128,
     pub contract: HumanAddr,
+    pub airdrop: Option<Contract>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -55,6 +58,7 @@ pub struct InitMsg {
     pub global_min_accepted_issued_price: Uint128,
     pub global_err_issued_price: Uint128,
     pub allowance_key_entropy: String,
+    pub airdrop: Option<Contract>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -82,6 +86,7 @@ pub enum HandleMsg {
         global_err_issued_price: Option<Uint128>,
         allowance_key: Option<String>,
         padding: Option<String>,
+        airdrop: Option<Contract>,
     },
     OpenBond {
         collateral_asset: Contract,
@@ -157,17 +162,13 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     BondOpportunities {},
-    Account {
-        permit: AccountPermit,
-    },
+    Account { permit: AccountPermit },
     CollateralAddresses {},
-    PriceCheck {
-        asset: String,
-    },
+    PriceCheck { asset: String },
     BondInfo {},
     CheckAllowance {},
     CheckBalance {},
-}   
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -176,7 +177,7 @@ pub enum QueryAnswer {
         config: Config,
     },
     BondOpportunities {
-        bond_opportunities: Vec<BondOpportunity>
+        bond_opportunities: Vec<BondOpportunity>,
     },
     Account {
         pending_bonds: Vec<PendingBond>,
@@ -191,13 +192,15 @@ pub enum QueryAnswer {
         global_total_issued: Uint128,
         global_total_claimed: Uint128,
         issued_asset: Snip20Asset,
+        global_min_accepted_issued_price: Uint128,
+        global_err_issued_price: Uint128,
     },
     CheckAllowance {
         allowance: Uint128,
     },
     CheckBalance {
         balance: Uint128,
-    }
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
