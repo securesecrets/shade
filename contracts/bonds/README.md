@@ -362,10 +362,10 @@ The information inside permits that validate account ownership
 
 NOTE: The parameters must be in order
 ### Structure
-| Name     | Type    | Description                                             | optional |
-|----------|---------|---------------------------------------------------------|----------|
-| contract | String  | Bonds contract                                        | no       |
-| key      | String  | Some permit key                                         | no       |
+| Name      | Type         | Description                                             | optional |
+|-----------|--------------|---------------------------------------------------------|----------|
+| contracts | Vec<String>  | Bond contracts the permit is good for                   | no       |
+| key       | String       | Some permit key                                         | no       |
 
 
 ## PermitSignature
