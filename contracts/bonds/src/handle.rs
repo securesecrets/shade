@@ -462,7 +462,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     // } else {
     messages.push(send_msg(
         env.message.sender,
-        prevUint128(total.u128()),
+        total.into(),
         None,
         None,
         None,
@@ -827,16 +827,16 @@ pub fn calculate_issuance(
     //                             (p1 * 10^18)
     // (a1 * 10^x) * ------------------------------------ = (a2 * 10^y)
     //                      (p2 * 10^18) * ((100 - d1))
-    let percent_disc = 100_000u128 - discount.u128(); // - discount.multiply_ratio(1000u128, 1_000_000_000_000_000_000u128).u128();
+    let percent_disc = Uint128::new(100_000).checked_sub(discount).unwrap(); // - discount.multiply_ratio(1000u128, 1_000_000_000_000_000_000u128).u128();
     let mut discount_price = issued_price.multiply_ratio(percent_disc, 100000u128);
     if discount_price < min_accepted_issued_price {
         discount_price = min_accepted_issued_price
     }
     let issued_amount = collateral_amount.multiply_ratio(collateral_price, discount_price);
-    let difference: i32 = issued_decimals as i32 - collateral_decimals as i32;
+    let difference: i32 = issued_decimals.checked_sub(collateral_decimals).unwrap().into();
     match difference.cmp(&0) {
         Ordering::Greater => (
-            Uint128::from(issued_amount.u128() * 10u128.pow(u32::try_from(difference).unwrap())),
+            issued_amount.checked_mul(Uint128::new(10u128.pow(u32::try_from(difference).unwrap()))).unwrap(),
             discount_price,
         ),
         Ordering::Less => (
