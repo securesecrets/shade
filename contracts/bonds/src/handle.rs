@@ -422,7 +422,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     for bond in pending_bonds.iter() {
         if bond.end_time <= now {
             // Add claim amount to total
-            total = total.add(bond.claim_amount);
+            total = total.checked_add(bond.claim_amount);
         }
     }
 
