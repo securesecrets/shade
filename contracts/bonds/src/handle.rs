@@ -561,7 +561,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
 
         let allocated_allowance = allocated_allowance_r(&deps.storage).load()?;
         // Declaring again so 1.0 Uint128 works
-        let snip_allowance = Uint128::from(snip20_allowance.allowance.u128());
+        let snip_allowance = Uint128::from(snip20_allowance.allowance);
 
         // Error out if allowance doesn't allow bond opportunity
         if snip_allowance.checked_sub(allocated_allowance)? < limit {
