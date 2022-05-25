@@ -324,9 +324,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     let mut account = match account_r(&deps.storage).may_load(sender.as_str().as_bytes())? {
         None => {
             // Airdrop task
-            match config.airdrop {
-                None => {}
-                Some(airdrop) => {
+           if let Some(airdrop) = config.airdrop {
                     let msg = CompleteTask {
                         address: sender.clone(),
                         padding: None,
@@ -424,7 +422,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     for bond in pending_bonds.iter() {
         if bond.end_time <= now {
             // Add claim amount to total
-            total = total.add(bond.claim_amount);
+            total = total.checked_add(bond.claim_amount);
         }
     }
 
@@ -563,7 +561,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
 
         let allocated_allowance = allocated_allowance_r(&deps.storage).load()?;
         // Declaring again so 1.0 Uint128 works
-        let snip_allowance = Uint128::from(snip20_allowance.allowance.u128());
+        let snip_allowance = Uint128::from(snip20_allowance.allowance);
 
         // Error out if allowance doesn't allow bond opportunity
         if snip_allowance.checked_sub(allocated_allowance)? < limit {
