@@ -324,14 +324,14 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     let mut account = match account_r(&deps.storage).may_load(sender.as_str().as_bytes())? {
         None => {
             // Airdrop task
-           if let Some(airdrop) = config.airdrop {
-                    let msg = CompleteTask {
-                        address: sender.clone(),
-                        padding: None,
-                    };
-                    messages.push(msg.to_cosmos_msg(airdrop.code_hash, airdrop.address, None)?);
-                }
+            if let Some(airdrop) = config.airdrop {
+                let msg = CompleteTask {
+                    address: sender.clone(),
+                    padding: None,
+                };
+                messages.push(msg.to_cosmos_msg(airdrop.code_hash, airdrop.address, None)?);
             }
+            
 
             Account {
                 address: sender,
@@ -422,7 +422,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     for bond in pending_bonds.iter() {
         if bond.end_time <= now {
             // Add claim amount to total
-            total = total.checked_add(bond.claim_amount);
+            total = total.checked_add(bond.claim_amount).unwrap();
         }
     }
 
@@ -831,7 +831,7 @@ pub fn calculate_issuance(
         discount_price = min_accepted_issued_price
     }
     let issued_amount = collateral_amount.multiply_ratio(collateral_price, discount_price);
-    let difference: i32 = issued_decimals.checked_sub(collateral_decimals).unwrap().into();
+    let difference: i32 = i32::from(issued_decimals).checked_sub(i32::from(collateral_decimals)).unwrap();
     match difference.cmp(&0) {
         Ordering::Greater => (
             issued_amount.checked_mul(Uint128::new(10u128.pow(u32::try_from(difference).unwrap()))).unwrap(),
