@@ -825,7 +825,7 @@ pub fn calculate_issuance(
     //                             (p1 * 10^18)
     // (a1 * 10^x) * ------------------------------------ = (a2 * 10^y)
     //                      (p2 * 10^18) * ((100 - d1))
-    let percent_disc = 100_000u128 - discount.u128(); // - discount.multiply_ratio(1000u128, 1_000_000_000_000_000_000u128).u128();
+    let percent_disc = Uint128::new(100_000u128).checked_sub(discount); // - discount.multiply_ratio(1000u128, 1_000_000_000_000_000_000u128).u128();
     let mut discount_price = issued_price.multiply_ratio(percent_disc, 100000u128);
     if discount_price < min_accepted_issued_price {
         discount_price = min_accepted_issued_price
