@@ -1,6 +1,8 @@
-use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult, Storage};
+use cosmwasm_std::{Binary, Env, HumanAddr, StdError, StdResult, Storage};
+use query_authentication::viewing_keys::ViewingKey;
 use schemars::JsonSchema;
 use secret_storage_plus::{Item, Map};
+use secret_toolkit::crypto::{Prng, sha_256};
 use serde::{Deserialize, Serialize};
 use cosmwasm_math_compat::Uint128;
 use crate::impl_into_u8;
@@ -228,9 +230,109 @@ pub struct Allowance {
     pub expiration: Option<u64>,
 }
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
-pub struct Allowances(pub Vec<Allowance>);
+impl Default for Allowance {
+    fn default() -> Self {
+        Self {
+            amount: Uint128::zero(),
+            expiration: None
+        }
+    }
+}
+impl Allowance {
+    pub fn is_expired(&self, block: &cosmwasm_std::BlockInfo) -> bool {
+        match self.expiration {
+            Some(time) => block.time >= time,
+            None => false
+        }
+    }
+
+    pub fn spend<S: Storage>(
+        storage: &mut S,
+        owner: &HumanAddr,
+        spender: &HumanAddr,
+        amount: Uint128,
+        block: &cosmwasm_std::BlockInfo
+    ) -> StdResult<()> {
+        let mut allowance = Allowance::load(storage, (owner.clone(), spender.clone()))?;
+
+        if allowance.is_expired(block) {
+            return Err(StdError::generic_err("Insufficient allowance TODO: missing allowance and amount"));
+        }
+        if let Some(new_allowance) = allowance.amount.checked_sub(amount) {
+            allowance.amount = new_allowance;
+        } else {
+            return Err(StdError::generic_err("Insufficient allowance TODO: missing allowance and amount"));
+        }
+
+        allowance.save(storage, (owner.clone(), spender.clone()))?;
+
+        Ok(())
+    }
+}
 // (Owner, Spender)
-impl MapStorage<'static, (HumanAddr, HumanAddr)> for Allowances {
-    const MAP: Map<'static, (HumanAddr, HumanAddr), Self> = Map::new("allowances-");
+impl MapStorage<'static, (HumanAddr, HumanAddr)> for Allowance {
+    const MAP: Map<'static, (HumanAddr, HumanAddr), Self> = Map::new("allowance-");
+}
+
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
+pub struct ReceiverHash(pub String);
+impl MapStorage<'static, HumanAddr> for ReceiverHash {
+    const MAP: Map<'static, HumanAddr, Self> = Map::new("receiver-hash-");
+}
+
+// Auth
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
+pub struct Key(pub String);
+
+impl Key {
+    // TODO: implement this in query auth instead
+    pub fn generate(env: &Env, seed: &[u8], entropy: &[u8]) -> Self {
+        // 16 here represents the lengths in bytes of the block height and time.
+        let entropy_len = 16 + env.message.sender.len() + entropy.len();
+        let mut rng_entropy = Vec::with_capacity(entropy_len);
+        rng_entropy.extend_from_slice(&env.block.height.to_be_bytes());
+        rng_entropy.extend_from_slice(&env.block.time.to_be_bytes());
+        rng_entropy.extend_from_slice(&env.message.sender.0.as_bytes());
+        rng_entropy.extend_from_slice(entropy);
+
+        let mut rng = Prng::new(seed, &rng_entropy);
+
+        let rand_slice = rng.rand_bytes();
+
+        let key = sha_256(&rand_slice);
+
+        Self(VIEWING_KEY_PREFIX.to_string() + &base64::encode(key))
+    }
+}
+
+impl ToString for Key {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+const KEY_SIZE: usize = 32;
+impl ViewingKey<32> for Key{}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct HashedKey(pub [u8; VIEWING_KEY_SIZE]);
+impl MapStorage<'static, HumanAddr> for HashedKey {
+    const MAP: Map<'static, HumanAddr, Self> = Map::new("hashed-viewing-key-");
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PermitKey(pub bool);
+impl MapStorage<'static, (HumanAddr, String)> for PermitKey {
+    const MAP: Map<'static, (HumanAddr, String), Self> = Map::new("revoked-permit-");
+}
+impl PermitKey {
+    pub fn revoke<S: Storage>(storage: &mut S, key: String, user: HumanAddr) -> StdResult<()> {
+        PermitKey(true).save(storage, (user, key))
+    }
+
+    pub fn is_revoked<S: Storage>(storage: &mut S, key: String, user: HumanAddr) -> StdResult<bool> {
+        Ok(match PermitKey::may_load(storage, (user, key))? {
+            None => false,
+            Some(_) => true
+        })
+    }
 }

@@ -1,7 +1,11 @@
 use cosmwasm_std::{Api, Binary, Env, Extern, from_binary, HandleResponse, HandleResult, InitResponse, Querier, StdError, StdResult, Storage, to_binary};
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::contract_interfaces::snip20_test::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, Extended};
-use crate::handle::transfers::{try_batch_transfer, try_transfer};
+use crate::handle::transfers::{try_batch_send, try_batch_transfer, try_send, try_transfer};
+use crate::handle::{try_change_admin, try_create_viewing_key, try_deposit, try_redeem, try_register_receive, try_revoke_permit, try_set_contract_status, try_set_viewing_key};
+use crate::handle::allowance::{try_batch_send_from, try_batch_transfer_from, try_decrease_allowance, try_increase_allowance, try_send_from, try_transfer_from};
+use crate::handle::burning::{try_batch_burn_from, try_burn, try_burn_from};
+use crate::handle::minting::{try_add_minters, try_batch_mint, try_mint, try_remove_minters, try_set_minters};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -24,10 +28,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
+    // TODO: implement contract status
     pad_handle_result(
         match msg {
             HandleMsg::Redeem { amount, denom, ..
-            } => try_redeem(deps, env, amount, denom),
+            } => try_redeem(deps, env, amount),
 
             HandleMsg::Deposit { ..
             } => try_deposit(deps, env),
@@ -36,7 +41,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             } => try_transfer(deps, env, recipient, amount, memo),
 
             HandleMsg::Send { recipient, recipient_code_hash, amount, msg, memo, ..
-            } => try_send(deps, env, recipient, recipient_code_hash, amount, msg, memo),
+            } => try_send(deps, env, recipient, recipient_code_hash, amount, memo, msg),
 
             HandleMsg::BatchTransfer { actions, ..
             } => try_batch_transfer(deps, env, actions),
@@ -113,18 +118,22 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     pad_query_result(
-        match msg {
-            QueryMsg::TokenInfo { .. } => {}
-            QueryMsg::TokenConfig { .. } => {}
-            QueryMsg::ContractStatus { .. } => {}
-            QueryMsg::ExchangeRate { .. } => {}
-            QueryMsg::Allowance { .. } => {}
-            QueryMsg::Balance { .. } => {}
-            QueryMsg::TransferHistory { .. } => {}
-            QueryMsg::TransactionHistory { .. } => {}
-            QueryMsg::Minters { .. } => {}
+        to_binary(&match msg {
+            QueryMsg::TokenInfo { } => query::token_info(deps),
+            QueryMsg::TokenConfig { } => query::token_config(deps),
+            QueryMsg::ContractStatus { } => query::contract_status(deps),
+            QueryMsg::ExchangeRate { } => query::exchange_rate(deps),
+            QueryMsg::Minters { } => query::minters(deps),
+
             QueryMsg::WithPermit { .. } => {}
-        },
+
+            _ => viewing_key_queries(deps, msg)
+        }),
         RESPONSE_BLOCK_SIZE,
     )
 }
+QueryMsg::Allowance { .. } => {}
+QueryMsg::Balance { .. } => {}
+QueryMsg::TransferHistory { .. } => {}
+QueryMsg::TransactionHistory { .. } => {}
+

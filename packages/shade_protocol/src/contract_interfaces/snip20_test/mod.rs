@@ -7,6 +7,7 @@ use query_authentication::permit::Permit;
 use schemars::JsonSchema;
 use secret_storage_plus::Item;
 use secret_toolkit::crypto::sha_256;
+use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 use cosmwasm_math_compat::Uint128;
 use crate::contract_interfaces::snip20_test::manager::{Admin, Balance, CoinInfo, Config, ContractStatusLevel, RandSeed, TotalSupply};
@@ -169,6 +170,10 @@ impl InitConfig {
     }
 }
 
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
@@ -310,6 +315,49 @@ pub enum HandleMsg {
         permit_name: String,
         padding: Option<String>,
     },
+}
+
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[serde(rename_all = "snake_case")]
+struct Snip20ReceiveMsg {
+    pub sender: HumanAddr,
+    pub from: HumanAddr,
+    pub amount: Uint128,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memo: Option<String>,
+    pub msg: Option<Binary>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum ReceiverHandleMsg {
+    Receive(Snip20ReceiveMsg),
+}
+
+impl ReceiverHandleMsg {
+    pub fn new(
+        sender: HumanAddr,
+        from: HumanAddr,
+        amount: Uint128,
+        memo: Option<String>,
+        msg: Option<Binary>,
+    ) -> Self {
+        Self::Receive(Snip20ReceiveMsg{
+            sender,
+            from,
+            amount,
+            memo,
+            msg
+        })
+    }
+}
+
+impl HandleCallback for ReceiverHandleMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
@@ -472,6 +520,10 @@ pub enum QueryMsg {
         permit: QueryPermit,
         query: QueryWithPermit,
     },
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
