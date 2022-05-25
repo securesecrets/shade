@@ -575,7 +575,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         };
 
         // Increase stored allocated_allowance by the opportunity's issuance limit
-        allocated_allowance_w(&mut deps.storage).update(|allocated| Ok(allocated + limit))?;
+        allocated_allowance_w(&mut deps.storage).update(|allocated| Ok(allocated.checked_add(limit)?))?;
     }
 
     let deposit_denom = fetch_snip20(&collateral_asset.clone(), &deps.querier)?;
@@ -602,7 +602,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
 
     // Increase global total issued by bond opportunity's issuance limit
     global_total_issued_w(&mut deps.storage)
-        .update(|global_total_issued| Ok(global_total_issued + bond_opportunity.issuance_limit))?;
+        .update(|global_total_issued| Ok(global_total_issued.checked_add(bond_opportunity.issuance_limit)?))?;
 
     // Return Success response
     Ok(HandleResponse {
@@ -712,7 +712,7 @@ fn check_against_limits<S: Storage, A: Api, Q: Querier>(
         &global_total_issued,
     )?;
 
-    if global_total_issued + bond_limit > global_issuance_limit {
+    if global_total_issued.checked_add(bond_limit)? > global_issuance_limit {
         return Err(bond_limit_exceeds_global_limit(
             global_issuance_limit,
             global_total_issued,
