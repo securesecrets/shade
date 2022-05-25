@@ -324,9 +324,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     let mut account = match account_r(&deps.storage).may_load(sender.as_str().as_bytes())? {
         None => {
             // Airdrop task
-            match config.airdrop {
-                None => {}
-                Some(airdrop) => {
+           if let Some(airdrop) = config.airdrop {
                     let msg = CompleteTask {
                         address: sender.clone(),
                         padding: None,
