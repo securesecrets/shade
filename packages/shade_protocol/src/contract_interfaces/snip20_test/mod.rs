@@ -323,7 +323,7 @@ impl HandleCallback for HandleMsg {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
-struct Snip20ReceiveMsg {
+pub struct Snip20ReceiveMsg {
     pub sender: HumanAddr,
     pub from: HumanAddr,
     pub amount: Uint128,
@@ -466,6 +466,12 @@ pub struct PermitParams {
     pub allowed_tokens: Vec<HumanAddr>,
     pub permit_name: String,
     pub permissions: Vec<Permission>,
+}
+
+impl PermitParams {
+    pub fn contains(&self, perm: Permission) -> bool {
+        self.permissions.contains(&perm)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

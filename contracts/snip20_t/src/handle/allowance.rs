@@ -92,8 +92,8 @@ pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     try_transfer_impl(
-        deps,
-        &spender,
+        &mut deps.storage,
+        &env.message.sender,
         Some(&owner),
         &recipient,
         amount,
@@ -118,8 +118,8 @@ pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
     let block = &env.block;
     for action in actions {
         try_transfer_impl(
-            deps,
-            &action.spender,
+            &mut deps.storage,
+            &env.message.sender,
             Some(&action.owner),
             &action.recipient,
             action.amount,
@@ -151,12 +151,12 @@ pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     try_send_impl(
-        deps,
+        &mut deps.storage,
         &mut messages,
-        &spender,
+        &env.message.sender,
         Some(&owner),
         &recipient,
-        recipient_code_hash
+        recipient_code_hash,
         amount,
         memo,
         msg,
@@ -182,7 +182,7 @@ pub fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
 
     for action in actions {
         try_send_impl(
-            deps,
+            &mut deps.storage,
             &mut messages,
             &sender,
             Some(&action.owner),

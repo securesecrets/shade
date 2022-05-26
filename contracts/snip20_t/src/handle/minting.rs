@@ -127,7 +127,7 @@ pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
 
     let mut minters = Minters::load(&deps.storage)?;
     for minter in minters_to_remove {
-        minters.retain(|x| x != &minter);
+        minters.0.retain(|x| x != &minter);
     }
     minters.save(&mut deps.storage)?;
 

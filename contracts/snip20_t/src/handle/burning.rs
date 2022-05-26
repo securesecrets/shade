@@ -102,7 +102,7 @@ pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
             &env.block
         )?;
 
-        Balance::sub(&mut deps.storage, amount, &action.owner)?;
+        Balance::sub(&mut deps.storage, action.amount, &action.owner)?;
 
         // Dec total supply
         // TODO: cannot burn more than total supply error

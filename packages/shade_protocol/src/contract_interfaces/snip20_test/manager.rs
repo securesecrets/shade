@@ -20,7 +20,7 @@ impl ContractStatusLevel {
     pub fn save<S: Storage>(self, storage: &mut S) -> StdResult<()> {
         ContractStatus(self.into()).save(storage)
     }
-    pub fn load<S: Storage>(storage: &mut S) -> StdResult<Self> {
+    pub fn load<S: Storage>(storage: & S) -> StdResult<Self> {
         let i = ContractStatus::load(storage)?.0;
         let item = match i {
             1 => ContractStatusLevel::NormalRun,
@@ -224,7 +224,7 @@ impl ItemStorage for Minters {
     const ITEM: Item<'static, Self> = Item::new("minters-");
 }
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct Allowance {
     pub amount: Uint128,
     pub expiration: Option<u64>,
@@ -258,7 +258,7 @@ impl Allowance {
         if allowance.is_expired(block) {
             return Err(StdError::generic_err("Insufficient allowance TODO: missing allowance and amount"));
         }
-        if let Some(new_allowance) = allowance.amount.checked_sub(amount) {
+        if let Ok(new_allowance) = allowance.amount.checked_sub(amount) {
             allowance.amount = new_allowance;
         } else {
             return Err(StdError::generic_err("Insufficient allowance TODO: missing allowance and amount"));
@@ -301,7 +301,17 @@ impl Key {
 
         let key = sha_256(&rand_slice);
 
-        Self(VIEWING_KEY_PREFIX.to_string() + &base64::encode(key))
+        Self(base64::encode(key))
+    }
+
+    pub fn verify<S: Storage>(storage: &S, address: HumanAddr, key: String) -> StdResult<bool> {
+        Ok(match HashedKey::may_load(storage, address)? {
+            None => {
+                Key(key).compare(&[0u8; KEY_SIZE]);
+                false
+            }
+            Some(hashed) => Key(key).compare(&hashed.0)
+        })
     }
 }
 
@@ -314,7 +324,7 @@ const KEY_SIZE: usize = 32;
 impl ViewingKey<32> for Key{}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct HashedKey(pub [u8; VIEWING_KEY_SIZE]);
+pub struct HashedKey(pub [u8; KEY_SIZE]);
 impl MapStorage<'static, HumanAddr> for HashedKey {
     const MAP: Map<'static, HumanAddr, Self> = Map::new("hashed-viewing-key-");
 }

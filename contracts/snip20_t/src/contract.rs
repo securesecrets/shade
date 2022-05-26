@@ -1,6 +1,9 @@
 use cosmwasm_std::{Api, Binary, Env, Extern, from_binary, HandleResponse, HandleResult, InitResponse, Querier, StdError, StdResult, Storage, to_binary};
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
-use shade_protocol::contract_interfaces::snip20_test::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, Extended};
+use shade_protocol::contract_interfaces::snip20_test::{InitMsg, HandleMsg, HandleAnswer, QueryMsg, QueryAnswer, Permission, QueryWithPermit};
+use shade_protocol::contract_interfaces::snip20_test::manager::{Key, PermitKey};
+use shade_protocol::utils::storage::plus::MapStorage;
+use crate::query;
 use crate::handle::transfers::{try_batch_send, try_batch_transfer, try_send, try_transfer};
 use crate::handle::{try_change_admin, try_create_viewing_key, try_deposit, try_redeem, try_register_receive, try_revoke_permit, try_set_contract_status, try_set_viewing_key};
 use crate::handle::allowance::{try_batch_send_from, try_batch_transfer_from, try_decrease_allowance, try_increase_allowance, try_send_from, try_transfer_from};
@@ -125,15 +128,94 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::ExchangeRate { } => query::exchange_rate(deps),
             QueryMsg::Minters { } => query::minters(deps),
 
-            QueryMsg::WithPermit { .. } => {}
+            QueryMsg::WithPermit { permit, query } => {
+                // Validate permit and get account
+                let account = permit.validate(None)?.as_humanaddr(&deps.api)?;
 
-            _ => viewing_key_queries(deps, msg)
+                // Check that permit is not revoked
+                if PermitKey::may_load(&deps.storage, (account.clone(), permit.params.permit_name.clone()))?.is_some() {
+                    return Err(StdError::generic_err("Permit key is revoked"))
+                }
+
+                match query {
+                    QueryWithPermit::Allowance { owner, spender, .. } => {
+                        if !permit.params.contains(Permission::Allowance) {
+                            return Err(StdError::generic_err("No permission to query allowance"))
+                        }
+
+                        if owner != account && spender != account {
+                            return Err(StdError::generic_err("Only allowance owner or spender can query this"))
+                        }
+
+                        query::allowance(deps, owner, spender)
+                    }
+                    QueryWithPermit::Balance { } => {
+                        if !permit.params.contains(Permission::Balance) {
+                            return Err(StdError::generic_err("No permission to query balance"))
+                        }
+
+                        query::balance(deps, account.clone())
+                    }
+                    QueryWithPermit::TransferHistory {page, page_size } => {
+                        if !permit.params.contains(Permission::History) {
+                            return Err(StdError::generic_err("No permission to query history"))
+                        }
+
+                        query::transfer_history(deps, account.clone(), page.unwrap_or(0), page_size)
+                    }
+                    QueryWithPermit::TransactionHistory { page, page_size } => {
+                        if !permit.params.contains(Permission::History) {
+                            return Err(StdError::generic_err("No permission to query history"))
+                        }
+
+                        query::transaction_history(deps, account.clone(), page.unwrap_or(0), page_size)
+                    }
+                }
+            }
+
+            _ => {
+                match msg {
+                    QueryMsg::Allowance { owner, spender, key } => {
+                        if Key::verify(&deps.storage, owner.clone(), key.clone())? ||
+                            Key::verify(&deps.storage, spender.clone(), key)? {
+                            query::allowance(deps, owner, spender)
+                        }
+
+                        else {
+                            return Err(StdError::generic_err("Invalid viewing key"))
+                        }
+                    }
+                    QueryMsg::Balance { address, key } => {
+                        if Key::verify(&deps.storage, address.clone(), key.clone())? {
+                            query::balance(deps, address.clone())
+                        }
+
+                        else {
+                            return Err(StdError::generic_err("Invalid viewing key"))
+                        }
+                    }
+                    QueryMsg::TransferHistory { address, key, page, page_size } => {
+                        if Key::verify(&deps.storage, address.clone(), key.clone())? {
+                            query::transfer_history(deps, address.clone(), page.unwrap_or(0), page_size)
+                        }
+
+                        else {
+                            return Err(StdError::generic_err("Invalid viewing key"))
+                        }
+                    }
+                    QueryMsg::TransactionHistory { address, key, page, page_size } => {
+                        if Key::verify(&deps.storage, address.clone(), key.clone())? {
+                            query::transaction_history(deps, address.clone(), page.unwrap_or(0), page_size)
+                        }
+
+                        else {
+                            return Err(StdError::generic_err("Invalid viewing key"))
+                        }
+                    }
+                    _ => return Err(StdError::generic_err("Not an authenticated msg"))
+                }
+            }
         }),
         RESPONSE_BLOCK_SIZE,
     )
 }
-QueryMsg::Allowance { .. } => {}
-QueryMsg::Balance { .. } => {}
-QueryMsg::TransferHistory { .. } => {}
-QueryMsg::TransactionHistory { .. } => {}
-

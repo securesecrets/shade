@@ -40,7 +40,7 @@ treasury = ["utils", "adapter", "snip20"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 adapter = []
-snip20_test = ["utils", "errors", "storage_plus", "dep:query-authentication"]
+snip20_test = ["utils", "errors", "storage_plus", "dep:query-authentication", "dep:base64"]
 snip20_staking = ["utils"]
 sky = ["snip20", "utils", "sienna"]
 
@@ -65,6 +65,7 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 # TODO: fix import
 chrono = "0.4.19"
+base64 = { version = "0.12.3", optional = true }
 # Needed for transactions
 query-authentication = { git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0", optional = true }
 # Used by airdrop

@@ -28,10 +28,10 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     Balance::sub(&mut deps.storage, amount, &sender)?;
     TotalSupply::sub(&mut deps.storage, amount)?;
 
-    let token_reserve = deps
+    let token_reserve = Uint128::from(deps
         .querier
         .query_balance(&env.contract.address, "uscrt")?
-        .amount;
+        .amount);
     if amount > token_reserve {
         return Err(StdError::generic_err(
             "You are trying to redeem for more SCRT than the token has in its deposit reserve.",
@@ -43,11 +43,13 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
         amount: amount.into(),
     }];
 
+    let denom = CoinInfo::load(&deps.storage)?.symbol;
+
     store_redeem(
         &mut deps.storage,
         &sender,
         amount,
-        CoinInfo::load(&deps.storage)?.symbol,
+        denom,
         &env.block,
     )?;
 
