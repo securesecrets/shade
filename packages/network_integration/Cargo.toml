@@ -29,6 +29,7 @@ cosmwasm-math-compat = { path = "../cosmwasm_math_compat" }
 shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = [
   "dex",
   "airdrop",
+  "bonds",
   "initializer",
   "governance",
   "mint",
@@ -38,6 +39,7 @@ shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = [
   "staking",
   "treasury",
 ] }
+mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }
 secretcli = { version = "0.1.0", path = "../secretcli" }
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 serde_json = { version = "1.0.67" }
