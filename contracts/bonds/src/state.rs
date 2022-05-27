@@ -8,11 +8,10 @@ use shade_protocol::{
     contract_interfaces::{
         bonds::{
             errors::{permit_contract_mismatch, permit_key_revoked},
-            Account, AccountPermit, AddressProofPermit, BondOpportunity, Config,
+            Account, AccountPermit, BondOpportunity, Config,
         },
         snip20::Snip20Asset,
     },
-    utils::asset::Contract,
 };
 
 pub static CONFIG: &[u8] = b"config";

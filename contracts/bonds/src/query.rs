@@ -1,7 +1,7 @@
 use crate::{
     handle::oracle,
     state::{
-        account_r, account_viewkey_r, allowance_key_r, bond_opportunity_r, collateral_assets_r,
+        account_r, allowance_key_r, bond_opportunity_r, collateral_assets_r,
         config_r, global_total_claimed_r, global_total_issued_r, issued_asset_r,
         validate_account_permit,
     },
@@ -9,15 +9,11 @@ use crate::{
 
 use cosmwasm_math_compat::Uint128;
 
-use shade_protocol::contract_interfaces::bonds::errors::not_treasury_bond;
-
 use secret_toolkit::snip20::{allowance_query, balance_query};
 
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
 use shade_protocol::contract_interfaces::{
-    bonds::{AccountKey, AccountPermit, BondOpportunity, QueryAnswer},
-    oracles,
-    snip20::Snip20Asset,
+    bonds::{AccountPermit, BondOpportunity, QueryAnswer},
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {

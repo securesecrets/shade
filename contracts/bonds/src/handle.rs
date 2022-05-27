@@ -1,43 +1,40 @@
-use chrono::prelude::*;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HumanAddr, Querier, StdError, StdResult, Storage, Uint128 as prevUint128, WasmMsg,
+    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    HumanAddr, Querier, StdError, StdResult, Storage,
 };
-
-use query_authentication::viewing_keys::ViewingKey;
 
 use secret_toolkit::{
     snip20::{
-        allowance_query, mint_msg, register_receive_msg, send_msg, token_info_query,
-        transfer_from_msg, transfer_msg, Allowance,
+        allowance_query, mint_msg, register_receive_msg, send_msg,
+        transfer_from_msg,
     },
-    utils::{HandleCallback, InitCallback, Query},
+    utils::{HandleCallback, Query},
 };
 
 use shade_protocol::contract_interfaces::{
     airdrop::HandleMsg::CompleteTask,
     oracles::band::ReferenceData,
     oracles::oracle::QueryMsg::Price,
-    snip20::{token_config_query, HandleMsg, Snip20Asset, TokenConfig},
+    snip20::{Snip20Asset},
 };
 use shade_protocol::contract_interfaces::{
     bonds::{
         errors::*,
-        BondOpportunity, SlipMsg, {Account, AccountKey, Config, HandleAnswer, PendingBond},
+        BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
     },
     snip20::fetch_snip20,
 };
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
 
-use std::{cmp::Ordering, convert::TryFrom, ops::Add};
+use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::state::{
-    account_r, account_viewkey_w, account_w, allocated_allowance_r, allocated_allowance_w,
+    account_r, account_w, allocated_allowance_r, allocated_allowance_w,
     allowance_key_r, allowance_key_w, bond_opportunity_r, bond_opportunity_w, collateral_assets_r,
-    collateral_assets_w, config_r, config_w, global_total_claimed_r, global_total_claimed_w,
-    global_total_issued_r, global_total_issued_w, issued_asset_r,
+    collateral_assets_w, config_r, config_w, global_total_claimed_w,
+    global_total_issued_r, global_total_issued_w, issued_asset_r, revoke_permit,
 };
 
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
@@ -164,18 +161,22 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 pub fn try_remove_admin<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    admin_to_remove: HumanAddr
+    admin_to_remove: HumanAddr,
 ) -> StdResult<HandleResponse> {
-    let mut config = config_r(&deps.storage).load()?;
+    let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.limit_admin {
-        return Err(not_limit_admin())
+        return Err(not_limit_admin());
     }
 
     // Retain only admin addresses that don't match the one to remove
-    config.admin.retain(
-    |admin| admin != &admin_to_remove,
-    );
+    config_w(&mut deps.storage).update(|mut state|{
+        state.admin.retain(
+            |admin| admin != &admin_to_remove,
+        );
+        Ok(state)
+    })?;
+
 
     Ok(HandleResponse {
         messages: vec![],
@@ -189,16 +190,20 @@ pub fn try_remove_admin<S: Storage, A: Api, Q: Querier>(
 pub fn try_add_admin<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    admin_to_add: HumanAddr
+    admin_to_add: HumanAddr,
 ) -> StdResult<HandleResponse> {
-    let mut config = config_r(&deps.storage).load()?;
+    let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.limit_admin {
-        return Err(not_limit_admin())
+        return Err(not_limit_admin());
     }
-
     // Add the new admin address
-    config.admin.push(admin_to_add);
+    if !config.admin.contains(&admin_to_add){
+        config_w(&mut deps.storage).update(|mut state| {
+            state.admin.push(admin_to_add);
+            Ok(state)
+        })?;
+    }
     
     Ok(HandleResponse {
         messages: vec![],
@@ -285,18 +290,16 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    bond_opportunity_w(&mut deps.storage).update(env.message.sender.to_string().as_bytes(), |opp| {
-        let o = opp.unwrap();
-        o.amount_issued.checked_add(amount_to_issue)?;
-        Ok(o)
-    })?;
+    let mut opp = bond_opportunity_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
+    opp.amount_issued += amount_to_issue;
+    bond_opportunity_w(&mut deps.storage).save(env.message.sender.to_string().as_bytes(), &opp)?;
 
     let mut messages = vec![];
 
     // Collateral to treasury
     messages.push(send_msg(
         config.treasury.clone(),
-        prevUint128(deposit_amount.u128()),
+        deposit_amount.into(),
         None,
         None,
         None,
@@ -356,7 +359,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         messages.push(transfer_from_msg(
             config.treasury.clone(),
             env.contract.address.clone(),
-            prevUint128(amount_to_issue.u128()),
+            amount_to_issue.into(),
             None,
             None,
             256,
@@ -366,7 +369,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     } else {
         messages.push(mint_msg(
             config.contract,
-            prevUint128(amount_to_issue.u128()),
+            amount_to_issue.into(),
             None,
             None,
             256,
@@ -445,19 +448,6 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     //Set up empty message vec
     let mut messages = vec![];
 
-    // // Decide via config boolean whether or not the contract is a minting bond
-    // if config.minting_bond {
-    //     // Mint out the total using snip20 to the user
-    //     messages.push(mint_msg(
-    //         env.message.sender,
-    //         total,
-    //         None,
-    //         None,
-    //         256,
-    //         config.issued_asset.code_hash.clone(),
-    //         config.issued_asset.address,
-    //     )?);
-    // } else {
     messages.push(send_msg(
         env.message.sender,
         total.into(),
@@ -876,4 +866,20 @@ pub fn oracle<S: Storage, A: Api, Q: Querier>(
         config.oracle.address,
     )?;
     Ok(Uint128::from(answer.rate))
+}
+
+pub fn try_disable_permit<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: &Env,
+    key: String,
+) -> StdResult<HandleResponse> {
+    revoke_permit(&mut deps.storage, env.message.sender.to_string(), key);
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::DisablePermit {
+            status: ResponseStatus::Success,
+        })?),
+    })
 }

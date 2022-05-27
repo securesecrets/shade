@@ -29,6 +29,7 @@ use std::{
 
 pub const ADMIN_KEY: &str = "b";
 pub const LIMIT_ADMIN_KEY: &str = "c";
+pub const ADMIN_KEY_2: &str = "d";
 
 fn setup_contracts(
     global_issuance_limit: Uint128,
@@ -162,11 +163,11 @@ fn setup_contracts(
     print_header("Oracle Initiated");
 
     let bonds_init_msg = bonds::InitMsg {
-        limit_admin: HumanAddr::from(account_limit_admin.clone()),
+        limit_admin: HumanAddr::from(account_admin.clone()),
         global_issuance_limit,
         global_minimum_bonding_period,
         global_maximum_discount,
-        admin: HumanAddr::from(account_admin.clone()),
+        admin: vec![HumanAddr::from(account_admin.clone())],
         oracle: Contract {
             address: HumanAddr::from(oracle.address.clone()),
             code_hash: oracle.code_hash.clone(),
@@ -368,7 +369,7 @@ fn setup_contracts_allowance(
         global_issuance_limit,
         global_minimum_bonding_period,
         global_maximum_discount,
-        admin: HumanAddr::from(account_admin.clone()),
+        admin: vec![HumanAddr::from(account_admin.clone())],
         oracle: Contract {
             address: HumanAddr::from(oracle.address.clone()),
             code_hash: oracle.code_hash.clone(),
@@ -552,7 +553,6 @@ fn update_bonds_config(
     reports: &mut Vec<Report>,
 ) -> Result<()> {
     let msg = bonds::HandleMsg::UpdateConfig {
-        admin,
         oracle,
         treasury,
         issued_asset,
@@ -730,7 +730,7 @@ fn print_pending_bonds(bonds: &NetContract, reports: &mut Vec<Report>) -> Result
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contract: HumanAddr(bonds.address.clone()),
+            contracts: vec![HumanAddr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,
@@ -769,22 +769,6 @@ fn set_viewing_keys(
     issued_snip20: &NetContract,
     collat_snip20: &NetContract,
 ) -> Result<()> {
-    // let msg = bonds::HandleMsg::SetViewingKey {
-    //     key: key.clone(),
-    // };
-
-    // let tx_info = handle(
-    //     &msg,
-    //     bonds,
-    //     ACCOUNT_KEY,
-    //     Some(GAS),
-    //     Some("test"),
-    //     None,
-    //     reports,
-    //     None,
-    // )?.1;
-
-    // println!("Gas used: {}", tx_info.gas_used);
 
     let issued_snip_msg = snip20::HandleMsg::SetViewingKey {
         key: key.clone(),
@@ -823,16 +807,6 @@ fn set_viewing_keys(
 
     Ok(())
 }
-
-// struct Key {pub key: String,}
-
-// impl ToString for Key {
-//     fn to_string(&self) -> String {
-//         self.0.clone()
-//     }
-// }
-
-// impl ViewingKey<32> for Key{}
 
 fn set_band_prices(
     collat_snip: &NetContract,
@@ -1006,6 +980,93 @@ fn create_signed_permit<T: Clone + Serialize>(
     permit
 }
 
+fn add_admin(
+    sender: &str,
+    recipient: &str,
+    bonds: &NetContract,
+    reports: &mut Vec<Report>,
+) -> Result<()> {
+    let new_admin = account_address(recipient)?;
+
+    let msg = bonds::HandleMsg::AddAdmin { 
+        admin_to_add: HumanAddr::from(new_admin), 
+        padding: None 
+    };
+
+    print_header("message made");
+
+    let add_admin_tx_info = handle(
+        &msg,
+        bonds,
+        sender,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,        
+    )?
+    .1;
+    
+    println!("Gas used: {}", add_admin_tx_info.gas_used);
+
+    Ok(())
+}
+
+fn remove_admin(
+    sender: &str,
+    recipient: &str,
+    bonds: &NetContract,
+    reports: &mut Vec<Report>,
+) -> Result<()> {
+    let removed_admin = account_address(recipient)?;
+
+    let msg = bonds::HandleMsg::RemoveAdmin { 
+        admin_to_remove: HumanAddr::from(removed_admin), 
+        padding: None, 
+    };
+    
+    let remove_admin_tx_info = handle(
+        &msg,
+        bonds,
+        sender,
+        Some(GAS),
+        Some("test"),
+        None,
+        reports,
+        None,
+    )?.1;
+
+    println!("Gas used: {}", remove_admin_tx_info.gas_used);
+
+    Ok(())
+}
+
+fn print_config(
+    bonds: &NetContract,
+) -> Result<()> {
+    let msg = bonds::QueryMsg::Config {  };
+
+    let query_info = query(
+        &bonds,
+        msg,
+        None,
+    )?;
+
+    if let bonds::QueryAnswer::Config { config } = query_info {
+        for admin in config.admin.iter() {
+            println!("Admin: {}", admin)
+        }
+    }
+    
+    Ok(())
+}
+
+// fn revoke_permit(
+//     permit: 
+//     bonds: &NetContract,
+//     reports: &mut Vec<Report>,
+// ) -? 
+
 #[test]
 fn run_bonds_singular() -> Result<()> {
     let account_a = account_address(ACCOUNT_KEY)?;
@@ -1033,6 +1094,48 @@ fn run_bonds_singular() -> Result<()> {
     print_contract(&bonds);
     print_contract(&mockband);
     print_contract(&oracle);
+
+    // print_header("Adding second Admin");
+    // add_admin(ADMIN_KEY, ACCOUNT_KEY, &bonds, &mut reports)?;
+    // print_header("Attempt failed");
+    // add_admin(LIMIT_ADMIN_KEY, ACCOUNT_KEY, &bonds, &mut reports)?;
+
+    // print_config(&bonds)?;
+
+    // print_header("Removing second Admin");
+    // remove_admin(ADMIN_KEY, ACCOUNT_KEY, &bonds, &mut reports)?;
+    // remove_admin(LIMIT_ADMIN_KEY, ACCOUNT_KEY, &bonds, &mut reports)?;
+
+    // print_config(&bonds)?;
+
+    let msg = bonds::HandleMsg::AddAdmin { admin_to_add: HumanAddr::from(account_a.clone()), padding: None };
+    let tx = handle(
+        &msg,
+        &bonds,
+        ADMIN_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        &mut reports,
+        None
+    )?;
+
+//    print_header("Trying second admin");
+
+    // let tx_2 = handle(
+    //     &msg,
+    //     &bonds,
+    //     LIMIT_ADMIN_KEY,
+    //     Some(GAS),
+    //     Some("test"),
+    //     None,
+    //     &mut reports,
+    //     None
+    // )?;
+
+    print_header("Removing second Admin");
+    remove_admin(ADMIN_KEY, ACCOUNT_KEY, &bonds, &mut reports)?;
+    print_config(&bonds)?;
 
     set_band_prices(
         &collateral_snip,
@@ -1118,7 +1221,7 @@ fn run_bonds_singular() -> Result<()> {
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contract: HumanAddr(bonds.address.clone()),
+            contracts: vec![HumanAddr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,
@@ -1127,9 +1230,9 @@ fn run_bonds_singular() -> Result<()> {
     );
 
     let account_quer_msg = bonds::QueryMsg::Account {
-        permit: account_permit,
+        permit: account_permit.clone(),
     };
-    let account_query: bonds::QueryAnswer = query(&bonds, account_quer_msg, None)?;
+    let account_query: bonds::QueryAnswer = query(&bonds, account_quer_msg.clone(), None)?;
 
     if let bonds::QueryAnswer::Account { pending_bonds } = account_query {
         assert_eq!(pending_bonds[0].deposit_amount, Uint128::new(100_000_000));
@@ -1153,7 +1256,7 @@ fn run_bonds_singular() -> Result<()> {
     claim_bond(&bonds, &mut reports)?;
 
     let bond_opp_query_msg_2 = bonds::QueryMsg::BondOpportunities {};
-    let opp_query_2: bonds::QueryAnswer = query(&bonds, bond_opp_query_msg_2, None)?;
+    let opp_query_2: bonds::QueryAnswer = query(&bonds, bond_opp_query_msg_2.clone(), None)?;
 
     if let bonds::QueryAnswer::BondOpportunities { bond_opportunities } = opp_query_2 {
         assert_eq!(
@@ -1205,6 +1308,19 @@ fn run_bonds_singular() -> Result<()> {
     if let bonds::QueryAnswer::BondOpportunities { bond_opportunities } = opp_query_3 {
         assert_eq!(bond_opportunities.is_empty(), true);
     }
+
+    let new_msg = bonds::HandleMsg::DisablePermit { permit: account_permit.params.key, padding: None };
+    handle(
+        &new_msg,
+        &bonds,
+        ADMIN_KEY,
+        Some(GAS),
+        Some("test"),
+        None,
+        &mut reports,
+        None
+    )?;
+    //query(&bonds, account_quer_msg, None)?;
 
     buy_bond(&collateral_snip, Uint128::new(10), &mut reports, &bonds)?;
 
@@ -1340,7 +1456,7 @@ fn run_bonds_multiple_opps() -> Result<()> {
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contract: HumanAddr(bonds.address.clone()),
+            contracts: vec![HumanAddr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,
@@ -1511,7 +1627,7 @@ fn run_bonds_singular_allowance() -> Result<()> {
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contract: HumanAddr(bonds.address.clone()),
+            contracts: vec![HumanAddr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,
@@ -1760,7 +1876,7 @@ fn run_bonds_bad_opportunities() -> Result<()> {
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contract: HumanAddr(bonds.address.clone()),
+            contracts: vec![HumanAddr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,

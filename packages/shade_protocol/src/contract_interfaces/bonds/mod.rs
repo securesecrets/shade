@@ -121,6 +121,10 @@ pub enum HandleMsg {
     Claim {
         padding: Option<String>,
     },
+    DisablePermit {
+        permit: String,
+        padding: Option<String>,
+    }
 }
 
 impl HandleCallback for HandleMsg {
@@ -167,6 +171,9 @@ pub enum HandleAnswer {
     ClosedBond {
         status: ResponseStatus,
         collateral_asset: Contract,
+    },
+    DisablePermit {
+        status: ResponseStatus,
     },
 }
 
