@@ -15,11 +15,15 @@ pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let owner = env.message.sender;
 
-    let mut allowance = Allowance::load(&deps.storage, (owner.clone(), spender.clone()))?;
+    let mut allowance = Allowance::may_load(
+        &deps.storage,
+        (owner.clone(), spender.clone())
+    )?.unwrap_or(Allowance::default());
 
     // Reset allowance if its expired
     if allowance.is_expired(&env.block) {
-        allowance = Allowance::default();
+        allowance.amount = amount;
+        allowance.expiration = None;
     } else {
         allowance.amount = match allowance.amount.checked_add(amount) {
             Ok(amount) => amount,

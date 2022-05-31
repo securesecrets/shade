@@ -2,7 +2,7 @@ use cosmwasm_std::{Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAdd
 use secret_toolkit::utils::HandleCallback;
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20_test::{batch, HandleAnswer, ReceiverHandleMsg};
-use shade_protocol::contract_interfaces::snip20_test::manager::{Allowance, Balance, CoinInfo, Config, ReceiverHash};
+use shade_protocol::contract_interfaces::snip20_test::manager::{Allowance, Balance, CoinInfo, Config, ContractStatusLevel, ReceiverHash};
 use shade_protocol::contract_interfaces::snip20_test::transaction_history::store_transfer;
 use shade_protocol::utils::generic_response::ResponseStatus::Success;
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
@@ -22,11 +22,13 @@ pub fn try_transfer_impl<S: Storage>(
         return Err(StdError::generic_err("Transfers are disabled"))
     }
 
-    let some_owner = owner.unwrap_or(sender);
-
-    if owner.is_some() {
-        Allowance::spend(storage, some_owner, sender, amount, block)?;
-    }
+    let some_owner = match owner {
+        None => sender,
+        Some(owner) => {
+            Allowance::spend(storage, owner, sender, amount, block)?;
+            owner
+        }
+    };
 
     Balance::transfer(storage, amount, some_owner, recipient)?;
 

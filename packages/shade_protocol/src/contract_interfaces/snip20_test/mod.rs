@@ -10,7 +10,7 @@ use secret_toolkit::crypto::sha_256;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 use cosmwasm_math_compat::Uint128;
-use crate::contract_interfaces::snip20_test::manager::{Admin, Balance, CoinInfo, Config, ContractStatusLevel, RandSeed, TotalSupply};
+use crate::contract_interfaces::snip20_test::manager::{Admin, Balance, CoinInfo, Config, ContractStatusLevel, Minters, RandSeed, TotalSupply};
 use crate::contract_interfaces::snip20_test::transaction_history::{RichTx, store_mint, Tx};
 use crate::utils::generic_response::ResponseStatus;
 use crate::utils::storage::plus::ItemStorage;
@@ -82,7 +82,7 @@ impl InitMsg {
         if let Some(initial_balances) = &self.initial_balances{
             for balance in initial_balances.iter() {
                 Balance::set(storage, balance.amount.clone(), &balance.address)?;
-                total_supply.checked_add(balance.amount)?;
+                total_supply = total_supply.checked_add(balance.amount)?;
 
                 store_mint(
                     storage,
@@ -98,6 +98,10 @@ impl InitMsg {
 
         TotalSupply::set(storage, total_supply)?;
 
+        ContractStatusLevel::NormalRun.save(storage)?;
+
+        Minters(vec![]).save(storage)?;
+
         Ok(())
     }
 }
@@ -107,22 +111,22 @@ impl InitMsg {
 pub struct InitConfig {
     /// Indicates whether the total supply is public or should be kept secret.
     /// default: False
-    public_total_supply: Option<bool>,
+    pub public_total_supply: Option<bool>,
     /// Indicates whether deposit functionality should be enabled
     /// default: False
-    enable_deposit: Option<bool>,
+    pub enable_deposit: Option<bool>,
     /// Indicates whether redeem functionality should be enabled
     /// default: False
-    enable_redeem: Option<bool>,
+    pub enable_redeem: Option<bool>,
     /// Indicates whether mint functionality should be enabled
     /// default: False
-    enable_mint: Option<bool>,
+    pub enable_mint: Option<bool>,
     /// Indicates whether burn functionality should be enabled
     /// default: False
-    enable_burn: Option<bool>,
+    pub enable_burn: Option<bool>,
     /// Indicates whether transferring tokens should be enables
     /// default: True
-    enable_transfer: Option<bool>,
+    pub enable_transfer: Option<bool>,
 }
 
 impl Default for InitConfig {
@@ -166,7 +170,7 @@ impl InitConfig {
         self.enable_burn.unwrap_or(false)
     }
     pub fn transfer_enabled(&self) -> bool {
-        self.enable_burn.unwrap_or(false)
+        self.enable_burn.unwrap_or(true)
     }
 }
 
@@ -509,12 +513,12 @@ pub enum QueryMsg {
         address: HumanAddr,
         key: String,
     },
-    TransferHistory {
-        address: HumanAddr,
-        key: String,
-        page: Option<u32>,
-        page_size: u32,
-    },
+    // TransferHistory {
+    //     address: HumanAddr,
+    //     key: String,
+    //     page: Option<u32>,
+    //     page_size: u32,
+    // },
     TransactionHistory {
         address: HumanAddr,
         key: String,
@@ -540,10 +544,10 @@ pub enum QueryWithPermit {
         spender: HumanAddr,
     },
     Balance {},
-    TransferHistory {
-        page: Option<u32>,
-        page_size: u32,
-    },
+    // TransferHistory {
+    //     page: Option<u32>,
+    //     page_size: u32,
+    // },
     TransactionHistory {
         page: Option<u32>,
         page_size: u32,
@@ -560,6 +564,7 @@ pub enum QueryAnswer {
         total_supply: Option<Uint128>,
     },
     TokenConfig {
+        // TODO: add other config items as optionals so they can be ignored in other snip20s
         public_total_supply: bool,
         deposit_enabled: bool,
         redeem_enabled: bool,

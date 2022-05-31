@@ -51,3 +51,12 @@ pub mod snip20_staking {
     pub struct Snip20Staking;
     harness_macro::implement_harness!(Snip20Staking, spip_stkd_0);
 }
+
+#[cfg(feature = "snip20_t")]
+pub mod snip20_t {
+    use crate::harness_macro;
+    use snip20_t;
+
+    pub struct Snip20T;
+    harness_macro::implement_harness!(Snip20T, snip20_t);
+}

@@ -94,21 +94,6 @@ impl StoredLegacyTransfer {
         };
         Ok(tx)
     }
-
-    fn append<S: Storage>(
-        &self,
-        storage: &mut S,
-        for_address: &HumanAddr,
-    ) -> StdResult<()> {
-        let mut id = UserTXTotal::may_load(
-            storage,
-            USER_TRANSFER_INDEX,
-            for_address.clone()
-        )?.unwrap_or(UserTXTotal(0)).0;
-
-        UserTXTotal(id + 1).save(storage, USER_TRANSFER_INDEX, for_address.clone())?;
-        self.save(storage, (for_address.clone(), id))
-    }
 }
 
 impl MapStorage<'static, (HumanAddr, u64)> for StoredLegacyTransfer {
@@ -279,33 +264,6 @@ impl StoredRichTx {
             block_height: self.block_height,
         })
     }
-
-    fn from_stored_legacy_transfer(transfer: StoredLegacyTransfer) -> Self {
-        let action = StoredTxAction::transfer(transfer.from, transfer.sender, transfer.receiver);
-        Self {
-            id: transfer.id,
-            action,
-            coins: transfer.coins,
-            memo: transfer.memo,
-            block_time: transfer.block_time,
-            block_height: transfer.block_height,
-        }
-    }
-
-    fn append<S: Storage>(
-        &self,
-        storage: &mut S,
-        for_address: &HumanAddr,
-    ) -> StdResult<()> {
-        let mut id = UserTXTotal::may_load(
-            storage,
-            USER_TX_INDEX,
-            for_address.clone()
-        )?.unwrap_or(UserTXTotal(0)).0;
-
-        UserTXTotal(id + 1).save(storage, USER_TX_INDEX, for_address.clone())?;
-        self.save(storage, (for_address.clone(), id))
-    }
 }
 
 impl MapStorage<'static, (HumanAddr, u64)> for StoredRichTx {
@@ -321,7 +279,7 @@ impl ItemStorage for TXCount {
 }
 
 fn increment_tx_count<S: Storage>(storage: &mut S) -> StdResult<u64> {
-    let id = TXCount::load(storage)?.0 + 1;
+    let id = TXCount::may_load(storage)?.unwrap_or(TXCount(0)).0 + 1;
     TXCount(id).save(storage)?;
     Ok(id)
 }
@@ -330,9 +288,23 @@ fn increment_tx_count<S: Storage>(storage: &mut S) -> StdResult<u64> {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 struct UserTXTotal(pub u64);
 
-impl NaiveMapStorage<'static> for UserTXTotal {}
-const USER_TX_INDEX: Map<'static, HumanAddr, UserTXTotal> = Map::new("user-tx-index-");
-const USER_TRANSFER_INDEX: Map<'static, HumanAddr, UserTXTotal> = Map::new("user-transfer-index-");
+impl UserTXTotal {
+    pub fn append<S: Storage>(
+        storage: &mut S,
+        for_address: &HumanAddr,
+        tx: &StoredRichTx,
+    ) -> StdResult<()> {
+        let id = UserTXTotal::may_load(storage, for_address.clone())?.unwrap_or(UserTXTotal(0)).0;
+        UserTXTotal(id + 1).save(storage, for_address.clone())?;
+        tx.save(storage, (for_address.clone(), id))?;
+
+        Ok(())
+    }
+}
+
+impl MapStorage<'static, HumanAddr> for UserTXTotal {
+    const MAP: Map<'static, HumanAddr, Self> = Map::new("user-tx-total-");
+}
 
 #[allow(clippy::too_many_arguments)] // We just need them
 pub fn store_transfer<S: Storage>(
@@ -347,34 +319,28 @@ pub fn store_transfer<S: Storage>(
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
-    let transfer = StoredLegacyTransfer {
+    let tx = StoredRichTx{
         id,
-        from: owner.clone(),
-        sender: sender.clone(),
-        receiver: receiver.clone(),
+        action: StoredTxAction::transfer(owner.clone(), sender.clone(), receiver.clone()),
         coins,
         memo,
-        block_time: block.time,
-        block_height: block.height,
+        block_time: 0,
+        block_height: 0
     };
-    let tx = StoredRichTx::from_stored_legacy_transfer(transfer.clone());
 
     // Write to the owners history if it's different from the other two addresses
     if owner != sender && owner != receiver {
         // cosmwasm_std::debug_print("saving transaction history for owner");
-        tx.append(storage, owner)?;
-        transfer.append(storage, owner)?;
+        UserTXTotal::append(storage, owner, &tx)?;
     }
     // Write to the sender's history if it's different from the receiver
     if sender != receiver {
         // cosmwasm_std::debug_print("saving transaction history for sender");
-        tx.append(storage, sender)?;
-        transfer.append(storage, sender)?;
+        UserTXTotal::append(storage, sender, &tx)?;
     }
     // Always write to the recipient's history
     // cosmwasm_std::debug_print("saving transaction history for receiver");
-    tx.append(storage, receiver)?;
-    transfer.append(storage, receiver)?;
+    UserTXTotal::append(storage, receiver, &tx)?;
 
     Ok(())
 }
@@ -394,9 +360,10 @@ pub fn store_mint<S: Storage>(
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
     if minter != recipient {
-        tx.append(storage, recipient)?;
+        UserTXTotal::append(storage, recipient, &tx)?;
+
     }
-    tx.append(storage, minter)?;
+    UserTXTotal::append(storage, minter, &tx)?;
 
     Ok(())
 }
@@ -416,9 +383,9 @@ pub fn store_burn<S: Storage>(
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
     if burner != owner {
-        tx.append(storage, owner)?;
+        UserTXTotal::append(storage, owner, &tx)?;
     }
-    tx.append(storage, burner)?;
+    UserTXTotal::append(storage, burner, &tx)?;
 
     Ok(())
 }
@@ -435,7 +402,7 @@ pub fn store_deposit<S: Storage>(
     let action = StoredTxAction::deposit();
     let tx = StoredRichTx::new(id, action, coins, None, block);
 
-    tx.append(storage, recipient)?;
+    UserTXTotal::append(storage, recipient, &tx)?;
 
     Ok(())
 }
@@ -452,7 +419,7 @@ pub fn store_redeem<S: Storage>(
     let action = StoredTxAction::redeem();
     let tx = StoredRichTx::new(id, action, coins, None, block);
 
-    tx.append(storage, redeemer)?;
+    UserTXTotal::append(storage, redeemer, &tx)?;
 
     Ok(())
 }
@@ -463,7 +430,7 @@ pub fn get_txs<S: Storage>(
     page: u32,
     page_size: u32,
 ) -> StdResult<(Vec<RichTx>, u64)> {
-    let id = UserTXTotal::load(storage, USER_TX_INDEX, for_address.clone())?.0;
+    let id = UserTXTotal::load(storage, for_address.clone())?.0;
     let start_index = page as u64 * page_size as u64;
     let size: u64;
     if (start_index + page_size as u64) > id {
@@ -482,27 +449,28 @@ pub fn get_txs<S: Storage>(
     Ok((txs, size-start_index))
 }
 
-pub fn get_transfers<S: Storage>(
-    storage: &S,
-    for_address: &HumanAddr,
-    page: u32,
-    page_size: u32,
-) -> StdResult<(Vec<Tx>, u64)> {
-    let id = UserTXTotal::load(storage, USER_TRANSFER_INDEX, for_address.clone())?.0;
-    let start_index = page as u64 * page_size as u64;
-    let size: u64;
-    if (start_index + page_size as u64) > id {
-        size = id;
-    }
-    else {
-        size = page_size as u64 + start_index;
-    }
-
-    let mut txs = vec![];
-    for index in start_index..size {
-        let stored_tx = StoredLegacyTransfer::load(storage, (for_address.clone(), index))?;
-        txs.push(stored_tx.into_humanized()?);
-    }
-
-    Ok((txs, size-start_index))
-}
+// TODO: implement a way to turn get_txs into transfers
+// pub fn get_transfers<S: Storage>(
+//     storage: &S,
+//     for_address: &HumanAddr,
+//     page: u32,
+//     page_size: u32,
+// ) -> StdResult<(Vec<Tx>, u64)> {
+//     let id = UserTXTotal::load(storage, for_address.clone())?.0;
+//     let start_index = page as u64 * page_size as u64;
+//     let size: u64;
+//     if (start_index + page_size as u64) > id {
+//         size = id;
+//     }
+//     else {
+//         size = page_size as u64 + start_index;
+//     }
+//
+//     let mut txs = vec![];
+//     for index in start_index..size {
+//         let stored_tx = StoredLegacyTransfer::load(storage, (for_address.clone(), index))?;
+//         txs.push(stored_tx.into_humanized()?);
+//     }
+//
+//     Ok((txs, size-start_index))
+// }

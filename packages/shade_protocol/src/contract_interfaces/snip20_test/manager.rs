@@ -23,9 +23,9 @@ impl ContractStatusLevel {
     pub fn load<S: Storage>(storage: & S) -> StdResult<Self> {
         let i = ContractStatus::load(storage)?.0;
         let item = match i {
-            1 => ContractStatusLevel::NormalRun,
-            2 => ContractStatusLevel::StopAllButRedeems,
-            3 => ContractStatusLevel::StopAll,
+            0 => ContractStatusLevel::NormalRun,
+            1 => ContractStatusLevel::StopAllButRedeems,
+            2 => ContractStatusLevel::StopAll,
             _ => return Err(StdError::generic_err("Stored enum u8 is greater than enum"))
         };
         Ok(item)
@@ -256,7 +256,7 @@ impl Allowance {
         let mut allowance = Allowance::load(storage, (owner.clone(), spender.clone()))?;
 
         if allowance.is_expired(block) {
-            return Err(StdError::generic_err("Insufficient allowance TODO: missing allowance and amount"));
+            return Err(StdError::generic_err("Allowance expired TODO: add date"));
         }
         if let Ok(new_allowance) = allowance.amount.checked_sub(amount) {
             allowance.amount = new_allowance;

@@ -179,18 +179,16 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
 pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    entropy: String,
+    key: String,
 ) -> StdResult<HandleResponse> {
     let seed = RandSeed::load(&deps.storage)?.0;
 
-    let key = Key::generate(&env, seed.as_slice(), (&entropy).as_ref());
-
-    HashedKey(key.hash()).save(&mut deps.storage, env.message.sender)?;
+    HashedKey(Key(key).hash()).save(&mut deps.storage, env.message.sender)?;
 
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::CreateViewingKey { key: key.0 })?),
+        data: Some(to_binary(&HandleAnswer::SetViewingKey { status: Success })?),
     })
 }
 

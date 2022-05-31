@@ -2,11 +2,11 @@ use cosmwasm_std::{Api, Extern, HumanAddr, Querier, QueryResult, StdResult, Stor
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20_test::manager::{Allowance, Balance, CoinInfo, Config, ContractStatusLevel, Minters, TotalSupply};
 use shade_protocol::contract_interfaces::snip20_test::QueryAnswer;
-use shade_protocol::contract_interfaces::snip20_test::transaction_history::{get_transfers, get_txs};
+use shade_protocol::contract_interfaces::snip20_test::transaction_history::{get_txs};
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 
 pub fn token_info<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>) -> QueryResult {
+    deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
 
     let info = CoinInfo::load(&deps.storage)?;
 
@@ -15,7 +15,7 @@ pub fn token_info<S: Storage, A: Api, Q: Querier>(
         false => None
     };
 
-    to_binary(&QueryAnswer::TokenInfo {
+    Ok(QueryAnswer::TokenInfo {
         name: info.name,
         symbol: info.symbol,
         decimals: info.decimals,
@@ -24,8 +24,8 @@ pub fn token_info<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn token_config<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>) -> QueryResult {
-    to_binary(&QueryAnswer::TokenConfig {
+    deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::TokenConfig {
         // TODO: show the other addrd config items
         public_total_supply: Config::public_total_supply(&deps.storage)?,
         deposit_enabled: Config::deposit_enabled(&deps.storage)?,
@@ -36,14 +36,14 @@ pub fn token_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn contract_status<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>) -> QueryResult {
-    to_binary(&QueryAnswer::ContractStatus {
+    deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::ContractStatus {
         status: ContractStatusLevel::load(&deps.storage)?
     })
 }
 
 pub fn exchange_rate<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>) -> QueryResult {
+    deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     let decimals = CoinInfo::load(&deps.storage)?.decimals;
     if Config::deposit_enabled(&deps.storage)? || Config::redeem_enabled(&deps.storage)? {
         let rate: Uint128;
@@ -57,17 +57,17 @@ pub fn exchange_rate<S: Storage, A: Api, Q: Querier>(
             rate = Uint128::new(10u128.pow(6 - decimals as u32));
             denom = CoinInfo::load(&deps.storage)?.symbol;
         }
-        return to_binary(&QueryAnswer::ExchangeRate { rate, denom });
+        return Ok(QueryAnswer::ExchangeRate { rate, denom });
     }
-    to_binary(&QueryAnswer::ExchangeRate {
+    Ok(QueryAnswer::ExchangeRate {
         rate: Uint128::new(0),
         denom: String::new(),
     })
 }
 
 pub fn minters<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>) -> QueryResult {
-    to_binary(&QueryAnswer::Minters {
+    deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::Minters {
         minters: Minters::load(&deps.storage)?.0
     })
 }
@@ -76,10 +76,10 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     owner: HumanAddr,
     spender: HumanAddr
-) -> QueryResult {
+) -> StdResult<QueryAnswer> {
     let allowance = Allowance::load(&deps.storage, (owner.clone(), spender.clone()))?;
 
-    to_binary(&QueryAnswer::Allowance {
+    Ok(QueryAnswer::Allowance {
         spender,
         owner,
         allowance: allowance.amount,
@@ -88,33 +88,33 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>, account: HumanAddr) -> QueryResult {
-    to_binary(&QueryAnswer::Balance {
+    deps: &Extern<S, A, Q>, account: HumanAddr) -> StdResult<QueryAnswer> {
+    Ok(QueryAnswer::Balance {
         amount: Balance::load(&deps.storage, account)?.0
     })
 }
 
-pub fn transfer_history<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    account: HumanAddr,
-    page: u32,
-    page_size: u32,
-) -> QueryResult {
-    let transfer = get_transfers(&deps.storage, &account, page, page_size)?;
-    to_binary(&QueryAnswer::TransferHistory {
-        txs: transfer.0,
-        total: Some(transfer.1)
-    })
-}
+// pub fn transfer_history<S: Storage, A: Api, Q: Querier>(
+//     deps: &Extern<S, A, Q>,
+//     account: HumanAddr,
+//     page: u32,
+//     page_size: u32,
+// ) -> StdResult<QueryAnswer> {
+//     let transfer = get_transfers(&deps.storage, &account, page, page_size)?;
+//     Ok(QueryAnswer::TransferHistory {
+//         txs: transfer.0,
+//         total: Some(transfer.1)
+//     })
+// }
 
 pub fn transaction_history<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     account: HumanAddr,
     page: u32,
     page_size: u32,
-) -> QueryResult {
+) -> StdResult<QueryAnswer> {
     let transfer = get_txs(&deps.storage, &account, page, page_size)?;
-    to_binary(&QueryAnswer::TransactionHistory {
+    Ok(QueryAnswer::TransactionHistory {
         txs: transfer.0,
         total: Some(transfer.1)
     })
