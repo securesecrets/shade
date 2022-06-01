@@ -8,6 +8,8 @@ pub mod mint;
 
 pub mod staking;
 
+pub mod sky;
+
 #[cfg(feature = "snip20")]
 pub mod snip20;
 
@@ -21,3 +23,7 @@ pub mod initializer;
 // Protocol libraries
 #[cfg(feature = "governance")]
 pub mod governance;
+
+// Bonds
+#[cfg(feature = "bonds")]
+pub mod bonds;

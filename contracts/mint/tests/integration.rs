@@ -11,9 +11,9 @@ use cosmwasm_std::{
     InitResponse,
     StdError,
     StdResult,
-    Uint128,
 };
 
+use cosmwasm_math_compat::Uint128;
 use shade_protocol::{
     contract_interfaces::{
         mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
@@ -226,27 +226,27 @@ macro_rules! mint_int_tests {
 }
 mint_int_tests! {
     mint_int_0: (
-        Uint128(10u128.pow(18)), // $1
-        Uint128(10u128.pow(6)), // 1sscrt
-        Uint128(10u128.pow(18)), // $1
-        Uint128(10u128.pow(8)), // 1 SHD
+        Uint128::new(10u128.pow(18)), // $1
+        Uint128::new(10u128.pow(6)), // 1sscrt
+        Uint128::new(10u128.pow(18)), // $1
+        Uint128::new(10u128.pow(8)), // 1 SHD
     ),
     mint_int_1: (
-        Uint128(2 * 10u128.pow(18)), // $2
-        Uint128(10u128.pow(6)), // 1 sscrt
-        Uint128(10u128.pow(18)), // $1
-        Uint128(2 * 10u128.pow(8)), // 2 SHD
+        Uint128::new(2 * 10u128.pow(18)), // $2
+        Uint128::new(10u128.pow(6)), // 1 sscrt
+        Uint128::new(10u128.pow(18)), // $1
+        Uint128::new(2 * 10u128.pow(8)), // 2 SHD
     ),
     mint_int_2: (
-        Uint128(1 * 10u128.pow(18)), // $1
-        Uint128(4 * 10u128.pow(6)), // 4 sscrt
-        Uint128(10u128.pow(18)), // $1
-        Uint128(4 * 10u128.pow(8)), // 4 SHD
+        Uint128::new(1 * 10u128.pow(18)), // $1
+        Uint128::new(4 * 10u128.pow(6)), // 4 sscrt
+        Uint128::new(10u128.pow(18)), // $1
+        Uint128::new(4 * 10u128.pow(8)), // 4 SHD
     ),
     mint_int_3: (
-        Uint128(10 * 10u128.pow(18)), // $10
-        Uint128(30 * 10u128.pow(6)), // 30 sscrt
-        Uint128(5 * 10u128.pow(18)), // $5
-        Uint128(60 * 10u128.pow(8)), // 60 SHD
+        Uint128::new(10 * 10u128.pow(18)), // $10
+        Uint128::new(30 * 10u128.pow(6)), // 30 sscrt
+        Uint128::new(5 * 10u128.pow(18)), // $5
+        Uint128::new(60 * 10u128.pow(8)), // 60 SHD
     ),
 }
