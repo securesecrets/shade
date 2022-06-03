@@ -12,7 +12,7 @@ use shade_protocol::{
     },
     dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
     mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
-    snip20::Snip20Asset,
+    snip20::helpers::Snip20Asset,
 }};
 use secret_toolkit::utils::Query;
 use secret_toolkit::snip20::send_msg;

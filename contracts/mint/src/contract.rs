@@ -11,11 +11,11 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::snip20::token_info_query;
+use secret_toolkit::snip20::{token_info_query, token_config_query};
 
 use shade_protocol::contract_interfaces::{
     mint::mint::{Config, HandleMsg, InitMsg, QueryMsg},
-    snip20::{token_config_query, Snip20Asset},
+    snip20::helpers::Snip20Asset,
 };
 
 use crate::{
@@ -50,7 +50,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         msg.native_asset.address.clone(),
     )?;
 
-    let token_config = token_config_query(&deps.querier, msg.native_asset.clone())?;
+    let token_config = token_config_query(&deps.querier, 256, msg.native_asset.code_hash.clone(), msg.native_asset.address.clone())?;
 
     let peg = match msg.peg {
         Some(p) => p,

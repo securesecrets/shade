@@ -17,7 +17,7 @@ use cosmwasm_std::{
     Storage,
 };
 use secret_toolkit::{
-    snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
+    snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query, TokenConfig, token_config_query},
     utils::Query,
 };
 use shade_protocol::{
@@ -27,7 +27,7 @@ use shade_protocol::{
             mint_router::{Config, HandleAnswer},
         },
         oracles::{band::ReferenceData, oracle::QueryMsg::Price},
-        snip20::{token_config_query, Snip20Asset, TokenConfig},
+        snip20::helpers::Snip20Asset,
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };

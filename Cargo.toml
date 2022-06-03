@@ -7,16 +7,15 @@ members = [
   "packages/contract_harness",
 
   # Network setups
-  "contracts/initializer",
   "contracts/airdrop",
 
   # Protocol contracts
-  "contracts/snip20_t",
+  "contracts/snip20",
   "contracts/governance",
   "contracts/mint",
   "contracts/mint_router",
   "contracts/oracle",
-  "contracts/snip20",
+  "contracts/snip20-reference-impl",
   "contracts/sky",
 
   # DAO

@@ -18,7 +18,6 @@ dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
 band = []
 secretswap = ["utils"]
 sienna = ["utils", "math"]
-snip20 = ["utils", "dep:remain", "dep:query-authentication"]
 
 # Utils
 utils = []
@@ -30,7 +29,6 @@ storage_plus = ["storage", "dep:secret-storage-plus"]
 
 # Protocol contracts
 airdrop = ["utils", "errors", "dep:remain", "dep:query-authentication"]
-initializer = ["snip20", "utils"]
 governance = ["utils", "flexible_msg"]
 mint = ["utils", "snip20"]
 mint_router = ["utils", "snip20"]
@@ -40,13 +38,14 @@ treasury = ["utils", "adapter", "snip20"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 adapter = []
-snip20_test = ["utils", "errors", "storage_plus", "dep:query-authentication", "dep:base64"]
+snip20 = ["utils", "errors", "dep:base64"]
 snip20_staking = ["utils"]
 sky = ["snip20", "utils", "sienna"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
 governance-impl = ["governance", "storage"]
+snip20-impl = ["snip20", "storage_plus", "dep:query-authentication",]
 sky-impl = ["sky", "storage_plus"]
 
 # for quicker tests, cargo test --lib

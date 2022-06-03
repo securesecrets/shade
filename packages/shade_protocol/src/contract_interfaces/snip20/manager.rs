@@ -5,6 +5,7 @@ use secret_storage_plus::{Item, Map};
 use secret_toolkit::crypto::{Prng, sha_256};
 use serde::{Deserialize, Serialize};
 use cosmwasm_math_compat::Uint128;
+use crate::contract_interfaces::snip20::errors::{allowance_expired, contract_status_level_invalid, insufficient_allowance, no_funds, not_enough_funds};
 use crate::impl_into_u8;
 use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveItemStorage};
 
@@ -16,6 +17,8 @@ pub enum ContractStatusLevel {
     StopAllButRedeems,
     StopAll,
 }
+
+#[cfg(feature = "snip20-impl")]
 impl ContractStatusLevel {
     pub fn save<S: Storage>(self, storage: &mut S) -> StdResult<()> {
         ContractStatus(self.into()).save(storage)
@@ -26,7 +29,7 @@ impl ContractStatusLevel {
             0 => ContractStatusLevel::NormalRun,
             1 => ContractStatusLevel::StopAllButRedeems,
             2 => ContractStatusLevel::StopAll,
-            _ => return Err(StdError::generic_err("Stored enum u8 is greater than enum"))
+            _ => return Err(contract_status_level_invalid(i))
         };
         Ok(item)
     }
@@ -35,6 +38,8 @@ impl_into_u8!(ContractStatusLevel);
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct ContractStatus(pub u8);
+
+#[cfg(feature = "snip20-impl")]
 impl ItemStorage for ContractStatus {
     const ITEM: Item<'static, Self> = Item::new("contract-status-level-");
 }
@@ -47,6 +52,7 @@ pub struct CoinInfo {
     pub decimals: u8,
 }
 
+#[cfg(feature = "snip20-impl")]
 impl ItemStorage for CoinInfo {
     const ITEM: Item<'static, Self> = Item::new("coin-info-");
 }
@@ -54,6 +60,7 @@ impl ItemStorage for CoinInfo {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct Admin(pub HumanAddr);
 
+#[cfg(feature = "snip20-impl")]
 impl ItemStorage for Admin {
     const ITEM: Item<'static, Self> = Item::new("admin-");
 }
@@ -61,6 +68,7 @@ impl ItemStorage for Admin {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct RandSeed(pub Vec<u8>);
 
+#[cfg(feature = "snip20-impl")]
 impl ItemStorage for RandSeed {
     const ITEM: Item<'static, Self> = Item::new("rand-seed-");
 }
@@ -68,13 +76,20 @@ impl ItemStorage for RandSeed {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct Setting(pub bool);
 
+#[cfg(feature = "snip20-impl")]
 impl NaiveItemStorage for Setting {}
 
+#[cfg(feature = "snip20-impl")]
 const PUBLIC_TOTAL_SUPPLY: Item<'static, Setting> = Item::new("public-total-supply-");
+#[cfg(feature = "snip20-impl")]
 const ENABLE_DEPOSIT: Item<'static, Setting> = Item::new("enable-deposit-");
+#[cfg(feature = "snip20-impl")]
 const ENABLE_REDEEM: Item<'static, Setting> = Item::new("enable-redeem-");
+#[cfg(feature = "snip20-impl")]
 const ENABLE_MINT: Item<'static, Setting> = Item::new("enable-mint-");
+#[cfg(feature = "snip20-impl")]
 const ENABLE_BURN: Item<'static, Setting> = Item::new("enable-burn-");
+#[cfg(feature = "snip20-impl")]
 const ENABLE_TRANSFER: Item<'static, Setting> = Item::new("enable-transfer-");
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -88,6 +103,7 @@ pub struct Config {
     pub enable_transfer: bool,
 }
 
+#[cfg(feature = "snip20-impl")]
 impl Config {
     pub fn save<S: Storage>(&self, storage: &mut S) -> StdResult<()> {
         Self::set_public_total_supply(storage, self.public_total_supply)?;
@@ -156,9 +172,13 @@ impl Config {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct TotalSupply(pub Uint128);
+
+#[cfg(feature = "snip20-impl")]
 impl ItemStorage for TotalSupply {
     const ITEM: Item<'static, Self> = Item::new("total-supply-");
 }
+
+#[cfg(feature = "snip20-impl")]
 impl TotalSupply {
     pub fn set<S: Storage>(storage: &mut S, amount: Uint128) -> StdResult<()> {
         TotalSupply(amount).save(storage)
@@ -177,9 +197,13 @@ impl TotalSupply {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct Balance(pub Uint128);
+
+#[cfg(feature = "snip20-impl")]
 impl MapStorage<'static, HumanAddr> for Balance {
     const MAP: Map<'static, HumanAddr, Self> = Map::new("balance-");
 }
+
+#[cfg(feature = "snip20-impl")]
 impl Balance {
     pub fn set<S: Storage>(storage: &mut S, amount: Uint128, addr: &HumanAddr) -> StdResult<()> {
         Balance(amount).save(storage, addr.clone())
@@ -195,13 +219,11 @@ impl Balance {
     pub fn sub<S: Storage>(storage: &mut S, amount: Uint128, addr: &HumanAddr) -> StdResult<Uint128> {
         let subtractee = match Self::load(storage, addr.clone()) {
             Ok(amount) => amount.0,
-            // TODO: impl error
-            Err(_) => return Err(StdError::generic_err("Account has no funds"))
+            Err(_) => return Err(no_funds())
         };
         let supply = match subtractee.checked_sub(amount) {
             Ok(supply) => supply,
-            // TODO: impl error
-            Err(_) => return Err(StdError::generic_err("Account doesnt have enough funds"))
+            Err(_) => return Err(not_enough_funds())
         };
         Balance::set(storage, supply, addr)?;
         Ok(supply)
@@ -220,6 +242,8 @@ impl Balance {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct Minters(pub Vec<HumanAddr>);
+
+#[cfg(feature = "snip20-impl")]
 impl ItemStorage for Minters {
     const ITEM: Item<'static, Self> = Item::new("minters-");
 }
@@ -238,6 +262,8 @@ impl Default for Allowance {
         }
     }
 }
+
+#[cfg(feature = "snip20-impl")]
 impl Allowance {
     pub fn is_expired(&self, block: &cosmwasm_std::BlockInfo) -> bool {
         match self.expiration {
@@ -256,12 +282,12 @@ impl Allowance {
         let mut allowance = Allowance::load(storage, (owner.clone(), spender.clone()))?;
 
         if allowance.is_expired(block) {
-            return Err(StdError::generic_err("Allowance expired TODO: add date"));
+            return Err(allowance_expired(allowance.expiration.unwrap()))
         }
         if let Ok(new_allowance) = allowance.amount.checked_sub(amount) {
             allowance.amount = new_allowance;
         } else {
-            return Err(StdError::generic_err("Insufficient allowance TODO: missing allowance and amount"));
+            return Err(insufficient_allowance());
         }
 
         allowance.save(storage, (owner.clone(), spender.clone()))?;
@@ -270,12 +296,15 @@ impl Allowance {
     }
 }
 // (Owner, Spender)
+#[cfg(feature = "snip20-impl")]
 impl MapStorage<'static, (HumanAddr, HumanAddr)> for Allowance {
     const MAP: Map<'static, (HumanAddr, HumanAddr), Self> = Map::new("allowance-");
 }
 
 #[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
 pub struct ReceiverHash(pub String);
+
+#[cfg(feature = "snip20-impl")]
 impl MapStorage<'static, HumanAddr> for ReceiverHash {
     const MAP: Map<'static, HumanAddr, Self> = Map::new("receiver-hash-");
 }
@@ -284,6 +313,7 @@ impl MapStorage<'static, HumanAddr> for ReceiverHash {
 #[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
 pub struct Key(pub String);
 
+#[cfg(feature = "snip20-impl")]
 impl Key {
     // TODO: implement this in query auth instead
     pub fn generate(env: &Env, seed: &[u8], entropy: &[u8]) -> Self {
@@ -325,15 +355,21 @@ impl ViewingKey<32> for Key{}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct HashedKey(pub [u8; KEY_SIZE]);
+
+#[cfg(feature = "snip20-impl")]
 impl MapStorage<'static, HumanAddr> for HashedKey {
     const MAP: Map<'static, HumanAddr, Self> = Map::new("hashed-viewing-key-");
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PermitKey(pub bool);
+
+#[cfg(feature = "snip20-impl")]
 impl MapStorage<'static, (HumanAddr, String)> for PermitKey {
     const MAP: Map<'static, (HumanAddr, String), Self> = Map::new("revoked-permit-");
 }
+
+#[cfg(feature = "snip20-impl")]
 impl PermitKey {
     pub fn revoke<S: Storage>(storage: &mut S, key: String, user: HumanAddr) -> StdResult<()> {
         PermitKey(true).save(storage, (user, key))

@@ -13,7 +13,7 @@ use cosmwasm_storage::{
 use shade_protocol::{
     contract_interfaces::{
         mint::mint::{Config, SupportedAsset},
-        snip20::Snip20Asset,
+        snip20::helpers::Snip20Asset,
     },
     utils::asset::Contract,
 };

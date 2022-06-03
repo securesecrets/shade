@@ -6,6 +6,7 @@ use cosmwasm_std::{
 };
 use secret_storage_plus::{Item, Map};
 use cosmwasm_math_compat::Uint128;
+use crate::contract_interfaces::snip20::errors::{legacy_cannot_convert_from_tx, tx_code_invalid_conversion};
 
 use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveMapStorage};
 
@@ -26,6 +27,41 @@ pub struct Tx {
     // reflects that some SNIP-20 contracts may not include this info.
     pub block_time: Option<u64>,
     pub block_height: Option<u64>,
+}
+
+#[cfg(feature = "snip20-impl")]
+impl Tx {
+    // Inefficient but compliant, not recommended to use deprecated features
+    pub fn get<S: Storage>(
+        storage: &S,
+        for_address: &HumanAddr,
+        page: u32,
+        page_size: u32,
+    ) -> StdResult<(Vec<Self>, u64)> {
+        let id = UserTXTotal::load(storage, for_address.clone())?.0;
+        let start_index = page as u64 * page_size as u64;
+
+        // Since we dont know where the legacy txs are then we iterate over everything
+        let mut total = 0u64;
+        let mut txs = vec![];
+        for i in 0..id {
+            match StoredRichTx::load(storage, (for_address.clone(), i))?.into_legacy() {
+                Ok(tx) => {
+                    total += 1;
+                    if total >= (start_index + page_size as u64) {
+                        break;
+                    }
+                    else if total >= start_index {
+                        txs.push(tx);
+                    }
+                }
+                Err(_) => {}
+            }
+        }
+
+        let length = txs.len() as u64;
+        Ok((txs, length))
+    }
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug, PartialEq)]
@@ -64,42 +100,36 @@ pub struct RichTx {
     pub block_height: u64,
 }
 
-// Stored types:
+#[cfg(feature = "snip20-impl")]
+impl RichTx {
+    pub fn get<S: Storage>(
+        storage: &S,
+        for_address: &HumanAddr,
+        page: u32,
+        page_size: u32,
+    ) -> StdResult<(Vec<Self>, u64)> {
+        let id = UserTXTotal::load(storage, for_address.clone())?.0;
+        let start_index = page as u64 * page_size as u64;
+        let size: u64;
+        if (start_index + page_size as u64) > id {
+            size = id;
+        }
+        else {
+            size = page_size as u64 + start_index;
+        }
 
-/// This type is the stored version of the legacy transfers
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
-struct StoredLegacyTransfer {
-    id: u64,
-    from: HumanAddr,
-    sender: HumanAddr,
-    receiver: HumanAddr,
-    coins: Coin,
-    memo: Option<String>,
-    block_time: u64,
-    block_height: u64,
-}
+        let mut txs = vec![];
+        for index in start_index..size {
+            let stored_tx = StoredRichTx::load(storage, (for_address.clone(), index))?;
+            txs.push(stored_tx.into_humanized()?);
+        }
 
-impl StoredLegacyTransfer {
-    pub fn into_humanized<>(self) -> StdResult<Tx> {
-        let tx = Tx {
-            id: self.id,
-            from: self.from,
-            sender: self.sender,
-            receiver: self.receiver,
-            coins: self.coins,
-            memo: self.memo,
-            block_time: Some(self.block_time),
-            block_height: Some(self.block_height),
-        };
-        Ok(tx)
+        let length = txs.len() as u64;
+        Ok((txs, length))
     }
 }
 
-impl MapStorage<'static, (HumanAddr, u64)> for StoredLegacyTransfer {
-    const MAP: Map<'static, (HumanAddr, u64), Self> = Map::new("stored-legacy-transfer-");
-}
-
+// Stored types:
 #[derive(Clone, Copy, Debug)]
 #[repr(u8)]
 enum TxCode {
@@ -123,10 +153,7 @@ impl TxCode {
             2 => Ok(Burn),
             3 => Ok(Deposit),
             4 => Ok(Redeem),
-            other => Err(StdError::generic_err(format!(
-                "Unexpected Tx code in transaction history: {} Storage is corrupted.",
-                other
-            ))),
+            other => Err(tx_code_invalid_conversion(n)),
         }
     }
 }
@@ -254,7 +281,7 @@ impl StoredRichTx {
         }
     }
 
-    fn into_humanized<>(self) -> StdResult<RichTx> {
+    fn into_humanized(self) -> StdResult<RichTx> {
         Ok(RichTx {
             id: self.id,
             action: self.action.into_humanized()?,
@@ -264,8 +291,27 @@ impl StoredRichTx {
             block_height: self.block_height,
         })
     }
+
+    fn into_legacy(self) -> StdResult<Tx> {
+        if self.action.tx_type == 0 {
+            Ok(Tx {
+                id: self.id,
+                from: self.action.address1.unwrap(),
+                sender: self.action.address2.unwrap(),
+                receiver: self.action.address3.unwrap(),
+                coins: self.coins,
+                memo: self.memo,
+                block_time: Some(self.block_time),
+                block_height: Some(self.block_height)
+            })
+        }
+        else {
+            Err(legacy_cannot_convert_from_tx())
+        }
+    }
 }
 
+#[cfg(feature = "snip20-impl")]
 impl MapStorage<'static, (HumanAddr, u64)> for StoredRichTx {
     const MAP: Map<'static, (HumanAddr, u64), Self> = Map::new("stored-rich-tx-");
 }
@@ -274,10 +320,12 @@ impl MapStorage<'static, (HumanAddr, u64)> for StoredRichTx {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 struct TXCount(pub u64);
 
+#[cfg(feature = "snip20-impl")]
 impl ItemStorage for TXCount {
     const ITEM: Item<'static, Self> = Item::new("tx-count-");
 }
 
+#[cfg(feature = "snip20-impl")]
 fn increment_tx_count<S: Storage>(storage: &mut S) -> StdResult<u64> {
     let id = TXCount::may_load(storage)?.unwrap_or(TXCount(0)).0 + 1;
     TXCount(id).save(storage)?;
@@ -288,6 +336,7 @@ fn increment_tx_count<S: Storage>(storage: &mut S) -> StdResult<u64> {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 struct UserTXTotal(pub u64);
 
+#[cfg(feature = "snip20-impl")]
 impl UserTXTotal {
     pub fn append<S: Storage>(
         storage: &mut S,
@@ -302,10 +351,12 @@ impl UserTXTotal {
     }
 }
 
+#[cfg(feature = "snip20-impl")]
 impl MapStorage<'static, HumanAddr> for UserTXTotal {
     const MAP: Map<'static, HumanAddr, Self> = Map::new("user-tx-total-");
 }
 
+#[cfg(feature = "snip20-impl")]
 #[allow(clippy::too_many_arguments)] // We just need them
 pub fn store_transfer<S: Storage>(
     storage: &mut S,
@@ -345,6 +396,7 @@ pub fn store_transfer<S: Storage>(
     Ok(())
 }
 
+#[cfg(feature = "snip20-impl")]
 pub fn store_mint<S: Storage>(
     storage: &mut S,
     minter: &HumanAddr,
@@ -368,6 +420,7 @@ pub fn store_mint<S: Storage>(
     Ok(())
 }
 
+#[cfg(feature = "snip20-impl")]
 pub fn store_burn<S: Storage>(
     storage: &mut S,
     owner: &HumanAddr,
@@ -390,6 +443,7 @@ pub fn store_burn<S: Storage>(
     Ok(())
 }
 
+#[cfg(feature = "snip20-impl")]
 pub fn store_deposit<S: Storage>(
     storage: &mut S,
     recipient: &HumanAddr,
@@ -407,6 +461,7 @@ pub fn store_deposit<S: Storage>(
     Ok(())
 }
 
+#[cfg(feature = "snip20-impl")]
 pub fn store_redeem<S: Storage>(
     storage: &mut S,
     redeemer: &HumanAddr,
@@ -423,54 +478,3 @@ pub fn store_redeem<S: Storage>(
 
     Ok(())
 }
-
-pub fn get_txs<S: Storage>(
-    storage: &S,
-    for_address: &HumanAddr,
-    page: u32,
-    page_size: u32,
-) -> StdResult<(Vec<RichTx>, u64)> {
-    let id = UserTXTotal::load(storage, for_address.clone())?.0;
-    let start_index = page as u64 * page_size as u64;
-    let size: u64;
-    if (start_index + page_size as u64) > id {
-        size = id;
-    }
-    else {
-        size = page_size as u64 + start_index;
-    }
-
-    let mut txs = vec![];
-    for index in start_index..size {
-        let stored_tx = StoredRichTx::load(storage, (for_address.clone(), index))?;
-        txs.push(stored_tx.into_humanized()?);
-    }
-
-    Ok((txs, size-start_index))
-}
-
-// TODO: implement a way to turn get_txs into transfers
-// pub fn get_transfers<S: Storage>(
-//     storage: &S,
-//     for_address: &HumanAddr,
-//     page: u32,
-//     page_size: u32,
-// ) -> StdResult<(Vec<Tx>, u64)> {
-//     let id = UserTXTotal::load(storage, for_address.clone())?.0;
-//     let start_index = page as u64 * page_size as u64;
-//     let size: u64;
-//     if (start_index + page_size as u64) > id {
-//         size = id;
-//     }
-//     else {
-//         size = page_size as u64 + start_index;
-//     }
-//
-//     let mut txs = vec![];
-//     for index in start_index..size {
-//         let stored_tx = StoredLegacyTransfer::load(storage, (for_address.clone(), index))?;
-//         txs.push(stored_tx.into_humanized()?);
-//     }
-//
-//     Ok((txs, size-start_index))
-// }

@@ -19,7 +19,7 @@ use shade_protocol::{
     contract_interfaces::{
         dex::{dex, secretswap, sienna},
         oracles::oracle::{HandleAnswer, IndexElement},
-        snip20::Snip20Asset,
+        snip20::helpers::Snip20Asset,
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };

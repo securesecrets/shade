@@ -1,12 +1,3 @@
-#[cfg(feature = "snip20")]
-pub mod snip20 {
-    use crate::harness_macro;
-    use snip20_reference_impl;
-
-    pub struct Snip20;
-    harness_macro::implement_harness!(Snip20, snip20_reference_impl);
-}
-
 #[cfg(feature = "mint")]
 pub mod mint {
     use crate::harness_macro;
@@ -52,11 +43,11 @@ pub mod snip20_staking {
     harness_macro::implement_harness!(Snip20Staking, spip_stkd_0);
 }
 
-#[cfg(feature = "snip20_t")]
-pub mod snip20_t {
+#[cfg(feature = "snip20")]
+pub mod snip20 {
     use crate::harness_macro;
-    use snip20_t;
+    use snip20;
 
-    pub struct Snip20T;
-    harness_macro::implement_harness!(Snip20T, snip20_t);
+    pub struct Snip20;
+    harness_macro::implement_harness!(Snip20, snip20);
 }
