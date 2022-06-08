@@ -23,3 +23,5 @@ pub mod initializer;
 // Protocol libraries
 #[cfg(feature = "governance")]
 pub mod governance;
+
+pub mod ddomain;
