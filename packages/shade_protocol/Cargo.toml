@@ -13,6 +13,8 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["utils"]
 
+# TODO: Normalize usage, some features are using - while others use _
+
 # Templates
 dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
 band = []
@@ -41,11 +43,13 @@ adapter = []
 snip20 = ["utils", "errors", "dep:base64"]
 snip20_staking = ["utils"]
 sky = ["snip20", "utils", "sienna"]
+query_auth = ["utils", "dep:query-authentication"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
 governance-impl = ["governance", "storage"]
-snip20-impl = ["snip20", "storage_plus", "dep:query-authentication",]
+query_auth_impl = ["query_auth", "storage_plus"]
+snip20-impl = ["snip20", "storage_plus", "dep:query-authentication"]
 sky-impl = ["sky", "storage_plus"]
 
 # for quicker tests, cargo test --lib

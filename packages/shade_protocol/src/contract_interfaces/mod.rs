@@ -23,3 +23,6 @@ pub mod initializer;
 // Protocol libraries
 #[cfg(feature = "governance")]
 pub mod governance;
+
+#[cfg(feature = "query_auth")]
+pub mod query_auth;

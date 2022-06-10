@@ -17,6 +17,7 @@ members = [
   "contracts/oracle",
   "contracts/snip20-reference-impl",
   "contracts/sky",
+  "contracts/query_auth",
 
   # DAO
   # - Core
