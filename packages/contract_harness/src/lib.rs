@@ -59,3 +59,7 @@ implement_harness!(Governance, governance);
 use spip_stkd_0;
 pub struct Snip20Staking;
 implement_harness!(Snip20Staking, spip_stkd_0);
+
+use mock_sienna_pair;
+pub struct MockSiennaPair;
+implement_harness!(MockSiennaPair, mock_sienna_pair);

@@ -46,6 +46,7 @@ pub struct TokenTypeAmount {
     pub token: TokenType,
 }
 
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Swap {
@@ -77,6 +78,7 @@ pub struct CallbackSwap {
 pub struct SwapSimulation {
     pub offer: TokenTypeAmount,
 }
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

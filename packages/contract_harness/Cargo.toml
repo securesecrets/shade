@@ -27,3 +27,4 @@ treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager
 scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking"}
 governance = { version = "0.1.0", path = "../../contracts/governance"}
 spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking"}
+mock_sienna_pair = { version = "0.1.0", path = "../../contracts/mock_sienna_pair"}
