@@ -9,7 +9,7 @@ use crate::tests::{
 use contract_harness::harness::{governance::Governance, snip20::Snip20};
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, StdResult};
-use fadroma_ensemble::{ContractEnsemble, MockEnv};
+use fadroma::ensemble::{ContractEnsemble, MockEnv};
 use fadroma_platform_scrt::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
@@ -250,7 +250,7 @@ fn assembly_to_funding_transition() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -425,7 +425,7 @@ fn funding_proposal() {
 fn funding_proposal_after_deadline() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
-    chain.block().time += 10000;
+    chain.block_mut().time += 10000;
 
     assert!(
         chain
@@ -547,7 +547,7 @@ fn update_after_failed_funding() {
         )
         .unwrap();
 
-    chain.block().time += 10000;
+    chain.block_mut().time += 10000;
 
     chain.execute(
         &governance::HandleMsg::Update {
@@ -627,7 +627,7 @@ fn claim_after_failing() {
         )
         .unwrap();
 
-    chain.block().time += 10000;
+    chain.block_mut().time += 10000;
 
     chain.execute(
         &governance::HandleMsg::Update {

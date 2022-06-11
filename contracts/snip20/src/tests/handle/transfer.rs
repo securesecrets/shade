@@ -1,5 +1,5 @@
 use cosmwasm_std::HumanAddr;
-use fadroma_ensemble::MockEnv;
+use fadroma::ensemble::MockEnv;
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitialBalance, QueryMsg, QueryAnswer};
 use shade_protocol::contract_interfaces::snip20::manager::Balance;

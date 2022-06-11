@@ -3,7 +3,7 @@ pub mod query;
 
 use contract_harness::harness::snip20::Snip20;
 use cosmwasm_std::{Binary, HumanAddr, StdResult};
-use fadroma_ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
+use fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
 use fadroma_platform_scrt::ContractLink;
 use shade_protocol::contract_interfaces::{
     snip20,

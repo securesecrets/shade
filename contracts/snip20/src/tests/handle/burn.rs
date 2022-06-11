@@ -1,5 +1,5 @@
 use cosmwasm_std::HumanAddr;
-use fadroma_ensemble::MockEnv;
+use fadroma::ensemble::MockEnv;
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig, InitialBalance};
 use shade_protocol::contract_interfaces::snip20::batch::BurnFromAction;
@@ -23,7 +23,7 @@ fn burn() {
         enable_transfer: None
     })).unwrap();
 
-    chain.block().time = 0;
+    chain.block_mut().time = 0;
 
     // Insufficient tokens
     assert!(chain.execute(&HandleMsg::Burn {
@@ -71,7 +71,7 @@ fn burn_from() {
         enable_transfer: None
     })).unwrap();
 
-    chain.block().time = 0;
+    chain.block_mut().time = 0;
 
     // Insufficient allowance
     assert!(chain.execute(&HandleMsg::BurnFrom {
@@ -96,7 +96,7 @@ fn burn_from() {
         memo: None
     }, MockEnv::new("Esmail", snip.clone())).is_err());
 
-    chain.block().time = 1_000_000_010;
+    chain.block_mut().time = 1_000_000_010;
 
     // Transfer expired
     assert!(chain.execute(&HandleMsg::BurnFrom {
@@ -157,7 +157,7 @@ fn batch_burn_from() {
         enable_transfer: None
     })).unwrap();
 
-    chain.block().time = 0;
+    chain.block_mut().time = 0;
 
     let granters = vec!["Eliot", "Alderson", "Sam"];
 
@@ -190,7 +190,7 @@ fn batch_burn_from() {
         padding: None
     }, MockEnv::new("Esmail", snip.clone())).is_err());
 
-    chain.block().time = 1_000_000_010;
+    chain.block_mut().time = 1_000_000_010;
 
     // Transfer expired
     assert!(chain.execute(&HandleMsg::BatchBurnFrom {
