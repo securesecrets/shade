@@ -4,11 +4,13 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{
     Api, CanonicalAddr, Coin, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage,
 };
-use secret_storage_plus::{Item, Map};
 use cosmwasm_math_compat::Uint128;
 use crate::contract_interfaces::snip20::errors::{legacy_cannot_convert_from_tx, tx_code_invalid_conversion};
 
+#[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveMapStorage};
+#[cfg(feature = "snip20-impl")]
+use secret_storage_plus::{Item, Map};
 
 // Note that id is a globally incrementing counter.
 // Since it's 64 bits long, even at 50 tx/s it would take

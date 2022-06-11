@@ -38,14 +38,14 @@ treasury = ["utils", "adapter", "snip20"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 adapter = []
-snip20 = ["utils", "errors", "dep:base64"]
+snip20 = ["utils", "errors", "dep:base64", "dep:query-authentication"]
 snip20_staking = ["utils"]
 sky = ["snip20", "utils", "sienna"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
 governance-impl = ["governance", "storage"]
-snip20-impl = ["snip20", "storage_plus", "dep:query-authentication",]
+snip20-impl = ["snip20", "storage_plus"]
 sky-impl = ["sky", "storage_plus"]
 
 # for quicker tests, cargo test --lib
