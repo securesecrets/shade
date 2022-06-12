@@ -1,5 +1,6 @@
 use crate::cli_types::{
-    ListCodeResponse, ListContractCode, NetContract, SignedTx, TxCompute, TxQuery, TxResponse,
+    ListCodeResponse, ListContractCode, NetContract, SignedTx, StoredContract, TxCompute, TxQuery,
+    TxResponse,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Result, Value};
@@ -55,11 +56,14 @@ fn secretcli_run(command: Vec<String>, max_retry: Option<i32>) -> Result<Value> 
         result = cli.output().expect("Unexpected error");
     }
     let out = result.stdout;
+    if String::from_utf8_lossy(&out).contains("output_error") {
+        println!("{:?}", &String::from_utf8_lossy(&out));
+    }
     serde_json::from_str(&String::from_utf8_lossy(&out))
 }
 
 ///
-/// Stores the given contract
+/// Stores the given `contract
 ///
 /// # Arguments
 ///
@@ -256,6 +260,46 @@ fn instantiate_contract<Init: serde::Serialize>(
 }
 
 ///
+/// Store the given contract and return the stored contract information
+///
+/// * 'contract_file' - Contract file to store
+/// * 'sender' - Msg sender
+/// * 'store_gas' - Gas price to use when storing the contract, defaults to 10000000
+/// * 'backend' - Keyring backend defaults to none
+/// 
+pub fn store_and_return_contract(
+    contract_file: &str,
+    sender: &str,
+    store_gas: Option<&str>,
+    backend: Option<&str>,
+) -> Result<StoredContract> {
+    let store_response = store_contract(contract_file, Option::from(&*sender), store_gas, backend)?;
+    let store_query = query_hash(store_response.txhash)?;
+    let mut contract = StoredContract {
+        id: "".to_string(),
+        code_hash: "".to_string(),
+    };
+
+    for attribute in &store_query.logs[0].events[0].attributes {
+        if attribute.msg_key == "code_id" {
+            contract.id = attribute.value.clone();
+            break;
+        }
+    }
+
+    let listed_contracts = list_code()?;
+
+    for item in listed_contracts {
+        if item.id.to_string() == contract.id {
+            contract.code_hash = item.data_hash;
+            break;
+        }
+    }
+
+    Ok(contract)
+}
+
+///
 /// Allows contract init to be used in test scripts
 ///
 /// # Arguments
@@ -349,7 +393,7 @@ fn execute_contract<Handle: serde::Serialize>(
     max_tries: Option<i32>,
 ) -> Result<TxResponse> {
     let message = serde_json::to_string(&msg)?;
-
+    
     let mut command = vec![
         "tx",
         "compute",
