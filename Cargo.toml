@@ -12,6 +12,7 @@ members = [
   # Protocol contracts
   "contracts/snip20",
   "contracts/governance",
+  "contracts/bonds",
   "contracts/mint",
   "contracts/mint_router",
   "contracts/oracle",

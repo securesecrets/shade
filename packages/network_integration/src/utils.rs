@@ -9,6 +9,7 @@ use std::fs;
 // Smart contracts
 pub const SNIP20_FILE: &str = "../../compiled/snip20.wasm.gz";
 pub const AIRDROP_FILE: &str = "../../compiled/airdrop.wasm.gz";
+pub const BONDS_FILE: &str = "../../compiled/bonds.wasm.gz";
 pub const GOVERNANCE_FILE: &str = "../../compiled/governance.wasm.gz";
 pub const MOCK_BAND_FILE: &str = "../../compiled/mock_band.wasm.gz";
 pub const ORACLE_FILE: &str = "../../compiled/oracle.wasm.gz";
@@ -21,6 +22,8 @@ pub const STORE_GAS: &str = "10000000";
 pub const GAS: &str = "800000";
 pub const VIEW_KEY: &str = "password";
 pub const ACCOUNT_KEY: &str = "a";
+
+
 
 pub fn generate_label(size: usize) -> String {
     rand::thread_rng()

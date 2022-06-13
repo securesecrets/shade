@@ -9,7 +9,7 @@ use crate::tests::{
 use contract_harness::harness::{governance::Governance, snip20_staking::Snip20Staking};
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, StdResult};
-use fadroma_ensemble::{ContractEnsemble, MockEnv};
+use fadroma::ensemble::{ContractEnsemble, MockEnv};
 use fadroma_platform_scrt::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
@@ -118,7 +118,7 @@ fn update_before_deadline() {
 fn update_after_deadline() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     assert!(
         chain
@@ -192,7 +192,7 @@ fn unauthorised_vote() {
 fn vote_after_deadline() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     assert!(
         chain
@@ -426,7 +426,7 @@ fn vote_passed() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -492,7 +492,7 @@ fn vote_abstained() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -558,7 +558,7 @@ fn vote_rejected() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -624,7 +624,7 @@ fn vote_vetoed() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -672,7 +672,7 @@ fn vote_no_quorum() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -884,7 +884,7 @@ fn vote_count() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -997,7 +997,7 @@ fn vote_count_percentage() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(

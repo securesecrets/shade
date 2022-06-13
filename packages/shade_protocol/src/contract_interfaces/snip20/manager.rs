@@ -1,13 +1,15 @@
 use cosmwasm_std::{Binary, Env, HumanAddr, StdError, StdResult, Storage};
 use query_authentication::viewing_keys::ViewingKey;
 use schemars::JsonSchema;
-use secret_storage_plus::{Item, Map};
 use secret_toolkit::crypto::{Prng, sha_256};
 use serde::{Deserialize, Serialize};
 use cosmwasm_math_compat::Uint128;
 use crate::contract_interfaces::snip20::errors::{allowance_expired, contract_status_level_invalid, insufficient_allowance, no_funds, not_enough_funds};
 use crate::impl_into_u8;
+#[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveItemStorage};
+#[cfg(feature = "snip20-impl")]
+use secret_storage_plus::{Item, Map};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[repr(u8)]

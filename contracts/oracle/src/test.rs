@@ -13,7 +13,6 @@ use cosmwasm_std::{
 };
 use fadroma::{
     ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
-    ContractLink,
 };
 
 pub struct Oracle;
