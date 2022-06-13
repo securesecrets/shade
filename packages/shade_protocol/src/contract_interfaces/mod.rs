@@ -23,3 +23,7 @@ pub mod initializer;
 // Protocol libraries
 #[cfg(feature = "governance")]
 pub mod governance;
+
+// Bonds
+#[cfg(feature = "bonds")]
+pub mod bonds;
