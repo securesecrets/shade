@@ -52,6 +52,7 @@ use shade_protocol::{
     },
     utils::storage::plus::MapStorage,
 };
+use shade_protocol::contract_interfaces::snip20::errors::{action_disabled, invalid_viewing_key, not_authenticated_msg, permit_revoked, unauthorized_permit};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -83,11 +84,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         ContractStatusLevel::StopAllButRedeems | ContractStatusLevel::StopAll => match msg {
             HandleMsg::Redeem { .. } => {
                 if status != ContractStatusLevel::StopAllButRedeems {
-                    return Err(StdError::unauthorized());
+                    return Err(action_disabled());
                 }
             }
             HandleMsg::SetContractStatus { .. } => {}
-            _ => return Err(StdError::unauthorized()),
+            _ => return Err(action_disabled()),
         },
     }
 
@@ -232,33 +233,31 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
                 )?
                 .is_some()
                 {
-                    return Err(StdError::generic_err("Permit key is revoked"));
+                    return Err(permit_revoked(permit.params.permit_name));
                 }
 
                 match query {
                     QueryWithPermit::Allowance { owner, spender, .. } => {
                         if !permit.params.contains(Permission::Allowance) {
-                            return Err(StdError::generic_err("No permission to query allowance"));
+                            return Err(unauthorized_permit(Permission::Allowance));
                         }
 
                         if owner != account && spender != account {
-                            return Err(StdError::generic_err(
-                                "Only allowance owner or spender can query this",
-                            ));
+                            return Err(unauthorized_permit(Permission::Allowance));
                         }
 
                         query::allowance(deps, owner, spender)?
                     }
                     QueryWithPermit::Balance {} => {
                         if !permit.params.contains(Permission::Balance) {
-                            return Err(StdError::generic_err("No permission to query balance"));
+                            return Err(unauthorized_permit(Permission::Balance));
                         }
 
                         query::balance(deps, account.clone())?
                     }
                     QueryWithPermit::TransferHistory { page, page_size } => {
                         if !permit.params.contains(Permission::History) {
-                            return Err(StdError::generic_err("No permission to query history"));
+                            return Err(unauthorized_permit(Permission::History));
                         }
 
                         query::transfer_history(
@@ -270,7 +269,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
                     }
                     QueryWithPermit::TransactionHistory { page, page_size } => {
                         if !permit.params.contains(Permission::History) {
-                            return Err(StdError::generic_err("No permission to query history"));
+                            return Err(unauthorized_permit(Permission::History));
                         }
 
                         query::transaction_history(
@@ -294,14 +293,14 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
                     {
                         query::allowance(deps, owner, spender)?
                     } else {
-                        return Err(StdError::generic_err("Invalid viewing key"));
+                        return Err(invalid_viewing_key());
                     }
                 }
                 QueryMsg::Balance { address, key } => {
                     if Key::verify(&deps.storage, address.clone(), key.clone())? {
                         query::balance(deps, address.clone())?
                     } else {
-                        return Err(StdError::generic_err("Invalid viewing key"));
+                        return Err(invalid_viewing_key());
                     }
                 }
                 QueryMsg::TransferHistory {
@@ -318,7 +317,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
                             page_size,
                         )?
                     } else {
-                        return Err(StdError::generic_err("Invalid viewing key"));
+                        return Err(invalid_viewing_key());
                     }
                 }
                 QueryMsg::TransactionHistory {
@@ -335,10 +334,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
                             page_size,
                         )?
                     } else {
-                        return Err(StdError::generic_err("Invalid viewing key"));
+                        return Err(invalid_viewing_key());
                     }
                 }
-                _ => return Err(StdError::generic_err("Not an authenticated msg")),
+                _ => return Err(not_authenticated_msg()),
             },
         }),
         RESPONSE_BLOCK_SIZE,

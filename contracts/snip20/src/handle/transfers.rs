@@ -2,6 +2,7 @@ use cosmwasm_std::{Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAdd
 use secret_toolkit::utils::HandleCallback;
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer, ReceiverHandleMsg};
+use shade_protocol::contract_interfaces::snip20::errors::transfer_disabled;
 use shade_protocol::contract_interfaces::snip20::manager::{Allowance, Balance, CoinInfo, Config, ContractStatusLevel, ReceiverHash};
 use shade_protocol::contract_interfaces::snip20::transaction_history::store_transfer;
 use shade_protocol::utils::generic_response::ResponseStatus::Success;
@@ -19,7 +20,7 @@ pub fn try_transfer_impl<S: Storage>(
 ) -> StdResult<()> {
 
     if !Config::transfer_enabled(storage)? {
-        return Err(StdError::generic_err("Transfers are disabled"))
+        return Err(transfer_disabled())
     }
 
     let some_owner = match owner {

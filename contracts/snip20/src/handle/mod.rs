@@ -45,6 +45,7 @@ use shade_protocol::{
         storage::plus::{ItemStorage, MapStorage},
     },
 };
+use shade_protocol::contract_interfaces::snip20::errors::{deposit_disabled, no_tokens_received, not_admin, not_enough_tokens, redeem_disabled, unsupported_token};
 
 pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -54,9 +55,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     let sender = env.message.sender;
 
     if !Config::redeem_enabled(&deps.storage)? {
-        return Err(StdError::generic_err(
-            "Redeem functionality is not enabled for this token.",
-        ));
+        return Err(redeem_disabled());
     }
 
     Balance::sub(&mut deps.storage, amount, &sender)?;
@@ -68,9 +67,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
             .amount,
     );
     if amount > token_reserve {
-        return Err(StdError::generic_err(
-            "You are trying to redeem for more SCRT than the token has in its deposit reserve.",
-        ));
+        return Err(not_enough_tokens(amount, token_reserve));
     }
 
     let withdrawal_coins: Vec<Coin> = vec![Coin {
@@ -104,20 +101,16 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         if coin.denom == "uscrt" {
             amount = Uint128::from(coin.amount)
         } else {
-            return Err(StdError::generic_err(
-                "Tried to deposit an unsupported token",
-            ));
+            return Err(unsupported_token());
         }
     }
 
     if amount.is_zero() {
-        return Err(StdError::generic_err("No funds were sent to be deposited"));
+        return Err(no_tokens_received());
     }
 
     if !Config::deposit_enabled(&deps.storage)? {
-        return Err(StdError::generic_err(
-            "Deposit functionality is not enabled for this token.",
-        ));
+        return Err(deposit_disabled());
     }
 
     TotalSupply::add(&mut deps.storage, amount)?;
@@ -144,7 +137,7 @@ pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
     address: HumanAddr,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != Admin::load(&deps.storage)?.0 {
-        return Err(StdError::unauthorized());
+        return Err(not_admin());
     }
 
     Admin(address).save(&mut deps.storage)?;
@@ -162,7 +155,7 @@ pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
     status_level: ContractStatusLevel,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != Admin::load(&deps.storage)?.0 {
-        return Err(StdError::unauthorized());
+        return Err(not_admin());
     }
 
     status_level.save(&mut deps.storage)?;

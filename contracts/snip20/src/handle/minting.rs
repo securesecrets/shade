@@ -1,6 +1,7 @@
 use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
+use shade_protocol::contract_interfaces::snip20::errors::{minting_disabled, not_admin, not_minter};
 use shade_protocol::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, Minters, ReceiverHash, TotalSupply};
 use shade_protocol::contract_interfaces::snip20::transaction_history::{store_burn, store_mint};
 use shade_protocol::utils::generic_response::ResponseStatus::Success;
@@ -29,11 +30,11 @@ pub fn try_mint<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
-        return Err(StdError::generic_err("Minting not enabled"))
+        return Err(minting_disabled())
     }
     // User is minter
     if !Minters::load(&deps.storage)?.0.contains(&env.message.sender) {
-        return Err(StdError::generic_err("User not minter"))
+        return Err(not_minter(&env.message.sender))
     }
     // Inc total supply
     TotalSupply::add(&mut deps.storage, amount)?;
@@ -56,11 +57,11 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
-        return Err(StdError::generic_err("Minting not enabled"))
+        return Err(minting_disabled())
     }
     // User is minter
     if !Minters::load(&deps.storage)?.0.contains(&env.message.sender) {
-        return Err(StdError::generic_err("User not minter"))
+        return Err(not_minter(&env.message.sender))
     }
 
     let sender = env.message.sender;
@@ -95,10 +96,10 @@ pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
-        return Err(StdError::generic_err("Minting not enabled"))
+        return Err(minting_disabled())
     }
     if Admin::load(&deps.storage)?.0 != env.message.sender {
-        return Err(StdError::unauthorized())
+        return Err(not_admin())
     }
 
     let mut minters = Minters::load(&deps.storage)?;
@@ -119,10 +120,10 @@ pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
-        return Err(StdError::generic_err("Minting not enabled"))
+        return Err(minting_disabled())
     }
     if Admin::load(&deps.storage)?.0 != env.message.sender {
-        return Err(StdError::unauthorized())
+        return Err(not_admin())
     }
 
     let mut minters = Minters::load(&deps.storage)?;
@@ -145,10 +146,10 @@ pub fn try_set_minters<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
-        return Err(StdError::generic_err("Minting not enabled"))
+        return Err(minting_disabled())
     }
     if Admin::load(&deps.storage)?.0 != env.message.sender {
-        return Err(StdError::unauthorized())
+        return Err(not_admin())
     }
 
     Minters(minters).save(&mut deps.storage)?;

@@ -20,6 +20,7 @@ use shade_protocol::{
     },
     utils::{generic_response::ResponseStatus::Success, storage::plus::ItemStorage},
 };
+use shade_protocol::contract_interfaces::snip20::errors::burning_disabled;
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -32,7 +33,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     // Burn enabled
     if !Config::burn_enabled(&deps.storage)? {
-        return Err(StdError::generic_err("Burning not enabled"));
+        return Err(burning_disabled());
     }
 
     Balance::sub(&mut deps.storage, amount, sender)?;
@@ -68,7 +69,7 @@ pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
 
     // Burn enabled
     if !Config::burn_enabled(&deps.storage)? {
-        return Err(StdError::generic_err("Burning not enabled"));
+        return Err(burning_disabled());
     }
 
     Allowance::spend(&mut deps.storage, &owner, &sender, amount, &env.block)?;
@@ -103,7 +104,7 @@ pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
 
     // Burn enabled
     if !Config::burn_enabled(&deps.storage)? {
-        return Err(StdError::generic_err("Burning not enabled"));
+        return Err(burning_disabled());
     }
 
     let mut supply = TotalSupply::load(&deps.storage)?;
@@ -120,7 +121,6 @@ pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
         Balance::sub(&mut deps.storage, action.amount, &action.owner)?;
 
         // Dec total supply
-        // TODO: cannot burn more than total supply error
         supply.0 = supply.0.checked_sub(action.amount)?;
 
         store_burn(
