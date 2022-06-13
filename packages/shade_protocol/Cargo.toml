@@ -52,7 +52,6 @@ query_auth = ["utils", "dep:query-authentication"]
 governance-impl = ["governance", "storage"]
 snip20-impl = ["snip20", "storage_plus"]
 query_auth_impl = ["query_auth", "storage_plus"]
-snip20-impl = ["snip20", "storage_plus"]
 sky-impl = ["sky", "storage_plus"]
 
 # for quicker tests, cargo test --lib
