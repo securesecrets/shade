@@ -16,14 +16,13 @@ use shade_protocol::contract_interfaces::{
     airdrop::HandleMsg::CompleteTask,
     oracles::band::ReferenceData,
     oracles::oracle::QueryMsg::Price,
-    snip20::{Snip20Asset},
+    snip20::helpers::{Snip20Asset, fetch_snip20},
 };
 use shade_protocol::contract_interfaces::{
     bonds::{
         errors::*,
         BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
     },
-    snip20::fetch_snip20,
 };
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
