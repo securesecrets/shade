@@ -15,7 +15,7 @@ default = []
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
-fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git"}
+fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features = ["ensemble"]}
 
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20" }
 
