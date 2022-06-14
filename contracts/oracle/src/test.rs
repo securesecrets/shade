@@ -1,3 +1,4 @@
+/*
 use crate::contract::{handle, init, query};
 use cosmwasm_std::{
     coins,
@@ -10,10 +11,6 @@ use cosmwasm_std::{
     InitResponse,
     StdError,
     StdResult,
-};
-use fadroma::{
-    ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
-    ContractLink,
 };
 
 pub struct Oracle;
@@ -47,3 +44,4 @@ impl ContractHarness for Oracle {
         )
     }
 }
+*/
