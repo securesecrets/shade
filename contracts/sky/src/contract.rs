@@ -9,7 +9,7 @@ use crate::{
 };
 
 use shade_protocol::{
-    contract_interfaces::sky::sky::{Config, InitMsg, HandleMsg, QueryMsg, ViewingKeys, SelfAddr},
+    contract_interfaces::sky::sky::{Config, InitMsg, HandleMsg, QueryMsg, ViewingKeys, SelfAddr, Cycles},
     utils::storage::plus::ItemStorage,
 };
 
@@ -34,6 +34,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     state.save(&mut deps.storage)?;
     SelfAddr(env.contract.address).save(&mut deps.storage)?;
+    Cycles( vec![] ).save(&mut deps.storage)?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
@@ -70,6 +71,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::UpdateConfig{ config } => handle::try_update_config(deps, env, config),
         HandleMsg::ArbPeg{ amount } => handle::try_execute(deps, env, amount),
+        HandleMsg::SetCycles{ cycles } => handle::try_set_cycles(deps, env, cycles),
+        HandleMsg::AppendCycles { cycle } => handle::try_append_cycle(deps, env, cycle),
     }
 }
 
@@ -81,6 +84,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::GetMarketRate {} => to_binary(&query::market_rate(deps)?),
         QueryMsg::IsProfitable { amount } => to_binary( &query::trade_profitability(deps, amount)?),
-        QueryMsg::Balance{} => to_binary(&query::get_balances(deps)?)
+        QueryMsg::Balance{} => to_binary(&query::get_balances(deps)?),
+        QueryMsg::GetCycles{} => to_binary(&query::get_cycles(deps)?),
     }
 }

@@ -25,6 +25,24 @@ pub mod sienna_exchange {
     harness_macro::implement_harness!(SiennaExchange, exchange);
 }
 
+#[cfg(feature = "sienna_factory")]
+pub mod sienna_factory {
+    use crate::harness_macro;
+    use factory;
+
+    pub struct SiennaFactory;
+    harness_macro::implement_harness!(SiennaFactory, factory);
+}
+
+#[cfg(feature = "sienna_lp_token")]
+pub mod sienna_lp_token {
+    use crate::harness_macro;
+    use lp_token;
+
+    pub struct SiennaLpToken;
+    harness_macro::implement_harness_lp!(SiennaLpToken, lp_token);
+}
+
 #[cfg(feature = "mint")]
 pub mod mint {
     use crate::harness_macro;

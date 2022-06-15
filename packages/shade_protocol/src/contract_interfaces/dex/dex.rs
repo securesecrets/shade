@@ -32,6 +32,13 @@ pub struct TradingPair {
     pub asset: Snip20Asset,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct TradingPairNoAsset {
+    pub dex: Dex,
+    pub contract: Contract,
+}
+
 /* give_amount into give_pool
  * returns how much to be received from take_pool
  */

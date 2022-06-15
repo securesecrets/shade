@@ -5,7 +5,7 @@ use cosmwasm_math_compat::Uint128;
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     contract_interfaces::{
-        sky::sky::{QueryAnswer, Config, ViewingKeys, SelfAddr},
+        sky::sky::{QueryAnswer, Config, ViewingKeys, SelfAddr, Cycles},
         mint::mint::{QueryMsg, self},
         dex::{dex::pool_take_amount, sienna::{PairInfoResponse, PairQuery, TokenType, PairInfo},},
     snip20,
@@ -201,5 +201,15 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         error_status: is_error.clone(),
         shd_bal,
         silk_bal
+    })
+}
+
+pub fn get_cycles<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<QueryAnswer> {
+    //Need to make private eventually
+    Ok(QueryAnswer::GetCycles { 
+        error_status: false, 
+        cycles: Cycles::load(&deps.storage)?.0
     })
 }

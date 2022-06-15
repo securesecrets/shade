@@ -4,11 +4,12 @@ use cosmwasm_std::{
 };
 use fadroma::scrt::to_cosmos_msg;
 use cosmwasm_math_compat::Uint128;
+use fadroma::{to_cosmos_msg, BaseComposable};
 use shade_protocol::{
     utils::{asset::Contract, storage::plus::ItemStorage},
     contract_interfaces::{
     sky::sky::{
-        Config, HandleAnswer, self, ViewingKeys
+        Config, HandleAnswer, self, ViewingKeys, Cycle, Cycles
     },
     dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
     mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
@@ -48,6 +49,51 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig{
+            status: true,
+        })?),
+    })
+}
+
+pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    cycles_to_set: Vec<Cycle>,
+) -> StdResult<HandleResponse> {
+    if env.message.sender != Config::load(&deps.storage)?.admin {
+        return Err(StdError::unauthorized())
+    }
+
+    let new_cycles = Cycles ( cycles_to_set );
+    new_cycles.save(&mut deps.storage)?;
+
+    Ok(HandleResponse{
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::SetCycles{
+            status: true,
+        })?),
+    })
+}
+
+pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    cycles_to_add: Vec<Cycle>,
+) -> StdResult<HandleResponse> {
+    if env.message.sender != Config::load(&deps.storage)?.admin {
+        return Err(StdError::unauthorized())
+    }
+
+    let mut cycles = Cycles::load(&deps.storage)?;
+
+    cycles.0.append(&mut cycles_to_add.clone());
+
+    cycles.save(&mut deps.storage)?;
+
+    Ok(HandleResponse{
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::AppendCycles{
             status: true,
         })?),
     })
