@@ -1,7 +1,7 @@
 pub mod stake;
 use crate::{
     contract_interfaces::{
-        snip20::permit::Snip20Permit,
+        snip20::QueryPermit,
         staking::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue},
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
@@ -169,7 +169,7 @@ pub enum QueryMsg {
     // Distributors
     Distributors {},
     WithPermit {
-        permit: Snip20Permit,
+        permit: QueryPermit,
         query: QueryWithPermit,
     },
 }

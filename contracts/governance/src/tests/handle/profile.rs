@@ -1,7 +1,7 @@
 use crate::tests::{admin_only_governance, get_profiles};
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::HumanAddr;
-use fadroma_ensemble::MockEnv;
+use fadroma::ensemble::MockEnv;
 use shade_protocol::contract_interfaces::{
     governance,
     governance::profile::{Count, Profile, UpdateFundProfile, UpdateProfile, UpdateVoteProfile},

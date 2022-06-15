@@ -19,7 +19,6 @@ dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
 band = []
 secretswap = ["utils"]
 sienna = ["utils", "math"]
-snip20 = ["utils", "dep:remain", "dep:query-authentication"]
 
 # Utils
 utils = []
@@ -27,11 +26,10 @@ errors = []
 flexible_msg = []
 math = []
 storage = ["cosmwasm-storage/iterator"]
-storage_plus = ["dep:secret-storage-plus"]
+storage_plus = ["storage", "dep:secret-storage-plus"]
 
 # Protocol contracts
 airdrop = ["utils", "errors", "dep:remain", "dep:query-authentication"]
-initializer = ["snip20", "utils"]
 bonds = ["utils", "errors", "dep:remain", "oracle", "airdrop", "dep:query-authentication", "snip20"]
 governance = ["utils", "flexible_msg"]
 mint = ["utils", "snip20"]
@@ -42,12 +40,14 @@ treasury = ["utils", "adapter", "snip20"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 adapter = []
+snip20 = ["utils", "errors", "dep:base64", "dep:query-authentication"]
 snip20_staking = ["utils"]
 sky = ["snip20", "utils", "sienna"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
 governance-impl = ["governance", "storage"]
+snip20-impl = ["snip20", "storage_plus"]
 sky-impl = ["sky", "storage_plus"]
 
 # for quicker tests, cargo test --lib
@@ -66,6 +66,7 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 # TODO: fix import
 chrono = "0.4.19"
+base64 = { version = "0.12.3", optional = true }
 # Needed for transactions
 query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0", optional = true }
 remain = { version = "0.2.2", optional = true }
@@ -73,5 +74,4 @@ subtle = { version = "2.2.3", default-features = false }
 sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
-base64 = "0.12.3"
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }

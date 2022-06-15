@@ -12,7 +12,7 @@ use crate::contract_interfaces::bonds::rand::{sha_256, Prng};
 use crate::contract_interfaces::bonds::utils::{
     create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE,
 };
-use crate::contract_interfaces::snip20::Snip20Asset;
+use crate::contract_interfaces::snip20::helpers::Snip20Asset;
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_math_compat::Uint128;

@@ -1,5 +1,5 @@
 use crate::{
-    contract_interfaces::snip20::Snip20Asset,
+    contract_interfaces::snip20::helpers::Snip20Asset,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use cosmwasm_math_compat::Uint128;

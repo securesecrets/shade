@@ -143,7 +143,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
     assets_w(&mut deps.storage).save(
         contract.address.to_string().as_bytes(),
-        &snip20::fetch_snip20(contract, &deps.querier)?,
+        &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
     )?;
 
     allocations_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;

@@ -6,7 +6,7 @@ use contract_harness::harness::{
 };
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, HumanAddr, StdResult};
-use fadroma_ensemble::{ContractEnsemble, MockEnv};
+use fadroma::ensemble::{ContractEnsemble, MockEnv};
 use fadroma_platform_scrt::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
@@ -236,7 +236,7 @@ fn update_before_deadline() {
 fn update_after_deadline() {
     let (mut chain, gov, _) = init_voting_governance_with_proposal().unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     assert!(
         chain
@@ -292,7 +292,7 @@ fn invalid_vote() {
 fn vote_after_deadline() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     assert!(
         chain
@@ -581,7 +581,7 @@ fn vote_passed() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -662,7 +662,7 @@ fn vote_abstained() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -743,7 +743,7 @@ fn vote_rejected() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -824,7 +824,7 @@ fn vote_vetoed() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -905,7 +905,7 @@ fn vote_no_quorum() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -1175,7 +1175,7 @@ fn vote_count() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(
@@ -1441,7 +1441,7 @@ fn vote_count_percentage() {
         )
         .unwrap();
 
-    chain.block().time += 30000;
+    chain.block_mut().time += 30000;
 
     chain
         .execute(

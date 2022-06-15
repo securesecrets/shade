@@ -3,7 +3,7 @@ use crate::{
         dex::{secretswap, sienna},
         mint::mint,
         oracles::band,
-        snip20::Snip20Asset,
+        snip20::helpers::Snip20Asset,
     },
     utils::{
         asset::Contract,

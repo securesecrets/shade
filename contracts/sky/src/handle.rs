@@ -2,8 +2,8 @@ use cosmwasm_std::{
     Storage, Api, Querier, Extern, Env, StdResult, HandleResponse, to_binary, 
     StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
 };
+use fadroma::scrt::to_cosmos_msg;
 use cosmwasm_math_compat::Uint128;
-use fadroma::to_cosmos_msg;
 use shade_protocol::{
     utils::{asset::Contract, storage::plus::ItemStorage},
     contract_interfaces::{
@@ -12,7 +12,7 @@ use shade_protocol::{
     },
     dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
     mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
-    snip20::Snip20Asset,
+    snip20::helpers::Snip20Asset,
 }};
 use secret_toolkit::utils::Query;
 use secret_toolkit::snip20::send_msg;

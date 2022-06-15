@@ -17,14 +17,15 @@ use cosmwasm_std::{
     Storage,
 };
 use secret_toolkit::{
-    snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query},
+    snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query,
+             token_config_query, TokenConfig},
     utils::Query,
 };
 use shade_protocol::{
     contract_interfaces::{
         mint::mint::{Config, HandleAnswer, Limit, MintMsgHook, SupportedAsset},
         oracles::{band::ReferenceData, oracle::QueryMsg::Price},
-        snip20::{token_config_query, Snip20Asset, TokenConfig},
+        snip20::helpers::Snip20Asset,
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
@@ -355,7 +356,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     )?;
 
     let asset_config: Option<TokenConfig> =
-        match token_config_query(&deps.querier, contract.clone()) {
+        match token_config_query(&deps.querier, 256, contract.code_hash.clone(), contract.address.clone()) {
             Ok(c) => Option::from(c),
             Err(_) => None,
         };

@@ -10,7 +10,7 @@ use cosmwasm_storage::{
     Singleton,
 };
 use shade_protocol::{
-    contract_interfaces::{dao::treasury, snip20::Snip20Asset},
+    contract_interfaces::{dao::treasury, snip20::helpers::Snip20Asset},
     utils::asset::Contract,
 };
 

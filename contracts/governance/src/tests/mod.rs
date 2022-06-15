@@ -15,7 +15,7 @@ use cosmwasm_std::{
     StdError,
     StdResult,
 };
-use fadroma_ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
+use fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
 use fadroma_platform_scrt::ContractLink;
 use serde::Serialize;
 use shade_protocol::contract_interfaces::{

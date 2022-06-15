@@ -11,7 +11,7 @@ use cosmwasm_storage::{
     Singleton,
 };
 use shade_protocol::{
-    contract_interfaces::{mint::mint_router::Config, snip20::Snip20Asset},
+    contract_interfaces::{mint::mint_router::Config, snip20::helpers::Snip20Asset},
     utils::asset::Contract,
 };
 
