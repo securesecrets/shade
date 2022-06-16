@@ -24,9 +24,9 @@ macro_rules! implement_harness {
     };
 }
 
-use snip20_reference_impl;
+use snip20;
 pub struct Snip20;
-implement_harness!(Snip20, snip20_reference_impl);
+implement_harness!(Snip20, snip20);
 
 use mint;
 pub struct Mint;
