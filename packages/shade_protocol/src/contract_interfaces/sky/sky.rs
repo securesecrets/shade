@@ -162,10 +162,13 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
     pub pair_address: HumanAddr,
+    pub pair_code_hash: String,
     pub dex_id: Dex, //sienna, scrtswap, shdswap
     pub token1_address: HumanAddr,
+    pub token1_code_hash: String,
     pub token1_amount: Uint128,
     pub token2_address: HumanAddr,
+    pub token2_code_hash: String,
     pub token2_amount: Uint128,
 }
 
@@ -174,6 +177,23 @@ pub struct ArbPair {
 pub struct Cycle {
     pub pair_addrs: Vec<ArbPair>,
     pub start_addr: HumanAddr
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TokenAmount {
+    pub token: TokenType,
+    pub amount: Uint128
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ShdSwpQueryMsg {
+    GetPairInfo,
+    GetWhiteListAddress,
+    GetTradeCount,
+    GetAdmin,
+    GetStakingContract,
+    GetEstimatedPrice { offer: TokenAmount}
 }
 
 /*impl ArbPair {

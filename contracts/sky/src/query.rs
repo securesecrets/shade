@@ -7,7 +7,7 @@ use cosmwasm_math_compat::{Uint128, Uint64};
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     contract_interfaces::{
-        sky::sky::{QueryAnswer, Config, ViewingKeys, SelfAddr, Cycles},
+        sky::sky::{QueryAnswer, Config, ViewingKeys, SelfAddr, Cycles, ShdSwpQueryMsg},
         mint::mint::{QueryMsg, self},
         dex::{dex::pool_take_amount, sienna::{PairInfoResponse, PairQuery, TokenType, PairInfo},},
     snip20,
@@ -221,14 +221,31 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     index: Uint128,
 ) -> StdResult<QueryAnswer> {
-    let cycles = Cycles::load(&deps.storage)?.0;
+    let mut cycles = Cycles::load(&deps.storage)?.0;
 
     if index.u128() > cycles.len().try_into().unwrap() {
         return Err(StdError::GenericErr { msg: "Index passed is out of bounds".to_string(), backtrace: None });
     }
 
     for pair in cycles[index.u128() as usize].pair_addrs.clone(){
+        let res = ShdSwpQueryMsg::GetPairInfo.query(
+            &deps.querier,
+            pair.pair_code_hash.clone(),
+            pair.pair_address.clone(),
+        )?;
+        match res {
+            shadeswap_shared::msg::amm_pair::QueryMsgResponse::GetPairInfo {
+                liquidity_token: ContractLink<HumanAddr>,
+                factory: ContractLink<HumanAddr>,
+                pair: TokenPair<HumanAddr>,
+                amount_0: Uint128,
+                amount_1: Uint128,
+                total_liquidity: Uint128,
+                contract_version: u32,
+            } => {
 
+            }
+        }
     }
 
     Ok(QueryAnswer::IsCycleProfitable{
