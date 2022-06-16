@@ -32,8 +32,8 @@ pub fn market_rate<S: Storage, A: Api, Q: Querier>(
         amount: Uint128::new(100000000), //1 SHD
     }.query(
         &deps.querier,
-        config.mint_addr.code_hash.clone(),
-        config.mint_addr.address.clone(),
+        config.mint_addr_silk.code_hash.clone(),
+        config.mint_addr_silk.address.clone(),
     )?;
     let mut mint_price: Uint128 = Uint128::new(0); // SILK/SHD
     match mint_info{
@@ -103,9 +103,7 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
                 silk_8d = silk_amount.checked_mul(Uint128::new(100))?;
             }
         }
-        _ => {
-            ;
-        }
+        _ => {}
     }
 
     let div_silk_8d: Uint128 = silk_8d.checked_mul(Uint128::new(100000000))?;

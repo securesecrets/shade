@@ -8,13 +8,13 @@ use shade_protocol::{
     utils::{asset::Contract, storage::plus::ItemStorage},
     contract_interfaces::{
     sky::sky::{
-        Config, HandleAnswer, self
+        Config, HandleAnswer, self, ViewingKeys
     },
     dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
     mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
     snip20::helpers::Snip20Asset,
 }};
-use secret_toolkit::utils::Query;
+use secret_toolkit::{utils::Query, snip20::set_viewing_key_msg};
 use secret_toolkit::snip20::send_msg;
 use crate::{query::trade_profitability};
 
@@ -27,8 +27,25 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized())
     }
     config.save(&mut deps.storage)?;
+    let view_key = ViewingKeys::load(&deps.storage)?.0;
+    let mut messages = vec![
+        set_viewing_key_msg(
+            view_key.clone(), 
+            None, 
+            1, 
+            config.shd_token.contract.code_hash.clone(), 
+            config.shd_token.contract.address.clone(),    
+        )?,
+        set_viewing_key_msg(
+            view_key.clone(), 
+            None, 
+            1, 
+            config.silk_token.contract.code_hash.clone(), 
+            config.silk_token.contract.address.clone()
+        )?
+    ];
     Ok(HandleResponse{
-        messages: vec![],
+        messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig{
             status: true,
@@ -195,8 +212,8 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
     if is_mint_first {
         messages.push(to_cosmos_msg(
-            config.mint_addr.address.clone(),
-            config.mint_addr.code_hash.clone(),
+            config.mint_addr_silk.address.clone(),
+            config.mint_addr_silk.code_hash.clone(),
             &mint::HandleMsg::Receive{
                 sender: env.contract.address.clone(),
                 from: config.shd_token.contract.address.clone(),
@@ -236,8 +253,8 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
         )?);
 
         messages.push(to_cosmos_msg(
-            config.mint_addr.address.clone(),
-            config.mint_addr.code_hash.clone(),
+            config.mint_addr_shd.address.clone(),
+            config.mint_addr_shd.code_hash.clone(),
             &mint::HandleMsg::Receive{
                 sender: env.contract.address.clone(),
                 from: config.silk_token.contract.address.clone(),

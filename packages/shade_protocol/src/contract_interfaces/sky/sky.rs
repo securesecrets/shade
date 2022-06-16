@@ -20,7 +20,8 @@ pub struct TokenContract{
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub admin: HumanAddr,
-    pub mint_addr: Contract,
+    pub mint_addr_shd: Contract,
+    pub mint_addr_silk: Contract,
     pub market_swap_addr: Contract,
     pub shd_token: TokenContract,
     pub silk_token: TokenContract,
@@ -52,7 +53,8 @@ impl ItemStorage for SelfAddr{
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg{
     pub admin: Option<HumanAddr>,
-    pub mint_addr: Contract,
+    pub mint_addr_shd: Contract,
+    pub mint_addr_silk: Contract,
     pub market_swap_addr: Contract,
     pub shd_token: TokenContract,
     pub silk_token: TokenContract,

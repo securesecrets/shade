@@ -1,3 +1,30 @@
+#[cfg(feature = "snip20")]
+pub mod snip20 {
+    use crate::harness_macro;
+    use snip20_reference_impl;
+
+    pub struct Snip20;
+    harness_macro::implement_harness!(Snip20, snip20_reference_impl);
+}
+
+#[cfg(feature = "sky")]
+pub mod sky {
+    use crate::harness_macro;
+    use sky;
+
+    pub struct Sky;
+    harness_macro::implement_harness!(Sky, sky);
+}
+
+#[cfg(feature = "sienna_exchange")]
+pub mod sienna_exchange {
+    use crate::harness_macro;
+    use exchange;
+
+    pub struct SiennaExchange;
+    harness_macro::implement_harness!(SiennaExchange, exchange);
+}
+
 #[cfg(feature = "mint")]
 pub mod mint {
     use crate::harness_macro;
