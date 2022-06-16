@@ -16,6 +16,7 @@ use cosmwasm_std::{
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::{
     contract_interfaces::{
+        snip20,
         mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
         oracles::band::{BandQuery, ReferenceData},
     },
@@ -26,6 +27,8 @@ use shade_protocol::{
 };
 
 use snip20_reference_impl;
+use mock_band;
+use oracle;
 
 use mint::{
     contract::{handle, init, query},
@@ -54,7 +57,7 @@ fn test_ensemble(
     let sscrt = ensemble
         .instantiate(
             reg_snip20.id,
-            &snip20_reference_impl::msg::InitMsg {
+            &snip20::InitMsg {
                 name: "secretSCRT".into(),
                 admin: Some("admin".into()),
                 symbol: "SSCRT".into(),
@@ -73,7 +76,7 @@ fn test_ensemble(
     let shade = ensemble
         .instantiate(
             reg_snip20.id,
-            &snip20_reference_impl::msg::InitMsg {
+            &snip20::InitMsg {
                 name: "Shade".into(),
                 admin: Some("admin".into()),
                 symbol: "SHD".into(),

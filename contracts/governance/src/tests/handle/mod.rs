@@ -9,7 +9,7 @@ use contract_harness::Snip20;
 use cosmwasm_std::HumanAddr;
 use fadroma::ensemble::MockEnv;
 use fadroma_platform_scrt::ContractLink;
-use shade_protocol::{contract_interfaces::governance, utils::asset::Contract};
+use shade_protocol::{contract_interfaces::{governance, snip20}, utils::asset::Contract};
 
 #[test]
 fn init_contract() {
@@ -26,7 +26,7 @@ fn set_config_msg() {
     let snip20 = chain
         .instantiate(
             snip20.id,
-            &snip20_reference_impl::msg::InitMsg {
+            &snip20::InitMsg {
                 name: "funding_token".to_string(),
                 admin: None,
                 symbol: "FND".to_string(),
@@ -100,7 +100,7 @@ fn reject_disable_config_tokens() {
     let snip20 = chain
         .instantiate(
             snip20.id,
-            &snip20_reference_impl::msg::InitMsg {
+            &snip20::InitMsg {
                 name: "funding_token".to_string(),
                 admin: None,
                 symbol: "FND".to_string(),
