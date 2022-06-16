@@ -1,5 +1,5 @@
 use crate::tests::{get_proposals, init_governance};
-use contract_harness::{
+use contract_harness::harness::{
     Governance,
     Snip20,
     Snip20Staking,

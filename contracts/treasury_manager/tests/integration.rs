@@ -20,7 +20,7 @@ use shade_protocol::{
     },
 };
 
-use contract_harness::{
+use contract_harness::harness::{
     Treasury, TreasuryManager, ScrtStaking, Snip20ReferenceImpl as Snip20,
 };
 
