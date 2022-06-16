@@ -12,7 +12,7 @@ use crate::tests::{
 };
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, StdResult};
-use fadroma_ensemble::{ContractEnsemble, MockEnv};
+use fadroma::ensemble::{ContractEnsemble, MockEnv};
 use fadroma_platform_scrt::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
@@ -290,7 +290,7 @@ fn msg_proposal_invalid_msg() {
             .is_err()
     );
 
-    chain.block().time += 100000;
+    chain.block_mut().time += 100000;
 
     chain
         .execute(

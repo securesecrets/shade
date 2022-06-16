@@ -36,7 +36,7 @@ use shade_protocol::{
             adapter,
             rewards_emission::{Config, HandleAnswer, Reward},
         },
-        snip20::{fetch_snip20, Snip20Asset},
+        snip20::helpers::{fetch_snip20, Snip20Asset},
     },
     utils::{
         asset::{scrt_balance, Contract},

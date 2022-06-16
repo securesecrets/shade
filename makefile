@@ -17,7 +17,7 @@ CONTRACTS = \
 		airdrop bonds governance snip20_staking mint mint_router \
 		treasury treasury_manager scrt_staking rewards_emission \
 		lp_shade_swap \
-    oracle initializer snip20 \
+    	oracle  snip20\
 		mock_band mock_secretswap_pair mock_sienna_pair sky
 
 PACKAGES = \
@@ -32,9 +32,6 @@ dao: treasury treasury_manager scrt_staking rewards_emission
 
 compress_all: setup
 	@$(MAKE) $(addprefix compress-,$(CONTRACTS))
-
-compress-snip20: setup
-	$(call opt_and_compress,snip20,snip20_reference_impl)
 
 compress-snip20_staking: setup
 	$(call opt_and_compress,snip20_staking,spip_stkd_0)

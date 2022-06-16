@@ -12,11 +12,11 @@ use cosmwasm_std::{
     Storage,
     Uint128,
 };
-use secret_toolkit::snip20::{register_receive_msg, token_info_query};
+use secret_toolkit::snip20::{register_receive_msg, token_info_query, token_config_query};
 
 use shade_protocol::contract_interfaces::{
     mint::mint_router::{Config, HandleMsg, InitMsg, QueryMsg},
-    snip20::{token_config_query, Snip20Asset},
+    snip20::helpers::Snip20Asset,
 };
 
 use crate::{

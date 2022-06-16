@@ -35,8 +35,8 @@ use mint::{
 use contract_harness::{Mint, MockBand, Oracle, Snip20};
 use fadroma::{
     ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
-    ContractLink,
 };
+use fadroma::scrt::ContractLink;
 
 fn test_ensemble(
     offer_price: Uint128,

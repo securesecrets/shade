@@ -10,7 +10,7 @@ use shade_protocol::{
             errors::{permit_contract_mismatch, permit_key_revoked},
             Account, AccountPermit, BondOpportunity, Config,
         },
-        snip20::Snip20Asset,
+        snip20::helpers::Snip20Asset,
     },
 };
 
