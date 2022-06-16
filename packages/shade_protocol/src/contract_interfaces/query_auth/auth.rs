@@ -10,7 +10,6 @@ use crate::utils::storage::plus::MapStorage;
 pub struct Key(pub String);
 
 impl Key {
-    // TODO: implement this in query auth instead
     pub fn generate(env: &Env, seed: &[u8], entropy: &[u8]) -> Self {
         // 16 here represents the lengths in bytes of the block height and time.
         let entropy_len = 16 + env.message.sender.len() + entropy.len();

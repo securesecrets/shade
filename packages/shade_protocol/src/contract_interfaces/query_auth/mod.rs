@@ -118,11 +118,12 @@ pub enum HandleAnswer {
 
 pub type QueryPermit = Permit<PermitData>;
 
+#[remain::sorted]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct PermitData {
+    pub data: Binary,
     pub key: String,
-    pub data: Binary
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

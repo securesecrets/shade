@@ -51,3 +51,12 @@ pub mod snip20 {
     pub struct Snip20;
     harness_macro::implement_harness!(Snip20, snip20);
 }
+
+#[cfg(feature = "query_auth")]
+pub mod query_auth {
+    use crate::harness_macro;
+    use query_auth;
+
+    pub struct QueryAuth;
+    harness_macro::implement_harness!(QueryAuth, query_auth);
+}

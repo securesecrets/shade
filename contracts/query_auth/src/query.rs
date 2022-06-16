@@ -36,6 +36,6 @@ pub fn validate_permit<S: Storage, A: Api, Q: Querier>(
         is_revoked: PermitKey::may_load(
             &deps.storage,
             (user, permit.params.key),
-        )?.is_none()
+        )?.is_some()
     })
 }
