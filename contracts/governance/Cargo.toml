@@ -42,6 +42,6 @@ mockall = "0.10.2"
 mockall_double = "0.2.0"
 fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"]  }
 fadroma-platform-scrt = { branch = "v100",  git = "https://github.com/hackbg/fadroma.git" }
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "governance", "snip20_staking", "snip20"  ] }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness" }
 snip20-reference-impl = { version = "0.1.0", path = "../snip20-reference-impl" }
 spip_stkd_0 = { version = "0.1.0", path = "../snip20_staking" }

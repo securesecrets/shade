@@ -10,21 +10,18 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 proc-macro = true
 
-[features]
-default = []
-mint = ["dep:mint"]
-oracle = ["dep:oracle"]
-mock_band= ["dep:mock_band"]
-governance = ["dep:governance"]
-snip20_staking = ["dep:spip_stkd_0"]
-snip20 = ["dep:snip20"]
-
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"] }
-mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
-oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
-mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }
-governance = { version = "0.1.0", path = "../../contracts/governance", optional = true }
-spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
-snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
+
+mint = { version = "0.1.0", path = "../../contracts/mint" }
+oracle = { version = "0.1.0", path = "../../contracts/oracle" }
+mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }
+governance = { version = "0.1.0", path = "../../contracts/governance" }
+spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking" }
+snip20 = { version = "0.1.0", path = "../../contracts/snip20" }
+snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
+treasury = { version = "0.1.0", path = "../../contracts/treasury" }
+treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager" }
+mock_sienna_pair = { version = "0.1.0", path = "../../contracts/mock_sienna_pair" }
+scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking" }

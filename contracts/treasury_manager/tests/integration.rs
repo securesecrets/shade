@@ -25,7 +25,9 @@ use contract_harness::{
 };
 
 use fadroma::{
-    ContractLink, 
+    scrt::{
+        ContractLink,
+    },
     ensemble::{
        MockEnv, MockDeps, 
        ContractHarness, ContractEnsemble,

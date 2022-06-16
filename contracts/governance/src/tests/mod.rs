@@ -2,7 +2,7 @@ pub mod handle;
 pub mod query;
 
 use crate::contract::{handle, init, query};
-use contract_harness::harness::governance::Governance;
+use contract_harness::Governance;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     from_binary,
