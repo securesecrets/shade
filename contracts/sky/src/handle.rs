@@ -3,6 +3,7 @@ use cosmwasm_std::{
     StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
 };
 use cosmwasm_math_compat::Uint128;
+use fadroma::to_cosmos_msg;
 use shade_protocol::{
     utils::{asset::Contract, storage::plus::ItemStorage},
     contract_interfaces::{
@@ -13,10 +14,8 @@ use shade_protocol::{
     mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
     snip20::Snip20Asset,
 }};
-use secret_toolkit::{
-    utils::{HandleCallback, Query},
-    snip20::send_msg,
-};
+use secret_toolkit::utils::Query;
+use secret_toolkit::snip20::send_msg;
 use crate::{query::trade_profitability};
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
@@ -195,8 +194,10 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     let mut sienna_msg: Swap;
 
     if is_mint_first {
-        messages.push(
-            mint::HandleMsg::Receive {
+        messages.push(to_cosmos_msg(
+            config.mint_addr.address.clone(),
+            config.mint_addr.code_hash.clone(),
+            &mint::HandleMsg::Receive{
                 sender: env.contract.address.clone(),
                 from: config.shd_token.contract.address.clone(),
                 amount: amount.clone(),
@@ -204,12 +205,8 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
                 msg: Some(to_binary(&mint::MintMsgHook{
                     minimum_expected_amount: first_swap_min_expected
                 })?)
-            }.to_cosmos_msg(
-                config.mint_addr.code_hash.clone(),
-                config.mint_addr.address.clone(),
-                None,
-            )?
-        );
+            },
+        )?);
 
         messages.push(send_msg(
             config.market_swap_addr.address.clone(),
@@ -238,8 +235,10 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
             config.shd_token.contract.address.clone(),
         )?);
 
-        messages.push(
-            mint::HandleMsg::Receive{
+        messages.push(to_cosmos_msg(
+            config.mint_addr.address.clone(),
+            config.mint_addr.code_hash.clone(),
+            &mint::HandleMsg::Receive{
                 sender: env.contract.address.clone(),
                 from: config.silk_token.contract.address.clone(),
                 amount: first_swap_min_expected,
@@ -247,12 +246,8 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
                 msg: Some(to_binary(&mint::MintMsgHook{
                     minimum_expected_amount: second_swap_min_expected
                 })?)
-            }.to_cosmos_msg(
-                config.mint_addr.code_hash.clone(),
-                config.mint_addr.address.clone(),
-                None,
-            )?
-        );
+            },
+        )?);
     }
 
     Ok(HandleResponse{

@@ -103,7 +103,9 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
                 silk_8d = silk_amount.checked_mul(Uint128::new(100))?;
             }
         }
-        _ => { }
+        _ => {
+            ;
+        }
     }
 
     let div_silk_8d: Uint128 = silk_8d.checked_mul(Uint128::new(100000000))?;

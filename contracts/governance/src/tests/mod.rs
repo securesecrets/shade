@@ -2,7 +2,7 @@ pub mod handle;
 pub mod query;
 
 use crate::contract::{handle, init, query};
-use contract_harness::Governance;
+use contract_harness::harness::governance::Governance;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     from_binary,
@@ -15,10 +15,8 @@ use cosmwasm_std::{
     StdError,
     StdResult,
 };
-use fadroma::{
-    ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
-    ContractLink,
-};
+use fadroma_ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
+use fadroma_platform_scrt::ContractLink;
 use serde::Serialize;
 use shade_protocol::contract_interfaces::{
     governance,

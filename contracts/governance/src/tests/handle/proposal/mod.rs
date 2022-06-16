@@ -12,10 +12,8 @@ use crate::tests::{
 };
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, StdResult};
-use fadroma::{
-    ensemble::{ContractEnsemble, MockEnv},
-    ContractLink,
-};
+use fadroma_ensemble::{ContractEnsemble, MockEnv};
+use fadroma_platform_scrt::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
         governance,
