@@ -99,6 +99,10 @@ pub enum QueryMsg {
     },
     Balance{},
     GetCycles{},
+    IsCycleProfitable{
+        amount: Uint128,
+        index: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -127,6 +131,10 @@ pub enum QueryAnswer {
     GetCycles{
         error_status: bool,
         cycles: Vec<Cycle>,
+    },
+    IsCycleProfitable{
+        is_profitable:bool,
+        direction: Cycle,
     }
 }
 
@@ -153,19 +161,19 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
-    pair_address: HumanAddr,
-    dex_id: Dex, //sienna, scrtswap, shdswap
-    token1_address: HumanAddr,
-    token1_amount: Uint128,
-    token2_address: HumanAddr,
-    token2_amount: Uint128,
+    pub pair_address: HumanAddr,
+    pub dex_id: Dex, //sienna, scrtswap, shdswap
+    pub token1_address: HumanAddr,
+    pub token1_amount: Uint128,
+    pub token2_address: HumanAddr,
+    pub token2_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Cycle {
-    pair_addrs: Vec<ArbPair>,
-    start_addr: HumanAddr
+    pub pair_addrs: Vec<ArbPair>,
+    pub start_addr: HumanAddr
 }
 
 /*impl ArbPair {

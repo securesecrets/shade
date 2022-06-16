@@ -20,9 +20,9 @@
 use cosmwasm_math_compat::Uint128;
 use contract_harness::harness::{
     snip20::Snip20, 
-    sienna_exchange::SiennaExchange,
-    sienna_factory::SiennaFactory,
-    sienna_lp_token::SiennaLpToken,
+    //sienna_exchange::SiennaExchange,
+    //sienna_factory::SiennaFactory,
+    //sienna_lp_token::SiennaLpToken,
 };
 use fadroma::{
     ensemble::{ContractEnsemble, MockEnv},
@@ -58,9 +58,9 @@ fn test_ensemble_sky(
     let mut ensemble = ContractEnsemble::new(50);
 
     let reg_snip20 = ensemble.register(Box::new(Snip20));
-    let reg_sienna_exchange = ensemble.register(Box::new(SiennaExchange));
-    let reg_sienna_factory = ensemble.register(Box::new(SiennaFactory));
-    let reg_sienna_lp_token = ensemble.register(Box::new(SiennaLpToken));
+    //let reg_sienna_exchange = ensemble.register(Box::new(SiennaExchange));
+    //let reg_sienna_factory = ensemble.register(Box::new(SiennaFactory));
+    //let reg_sienna_lp_token = ensemble.register(Box::new(SiennaLpToken));
 
     println!("Deploying sscrt contract");
 
@@ -215,7 +215,7 @@ fn test_ensemble_sky(
         }
     }
 
-    println!("{}", reg_sienna_factory.code_hash);
+    /*println!("{}", reg_sienna_factory.code_hash);
     println!("{}", reg_sienna_lp_token.code_hash);
 
     let sienna_factory = ensemble.instantiate(
@@ -255,7 +255,7 @@ fn test_ensemble_sky(
             entropy: to_binary("").ok().unwrap(),
         },
         MockEnv::new("admin", sienna_factory.clone()),
-    ).unwrap();
+    ).unwrap();*/
 
     println!("here");
 

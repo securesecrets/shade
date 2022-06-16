@@ -1,7 +1,9 @@
+use std::convert::{TryInto, TryFrom};
+
 use cosmwasm_std::{
     Storage, Api, Querier, Extern, StdResult, StdError, debug_print,
 };
-use cosmwasm_math_compat::Uint128;
+use cosmwasm_math_compat::{Uint128, Uint64};
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     contract_interfaces::{
@@ -211,5 +213,26 @@ pub fn get_cycles<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::GetCycles { 
         error_status: false, 
         cycles: Cycles::load(&deps.storage)?.0
+    })
+}
+
+pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    amount: Uint128,
+    index: Uint128,
+) -> StdResult<QueryAnswer> {
+    let cycles = Cycles::load(&deps.storage)?.0;
+
+    if index.u128() > cycles.len().try_into().unwrap() {
+        return Err(StdError::GenericErr { msg: "Index passed is out of bounds".to_string(), backtrace: None });
+    }
+
+    for pair in cycles[index.u128() as usize].pair_addrs.clone(){
+
+    }
+
+    Ok(QueryAnswer::IsCycleProfitable{
+        is_profitable: false,
+        direction: cycles[0].clone(),
     })
 }

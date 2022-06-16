@@ -86,5 +86,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::IsProfitable { amount } => to_binary( &query::trade_profitability(deps, amount)?),
         QueryMsg::Balance{} => to_binary(&query::get_balances(deps)?),
         QueryMsg::GetCycles{} => to_binary(&query::get_cycles(deps)?),
+        QueryMsg::IsCycleProfitable{ amount, index } => to_binary( &query::cycle_profitability(deps, amount, index)?),
     }
 }
