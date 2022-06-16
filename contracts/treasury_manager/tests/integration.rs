@@ -21,7 +21,7 @@ use shade_protocol::{
 };
 
 use contract_harness::{
-    Treasury, TreasuryManager, ScrtStaking, Snip20,
+    Treasury, TreasuryManager, ScrtStaking, Snip20ReferencImpl as Snip20,
 };
 
 use fadroma::{

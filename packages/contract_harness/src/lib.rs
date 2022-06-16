@@ -28,6 +28,10 @@ use snip20;
 pub struct Snip20;
 implement_harness!(Snip20, snip20);
 
+use snip20_reference_impl;
+pub struct Snip20ReferenceImpl;
+implement_harness!(Snip20ReferenceImpl, snip20_reference_impl);
+
 use mint;
 pub struct Mint;
 implement_harness!(Mint, mint);
