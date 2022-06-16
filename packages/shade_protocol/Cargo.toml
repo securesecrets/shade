@@ -42,7 +42,7 @@ rewards_emission = ["adapter"]
 lp_shade_swap = []
 adapter = []
 snip20 = ["utils", "errors", "dep:base64", "dep:query-authentication"]
-snip20_staking = ["utils"]
+snip20_staking = ["utils", "storage"]
 sky = ["snip20", "utils", "dex"]
 
 # Protocol Implementation Contracts

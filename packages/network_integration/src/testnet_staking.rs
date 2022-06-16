@@ -1,4 +1,5 @@
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
+use cosmwasm_math_compat as compat;
 use network_integration::utils::{
     generate_label, print_contract, print_header, SHD_STAKING_FILE, GAS, SNIP20_FILE, STORE_GAS,
 };
@@ -8,12 +9,12 @@ use secretcli::secretcli::{account_address, init};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;
-use shade_protocol::{
-    snip20_staking,
+use shade_protocol::contract_interfaces::{
+    staking::snip20_staking,
     snip20,
 };
 use std::{env, fs};
-use shade_protocol::snip20::InitialBalance;
+use shade_protocol::contract_interfaces::snip20::InitialBalance;
 
 fn main() -> Result<()> {
     // Initialize snip20
@@ -26,7 +27,7 @@ fn main() -> Result<()> {
         decimals: 8,
         initial_balances: Some(vec![InitialBalance {
             address: HumanAddr::from("secret1xtl6rt2pwhseuzct00h8uw6trkzjj2l8lu38se".to_string()),
-            amount: Uint128(1000000000000000),
+            amount: compat::Uint128::new(1000000000000000),
         }]),
         prng_seed: Default::default(),
         config: Some(snip20::InitConfig {
@@ -35,6 +36,7 @@ fn main() -> Result<()> {
             enable_redeem: Some(false),
             enable_mint: Some(true),
             enable_burn: Some(true),
+            enable_transfer: Some(true),
         }),
     };
 
@@ -60,9 +62,7 @@ fn main() -> Result<()> {
         decimals: Some(8),
         share_decimals: 18,
         prng_seed: Default::default(),
-        config: Some(snip20_staking::InitConfig {
-            public_total_supply: Some(true),
-        }),
+        public_total_supply: true,
         unbond_time: 180,
         staked_token: Contract { address: HumanAddr(snip.address.clone()), code_hash: snip.code_hash },
         treasury: Some(HumanAddr(snip.address)),

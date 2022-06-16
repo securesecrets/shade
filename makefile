@@ -16,7 +16,7 @@ endef
 CONTRACTS = \
 		airdrop bonds governance snip20_staking mint mint_router \
 		treasury treasury_manager scrt_staking rewards_emission \
-		lp_shade_swap oracle  snip20\
+		lp_shade_swap oracle snip20\
 		mock_band mock_secretswap_pair mock_sienna_pair sky
 
 PACKAGES = \
