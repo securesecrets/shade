@@ -280,7 +280,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
                         )?
                     }
                 }
-            },
+            }
 
             _ => match msg {
                 QueryMsg::Allowance {

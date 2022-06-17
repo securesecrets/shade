@@ -1,7 +1,7 @@
 pub mod handle;
 pub mod query;
 
-use contract_harness::harness::Snip20;
+use contract_harness::harness::snip20::Snip20;
 use cosmwasm_std::{Binary, HumanAddr, StdResult};
 use fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
 use fadroma_platform_scrt::ContractLink;
