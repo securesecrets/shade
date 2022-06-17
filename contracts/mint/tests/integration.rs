@@ -35,7 +35,13 @@ use mint::{
     handle::{calculate_mint, calculate_portion, try_burn},
 };
 
-use contract_harness::harness::{Mint, MockBand, Oracle, Snip20ReferenceImpl as Snip20};
+use contract_harness::harness::{
+    mint::Mint, 
+    mock_band::MockBand, 
+    oracle::Oracle, 
+    snip20_reference_impl::Snip20ReferenceImpl as Snip20
+};
+
 use fadroma::{
     ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
 };
