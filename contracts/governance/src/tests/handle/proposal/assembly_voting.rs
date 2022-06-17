@@ -6,7 +6,7 @@ use crate::tests::{
     gov_msg_proposal,
     init_governance,
 };
-use contract_harness::harness::{Governance, Snip20Staking};
+use contract_harness::harness::{governance::Governance, snip20_staking::Snip20Staking};
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, Binary, HumanAddr, StdResult};
 use fadroma::ensemble::{ContractEnsemble, MockEnv};
