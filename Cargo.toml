@@ -18,6 +18,8 @@ members = [
   "contracts/oracle",
   "contracts/sky",
 
+  "contracts/snip20-reference-impl",
+
   # DAO
   # - Core
   "contracts/treasury",

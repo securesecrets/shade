@@ -1,69 +1,62 @@
-use cosmwasm_std::{from_binary, Binary, Env, HandleResponse, InitResponse, StdResult};
-use fadroma::ensemble::{ContractHarness, MockDeps};
+#[cfg(feature = "mint")]
+pub mod mint {
+    use crate::harness_macro;
+    use mint;
 
-macro_rules! implement_harness {
-    ($x:ident, $s:ident) => {
-        impl ContractHarness for $x {
-            fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
-                $s::contract::init(deps, env, from_binary(&msg)?)
-            }
-
-            fn handle(
-                &self,
-                deps: &mut MockDeps,
-                env: Env,
-                msg: Binary,
-            ) -> StdResult<HandleResponse> {
-                $s::contract::handle(deps, env, from_binary(&msg)?)
-            }
-
-            fn query(&self, deps: &MockDeps, msg: Binary) -> StdResult<Binary> {
-                $s::contract::query(deps, from_binary(&msg)?)
-            }
-        }
-    };
+    pub struct Mint;
+    harness_macro::implement_harness!(Mint, mint);
 }
 
-use snip20;
-pub struct Snip20;
-implement_harness!(Snip20, snip20);
+#[cfg(feature = "oracle")]
+pub mod oracle {
+    use crate::harness_macro;
+    use oracle;
 
-use snip20_reference_impl;
-pub struct Snip20ReferenceImpl;
-implement_harness!(Snip20ReferenceImpl, snip20_reference_impl);
+    pub struct Oracle;
+    harness_macro::implement_harness!(Oracle, oracle);
+}
 
-use mint;
-pub struct Mint;
-implement_harness!(Mint, mint);
+#[cfg(feature = "mock_band")]
+pub mod mock_band {
+    use crate::harness_macro;
+    use mock_band;
 
-use oracle;
-pub struct Oracle;
-implement_harness!(Oracle, oracle);
+    pub struct MockBand;
+    harness_macro::implement_harness!(MockBand, mock_band);
+}
 
-use mock_band;
-pub struct MockBand;
-implement_harness!(MockBand, mock_band);
+#[cfg(feature = "governance")]
+pub mod governance {
+    use crate::harness_macro;
+    use governance;
 
-use treasury;
-pub struct Treasury;
-implement_harness!(Treasury, treasury);
+    pub struct Governance;
+    harness_macro::implement_harness!(Governance, governance);
+}
 
-use treasury_manager;
-pub struct TreasuryManager;
-implement_harness!(TreasuryManager, treasury_manager);
+#[cfg(feature = "snip20_staking")]
+pub mod snip20_staking {
+    use crate::harness_macro;
+    use spip_stkd_0;
 
-use scrt_staking;
-pub struct ScrtStaking;
-implement_harness!(ScrtStaking, scrt_staking);
+    pub struct Snip20Staking;
+    harness_macro::implement_harness!(Snip20Staking, spip_stkd_0);
+}
 
-use governance;
-pub struct Governance;
-implement_harness!(Governance, governance);
+#[cfg(feature = "snip20")]
+pub mod snip20 {
+    use crate::harness_macro;
+    use snip20;
 
-use spip_stkd_0;
-pub struct Snip20Staking;
-implement_harness!(Snip20Staking, spip_stkd_0);
+    pub struct Snip20;
+    harness_macro::implement_harness!(Snip20, snip20);
+}
 
-use mock_sienna_pair;
-pub struct MockSiennaPair;
-implement_harness!(MockSiennaPair, mock_sienna_pair);
+#[cfg(feature = "snip20_reference_impl")]
+pub mod snip20_reference_impl {
+    use crate::harness_macro;
+    use snip20_reference_impl;
+
+    pub struct Snip20ReferenceImpl;
+    harness_macro::implement_harness!(Snip20ReferenceImpl, snip20_reference_impl);
+}

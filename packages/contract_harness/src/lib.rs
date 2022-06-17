@@ -1,2 +1,2 @@
-#[cfg(not(target_arch = "wasm32"))]
 pub mod harness;
+pub mod harness_macro;
