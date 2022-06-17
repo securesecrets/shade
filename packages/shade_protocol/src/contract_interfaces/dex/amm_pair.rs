@@ -1,5 +1,6 @@
 use crate::contract_interfaces::dex::sienna::{self};
-use fadroma_platform_scrt::{ContractLink, ContractInstantiationInfo, Callback, HumanAddr, Binary};
+use cosmwasm_std::{HumanAddr, Binary};
+use fadroma_platform_scrt::{ContractLink, ContractInstantiationInfo, Callback};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

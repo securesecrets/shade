@@ -16,31 +16,31 @@ pub mod sky {
     harness_macro::implement_harness!(Sky, sky);
 }
 
-#[cfg(feature = "sienna_exchange")]
-pub mod sienna_exchange {
+#[cfg(feature = "shadeswap_exchange")]
+pub mod shadeswap_exchange {
     use crate::harness_macro;
-    use exchange;
+    use amm_pair;
 
-    pub struct SiennaExchange;
-    harness_macro::implement_harness!(SiennaExchange, exchange);
+    pub struct ShadeswapExchange;
+    harness_macro::implement_harness!(ShadeswapExchange, exchange);
 }
 
-#[cfg(feature = "sienna_factory")]
-pub mod sienna_factory {
+#[cfg(feature = "shadeswap_factory")]
+pub mod shadeswap_factory {
     use crate::harness_macro;
     use factory;
 
-    pub struct SiennaFactory;
-    harness_macro::implement_harness!(SiennaFactory, factory);
+    pub struct ShadeswapFactory;
+    harness_macro::implement_harness!(ShadeswapFactory, factory);
 }
 
-#[cfg(feature = "sienna_lp_token")]
-pub mod sienna_lp_token {
+#[cfg(feature = "shadeswap_lp_token")]
+pub mod shadeswap_lp_token {
     use crate::harness_macro;
     use lp_token;
 
-    pub struct SiennaLpToken;
-    harness_macro::implement_harness_lp!(SiennaLpToken, lp_token);
+    pub struct ShadeswapLpToken;
+    harness_macro::implement_harness!(ShadeswapLpToken, lp_token);
 }
 
 #[cfg(feature = "mint")]

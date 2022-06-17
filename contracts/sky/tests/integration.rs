@@ -20,8 +20,8 @@
 use cosmwasm_math_compat::Uint128;
 use contract_harness::harness::{
     snip20::Snip20, 
-    //sienna_exchange::SiennaExchange,
-    //sienna_factory::SiennaFactory,
+    shadeswap_exchange::ShadeswapExchange,
+    shadeswap_factory::ShadeswapFactory,
     //sienna_lp_token::SiennaLpToken,
 };
 use fadroma::{
@@ -58,8 +58,8 @@ fn test_ensemble_sky(
     let mut ensemble = ContractEnsemble::new(50);
 
     let reg_snip20 = ensemble.register(Box::new(Snip20));
-    //let reg_sienna_exchange = ensemble.register(Box::new(SiennaExchange));
-    //let reg_sienna_factory = ensemble.register(Box::new(SiennaFactory));
+    let reg_shadeswap_exchange = ensemble.register(Box::new(ShadeswapExchange));
+    let reg_shadeswap_factory = ensemble.register(Box::new(ShadeswapFactory));
     //let reg_sienna_lp_token = ensemble.register(Box::new(SiennaLpToken));
 
     println!("Deploying sscrt contract");
@@ -160,7 +160,7 @@ fn test_ensemble_sky(
 
     let mut query_res = ensemble.query(
         sscrt.address.clone(),
-        snip20::QueryMsg::Balance { 
+        &snip20::QueryMsg::Balance { 
             address: "admin".into(), 
             key: key.clone(), 
         }
@@ -179,7 +179,7 @@ fn test_ensemble_sky(
 
     query_res = ensemble.query(
         shd.address.clone(),
-        snip20::QueryMsg::Balance { 
+        &snip20::QueryMsg::Balance { 
             address: "admin".into(), 
             key: key.clone(), 
         }
@@ -198,7 +198,7 @@ fn test_ensemble_sky(
 
     query_res = ensemble.query(
         silk.address.clone(),
-        snip20::QueryMsg::Balance { 
+        &snip20::QueryMsg::Balance { 
             address: "admin".into(), 
             key: key.clone(), 
         }

@@ -1,18 +1,24 @@
-use std::convert::{TryInto, TryFrom};
+use std::{convert::{TryInto, TryFrom}, thread::current};
 
 use cosmwasm_std::{
     Storage, Api, Querier, Extern, StdResult, StdError, debug_print,
 };
 use cosmwasm_math_compat::{Uint128, Uint64};
+use fadroma::{
+    prelude::ContractLink
+};
+use shadeswap_shared::{
+    self, msg, TokenAmount,
+};
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     contract_interfaces::{
-        sky::sky::{QueryAnswer, Config, ViewingKeys, SelfAddr, Cycles, ShdSwpQueryMsg},
+        sky::sky::{QueryAnswer, Config, ViewingKeys, SelfAddr, Cycles, ArbPair},
         mint::mint::{QueryMsg, self},
         dex::{dex::pool_take_amount, sienna::{PairInfoResponse, PairQuery, TokenType, PairInfo},},
     snip20,
     },
-    utils::storage::plus::ItemStorage,
+    utils::{storage::plus::ItemStorage, asset::Contract},
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
@@ -221,35 +227,172 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     index: Uint128,
 ) -> StdResult<QueryAnswer> {
+    let config = Config::load(&deps.storage)?;
     let mut cycles = Cycles::load(&deps.storage)?.0;
+    let mut new_pair_addrs: Vec<ArbPair>;
 
     if index.u128() > cycles.len().try_into().unwrap() {
         return Err(StdError::GenericErr { msg: "Index passed is out of bounds".to_string(), backtrace: None });
     }
 
-    for pair in cycles[index.u128() as usize].pair_addrs.clone(){
-        let res = ShdSwpQueryMsg::GetPairInfo.query(
+
+    let mut current_offer: TokenAmount<shadeswap_shared::fadroma::HumanAddr> = TokenAmount {
+        token: shadeswap_shared::TokenType::CustomToken { 
+            contract_addr: shadeswap_shared::fadroma::HumanAddr::from(config.shd_token.contract.address.into()), 
+            token_code_hash: config.shd_token.contract.code_hash 
+        },
+        amount: shadeswap_shared::fadroma::Uint128::from(amount.u128()),
+    };
+
+    for arb_pair in cycles[index.u128() as usize].pair_addrs.clone(){
+        let res = shadeswap_shared::msg::amm_pair::QueryMsg::GetEstimatedPrice { 
+            offer: current_offer
+        }
+        .query(
             &deps.querier,
-            pair.pair_code_hash.clone(),
-            pair.pair_address.clone(),
+            arb_pair.pair_code_hash.clone(),
+            arb_pair.pair_address.clone(),
         )?;
         match res {
-            shadeswap_shared::msg::amm_pair::QueryMsgResponse::GetPairInfo {
-                liquidity_token: ContractLink<HumanAddr>,
-                factory: ContractLink<HumanAddr>,
-                pair: TokenPair<HumanAddr>,
-                amount_0: Uint128,
-                amount_1: Uint128,
-                total_liquidity: Uint128,
-                contract_version: u32,
+            shadeswap_shared::msg::amm_pair::QueryMsgResponse::EstimatedPrice {
+                estimated_price,
             } => {
-
+                match current_offer.token {
+                    shadeswap_shared::TokenType::CustomToken { 
+                        contract_addr, 
+                        token_code_hash 
+                    } => {
+                        if token_code_hash == arb_pair.token0_code_hash {
+                            current_offer = TokenAmount {
+                                token: shadeswap_shared::TokenType::CustomToken { 
+                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token1_address.into()), 
+                                    token_code_hash: arb_pair.token1_code_hash 
+                                },
+                                amount: estimated_price,
+                            };
+                        }
+                        else {
+                            current_offer = TokenAmount {
+                                token: shadeswap_shared::TokenType::CustomToken { 
+                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token0_address.into()), 
+                                    token_code_hash: arb_pair.token0_code_hash 
+                                },
+                                amount: estimated_price,
+                            };
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            _ => {
+                return Err(StdError::GenericErr { msg: "Unexpected result".to_string(), backtrace: None })
             }
         }
+    }
+
+    if current_offer.amount.u128() > amount.u128() {
+        return Ok(QueryAnswer::IsCycleProfitable{
+            is_profitable: true,
+            direction: cycles[index.u128() as usize].clone(),
+        })
+    }
+
+    current_offer = TokenAmount {
+        token: shadeswap_shared::TokenType::CustomToken { 
+            contract_addr: shadeswap_shared::fadroma::HumanAddr::from(config.shd_token.contract.address.into()), 
+            token_code_hash: config.shd_token.contract.code_hash 
+        },
+        amount: shadeswap_shared::fadroma::Uint128::from(amount.u128()),
+    };
+
+    for arb_pair in cycles[index.u128() as usize].pair_addrs.clone().iter().rev() {
+        let res = shadeswap_shared::msg::amm_pair::QueryMsg::GetEstimatedPrice { 
+            offer: current_offer
+        }
+        .query(
+            &deps.querier,
+            arb_pair.pair_code_hash.clone(),
+            arb_pair.pair_address.clone(),
+        )?;
+        match res {
+            shadeswap_shared::msg::amm_pair::QueryMsgResponse::EstimatedPrice {
+                estimated_price,
+            } => {
+                match current_offer.token {
+                    shadeswap_shared::TokenType::CustomToken { 
+                        contract_addr, 
+                        token_code_hash 
+                    } => {
+                        if token_code_hash == arb_pair.token0_code_hash {
+                            current_offer = TokenAmount {
+                                token: shadeswap_shared::TokenType::CustomToken { 
+                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token1_address.into()), 
+                                    token_code_hash: arb_pair.token1_code_hash 
+                                },
+                                amount: estimated_price,
+                            };
+                        }
+                        else {
+                            current_offer = TokenAmount {
+                                token: shadeswap_shared::TokenType::CustomToken { 
+                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token0_address.into()), 
+                                    token_code_hash: arb_pair.token0_code_hash 
+                                },
+                                amount: estimated_price,
+                            };
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            _ => {
+                return Err(StdError::GenericErr { msg: "Unexpected result".to_string(), backtrace: None })
+            }
+        }
+    }
+
+    if current_offer.amount.u128() > amount.u128() {
+        cycles[index.u128() as usize].pair_addrs.clone().reverse();
+        return Ok(QueryAnswer::IsCycleProfitable{
+            is_profitable: true,
+            direction: cycles[index.u128() as usize].clone(),
+        })
     }
 
     Ok(QueryAnswer::IsCycleProfitable{
         is_profitable: false,
         direction: cycles[0].clone(),
+    })
+}
+
+pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    amount: Uint128,
+) -> StdResult<QueryAnswer> {
+    let mut cycles = Cycles::load(&deps.storage)?.0;
+    let mut return_is_profitable = vec![];
+    let mut return_directions = vec![];
+
+    for index in 0..cycles.len(){
+        let res = cycle_profitability(deps, amount, Uint128::from(index as u128)).unwrap();
+        match res {
+            QueryAnswer::IsCycleProfitable { 
+                is_profitable, 
+                direction 
+            } => {
+                if is_profitable {
+                    return_is_profitable.push(is_profitable);
+                    return_directions.push(direction);
+                }
+            }
+            _=>{
+                return Err(StdError::GenericErr{msg: "Unexpected result".to_string(), backtrace: None })
+            }
+        }
+    }
+
+    Ok(QueryAnswer::AnyCyclesProfitable{
+        is_profitable: vec![],
+        directions: vec![],
     })
 }

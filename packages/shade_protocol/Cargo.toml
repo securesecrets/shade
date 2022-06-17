@@ -21,7 +21,6 @@ secretswap = ["utils"]
 sienna = ["utils", "math"]
 factory = ["sienna", "dep:fadroma-platform-scrt"]
 amm_pair = ["sienna", "dep:fadroma-platform-scrt"]
-snip20 = ["utils", "dep:remain", "dep:query-authentication"]
 
 # Utils
 utils = []

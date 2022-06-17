@@ -72,6 +72,10 @@ pub struct InitMsg{
     pub limit: Option<String>,
 }
 
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
@@ -89,6 +93,10 @@ pub enum HandleMsg {
     },
 }
 
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
@@ -103,6 +111,10 @@ pub enum QueryMsg {
         amount: Uint128,
         index: Uint128,
     },
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -135,6 +147,10 @@ pub enum QueryAnswer {
     IsCycleProfitable{
         is_profitable:bool,
         direction: Cycle,
+    },
+    AnyCyclesProfitable{
+        is_profitable:Vec<bool>,
+        directions:Vec<Cycle>
     }
 }
 
@@ -164,12 +180,12 @@ pub struct ArbPair {
     pub pair_address: HumanAddr,
     pub pair_code_hash: String,
     pub dex_id: Dex, //sienna, scrtswap, shdswap
+    pub token0_address: HumanAddr,
+    pub token0_code_hash: String,
+    pub token0_amount: Uint128,
     pub token1_address: HumanAddr,
     pub token1_code_hash: String,
     pub token1_amount: Uint128,
-    pub token2_address: HumanAddr,
-    pub token2_code_hash: String,
-    pub token2_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -183,17 +199,6 @@ pub struct Cycle {
 pub struct TokenAmount {
     pub token: TokenType,
     pub amount: Uint128
-}
-
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ShdSwpQueryMsg {
-    GetPairInfo,
-    GetWhiteListAddress,
-    GetTradeCount,
-    GetAdmin,
-    GetStakingContract,
-    GetEstimatedPrice { offer: TokenAmount}
 }
 
 /*impl ArbPair {
