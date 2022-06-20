@@ -48,6 +48,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         global_err_issued_price: msg.global_err_issued_price,
         contract: env.contract.address.clone(),
         airdrop: msg.airdrop,
+        query_auth: msg.query_auth,
     };
 
     config_w(&mut deps.storage).save(&state)?;
@@ -130,6 +131,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 global_min_accepted_issued_price,
                 global_err_issued_price,
                 allowance_key,
+                airdrop,
+                query_auth,
                 ..
             } => handle::try_update_config(
                 deps,
@@ -144,6 +147,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 global_min_accepted_issued_price,
                 global_err_issued_price,
                 allowance_key,
+                airdrop,
+                query_auth,
             ),
             HandleMsg::RemoveAdmin { 
                 admin_to_remove , ..
@@ -186,7 +191,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 ..
             } => handle::try_deposit(deps, &env, sender, from, amount, msg),
             HandleMsg::Claim { .. } => handle::try_claim(deps, env),
-            HandleMsg::DisablePermit { permit, .. } => handle::try_disable_permit(deps, &env, permit),
         },
         RESPONSE_BLOCK_SIZE,
     )
