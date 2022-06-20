@@ -74,14 +74,6 @@ pub enum HandleMsg {
         reset_total_claimed: Option<bool>,
         padding: Option<String>,
     },
-    // RemoveAdmin {
-    //     admin_to_remove: HumanAddr,
-    //     padding: Option<String>,
-    // },
-    // AddAdmin {
-    //     admin_to_add: HumanAddr,
-    //     padding: Option<String>,
-    // },
     UpdateConfig {
         oracle: Option<Contract>,
         treasury: Option<HumanAddr>,
@@ -141,12 +133,6 @@ pub enum HandleAnswer {
     UpdateConfig {
         status: ResponseStatus,
     },
-    // RemoveAdmin {
-    //     status: ResponseStatus,
-    // },
-    // AddAdmin {
-    //     status: ResponseStatus,
-    // },
     Deposit {
         status: ResponseStatus,
         deposit_amount: Uint128,
