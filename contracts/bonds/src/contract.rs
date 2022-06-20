@@ -33,7 +33,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let state = Config {
         limit_admin: msg.limit_admin,
-        admin: msg.admin,
+        shade_admins: msg.shade_admins,
         oracle: msg.oracle,
         treasury: msg.treasury,
         issued_asset: msg.issued_asset,
@@ -103,6 +103,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         match msg {
             HandleMsg::UpdateLimitConfig {
                 limit_admin,
+                shade_admins,
                 global_issuance_limit,
                 global_minimum_bonding_period,
                 global_maximum_discount,
@@ -113,6 +114,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 deps,
                 env,
                 limit_admin,
+                shade_admins,
                 global_issuance_limit,
                 global_minimum_bonding_period,
                 global_maximum_discount,
@@ -145,12 +147,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 global_err_issued_price,
                 allowance_key,
             ),
-            HandleMsg::RemoveAdmin { 
-                admin_to_remove , ..
-            } => handle::try_remove_admin(deps, &env, admin_to_remove),
-            HandleMsg::AddAdmin { 
-                admin_to_add, ..
-            } => handle::try_add_admin(deps, &env, admin_to_add),
+            // HandleMsg::RemoveAdmin { 
+            //     admin_to_remove , ..
+            // } => handle::try_remove_admin(deps, &env, admin_to_remove),
+            // HandleMsg::AddAdmin { 
+            //     admin_to_add, ..
+            // } => handle::try_add_admin(deps, &env, admin_to_add),
             HandleMsg::OpenBond {
                 collateral_asset,
                 start_time,

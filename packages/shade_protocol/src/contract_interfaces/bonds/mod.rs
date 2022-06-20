@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub limit_admin: HumanAddr,
-    pub admin: Vec<HumanAddr>,
+    pub shade_admins: Contract,
     pub oracle: Contract,
     pub treasury: HumanAddr,
     pub issued_asset: Contract,
@@ -47,7 +47,7 @@ pub struct InitMsg {
     pub global_issuance_limit: Uint128,
     pub global_minimum_bonding_period: u64,
     pub global_maximum_discount: Uint128,
-    pub admin: Vec<HumanAddr>,
+    pub shade_admins: Contract,
     pub oracle: Contract,
     pub treasury: HumanAddr,
     pub issued_asset: Contract,
@@ -66,6 +66,7 @@ pub struct InitMsg {
 pub enum HandleMsg {
     UpdateLimitConfig {
         limit_admin: Option<HumanAddr>,
+        shade_admins: Option<Contract>,
         global_issuance_limit: Option<Uint128>,
         global_minimum_bonding_period: Option<u64>,
         global_maximum_discount: Option<Uint128>,
@@ -73,14 +74,14 @@ pub enum HandleMsg {
         reset_total_claimed: Option<bool>,
         padding: Option<String>,
     },
-    RemoveAdmin {
-        admin_to_remove: HumanAddr,
-        padding: Option<String>,
-    },
-    AddAdmin {
-        admin_to_add: HumanAddr,
-        padding: Option<String>,
-    },
+    // RemoveAdmin {
+    //     admin_to_remove: HumanAddr,
+    //     padding: Option<String>,
+    // },
+    // AddAdmin {
+    //     admin_to_add: HumanAddr,
+    //     padding: Option<String>,
+    // },
     UpdateConfig {
         oracle: Option<Contract>,
         treasury: Option<HumanAddr>,
@@ -140,12 +141,12 @@ pub enum HandleAnswer {
     UpdateConfig {
         status: ResponseStatus,
     },
-    RemoveAdmin {
-        status: ResponseStatus,
-    },
-    AddAdmin {
-        status: ResponseStatus,
-    },
+    // RemoveAdmin {
+    //     status: ResponseStatus,
+    // },
+    // AddAdmin {
+    //     status: ResponseStatus,
+    // },
     Deposit {
         status: ResponseStatus,
         deposit_amount: Uint128,

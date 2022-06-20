@@ -33,6 +33,7 @@ pub enum Error {
     IssuedAssetDeposit,
     NotTreasuryBond,
     NoBondsClaimable,
+    NotAdmin,
 }
 
 impl_into_u8!(Error);
@@ -111,6 +112,9 @@ impl CodeType for Error {
             }
             Error::NoBondsClaimable => {
                 build_string("Pending bonds not redeemable, nothing claimed", context)
+            }
+            Error::NotAdmin => {
+                build_string("Not registered as admin address via Shade-Admin", context)
             }
         }
     }
@@ -335,4 +339,8 @@ pub fn not_treasury_bond() -> StdError {
 
 pub fn no_bonds_claimable() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::NoBondsClaimable, vec![]).to_error()
+}
+
+pub fn not_admin() -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::NotAdmin, vec![]).to_error()
 }

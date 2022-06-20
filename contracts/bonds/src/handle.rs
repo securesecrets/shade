@@ -19,6 +19,7 @@ use shade_protocol::contract_interfaces::{
     snip20::helpers::{Snip20Asset, fetch_snip20},
 };
 use shade_protocol::contract_interfaces::{
+    admin::{QueryMsg, ValidateAdminPermissionResponse},
     bonds::{
         errors::*,
         BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
@@ -40,6 +41,7 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     limit_admin: Option<HumanAddr>,
+    shade_admins: Option<Contract>,
     global_issuance_limit: Option<Uint128>,
     global_minimum_bonding_period: Option<u64>,
     global_maximum_discount: Option<Uint128>,
@@ -57,6 +59,9 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
     config.update(|mut state| {
         if let Some(limit_admin) = limit_admin {
             state.limit_admin = limit_admin;
+        }
+        if let Some(shade_admins) = shade_admins {
+            state.shade_admins = shade_admins;
         }
         if let Some(global_issuance_limit) = global_issuance_limit {
             state.global_issuance_limit = global_issuance_limit;
@@ -107,9 +112,19 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let cur_config = config_r(&deps.storage).load()?;
 
+
     // Admin-only
-    if !cur_config.admin.contains(&env.message.sender) {
-        return Err(StdError::unauthorized());
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission { 
+        contract_address: cur_config.contract.to_string(), 
+        admin_address: env.message.sender.to_string(), 
+    }.query(
+        &deps.querier,
+        cur_config.shade_admins.code_hash,
+        cur_config.shade_admins.address,
+    )?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(not_admin())
     }
 
     if let Some(allowance_key) = allowance_key {
@@ -157,62 +172,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_remove_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    admin_to_remove: HumanAddr,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-
-    if env.message.sender != config.limit_admin {
-        return Err(not_limit_admin());
-    }
-
-    // Retain only admin addresses that don't match the one to remove
-    config_w(&mut deps.storage).update(|mut state|{
-        state.admin.retain(
-            |admin| admin != &admin_to_remove,
-        );
-        Ok(state)
-    })?;
-
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveAdmin { 
-            status: ResponseStatus::Success, 
-        })?),
-    })
-}
-
-pub fn try_add_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    admin_to_add: HumanAddr,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-
-    if env.message.sender != config.limit_admin {
-        return Err(not_limit_admin());
-    }
-    // Add the new admin address
-    if !config.admin.contains(&admin_to_add){
-        config_w(&mut deps.storage).update(|mut state| {
-            state.admin.push(admin_to_add);
-            Ok(state)
-        })?;
-    }
-    
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveAdmin { 
-            status: ResponseStatus::Success, 
-        })?),
-    })
-}
-
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -233,7 +192,16 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check that sender isn't an admin
-    if config.admin.contains(&sender) {
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission { 
+        contract_address: config.contract.to_string(), 
+        admin_address: sender.to_string(), 
+    }.query(
+        &deps.querier,
+        config.shade_admins.code_hash,
+        config.shade_admins.address,
+    )?;
+
+    if admin_response.error_msg.is_none() {
         return Err(blacklisted(sender));
     }
 
@@ -485,9 +453,18 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if !config.admin.contains(&env.message.sender) {
-        return Err(StdError::unauthorized());
-    };
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission { 
+        contract_address: config.contract.to_string(), 
+        admin_address: env.message.sender.to_string(), 
+    }.query(
+        &deps.querier,
+        config.shade_admins.code_hash,
+        config.shade_admins.address,
+    )?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(not_admin())
+    }
 
     let mut messages = vec![];
 
@@ -618,9 +595,18 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if !config.admin.contains(&env.message.sender) {
-        return Err(StdError::unauthorized());
-    };
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission { 
+        contract_address: config.contract.to_string(), 
+        admin_address: env.message.sender.to_string(), 
+    }.query(
+        &deps.querier,
+        config.shade_admins.code_hash,
+        config.shade_admins.address,
+    )?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(not_admin())
+    }
 
     // Check whether previous bond for this asset exists
 
@@ -750,7 +736,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     err_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
     let mut disc = discount;
-    let mut collateral_price = oracle(&deps, collateral_asset.token_info.symbol.clone())?; // Placeholder for Oracle lookup
+    let mut collateral_price = oracle(&deps, collateral_asset.token_info.symbol.clone())?;
     if collateral_price > max_accepted_collateral_price {
         if collateral_price > err_collateral_price {
             return Err(collateral_price_exceeds_limit(
@@ -760,7 +746,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
         }
         collateral_price = max_accepted_collateral_price;
     }
-    let mut issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?; // Placeholder for minted asset price lookup
+    let mut issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?;
     if issued_price < err_issued_price {
         return Err(issued_price_below_minimum(
             issued_price.clone(),

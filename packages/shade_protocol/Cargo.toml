@@ -29,6 +29,7 @@ storage = ["cosmwasm-storage/iterator"]
 storage_plus = ["storage", "dep:secret-storage-plus"]
 
 # Protocol contracts
+admin = []
 airdrop = ["utils", "errors", "dep:remain", "dep:query-authentication"]
 bonds = ["utils", "errors", "dep:remain", "oracle", "airdrop", "dep:query-authentication", "snip20"]
 governance = ["utils", "flexible_msg"]
