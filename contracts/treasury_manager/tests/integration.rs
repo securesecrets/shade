@@ -77,7 +77,7 @@ fn single_asset_holder_no_adapters(
                 code_hash: reg_snip20.code_hash.clone(),
             }
         )
-    ).unwrap();
+    ).unwrap().instance;
 
     let manager = ensemble.instantiate(
         reg_manager.id,
@@ -93,7 +93,7 @@ fn single_asset_holder_no_adapters(
                 code_hash: reg_manager.code_hash,
             }
         )
-    ).unwrap();
+    ).unwrap().instance;
 
     // set holder viewing key
     ensemble.execute(
