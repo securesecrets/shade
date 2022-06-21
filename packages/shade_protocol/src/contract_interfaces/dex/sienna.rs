@@ -1,5 +1,5 @@
 use crate::{
-    contract_interfaces::{dex::dex, oracles::band},
+    contract_interfaces::{dex::dex::{self, TokenType}, oracles::band},
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
@@ -11,18 +11,6 @@ use cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use secret_toolkit::{utils::Query, serialization::Base64};
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum TokenType {
-    CustomToken {
-        contract_addr: HumanAddr,
-        token_code_hash: String,
-    },
-    NativeToken {
-        denom: String,
-    },
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

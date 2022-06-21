@@ -10,7 +10,8 @@ use shade_protocol::{
     sky::sky::{
         Config, HandleAnswer, self, ViewingKeys, Cycle, Cycles
     },
-    dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
+    dex::dex::{TokenType},
+    dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, Swap, SwapOffer, CallbackMsg, CallbackSwap},
     mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
     snip20::helpers::Snip20Asset,
 }};

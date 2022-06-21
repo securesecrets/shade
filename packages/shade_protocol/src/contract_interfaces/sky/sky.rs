@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use crate::contract_interfaces::dex::dex::{TradingPairNoAsset, Dex};
-use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery, TokenType};
+use crate::contract_interfaces::dex::dex::{TradingPairNoAsset, Dex, TokenType};
+use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery};
 use crate::{utils::asset::Contract, contract_interfaces::snip20::helpers::Snip20Asset};
 use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_math_compat::Uint128;
