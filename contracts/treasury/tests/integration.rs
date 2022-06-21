@@ -76,7 +76,7 @@ fn single_asset_portion_full_dao_integration(
                 code_hash: reg_snip20.code_hash.clone(),
             }
         )
-    ).unwrap();
+    ).unwrap().instance;
 
     let treasury = ensemble.instantiate(
         reg_treasury.id,
@@ -91,7 +91,7 @@ fn single_asset_portion_full_dao_integration(
                 code_hash: reg_treasury.code_hash,
             }
         )
-    ).unwrap();
+    ).unwrap().instance;
 
     let manager = ensemble.instantiate(
         reg_manager.id,
@@ -107,7 +107,7 @@ fn single_asset_portion_full_dao_integration(
                 code_hash: reg_manager.code_hash,
             }
         )
-    ).unwrap();
+    ).unwrap().instance;
 
     let scrt_staking = ensemble.instantiate(
         reg_scrt_staking.id,
@@ -128,8 +128,7 @@ fn single_asset_portion_full_dao_integration(
                 code_hash: reg_scrt_staking.code_hash,
             }
         )
-    ).unwrap();
-
+    ).unwrap().instance;
 
     // Register treasury assets
     ensemble.execute(
