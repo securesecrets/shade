@@ -62,7 +62,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
             address: "funding_token".into(),
             code_hash: snip20.code_hash,
         }),
-    )?;
+    )?.instance;
 
     // Register governance
     let gov = chain.register(Box::new(Governance));
@@ -106,7 +106,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
             address: "gov".into(),
             code_hash: gov.code_hash,
         }),
-    )?;
+    )?.instance;
 
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
@@ -309,7 +309,7 @@ fn fake_funding_token() {
                 code_hash: snip20.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     chain
         .execute(

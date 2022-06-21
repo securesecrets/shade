@@ -40,7 +40,7 @@ fn set_config_msg() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     chain
         .execute(
@@ -114,7 +114,7 @@ fn reject_disable_config_tokens() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     chain
         .execute(
