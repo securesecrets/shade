@@ -51,3 +51,12 @@ pub mod snip20 {
     pub struct Snip20;
     harness_macro::implement_harness!(Snip20, snip20);
 }
+
+#[cfg(feature = "bonds")]
+pub mod bonds {
+    use crate::harness_macro;
+    use bonds;
+
+    pub struct Bonds;
+    harness_macro::implement_harness!(Bonds, bonds);
+}

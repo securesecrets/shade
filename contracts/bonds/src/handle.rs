@@ -14,8 +14,7 @@ use secret_toolkit::{
 
 use shade_protocol::contract_interfaces::{
     airdrop::HandleMsg::CompleteTask,
-    oracles::band::ReferenceData,
-    oracles::oracle::QueryMsg::Price,
+    oracles::oracle::{QueryMsg::GetPrice, OracleAnswer},
     snip20::helpers::{Snip20Asset, fetch_snip20},
 };
 use shade_protocol::contract_interfaces::{
@@ -842,15 +841,15 @@ pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> 
 
 pub fn oracle<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    symbol: String,
+    key: String,
 ) -> StdResult<Uint128> {
     let config: Config = config_r(&deps.storage).load()?;
-    let answer: ReferenceData = Price { symbol }.query(
+    let answer: OracleAnswer = GetPrice { key }.query(
         &deps.querier,
         config.oracle.code_hash,
         config.oracle.address,
     )?;
-    Ok(Uint128::from(answer.rate))
+    Ok(Uint128::from(answer.price.rate))
 }
 
 pub fn try_disable_permit<S: Storage, A: Api, Q: Querier>(

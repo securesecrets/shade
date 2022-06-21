@@ -65,7 +65,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
-        QueryMsg::Price { symbol } => to_binary(&query::price(deps, symbol)?),
+        QueryMsg::GetPrice { key } => to_binary(&query::price(deps, key)?),
         QueryMsg::Prices { symbols } => to_binary(&query::prices(deps, symbols)?),
     }
 }
