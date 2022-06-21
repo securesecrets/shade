@@ -18,25 +18,6 @@ use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum BondStatus {
-    Active,
-    Unbonding,
-    UnbondComplete,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Bond {
-    pub amount: Uint128,
-    pub token: Contract,
-    pub address: HumanAddr,
-    pub status: BondStatus,
-}
-*/
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SubHandleMsg {
@@ -88,21 +69,8 @@ pub enum SubQueryMsg {
     Unbonding { asset: HumanAddr },
     Claimable { asset: HumanAddr },
     Unbondable { asset: HumanAddr },
-    /* TODO
-     * - LP pool assets
-     * Ratio { asset0: HumanAddr, asset1: HumanAddr },
-     * - things like unbond period
-     * Metadata { asset: HumanAddr },
-     * - How much is available to unbond
-     * Unbondable { asset: HumanAddr },
-     */
+    Reserves { asset: HumanAddr },
 }
-
-/*
-impl Query for SubQueryMsg {
-    const BLOCK_SIZE: usize = 256;
-}
-*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -121,6 +89,7 @@ pub enum QueryAnswer {
     Unbonding { amount: Uint128 },
     Claimable { amount: Uint128 },
     Unbondable { amount: Uint128 },
+    Reserves { amount: Uint128 },
 }
 
 pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
@@ -174,6 +143,22 @@ pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
             "Failed to query adapter unbondable from {}",
             adapter.address
         ))),
+    }
+}
+
+pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: &HumanAddr,
+    adapter: Contract,
+) -> StdResult<Uint128> {
+
+    match (QueryMsg::Adapter(SubQueryMsg::Reserves {
+        asset: asset.clone(),
+    }).query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
+        QueryAnswer::Reserves { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(
+            format!("Failed to query adapter unbondable from {}", adapter.address)
+        ))
     }
 }
 

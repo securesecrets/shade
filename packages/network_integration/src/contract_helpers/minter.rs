@@ -1,3 +1,4 @@
+/*
 use crate::{
     contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_with_gov},
     utils::{print_contract, print_epoch_info, print_header, print_vec, GAS, MINT_FILE, VIEW_KEY},
@@ -188,6 +189,7 @@ pub fn mint(
 ) {
     let msg = snip20::HandleMsg::Send {
         recipient: HumanAddr::from(minter),
+        recipient_code_hash: None,
         amount,
         msg: Some(
             to_binary(&mint::MintMsgHook {
@@ -211,3 +213,4 @@ pub fn mint(
     )
     .unwrap();
 }
+*/

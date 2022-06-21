@@ -9,8 +9,6 @@ use shade_protocol::contract_interfaces::{
 };
 
 use crate::state::{
-    account_list_r,
-    account_r,
     allowances_r,
     asset_list_r,
     assets_r,
@@ -62,6 +60,49 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
                 };
             }
             Ok(adapter::QueryAnswer::Balance { amount: balance })
+        }
+        None => Err(StdError::NotFound {
+            kind: asset.to_string(),
+            backtrace: None,
+        }),
+    }
+}
+
+pub fn reserves<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: &HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    //TODO: restrict to admin?
+
+    let managers = managers_r(&deps.storage).load()?;
+
+    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        Some(a) => {
+            let mut reserves = balance_query(
+                &deps.querier,
+                self_address_r(&deps.storage).load()?,
+                viewing_key_r(&deps.storage).load()?,
+                1,
+                a.contract.code_hash.clone(),
+                a.contract.address.clone(),
+            )?.amount;
+
+            for allowance in allowances_r(&deps.storage).load(&asset.as_str().as_bytes())? {
+                match allowance {
+                    treasury::Allowance::Portion { spender, .. } => {
+                        let manager = managers
+                            .clone().into_iter()
+                            .find(|m| m.contract.address == spender).unwrap();
+                        reserves += adapter::reserves_query(
+                            &deps,
+                            asset,
+                            manager.contract
+                        )?;
+                    }
+                    _ => {}
+                };
+            }
+            Ok(adapter::QueryAnswer::Reserves { amount: reserves })
         }
         None => Err(StdError::NotFound {
             kind: asset.to_string(),
@@ -163,22 +204,4 @@ pub fn allowances<S: Storage, A: Api, Q: Querier>(
             Some(a) => a,
         },
     })
-}
-
-pub fn accounts<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<treasury::QueryAnswer> {
-    Ok(treasury::QueryAnswer::Accounts {
-        accounts: account_list_r(&deps.storage).load()?,
-    })
-}
-
-pub fn account<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    holder: HumanAddr,
-) -> StdResult<treasury::QueryAnswer> {
-    match account_r(&deps.storage).may_load(holder.as_str().as_bytes())? {
-        Some(a) => Ok(treasury::QueryAnswer::Account { account: a }),
-        None => Err(StdError::generic_err("Not an account holder")),
-    }
 }

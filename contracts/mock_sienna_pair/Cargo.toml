@@ -31,7 +31,6 @@ cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "dex",
-  "sienna",
 ] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }

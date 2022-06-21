@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
-    pub sscrt: Contract,
 }
 
 /* Examples:
@@ -43,6 +42,7 @@ pub enum Allowance {
     },
 }
 
+//TODO rename to Adapter
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Manager {
@@ -51,6 +51,7 @@ pub struct Manager {
     pub desired: Uint128,
 }
 
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Balance {
@@ -67,6 +68,7 @@ pub enum Status {
     Transferred,
 }
 
+//TODO: move accounts to treasury manager
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Account {
@@ -75,6 +77,7 @@ pub struct Account {
     pub claimable: Vec<Balance>,
     pub status: Status,
 }
+*/
 
 // Flag to be sent with funds
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -87,7 +90,6 @@ pub struct Flag {
 pub struct InitMsg {
     pub admin: Option<HumanAddr>,
     pub viewing_key: String,
-    pub sscrt: Contract,
 }
 
 impl InitCallback for InitMsg {
@@ -119,13 +121,6 @@ pub enum HandleMsg {
         asset: HumanAddr,
         allowance: Allowance,
     },
-    AddAccount {
-        holder: HumanAddr,
-    },
-    CloseAccount {
-        holder: HumanAddr,
-    },
-
     /* TODO: Maybe?
     TransferAccount {
     },
@@ -156,12 +151,6 @@ pub enum HandleAnswer {
     Allowance {
         status: ResponseStatus,
     },
-    AddAccount {
-        status: ResponseStatus,
-    },
-    RemoveAccount {
-        status: ResponseStatus,
-    },
     Rebalance {
         status: ResponseStatus,
     },
@@ -184,10 +173,12 @@ pub enum QueryMsg {
         asset: HumanAddr,
         spender: HumanAddr,
     },
-    Accounts {},
-    Account {
+    /*
+    AccountHolders { },
+    Account { 
         holder: HumanAddr,
     },
+    */
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -203,6 +194,6 @@ pub enum QueryAnswer {
     Allowances { allowances: Vec<Allowance> },
     CurrentAllowances { allowances: Vec<Allowance> },
     Allowance { allowance: Uint128 },
-    Accounts { accounts: Vec<HumanAddr> },
-    Account { account: Account },
+    //Accounts { accounts: Vec<HumanAddr> },
+    //Account { account: Account },
 }

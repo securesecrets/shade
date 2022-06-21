@@ -91,7 +91,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let cur_config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != cur_config.admin {
+    if cur_config.admins.contains(&env.message.sender) {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -108,7 +108,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 /* Claim rewards and restake, hold enough for pending unbondings
- * Send available unbonded funds to treasury
+ * Send reserves unbonded funds to treasury
  */
 pub fn update<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -180,6 +180,9 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
     */
+    if !config.admins.contains(&env.message.sender) || config.owner != env.message.sender {
+        return Err(StdError::unauthorized());
+    }
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err("Unrecognized Asset"));
@@ -197,47 +200,42 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     let scrt_balance = scrt_balance(&deps, self_address)?;
     let rewards = query::rewards(deps)?;
 
-    let unbonding = unbonding_r(&deps.storage).load()?;
-
-    // TODO: Refine this if we can query unbonding amounts
-    if delegated < amount {
-        return Err(StdError::generic_err(format!(
-            "Unbond amount {} greater than delegated {}; rew {}, bal {}",
-            amount, delegated, rewards, scrt_balance
-        )));
-    }
-
-    /*
-    if amount > (scrt_balance + rewards + delegated) {
-        return Err(StdError::generic_err(
-            format!("Unbond {} greater than balance {}, rewards {}, del {}",
-                    amount, scrt_balance, rewards, delegated)
-        ));
-    }
-    */
-
-    unbonding_w(&mut deps.storage).update(|u| Ok(u + amount))?;
 
     let mut messages = vec![];
     let mut undelegated = vec![];
 
-    let mut available = scrt_balance + rewards + delegated;
+    let mut unbonding = unbonding_r(&deps.storage).load()? + amount;
+    let total = scrt_balance + rewards + delegated;
+    let mut reserves = scrt_balance + rewards;
 
-    if unbonding < available {
-        available = (available - unbonding)?;
-    } else {
-        available = Uint128::zero();
+    if total < unbonding {
+        return Err(StdError::generic_err(
+            format!("Total Unbond amount {} greater than delegated {}; rew {}, bal {}",
+                    unbonding + amount, delegated, rewards, scrt_balance)
+        ));
     }
 
-    if amount > available {
-        return Err(StdError::generic_err(format!(
-            "Cannot unbond more than is available: {}",
-            available
-        )));
+    // Send full unbonding
+    if unbonding < reserves {
+        messages.append(&mut wrap_and_send(unbonding, 
+                                           config.owner, 
+                                           config.sscrt, 
+                                           None)?);
+        reserves = (reserves - unbonding)?;
+        unbonding = Uint128::zero();
     }
-    let mut unbond_amount = amount;
+    // Send all reserves
+    else {
+        messages.append(&mut wrap_and_send(reserves, 
+                                           config.owner, 
+                                           config.sscrt, 
+                                           None)?);
+        reserves = Uint128::zero();
+        unbonding = (unbonding - reserves)?;
+    }
 
-    while unbond_amount > Uint128::zero() {
+    while unbonding > Uint128::zero() {
+
         // Unbond from largest validator first
         let max_delegation = delegations.iter().max_by_key(|d| {
             if undelegated.contains(&d.validator) {
@@ -260,21 +258,30 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                 }
 
                 // This delegation isn't enough to fully unbond
-                if delegation.amount.amount.clone() < unbond_amount {
-                    messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
-                        validator: delegation.validator.clone(),
-                        amount: delegation.amount.clone(),
-                    }));
-                    unbond_amount = (unbond_amount - delegation.amount.amount.clone())?;
-                } else {
-                    messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
-                        validator: delegation.validator.clone(),
-                        amount: Coin {
-                            denom: delegation.amount.denom.clone(),
-                            amount: unbond_amount,
-                        },
-                    }));
-                    unbond_amount = Uint128::zero();
+                if delegation.amount.amount.clone() < unbonding {
+                    messages.push(
+                        CosmosMsg::Staking(
+                            StakingMsg::Undelegate {
+                                validator: delegation.validator.clone(),
+                                amount: delegation.amount.clone(),
+                            }
+                        )
+                    );
+                    unbonding = (unbonding - delegation.amount.amount.clone())?;
+                }
+                else {
+                    messages.push(
+                        CosmosMsg::Staking(
+                            StakingMsg::Undelegate {
+                                validator: delegation.validator.clone(),
+                                amount: Coin {
+                                    denom: delegation.amount.denom.clone(),
+                                    amount: unbonding,
+                                }
+                            }
+                        )
+                    );
+                    unbonding = Uint128::zero();
                 }
 
                 undelegated.push(delegation.validator.clone());
@@ -282,12 +289,14 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    unbonding_w(&mut deps.storage).save(&unbonding)?;
+
     Ok(HandleResponse {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
-            amount: unbond_amount,
+            amount: unbonding,
         })?),
     })
 }
@@ -333,7 +342,7 @@ pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
  */
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    _env: Env,
+    env: Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
@@ -342,8 +351,11 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
+    if !config.admins.contains(&env.message.sender) || !(config.owner == env.message.sender) {
+        return Err(StdError::unauthorized());
+    }
+
     let mut messages = vec![];
-    //let address = self_address_r(&deps.storage).load()?;
 
     let unbond_amount = unbonding_r(&deps.storage).load()?;
     let mut claim_amount = Uint128::zero();
@@ -367,14 +379,14 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
-
     messages.append(&mut wrap_and_send(
         claim_amount,
-        config.treasury,
+        config.owner,
         config.sscrt,
         None,
     )?);
+
+    unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
 
     Ok(HandleResponse {
         messages,

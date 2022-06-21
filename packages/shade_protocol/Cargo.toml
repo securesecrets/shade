@@ -15,7 +15,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["utils"]
 
 # Templates
-dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
+dex = ["utils", "math", "snip20", "mint", "band"]
 band = []
 secretswap = ["utils"]
 sienna = ["utils", "math"]
@@ -39,10 +39,11 @@ scrt_staking= ["utils", "adapter", "treasury"]
 treasury = ["utils", "adapter", "snip20"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
+lp_shade_swap = []
 adapter = []
 snip20 = ["utils", "errors", "dep:base64", "dep:query-authentication"]
-snip20_staking = ["utils"]
-sky = ["snip20", "utils", "sienna"]
+snip20_staking = ["utils", "storage"]
+sky = ["snip20", "utils", "dex"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
