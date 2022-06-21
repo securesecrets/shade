@@ -1,8 +1,9 @@
-use cosmwasm_std::HumanAddr;
+use cosmwasm_std::{Binary, from_binary, HumanAddr};
 use fadroma::ensemble::MockEnv;
 use crate::tests::init_contract;
 use shade_protocol::contract_interfaces::query_auth;
-use shade_protocol::contract_interfaces::query_auth::ContractStatus;
+use shade_protocol::contract_interfaces::query_auth::{ContractStatus};
+use shade_protocol::utils::wrap::unwrap;
 
 #[test]
 fn set_admin() {
@@ -75,10 +76,35 @@ fn set_vk() {
 fn create_vk() {
     let (mut chain, auth) = init_contract().unwrap();
 
-    assert!(chain.execute(&query_auth::HandleMsg::CreateViewingKey {
+    let data = chain.execute(&query_auth::HandleMsg::CreateViewingKey {
         entropy: "randomness".to_string(),
         padding: None
-    }, MockEnv::new("user", auth.clone())).is_ok());
+    }, MockEnv::new("user", auth.clone())).unwrap().response.data.unwrap();
+
+    let msg: query_auth::HandleAnswer = from_binary(&data).unwrap();
+
+    let key = match msg {
+        query_auth::HandleAnswer::CreateViewingKey { key, .. } => key,
+        _ => {
+            assert!(false);
+            "doesnt_work".to_string()
+        }
+    };
+
+    let query: query_auth::QueryAnswer = chain.query(
+        auth.address.clone(),
+        &query_auth::QueryMsg::ValidateViewingKey {
+            user: HumanAddr::from("user"),
+            key
+        }
+    ).unwrap();
+
+    match query {
+        query_auth::QueryAnswer::ValidateViewingKey { is_valid } => {
+            assert!(is_valid);
+        }
+        _ => assert!(false)
+    };
 }
 
 #[test]

@@ -32,7 +32,7 @@ pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)>
             address: "auth".into(),
             code_hash: auth.code_hash
         })
-    )?;
+    )?.instance;
 
     Ok((chain, auth))
 }

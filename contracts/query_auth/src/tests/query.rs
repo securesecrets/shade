@@ -106,40 +106,20 @@ fn validate_permit() {
     // Confirm that the permit is valid
     assert!(permit.clone().validate(None).is_ok());
 
-    let mut deps = mock_dependencies(20, &[]);
-    let env = mock_env("admin", &[]);
+    let (mut chain, auth) = init_contract().unwrap();
 
-    let init_msg = query_auth::InitMsg {
-        admin: None,
-        prng_seed: Binary::from("random".as_bytes())
-    };
+    let query: query_auth::QueryAnswer = chain.query(
+        auth.address,
+        &query_auth::QueryMsg::ValidatePermit {
+            permit
+        }
+    ).unwrap();
 
-    init(&mut deps, env, init_msg).unwrap();
-
-    let result = query(&deps, query_auth::QueryMsg::ValidatePermit { permit }).unwrap();
-
-    match from_binary(&result).unwrap() {
-        query_auth::QueryAnswer::ValidatePermit { is_revoked, user} => {
+    match query {
+        query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
             assert!(!is_revoked);
             assert_eq!(user, HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"))
-        },
+        }
         _ => assert!(false)
     };
-
-    // let (mut chain, auth) = init_contract().unwrap();
-    //
-    // let query: query_auth::QueryAnswer = chain.query(
-    //     auth.address,
-    //     &query_auth::QueryMsg::ValidatePermit {
-    //         permit
-    //     }
-    // ).unwrap();
-    //
-    // match query {
-    //     query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
-    //         assert!(!is_revoked);
-    //         assert_eq!(user, HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"))
-    //     }
-    //     _ => assert!(false)
-    // };
 }
