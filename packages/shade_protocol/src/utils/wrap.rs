@@ -1,17 +1,12 @@
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
 use chrono::prelude::*;
 use cosmwasm_std::{
-    Api,
     Binary,
     CosmosMsg,
     HumanAddr,
-    Querier,
-    StdError,
     StdResult,
-    Storage,
     Uint128,
 };
-use schemars::JsonSchema;
 use secret_toolkit::snip20::{deposit_msg, redeem_msg, send_msg};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
