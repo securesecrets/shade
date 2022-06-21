@@ -60,7 +60,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
             address: "token".into(),
             code_hash: snip20.code_hash,
         }),
-    )?;
+    )?.instance;
 
     let stkd_tkn = chain.register(Box::new(Snip20Staking));
     let stkd_tkn = chain.instantiate(
@@ -87,7 +87,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
             address: "staked_token".into(),
             code_hash: stkd_tkn.code_hash,
         }),
-    )?;
+    )?.instance;
 
     // Stake tokens
     chain.execute(
@@ -181,7 +181,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
             address: "gov".into(),
             code_hash: gov.code_hash,
         }),
-    )?;
+    )?.instance;
 
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
@@ -1238,7 +1238,7 @@ fn vote_count_percentage() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let stkd_tkn = chain.register(Box::new(Snip20Staking));
     let stkd_tkn = chain
@@ -1267,7 +1267,7 @@ fn vote_count_percentage() {
                 code_hash: stkd_tkn.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     // Stake tokens
     chain
@@ -1369,7 +1369,7 @@ fn vote_count_percentage() {
                 code_hash: gov.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     chain
         .execute(

@@ -1,7 +1,10 @@
-#[cfg(feature = "secretswap")]
+#[cfg(feature = "dex")]
 pub mod secretswap;
 
-#[cfg(feature = "sienna")]
+#[cfg(feature = "dex")]
+pub mod shadeswap;
+
+#[cfg(feature = "dex")]
 pub mod sienna;
 
 #[cfg(feature = "dex")]

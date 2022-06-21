@@ -30,13 +30,13 @@ shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = [
   "dex",
   "airdrop",
   "bonds",
-  "initializer",
   "governance",
+  "governance-impl",
   "mint",
   "mint_router",
   "oracle",
   "scrt_staking",
-  "staking",
+  "snip20_staking",
   "treasury",
 ] }
 mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }

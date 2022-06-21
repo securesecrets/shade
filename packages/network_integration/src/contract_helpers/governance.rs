@@ -1,7 +1,8 @@
+/*
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::HumanAddr;
 use serde_json::Result;
-use shade_protocol::{governance, governance::GOVERNANCE_SELF};
+use shade_protocol::contract_interfaces::{governance, governance::GOVERNANCE_SELF};
 
 use crate::utils::{
     generate_label, print_contract, print_header, print_warning, ACCOUNT_KEY, GAS, STORE_GAS,
@@ -184,3 +185,4 @@ pub fn trigger_latest_proposal(
 
     Ok(proposals)
 }
+*/

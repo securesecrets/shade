@@ -36,12 +36,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let config = Config {
-        admin: match msg.admin {
-            None => env.message.sender.clone(),
-            Some(admin) => admin,
+        admins: match msg.admins {
+            None => vec![env.message.sender.clone()],
+            Some(mut admins) => {
+                if !admins.contains(&env.message.sender) {
+                    admins.push(env.message.sender);
+                }
+                admins
+            }
         },
         sscrt: msg.sscrt,
-        treasury: msg.treasury,
+        owner: msg.owner,
         validator_bounds: msg.validator_bounds,
     };
 
@@ -50,8 +55,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
     unbonding_w(&mut deps.storage).save(&Uint128::zero())?;
-
-    debug_print!("Contract was initialized by {}", env.message.sender);
 
     Ok(InitResponse {
         messages: vec![
@@ -109,9 +112,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
             adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
             adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
-            adapter::SubQueryMsg::Unbondable { asset } => {
-                to_binary(&query::unbondable(deps, asset)?)
-            }
-        },
+            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(deps, asset)?),
+            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(deps, asset)?),
+        }
     }
 }

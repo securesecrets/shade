@@ -26,6 +26,7 @@ use shade_protocol::{
     },
 };
 
+use snip20_reference_impl;
 use mock_band;
 use oracle;
 
@@ -34,7 +35,13 @@ use mint::{
     handle::{calculate_mint, calculate_portion, try_burn},
 };
 
-use contract_harness::harness::{mint::Mint, mock_band::MockBand, oracle::Oracle, snip20::Snip20};
+use contract_harness::harness::{
+    mint::Mint, 
+    mock_band::MockBand, 
+    oracle::Oracle, 
+    snip20_reference_impl::Snip20ReferenceImpl as Snip20
+};
+
 use fadroma::{
     ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
 };
@@ -70,7 +77,7 @@ fn test_ensemble(
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let shade = ensemble
         .instantiate(
@@ -89,7 +96,7 @@ fn test_ensemble(
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let band = ensemble
         .instantiate(
@@ -100,7 +107,7 @@ fn test_ensemble(
                 code_hash: reg_band.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let oracle = ensemble
         .instantiate(
@@ -121,7 +128,7 @@ fn test_ensemble(
                 code_hash: reg_oracle.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let mint = ensemble
         .instantiate(
@@ -146,7 +153,7 @@ fn test_ensemble(
                 code_hash: reg_mint.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     // Setup price feeds
     ensemble
