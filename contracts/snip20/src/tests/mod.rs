@@ -65,5 +65,5 @@ pub fn create_vk(
         },
         MockEnv::new(addr, snip.clone()),
     )?;
-    OK(())
+    Ok(())
 }
