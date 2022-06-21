@@ -874,19 +874,3 @@ pub fn oracle<S: Storage, A: Api, Q: Querier>(
     )?;
     Ok(Uint128::from(answer.rate))
 }
-
-// pub fn try_disable_permit<S: Storage, A: Api, Q: Querier>(
-//     deps: &mut Extern<S, A, Q>,
-//     env: &Env,
-//     key: String,
-// ) -> StdResult<HandleResponse> {
-//     revoke_permit(&mut deps.storage, env.message.sender.to_string(), key);
-
-//     Ok(HandleResponse {
-//         messages: vec![],
-//         log: vec![],
-//         data: Some(to_binary(&HandleAnswer::DisablePermit {
-//             status: ResponseStatus::Success,
-//         })?),
-//     })
-// }
