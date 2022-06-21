@@ -1,6 +1,6 @@
 use crate::contract_interfaces::airdrop::errors::permit_rejected;
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult};
+use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Api};
 use query_authentication::{
     permit::{bech32_to_canonical, Permit},
     transaction::SignedTx,
@@ -65,9 +65,9 @@ pub struct EmptyMsg {}
 // Used to prove ownership over IBC addresses
 pub type AddressProofPermit = Permit<FillerMsg>;
 
-pub fn authenticate_ownership(permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
+pub fn authenticate_ownership<A: Api>(api: &A, permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
     let signer_address = permit
-        .validate(Some("wasm/MsgExecuteContract".to_string()))?
+        .validate(api, Some("wasm/MsgExecuteContract".to_string()))?
         .as_canonical();
 
     if signer_address != bech32_to_canonical(permit_address) {

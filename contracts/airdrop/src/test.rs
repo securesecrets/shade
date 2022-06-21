@@ -3,6 +3,7 @@ pub mod tests {
     use crate::handle::inverse_normalizer;
     use cosmwasm_math_compat::Uint128;
     use cosmwasm_std::{from_binary, Binary, HumanAddr};
+    use cosmwasm_std::testing::mock_dependencies;
     use query_authentication::{
         permit::bech32_to_canonical,
         transaction::{PermitSignature, PubKey},
@@ -44,8 +45,9 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
+        let deps = mock_dependencies(20, &[]);
         let addr = permit
-            .validate(Some(MSGTYPE.to_string()))
+            .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
         assert_eq!(
             addr.as_canonical(),
@@ -60,7 +62,7 @@ pub mod tests {
 
         assert!(
             permit
-                .validate(Some("wasm/MsgExecuteContract".to_string()))
+                .validate(&deps.api, Some("wasm/MsgExecuteContract".to_string()))
                 .is_err()
         )
     }
@@ -81,8 +83,9 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
+        let deps = mock_dependencies(20, &[]);
         let addr = permit
-            .validate(Some(MSGTYPE.to_string()))
+            .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
         assert_eq!(
             addr.as_canonical(),
@@ -95,7 +98,7 @@ pub mod tests {
 
         permit.memo = Some("OtherMemo".to_string());
 
-        assert!(permit.validate(Some(MSGTYPE.to_string())).is_err())
+        assert!(permit.validate(&deps.api, Some(MSGTYPE.to_string())).is_err())
     }
 
     #[test]
@@ -114,8 +117,9 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
+        let deps = mock_dependencies(20, &[]);
         let addr = permit
-            .validate(Some(MSGTYPE.to_string()))
+            .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
         assert_eq!(
             addr.as_canonical(),
@@ -128,7 +132,7 @@ pub mod tests {
 
         permit.memo = Some("OtherMemo".to_string());
 
-        assert!(permit.validate(Some(MSGTYPE.to_string())).is_err())
+        assert!(permit.validate(&deps.api, Some(MSGTYPE.to_string())).is_err())
     }
 
     #[test]
@@ -147,8 +151,9 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
+        let deps = mock_dependencies(20, &[]);
         let addr = permit
-            .validate(Some(MSGTYPE.to_string()))
+            .validate(&deps.api , Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
         assert_eq!(
             addr.as_canonical(),
@@ -161,7 +166,7 @@ pub mod tests {
 
         permit.memo = Some("OtherMemo".to_string());
 
-        assert!(permit.validate(Some(MSGTYPE.to_string())).is_err())
+        assert!(permit.validate(&deps.api, Some(MSGTYPE.to_string())).is_err())
     }
 
     #[test]
@@ -180,8 +185,9 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
+        let deps = mock_dependencies(20, &[]);
         let addr = permit
-            .validate(Some(MSGTYPE.to_string()))
+            .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
         assert_eq!(
             addr.as_canonical(),
@@ -194,7 +200,7 @@ pub mod tests {
 
         permit.memo = Some("OtherMemo".to_string());
 
-        assert!(permit.validate(Some(MSGTYPE.to_string())).is_err())
+        assert!(permit.validate(&deps.api, Some(MSGTYPE.to_string())).is_err())
     }
 
     #[test]
@@ -213,8 +219,9 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
+        let deps = mock_dependencies(20, &[]);
         let addr = permit
-            .validate(Some(MSGTYPE.to_string()))
+            .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
         assert_eq!(
             addr.as_canonical(),
@@ -227,7 +234,7 @@ pub mod tests {
 
         permit.memo = Some("OtherMemo".to_string());
 
-        assert!(permit.validate(Some(MSGTYPE.to_string())).is_err())
+        assert!(permit.validate(&deps.api, Some(MSGTYPE.to_string())).is_err())
     }
 
     #[test]
@@ -246,8 +253,9 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
+        let deps = mock_dependencies(20, &[]);
         let addr = permit
-            .validate(Some(MSGTYPE.to_string()))
+            .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
         assert_eq!(
             addr.as_canonical(),
@@ -260,7 +268,7 @@ pub mod tests {
 
         permit.memo = Some("OtherMemo".to_string());
 
-        assert!(permit.validate(Some(MSGTYPE.to_string())).is_err())
+        assert!(permit.validate(&deps.api, Some(MSGTYPE.to_string())).is_err())
     }
 
     #[test]
@@ -279,8 +287,9 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
+        let deps = mock_dependencies(20, &[]);
         let addr = permit
-            .validate(Some(MSGTYPE.to_string()))
+            .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
         assert_eq!(
             addr.as_canonical(),
@@ -293,7 +302,7 @@ pub mod tests {
 
         permit.memo = Some("OtherMemo".to_string());
 
-        assert!(permit.validate(Some(MSGTYPE.to_string())).is_err())
+        assert!(permit.validate(&deps.api, Some(MSGTYPE.to_string())).is_err())
     }
 
     #[test]

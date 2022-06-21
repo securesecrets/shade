@@ -29,7 +29,7 @@ pub fn validate_permit<S: Storage, A: Api, Q: Querier>(
     permit: QueryPermit
 ) -> StdResult<QueryAnswer> {
 
-    let user = permit.validate(None)?.as_humanaddr(&deps.api)?;
+    let user = permit.validate(&deps.api, None)?.as_humanaddr(None)?;
 
     Ok(QueryAnswer::ValidatePermit {
         user: user.clone(),
