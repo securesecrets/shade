@@ -70,6 +70,6 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
 
             month_diff >= months.u128() as u32
         }
-        Cycle::Yearly { years } => now.year_ce() > last_refresh.year_ce(),
+        Cycle::Yearly { years } => now.year_ce().1 - last_refresh.year_ce().1 >= years.u128() as u32,
     }
 }

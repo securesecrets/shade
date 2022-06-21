@@ -8,9 +8,43 @@ use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
     pub treasury: HumanAddr,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Balance {
+    pub token: HumanAddr,
+    pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Status {
+    Active,
+    Disabled,
+    Closed,
+    Transferred,
+}
+
+//TODO: move accounts to treasury manager
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Holder {
+    pub balances: Vec<Balance>,
+    pub unbondings: Vec<Balance>,
+    //pub claimable: Vec<Balance>,
+    pub status: Status,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Unbonding {
+    pub holder: HumanAddr,
+    pub amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -20,6 +54,7 @@ pub struct Allocation {
     pub contract: Contract,
     pub alloc_type: AllocationType,
     pub amount: Uint128,
+    pub tolerance: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -35,8 +70,9 @@ pub enum AllocationType {
 pub struct AllocationMeta {
     pub nick: Option<String>,
     pub contract: Contract,
-    pub amount: Uint128,
     pub alloc_type: AllocationType,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
     pub balance: Uint128,
 }
 
@@ -54,7 +90,6 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    /*
     Receive {
         sender: HumanAddr,
         from: HumanAddr,
@@ -62,7 +97,6 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    */
     UpdateConfig {
         config: Config,
     },
@@ -72,6 +106,12 @@ pub enum HandleMsg {
     Allocate {
         asset: HumanAddr,
         allocation: Allocation,
+    },
+    AddHolder {
+        holder: HumanAddr,
+    },
+    RemoveHolder {
+        holder: HumanAddr,
     },
     Adapter(adapter::SubHandleMsg),
 }
@@ -99,6 +139,12 @@ pub enum HandleAnswer {
     Allocate {
         status: ResponseStatus,
     },
+    AddHolder {
+        status: ResponseStatus,
+    },
+    RemoveHolder {
+        status: ResponseStatus,
+    },
     Adapter(adapter::HandleAnswer),
 }
 
@@ -109,6 +155,12 @@ pub enum QueryMsg {
     Assets {},
     Allocations { asset: HumanAddr },
     PendingAllowance { asset: HumanAddr },
+    Holders { },
+    Holder { holder: HumanAddr },
+    Balance { asset: HumanAddr, holder: HumanAddr },
+    Unbonding { asset: HumanAddr, holder: HumanAddr },
+    Unbondable { asset: HumanAddr, holder: HumanAddr },
+    Claimable { asset: HumanAddr, holder: HumanAddr },
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -123,5 +175,7 @@ pub enum QueryAnswer {
     Assets { assets: Vec<HumanAddr> },
     Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
+    Holders { holders: Vec<HumanAddr> },
+    Holder { holder: Holder },
     Adapter(adapter::QueryAnswer),
 }

@@ -143,6 +143,7 @@ fn main() -> serde_json::Result<()> {
         handle(
             &snip20::HandleMsg::Send {
                 recipient: HumanAddr(airdrop.address),
+                recipient_code_hash: None,
                 amount: airdrop_amount,
                 msg: None,
                 memo: None,

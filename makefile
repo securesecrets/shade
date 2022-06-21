@@ -3,7 +3,7 @@ compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
 
 build-release=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
-build-debug=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print"
+# build-debug=RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print"
 
 # args (no extensions): wasm_name, contract_dir_name
 define opt_and_compress = 
@@ -16,15 +16,15 @@ endef
 CONTRACTS = \
 		airdrop bonds governance snip20_staking mint mint_router \
 		treasury treasury_manager scrt_staking rewards_emission \
-    	oracle  snip20 query_auth\
+		lp_shade_swap oracle snip20 query_auth\
 		mock_band mock_secretswap_pair mock_sienna_pair sky
 
-debug: setup
-	(cd ${contracts_dir}; ${build-debug})
-	@$(MAKE) compress_all
+PACKAGES = \
+	  shade_protocol contract_harness cosmwasm_math_compat \
+		network_integration network_tester secretcli
 
 release: setup
-	(cd ${contracts_dir}; ${build-release})
+	${build-release}
 	@$(MAKE) compress_all
 
 dao: treasury treasury_manager scrt_staking rewards_emission
@@ -39,18 +39,25 @@ compress-%: setup
 	$(call opt_and_compress,$*,$*)
 
 $(CONTRACTS): setup
-	(cd ${contracts_dir}/$@; ${build-debug})
+	(cd ${contracts_dir}/$@; ${build-release})
 	@$(MAKE) $(addprefix compress-,$(@))
 
-test:
-	@$(MAKE) $(addprefix test-,$(CONTRACTS))
+$(PACKAGES):
+	(cd packages/$@; cargo build)
 
-test-%:
-	(cd ${contracts_dir}/$*; cargo test)
+snip20: setup
+	(cd ${contracts_dir}/snip20; ${build-release})
+	@$(MAKE) $(addprefix compress-,snip20)
 
 snip20_staking: setup
 	(cd ${contracts_dir}/snip20_staking; ${build-release})
 	@$(MAKE) $(addprefix compress-,snip20_staking)
+
+test:
+	@$(MAKE) $(addprefix test-,$(CONTRACTS))
+
+test-%: %
+	(cd ${contracts_dir}/$*; cargo test)
 
 setup: $(compiled_dir) $(checksum_dir)
 
@@ -65,6 +72,7 @@ clippy:
 
 clean:
 	find . -name "Cargo.lock" -delete
+	rm -rf target
 	rm -r $(compiled_dir)
 
 format:

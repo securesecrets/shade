@@ -19,6 +19,8 @@ members = [
   "contracts/sky",
   "contracts/query_auth",
 
+  "contracts/snip20-reference-impl",
+
   # DAO
   # - Core
   "contracts/treasury",
@@ -26,9 +28,10 @@ members = [
   # - Adapters
   "contracts/scrt_staking",
   "contracts/rewards_emission",
+  "contracts/lp_shade_swap",
 
   "contracts/snip20_staking",
-
+  
   # Mock contracts
   "contracts/mock_band",
   "contracts/mock_secretswap_pair",
