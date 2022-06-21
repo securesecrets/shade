@@ -24,7 +24,7 @@ pub fn init_snip20(msg: snip20::InitMsg) -> StdResult<(ContractEnsemble, Contrac
             address: "snip20".into(),
             code_hash: gov.code_hash,
         }),
-    )?;
+    )?.instance;
 
     Ok((chain, gov))
 }
@@ -64,5 +64,6 @@ pub fn create_vk(
             padding: None,
         },
         MockEnv::new(addr, snip.clone()),
-    )
+    )?;
+    Ok(())
 }
