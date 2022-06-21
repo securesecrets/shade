@@ -1,5 +1,5 @@
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use cosmwasm_std::{HumanAddr, Storage};
 use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
@@ -7,8 +7,7 @@ use cosmwasm_storage::{
 use shade_protocol::{
     contract_interfaces::{
         bonds::{
-            errors::{permit_contract_mismatch, permit_key_revoked},
-            Account, AccountPermit, BondOpportunity, Config,
+            Account, BondOpportunity, Config,
         },
         snip20::helpers::Snip20Asset,
     },
@@ -21,10 +20,8 @@ pub static COLLATERAL_ASSETS: &[u8] = b"collateral_assets";
 pub static ISSUED_ASSET: &[u8] = b"issued_asset";
 pub static ACCOUNTS_KEY: &[u8] = b"accounts";
 pub static BOND_OPPORTUNITIES: &[u8] = b"bond_opportunities";
-pub static ACCOUNT_VIEWING_KEY: &[u8] = b"account_viewing_key";
 pub static ALLOCATED_ALLOWANCE: &[u8] = b"allocated_allowance";
 pub static ALLOWANCE_VIEWING_KEY: &[u8] = b"allowance_viewing_key";
-pub static ACCOUNT_PERMIT_KEY: &str = "account_permit_key";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG)
@@ -79,15 +76,6 @@ pub fn account_w<S: Storage>(storage: &mut S) -> Bucket<S, Account> {
     bucket(ACCOUNTS_KEY, storage)
 }
 
-// Account viewing key
-pub fn account_viewkey_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, [u8; 32]> {
-    bucket_read(ACCOUNT_VIEWING_KEY, storage)
-}
-
-pub fn account_viewkey_w<S: Storage>(storage: &mut S) -> Bucket<S, [u8; 32]> {
-    bucket(ACCOUNT_VIEWING_KEY, storage)
-}
-
 pub fn bond_opportunity_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, BondOpportunity> {
     bucket_read(BOND_OPPORTUNITIES, storage)
 }
@@ -112,62 +100,4 @@ pub fn allowance_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
 
 pub fn allowance_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
     singleton_read(storage, ALLOWANCE_VIEWING_KEY)
-}
-
-pub fn account_permit_key_r<S: Storage>(storage: &S, account: String) -> ReadonlyBucket<S, bool> {
-    let key = ACCOUNT_PERMIT_KEY.to_string() + &account;
-    bucket_read(key.as_bytes(), storage)
-}
-
-pub fn account_permit_key_w<S: Storage>(storage: &mut S, account: String) -> Bucket<S, bool> {
-    let key = ACCOUNT_PERMIT_KEY.to_string() + &account;
-    bucket(key.as_bytes(), storage)
-}
-
-pub fn revoke_permit<S: Storage>(storage: &mut S, account: String, permit_key: String) {
-    account_permit_key_w(storage, account)
-        .save(permit_key.as_bytes(), &false)
-        .unwrap();
-}
-
-pub fn is_permit_revoked<S: Storage>(
-    storage: &S,
-    account: String,
-    permit_key: String,
-) -> StdResult<bool> {
-    if account_permit_key_r(storage, account)
-        .may_load(permit_key.as_bytes())?
-        .is_some()
-    {
-        Ok(true)
-    } else {
-        Ok(false)
-    }
-}
-
-pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    permit: &AccountPermit,
-    contract: HumanAddr,
-) -> StdResult<HumanAddr> {
-    // Check that contract matches
-    if !permit.params.contracts.contains(&contract) {
-        return Err(permit_contract_mismatch(
-            contract.as_str(),
-        ));
-    }
-
-    // Authenticate permit
-    let address = permit.validate(&deps.api, None)?.as_humanaddr(None)?;
-
-    // Check that permit is not revoked
-    if is_permit_revoked(
-        &deps.storage,
-        address.to_string(),
-        permit.params.key.clone(),
-    )? {
-        return Err(permit_key_revoked(permit.params.key.as_str()));
-    }
-
-    return Ok(address);
 }
