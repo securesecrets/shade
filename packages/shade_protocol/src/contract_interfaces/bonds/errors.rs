@@ -17,10 +17,8 @@ pub enum Error {
     ContractNotActive,
     NoBondFound,
     NoPendingBonds,
-    IncorrectViewingKey,
     PermitContractMismatch,
-    PermitKeyRevoked,
-    PermitRejected,
+    PermitRevoked,
     BondLimitExceedsGlobalLimit,
     BondingPeriodBelowMinimumTime,
     BondDiscountAboveMaximumRate,
@@ -34,6 +32,7 @@ pub enum Error {
     NotTreasuryBond,
     NoBondsClaimable,
     NotAdmin,
+    QueryAuthBadResponse,
 }
 
 impl_into_u8!(Error);
@@ -65,9 +64,6 @@ impl CodeType for Error {
             Error::NoPendingBonds => {
                 build_string("No pending bonds for user address {}", context)
             }
-            Error::IncorrectViewingKey => {
-                build_string("Provided viewing key is incorrect", context)
-            }
             Error::BondLimitExceedsGlobalLimit => {
                 build_string("Proposed bond issuance limit of {} exceeds available bond limit of {}", context)
             }
@@ -95,11 +91,8 @@ impl CodeType for Error {
             Error::PermitContractMismatch => {
                 build_string("Permit isn't valid for {}", context)
             }
-            Error::PermitKeyRevoked => {
-                build_string("Permit key {} revoked", context)
-            }
-            Error::PermitRejected => {
-                build_string("Permit was rejected", context)
+            Error::PermitRevoked => {
+                build_string("Permit is revoked", context)
             }
             Error::Blacklisted => {
                 build_string("Cannot enter bond opportunity, sender address of {} is blacklisted", context)
@@ -115,6 +108,9 @@ impl CodeType for Error {
             }
             Error::NotAdmin => {
                 build_string("Not registered as admin address via Shade-Admin", context)
+            }
+            Error::QueryAuthBadResponse => {
+                build_string("Query Authentication returned unrecognized response, cannot access information", context)
             }
         }
     }
@@ -182,17 +178,11 @@ pub fn no_pending_bonds(account_address: &str) -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::NoPendingBonds, vec![account_address]).to_error()
 }
 
-pub fn incorrect_viewing_key() -> StdError {
-    DetailedError::from_code(BOND_TARGET, Error::IncorrectViewingKey, vec![]).to_error()
-}
-
 pub fn bond_limit_exceeds_global_limit(
     global_issuance_limit: Uint128,
     global_total_issued: Uint128,
     bond_issuance_limit: Uint128,
 ) -> StdError {
-    //let global_limit_str = global_issuance_limit.to_string().as_str();
-    //let global_issued_str = global_issuance_limit.to_string().as_str();
     let available = global_issuance_limit
         .checked_sub(global_total_issued)
         .unwrap();
@@ -245,10 +235,6 @@ pub fn bond_issuance_exceeds_allowance(
     allocated_allowance: Uint128,
     bond_limit: Uint128,
 ) -> StdError {
-    //let snip20_allowance_string = snip20_allowance.to_string();
-    //let snip20_allowance_str = snip20_allowance_string.as_str();
-    //let allocated_allowance_string = allocated_allowance.to_string();
-    //let allocated_allowance_str = allocated_allowance_string.as_str();
     let available = snip20_allowance.checked_sub(allocated_allowance).unwrap();
     let available_string = available.to_string();
     let available_str = available_string.as_str();
@@ -317,12 +303,8 @@ pub fn permit_contract_mismatch(expected: &str) -> StdError {
     .to_error()
 }
 
-pub fn permit_key_revoked(key: &str) -> StdError {
-    DetailedError::from_code(BOND_TARGET, Error::PermitKeyRevoked, vec![key]).to_error()
-}
-
-pub fn permit_rejected() -> StdError {
-    DetailedError::from_code(BOND_TARGET, Error::PermitRejected, vec![]).to_error()
+pub fn permit_revoked() -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::PermitRevoked, vec![]).to_error()
 }
 
 pub fn blacklisted(address: HumanAddr) -> StdError {
@@ -343,4 +325,8 @@ pub fn no_bonds_claimable() -> StdError {
 
 pub fn not_admin() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::NotAdmin, vec![]).to_error()
+}
+
+pub fn query_auth_bad_response() -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::QueryAuthBadResponse, vec![]).to_error()
 }

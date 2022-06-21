@@ -14,6 +14,8 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["utils"]
 
+# TODO: Normalize usage, some features are using - while others use _
+
 # Templates
 dex = ["utils", "math", "snip20", "mint", "secretswap", "sienna", "band"]
 band = []
@@ -44,11 +46,13 @@ adapter = []
 snip20 = ["utils", "errors", "dep:base64", "dep:query-authentication"]
 snip20_staking = ["utils"]
 sky = ["snip20", "utils", "sienna"]
+query_auth = ["utils", "dep:query-authentication", "dep:remain"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
 governance-impl = ["governance", "storage"]
 snip20-impl = ["snip20", "storage_plus"]
+query_auth_impl = ["query_auth", "storage_plus", "dep:base64"]
 sky-impl = ["sky", "storage_plus"]
 
 # for quicker tests, cargo test --lib
@@ -76,3 +80,4 @@ sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }
+

@@ -4,19 +4,16 @@ pub mod utils;
 
 use cosmwasm_std::Env;
 
-use query_authentication::permit::{bech32_to_canonical, Permit};
-use query_authentication::viewing_keys::ViewingKey;
-
-use crate::contract_interfaces::bonds::errors::permit_rejected;
 use crate::contract_interfaces::bonds::rand::{sha_256, Prng};
 use crate::contract_interfaces::bonds::utils::{
     create_hashed_password, ct_slice_compare, VIEWING_KEY_PREFIX, VIEWING_KEY_SIZE,
 };
 use crate::contract_interfaces::snip20::helpers::Snip20Asset;
+use crate::contract_interfaces::query_auth::QueryPermit;
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult};
+use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
 use secret_toolkit::utils::HandleCallback;
 use serde::{Deserialize, Serialize};
@@ -39,6 +36,7 @@ pub struct Config {
     pub global_err_issued_price: Uint128,
     pub contract: HumanAddr,
     pub airdrop: Option<Contract>,
+    pub query_auth: Contract,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -59,6 +57,7 @@ pub struct InitMsg {
     pub global_err_issued_price: Uint128,
     pub allowance_key_entropy: String,
     pub airdrop: Option<Contract>,
+    pub query_auth: Contract,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -85,8 +84,9 @@ pub enum HandleMsg {
         global_min_accepted_issued_price: Option<Uint128>,
         global_err_issued_price: Option<Uint128>,
         allowance_key: Option<String>,
-        padding: Option<String>,
         airdrop: Option<Contract>,
+        query_auth: Option<Contract>,
+        padding: Option<String>,
     },
     OpenBond {
         collateral_asset: Contract,
@@ -114,10 +114,6 @@ pub enum HandleMsg {
     Claim {
         padding: Option<String>,
     },
-    DisablePermit {
-        permit: String,
-        padding: Option<String>,
-    }
 }
 
 impl HandleCallback for HandleMsg {
@@ -159,9 +155,6 @@ pub enum HandleAnswer {
         status: ResponseStatus,
         collateral_asset: Contract,
     },
-    DisablePermit {
-        status: ResponseStatus,
-    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -169,7 +162,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     BondOpportunities {},
-    Account { permit: AccountPermit },
+    Account { permit: QueryPermit },
     CollateralAddresses {},
     PriceCheck { asset: String },
     BondInfo {},
@@ -219,18 +212,6 @@ pub struct Account {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct AccountKey(pub String);
-
-impl ToString for AccountKey {
-    fn to_string(&self) -> String {
-        self.0.clone()
-    }
-}
-
-//impl ViewingKey<32> for AccountKey {}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct SnipViewingKey(pub String);
 
 impl SnipViewingKey {
@@ -265,74 +246,6 @@ impl SnipViewingKey {
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
-}
-
-// Used for querying account information
-pub type AccountPermit = Permit<AccountPermitMsg>;
-
-#[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct AccountPermitMsg {
-    pub contracts: Vec<HumanAddr>,
-    pub key: String,
-}
-
-#[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct FillerMsg {
-    pub coins: Vec<String>,
-    pub contract: String,
-    pub execute_msg: EmptyMsg,
-    pub sender: String,
-}
-
-impl Default for FillerMsg {
-    fn default() -> Self {
-        Self {
-            coins: vec![],
-            contract: "".to_string(),
-            sender: "".to_string(),
-            execute_msg: EmptyMsg {},
-        }
-    }
-}
-
-#[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EmptyMsg {}
-
-// Used to prove ownership over IBC addresses
-pub type AddressProofPermit = Permit<FillerMsg>;
-
-pub fn authenticate_ownership(permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
-    let signer_address = permit
-        .validate(Some("wasm/MsgExecuteContract".to_string()))?
-        .as_canonical();
-
-    if signer_address != bech32_to_canonical(permit_address) {
-        return Err(permit_rejected());
-    }
-
-    Ok(())
-}
-
-#[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct AddressProofMsg {
-    // Address is necessary since we have other network permits present
-    pub address: HumanAddr,
-    // Reward amount
-    pub amount: Uint128,
-    // Used to prevent permits from being used elsewhere
-    pub contract: HumanAddr,
-    // Index of the address in the leaves array
-    pub index: u32,
-    // Used to identify permits
-    pub key: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

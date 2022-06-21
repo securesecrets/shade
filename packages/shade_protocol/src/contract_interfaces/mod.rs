@@ -29,3 +29,6 @@ pub mod governance;
 // Bonds
 #[cfg(feature = "bonds")]
 pub mod bonds;
+
+#[cfg(feature = "query_auth")]
+pub mod query_auth;

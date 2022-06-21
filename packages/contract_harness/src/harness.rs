@@ -60,3 +60,12 @@ pub mod bonds {
     pub struct Bonds;
     harness_macro::implement_harness!(Bonds, bonds);
 }
+
+#[cfg(feature = "query_auth")]
+pub mod query_auth {
+    use crate::harness_macro;
+    use query_auth;
+
+    pub struct QueryAuth;
+    harness_macro::implement_harness!(QueryAuth, query_auth);
+}

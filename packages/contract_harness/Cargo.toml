@@ -18,6 +18,7 @@ governance = ["dep:governance"]
 snip20_staking = ["dep:spip_stkd_0"]
 snip20 = ["dep:snip20"]
 bonds = ["dep:bonds"]
+query_auth = ["dep:query_auth"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
@@ -29,3 +30,4 @@ governance = { version = "0.1.0", path = "../../contracts/governance", optional 
 spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
+query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }

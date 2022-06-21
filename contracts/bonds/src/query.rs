@@ -3,18 +3,20 @@ use crate::{
     state::{
         account_r, allowance_key_r, bond_opportunity_r, collateral_assets_r,
         config_r, global_total_claimed_r, global_total_issued_r, issued_asset_r,
-        validate_account_permit,
     },
 };
 
 use cosmwasm_math_compat::Uint128;
 
-use secret_toolkit::snip20::{allowance_query, balance_query};
+use secret_toolkit::{snip20::{allowance_query, balance_query}, utils::Query};
 
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
 use shade_protocol::contract_interfaces::{
-    bonds::{AccountPermit, BondOpportunity, QueryAnswer},
+    bonds::{BondOpportunity, QueryAnswer, errors::{query_auth_bad_response, permit_revoked}},
 };
+
+use shade_protocol::contract_interfaces::query_auth::{self, QueryMsg::ValidatePermit, QueryPermit};
+
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -24,13 +26,27 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
 
 pub fn account<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    permit: AccountPermit,
+    permit: QueryPermit,
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
     // Validate address
-    let contract = config.contract;
-
-    account_information(deps, validate_account_permit(deps, &permit, contract)?)
+    let authorized: query_auth::QueryAnswer = ValidatePermit { permit: permit }.query(
+        &deps.querier, 
+        config.query_auth.code_hash, 
+        config.query_auth.address
+    )?;
+    match authorized {
+        query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
+            if is_revoked!=false {
+                account_information(deps, user)
+            } else {
+                return Err(permit_revoked())
+            }
+        }
+        _ => {
+            return Err(query_auth_bad_response())
+        }
+    }
 }
 
 fn account_information<S: Storage, A: Api, Q: Querier>(
