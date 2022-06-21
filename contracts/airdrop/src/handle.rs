@@ -244,6 +244,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
             // Validate permits
             try_add_account_addresses(
                 &mut deps.storage,
+                &deps.api,
                 &config,
                 &env.message.sender,
                 &mut account,
@@ -288,6 +289,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
         // Validate permits
         try_add_account_addresses(
             &mut deps.storage,
+            &deps.api,
             &config,
             &env.message.sender,
             &mut account,
@@ -601,8 +603,9 @@ pub fn claim_tokens<S: Storage>(
 }
 
 /// Validates all of the information and updates relevant states
-pub fn try_add_account_addresses<S: Storage>(
+pub fn try_add_account_addresses<S: Storage, A: Api>(
     storage: &mut S,
+    api: &A,
     config: &Config,
     sender: &HumanAddr,
     account: &mut Account,
@@ -620,7 +623,7 @@ pub fn try_add_account_addresses<S: Storage>(
             // Avoid verifying sender
             if &params.address != sender {
                 // Check permit legitimacy
-                validate_address_permit(storage, permit, &params, config.contract.clone())?;
+                validate_address_permit(storage, api, permit, &params, config.contract.clone())?;
             }
 
             // Check that airdrop amount does not exceed maximum

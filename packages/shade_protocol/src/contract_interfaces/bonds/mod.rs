@@ -2,7 +2,7 @@ pub mod errors;
 pub mod rand;
 pub mod utils;
 
-use cosmwasm_std::Env;
+use cosmwasm_std::{Api, Env};
 
 use query_authentication::permit::{bech32_to_canonical, Permit};
 use query_authentication::viewing_keys::ViewingKey;
@@ -320,9 +320,9 @@ pub struct EmptyMsg {}
 // Used to prove ownership over IBC addresses
 pub type AddressProofPermit = Permit<FillerMsg>;
 
-pub fn authenticate_ownership(permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
+pub fn authenticate_ownership<A: Api>(api: &A, permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
     let signer_address = permit
-        .validate(Some("wasm/MsgExecuteContract".to_string()))?
+        .validate(api, Some("wasm/MsgExecuteContract".to_string()))?
         .as_canonical();
 
     if signer_address != bech32_to_canonical(permit_address) {

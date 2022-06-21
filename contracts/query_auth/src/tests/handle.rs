@@ -68,7 +68,7 @@ fn set_vk() {
     assert!(chain.execute(&query_auth::HandleMsg::SetViewingKey {
         key: "password".to_string(),
         padding: None
-    }, MockEnv::new("user", auth.clone())).is_ok());
+    }, MockEnv::new("user", auth)).is_ok());
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn create_vk() {
     assert!(chain.execute(&query_auth::HandleMsg::CreateViewingKey {
         entropy: "randomness".to_string(),
         padding: None
-    }, MockEnv::new("user", auth.clone())).is_ok());
+    }, MockEnv::new("user", auth)).is_ok());
 }
 
 #[test]
