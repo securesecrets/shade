@@ -14,9 +14,6 @@ exclude = [
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[net]
-git-fetch-with-cli = true   # use the `git` executable for git operations
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -37,7 +34,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 schemars = "0.7"
 fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git" }
-shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap" }
+shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap", branch = "secret_toolkit_implementation" }
 
 
 [dev-dependencies]

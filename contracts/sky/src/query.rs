@@ -238,15 +238,15 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
 
     let mut current_offer: TokenAmount<shadeswap_shared::fadroma::HumanAddr> = TokenAmount {
         token: shadeswap_shared::TokenType::CustomToken { 
-            contract_addr: shadeswap_shared::fadroma::HumanAddr::from(config.shd_token.contract.address.into()), 
-            token_code_hash: config.shd_token.contract.code_hash 
+            contract_addr: shadeswap_shared::fadroma::HumanAddr::from(config.shd_token.contract.address.to_string()), 
+            token_code_hash: config.shd_token.contract.code_hash.clone() 
         },
         amount: shadeswap_shared::fadroma::Uint128::from(amount.u128()),
     };
 
     for arb_pair in cycles[index.u128() as usize].pair_addrs.clone(){
         let res = shadeswap_shared::msg::amm_pair::QueryMsg::GetEstimatedPrice { 
-            offer: current_offer
+            offer: current_offer.clone()
         }
         .query(
             &deps.querier,
@@ -265,7 +265,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
                         if token_code_hash == arb_pair.token0_code_hash {
                             current_offer = TokenAmount {
                                 token: shadeswap_shared::TokenType::CustomToken { 
-                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token1_address.into()), 
+                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token1_address.to_string()), 
                                     token_code_hash: arb_pair.token1_code_hash 
                                 },
                                 amount: estimated_price,
@@ -274,7 +274,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
                         else {
                             current_offer = TokenAmount {
                                 token: shadeswap_shared::TokenType::CustomToken { 
-                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token0_address.into()), 
+                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token0_address.to_string()), 
                                     token_code_hash: arb_pair.token0_code_hash 
                                 },
                                 amount: estimated_price,
@@ -299,7 +299,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
 
     current_offer = TokenAmount {
         token: shadeswap_shared::TokenType::CustomToken { 
-            contract_addr: shadeswap_shared::fadroma::HumanAddr::from(config.shd_token.contract.address.into()), 
+            contract_addr: shadeswap_shared::fadroma::HumanAddr::from(config.shd_token.contract.address.to_string()), 
             token_code_hash: config.shd_token.contract.code_hash 
         },
         amount: shadeswap_shared::fadroma::Uint128::from(amount.u128()),
@@ -307,7 +307,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
 
     for arb_pair in cycles[index.u128() as usize].pair_addrs.clone().iter().rev() {
         let res = shadeswap_shared::msg::amm_pair::QueryMsg::GetEstimatedPrice { 
-            offer: current_offer
+            offer: current_offer.clone()
         }
         .query(
             &deps.querier,
@@ -324,10 +324,10 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
                         token_code_hash 
                     } => {
                         if token_code_hash == arb_pair.token0_code_hash {
-                            current_offer = TokenAmount {
+                            current_offer = shadeswap_shared::TokenAmount {
                                 token: shadeswap_shared::TokenType::CustomToken { 
-                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token1_address.into()), 
-                                    token_code_hash: arb_pair.token1_code_hash 
+                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token1_address.to_string()), 
+                                    token_code_hash: arb_pair.token1_code_hash.clone() 
                                 },
                                 amount: estimated_price,
                             };
@@ -335,8 +335,8 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
                         else {
                             current_offer = TokenAmount {
                                 token: shadeswap_shared::TokenType::CustomToken { 
-                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token0_address.into()), 
-                                    token_code_hash: arb_pair.token0_code_hash 
+                                    contract_addr: shadeswap_shared::fadroma::HumanAddr::from(arb_pair.token0_address.to_string()), 
+                                    token_code_hash: arb_pair.token0_code_hash.clone() 
                                 },
                                 amount: estimated_price,
                             };
@@ -352,7 +352,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     }
 
     if current_offer.amount.u128() > amount.u128() {
-        cycles[index.u128() as usize].pair_addrs.clone().reverse();
+        cycles[index.u128() as usize].pair_addrs.reverse();
         return Ok(QueryAnswer::IsCycleProfitable{
             is_profitable: true,
             direction: cycles[index.u128() as usize].clone(),

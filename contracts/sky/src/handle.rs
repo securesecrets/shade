@@ -4,7 +4,6 @@ use cosmwasm_std::{
 };
 use fadroma::scrt::to_cosmos_msg;
 use cosmwasm_math_compat::Uint128;
-use fadroma::{to_cosmos_msg, BaseComposable};
 use shade_protocol::{
     utils::{asset::Contract, storage::plus::ItemStorage},
     contract_interfaces::{
