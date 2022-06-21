@@ -10,7 +10,9 @@ pub fn set_admin() {
         issu, 
         coll, 
         band, 
-        oracle
+        oracle,
+        query_auth,
+        shade_admins
     ) = init_contracts().unwrap();
 
     let msg = bonds::HandleMsg::AddAdmin {
@@ -33,4 +35,19 @@ pub fn set_admin() {
         }
         _ => assert!(false)
     };
+}
+
+#[test]
+pub fn purchase_opportunity() {
+    let (mut chain, 
+        bonds, 
+        issu, 
+        coll, 
+        band, 
+        oracle,
+        query_auth,
+        shade_admins
+    ) = init_contracts().unwrap();
+
+
 }

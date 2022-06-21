@@ -10,8 +10,6 @@ pub mod staking;
 
 pub mod sky;
 
-pub mod admin;
-
 #[cfg(feature = "snip20")]
 pub mod snip20;
 

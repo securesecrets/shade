@@ -69,3 +69,12 @@ pub mod query_auth {
     pub struct QueryAuth;
     harness_macro::implement_harness!(QueryAuth, query_auth);
 }
+
+#[cfg(feature = "shade_admin")]
+pub mod shade_admin {
+    use crate::harness_macro;
+    use shade_admin::admin;
+
+    pub struct ShadeAdmin;
+    harness_macro::implement_admin_harness!(ShadeAdmin, admin);
+}

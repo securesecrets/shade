@@ -12,13 +12,14 @@ use secret_toolkit::{
     utils::{HandleCallback, Query},
 };
 
+use shade_admin::admin::{ValidateAdminPermissionResponse, QueryMsg};
+
 use shade_protocol::contract_interfaces::{
     airdrop::HandleMsg::CompleteTask,
     oracles::oracle::{QueryMsg::GetPrice, OracleAnswer},
     snip20::helpers::{Snip20Asset, fetch_snip20},
 };
 use shade_protocol::contract_interfaces::{
-    admin::{QueryMsg, ValidateAdminPermissionResponse},
     bonds::{
         errors::*,
         BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},

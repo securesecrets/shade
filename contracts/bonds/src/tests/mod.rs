@@ -3,14 +3,16 @@ pub mod handle;
 use cosmwasm_std::{
     from_binary, to_binary, Binary, Env, HandleResponse, HumanAddr, InitResponse, StdError, StdResult
 };
+use secret_toolkit::utils::Query;
 use shade_protocol::contract_interfaces::{
-    bonds, snip20::{self, InitialBalance, InitConfig}, oracles::{band::{self, InitMsg}, oracle}
+    bonds, snip20::{self, InitialBalance, InitConfig}, oracles::{band::{self, InitMsg}, oracle}, query_auth,
 };
 use shade_protocol::utils::asset::Contract;
 use fadroma::ensemble::{ContractEnsemble, MockEnv};
 use fadroma_platform_scrt::ContractLink;
-use contract_harness::harness::{bonds::Bonds, snip20::Snip20, oracle::Oracle, mock_band::MockBand};
+use contract_harness::harness::{bonds::Bonds, snip20::Snip20, oracle::Oracle, mock_band::MockBand, query_auth::QueryAuth};
 use cosmwasm_math_compat::Uint128;
+use shade_admin::admin;
 
 pub fn init_contracts() -> StdResult<(
     ContractEnsemble, 
@@ -18,7 +20,9 @@ pub fn init_contracts() -> StdResult<(
     ContractLink<HumanAddr>, 
     ContractLink<HumanAddr>, 
     ContractLink<HumanAddr>, 
-    ContractLink<HumanAddr>
+    ContractLink<HumanAddr>,
+    ContractLink<HumanAddr>,
+    ContractLink<HumanAddr>,    
 )> {
     let mut chain = ContractEnsemble::new(50);
 
@@ -103,6 +107,33 @@ pub fn init_contracts() -> StdResult<(
         })
     )?;
 
+    // Register query_auth
+    let query_auth = chain.register(Box::new(QueryAuth));
+    let query_auth = chain.instantiate(
+        query_auth.id, 
+        &query_auth::InitMsg {
+            admin: Some(HumanAddr::from("admin")),
+            prng_seed: Default::default()
+        }, 
+        MockEnv::new("admin", ContractLink { 
+            address: "query_auth".into(), 
+            code_hash: query_auth.code_hash 
+        })
+    )?;
+
+    // Register shade_admin
+    let shade_admin = chain.register(Box::new(ShadeAdmin));
+    let shade_admin = chain.instantiate(
+        shade_admin.id, 
+        &admin::InitMsg {
+            
+        }, 
+        MockEnv::new("admin", ContractLink { 
+            address: "shade_admin".into(), 
+            code_hash: shade_admin.code_hash 
+        })
+    )?;
+
     // Register bonds
     let bonds = chain.register(Box::new(Bonds));
     let bonds = chain.instantiate(
@@ -112,7 +143,6 @@ pub fn init_contracts() -> StdResult<(
             global_issuance_limit: Uint128::new(100_000_000_000_000_000),
             global_minimum_bonding_period: 1,
             global_maximum_discount: Uint128::new(10_000),
-            admin: vec![HumanAddr::from("admin")],
             oracle: Contract { address: oracle.address.clone(), code_hash: oracle.code_hash.clone() },
             treasury: HumanAddr::from("admin"),
             issued_asset: Contract { address: issu.address.clone(), code_hash: issu.code_hash.clone() },
@@ -124,11 +154,13 @@ pub fn init_contracts() -> StdResult<(
             global_err_issued_price: Uint128::zero(),
             allowance_key_entropy: "".into(),
             airdrop: None,
+            shade_admins: Contract { address: shade_admin.address.clone(), code_hash: shade_admin.code_hash.clone() },
+            query_auth: Contract { address: query_auth.address.clone(), code_hash: query_auth.code_hash.clone() },
         },
         MockEnv::new("admin", ContractLink { 
             address: "bonds".into(), 
             code_hash: bonds.code_hash })    
     )?;
 
-    Ok((chain, bonds, issu, coll, band, oracle))
+    Ok((chain, bonds, issu, coll, band, oracle, query_auth, shade_admins))
 }

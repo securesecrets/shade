@@ -3,6 +3,7 @@ name = "contract_harness"
 version = "0.1.0"
 authors = [
     "Guy Garcia <guysebastiangarcia@gmail.com>",
+    "Kyle Wahlberg <kyle.s.wahlberg@gmail.com>",
 ]
 edition = "2018"
 
@@ -19,6 +20,7 @@ snip20_staking = ["dep:spip_stkd_0"]
 snip20 = ["dep:snip20"]
 bonds = ["dep:bonds"]
 query_auth = ["dep:query_auth"]
+shade_admin = ["dep:shade_admin"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
@@ -31,3 +33,4 @@ spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", opti
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
+shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "develop", optional = true }
