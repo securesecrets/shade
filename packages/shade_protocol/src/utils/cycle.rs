@@ -1,4 +1,3 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
 use chrono::prelude::*;
 use cosmwasm_std::{Env, StdError, StdResult, Uint128};
 use schemars::JsonSchema;

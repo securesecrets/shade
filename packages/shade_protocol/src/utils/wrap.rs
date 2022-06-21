@@ -1,5 +1,4 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use chrono::prelude::*;
+use crate::utils::{asset::Contract};
 use cosmwasm_std::{
     Binary,
     CosmosMsg,
@@ -8,8 +7,6 @@ use cosmwasm_std::{
     Uint128,
 };
 use secret_toolkit::snip20::{deposit_msg, redeem_msg, send_msg};
-use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
 
 pub fn wrap(
     amount: Uint128,
