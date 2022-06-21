@@ -43,7 +43,7 @@ pub fn init_governance(
             address: "gov".into(),
             code_hash: gov.code_hash,
         }),
-    )?;
+    )?.instance;
 
     Ok((chain, gov))
 }
@@ -102,7 +102,8 @@ pub fn gov_msg_proposal(
             padding: None,
         },
         MockEnv::new(sender, gov.clone()),
-    )
+    )?;
+    Ok(())
 }
 
 pub fn get_assembly_msgs(

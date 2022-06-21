@@ -70,7 +70,7 @@ fn test_ensemble(
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let shade = ensemble
         .instantiate(
@@ -89,7 +89,7 @@ fn test_ensemble(
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let band = ensemble
         .instantiate(
@@ -100,7 +100,7 @@ fn test_ensemble(
                 code_hash: reg_band.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let oracle = ensemble
         .instantiate(
@@ -121,7 +121,7 @@ fn test_ensemble(
                 code_hash: reg_oracle.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let mint = ensemble
         .instantiate(
@@ -146,7 +146,7 @@ fn test_ensemble(
                 code_hash: reg_mint.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     // Setup price feeds
     ensemble
