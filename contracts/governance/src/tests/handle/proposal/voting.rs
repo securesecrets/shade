@@ -11,6 +11,7 @@ use fadroma_platform_scrt::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
         governance,
+        snip20,
         governance::{
             profile::{Count, Profile, VoteProfile},
             proposal::Status,
@@ -33,23 +34,23 @@ fn init_voting_governance_with_proposal() -> StdResult<(
     let snip20 = chain.register(Box::new(Snip20));
     let snip20 = chain.instantiate(
         snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
+        &snip20::InitMsg {
             name: "token".to_string(),
             admin: None,
             symbol: "TKN".to_string(),
             decimals: 6,
             initial_balances: Some(vec![
-                snip20_reference_impl::msg::InitialBalance {
+                snip20::InitialBalance {
                     address: HumanAddr::from("alpha"),
-                    amount: cosmwasm_std::Uint128(20_000_000),
+                    amount: Uint128::new(20_000_000),
                 },
-                snip20_reference_impl::msg::InitialBalance {
+                snip20::InitialBalance {
                     address: HumanAddr::from("beta"),
-                    amount: cosmwasm_std::Uint128(20_000_000),
+                    amount: Uint128::new(20_000_000),
                 },
-                snip20_reference_impl::msg::InitialBalance {
+                snip20::InitialBalance {
                     address: HumanAddr::from("charlie"),
-                    amount: cosmwasm_std::Uint128(20_000_000),
+                    amount: Uint128::new(20_000_000),
                 },
             ]),
             prng_seed: Default::default(),
@@ -59,7 +60,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
             address: "token".into(),
             code_hash: snip20.code_hash,
         }),
-    )?;
+    )?.instance;
 
     let stkd_tkn = chain.register(Box::new(Snip20Staking));
     let stkd_tkn = chain.instantiate(
@@ -86,14 +87,14 @@ fn init_voting_governance_with_proposal() -> StdResult<(
             address: "staked_token".into(),
             code_hash: stkd_tkn.code_hash,
         }),
-    )?;
+    )?.instance;
 
     // Stake tokens
     chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
+        &snip20::HandleMsg::Send {
             recipient: stkd_tkn.address.clone(),
             recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(20_000_000),
+            amount: Uint128::new(20_000_000),
             memo: None,
             msg: Some(to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap()),
             padding: None,
@@ -104,10 +105,10 @@ fn init_voting_governance_with_proposal() -> StdResult<(
         }),
     )?;
     chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
+        &snip20::HandleMsg::Send {
             recipient: stkd_tkn.address.clone(),
             recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(20_000_000),
+            amount: Uint128::new(20_000_000),
             memo: None,
             msg: Some(to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap()),
             padding: None,
@@ -118,10 +119,10 @@ fn init_voting_governance_with_proposal() -> StdResult<(
         }),
     )?;
     chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::Send {
+        &snip20::HandleMsg::Send {
             recipient: stkd_tkn.address.clone(),
             recipient_code_hash: None,
-            amount: cosmwasm_std::Uint128(20_000_000),
+            amount: Uint128::new(20_000_000),
             memo: None,
             msg: Some(to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap()),
             padding: None,
@@ -180,7 +181,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
             address: "gov".into(),
             code_hash: gov.code_hash,
         }),
-    )?;
+    )?.instance;
 
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
@@ -1210,23 +1211,23 @@ fn vote_count_percentage() {
     let snip20 = chain
         .instantiate(
             snip20.id,
-            &snip20_reference_impl::msg::InitMsg {
+            &snip20::InitMsg {
                 name: "token".to_string(),
                 admin: None,
                 symbol: "TKN".to_string(),
                 decimals: 6,
                 initial_balances: Some(vec![
-                    snip20_reference_impl::msg::InitialBalance {
+                    snip20::InitialBalance {
                         address: HumanAddr::from("alpha"),
-                        amount: cosmwasm_std::Uint128(20_000_000),
+                        amount: Uint128::new(20_000_000),
                     },
-                    snip20_reference_impl::msg::InitialBalance {
+                    snip20::InitialBalance {
                         address: HumanAddr::from("beta"),
-                        amount: cosmwasm_std::Uint128(20_000_000),
+                        amount: Uint128::new(20_000_000),
                     },
-                    snip20_reference_impl::msg::InitialBalance {
+                    snip20::InitialBalance {
                         address: HumanAddr::from("charlie"),
-                        amount: cosmwasm_std::Uint128(20_000_000),
+                        amount: Uint128::new(20_000_000),
                     },
                 ]),
                 prng_seed: Default::default(),
@@ -1237,7 +1238,7 @@ fn vote_count_percentage() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let stkd_tkn = chain.register(Box::new(Snip20Staking));
     let stkd_tkn = chain
@@ -1266,15 +1267,15 @@ fn vote_count_percentage() {
                 code_hash: stkd_tkn.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     // Stake tokens
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: stkd_tkn.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(20_000_000),
+                amount: Uint128::new(20_000_000),
                 memo: None,
                 msg: Some(
                     to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap(),
@@ -1289,10 +1290,10 @@ fn vote_count_percentage() {
         .unwrap();
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: stkd_tkn.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(20_000_000),
+                amount: Uint128::new(20_000_000),
                 memo: None,
                 msg: Some(
                     to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap(),
@@ -1307,10 +1308,10 @@ fn vote_count_percentage() {
         .unwrap();
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: stkd_tkn.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(20_000_000),
+                amount: Uint128::new(20_000_000),
                 memo: None,
                 msg: Some(
                     to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap(),
@@ -1368,7 +1369,7 @@ fn vote_count_percentage() {
                 code_hash: gov.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     chain
         .execute(

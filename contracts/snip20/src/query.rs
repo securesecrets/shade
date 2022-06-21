@@ -91,7 +91,10 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     owner: HumanAddr,
     spender: HumanAddr,
 ) -> StdResult<QueryAnswer> {
-    let allowance = Allowance::load(&deps.storage, (owner.clone(), spender.clone()))?;
+    let allowance = Allowance::may_load(
+        &deps.storage,
+        (owner.clone(), spender.clone())
+    )?.unwrap_or_default();
 
     Ok(QueryAnswer::Allowance {
         spender,

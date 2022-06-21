@@ -14,6 +14,7 @@ use fadroma_platform_scrt::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
         governance,
+        snip20,
         governance::{
             profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
             proposal::{ProposalMsg, Status},
@@ -35,23 +36,23 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     let snip20 = chain.register(Box::new(Snip20));
     let snip20 = chain.instantiate(
         snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
+        &snip20::InitMsg {
             name: "funding_token".to_string(),
             admin: None,
             symbol: "FND".to_string(),
             decimals: 6,
             initial_balances: Some(vec![
-                snip20_reference_impl::msg::InitialBalance {
+                snip20::InitialBalance {
                     address: HumanAddr::from("alpha"),
-                    amount: cosmwasm_std::Uint128(10000),
+                    amount: Uint128::new(10000),
                 },
-                snip20_reference_impl::msg::InitialBalance {
+                snip20::InitialBalance {
                     address: HumanAddr::from("beta"),
-                    amount: cosmwasm_std::Uint128(10000),
+                    amount: Uint128::new(10000),
                 },
-                snip20_reference_impl::msg::InitialBalance {
+                snip20::InitialBalance {
                     address: HumanAddr::from("charlie"),
-                    amount: cosmwasm_std::Uint128(10000),
+                    amount: Uint128::new(10000),
                 },
             ]),
             prng_seed: Default::default(),
@@ -61,7 +62,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
             address: "funding_token".into(),
             code_hash: snip20.code_hash,
         }),
-    )?;
+    )?.instance;
 
     // Register governance
     let gov = chain.register(Box::new(Governance));
@@ -105,7 +106,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
             address: "gov".into(),
             code_hash: gov.code_hash,
         }),
-    )?;
+    )?.instance;
 
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
@@ -122,7 +123,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     )?;
 
     chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::SetViewingKey {
+        &snip20::HandleMsg::SetViewingKey {
             key: "password".to_string(),
             padding: None,
         },
@@ -133,7 +134,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     )?;
 
     chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::SetViewingKey {
+        &snip20::HandleMsg::SetViewingKey {
             key: "password".to_string(),
             padding: None,
         },
@@ -144,7 +145,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     )?;
 
     chain.execute(
-        &snip20_reference_impl::msg::HandleMsg::SetViewingKey {
+        &snip20::HandleMsg::SetViewingKey {
             key: "password".to_string(),
             padding: None,
         },
@@ -281,23 +282,23 @@ fn fake_funding_token() {
     let other = chain
         .instantiate(
             other.id,
-            &snip20_reference_impl::msg::InitMsg {
+            &snip20::InitMsg {
                 name: "funding_token".to_string(),
                 admin: None,
                 symbol: "FND".to_string(),
                 decimals: 6,
                 initial_balances: Some(vec![
-                    snip20_reference_impl::msg::InitialBalance {
+                    snip20::InitialBalance {
                         address: HumanAddr::from("alpha"),
-                        amount: cosmwasm_std::Uint128(10000),
+                        amount: Uint128::new(10000),
                     },
-                    snip20_reference_impl::msg::InitialBalance {
+                    snip20::InitialBalance {
                         address: HumanAddr::from("beta"),
-                        amount: cosmwasm_std::Uint128(10000),
+                        amount: Uint128::new(10000),
                     },
-                    snip20_reference_impl::msg::InitialBalance {
+                    snip20::InitialBalance {
                         address: HumanAddr::from("charlie"),
-                        amount: cosmwasm_std::Uint128(10000),
+                        amount: Uint128::new(10000),
                     },
                 ]),
                 prng_seed: Default::default(),
@@ -308,7 +309,7 @@ fn fake_funding_token() {
                 code_hash: snip20.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     chain
         .execute(
@@ -332,10 +333,10 @@ fn fake_funding_token() {
     assert!(
         chain
             .execute(
-                &snip20_reference_impl::msg::HandleMsg::Send {
+                &snip20::HandleMsg::Send {
                     recipient: gov.address,
                     recipient_code_hash: None,
-                    amount: cosmwasm_std::Uint128(100),
+                    amount: Uint128::new(100),
                     msg: None,
                     memo: None,
                     padding: None
@@ -356,10 +357,10 @@ fn funding_proposal_without_msg() {
     assert!(
         chain
             .execute(
-                &snip20_reference_impl::msg::HandleMsg::Send {
+                &snip20::HandleMsg::Send {
                     recipient: gov.address,
                     recipient_code_hash: None,
-                    amount: cosmwasm_std::Uint128(100),
+                    amount: Uint128::new(100),
                     msg: None,
                     memo: None,
                     padding: None
@@ -379,10 +380,10 @@ fn funding_proposal() {
 
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(100),
+                amount: Uint128::new(100),
                 msg: Some(to_binary(&Uint128::zero()).unwrap()),
                 memo: None,
                 padding: None,
@@ -397,10 +398,10 @@ fn funding_proposal() {
 
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(100),
+                amount: Uint128::new(100),
                 msg: Some(to_binary(&Uint128::zero()).unwrap()),
                 memo: None,
                 padding: None,
@@ -430,10 +431,10 @@ fn funding_proposal_after_deadline() {
     assert!(
         chain
             .execute(
-                &snip20_reference_impl::msg::HandleMsg::Send {
+                &snip20::HandleMsg::Send {
                     recipient: gov.address.clone(),
                     recipient_code_hash: None,
-                    amount: cosmwasm_std::Uint128(100),
+                    amount: Uint128::new(100),
                     msg: Some(to_binary(&Uint128::zero()).unwrap()),
                     memo: None,
                     padding: None
@@ -472,10 +473,10 @@ fn update_when_fully_funded() {
 
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(1000),
+                amount: Uint128::new(1000),
                 msg: Some(to_binary(&Uint128::zero()).unwrap()),
                 memo: None,
                 padding: None,
@@ -490,10 +491,10 @@ fn update_when_fully_funded() {
 
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(1000),
+                amount: Uint128::new(1000),
                 msg: Some(to_binary(&Uint128::zero()).unwrap()),
                 memo: None,
                 padding: None,
@@ -531,10 +532,10 @@ fn update_after_failed_funding() {
 
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(1000),
+                amount: Uint128::new(1000),
                 msg: Some(to_binary(&Uint128::zero()).unwrap()),
                 memo: None,
                 padding: None,
@@ -574,10 +575,10 @@ fn claim_when_not_finished() {
 
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(1000),
+                amount: Uint128::new(1000),
                 msg: Some(to_binary(&Uint128::zero()).unwrap()),
                 memo: None,
                 padding: None,
@@ -611,10 +612,10 @@ fn claim_after_failing() {
 
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(1000),
+                amount: Uint128::new(1000),
                 msg: Some(to_binary(&Uint128::zero()).unwrap()),
                 memo: None,
                 padding: None,
@@ -653,10 +654,10 @@ fn claim_after_failing() {
         )
         .unwrap();
 
-    let query: snip20_reference_impl::msg::QueryAnswer = chain
+    let query: snip20::QueryAnswer = chain
         .query(
             snip20.address.clone(),
-            &snip20_reference_impl::msg::QueryMsg::Balance {
+            &snip20::QueryMsg::Balance {
                 address: HumanAddr::from("alpha"),
                 key: "password".to_string(),
             },
@@ -664,8 +665,8 @@ fn claim_after_failing() {
         .unwrap();
 
     match query {
-        snip20_reference_impl::msg::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, cosmwasm_std::Uint128(10000))
+        snip20::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, Uint128::new(10000))
         }
         _ => assert!(false),
     };
@@ -676,10 +677,10 @@ fn claim_after_passing() {
 
     chain
         .execute(
-            &snip20_reference_impl::msg::HandleMsg::Send {
+            &snip20::HandleMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
-                amount: cosmwasm_std::Uint128(2000),
+                amount: Uint128::new(2000),
                 msg: Some(to_binary(&Uint128::zero()).unwrap()),
                 memo: None,
                 padding: None,
@@ -716,10 +717,10 @@ fn claim_after_passing() {
         )
         .unwrap();
 
-    let query: snip20_reference_impl::msg::QueryAnswer = chain
+    let query: snip20::QueryAnswer = chain
         .query(
             snip20.address.clone(),
-            &snip20_reference_impl::msg::QueryMsg::Balance {
+            &snip20::QueryMsg::Balance {
                 address: HumanAddr::from("alpha"),
                 key: "password".to_string(),
             },
@@ -727,8 +728,8 @@ fn claim_after_passing() {
         .unwrap();
 
     match query {
-        snip20_reference_impl::msg::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, cosmwasm_std::Uint128(10000))
+        snip20::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, Uint128::new(10000))
         }
         _ => assert!(false),
     };

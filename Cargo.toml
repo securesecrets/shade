@@ -16,7 +16,6 @@ members = [
   "contracts/mint",
   "contracts/mint_router",
   "contracts/oracle",
-  "contracts/snip20-reference-impl",
   "contracts/sky",
   "contracts/query_auth",
 

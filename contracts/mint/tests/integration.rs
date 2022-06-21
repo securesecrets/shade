@@ -16,6 +16,7 @@ use cosmwasm_std::{
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::{
     contract_interfaces::{
+        snip20,
         mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
         oracles::band::{BandQuery, ReferenceData},
     },
@@ -27,7 +28,6 @@ use shade_protocol::{
 
 use mock_band;
 use oracle;
-use snip20_reference_impl;
 
 use mint::{
     contract::{handle, init, query},
@@ -56,7 +56,7 @@ fn test_ensemble(
     let sscrt = ensemble
         .instantiate(
             reg_snip20.id,
-            &snip20_reference_impl::msg::InitMsg {
+            &snip20::InitMsg {
                 name: "secretSCRT".into(),
                 admin: Some("admin".into()),
                 symbol: "SSCRT".into(),
@@ -70,12 +70,12 @@ fn test_ensemble(
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let shade = ensemble
         .instantiate(
             reg_snip20.id,
-            &snip20_reference_impl::msg::InitMsg {
+            &snip20::InitMsg {
                 name: "Shade".into(),
                 admin: Some("admin".into()),
                 symbol: "SHD".into(),
@@ -89,7 +89,7 @@ fn test_ensemble(
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let band = ensemble
         .instantiate(
@@ -100,7 +100,7 @@ fn test_ensemble(
                 code_hash: reg_band.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let oracle = ensemble
         .instantiate(
@@ -121,7 +121,7 @@ fn test_ensemble(
                 code_hash: reg_oracle.code_hash.clone(),
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     let mint = ensemble
         .instantiate(
@@ -146,7 +146,7 @@ fn test_ensemble(
                 code_hash: reg_mint.code_hash,
             }),
         )
-        .unwrap();
+        .unwrap().instance;
 
     // Setup price feeds
     ensemble
