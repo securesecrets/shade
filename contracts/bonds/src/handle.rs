@@ -857,5 +857,5 @@ pub fn oracle<S: Storage, A: Api, Q: Querier>(
         config.oracle.code_hash,
         config.oracle.address,
     )?;
-    Ok(Uint128::from(answer.rate))
+    Ok(Uint128::from(answer.price.rate))
 }
