@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use cosmwasm_std::{
     Storage, Api, Querier, Extern, Env, StdResult, HandleResponse, to_binary, 
     StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
@@ -20,7 +22,7 @@ use shade_protocol::{
 }};
 use secret_toolkit::{utils::Query, snip20::set_viewing_key_msg};
 use secret_toolkit::snip20::send_msg;
-use crate::{query::trade_profitability};
+use crate::{query::{trade_profitability, cycle_profitability}};
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -332,6 +334,25 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     index: Uint128,
 ) -> StdResult<HandleResponse> {
     let mut messages = vec![];
+    let cycles = Cycles::load(&deps.storage)?.0;
+
+    let res = cycle_profitability(deps, amount, index)?;
+    match res {
+        sky::QueryAnswer::IsCycleProfitable { 
+            is_profitable, 
+            direction 
+        } => {
+            if !is_profitable {
+                return Err(StdError::GenericErr { msg: "bad".to_string(), backtrace: None });
+            }
+        }
+        _ => {}
+    }
+
+    for arb_pair in cycles[index.u128() as usize].pair_addrs.clone() {
+
+    }
+
     Ok(HandleResponse{
         messages,
         log: vec![],
@@ -347,6 +368,8 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
     let mut messages = vec![];
+    let cycles = Cycles::load(&deps.storage)?.0;
+
     Ok(HandleResponse{
         messages,
         log: vec![],

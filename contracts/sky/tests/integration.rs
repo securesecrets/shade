@@ -19,14 +19,14 @@
 
 use cosmwasm_math_compat::Uint128;
 use contract_harness::harness::{
-    snip20::Snip20, 
-    shadeswap_exchange::ShadeswapExchange,
-    shadeswap_factory::ShadeswapFactory,
+    snip20::Snip20,
+    mock_shdswp::MockShdSwp, 
+    //shadeswap_exchange::ShadeswapExchange,
+    //shadeswap_factory::ShadeswapFactory,
     //sienna_lp_token::SiennaLpToken,
 };
 use fadroma::{
-    ensemble::{ContractEnsemble, MockEnv},
-    ContractLink, ContractInstantiationInfo, Callback,
+    ensemble::{ContractEnsemble, MockEnv}, prelude::{ContractLink, ContractInstantiationInfo, Callback},
 };
 use cosmwasm_math_compat as compat;
 use cosmwasm_std::{
@@ -48,7 +48,7 @@ use serde::{Serialize, Deserialize};
 use shade_protocol::{
     contract_interfaces::{
         snip20::{self},
-        dex::{self, sienna, factory, amm_pair},
+        dex::{self, shadeswap},
     },
 };
 
@@ -58,8 +58,10 @@ fn test_ensemble_sky(
     let mut ensemble = ContractEnsemble::new(50);
 
     let reg_snip20 = ensemble.register(Box::new(Snip20));
-    let reg_shadeswap_exchange = ensemble.register(Box::new(ShadeswapExchange));
-    let reg_shadeswap_factory = ensemble.register(Box::new(ShadeswapFactory));
+    
+    let reg_mock_shdswp = ensemble.register(Box::new(MockShdSwp));
+    //let reg_shadeswap_exchange = ensemble.register(Box::new(ShadeswapExchange));
+    //let reg_shadeswap_factory = ensemble.register(Box::new(ShadeswapFactory));
     //let reg_sienna_lp_token = ensemble.register(Box::new(SiennaLpToken));
 
     println!("Deploying sscrt contract");
@@ -84,7 +86,7 @@ fn test_ensemble_sky(
         }),
     ).unwrap();
 
-    println!("Sscrt contract addr: {}", sscrt.address);
+    println!("Sscrt contract addr: {}", sscrt.instance.address);
     println!("Deploying shd contract");
 
     let shd = ensemble.instantiate(
@@ -107,7 +109,7 @@ fn test_ensemble_sky(
         }),
     ).unwrap();
 
-    println!("Shd contract addr: {}", shd.address);
+    println!("Shd contract addr: {}", shd.instance.address);
     println!("Deploying silk contract");
 
     let silk = ensemble.instantiate(
@@ -130,7 +132,7 @@ fn test_ensemble_sky(
         }),
     ).unwrap();
 
-    println!("Silk contract addr: {}", silk.address);
+    println!("Silk contract addr: {}", silk.instance.address);
 
     let key = String::from("key");
 
@@ -139,7 +141,7 @@ fn test_ensemble_sky(
             key: key.clone(), 
             padding: None, 
         },
-        MockEnv::new("admin", sscrt.clone()),
+        MockEnv::new("admin", sscrt.instance.clone()),
     ).unwrap();
 
     ensemble.execute(
@@ -147,7 +149,7 @@ fn test_ensemble_sky(
             key: key.clone(), 
             padding: None, 
         },
-        MockEnv::new("admin", shd.clone()),
+        MockEnv::new("admin", shd.instance.clone()),
     ).unwrap();
 
     ensemble.execute(
@@ -155,11 +157,11 @@ fn test_ensemble_sky(
             key: key.clone(), 
             padding: None, 
         },
-        MockEnv::new("admin", silk.clone()),
+        MockEnv::new("admin", silk.instance.clone()),
     ).unwrap();
 
     let mut query_res = ensemble.query(
-        sscrt.address.clone(),
+        sscrt.instance.address.clone(),
         &snip20::QueryMsg::Balance { 
             address: "admin".into(), 
             key: key.clone(), 
@@ -178,7 +180,7 @@ fn test_ensemble_sky(
     }
 
     query_res = ensemble.query(
-        shd.address.clone(),
+        shd.instance.address.clone(),
         &snip20::QueryMsg::Balance { 
             address: "admin".into(), 
             key: key.clone(), 
@@ -197,7 +199,7 @@ fn test_ensemble_sky(
     }
 
     query_res = ensemble.query(
-        silk.address.clone(),
+        silk.instance.address.clone(),
         &snip20::QueryMsg::Balance { 
             address: "admin".into(), 
             key: key.clone(), 
