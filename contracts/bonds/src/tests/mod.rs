@@ -10,7 +10,7 @@ use shade_protocol::contract_interfaces::{
 use shade_protocol::utils::asset::Contract;
 use fadroma::ensemble::{ContractEnsemble, MockEnv};
 use fadroma_platform_scrt::ContractLink;
-use contract_harness::harness::{bonds::Bonds, snip20::Snip20, oracle::Oracle, mock_band::MockBand, query_auth::QueryAuth};
+use contract_harness::harness::{bonds::Bonds, snip20::Snip20, oracle::Oracle, mock_band::MockBand, query_auth::QueryAuth, admin::ShadeAdmin};
 use cosmwasm_math_compat::Uint128;
 use shade_admin::admin;
 
@@ -52,7 +52,7 @@ pub fn init_contracts() -> StdResult<(
         MockEnv::new("admin", ContractLink { 
             address: "issu".into(), 
             code_hash: issu.code_hash })
-    )?;
+    )?.instance;
 
     let coll = chain.register(Box::new(Snip20));
     let coll = chain.instantiate(
@@ -79,7 +79,7 @@ pub fn init_contracts() -> StdResult<(
         MockEnv::new("admin", ContractLink { 
             address: "coll".into(), 
             code_hash: coll.code_hash })
-    )?;
+    )?.instance;
 
     // Register mockband
     let band = chain.register(Box::new(MockBand));
@@ -90,7 +90,7 @@ pub fn init_contracts() -> StdResult<(
             address: "band".into(), 
             code_hash: band.code_hash 
         })
-    )?;
+    )?.instance;
 
     // Register oracle
     let oracle = chain.register(Box::new(Oracle));
@@ -105,7 +105,7 @@ pub fn init_contracts() -> StdResult<(
             address: "oracle".into(), 
             code_hash: oracle.code_hash 
         })
-    )?;
+    )?.instance;
 
     // Register query_auth
     let query_auth = chain.register(Box::new(QueryAuth));
@@ -119,7 +119,7 @@ pub fn init_contracts() -> StdResult<(
             address: "query_auth".into(), 
             code_hash: query_auth.code_hash 
         })
-    )?;
+    )?.instance;
 
     // Register shade_admin
     let shade_admin = chain.register(Box::new(ShadeAdmin));
@@ -132,7 +132,7 @@ pub fn init_contracts() -> StdResult<(
             address: "shade_admin".into(), 
             code_hash: shade_admin.code_hash 
         })
-    )?;
+    )?.instance;
 
     // Register bonds
     let bonds = chain.register(Box::new(Bonds));
@@ -160,7 +160,7 @@ pub fn init_contracts() -> StdResult<(
         MockEnv::new("admin", ContractLink { 
             address: "bonds".into(), 
             code_hash: bonds.code_hash })    
-    )?;
+    )?.instance;
 
-    Ok((chain, bonds, issu, coll, band, oracle, query_auth, shade_admins))
+    Ok((chain, bonds, issu, coll, band, oracle, query_auth, shade_admin))
 }

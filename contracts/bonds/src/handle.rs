@@ -14,9 +14,10 @@ use secret_toolkit::{
 
 use shade_admin::admin::{ValidateAdminPermissionResponse, QueryMsg};
 
+use shade_oracles::{router::{QueryMsg::GetPrice}, common::OraclePrice};
+
 use shade_protocol::contract_interfaces::{
     airdrop::HandleMsg::CompleteTask,
-    oracles::oracle::{QueryMsg::GetPrice, OracleAnswer},
     snip20::helpers::{Snip20Asset, fetch_snip20},
 };
 use shade_protocol::contract_interfaces::{
@@ -853,7 +854,7 @@ pub fn oracle<S: Storage, A: Api, Q: Querier>(
     key: String,
 ) -> StdResult<Uint128> {
     let config: Config = config_r(&deps.storage).load()?;
-    let answer: OracleAnswer = GetPrice { key }.query(
+    let answer: OraclePrice = GetPrice { key }.query(
         &deps.querier,
         config.oracle.code_hash,
         config.oracle.address,

@@ -79,10 +79,10 @@ pub mod query_auth {
     harness_macro::implement_harness!(QueryAuth, query_auth);
 }
 
-#[cfg(feature = "shade_admin")]
-pub mod shade_admin {
+#[cfg(feature = "admin")]
+pub mod admin {
     use crate::harness_macro;
-    use shade_admin::admin;
+    use admin;
 
     pub struct ShadeAdmin;
     harness_macro::implement_admin_harness!(ShadeAdmin, admin);
@@ -113,4 +113,13 @@ pub mod treasury {
 
     pub struct Treasury;
     harness_macro::implement_harness!(Treasury, treasury);
+}
+
+#[cfg(feature = "shade_oracles")]
+pub mod shade_oracles {
+    use crate::harness_macro;
+    use shade_oracles;
+
+    pub struct ShadeOracles;
+    harness_macro::implement_harness!(ShadeOracles, shade_oracles);
 }

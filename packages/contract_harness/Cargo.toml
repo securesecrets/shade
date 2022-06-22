@@ -21,10 +21,11 @@ scrt_staking = ["dep:scrt_staking"]
 snip20 = ["dep:snip20"]
 bonds = ["dep:bonds"]
 query_auth = ["dep:query_auth"]
-shade_admin = ["dep:shade_admin"]
+admin = ["dep:admin"]
 snip20_reference_impl = ["dep:snip20-reference-impl"]
 treasury = ["dep:treasury"]
 treasury_manager = ["dep:treasury_manager"]
+shade-oracles = ["dep:shade-oracles"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
@@ -39,8 +40,9 @@ spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", opti
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
-shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "develop", optional = true }
+admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "develop", optional = true }
 scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optional = true }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl", optional = true }
 treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
 treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
+shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", branch = "develop", optional = true }
