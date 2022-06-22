@@ -30,14 +30,18 @@ cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
 cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "sky-impl", "math"] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "sky-impl", "math", "dex", "shadeswap" ] }
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 schemars = "0.7"
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git" }
+#shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap", branch = "secret_toolkit_implementation" }
+
 
 [dev-dependencies]
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness" }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
+#shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap", features = ["amm_pair"] }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "mint", "oracle", "mock_band", "snip20", "sky"] }
+sky = { version = "0.1.0", path = "../../contracts/sky" }
 oracle = { version = "0.1.0", path = "../../contracts/oracle" }
 mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }
 snafu = { version = "0.6.3" }

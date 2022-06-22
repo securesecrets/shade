@@ -8,13 +8,17 @@ use shade_protocol::{
     utils::{asset::Contract, storage::plus::ItemStorage},
     contract_interfaces::{
     sky::sky::{
-        Config, HandleAnswer, self
+        Config, HandleAnswer, self, ViewingKeys, Cycle, Cycles
     },
-    dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
+    dex::{
+        self,
+        sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, Swap, SwapOffer, CallbackMsg, CallbackSwap},
+        shadeswap::{TokenType},
+    },
     mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
     snip20::helpers::Snip20Asset,
 }};
-use secret_toolkit::utils::Query;
+use secret_toolkit::{utils::Query, snip20::set_viewing_key_msg};
 use secret_toolkit::snip20::send_msg;
 use crate::{query::trade_profitability};
 
@@ -27,10 +31,72 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized())
     }
     config.save(&mut deps.storage)?;
+    let view_key = ViewingKeys::load(&deps.storage)?.0;
+    let mut messages = vec![
+        set_viewing_key_msg(
+            view_key.clone(), 
+            None, 
+            1, 
+            config.shd_token.contract.code_hash.clone(), 
+            config.shd_token.contract.address.clone(),    
+        )?,
+        set_viewing_key_msg(
+            view_key.clone(), 
+            None, 
+            1, 
+            config.silk_token.contract.code_hash.clone(), 
+            config.silk_token.contract.address.clone()
+        )?
+    ];
+    Ok(HandleResponse{
+        messages,
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::UpdateConfig{
+            status: true,
+        })?),
+    })
+}
+
+pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    cycles_to_set: Vec<Cycle>,
+) -> StdResult<HandleResponse> {
+    if env.message.sender != Config::load(&deps.storage)?.admin {
+        return Err(StdError::unauthorized())
+    }
+
+    let new_cycles = Cycles ( cycles_to_set );
+    new_cycles.save(&mut deps.storage)?;
+
     Ok(HandleResponse{
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig{
+        data: Some(to_binary(&HandleAnswer::SetCycles{
+            status: true,
+        })?),
+    })
+}
+
+pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    cycles_to_add: Vec<Cycle>,
+) -> StdResult<HandleResponse> {
+    if env.message.sender != Config::load(&deps.storage)?.admin {
+        return Err(StdError::unauthorized())
+    }
+
+    let mut cycles = Cycles::load(&deps.storage)?;
+
+    cycles.0.append(&mut cycles_to_add.clone());
+
+    cycles.save(&mut deps.storage)?;
+
+    Ok(HandleResponse{
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::AppendCycles{
             status: true,
         })?),
     })
@@ -195,8 +261,8 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
     if is_mint_first {
         messages.push(to_cosmos_msg(
-            config.mint_addr.address.clone(),
-            config.mint_addr.code_hash.clone(),
+            config.mint_addr_silk.address.clone(),
+            config.mint_addr_silk.code_hash.clone(),
             &mint::HandleMsg::Receive{
                 sender: env.contract.address.clone(),
                 from: config.shd_token.contract.address.clone(),
@@ -236,8 +302,8 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
         )?);
 
         messages.push(to_cosmos_msg(
-            config.mint_addr.address.clone(),
-            config.mint_addr.code_hash.clone(),
+            config.mint_addr_shd.address.clone(),
+            config.mint_addr_shd.code_hash.clone(),
             &mint::HandleMsg::Receive{
                 sender: env.contract.address.clone(),
                 from: config.silk_token.contract.address.clone(),
@@ -254,6 +320,37 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ExecuteArb{
+            status: true,
+        })?)
+    })
+}
+
+pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    amount: Uint128,
+    index: Uint128,
+) -> StdResult<HandleResponse> {
+    let mut messages = vec![];
+    Ok(HandleResponse{
+        messages,
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::ExecuteArbCycle{
+            status: true,
+        })?)
+    })
+}
+
+pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    amount: Uint128,
+) -> StdResult<HandleResponse> {
+    let mut messages = vec![];
+    Ok(HandleResponse{
+        messages,
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::ExecuteArbAllCycles{
             status: true,
         })?)
     })

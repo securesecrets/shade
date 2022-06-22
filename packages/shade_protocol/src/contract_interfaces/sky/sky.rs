@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 
-use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery, TokenType};
+use crate::contract_interfaces::dex::dex::{Dex};
+use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery};
+use crate::contract_interfaces::dex::shadeswap::{TokenType};
 use crate::{utils::asset::Contract, contract_interfaces::snip20::helpers::Snip20Asset};
 use crate::utils::generic_response::ResponseStatus;
 use cosmwasm_math_compat::Uint128;
@@ -18,9 +20,11 @@ pub struct TokenContract{
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
-    pub mint_addr: Contract,
+    pub mint_addr_shd: Contract,
+    pub mint_addr_silk: Contract,
     pub market_swap_addr: Contract,
     pub shd_token: TokenContract,
     pub silk_token: TokenContract,
@@ -35,6 +39,10 @@ pub struct ViewingKeys(pub String);
 #[serde(rename_all = "snake_case")]
 pub struct SelfAddr(pub HumanAddr);
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Cycles (pub Vec<Cycle>);
+
 #[cfg(feature = "sky-impl")]
 use crate::utils::storage::plus::ItemStorage;
 impl ItemStorage for Config {
@@ -48,17 +56,27 @@ impl ItemStorage for ViewingKeys{
 impl ItemStorage for SelfAddr{
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }
+#[cfg(feature = "sky-impl")]
+impl ItemStorage for Cycles{
+    const ITEM: Item<'static, Cycles> = Item::new("item_cycles");
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct InitMsg{
     pub admin: Option<HumanAddr>,
-    pub mint_addr: Contract,
+    pub mint_addr_shd: Contract,
+    pub mint_addr_silk: Contract,
     pub market_swap_addr: Contract,
     pub shd_token: TokenContract,
     pub silk_token: TokenContract,
     pub treasury: HumanAddr,
     pub viewing_key: String,
     pub limit: Option<String>,
+}
+
+impl InitCallback for InitMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -70,6 +88,23 @@ pub enum HandleMsg {
     ArbPeg {
         amount: Uint128,
     },
+    SetCycles{
+        cycles: Vec<Cycle>,
+    },
+    AppendCycles{
+        cycle: Vec<Cycle>,
+    },
+    ArbCycle {
+        amount: Uint128,
+        index: Uint128,
+    },
+    ArbAllCycles{
+        amount: Uint128,
+    },
+}
+
+impl HandleCallback for HandleMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -81,6 +116,18 @@ pub enum QueryMsg {
         amount: Uint128,
     },
     Balance{},
+    GetCycles{},
+    IsCycleProfitable{
+        amount: Uint128,
+        index: Uint128,
+    },
+    AnyCyclesProfitable{
+        amount: Uint128,
+    }
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -105,6 +152,18 @@ pub enum QueryAnswer {
         error_status: bool,
         shd_bal: Uint128,
         silk_bal: Uint128,
+    },
+    GetCycles{
+        error_status: bool,
+        cycles: Vec<Cycle>,
+    },
+    IsCycleProfitable{
+        is_profitable:bool,
+        direction: Cycle,
+    },
+    AnyCyclesProfitable{
+        is_profitable:Vec<bool>,
+        directions:Vec<Cycle>
     }
 }
 
@@ -119,18 +178,37 @@ pub enum HandleAnswer {
     },
     ExecuteArb {
         status: bool,
-    }
+    },
+    SetCycles {
+        status: bool,
+    },
+    AppendCycles{
+        status: bool,
+    },
+    ExecuteArbCycle {
+        status: bool,
+    },
+    ExecuteArbAllCycles {
+        status: bool,
+    },
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
-    pair_address: HumanAddr,
-    dex_id: String, //sienna, scrtswap, shdswap
-    token1_address: HumanAddr,
-    token1_amount: Uint128,
-    token2_address: HumanAddr,
-    token2_amount: Uint128,
+    pub pair_contract: Contract,
+    pub dex_id: Dex, //sienna, scrtswap, shdswap
+    pub token0_contract: Contract,
+    pub token0_amount: Uint128,
+    pub token1_contract: Contract,
+    pub token1_amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Cycle {
+    pub pair_addrs: Vec<ArbPair>,
+    pub start_addr: HumanAddr
 }
 
 /*impl ArbPair {

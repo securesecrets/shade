@@ -114,3 +114,39 @@ pub mod treasury {
     pub struct Treasury;
     harness_macro::implement_harness!(Treasury, treasury);
 }
+
+#[cfg(feature = "sky")]
+pub mod sky {
+    use crate::harness_macro;
+    use sky;
+
+    pub struct Sky;
+    harness_macro::implement_harness!(Sky, sky);
+}
+
+#[cfg(feature = "shadeswap_exchange")]
+pub mod shadeswap_exchange {
+    use crate::harness_macro;
+    use amm_pair;
+
+    pub struct ShadeswapExchange;
+    harness_macro::implement_harness!(ShadeswapExchange, exchange);
+}
+
+#[cfg(feature = "shadeswap_factory")]
+pub mod shadeswap_factory {
+    use crate::harness_macro;
+    use factory;
+
+    pub struct ShadeswapFactory;
+    harness_macro::implement_harness!(ShadeswapFactory, factory);
+}
+
+#[cfg(feature = "shadeswap_lp_token")]
+pub mod shadeswap_lp_token {
+    use crate::harness_macro;
+    use lp_token;
+
+    pub struct ShadeswapLpToken;
+    harness_macro::implement_harness!(ShadeswapLpToken, lp_token);
+}

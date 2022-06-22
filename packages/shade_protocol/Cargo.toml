@@ -21,6 +21,7 @@ dex = ["utils", "math", "snip20", "mint", "band"]
 band = []
 secretswap = ["utils"]
 sienna = ["utils", "math"]
+shadeswap = ["mint", "dex", "band"]
 
 # Utils
 utils = []
