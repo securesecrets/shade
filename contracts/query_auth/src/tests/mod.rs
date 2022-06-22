@@ -18,8 +18,7 @@ use fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
 use fadroma_platform_scrt::ContractLink;
 use query_authentication::transaction::{PermitSignature, PubKey};
 use shade_protocol::contract_interfaces::{
-    query_auth,
-    query_auth::{PermitData, QueryPermit},
+    query_auth::{self, PermitData, QueryPermit},
 };
 
 pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)> {
