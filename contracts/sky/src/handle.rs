@@ -342,15 +342,47 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             is_profitable, 
             direction 
         } => {
+            let mut cur_asset = Contract{
+                address: direction.start_addr.clone(),
+                code_hash: "".to_string(),
+            };
+            if direction.pair_addrs[0].token0_contract.address.eq(&direction.start_addr.clone()) {
+                cur_asset = direction.pair_addrs[0].token0_contract.clone();
+            } else {
+                cur_asset = direction.pair_addrs[0].token1_contract.clone();
+            }
             if !is_profitable {
                 return Err(StdError::GenericErr { msg: "bad".to_string(), backtrace: None });
             }
+            for arb_pair in direction.pair_addrs.clone() {
+                let mut msg;
+                if arb_pair.eq(&direction.pair_addrs[direction.pair_addrs.len()-1]) {
+                    msg = Some(to_binary(&CallbackSwap{
+                        expected_return: amount,
+                    })?);
+                } else {
+                    msg = Some(to_binary(&CallbackSwap{
+                        expected_return: Uint128::zero(),
+                    })?);
+                }
+                messages.push(send_msg(
+                    arb_pair.pair_contract.address,
+                    cosmwasm_std::Uint128::from(amount.u128()),
+                    msg,
+                    None,
+                    None,
+                    256,
+                    cur_asset.code_hash.clone(),
+                    cur_asset.address.clone(),
+                )?);
+                if cur_asset.eq(&arb_pair.token0_contract.clone()) {
+                    cur_asset = arb_pair.token1_contract.clone();
+                } else {
+                    cur_asset = arb_pair.token0_contract.clone();
+                }
+            }
         }
         _ => {}
-    }
-
-    for arb_pair in cycles[index.u128() as usize].pair_addrs.clone() {
-
     }
 
     Ok(HandleResponse{
