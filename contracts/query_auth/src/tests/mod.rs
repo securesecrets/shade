@@ -11,8 +11,7 @@ use fadroma::ensemble::{ContractEnsemble, MockEnv};
 use fadroma_platform_scrt::ContractLink;
 use query_authentication::transaction::{PermitSignature, PubKey};
 use shade_protocol::contract_interfaces::{
-    query_auth,
-    query_auth::{PermitData, QueryPermit},
+    query_auth::{self, PermitData, QueryPermit},
 };
 use shade_protocol::utils::asset::Contract;
 
