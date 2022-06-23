@@ -1,36 +1,43 @@
 pub mod handle;
 pub mod query;
 
-use contract_harness::harness::query_auth::QueryAuth;
-use cosmwasm_math_compat::Uint128;
+use contract_harness::harness::{query_auth::QueryAuth, admin::Admin};
 use cosmwasm_std::{
-    from_binary,
-    to_binary,
     Binary,
-    Env,
-    HandleResponse,
     HumanAddr,
-    InitResponse,
-    StdError,
     StdResult,
 };
-use fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
+use fadroma::ensemble::{ContractEnsemble, MockEnv};
 use fadroma_platform_scrt::ContractLink;
 use query_authentication::transaction::{PermitSignature, PubKey};
 use shade_protocol::contract_interfaces::{
     query_auth,
     query_auth::{PermitData, QueryPermit},
 };
+use shade_protocol::utils::asset::Contract;
 
 pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)> {
     let mut chain = ContractEnsemble::new(20);
+
+    let admin = chain.register(Box::new(Admin));
+    let admin = chain.instantiate(
+        admin.id,
+        &shade_admin::admin::InitMsg{},
+        MockEnv::new("admin", ContractLink {
+            address: "admin_contract".into(),
+            code_hash: admin.code_hash,
+        }),
+    )?.instance;
 
     let auth = chain.register(Box::new(QueryAuth));
     let auth = chain
         .instantiate(
             auth.id,
             &query_auth::InitMsg {
-                admin: None,
+                admin_auth: Contract {
+                    address: admin.address.clone(),
+                    code_hash: admin.code_hash.clone()
+                },
                 prng_seed: Binary::from("random".as_bytes()),
             },
             MockEnv::new("admin", ContractLink {
@@ -39,6 +46,15 @@ pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)>
             }),
         )?
         .instance;
+
+    chain.execute(&shade_admin::admin::HandleMsg::AddContract {
+        contract_address: auth.address.to_string()
+    }, MockEnv::new("admin", admin.clone()))?;
+
+    chain.execute(&shade_admin::admin::HandleMsg::AddAuthorization {
+        contract_address: auth.address.to_string(),
+        admin_address: "admin".to_string()
+    }, MockEnv::new("admin", admin.clone()))?;
 
     Ok((chain, auth))
 }

@@ -30,13 +30,10 @@ pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    Admin(match msg.admin {
-        None => env.message.sender,
-        Some(admin) => admin,
-    })
+    Admin(msg.admin_auth)
     .save(&mut deps.storage)?;
 
     RngSeed::new(msg.prng_seed).save(&mut deps.storage)?;
@@ -82,7 +79,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
     pad_handle_result(
         match msg {
-            HandleMsg::SetAdmin { admin, .. } => handle::try_set_admin(deps, env, admin),
+            HandleMsg::SetAdminAuth { admin, .. } => handle::try_set_admin(deps, env, admin),
             HandleMsg::SetRunState { state, .. } => handle::try_set_run_state(deps, env, state),
             HandleMsg::SetViewingKey { key, .. } => handle::try_set_viewing_key(deps, env, key),
             HandleMsg::CreateViewingKey { entropy, .. } => {

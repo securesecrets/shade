@@ -1,17 +1,20 @@
 use crate::tests::{get_permit, init_contract};
-use cosmwasm_std::{from_binary, Binary, HumanAddr};
+use cosmwasm_std::{from_binary, HumanAddr};
 use fadroma::ensemble::MockEnv;
 use shade_protocol::{
     contract_interfaces::{query_auth, query_auth::ContractStatus},
-    utils::wrap::unwrap,
 };
+use shade_protocol::utils::asset::Contract;
 
 #[test]
 fn set_admin() {
     let (mut chain, auth) = init_contract().unwrap();
 
-    let msg = query_auth::HandleMsg::SetAdmin {
-        admin: HumanAddr::from("other_admin"),
+    let msg = query_auth::HandleMsg::SetAdminAuth {
+        admin: Contract {
+            address: HumanAddr::from("some_addr"),
+            code_hash: "some_hash".to_string()
+        },
         padding: None,
     };
 
@@ -33,7 +36,7 @@ fn set_admin() {
 
     match query {
         query_auth::QueryAnswer::Config { admin, .. } => {
-            assert_eq!(admin, HumanAddr::from("other_admin"));
+            assert_eq!(admin.address, HumanAddr::from("some_addr"));
         }
         _ => assert!(false),
     };
@@ -374,7 +377,7 @@ fn block_permit_key() {
         .unwrap();
 
     match query {
-        query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
+        query_auth::QueryAnswer::ValidatePermit { user: _, is_revoked } => {
             assert!(is_revoked);
         }
         _ => assert!(false),

@@ -1,18 +1,16 @@
 use crate::{
-    contract::{init, query},
     tests::{get_permit, init_contract},
 };
-use cosmwasm_std::{from_binary, testing::*, Binary, HumanAddr, Uint128};
+use cosmwasm_std::{testing::*, HumanAddr};
 use fadroma::ensemble::MockEnv;
-use query_authentication::transaction::{PermitSignature, PubKey};
 use shade_protocol::contract_interfaces::{
     query_auth,
-    query_auth::{ContractStatus, PermitData, QueryPermit},
+    query_auth::ContractStatus,
 };
 
 #[test]
 fn get_config() {
-    let (mut chain, auth) = init_contract().unwrap();
+    let (chain, auth) = init_contract().unwrap();
 
     let query: query_auth::QueryAnswer = chain
         .query(auth.address, &query_auth::QueryMsg::Config {})
@@ -20,7 +18,7 @@ fn get_config() {
 
     match query {
         query_auth::QueryAnswer::Config { admin, state } => {
-            assert_eq!(admin, HumanAddr::from("admin"));
+            assert_eq!(admin.address, HumanAddr::from("admin_contract"));
             assert_eq!(state, ContractStatus::Default);
         }
         _ => assert!(false),
@@ -101,7 +99,7 @@ fn validate_permit() {
     // Confirm that the permit is valid
     assert!(permit.clone().validate(&deps.api, None).is_ok());
 
-    let (mut chain, auth) = init_contract().unwrap();
+    let (chain, auth) = init_contract().unwrap();
 
     let query: query_auth::QueryAnswer = chain
         .query(auth.address, &query_auth::QueryMsg::ValidatePermit {
