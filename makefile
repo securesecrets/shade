@@ -40,7 +40,7 @@ compress-%: setup
 
 $(CONTRACTS): setup
 	(cd ${contracts_dir}/$@; ${build-release})
-	@$(MAKE) $(addprefix compress-,$(@))
+	@$(MAKE) compress-$(@)
 
 $(PACKAGES):
 	(cd packages/$@; cargo build)

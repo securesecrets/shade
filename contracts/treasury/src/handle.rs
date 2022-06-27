@@ -49,22 +49,17 @@ use shade_protocol::{
 use crate::{
     query,
     state::{
-        allowances_r,
-        allowances_w,
-        asset_list_r,
-        asset_list_w,
-        assets_r,
-        assets_w,
-        config_r,
-        config_w,
-        managers_r,
-        managers_w,
-        self_address_r,
-        viewing_key_r,
+        allowances_r, allowances_w,
+        asset_list_r, asset_list_w,
+        assets_r, assets_w,
+        config_r, config_w,
+        managers_r, managers_w,
+        self_address_r, viewing_key_r,
     },
 };
 use chrono::prelude::*;
 use shade_protocol::contract_interfaces::dao::adapter;
+use std::collections::HashMap;
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -143,7 +138,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     };
     let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
-    let mut balance = balance_query(
+    let mut token_balance = balance_query(
         &deps.querier,
         self_address,
         key.clone(),
@@ -163,61 +158,58 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     }
     */
 
-    let mut amount_total = Uint128::zero();
-    let mut out_balance = Uint128::zero();
 
     let mut managers = managers_r(&deps.storage).load()?;
 
-    // Fetch & sum balances
-    for allowance in &allowances {
-        match allowance {
-            Allowance::Amount {
-                spender,
-                cycle,
-                amount,
-                last_refresh,
-            } => {
-                //TODO: Query allowance
-                amount_total += *amount;
-                let i = managers
-                    .iter()
-                    .position(|m| m.contract.address == *spender)
-                    .unwrap();
-                managers[i].balance = adapter::balance_query(
-                    &deps,
-                    &full_asset.contract.address.clone(),
-                    managers[i].contract.clone(),
-                )?;
-                out_balance += managers[i].balance;
-            },
-            Allowance::Portion {
-                spender,
-                portion,
-                last_refresh,
-                tolerance,
-            } => {
-                let i = managers
-                    .iter()
-                    .position(|m| m.contract.address == *spender)
-                    .unwrap();
-                managers[i].balance = adapter::balance_query(
-                    &deps,
-                    &full_asset.contract.address.clone(),
-                    managers[i].contract.clone(),
-                )?;
-                out_balance += managers[i].balance;
-            }
-        }
+    // manager_addr: (balance, allowance)
+    let mut manager_data: HashMap<HumanAddr, (Uint128, Uint128)> = HashMap::new();
+
+    // Total amount of funds that are "out" or allocated to an adapter (sky, scrt_staking)
+    let mut out_balance = Uint128::zero();
+
+    // Fetch balances & allowances
+    for manager in managers.clone() {
+
+        let balance = adapter::balance_query(
+            &deps,
+            &full_asset.contract.address.clone(),
+            manager.contract.clone(),
+        )?;
+        out_balance += balance;
+
+        let allowance = allowance_query(
+            &deps.querier,
+            env.contract.address.clone(),
+            manager.contract.address.clone(),
+            key.clone(),
+            1,
+            full_asset.contract.code_hash.clone(),
+            full_asset.contract.address.clone(),
+        )?
+        .allowance;
+
+        manager_data.insert(manager.contract.address, (balance, allowance));
     }
 
-    let mut portion_total = ((balance + out_balance) - amount_total)?;
+    // Total for "amount" allowances (govt, assemblies, etc.)
+    let mut amount_total = Uint128::zero();
 
     managers_w(&mut deps.storage).save(&managers)?;
     let config = config_r(&deps.storage).load()?;
 
-    // Perform rebalance
-    for allowance in allowances {
+    let (
+        amount_allowances, 
+        portion_allowances
+    ): (Vec<Allowance>, Vec<Allowance>) = allowances
+        .into_iter()
+        .partition(|a| match a { 
+            Allowance::Amount { .. } => true, 
+            Allowance::Portion { .. } => false 
+        });
+
+    for allowance in amount_allowances {
         match allowance {
+            // TODO: change this to a "flag" instead of type
             Allowance::Amount {
                 spender,
                 cycle,
@@ -226,19 +218,72 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             } => {
                 let datetime = parse_utc_datetime(&last_refresh)?;
 
+                // Refresh allowance if cycle is exceeded
                 if exceeds_cycle(&datetime, &now, cycle) {
-                    if let Some(msg) = set_allowance(
-                        &deps,
-                        env,
-                        spender,
-                        amount,
-                        key.clone(),
-                        full_asset.contract.clone(),
-                    )? {
-                        messages.push(msg);
+
+                    let mut cur_allowance = Uint128::zero();
+                    if let Some(m) = manager_data.get(&spender) {
+                        cur_allowance = m.1;
+                    }
+                    else {
+                        cur_allowance = allowance_query(
+                            &deps.querier,
+                            env.contract.address.clone(),
+                            spender.clone(),
+                            key.clone(),
+                            1,
+                            full_asset.contract.code_hash.clone(),
+                            full_asset.contract.address.clone(),
+                        )?.allowance;
+
+                        // hasn't been accounted for by manager data
+                        amount_total += cur_allowance;
+                    }
+
+                    amount_total += cur_allowance;
+
+                    match amount.cmp(&cur_allowance) {
+                        // Decrease Allowance
+                        std::cmp::Ordering::Less => {
+                            messages.push(
+                                decrease_allowance_msg(
+                                    spender.clone(),
+                                    (cur_allowance - amount)?,
+                                    None,
+                                    None,
+                                    1,
+                                    full_asset.contract.code_hash.clone(),
+                                    full_asset.contract.address.clone(),
+                                )?
+                            );
+                        },
+                        // Increase Allowance
+                        std::cmp::Ordering::Greater => {
+                            messages.push(
+                                increase_allowance_msg(
+                                    spender.clone(),
+                                    (amount - cur_allowance)?,
+                                    None,
+                                    None,
+                                    1,
+                                    full_asset.contract.code_hash.clone(),
+                                    full_asset.contract.address.clone(),
+                                )?
+                            );
+                        },
+                        _ => {},
                     }
                 }
             }
+            _ => {}
+        }
+    }
+
+    // Total for "portion" allowances (managers for farming mostly & reallocating)
+    let mut portion_total = ((token_balance + out_balance) - amount_total)?;
+
+    for allowance in portion_allowances {
+        match allowance {
             Allowance::Portion {
                 spender,
                 portion,
@@ -340,7 +385,8 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                         )?);
                     }
                 }
-            }
+            },
+            _ => {},
         }
     }
 

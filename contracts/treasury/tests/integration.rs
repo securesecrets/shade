@@ -4,6 +4,7 @@ use cosmwasm_std::{
     Extern, HumanAddr, StdError,
     Binary, StdResult, HandleResponse, Env,
     InitResponse, Uint128,
+    Coin,
 };
 
 use shade_protocol::{
@@ -13,8 +14,7 @@ use shade_protocol::{
             treasury_manager,
             scrt_staking,
         },
-        mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
-        oracles::band::{ ReferenceData, BandQuery },
+        snip20,
     },
     utils::{
         asset::Contract,
@@ -26,7 +26,8 @@ use contract_harness::harness::{
     treasury::Treasury,
     treasury_manager::TreasuryManager,
     scrt_staking::ScrtStaking,
-    snip20_reference_impl::Snip20ReferenceImpl as Snip20,
+    //snip20_reference_impl::Snip20ReferenceImpl as Snip20,
+    snip20::Snip20,
 };
 
 use fadroma::{
@@ -60,14 +61,21 @@ fn single_asset_portion_full_dao_integration(
 
     let token = ensemble.instantiate(
         reg_snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
+        &snip20::InitMsg {
             name: "secretSCRT".into(),
             admin: Some("admin".into()),
             symbol: "SSCRT".into(),
             decimals: 6,
             initial_balances: None,
             prng_seed: to_binary("").ok().unwrap(),
-            config: None,
+            config: Some(snip20::InitConfig {
+                public_total_supply: Some(true),
+                enable_deposit: Some(true),
+                enable_redeem: Some(true),
+                enable_mint: Some(false),
+                enable_burn: Some(false),
+                enable_transfer: Some(true),
+            }),
         },
         MockEnv::new(
             "admin",
@@ -215,8 +223,35 @@ fn single_asset_portion_full_dao_integration(
         ),
     ).unwrap();
 
+    let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
+    ensemble.add_funds(HumanAddr::from("admin"), vec![deposit_coin.clone()]);
+
+    // Wrap L1
+    ensemble.execute(
+        &snip20::HandleMsg::Deposit {
+            padding: None,
+        },
+        MockEnv::new(
+            "admin",
+            token.clone(),
+        ).sent_funds(vec![deposit_coin]),
+    ).unwrap();
+
     // Deposit funds into treasury
-    //ensemble.execute();
+    ensemble.execute(
+        &snip20::HandleMsg::Send {
+            recipient: treasury.address.clone(),
+            recipient_code_hash: None,
+            amount: compat::Uint128::new(deposit.u128()),
+            msg: None,
+            memo: None,
+            padding: None,
+        },
+        MockEnv::new(
+            "admin",
+            token.clone(),
+        ),
+    ).unwrap();
     
     //rebalance/update treasury
     //rebalance/update manager
