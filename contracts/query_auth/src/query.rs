@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::query_auth::{
         auth::{Key, PermitKey},
@@ -9,6 +9,7 @@ use shade_protocol::{
     },
     utils::storage::plus::{ItemStorage, MapStorage},
 };
+use shade_protocol::contract_interfaces::query_auth::VERSION;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -32,6 +33,9 @@ pub fn validate_permit<S: Storage, A: Api, Q: Querier>(
     permit: QueryPermit,
 ) -> StdResult<QueryAnswer> {
     let user = permit.validate(&deps.api, None)?.as_humanaddr(None)?;
+    if permit.params.ver != VERSION {
+        return Err(StdError::unauthorized())
+    }
 
     Ok(QueryAnswer::ValidatePermit {
         user: user.clone(),

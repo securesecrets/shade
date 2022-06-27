@@ -62,7 +62,8 @@ pub fn get_permit() -> QueryPermit {
     QueryPermit {
         params: PermitData {
             key: "key".to_string(),
-            data: Binary::from_base64("c29tZSBzdHJpbmc=").unwrap()
+            data: Binary::from_base64("c29tZSBzdHJpbmc=").unwrap(),
+            ver: 1
         },
         signature: PermitSignature {
             pub_key: PubKey::new(

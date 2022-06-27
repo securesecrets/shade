@@ -14,6 +14,8 @@ use secret_storage_plus::Item;
 use secret_toolkit::crypto::sha_256;
 use crate::utils::asset::Contract;
 
+pub const VERSION: u8 = 1;
+
 #[cfg(feature = "query_auth_impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -125,6 +127,7 @@ pub type QueryPermit = Permit<PermitData>;
 pub struct PermitData {
     pub data: Binary,
     pub key: String,
+    pub ver: u8,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
