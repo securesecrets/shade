@@ -8,7 +8,7 @@ use crate::tests::{admin_only_governance, get_config};
 use contract_harness::harness::snip20::Snip20;
 use cosmwasm_std::HumanAddr;
 use fadroma::ensemble::MockEnv;
-use fadroma_platform_scrt::ContractLink;
+use fadroma::core::ContractLink;
 use shade_protocol::{contract_interfaces::{governance, snip20}, utils::asset::Contract};
 
 #[test]
