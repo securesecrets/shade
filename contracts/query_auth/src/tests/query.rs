@@ -1,7 +1,7 @@
 use crate::{
     tests::{get_permit, init_contract},
 };
-use cosmwasm_std::{testing::*, HumanAddr};
+use cosmwasm_std::{testing::*, HumanAddr, StdResult};
 use fadroma::ensemble::MockEnv;
 use shade_protocol::contract_interfaces::{
     query_auth,
@@ -92,7 +92,7 @@ fn validate_vk() {
 
 #[test]
 fn validate_permit() {
-    let permit = get_permit();
+    let mut permit = get_permit();
 
     let deps = mock_dependencies(20, &[]);
 
@@ -102,8 +102,8 @@ fn validate_permit() {
     let (chain, auth) = init_contract().unwrap();
 
     let query: query_auth::QueryAnswer = chain
-        .query(auth.address, &query_auth::QueryMsg::ValidatePermit {
-            permit,
+        .query(auth.address.clone(), &query_auth::QueryMsg::ValidatePermit {
+            permit: permit.clone(),
         })
         .unwrap();
 
@@ -117,4 +117,13 @@ fn validate_permit() {
         }
         _ => assert!(false),
     };
+
+    permit.params.ver = 2;
+
+    let query: StdResult<query_auth::QueryAnswer> = chain
+        .query(auth.address, &query_auth::QueryMsg::ValidatePermit {
+            permit: permit,
+        });
+
+    assert!(query.is_err());
 }
