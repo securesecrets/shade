@@ -8,7 +8,7 @@ use cosmwasm_std::{
     StdResult,
 };
 use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use fadroma_platform_scrt::ContractLink;
+use fadroma::core::ContractLink;
 use query_authentication::transaction::{PermitSignature, PubKey};
 use shade_protocol::contract_interfaces::{
     query_auth::{self, PermitData, QueryPermit},
