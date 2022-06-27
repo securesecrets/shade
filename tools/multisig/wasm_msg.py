@@ -8,7 +8,7 @@ parser.add_argument("msg", type=str, help="Smart contract's msg to execute")
 parser.add_argument("sender", type=str, help="The msg sender")
 parser.add_argument("key", type=str, help="Enclave key certificate")
 parser.add_argument("-o", "--output", type=str, help="Output message")
-parser.add_argument("--use_old", action = "store_true", help="Uses secretcli instead of secretd")
+parser.add_argument("--use_old", action="store_true", help="Uses secretcli instead of secretd")
 args = parser.parse_args()
 
 bin = "secretd"
