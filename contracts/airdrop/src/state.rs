@@ -148,8 +148,9 @@ pub fn is_permit_revoked<S: Storage>(
     }
 }
 
-pub fn validate_address_permit<S: Storage>(
+pub fn validate_address_permit<S: Storage, A: Api>(
     storage: &S,
+    api: &A,
     permit: &AddressProofPermit,
     params: &AddressProofMsg,
     contract: HumanAddr,
@@ -168,7 +169,7 @@ pub fn validate_address_permit<S: Storage>(
     }
 
     // Authenticate permit
-    authenticate_ownership(permit, params.address.as_str())
+    authenticate_ownership(api, permit, params.address.as_str())
 }
 
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
@@ -185,7 +186,7 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Authenticate permit
-    let address = permit.validate(None)?.as_humanaddr(&deps.api)?;
+    let address = permit.validate(&deps.api, None)?.as_humanaddr(None)?;
 
     // Check that permit is not revoked
     if is_permit_revoked(
