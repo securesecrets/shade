@@ -11,7 +11,6 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
-    Uint128,
 };
 
 use shade_protocol::contract_interfaces::dao::treasury::{Config, HandleMsg, InitMsg, QueryMsg};
@@ -20,7 +19,6 @@ use crate::{
     handle,
     query,
     state::{
-        allowances_w,
         asset_list_w,
         config_w,
         managers_w,
@@ -28,7 +26,7 @@ use crate::{
         viewing_key_w,
     },
 };
-use chrono::prelude::*;
+
 use shade_protocol::contract_interfaces::dao::adapter;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -100,7 +98,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
             adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(&deps, &asset)?),
-            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&StdError::generic_err("Not Implemented")),
+            adapter::SubQueryMsg::Unbondable { asset: _ } => to_binary(&StdError::generic_err("Not Implemented")),
             adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(&deps, &asset)?),
             adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(&deps, &asset)?),
         }

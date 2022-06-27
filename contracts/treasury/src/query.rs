@@ -1,11 +1,9 @@
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
 use secret_toolkit::{
     snip20::{allowance_query, balance_query},
-    utils::Query,
 };
 use shade_protocol::contract_interfaces::{
     dao::{adapter, treasury},
-    snip20,
 };
 
 use crate::state::{

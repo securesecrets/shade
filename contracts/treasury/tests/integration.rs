@@ -1,9 +1,6 @@
 use cosmwasm_math_compat as compat;
 use cosmwasm_std::{
-    coins, from_binary, to_binary,
-    Extern, HumanAddr, StdError,
-    Binary, StdResult, HandleResponse, Env,
-    InitResponse, Uint128,
+    to_binary, HumanAddr, Uint128,
     Coin,
 };
 
@@ -19,7 +16,6 @@ use shade_protocol::{
     },
     utils::{
         asset::Contract,
-        price::{normalize_price, translate_price},
     },
 };
 
@@ -34,7 +30,7 @@ use contract_harness::harness::{
 use fadroma::{
     scrt::ContractLink,
     ensemble::{
-       MockEnv, MockDeps, 
+       MockEnv, 
        ContractHarness, ContractEnsemble,
     },
 };

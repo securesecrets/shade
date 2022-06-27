@@ -1,6 +1,5 @@
 use cosmwasm_std::{
     self,
-    from_binary,
     to_binary,
     Api,
     Binary,
@@ -24,7 +23,6 @@ use secret_toolkit::{
         register_receive_msg,
         set_viewing_key_msg,
     },
-    utils::Query,
 };
 
 use shade_protocol::{
@@ -32,25 +30,21 @@ use shade_protocol::{
         dao::treasury::{
             Allowance,
             Config,
-            Flag,
             HandleAnswer,
             Manager,
-            QueryAnswer,
         },
         snip20,
     },
     utils::{
         asset::Contract,
-        cycle::{exceeds_cycle, parse_utc_datetime, Cycle},
+        cycle::{exceeds_cycle, parse_utc_datetime},
         generic_response::ResponseStatus,
     },
 };
 
 use crate::{
-    query,
     state::{
-        allowances_r, allowances_w,
-        asset_list_r, asset_list_w,
+        allowances_r, allowances_w, asset_list_w,
         assets_r, assets_w,
         config_r, config_w,
         managers_r, managers_w,
@@ -62,14 +56,14 @@ use shade_protocol::contract_interfaces::dao::adapter;
 use std::collections::HashMap;
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
     sender: HumanAddr,
     _from: HumanAddr,
-    amount: Uint128,
-    msg: Option<Binary>,
+    _amount: Uint128,
+    _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-    let key = sender.as_str().as_bytes();
+    let _key = sender.as_str().as_bytes();
 
     Ok(HandleResponse {
         messages: vec![],
@@ -103,8 +97,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    env: &Env,
+    _deps: &Extern<S, A, Q>,
+    _env: &Env,
     allowance: &Allowance,
 ) -> StdResult<Option<DateTime<Utc>>> {
     // Parse previous refresh datetime
@@ -138,7 +132,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     };
     let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
-    let mut token_balance = balance_query(
+    let token_balance = balance_query(
         &deps.querier,
         self_address,
         key.clone(),
@@ -159,7 +153,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     */
 
 
-    let mut managers = managers_r(&deps.storage).load()?;
+    let managers = managers_r(&deps.storage).load()?;
 
     // manager_addr: (balance, allowance)
     let mut manager_data: HashMap<HumanAddr, (Uint128, Uint128)> = HashMap::new();
@@ -195,7 +189,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     let mut amount_total = Uint128::zero();
 
     managers_w(&mut deps.storage).save(&managers)?;
-    let config = config_r(&deps.storage).load()?;
+    let _config = config_r(&deps.storage).load()?;
 
     let (
         amount_allowances, 
@@ -280,14 +274,14 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     }
 
     // Total for "portion" allowances (managers for farming mostly & reallocating)
-    let mut portion_total = ((token_balance + out_balance) - amount_total)?;
+    let portion_total = ((token_balance + out_balance) - amount_total)?;
 
     for allowance in portion_allowances {
         match allowance {
             Allowance::Portion {
                 spender,
                 portion,
-                last_refresh,
+                last_refresh: _,
                 tolerance,
             } => {
                 let desired_amount = portion_total.multiply_ratio(portion, 10u128.pow(18));
@@ -446,7 +440,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
-    reserves: Option<Uint128>,
+    _reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 
@@ -625,11 +619,11 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     // Zero the last-refresh
     let datetime: DateTime<Utc> = DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc);
 
-    let spender = match allowance {
+    let _spender = match allowance {
         Allowance::Portion {
             spender,
             portion,
-            last_refresh,
+            last_refresh: _,
             tolerance,
         } => {
             apps.push(Allowance::Portion {
@@ -644,7 +638,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
             spender,
             cycle,
             amount,
-            last_refresh,
+            last_refresh: _,
         } => {
             apps.push(Allowance::Amount {
                 spender: spender.clone(),
@@ -669,7 +663,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: &Env,
+    _env: &Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
 
@@ -711,7 +705,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: &Env,
+    _env: &Env,
     asset: HumanAddr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
