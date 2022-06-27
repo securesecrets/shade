@@ -87,3 +87,21 @@ pub mod treasury {
     pub struct Treasury;
     harness_macro::implement_harness!(Treasury, treasury);
 }
+
+#[cfg(feature = "query_auth")]
+pub mod query_auth {
+    use crate::harness_macro;
+    use query_auth;
+
+    pub struct QueryAuth;
+    harness_macro::implement_harness!(QueryAuth, query_auth);
+}
+
+#[cfg(feature = "admin")]
+pub mod admin {
+    use crate::harness_macro;
+    use admin;
+
+    pub struct Admin;
+    harness_macro::implement_harness!(Admin, admin);
+}

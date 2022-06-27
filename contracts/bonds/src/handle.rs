@@ -33,7 +33,7 @@ use crate::state::{
     account_r, account_w, allocated_allowance_r, allocated_allowance_w,
     allowance_key_r, allowance_key_w, bond_opportunity_r, bond_opportunity_w, collateral_assets_r,
     collateral_assets_w, config_r, config_w, global_total_claimed_w,
-    global_total_issued_r, global_total_issued_w, issued_asset_r, revoke_permit,
+    global_total_issued_r, global_total_issued_w, issued_asset_r,
 };
 
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
@@ -104,6 +104,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     global_min_accepted_issued_price: Option<Uint128>,
     global_err_issued_price: Option<Uint128>,
     allowance_key: Option<String>,
+    airdrop: Option<Contract>,
+    query_auth: Option<Contract>,
 ) -> StdResult<HandleResponse> {
     let cur_config = config_r(&deps.storage).load()?;
 
@@ -144,6 +146,12 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
         if let Some(global_err_issued_price) = global_err_issued_price {
             state.global_err_issued_price = global_err_issued_price;
+        }
+        if let Some(airdrop) = airdrop {
+            state.airdrop = Some(airdrop);
+        }
+        if let Some(query_auth) = query_auth {
+            state.query_auth = query_auth;
         }
         Ok(state)
     })?;
@@ -865,20 +873,4 @@ pub fn oracle<S: Storage, A: Api, Q: Querier>(
         config.oracle.address,
     )?;
     Ok(Uint128::from(answer.rate))
-}
-
-pub fn try_disable_permit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    key: String,
-) -> StdResult<HandleResponse> {
-    revoke_permit(&mut deps.storage, env.message.sender.to_string(), key);
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::DisablePermit {
-            status: ResponseStatus::Success,
-        })?),
-    })
 }

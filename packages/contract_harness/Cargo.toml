@@ -18,9 +18,11 @@ governance = ["dep:governance"]
 snip20_staking = ["dep:spip_stkd_0"]
 scrt_staking = ["dep:scrt_staking"]
 snip20 = ["dep:snip20"]
+query_auth = ["dep:query_auth"]
 snip20_reference_impl = ["dep:snip20-reference-impl"]
 treasury = ["dep:treasury"]
 treasury_manager = ["dep:treasury_manager"]
+admin = ["dep:admin"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
@@ -34,7 +36,8 @@ governance = { version = "0.1.0", path = "../../contracts/governance", optional 
 spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optional = true }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
+query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl", optional = true }
-
 treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
 treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
+admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0", optional = true }

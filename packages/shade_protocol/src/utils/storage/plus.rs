@@ -1,5 +1,5 @@
 use cosmwasm_std::{StdError, StdResult, Storage};
-use secret_storage_plus::{Item, Map, Prefix, PrimaryKey};
+use secret_storage_plus::{Item, Map, PrimaryKey};
 use serde::{de::DeserializeOwned, Serialize};
 
 pub trait NaiveItemStorage: Serialize + DeserializeOwned {
