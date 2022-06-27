@@ -38,7 +38,7 @@ snafu = { version = "0.6.3" }
 chrono = "0.4.19"
 
 [dev-dependencies]
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["treasury", "treasury_manager", "scrt_staking", "snip20_reference_impl" ] }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["treasury", "treasury_manager", "scrt_staking", "snip20_reference_impl", "snip20" ] }
 fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features = ["ensemble", "scrt"] }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "mint",

@@ -13,6 +13,7 @@ use shade_protocol::{
             treasury,
             treasury_manager,
             scrt_staking,
+            adapter,
         },
         snip20,
     },
@@ -253,9 +254,77 @@ fn single_asset_portion_full_dao_integration(
         ),
     ).unwrap();
     
-    //rebalance/update treasury
-    //rebalance/update manager
-    //check balances are expected
+    // update treasury
+    ensemble.execute(
+        &treasury::HandleMsg::Adapter(
+            adapter::SubHandleMsg::Update {
+                asset: token.address.clone(),
+            }
+        ),
+        MockEnv::new(
+            "admin", 
+            treasury.clone(),
+        ),
+    ).unwrap();
+
+    //update manager
+    ensemble.execute(
+        &treasury::HandleMsg::Adapter(
+            adapter::SubHandleMsg::Update {
+                asset: token.address.clone(),
+            }
+        ),
+        MockEnv::new(
+            "admin", 
+            manager.clone(),
+        ),
+    ).unwrap();
+
+    // Treasury balance check
+    match ensemble.query(
+        treasury.address.clone(),
+        &treasury::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, expected_treasury, "Pre-unbond Manager Holder Balance");
+        },
+        _ => assert!(false),
+    };
+    // Manager balance check
+    match ensemble.query(
+        manager.address.clone(),
+        &treasury_manager::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, expected_manager, "Pre-unbond Manager Holder Balance");
+        },
+        _ => assert!(false),
+    };
+
+    // scrt-staking Balance Check
+    match ensemble.query(
+        manager.address.clone(),
+        &treasury_manager::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, expected_scrt_staking, "Pre-unbond Manager Holder Balance");
+        },
+        _ => assert!(false),
+    };
+
+    //TODO unbond all and re-check
 }
 
 macro_rules! single_asset_portion_full_dao_tests {
