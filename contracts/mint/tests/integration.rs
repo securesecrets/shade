@@ -45,7 +45,7 @@ use contract_harness::harness::{
 use fadroma::{
     ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
 };
-use fadroma::scrt::ContractLink;
+use fadroma::core::ContractLink;
 
 fn test_ensemble(
     offer_price: Uint128,
