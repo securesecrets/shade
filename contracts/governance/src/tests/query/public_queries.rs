@@ -1,6 +1,3 @@
-// TODO: Queries
-// TODO: Check proposal without voting or funding and see how it returns
-
 // TODO: Verify proposal history
 // TODO: quwery proposals
 
@@ -12,8 +9,6 @@
 
 // TODO: Query user vote
 // TODO: Query where theres no user vote
-
-// TODO: funding privacy
 
 use crate::tests::{
     admin_only_governance,
@@ -208,3 +203,20 @@ fn query_config() {
 
     get_config(&mut chain, &gov).unwrap();
 }
+
+// Proposal testing completion
+
+// #[test]
+// fn query_total_proposals() {
+//     todo!()
+// }
+//
+// #[test]
+// fn query_proposals() {
+//     todo!()
+// }
+//
+// #[test]
+// fn query_proposals_funder_privacy() {
+//     todo!()
+// }

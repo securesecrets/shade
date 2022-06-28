@@ -207,6 +207,11 @@ fn voting() {
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
 
+    assert_eq!(prop.title, "Title".to_string());
+    assert_eq!(prop.metadata, "Text only proposal".to_string());
+    assert_eq!(prop.proposer, HumanAddr::from("alpha"));
+    assert_eq!(prop.assembly, Uint128::new(1));
+
     match prop.status {
         Status::Voting { .. } => assert!(true),
         _ => assert!(false),
@@ -599,6 +604,12 @@ fn vote_passed() {
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+
+    // Check that history works
+    match prop.status_history[0] {
+        Status::Voting {..} => assert!(true),
+        _ => assert!(false)
+    }
 
     match prop.status {
         Status::Passed { .. } => assert!(true),

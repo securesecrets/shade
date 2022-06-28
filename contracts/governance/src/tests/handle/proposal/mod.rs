@@ -171,6 +171,7 @@ fn msg_proposal() {
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
 
+    assert!(prop.msgs.is_some());
     assert_eq!(prop.status, Status::Success);
 
     let new_assembly =
@@ -310,7 +311,3 @@ fn msg_proposal_invalid_msg() {
 
     assert_eq!(prop.status, Status::Canceled);
 }
-
-// TODO: Assembly update if assembly setting removed from profile
-// TODO: funding update if funding setting removed from profile
-// TODO: voting update if voting setting removed from profile

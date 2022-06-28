@@ -160,7 +160,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
 
 #[test]
 fn assembly_to_funding_transition() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, _snip20) = init_funding_governance_with_proposal().unwrap();
     chain
         .execute(
             &governance::HandleMsg::SetProfile {
@@ -268,6 +268,17 @@ fn assembly_to_funding_transition() {
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
+
+    assert_eq!(prop.title, "Title".to_string());
+    assert_eq!(prop.metadata, "Text only proposal".to_string());
+    assert_eq!(prop.proposer, HumanAddr::from("alpha"));
+    assert_eq!(prop.assembly, Uint128::new(1));
+
+    // Check that history works
+    match prop.status_history[0] {
+        Status::AssemblyVote {..} => assert!(true),
+        _ => assert!(false)
+    }
 
     match prop.status {
         Status::Funding { .. } => assert!(true),
@@ -450,7 +461,7 @@ fn funding_proposal_after_deadline() {
 }
 #[test]
 fn update_while_funding() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, _snip20) = init_funding_governance_with_proposal().unwrap();
 
     assert!(
         chain
@@ -717,6 +728,11 @@ fn claim_after_passing() {
         )
         .unwrap();
 
+    let prop =
+        get_proposals(&mut chain, &gov, Uint128::new(0), Uint128::new(2)).unwrap()[0].clone();
+
+    assert_eq!(prop.funders.unwrap()[0], (HumanAddr::from("alpha"), Uint128::new(2000)));
+
     let query: snip20::QueryAnswer = chain
         .query(
             snip20.address.clone(),
@@ -735,6 +751,130 @@ fn claim_after_passing() {
     };
 }
 
-// TODO: Claim after passing
-// TODO: claim after failing
-// TODO: claim after veto
+fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
+    ContractEnsemble,
+    ContractLink<HumanAddr>,
+    ContractLink<HumanAddr>,
+)> {
+    let mut chain = ContractEnsemble::new(50);
+
+    // Register snip20
+    let snip20 = chain.register(Box::new(Snip20));
+    let snip20 = chain.instantiate(
+        snip20.id,
+        &snip20::InitMsg {
+            name: "funding_token".to_string(),
+            admin: None,
+            symbol: "FND".to_string(),
+            decimals: 6,
+            initial_balances: Some(vec![
+                snip20::InitialBalance {
+                    address: HumanAddr::from("alpha"),
+                    amount: Uint128::new(10000),
+                },
+                snip20::InitialBalance {
+                    address: HumanAddr::from("beta"),
+                    amount: Uint128::new(10000),
+                },
+                snip20::InitialBalance {
+                    address: HumanAddr::from("charlie"),
+                    amount: Uint128::new(10000),
+                },
+            ]),
+            prng_seed: Default::default(),
+            config: None,
+        },
+        MockEnv::new("admin", ContractLink {
+            address: "funding_token".into(),
+            code_hash: snip20.code_hash,
+        }),
+    )?.instance;
+
+    // Register governance
+    let gov = chain.register(Box::new(Governance));
+    let gov = chain.instantiate(
+        gov.id,
+        &InitMsg {
+            treasury: HumanAddr::from("treasury"),
+            admin_members: vec![
+                HumanAddr::from("alpha"),
+                HumanAddr::from("beta"),
+                HumanAddr::from("charlie"),
+            ],
+            admin_profile: Profile {
+                name: "admin".to_string(),
+                enabled: true,
+                assembly: None,
+                funding: Some(FundProfile {
+                    deadline: 1000,
+                    required: Uint128::new(2000),
+                    privacy: true,
+                    veto_deposit_loss: Default::default(),
+                }),
+                token: None,
+                cancel_deadline: 0,
+            },
+            public_profile: Profile {
+                name: "public".to_string(),
+                enabled: false,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+            funding_token: Some(Contract {
+                address: snip20.address.clone(),
+                code_hash: snip20.code_hash.clone(),
+            }),
+            vote_token: None,
+        },
+        MockEnv::new("admin", ContractLink {
+            address: "gov".into(),
+            code_hash: gov.code_hash,
+        }),
+    )?.instance;
+
+    chain.execute(
+        &governance::HandleMsg::AssemblyProposal {
+            assembly: Uint128::new(1),
+            title: "Title".to_string(),
+            metadata: "Text only proposal".to_string(),
+            msgs: None,
+            padding: None,
+        },
+        MockEnv::new("alpha", ContractLink {
+            address: gov.address.clone(),
+            code_hash: gov.code_hash.clone(),
+        }),
+    )?;
+
+    Ok((chain, gov, snip20))
+}
+
+#[test]
+fn funding_privacy() {
+    let (mut chain, gov, snip20) = init_funding_governance_with_proposal_with_privacy().unwrap();
+
+    chain
+        .execute(
+            &snip20::HandleMsg::Send {
+                recipient: gov.address.clone(),
+                recipient_code_hash: None,
+                amount: Uint128::new(2000),
+                msg: Some(to_binary(&Uint128::zero()).unwrap()),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                // Sender is self
+                HumanAddr::from("alpha"),
+                snip20.clone(),
+            ),
+        )
+        .unwrap();
+
+    let prop =
+        get_proposals(&mut chain, &gov, Uint128::new(0), Uint128::new(2)).unwrap()[0].clone();
+
+    assert!(prop.funders.is_none());
+}

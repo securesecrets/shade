@@ -294,7 +294,6 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 
             // Get total staking power
             let total_power = match query {
-                // TODO: fix when uint update is merged
                 snip20_staking::QueryAnswer::TotalStaked { shares, tokens } => tokens.into(),
                 _ => return Err(StdError::generic_err("Wrong query returned")),
             };
