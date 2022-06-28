@@ -181,31 +181,25 @@ pub fn balance_query<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claim_msg(asset: HumanAddr, adapter: Contract) -> StdResult<CosmosMsg> {
-    Ok(
-        HandleMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
-            adapter.code_hash,
-            adapter.address,
-            None,
-        )?,
+    HandleMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
+        adapter.code_hash,
+        adapter.address,
+        None,
     )
 }
 
 pub fn unbond_msg(asset: HumanAddr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
-    Ok(
-        HandleMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
-            adapter.code_hash,
-            adapter.address,
-            None,
-        )?,
+    HandleMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
+        adapter.code_hash,
+        adapter.address,
+        None,
     )
 }
 
 pub fn update_msg(asset: HumanAddr, adapter: Contract) -> StdResult<CosmosMsg> {
-    Ok(
-        HandleMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
-            adapter.code_hash,
-            adapter.address,
-            None,
-        )?,
+    HandleMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
+        adapter.code_hash,
+        adapter.address,
+        None,
     )
 }

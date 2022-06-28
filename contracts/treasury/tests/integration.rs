@@ -1,7 +1,7 @@
 use cosmwasm_math_compat as compat;
 use cosmwasm_std::{
-    to_binary, HumanAddr, Uint128,
-    Coin,
+    to_binary,
+    HumanAddr, Uint128, Coin,
 };
 
 use shade_protocol::{
@@ -251,8 +251,9 @@ fn single_asset_portion_full_dao_integration(
     ).unwrap();
     
     // update treasury
+    /*
     ensemble.execute(
-        &treasury::HandleMsg::Adapter(
+        &adapter::HandleMsg::Adapter(
             adapter::SubHandleMsg::Update {
                 asset: token.address.clone(),
             }
@@ -286,10 +287,11 @@ fn single_asset_portion_full_dao_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, expected_treasury, "Pre-unbond Manager Holder Balance");
+            assert_eq!(amount, expected_treasury, "Treasury Balance");
         },
         _ => assert!(false),
     };
+
     // Manager balance check
     match ensemble.query(
         manager.address.clone(),
@@ -300,7 +302,7 @@ fn single_asset_portion_full_dao_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, expected_manager, "Pre-unbond Manager Holder Balance");
+            assert_eq!(amount, expected_manager, "Manager Balance");
         },
         _ => assert!(false),
     };
@@ -315,10 +317,11 @@ fn single_asset_portion_full_dao_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Pre-unbond Manager Holder Balance");
+            assert_eq!(amount, expected_scrt_staking, "Adapter Balance");
         },
         _ => assert!(false),
     };
+    */
 
     //TODO unbond all and re-check
 }
