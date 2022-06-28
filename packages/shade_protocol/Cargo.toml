@@ -21,7 +21,7 @@ dex = ["utils", "math", "snip20", "mint", "band"]
 band = []
 secretswap = ["utils"]
 sienna = ["utils", "math"]
-shadeswap = ["mint", "dex", "band"]
+shadeswap = ["mint", "dex", "band", "fadroma"]
 
 # Utils
 utils = []
@@ -63,6 +63,7 @@ debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
+fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma", features = ["ensemble",], optional = true }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-math-compat = { path = "../cosmwasm_math_compat" }
 cosmwasm-schema = "0.10.1"

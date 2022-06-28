@@ -1,35 +1,31 @@
-use std::marker::PhantomData;
-
-use crate::contract_interfaces::dex::dex::{Dex};
-use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery};
-use crate::contract_interfaces::dex::shadeswap::{TokenType};
-use crate::{utils::asset::Contract, contract_interfaces::snip20::helpers::Snip20Asset};
-use crate::utils::generic_response::ResponseStatus;
+use crate::{
+    contract_interfaces::dex::{dex::Dex, sienna::PairInfoResponse},
+    utils::asset::Contract,
+};
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, HumanAddr, StdResult, Env, Extern, Querier, Api, Storage};
+use cosmwasm_std::HumanAddr;
 use schemars::JsonSchema;
 use secret_storage_plus::Item;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+/*#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct TokenContract{
+pub struct TokenContract {
     pub contract: Contract,
     pub decimals: Uint128,
-}
+}*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
-    pub mint_addr_shd: Contract,
-    pub mint_addr_silk: Contract,
-    pub market_swap_addr: Contract,
-    pub shd_token: TokenContract,
-    pub silk_token: TokenContract,
+    pub mint_contract_shd: Contract,
+    pub mint_contract_silk: Contract,
+    pub market_swap_contract: Contract,
+    pub shd_token_contract: Contract,
+    pub silk_token_contract: Contract,
     pub treasury: HumanAddr,
-    pub limit: Option<String>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -41,7 +37,7 @@ pub struct SelfAddr(pub HumanAddr);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Cycles (pub Vec<Cycle>);
+pub struct Cycles(pub Vec<Cycle>);
 
 #[cfg(feature = "sky-impl")]
 use crate::utils::storage::plus::ItemStorage;
@@ -49,30 +45,29 @@ impl ItemStorage for Config {
     const ITEM: Item<'static, Config> = Item::new("item_config");
 }
 #[cfg(feature = "sky-impl")]
-impl ItemStorage for ViewingKeys{
+impl ItemStorage for ViewingKeys {
     const ITEM: Item<'static, ViewingKeys> = Item::new("item_view_keys");
 }
 #[cfg(feature = "sky-impl")]
-impl ItemStorage for SelfAddr{
+impl ItemStorage for SelfAddr {
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }
 #[cfg(feature = "sky-impl")]
-impl ItemStorage for Cycles{
+impl ItemStorage for Cycles {
     const ITEM: Item<'static, Cycles> = Item::new("item_cycles");
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct InitMsg{
+pub struct InitMsg {
     pub admin: Option<HumanAddr>,
-    pub mint_addr_shd: Contract,
-    pub mint_addr_silk: Contract,
-    pub market_swap_addr: Contract,
-    pub shd_token: TokenContract,
-    pub silk_token: TokenContract,
+    pub mint_contract_shd: Contract,
+    pub mint_contract_silk: Contract,
+    pub market_swap_contract: Contract,
+    pub shd_token_contract: Contract,
+    pub silk_token_contract: Contract,
     pub treasury: HumanAddr,
     pub viewing_key: String,
-    pub limit: Option<String>,
 }
 
 impl InitCallback for InitMsg {
@@ -82,25 +77,11 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    UpdateConfig {
-        config: Config,
-    },
-    ArbPeg {
-        amount: Uint128,
-    },
-    SetCycles{
-        cycles: Vec<Cycle>,
-    },
-    AppendCycles{
-        cycle: Vec<Cycle>,
-    },
-    ArbCycle {
-        amount: Uint128,
-        index: Uint128,
-    },
-    ArbAllCycles{
-        amount: Uint128,
-    },
+    UpdateConfig { config: Config },
+    ArbPeg { amount: Uint128 },
+    SetCycles { cycles: Vec<Cycle> },
+    AppendCycles { cycle: Vec<Cycle> },
+    ArbCycle { amount: Uint128, index: Uint128 },
 }
 
 impl HandleCallback for HandleMsg {
@@ -111,19 +92,10 @@ impl HandleCallback for HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetConfig {},
-    GetMarketRate {},
-    IsProfitable {
-        amount: Uint128,
-    },
-    Balance{},
-    GetCycles{},
-    IsCycleProfitable{
-        amount: Uint128,
-        index: Uint128,
-    },
-    AnyCyclesProfitable{
-        amount: Uint128,
-    }
+    IsArbPegProfitable { amount: Uint128 },
+    Balance {},
+    GetCycles {},
+    IsCycleProfitable { amount: Uint128, index: Uint128 },
 }
 
 impl Query for QueryMsg {
@@ -136,79 +108,49 @@ pub enum QueryAnswer {
     Config {
         config: Config,
     },
-    GetMarketRate {
-        mint_rate: Uint128,
-        pair: PairInfoResponse,
-    },
-    TestProfitability {
+    ArbPegProfitability {
         is_profitable: bool,
         mint_first: bool,
-        shd_amount: Uint128,
-        silk_amount: Uint128,
-        first_swap_amount: Uint128,
-        second_swap_amount: Uint128,
+        first_swap_result: Uint128,
     },
-    Balance{
-        error_status: bool,
+    Balance {
         shd_bal: Uint128,
         silk_bal: Uint128,
     },
-    GetCycles{
-        error_status: bool,
+    GetCycles {
         cycles: Vec<Cycle>,
     },
-    IsCycleProfitable{
-        is_profitable:bool,
+    IsCycleProfitable {
+        is_profitable: bool,
         direction: Cycle,
+        swap_amounts: Vec<Uint128>,
     },
-    AnyCyclesProfitable{
-        is_profitable:Vec<bool>,
-        directions:Vec<Cycle>
-    }
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    Init {
-        status: bool,
-    },
-    UpdateConfig {
-        status: bool,
-    },
-    ExecuteArb {
-        status: bool,
-    },
-    SetCycles {
-        status: bool,
-    },
-    AppendCycles{
-        status: bool,
-    },
-    ExecuteArbCycle {
-        status: bool,
-    },
-    ExecuteArbAllCycles {
-        status: bool,
-    },
+    Init { status: bool },
+    UpdateConfig { status: bool },
+    ExecuteArb { status: bool },
+    SetCycles { status: bool },
+    AppendCycles { status: bool },
+    ExecuteArbCycle { status: bool },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
     pub pair_contract: Contract,
-    pub dex_id: Dex, //sienna, scrtswap, shdswap
     pub token0_contract: Contract,
-    pub token0_amount: Uint128,
     pub token1_contract: Contract,
-    pub token1_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Cycle {
     pub pair_addrs: Vec<ArbPair>,
-    pub start_addr: HumanAddr
+    pub start_addr: HumanAddr,
 }
 
 /*impl ArbPair {
@@ -217,7 +159,7 @@ pub struct Cycle {
             let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
                 &deps.querier,
                 env.contract_code_hash.clone(),
-                self.pair_address.clone(),                
+                self.pair_address.clone(),
             )?;
             match pool_info.pair_info.pair.token_0 {
                 TokenType::CustomToken { contract_addr, token_code_hash } => self.token1_address = contract_addr.clone(),
@@ -230,10 +172,10 @@ pub struct Cycle {
             self.token1_amount = pool_info.pair_info.amount_0.clone();
             self.token2_amount = pool_info.pair_info.amount_1.clone();
         } else if self.dex_id.eq(&"sswap".to_string()) {
-            todo!() 
+            todo!()
         } else { //shd swap
             todo!()
-        }  
+        }
 
         Ok(true)
     }

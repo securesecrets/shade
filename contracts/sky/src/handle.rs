@@ -1,4 +1,4 @@
-use crate::query::{cycle_profitability, trade_profitability};
+use crate::query::{conversion_mint_profitability, cycle_profitability};
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     to_binary,
@@ -22,7 +22,7 @@ use secret_toolkit::{
 };
 use shade_protocol::{
     contract_interfaces::{
-        dex::{self, shadeswap::TokenType},
+        dex::{self, shadeswap::SwapTokens},
         mint::mint::{self, HandleMsg::Receive, QueryAnswer, QueryAnswer::Mint, QueryMsg},
         sky::sky::{self, Config, Cycle, Cycles, HandleAnswer, ViewingKeys},
         snip20::helpers::Snip20Asset,
@@ -47,15 +47,15 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             view_key.clone(),
             None,
             1,
-            config.shd_token.contract.code_hash.clone(),
-            config.shd_token.contract.address.clone(),
+            config.shd_token_contract.code_hash.clone(),
+            config.shd_token_contract.address.clone(),
         )?,
         set_viewing_key_msg(
             view_key.clone(),
             None,
             1,
-            config.silk_token.contract.code_hash.clone(),
-            config.silk_token.contract.address.clone(),
+            config.silk_token_contract.code_hash.clone(),
+            config.silk_token_contract.address.clone(),
         )?,
     ];
     Ok(HandleResponse {
@@ -113,88 +113,90 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let config: Config = Config::load(&deps.storage)?;
 
-    let res = trade_profitability(deps, amount)?;
+    let res = conversion_mint_profitability(deps, amount)?;
 
     let mut profitable = false;
     let mut is_mint_first = false;
-    let mut pool_shd_amount = Uint128::zero();
-    let mut pool_silk_amount = Uint128::zero();
-    let mut first_swap_min_expected = Uint128::zero();
-    let mut second_swap_min_expected = Uint128::zero();
+    let mut first_swap_expected = Uint128::zero();
     match res {
-        sky::QueryAnswer::TestProfitability {
+        sky::QueryAnswer::ArbPegProfitability {
             is_profitable,
             mint_first,
-            shd_amount,
-            silk_amount,
-            first_swap_amount,
-            second_swap_amount,
+            first_swap_result,
         } => {
             profitable = is_profitable;
             is_mint_first = mint_first;
-            pool_shd_amount = shd_amount;
-            pool_silk_amount = silk_amount;
-            first_swap_min_expected = first_swap_amount;
-            second_swap_min_expected = second_swap_amount;
+            first_swap_expected = first_swap_result;
         }
         _ => {}
     }
 
+    if !profitable {
+        return Err(StdError::GenericErr {
+            msg: String::from("Trade not profitable"),
+            backtrace: None,
+        });
+    }
+
     let mut messages = vec![];
 
-    if profitable && is_mint_first {
+    if is_mint_first {
         messages.push(send_msg(
-            config.shd_token.contract.address.clone(),
-            config.shd_token.contract.code_hash.clone(),
-            &mint::HandleMsg::Receive {
-                sender: env.contract.address.clone(),
-                from: config.shd_token.contract.address.clone(),
-                amount: amount.clone(),
-                memo: None,
-                msg: Some(to_binary(&mint::MintMsgHook {
-                    minimum_expected_amount: first_swap_min_expected,
-                })?),
-            },
-        )?);
-
-        messages.push(send_msg(
-            config.market_swap_addr.address.clone(),
-            cosmwasm_std::Uint128(first_swap_min_expected.clone().u128()),
-            Some(to_binary(&CallbackSwap {
-                expected_return: second_swap_min_expected.clone(),
+            config.mint_contract_silk.address,
+            cosmwasm_std::Uint128(amount.clone().u128()),
+            Some(to_binary(&mint::MintMsgHook {
+                minimum_expected_amount: Uint128::zero(),
             })?),
             None,
             None,
             256,
-            config.silk_token.contract.code_hash.clone(),
-            config.silk_token.contract.address.clone(),
+            config.shd_token_contract.code_hash,
+            config.shd_token_contract.address,
+        )?);
+
+        messages.push(send_msg(
+            config.market_swap_contract.address.clone(),
+            cosmwasm_std::Uint128(first_swap_expected.clone().u128()),
+            Some(to_binary(&SwapTokens {
+                expected_return: Some(amount.clone()),
+                to: None,
+                router_link: None,
+                callback_signature: None,
+            })?),
+            None,
+            None,
+            256,
+            config.silk_token_contract.code_hash.clone(),
+            config.silk_token_contract.address.clone(),
         )?);
     } else {
         messages.push(send_msg(
-            config.market_swap_addr.address.clone(),
+            config.market_swap_contract.address.clone(),
             cosmwasm_std::Uint128(amount.u128()),
-            Some(to_binary(&CallbackSwap {
-                expected_return: first_swap_min_expected,
+            Some(to_binary(&SwapTokens {
+                expected_return: Some(Uint128::zero()),
+                to: None,
+                router_link: None,
+                callback_signature: None,
             })?),
             None,
             None,
             256,
-            config.shd_token.contract.code_hash.clone(),
-            config.shd_token.contract.address.clone(),
+            config.shd_token_contract.code_hash.clone(),
+            config.shd_token_contract.address.clone(),
         )?);
 
-        messages.push(to_cosmos_msg(
-            config.mint_addr_shd.address.clone(),
-            config.mint_addr_shd.code_hash.clone(),
-            &mint::HandleMsg::Receive {
-                sender: env.contract.address.clone(),
-                from: config.silk_token.contract.address.clone(),
-                amount: first_swap_min_expected,
-                memo: None,
-                msg: Some(to_binary(&mint::MintMsgHook {
-                    minimum_expected_amount: second_swap_min_expected,
-                })?),
-            },
+        messages.push(send_msg(
+            config.mint_contract_shd.address.clone(),
+            cosmwasm_std::Uint128(first_swap_expected.clone().u128()),
+            Some(to_binary(&mint::MintMsgHook {
+                minimum_expected_amount: amount.clone(),
+            })?),
+            None,
+            None,
+            256,
+            config.silk_token_contract.code_hash.clone(),
+            config.silk_token_contract.address.clone(),
         )?);
     }
 
@@ -219,6 +221,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
         sky::QueryAnswer::IsCycleProfitable {
             is_profitable,
             direction,
+            swap_amounts,
         } => {
             let mut cur_asset = Contract {
                 address: direction.start_addr.clone(),
@@ -239,20 +242,26 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                     backtrace: None,
                 });
             }
-            for arb_pair in direction.pair_addrs.clone() {
+            for (i, arb_pair) in direction.pair_addrs.clone().iter().enumerate() {
                 let mut msg;
                 if arb_pair.eq(&direction.pair_addrs[direction.pair_addrs.len() - 1]) {
-                    msg = Some(to_binary(&CallbackSwap {
-                        expected_return: amount,
+                    msg = Some(to_binary(&SwapTokens {
+                        expected_return: Some(amount),
+                        to: None,
+                        router_link: None,
+                        callback_signature: None,
                     })?);
                 } else {
-                    msg = Some(to_binary(&CallbackSwap {
-                        expected_return: Uint128::zero(),
+                    msg = Some(to_binary(&SwapTokens {
+                        expected_return: Some(Uint128::zero()),
+                        to: None,
+                        router_link: None,
+                        callback_signature: None,
                     })?);
                 }
                 messages.push(send_msg(
-                    arb_pair.pair_contract.address,
-                    cosmwasm_std::Uint128::from(amount.u128()),
+                    arb_pair.pair_contract.address.clone(),
+                    cosmwasm_std::Uint128::from(swap_amounts[i].u128()),
                     msg,
                     None,
                     None,
@@ -288,9 +297,7 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::ExecuteArbAllCycles {
-            status: true,
-        })?),
+        data: Some(to_binary(&HandleAnswer::UpdateConfig { status: true })?),
     })
 }
 
