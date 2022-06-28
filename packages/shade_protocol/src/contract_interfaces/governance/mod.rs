@@ -17,10 +17,12 @@ use crate::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, Coin, HumanAddr};
+use cosmwasm_std::{Binary, Coin, GovQuery, HumanAddr};
+use query_authentication::permit::Permit;
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
+use crate::contract_interfaces::query_auth::QueryPermit;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::SingletonStorage;
@@ -31,6 +33,8 @@ pub const MSG_VARIABLE: &str = "{~}";
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
+    pub query: Contract,
+
     pub treasury: HumanAddr,
     // When public voting is enabled, a voting token is expected
     pub vote_token: Option<Contract>,
@@ -47,6 +51,7 @@ impl SingletonStorage for Config {
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
     pub treasury: HumanAddr,
+    pub query_auth: Contract,
 
     // Admin rules
     pub admin_members: Vec<HumanAddr>,
@@ -269,6 +274,29 @@ pub enum HandleAnswer {
     SetContract { status: ResponseStatus },
 }
 
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthQuery {
+
+}
+
+pub type GovPermit = Permit<PermitData>;
+
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct QueryData {
+
+}
+
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct PermitData {
+    pub data: QueryData,
+    pub key: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
@@ -294,6 +322,10 @@ pub enum QueryMsg {
     TotalContracts {},
 
     Contracts { start: Uint128, end: Uint128 },
+
+    WithVK { user: HumanAddr, key: String, query: AuthQuery },
+
+    WithPermit { permit: GovQuery, query: AuthQuery },
 }
 
 impl Query for QueryMsg {
