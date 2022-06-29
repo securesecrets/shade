@@ -3,8 +3,6 @@ use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     to_binary,
     Api,
-    Binary,
-    CosmosMsg,
     Env,
     Extern,
     HandleResponse,
@@ -13,20 +11,14 @@ use cosmwasm_std::{
     StdError,
     StdResult,
     Storage,
-    WasmMsg,
 };
-use fadroma::scrt::to_cosmos_msg;
-use secret_toolkit::{
-    snip20::{send_msg, set_viewing_key_msg},
-    utils::Query,
-};
+use secret_toolkit::snip20::{send_msg, set_viewing_key_msg};
 use shade_protocol::{
     contract_interfaces::{
         dao::adapter,
-        dex::{self, shadeswap::SwapTokens},
-        mint::mint::{self, HandleMsg::Receive, QueryAnswer, QueryAnswer::Mint, QueryMsg},
+        dex::shadeswap::SwapTokens,
+        mint::mint,
         sky::sky::{self, Config, Cycle, Cycles, HandleAnswer, ViewingKeys},
-        snip20::helpers::Snip20Asset,
     },
     utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
@@ -43,7 +35,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     }
     config.save(&mut deps.storage)?;
     let view_key = ViewingKeys::load(&deps.storage)?.0;
-    let mut messages = vec![
+    let messages = vec![
         set_viewing_key_msg(
             view_key.clone(),
             None,
@@ -109,7 +101,7 @@ pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
 
 pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
     let config: Config = Config::load(&deps.storage)?;
@@ -210,12 +202,11 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
 pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     amount: Uint128,
     index: Uint128,
 ) -> StdResult<HandleResponse> {
     let mut messages = vec![];
-    let cycles = Cycles::load(&deps.storage)?.0;
 
     let res = cycle_profitability(deps, amount, index)?;
     match res {
@@ -224,10 +215,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             direction,
             swap_amounts,
         } => {
-            let mut cur_asset = Contract {
-                address: direction.start_addr.clone(),
-                code_hash: "".to_string(),
-            };
+            let mut cur_asset: Contract;
             if direction.pair_addrs[0]
                 .token0_contract
                 .address
@@ -244,7 +232,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                 });
             }
             for (i, arb_pair) in direction.pair_addrs.clone().iter().enumerate() {
-                let mut msg;
+                let msg;
                 if arb_pair.eq(&direction.pair_addrs[direction.pair_addrs.len() - 1]) {
                     msg = Some(to_binary(&SwapTokens {
                         expected_return: Some(amount),
@@ -287,12 +275,12 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
+/*pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
-    amount: Uint128,
+    _env: Env,
+    _amount: Uint128,
 ) -> StdResult<HandleResponse> {
-    let mut messages = vec![];
+    let messages = vec![];
     let cycles = Cycles::load(&deps.storage)?.0;
 
     Ok(HandleResponse {
@@ -303,7 +291,7 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
             amount: cosmwasm_std::Uint128::zero(),
         })?),
     })
-}
+}*/
 
 pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -311,25 +299,54 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
+    let config = Config::load(&deps.storage)?;
+    if !(env.message.sender == config.treasury) {
+        return Err(StdError::Unauthorized { backtrace: None });
+    }
+    if !(config.shd_token_contract.address == asset)
+        && !(config.silk_token_contract.address == asset)
+    {
+        return Err(StdError::GenericErr {
+            msg: String::from("Unrecognized asset"),
+            backtrace: None,
+        });
+    }
+    let contract;
+    if config.shd_token_contract.address == asset {
+        contract = config.shd_token_contract;
+    } else {
+        contract = config.silk_token_contract;
+    }
+    let messages = vec![send_msg(
+        config.treasury,
+        cosmwasm_std::Uint128::from(amount.u128()),
+        None,
+        None,
+        None,
+        256,
+        contract.code_hash,
+        contract.address,
+    )?];
+
     Ok(HandleResponse {
-        messages: vec![],
+        messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
-            amount: cosmwasm_std::Uint128::zero(),
+            amount: cosmwasm_std::Uint128::from(amount.u128()),
         })?),
     })
 }
 
 pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    asset: HumanAddr,
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    _asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+        data: Some(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,
             amount: cosmwasm_std::Uint128::zero(),
         })?),
@@ -337,16 +354,15 @@ pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_adapter_update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    asset: HumanAddr,
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    _asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+        data: Some(to_binary(&adapter::HandleAnswer::Update {
             status: ResponseStatus::Success,
-            amount: cosmwasm_std::Uint128::zero(),
         })?),
     })
 }

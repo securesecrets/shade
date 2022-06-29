@@ -1,29 +1,17 @@
-use std::{
-    convert::{TryFrom, TryInto},
-    thread::current,
-};
-
-use cosmwasm_math_compat::{Uint128, Uint64};
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{debug_print, Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
-use fadroma::prelude::ContractLink; /*
-use shadeswap_shared::{
-self, msg, TokenAmount,
-};*/
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     contract_interfaces::{
         dao::adapter,
-        dex::{
-            dex::pool_take_amount,
-            shadeswap::{self, TokenAmount, TokenType},
-            sienna::{self, PairInfo, PairInfoResponse, PairQuery},
-        },
-        mint::mint::{self, QueryMsg},
-        sky::sky::{ArbPair, Config, Cycles, QueryAnswer, SelfAddr, ViewingKeys},
+        dex::shadeswap::{self, TokenAmount, TokenType},
+        mint::mint,
+        sky::sky::{Config, Cycles, QueryAnswer, SelfAddr, ViewingKeys},
         snip20,
     },
-    utils::{asset::Contract, storage::plus::ItemStorage},
+    utils::storage::plus::ItemStorage,
 };
+use std::convert::TryInto;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -153,7 +141,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
     let config: Config = Config::load(&deps.storage)?;
     let mut first_swap_result;
 
-    let mut res = mint::QueryMsg::Mint {
+    let res = mint::QueryMsg::Mint {
         offer_asset: config.shd_token_contract.address.clone(),
         amount,
     }
@@ -237,7 +225,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let mut res = mint::QueryMsg::Mint {
+    let res = mint::QueryMsg::Mint {
         offer_asset: config.silk_token_contract.address.clone(),
         amount: first_swap_result,
     }
@@ -280,7 +268,6 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
     let viewing_key = ViewingKeys::load(&deps.storage)?.0;
     let self_addr = SelfAddr::load(&deps.storage)?.0;
     let config = Config::load(&deps.storage)?;
-    let mut is_error = false;
 
     let mut res = snip20::QueryMsg::Balance {
         address: self_addr.clone(),
@@ -300,7 +287,7 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         snip20::QueryAnswer::Balance { amount } => {
             shd_bal = amount.clone();
         }
-        _ => is_error = true,
+        _ => {}
     }
 
     res = snip20::QueryMsg::Balance {
@@ -319,7 +306,7 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         snip20::QueryAnswer::Balance { amount } => {
             silk_bal = amount;
         }
-        _ => is_error = true,
+        _ => {}
     }
 
     Ok(QueryAnswer::Balance { shd_bal, silk_bal })
@@ -341,7 +328,6 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<QueryAnswer> {
     let config = Config::load(&deps.storage)?;
     let mut cycles = Cycles::load(&deps.storage)?.0;
-    let mut new_pair_addrs: Vec<ArbPair>;
     let mut swap_amounts = vec![amount];
 
     if index.u128() > cycles.len().try_into().unwrap() {
@@ -515,7 +501,7 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {
-    let mut cycles = Cycles::load(&deps.storage)?.0;
+    let cycles = Cycles::load(&deps.storage)?.0;
     let mut return_is_profitable = vec![];
     let mut return_directions = vec![];
     let mut return_swap_amounts = vec![];
@@ -555,15 +541,37 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
+    let config = Config::load(&deps.storage)?;
+    if !(config.shd_token_contract.address == asset)
+        && !(config.silk_token_contract.address == asset)
+    {
+        return Err(StdError::GenericErr {
+            msg: String::from("Unrecognized asset"),
+            backtrace: None,
+        });
+    }
+    let res = get_balances(deps)?;
+    let mut amount = Uint128::zero();
+    match res {
+        QueryAnswer::Balance { shd_bal, silk_bal } => {
+            if config.shd_token_contract.address == asset {
+                amount = shd_bal;
+            } else {
+                amount = silk_bal;
+            }
+        }
+        _ => {}
+    }
     Ok(adapter::QueryAnswer::Balance {
-        amount: cosmwasm_std::Uint128::zero(),
+        amount: cosmwasm_std::Uint128(amount.u128()),
     })
 }
+
 pub fn adapter_claimable<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    _deps: &Extern<S, A, Q>,
+    _asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    Ok(adapter::QueryAnswer::Balance {
+    Ok(adapter::QueryAnswer::Claimable {
         amount: cosmwasm_std::Uint128::zero(),
     })
 }
@@ -572,16 +580,37 @@ pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    Ok(adapter::QueryAnswer::Balance {
-        amount: cosmwasm_std::Uint128::zero(),
+    let config = Config::load(&deps.storage)?;
+    if !(config.shd_token_contract.address == asset)
+        && !(config.silk_token_contract.address == asset)
+    {
+        return Err(StdError::GenericErr {
+            msg: String::from("Unrecognized asset"),
+            backtrace: None,
+        });
+    }
+    let res = get_balances(deps)?;
+    let mut amount = Uint128::zero();
+    match res {
+        QueryAnswer::Balance { shd_bal, silk_bal } => {
+            if config.shd_token_contract.address == asset {
+                amount = shd_bal;
+            } else {
+                amount = silk_bal;
+            }
+        }
+        _ => {}
+    }
+    Ok(adapter::QueryAnswer::Unbondable {
+        amount: cosmwasm_std::Uint128(amount.u128()),
     })
 }
 
 pub fn adapter_unbonding<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    _deps: &Extern<S, A, Q>,
+    _asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    Ok(adapter::QueryAnswer::Balance {
+    Ok(adapter::QueryAnswer::Unbonding {
         amount: cosmwasm_std::Uint128::zero(),
     })
 }
@@ -590,7 +619,28 @@ pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    Ok(adapter::QueryAnswer::Balance {
-        amount: cosmwasm_std::Uint128::zero(),
+    let config = Config::load(&deps.storage)?;
+    if !(config.shd_token_contract.address == asset)
+        && !(config.silk_token_contract.address == asset)
+    {
+        return Err(StdError::GenericErr {
+            msg: String::from("Unrecognized asset"),
+            backtrace: None,
+        });
+    }
+    let res = get_balances(deps)?;
+    let mut amount = Uint128::zero();
+    match res {
+        QueryAnswer::Balance { shd_bal, silk_bal } => {
+            if config.shd_token_contract.address == asset {
+                amount = shd_bal;
+            } else {
+                amount = silk_bal;
+            }
+        }
+        _ => {}
+    }
+    Ok(adapter::QueryAnswer::Reserves {
+        amount: cosmwasm_std::Uint128(amount.u128()),
     })
 }

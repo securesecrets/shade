@@ -48,7 +48,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
-    let mut messages = vec![
+    let messages = vec![
         set_viewing_key_msg(
             msg.viewing_key.clone(),
             None,
