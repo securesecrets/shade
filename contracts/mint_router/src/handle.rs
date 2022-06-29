@@ -26,7 +26,7 @@ use shade_protocol::{
             mint,
             mint_router::{Config, HandleAnswer},
         },
-        oracles::{band::ReferenceData, oracle::{QueryMsg::GetPrice, OracleAnswer}},
+        oracles::{band::ReferenceData, oracle::QueryMsg::Price},
         snip20::helpers::Snip20Asset,
     },
     utils::{asset::Contract, generic_response::ResponseStatus},

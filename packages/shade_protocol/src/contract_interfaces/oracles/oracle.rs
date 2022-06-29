@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     contract_interfaces::{
         dex::dex::TradingPair,
-        oracles::band::ReferenceData,
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
@@ -31,13 +30,6 @@ pub struct InitMsg {
     pub band: Contract,
     pub sscrt: Contract,
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct OracleAnswer {
-    pub key: String,
-    pub price: ReferenceData
-} 
 
 impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
@@ -94,7 +86,7 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    GetPrice { key: String },
+    Price { symbol: String },
     Prices { symbols: Vec<String> },
 }
 

@@ -24,7 +24,7 @@ use secret_toolkit::{
 use shade_protocol::{
     contract_interfaces::{
         mint::mint::{Config, HandleAnswer, Limit, MintMsgHook, SupportedAsset},
-        oracles::{band::ReferenceData, oracle::{QueryMsg::GetPrice, OracleAnswer}},
+        oracles::{band::ReferenceData, oracle::QueryMsg::Price},
         snip20::helpers::Snip20Asset,
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
@@ -539,14 +539,14 @@ pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
 
 fn oracle<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    key: String,
+    symbol: String,
 ) -> StdResult<Uint128> {
     let config: Config = config_r(&deps.storage).load()?;
-    let answer: OracleAnswer = GetPrice { key }.query(
+    let answer: ReferenceData = Price { symbol }.query(
         &deps.querier,
         config.oracle.code_hash,
         config.oracle.address,
     )?;
 
-    Ok(Uint128::from(answer.price.rate))
+    Ok(Uint128::from(answer.rate))
 }
