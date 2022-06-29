@@ -26,7 +26,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
+cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
@@ -38,7 +38,7 @@ snafu = { version = "0.6.3" }
 chrono = "0.4.19"
 
 [dev-dependencies]
-fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features = ["ensemble"] }
+fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features = ["ensemble", "scrt"] }
 contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["mint", "snip20_reference_impl", "mock_band", "oracle"] }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
 oracle = { version = "0.1.0", path = "../../contracts/oracle" }

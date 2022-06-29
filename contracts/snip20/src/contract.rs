@@ -224,7 +224,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
 
             QueryMsg::WithPermit { permit, query } => {
                 // Validate permit and get account
-                let account = permit.validate(None)?.as_humanaddr(&deps.api)?;
+                let account = permit.validate(&deps.api, None)?.as_humanaddr(None)?;
 
                 // Check that permit is not revoked
                 if PermitKey::may_load(

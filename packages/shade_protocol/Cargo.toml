@@ -65,7 +65,7 @@ cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-math-compat = { path = "../cosmwasm_math_compat" }
 cosmwasm-schema = "0.10.1"
-secret-toolkit = { version = "0.2" }
+secret-toolkit = { version = "0.2", features = ["crypto"] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
@@ -73,7 +73,7 @@ snafu = { version = "0.6.3" }
 chrono = "0.4.19"
 base64 = { version = "0.12.3", optional = true }
 # Needed for transactions
-query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0", optional = true }
+query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.3.0", optional = true }
 remain = { version = "0.2.2", optional = true }
 subtle = { version = "2.2.3", default-features = false }
 sha2 = { version = "0.9.1", default-features = false }

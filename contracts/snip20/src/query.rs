@@ -110,7 +110,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     account: HumanAddr,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Balance {
-        amount: Balance::load(&deps.storage, account)?.0,
+        amount: Balance::may_load(&deps.storage, account)?.unwrap_or(Balance(Uint128::zero())).0,
     })
 }
 

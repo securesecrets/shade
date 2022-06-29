@@ -41,10 +41,10 @@ spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", opti
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
-admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "develop", optional = true }
 scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optional = true }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl", optional = true }
 treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
 treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", branch = "shadeswap-market-oracle", optional = true }
 shade-oracles-ensemble = { git = "https://github.com/securesecrets/shade-oracle.git", branch = "shadeswap-market-oracle", optional = true }
+admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0", optional = true }

@@ -23,7 +23,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
+cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
@@ -46,6 +46,5 @@ serde_json = { version = "1.0.67" }
 mockall = "0.10.2"
 mockall_double = "0.2.0"
 fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"]  }
-fadroma-platform-scrt = { branch = "v100",  git = "https://github.com/hackbg/fadroma.git" }
 contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "governance", "snip20_staking", "snip20"  ] }
 spip_stkd_0 = { version = "0.1.0", path = "../snip20_staking" }
