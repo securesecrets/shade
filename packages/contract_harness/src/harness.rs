@@ -84,8 +84,8 @@ pub mod admin {
     use crate::harness_macro;
     use admin;
 
-    pub struct ShadeAdmin;
-    harness_macro::implement_harness!(ShadeAdmin, admin);
+    pub struct Admin;
+    harness_macro::implement_harness!(Admin, admin);
 }
 
 #[cfg(feature = "snip20_reference_impl")]
