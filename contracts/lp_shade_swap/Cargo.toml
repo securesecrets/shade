@@ -39,3 +39,4 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
+shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap.git", branch = "touch-ups"}

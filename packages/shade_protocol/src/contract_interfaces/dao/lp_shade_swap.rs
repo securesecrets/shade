@@ -13,6 +13,24 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub enum SplitMethod {
+    Conversion {
+        contract: Contract,
+    },
+    //TODO implement
+    /*
+    Market {
+        // "market_buy" contract
+        contract: Contract,
+    },
+    Lend {
+        overseer: Contract,
+    },
+    */
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Config {
     pub admin: HumanAddr,
     pub treasury: HumanAddr,
@@ -20,8 +38,9 @@ pub struct Config {
     pub token_a: Contract,
     pub token_b: Contract,
     pub liquidity_token: Contract,
+    pub staking_contract: Option<Contract>,
     pub reward_token: Option<Contract>,
-    pub rewards_contract: Option<Contract>,
+    pub split: Option<SplitMethod>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -33,7 +52,7 @@ pub struct InitMsg {
     pub pair: Contract,
     pub token_a: Contract,
     pub token_b: Contract,
-    pub rewards_contract: Option<Contract>,
+    pub staking_contract: Option<Contract>,
 }
 
 impl InitCallback for InitMsg {
@@ -56,6 +75,9 @@ pub enum HandleMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
+    // TODO Refresh approvals to max
+    // admin only
+    RefreshApprovals,
     UpdateConfig {
         config: Config,
     },
@@ -108,11 +130,17 @@ pub enum QueryAnswer {
  * Otherwise it will be sent straight to treasury on claim
  */
 pub fn is_supported_asset(config: &Config, asset: &HumanAddr) -> bool {
+    if let Some(reward_token) = config.reward_token {
+        if reward_token.address == *asset {
+            return true;
+        }
+    }
+
     vec![
         config.token_a.address.clone(),
         config.token_b.address.clone(),
         config.liquidity_token.address.clone(),
-    ].contains(asset) 
+    ].contains(asset)
 }
 
 pub fn get_supported_asset(

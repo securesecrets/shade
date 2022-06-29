@@ -36,7 +36,7 @@ use shade_protocol::{
         snip20,
     },
     utils::{
-        asset::Contract,
+        asset::{Contract, set_allowance},
         cycle::{exceeds_cycle, parse_utc_datetime},
         generic_response::ResponseStatus,
     },
@@ -391,49 +391,6 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             status: ResponseStatus::Success,
         })?),
     })
-}
-
-pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    env: &Env,
-    spender: HumanAddr,
-    amount: Uint128,
-    key: String,
-    asset: Contract,
-) -> StdResult<Option<CosmosMsg>> {
-    let cur_allowance = allowance_query(
-        &deps.querier,
-        env.contract.address.clone(),
-        spender.clone(),
-        key,
-        1,
-        asset.code_hash.clone(),
-        asset.address.clone(),
-    )?;
-
-    match amount.cmp(&cur_allowance.allowance) {
-        // Decrease Allowance
-        std::cmp::Ordering::Less => Ok(Some(decrease_allowance_msg(
-            spender.clone(),
-            (cur_allowance.allowance - amount)?,
-            None,
-            None,
-            1,
-            asset.code_hash.clone(),
-            asset.address.clone(),
-        )?)),
-        // Increase Allowance
-        std::cmp::Ordering::Greater => Ok(Some(increase_allowance_msg(
-            spender.clone(),
-            (amount - cur_allowance.allowance)?,
-            None,
-            None,
-            1,
-            asset.code_hash.clone(),
-            asset.address.clone(),
-        )?)),
-        _ => Ok(None),
-    }
 }
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
