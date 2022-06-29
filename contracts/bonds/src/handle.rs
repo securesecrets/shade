@@ -859,5 +859,7 @@ pub fn oracle<S: Storage, A: Api, Q: Querier>(
         config.oracle.code_hash,
         config.oracle.address,
     )?;
-    Ok(Uint128::from(answer.price.rate))
+
+    // From wasn't working, so here's a fix
+    Ok(Uint128::new(answer.data.rate.u128()))
 }
