@@ -12,6 +12,7 @@ self, msg, TokenAmount,
 use secret_toolkit::utils::Query;
 use shade_protocol::{
     contract_interfaces::{
+        dao::adapter,
         dex::{
             dex::pool_take_amount,
             shadeswap::{self, TokenAmount, TokenType},
@@ -547,5 +548,49 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
         is_profitable: false,
         direction: cycles[0].clone(),
         swap_amounts: vec![],
+    })
+}
+
+pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    Ok(adapter::QueryAnswer::Balance {
+        amount: cosmwasm_std::Uint128::zero(),
+    })
+}
+pub fn adapter_claimable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    Ok(adapter::QueryAnswer::Balance {
+        amount: cosmwasm_std::Uint128::zero(),
+    })
+}
+
+pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    Ok(adapter::QueryAnswer::Balance {
+        amount: cosmwasm_std::Uint128::zero(),
+    })
+}
+
+pub fn adapter_unbonding<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    Ok(adapter::QueryAnswer::Balance {
+        amount: cosmwasm_std::Uint128::zero(),
+    })
+}
+
+pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    Ok(adapter::QueryAnswer::Balance {
+        amount: cosmwasm_std::Uint128::zero(),
     })
 }

@@ -1,5 +1,8 @@
 use crate::{
-    contract_interfaces::dex::{dex::Dex, sienna::PairInfoResponse},
+    contract_interfaces::{
+        dao::adapter,
+        dex::{dex::Dex, sienna::PairInfoResponse},
+    },
     utils::asset::Contract,
 };
 use cosmwasm_math_compat::Uint128;
@@ -82,6 +85,7 @@ pub enum HandleMsg {
     SetCycles { cycles: Vec<Cycle> },
     AppendCycles { cycle: Vec<Cycle> },
     ArbCycle { amount: Uint128, index: Uint128 },
+    Adapter(adapter::SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -96,6 +100,7 @@ pub enum QueryMsg {
     Balance {},
     GetCycles {},
     IsCycleProfitable { amount: Uint128, index: Uint128 },
+    Adapter(adapter::SubQueryMsg),
 }
 
 impl Query for QueryMsg {

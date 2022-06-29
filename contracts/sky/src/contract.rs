@@ -1,3 +1,5 @@
+use crate::{handle, query};
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     self,
     debug_print,
@@ -14,17 +16,10 @@ use cosmwasm_std::{
 };
 use secret_toolkit::snip20::set_viewing_key_msg;
 
-use crate::{handle, query};
-
 use shade_protocol::{
-    contract_interfaces::sky::sky::{
-        Config,
-        Cycles,
-        HandleMsg,
-        InitMsg,
-        QueryMsg,
-        SelfAddr,
-        ViewingKeys,
+    contract_interfaces::{
+        dao::adapter,
+        sky::sky::{Config, Cycles, HandleMsg, InitMsg, QueryMsg, SelfAddr, ViewingKeys},
     },
     utils::storage::plus::ItemStorage,
 };
@@ -90,6 +85,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::AppendCycles { cycle } => handle::try_append_cycle(deps, env, cycle),
         HandleMsg::ArbCycle { amount, index } => handle::try_arb_cycle(deps, env, amount, index),
         //HandleMsg::ArbAllCycles{ amount } => handle::try_arb_all_cycles(deps, env, amount ),
+        HandleMsg::Adapter(adapter) => match adapter {
+            adapter::SubHandleMsg::Unbond { asset, amount } => {
+                handle::try_adapter_unbond(deps, env, asset, Uint128::from(amount.u128()))
+            }
+            adapter::SubHandleMsg::Claim { asset } => handle::try_adapter_claim(deps, env, asset),
+            adapter::SubHandleMsg::Update { asset } => handle::try_adapter_update(deps, env, asset),
+        },
     }
 }
 
@@ -107,5 +109,22 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::IsCycleProfitable { amount, index } => {
             to_binary(&query::cycle_profitability(deps, amount, index)?)
         }
+        QueryMsg::Adapter(adapter) => match adapter {
+            adapter::SubQueryMsg::Balance { asset } => {
+                to_binary(&query::adapter_balance(deps, asset)?)
+            }
+            adapter::SubQueryMsg::Claimable { asset } => {
+                to_binary(&query::adapter_claimable(deps, asset)?)
+            }
+            adapter::SubQueryMsg::Unbonding { asset } => {
+                to_binary(&query::adapter_unbonding(deps, asset)?)
+            }
+            adapter::SubQueryMsg::Unbondable { asset } => {
+                to_binary(&query::adapter_unbondable(deps, asset)?)
+            }
+            adapter::SubQueryMsg::Reserves { asset } => {
+                to_binary(&query::adapter_reserves(deps, asset)?)
+            }
+        },
     }
 }

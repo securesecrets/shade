@@ -22,12 +22,13 @@ use secret_toolkit::{
 };
 use shade_protocol::{
     contract_interfaces::{
+        dao::adapter,
         dex::{self, shadeswap::SwapTokens},
         mint::mint::{self, HandleMsg::Receive, QueryAnswer, QueryAnswer::Mint, QueryMsg},
         sky::sky::{self, Config, Cycle, Cycles, HandleAnswer, ViewingKeys},
         snip20::helpers::Snip20Asset,
     },
-    utils::{asset::Contract, storage::plus::ItemStorage},
+    utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
 
 /// ## Markdown
@@ -297,7 +298,56 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig { status: true })?),
+        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: cosmwasm_std::Uint128::zero(),
+        })?),
+    })
+}
+
+pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    asset: HumanAddr,
+    amount: Uint128,
+) -> StdResult<HandleResponse> {
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: cosmwasm_std::Uint128::zero(),
+        })?),
+    })
+}
+
+pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    asset: HumanAddr,
+) -> StdResult<HandleResponse> {
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: cosmwasm_std::Uint128::zero(),
+        })?),
+    })
+}
+
+pub fn try_adapter_update<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    asset: HumanAddr,
+) -> StdResult<HandleResponse> {
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+            status: ResponseStatus::Success,
+            amount: cosmwasm_std::Uint128::zero(),
+        })?),
     })
 }
 
