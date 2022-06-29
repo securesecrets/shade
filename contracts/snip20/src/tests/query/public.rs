@@ -34,7 +34,8 @@ fn token_config() {
             deposit_enabled,
             redeem_enabled,
             mint_enabled,
-            burn_enabled
+            burn_enabled,
+            transfer_enabled
         } => {
             assert_eq!(public_total_supply, false);
             assert_eq!(deposit_enabled, false);
@@ -64,7 +65,8 @@ fn token_config() {
             deposit_enabled,
             redeem_enabled,
             mint_enabled,
-            burn_enabled
+            burn_enabled,
+            transfer_enabled
         } => {
             assert_eq!(public_total_supply, true);
             assert_eq!(deposit_enabled, true);

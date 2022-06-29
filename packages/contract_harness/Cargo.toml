@@ -26,6 +26,7 @@ snip20_reference_impl = ["dep:snip20-reference-impl"]
 treasury = ["dep:treasury"]
 treasury_manager = ["dep:treasury_manager"]
 shade-oracles = ["dep:shade-oracles"]
+shade-oracles-ensemble = ["dep:shade-oracles-ensemble"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
@@ -45,4 +46,5 @@ scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optio
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl", optional = true }
 treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
 treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
-shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", branch = "develop", optional = true }
+shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", branch = "shadeswap-market-oracle", optional = true }
+shade-oracles-ensemble = { git = "https://github.com/securesecrets/shade-oracle.git", branch = "shadeswap-market-oracle", optional = true }

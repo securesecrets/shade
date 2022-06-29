@@ -85,7 +85,7 @@ pub mod admin {
     use admin;
 
     pub struct ShadeAdmin;
-    harness_macro::implement_admin_harness!(ShadeAdmin, admin);
+    harness_macro::implement_harness!(ShadeAdmin, admin);
 }
 
 #[cfg(feature = "snip20_reference_impl")]
@@ -113,13 +113,4 @@ pub mod treasury {
 
     pub struct Treasury;
     harness_macro::implement_harness!(Treasury, treasury);
-}
-
-#[cfg(feature = "shade_oracles")]
-pub mod shade_oracles {
-    use crate::harness_macro;
-    use shade_oracles;
-
-    pub struct ShadeOracles;
-    harness_macro::implement_harness!(ShadeOracles, shade_oracles);
 }
