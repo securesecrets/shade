@@ -200,20 +200,6 @@ pub fn init_contracts() -> StdResult<(
 
     assert!(chain.execute(&msg, MockEnv::new("admin", router.clone())).is_ok());
 
-    // Register query_auth
-    let query_auth = chain.register(Box::new(QueryAuth));
-    let query_auth = chain.instantiate(
-        query_auth.id, 
-        &query_auth::InitMsg {
-            admin: Some(HumanAddr::from("admin")),
-            prng_seed: Default::default()
-        }, 
-        MockEnv::new("admin", ContractLink { 
-            address: "query_auth".into(), 
-            code_hash: query_auth.code_hash 
-        })
-    )?.instance;
-
     // Register shade_admin
     let shade_admin = chain.register(Box::new(ShadeAdmin));
     let shade_admin = chain.instantiate(
@@ -224,6 +210,20 @@ pub fn init_contracts() -> StdResult<(
         MockEnv::new("admin", ContractLink { 
             address: "shade_admin".into(), 
             code_hash: shade_admin.code_hash 
+        })
+    )?.instance;
+
+    // Register query_auth
+    let query_auth = chain.register(Box::new(QueryAuth));
+    let query_auth = chain.instantiate(
+        query_auth.id, 
+        &query_auth::InitMsg {
+            admin_auth: Contract { address: shade_admin.address.clone(), code_hash: shade_admin.code_hash.clone() },
+            prng_seed: Default::default()
+        }, 
+        MockEnv::new("admin", ContractLink { 
+            address: "query_auth".into(), 
+            code_hash: query_auth.code_hash 
         })
     )?.instance;
 
