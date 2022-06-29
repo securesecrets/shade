@@ -42,4 +42,4 @@ shade_admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0
 contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "query_auth", "admin" ] }
 mockall = "0.10.2"
 mockall_double = "0.2.0"
-fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"] }
+fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"] }
