@@ -27,7 +27,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
+cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std" }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
@@ -41,11 +41,11 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 chrono = "0.4.19"
 time = "0.1.44"
-query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.2.0"}
 admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "main"}
 shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "main"}
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", branch = "shadeswap-market-oracle"}
 fadroma = { git = "https://github.com/hackbg/fadroma", branch = "v100", features = [] }
+query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.3.0"}
 
 [dev-dependencies]
 mockall = "0.10.2"

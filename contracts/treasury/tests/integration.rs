@@ -30,7 +30,7 @@ use contract_harness::harness::{
 };
 
 use fadroma::{
-    scrt::ContractLink,
+    core::ContractLink,
     ensemble::{
        MockEnv, MockDeps, 
        ContractHarness, ContractEnsemble,

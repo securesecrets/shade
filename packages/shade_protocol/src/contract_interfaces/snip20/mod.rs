@@ -175,7 +175,7 @@ impl InitConfig {
         self.enable_burn.unwrap_or(false)
     }
     pub fn transfer_enabled(&self) -> bool {
-        self.enable_burn.unwrap_or(true)
+        self.enable_transfer.unwrap_or(true)
     }
 }
 
