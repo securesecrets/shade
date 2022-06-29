@@ -9,12 +9,12 @@ use shade_protocol::contract_interfaces::{
 };
 use shade_protocol::utils::asset::Contract;
 use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use fadroma_platform_scrt::ContractLink;
+use fadroma::core::ContractLink;
 use contract_harness::harness::{
     bonds::Bonds, 
     snip20::Snip20, 
     query_auth::QueryAuth, 
-    admin::ShadeAdmin
+    admin::Admin
 };
 use shade_oracles_ensemble::harness::{
     ProxyBandOracle, MockBand, OracleRouter
@@ -36,6 +36,19 @@ pub fn init_contracts() -> StdResult<(
     ContractLink<HumanAddr> 
 )> {
     let mut chain = ContractEnsemble::new(50);
+
+    // Register shade_admin
+    let shade_admin = chain.register(Box::new(Admin));
+    let shade_admin = chain.instantiate(
+        shade_admin.id, 
+        &admin::InitMsg {
+            
+        }, 
+        MockEnv::new("admin", ContractLink { 
+            address: "shade_admin".into(), 
+            code_hash: shade_admin.code_hash 
+        })
+    )?.instance;
 
     // Register snip20s
     let issu = chain.register(Box::new(Snip20));
@@ -59,7 +72,7 @@ pub fn init_contracts() -> StdResult<(
     )?.instance;
 
     let msg = snip20::HandleMsg::SetViewingKey { key: "key".to_string(), padding: None };
-    chain.execute(&msg, MockEnv::new("user", issu.clone())).unwrap();
+    chain.execute(&msg, MockEnv::new("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq", issu.clone())).unwrap();
 
     let coll = chain.register(Box::new(Snip20));
     let coll = chain.instantiate(
@@ -70,7 +83,7 @@ pub fn init_contracts() -> StdResult<(
             symbol: "COLL".into(),
             decimals: 8,
             initial_balances: Some(vec![InitialBalance {
-                address: HumanAddr::from("user"),
+                address: HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
                 amount: Uint128::new(1_000_000_000_000_000),
             }]),
             prng_seed: Default::default(),
@@ -123,7 +136,7 @@ pub fn init_contracts() -> StdResult<(
     let issu_oracle = chain.instantiate(
         issu_oracle.id, 
         &InitMsg {
-            owner: HumanAddr::from("admin"),
+            admin_auth: shade_oracles::common::Contract { address: shade_admin.address.clone(), code_hash: shade_admin.code_hash.clone() },
             band: shade_oracles::common::Contract { address: band.address.clone(), code_hash: band.code_hash.clone() },
             quote_symbol: "ISSU".to_string(),
         }, 
@@ -138,7 +151,7 @@ pub fn init_contracts() -> StdResult<(
     let coll_oracle = chain.instantiate(
         coll_oracle.id, 
         &InitMsg {
-            owner: HumanAddr::from("admin"),
+            admin_auth: shade_oracles::common::Contract { address: shade_admin.address.clone(), code_hash: shade_admin.code_hash.clone() },
             band: shade_oracles::common::Contract { address: band.address.clone(), code_hash: band.code_hash.clone() },
             quote_symbol: "COLL".to_string(),
         }, 
@@ -153,7 +166,7 @@ pub fn init_contracts() -> StdResult<(
     let atom_oracle = chain.instantiate(
         atom_oracle.id, 
         &InitMsg {
-            owner: HumanAddr::from("admin"),
+            admin_auth: shade_oracles::common::Contract { address: shade_admin.address.clone(), code_hash: shade_admin.code_hash.clone() },
             band: shade_oracles::common::Contract { address: band.address.clone(), code_hash: band.code_hash.clone() },
             quote_symbol: "ATOM".to_string(),
         }, 
@@ -168,11 +181,13 @@ pub fn init_contracts() -> StdResult<(
     let router = chain.instantiate(
         router.id, 
         &router::InitMsg {
-            owner: HumanAddr::from("admin"),
+            admin_auth: shade_oracles::common::Contract { address: shade_admin.address.clone(), code_hash: shade_admin.code_hash.clone() },
             default_oracle: shade_oracles::common::Contract {
                 address: coll_oracle.address.clone(),
                 code_hash: coll_oracle.code_hash.clone()
-            }
+            },
+            band: shade_oracles::common::Contract { address: band.address.clone(), code_hash: band.code_hash.clone() },
+            quote_symbol: "COLL".to_string()
         }, 
         MockEnv::new("admin", ContractLink { 
             address: "router".into(), 
@@ -199,19 +214,6 @@ pub fn init_contracts() -> StdResult<(
     }};
 
     assert!(chain.execute(&msg, MockEnv::new("admin", router.clone())).is_ok());
-
-    // Register shade_admin
-    let shade_admin = chain.register(Box::new(ShadeAdmin));
-    let shade_admin = chain.instantiate(
-        shade_admin.id, 
-        &admin::InitMsg {
-            
-        }, 
-        MockEnv::new("admin", ContractLink { 
-            address: "shade_admin".into(), 
-            code_hash: shade_admin.code_hash 
-        })
-    )?.instance;
 
     // Register query_auth
     let query_auth = chain.register(Box::new(QueryAuth));
@@ -268,14 +270,14 @@ pub fn set_prices(
     let msg = UpdateSymbolPrice { 
         base_symbol: "ISSU".to_string(), 
         quote_symbol: "ISSU".to_string(),
-        rate: issu_price.into(),
+        rate: issu_price.u128().into(),
         last_updated: None,
     };
     chain.execute(&msg, MockEnv::new("admin", band.clone())).unwrap();
 
     let msg = UpdateSymbolPrice { 
         base_symbol: "COLL".to_string(), 
-        rate: coll_price.into(),
+        rate: coll_price.u128().into(),
         quote_symbol: "COLL".to_string(),    
         last_updated: None,
     };
@@ -283,7 +285,7 @@ pub fn set_prices(
 
     let msg = UpdateSymbolPrice { 
         base_symbol: "ATOM".to_string(), 
-        rate: atom_price.into(),
+        rate: atom_price.u128().into(),
         quote_symbol: "ATOM".to_string(),    
         last_updated: None,
     };
@@ -317,7 +319,7 @@ pub fn check_balances(
     }
 
     let msg = snip20::QueryMsg::Balance { 
-        address: HumanAddr::from("user".to_string()), 
+        address: HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq".to_string()), 
         key: "key".to_string() 
     };
 

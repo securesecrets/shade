@@ -1,11 +1,13 @@
 use fadroma::ensemble::{ContractEnsemble};
-use cosmwasm_std::{HumanAddr};
-use fadroma_platform_scrt::ContractLink;
+use cosmwasm_std::{HumanAddr, Binary, testing::*};
+use fadroma::core::ContractLink;
 use shade_protocol::contract_interfaces::{
     bonds, 
     snip20::{helpers::Snip20Asset}, 
-    query_auth,
+    query_auth::{self, PermitData, QueryPermit},
 };
+
+use query_authentication::transaction::{PermitSignature, PubKey};
 
 use cosmwasm_math_compat::Uint128;
 
@@ -82,4 +84,91 @@ pub fn query_opp_parameters(
         }
         _ => assert!(false)
     };
+}
+
+
+pub fn query_acccount_parameters (
+    chain: &mut ContractEnsemble,
+    bonds: &ContractLink<HumanAddr>,
+    query_auth: &ContractLink<HumanAddr>,
+    sender: &str,
+    deposit_denom: Option<Snip20Asset>,
+    end_time: Option<u64>,
+    deposit_amount: Option<Uint128>,
+    deposit_price: Option<Uint128>,
+    claim_amount: Option<Uint128>,
+    claim_price: Option<Uint128>,
+    discount: Option<Uint128>,
+    discount_price: Option<Uint128>
+) -> () {
+    let permit = get_permit();
+
+    let deps = mock_dependencies(20, &[]);
+
+    // Confirm that the permit is valid
+    assert!(permit.clone().validate(&deps.api, None).is_ok());
+
+    let query: query_auth::QueryAnswer = chain
+        .query(query_auth.address.clone(), &query_auth::QueryMsg::ValidatePermit {
+            permit: permit.clone(),
+        })
+        .unwrap();
+
+    let query: bonds::QueryAnswer = chain.query(
+        bonds.address.clone(),
+        &bonds::QueryMsg::Account { permit }
+    ).unwrap();
+
+    match query {
+        bonds::QueryAnswer::Account { pending_bonds, .. } => {
+            if deposit_denom.is_some() {
+                assert_eq!(pending_bonds[0].deposit_denom, deposit_denom.unwrap())
+            }
+            if end_time.is_some() {
+                assert_eq!(pending_bonds[0].end_time, end_time.unwrap())
+            }
+            if deposit_price.is_some() {
+                assert_eq!(pending_bonds[0].deposit_price, deposit_price.unwrap())
+            }
+            if deposit_amount.is_some() {
+                assert_eq!(pending_bonds[0].deposit_amount, deposit_amount.unwrap())
+            }
+            if claim_amount.is_some() {
+                assert_eq!(pending_bonds[0].claim_amount, claim_amount.unwrap())
+            }
+            if claim_price.is_some() {
+                assert_eq!(pending_bonds[0].claim_price, claim_price.unwrap())
+            }
+            if discount.is_some() {
+                assert_eq!(pending_bonds[0].discount, discount.unwrap())
+            }
+            if discount_price.is_some() {
+                assert_eq!(pending_bonds[0].discount_price, discount_price.unwrap())
+            }
+        }
+        _ => assert!(false)
+    };
+}
+
+fn get_permit() -> QueryPermit {
+    QueryPermit {
+        params: PermitData {
+            key: "key".to_string(),
+            data: Binary::from_base64("c29tZSBzdHJpbmc=").unwrap()
+        },
+        signature: PermitSignature {
+            pub_key: PubKey::new(
+                Binary::from_base64(
+                    "A9NjbriiP7OXCpoTov9ox/35+h5k0y1K0qCY/B09YzAP"
+                ).unwrap()
+            ),
+            signature: Binary::from_base64(
+                "XRzykrPmMs0ZhksNXX+eU0TM21fYBZXZogr5wYZGGy11t2ntfySuQNQJEw6D4QKvPsiU9gYMsQ259dOzMZNAEg=="
+            ).unwrap()
+        },
+        account_number: None,
+        chain_id: Some(String::from("chain")),
+        sequence: None,
+        memo: None
+    }
 }

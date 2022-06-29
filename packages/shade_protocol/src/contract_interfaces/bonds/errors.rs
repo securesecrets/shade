@@ -92,7 +92,7 @@ impl CodeType for Error {
                 build_string("Permit isn't valid for {}", context)
             }
             Error::PermitRevoked => {
-                build_string("Permit is revoked", context)
+                build_string("Permit is revoked for user {}", context)
             }
             Error::Blacklisted => {
                 build_string("Cannot enter bond opportunity, sender address of {} is blacklisted", context)
@@ -303,8 +303,8 @@ pub fn permit_contract_mismatch(expected: &str) -> StdError {
     .to_error()
 }
 
-pub fn permit_revoked() -> StdError {
-    DetailedError::from_code(BOND_TARGET, Error::PermitRevoked, vec![]).to_error()
+pub fn permit_revoked(user: &str) -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::PermitRevoked, vec![user]).to_error()
 }
 
 pub fn blacklisted(address: HumanAddr) -> StdError {

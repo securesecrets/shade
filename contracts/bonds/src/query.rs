@@ -37,10 +37,10 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
     )?;
     match authorized {
         query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
-            if is_revoked!=false {
+            if is_revoked!=true {
                 account_information(deps, user)
             } else {
-                return Err(permit_revoked())
+                return Err(permit_revoked(user.as_str()))
             }
         }
         _ => {

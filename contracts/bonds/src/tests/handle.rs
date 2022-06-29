@@ -1,7 +1,7 @@
 use crate::tests::{init_contracts, set_prices, check_balances, query::{query_no_opps, query_opp_parameters}};
 use fadroma::ensemble::{MockEnv, ContractEnsemble};
 use cosmwasm_std::{HumanAddr};
-use fadroma_platform_scrt::ContractLink;
+use fadroma::core::ContractLink;
 use shade_protocol::contract_interfaces::{
     bonds, 
     snip20::{self, helpers::Snip20Asset}, 
@@ -10,7 +10,7 @@ use shade_protocol::contract_interfaces::{
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::utils::asset::Contract;
 
-use super::{setup_admin, increase_allowance};
+use super::{setup_admin, increase_allowance, query::query_acccount_parameters};
 
 #[test]
 pub fn test_bonds() {
@@ -53,6 +53,8 @@ pub fn test_bonds() {
 
     buy_opp(&mut chain, &bonds, &coll, Uint128::new(2_000_000_000));
 
+    query_acccount_parameters(&mut chain, &bonds.clone(), &query_auth.clone(), "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq", None, None, Some(Uint128::new(2_000_000_000)), None, None, None, None, None);
+
     query_opp_parameters(
         &mut chain, 
         &bonds, 
@@ -92,7 +94,7 @@ pub fn test_bonds() {
 
     let msg = query_auth::HandleMsg::CreateViewingKey { entropy: "random".to_string(), padding: None };
 
-    chain.execute(&msg, MockEnv::new("user", query_auth.clone())).unwrap();
+    chain.execute(&msg, MockEnv::new("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq", query_auth.clone())).unwrap();
 
     claim(&mut chain, &bonds);
 
@@ -105,7 +107,7 @@ pub fn test_bonds() {
     query_no_opps(&mut chain, &bonds);
 
     open_opp(&mut chain, &bonds, &coll, "admin", None, None, None, None, Uint128::new(1), Uint128::new(1), false);
-    open_opp_fail(&mut chain, &bonds, &coll, "user", None, None, None, None, Uint128::new(1), Uint128::new(1), false);
+    open_opp_fail(&mut chain, &bonds, &coll, "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq", None, None, None, None, Uint128::new(1), Uint128::new(1), false);
     open_opp_fail(&mut chain, &bonds, &coll, "admin", None, None, None, Some(Uint128::new(10000000000000000000)), Uint128::new(1), Uint128::new(1), false);
     open_opp(&mut chain, &bonds, &coll, "admin", None, None, None, Some(Uint128::new(4_347)), Uint128::new(1_000_000_000_000_000_000), Uint128::new(950_000_000_000_000_000), false);
     
@@ -130,7 +132,7 @@ fn claim (
 ) -> () {
     let msg = bonds::HandleMsg::Claim { padding: None };
 
-    chain.execute(&msg, MockEnv::new("user", bonds.clone())).unwrap();
+    chain.execute(&msg, MockEnv::new("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq", bonds.clone())).unwrap();
 }
 
 fn buy_opp (
@@ -148,7 +150,7 @@ fn buy_opp (
         padding: None 
     };
 
-    chain.execute(&msg, MockEnv::new("user", coll.clone())).unwrap();
+    chain.execute(&msg, MockEnv::new("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq", coll.clone())).unwrap();
 }
 
 fn buy_opp_fail (
@@ -165,7 +167,7 @@ fn buy_opp_fail (
         padding: None 
     };
 
-    match chain.execute(&msg, MockEnv::new("user", coll.clone())) {
+    match chain.execute(&msg, MockEnv::new("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq", coll.clone())) {
         Ok(_) => assert!(false),
         Err(_) => assert!(true)
     }
