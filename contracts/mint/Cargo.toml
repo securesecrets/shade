@@ -38,7 +38,7 @@ snafu = { version = "0.6.3" }
 chrono = "0.4.19"
 
 [dev-dependencies]
-fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features = ["ensemble", "scrt"] }
+fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features = ["ensemble", "scrt"] }
 contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["mint", "snip20_reference_impl", "mock_band", "oracle"] }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
 oracle = { version = "0.1.0", path = "../../contracts/oracle" }

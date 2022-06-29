@@ -26,7 +26,7 @@ admin = ["dep:admin"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
-fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features = [
+fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features = [
   "ensemble",
 ] }
 mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
