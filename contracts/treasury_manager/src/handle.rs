@@ -248,17 +248,16 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
         tolerance: allocation.tolerance,
     });
 
-    if (apps
+    if apps
         .iter()
         .map(|a| {
             if a.alloc_type == AllocationType::Portion {
                 a.amount.u128()
             } else {
-                0
+                0u128
             }
         })
-        .sum::<u128>())
-        > ONE_HUNDRED_PERCENT
+        .sum::<u128>() > ONE_HUNDRED_PERCENT
     {
         return Err(StdError::generic_err(
             "Invalid allocation total exceeding 100%",
