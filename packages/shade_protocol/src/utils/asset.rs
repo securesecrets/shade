@@ -1,5 +1,6 @@
 use cosmwasm_std::{
     Api,
+    Env,
     BalanceResponse,
     BankQuery,
     Extern,
@@ -8,9 +9,13 @@ use cosmwasm_std::{
     StdResult,
     Storage,
     Uint128,
+    CosmosMsg,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use secret_toolkit::snip20::{
+    allowance_query, increase_allowance_msg, decrease_allowance_msg
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
