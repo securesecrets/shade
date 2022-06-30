@@ -24,7 +24,7 @@ pub enum Error {
     BondDiscountAboveMaximumRate,
     BondIssuanceExceedsAllowance,
     NotLimitAdmin,
-    CollateralPriceExceedsLimit,
+    DepositPriceExceedsLimit,
     IssuedPriceBelowMinimum,
     SlippageToleranceExceeded,
     Blacklisted,
@@ -59,7 +59,7 @@ impl CodeType for Error {
                 build_string("Bonds contract is currently not active. Governance must activate the contract before functionality can resume.", context)
             }
             Error::NoBondFound => {
-                build_string("No bond opportunity found for collateral contract {}", context)
+                build_string("No bond opportunity found for deposit contract {}", context)
             }
             Error::NoPendingBonds => {
                 build_string("No pending bonds for user address {}", context)
@@ -79,8 +79,8 @@ impl CodeType for Error {
             Error::NotLimitAdmin => {
                 build_string("Global limit parameters can only be changed by the limit admin", context)
             }
-            Error::CollateralPriceExceedsLimit => {
-                build_string("Collateral asset price of {} exceeds limit price of {}, cannot enter bond opportunity", context)
+            Error::DepositPriceExceedsLimit => {
+                build_string("Deposit asset price of {} exceeds limit price of {}, cannot enter bond opportunity", context)
             }
             Error::IssuedPriceBelowMinimum => {
                 build_string("Issued asset price of {} is below minimum value of {}, cannot enter opportunity", context)
@@ -165,11 +165,11 @@ pub fn contract_not_active() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::ContractNotActive, vec![""]).to_error()
 }
 
-pub fn no_bond_found(collateral_asset_address: &str) -> StdError {
+pub fn no_bond_found(deposit_asset_address: &str) -> StdError {
     DetailedError::from_code(
         BOND_TARGET,
         Error::NoBondFound,
-        vec![collateral_asset_address],
+        vec![deposit_asset_address],
     )
     .to_error()
 }
@@ -252,15 +252,15 @@ pub fn not_limit_admin() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::NotLimitAdmin, vec![]).to_error()
 }
 
-pub fn collateral_price_exceeds_limit(collateral_price: Uint128, limit: Uint128) -> StdError {
-    let collateral_string = collateral_price.to_string();
-    let collateral_str = collateral_string.as_str();
+pub fn deposit_price_exceeds_limit(deposit_price: Uint128, limit: Uint128) -> StdError {
+    let deposit_string = deposit_price.to_string();
+    let deposit_str = deposit_string.as_str();
     let limit_string = limit.to_string();
     let limit_str = limit_string.as_str();
     DetailedError::from_code(
         BOND_TARGET,
-        Error::CollateralPriceExceedsLimit,
-        vec![collateral_str, limit_str],
+        Error::DepositPriceExceedsLimit,
+        vec![deposit_str, limit_str],
     )
     .to_error()
 }

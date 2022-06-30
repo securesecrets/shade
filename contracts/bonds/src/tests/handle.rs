@@ -14,7 +14,7 @@ use super::{increase_allowance, query::query_acccount_parameters, setup_admin};
 
 #[test]
 pub fn test_bonds() {
-    let (mut chain, bonds, issu, coll, atom, band, _oracle, query_auth, shade_admins) =
+    let (mut chain, bonds, issu, depo, atom, band, _oracle, query_auth, shade_admins) =
         init_contracts().unwrap();
 
     set_prices(
@@ -31,12 +31,12 @@ pub fn test_bonds() {
     increase_allowance(&mut chain, &bonds, &issu);
 
     // No bond, so fail
-    buy_opp_fail(&mut chain, &bonds, &coll);
+    buy_opp_fail(&mut chain, &bonds, &depo);
 
     open_opp(
         &mut chain,
         &bonds,
-        &coll,
+        &depo,
         "admin",
         Some(100),
         Some(Uint128::new(10_000_000_000)),
@@ -47,7 +47,7 @@ pub fn test_bonds() {
         false,
     );
 
-    buy_opp(&mut chain, &bonds, &coll, Uint128::new(2_000_000_000));
+    buy_opp(&mut chain, &bonds, &depo, Uint128::new(2_000_000_000));
 
     query_acccount_parameters(
         &mut chain,
@@ -97,7 +97,7 @@ pub fn test_bonds() {
         None,
     );
 
-    buy_opp(&mut chain, &bonds, &coll, Uint128::new(2_000_000_000));
+    buy_opp(&mut chain, &bonds, &depo, Uint128::new(2_000_000_000));
 
     query_opp_parameters(
         &mut chain,
@@ -134,20 +134,20 @@ pub fn test_bonds() {
     check_balances(
         &mut chain,
         &issu,
-        &coll,
+        &depo,
         Uint128::new(2010101010),
         Uint128::new(4_000_000_000),
     )
     .unwrap();
 
-    close_opp(&mut chain, &bonds, &coll, "admin");
+    close_opp(&mut chain, &bonds, &depo, "admin");
 
     query_no_opps(&mut chain, &bonds);
 
     open_opp(
         &mut chain,
         &bonds,
-        &coll,
+        &depo,
         "admin",
         None,
         None,
@@ -160,7 +160,7 @@ pub fn test_bonds() {
     open_opp_fail(
         &mut chain,
         &bonds,
-        &coll,
+        &depo,
         "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq",
         None,
         None,
@@ -173,7 +173,7 @@ pub fn test_bonds() {
     open_opp_fail(
         &mut chain,
         &bonds,
-        &coll,
+        &depo,
         "admin",
         None,
         None,
@@ -186,7 +186,7 @@ pub fn test_bonds() {
     open_opp(
         &mut chain,
         &bonds,
-        &coll,
+        &depo,
         "admin",
         None,
         None,
@@ -206,11 +206,11 @@ pub fn test_bonds() {
     )
     .unwrap();
 
-    buy_opp(&mut chain, &bonds, &coll, Uint128::new(5));
+    buy_opp(&mut chain, &bonds, &depo, Uint128::new(5));
     open_opp(
         &mut chain,
         &bonds,
-        &coll,
+        &depo,
         "admin",
         None,
         None,
@@ -220,8 +220,8 @@ pub fn test_bonds() {
         Uint128::new(950_000_000_000_000_000),
         false,
     );
-    buy_opp(&mut chain, &bonds, &coll, Uint128::new(500_000_000)); // 5 units
-                                                                   // 4.9/9 for amount purchased, due to config issu_limit of $9 and current coll price of $.98
+    buy_opp(&mut chain, &bonds, &depo, Uint128::new(500_000_000)); // 5 units
+                                                                   // 4.9/9 for amount purchased, due to config issu_limit of $9 and current depo price of $.98
     query_opp_parameters(
         &mut chain,
         &bonds,
@@ -266,7 +266,7 @@ pub fn test_bonds() {
     open_opp(
         &mut chain,
         &bonds,
-        &coll,
+        &depo,
         "admin",
         None,
         None,
@@ -276,7 +276,7 @@ pub fn test_bonds() {
         Uint128::new(950_000_000_000_000_000),
         false,
     );
-    close_opp(&mut chain, &bonds, &coll, "admin");
+    close_opp(&mut chain, &bonds, &depo, "admin");
     query_opp_parameters(
         &mut chain,
         &bonds,
@@ -310,7 +310,7 @@ fn claim(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAddr>) -> () {
 fn buy_opp(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
-    coll: &ContractLink<HumanAddr>,
+    depo: &ContractLink<HumanAddr>,
     amount: Uint128,
 ) -> () {
     let msg = snip20::HandleMsg::Send {
@@ -327,7 +327,7 @@ fn buy_opp(
             &msg,
             MockEnv::new(
                 "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq",
-                coll.clone(),
+                depo.clone(),
             ),
         )
         .unwrap();
@@ -336,7 +336,7 @@ fn buy_opp(
 fn buy_opp_fail(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
-    coll: &ContractLink<HumanAddr>,
+    depo: &ContractLink<HumanAddr>,
 ) -> () {
     let msg = snip20::HandleMsg::Send {
         recipient: bonds.address.clone(),
@@ -351,7 +351,7 @@ fn buy_opp_fail(
         &msg,
         MockEnv::new(
             "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq",
-            coll.clone(),
+            depo.clone(),
         ),
     ) {
         Ok(_) => assert!(false),
@@ -362,14 +362,14 @@ fn buy_opp_fail(
 fn open_opp(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
-    coll: &ContractLink<HumanAddr>,
+    depo: &ContractLink<HumanAddr>,
     sender: &str,
     time_till_opp_end: Option<u64>,
     bond_issuance_limit: Option<Uint128>,
     bonding_period: Option<u64>,
     discount: Option<Uint128>,
-    max_accepted_collateral_price: Uint128,
-    err_collateral_price: Uint128,
+    max_accepted_deposit_price: Uint128,
+    err_deposit_price: Uint128,
     minting_bond: bool,
 ) -> () {
     let mut add: u64 = 50;
@@ -378,17 +378,17 @@ fn open_opp(
     }
 
     let msg = bonds::HandleMsg::OpenBond {
-        collateral_asset: Contract {
-            address: coll.address.clone(),
-            code_hash: coll.code_hash.clone(),
+        deposit_asset: Contract {
+            address: depo.address.clone(),
+            code_hash: depo.code_hash.clone(),
         },
         start_time: chain.block().time,
         end_time: (chain.block().time + add),
         bond_issuance_limit,
         bonding_period,
         discount,
-        max_accepted_collateral_price,
-        err_collateral_price,
+        max_accepted_deposit_price,
+        err_deposit_price,
         minting_bond,
         padding: None,
     };
@@ -401,14 +401,14 @@ fn open_opp(
 fn open_opp_fail(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
-    coll: &ContractLink<HumanAddr>,
+    depo: &ContractLink<HumanAddr>,
     sender: &str,
     time_till_opp_end: Option<u64>,
     bond_issuance_limit: Option<Uint128>,
     bonding_period: Option<u64>,
     discount: Option<Uint128>,
-    max_accepted_collateral_price: Uint128,
-    err_collateral_price: Uint128,
+    max_accepted_deposit_price: Uint128,
+    err_deposit_price: Uint128,
     minting_bond: bool,
 ) -> () {
     let mut add: u64 = 0;
@@ -417,17 +417,17 @@ fn open_opp_fail(
     }
 
     let msg = bonds::HandleMsg::OpenBond {
-        collateral_asset: Contract {
-            address: coll.address.clone(),
-            code_hash: coll.code_hash.clone(),
+        deposit_asset: Contract {
+            address: depo.address.clone(),
+            code_hash: depo.code_hash.clone(),
         },
         start_time: chain.block().time,
         end_time: (chain.block().time + add),
         bond_issuance_limit,
         bonding_period,
         discount,
-        max_accepted_collateral_price,
-        err_collateral_price,
+        max_accepted_deposit_price,
+        err_deposit_price,
         minting_bond,
         padding: None,
     };
@@ -445,13 +445,13 @@ fn open_opp_fail(
 fn close_opp(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
-    coll: &ContractLink<HumanAddr>,
+    depo: &ContractLink<HumanAddr>,
     sender: &str,
 ) -> () {
     let msg = bonds::HandleMsg::CloseBond {
-        collateral_asset: Contract {
-            address: coll.address.clone(),
-            code_hash: coll.code_hash.clone(),
+        deposit_asset: Contract {
+            address: depo.address.clone(),
+            code_hash: depo.code_hash.clone(),
         },
         padding: None,
     };

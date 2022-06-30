@@ -91,14 +91,14 @@ pub fn init_contracts() -> StdResult<(
         )
         .unwrap();
 
-    let coll = chain.register(Box::new(Snip20));
-    let coll = chain
+    let depo = chain.register(Box::new(Snip20));
+    let depo = chain
         .instantiate(
-            coll.id,
+            depo.id,
             &snip20::InitMsg {
-                name: "Collateral".into(),
+                name: "Deposit".into(),
                 admin: Some(HumanAddr::from("admin")),
-                symbol: "COLL".into(),
+                symbol: "DEPO".into(),
                 decimals: 8,
                 initial_balances: Some(vec![InitialBalance {
                     address: HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
@@ -110,8 +110,8 @@ pub fn init_contracts() -> StdResult<(
             MockEnv::new(
                 "admin",
                 ContractLink {
-                    address: "coll".into(),
-                    code_hash: coll.code_hash,
+                    address: "depo".into(),
+                    code_hash: depo.code_hash,
                 },
             ),
         )?
@@ -122,7 +122,7 @@ pub fn init_contracts() -> StdResult<(
         padding: None,
     };
     chain
-        .execute(&msg, MockEnv::new("admin", coll.clone()))
+        .execute(&msg, MockEnv::new("admin", depo.clone()))
         .unwrap();
 
     let atom = chain.register(Box::new(Snip20));
@@ -201,11 +201,11 @@ pub fn init_contracts() -> StdResult<(
         )?
         .instance;
 
-    // Coll oracles
-    let coll_oracle = chain.register(Box::new(ProxyBandOracle));
-    let coll_oracle = chain
+    // Depo oracles
+    let depo_oracle = chain.register(Box::new(ProxyBandOracle));
+    let depo_oracle = chain
         .instantiate(
-            coll_oracle.id,
+            depo_oracle.id,
             &InitMsg {
                 admin_auth: shade_oracles::common::Contract {
                     address: shade_admin.address.clone(),
@@ -215,13 +215,13 @@ pub fn init_contracts() -> StdResult<(
                     address: band.address.clone(),
                     code_hash: band.code_hash.clone(),
                 },
-                quote_symbol: "COLL".to_string(),
+                quote_symbol: "DEPO".to_string(),
             },
             MockEnv::new(
                 "admin",
                 ContractLink {
-                    address: "coll_oracle".into(),
-                    code_hash: coll_oracle.code_hash,
+                    address: "depo_oracle".into(),
+                    code_hash: depo_oracle.code_hash,
                 },
             ),
         )?
@@ -264,14 +264,14 @@ pub fn init_contracts() -> StdResult<(
                     code_hash: shade_admin.code_hash.clone(),
                 },
                 default_oracle: shade_oracles::common::Contract {
-                    address: coll_oracle.address.clone(),
-                    code_hash: coll_oracle.code_hash.clone(),
+                    address: depo_oracle.address.clone(),
+                    code_hash: depo_oracle.code_hash.clone(),
                 },
                 band: shade_oracles::common::Contract {
                     address: band.address.clone(),
                     code_hash: band.code_hash.clone(),
                 },
-                quote_symbol: "COLL".to_string(),
+                quote_symbol: "DEPO".to_string(),
             },
             MockEnv::new(
                 "admin",
@@ -383,7 +383,7 @@ pub fn init_contracts() -> StdResult<(
         chain,
         bonds,
         issu,
-        coll,
+        depo,
         atom,
         band,
         router,
@@ -396,7 +396,7 @@ pub fn set_prices(
     chain: &mut ContractEnsemble,
     band: &ContractLink<HumanAddr>,
     issu_price: Uint128,
-    coll_price: Uint128,
+    depo_price: Uint128,
     atom_price: Uint128,
 ) -> StdResult<()> {
     let msg = UpdateSymbolPrice {
@@ -410,9 +410,9 @@ pub fn set_prices(
         .unwrap();
 
     let msg = UpdateSymbolPrice {
-        base_symbol: "COLL".to_string(),
-        rate: coll_price.u128().into(),
-        quote_symbol: "COLL".to_string(),
+        base_symbol: "DEPO".to_string(),
+        rate: depo_price.u128().into(),
+        quote_symbol: "DEPO".to_string(),
         last_updated: None,
     };
     chain
@@ -435,20 +435,20 @@ pub fn set_prices(
 pub fn check_balances(
     chain: &mut ContractEnsemble,
     issu: &ContractLink<HumanAddr>,
-    coll: &ContractLink<HumanAddr>,
+    depo: &ContractLink<HumanAddr>,
     user_expected_issu: Uint128,
-    admin_expected_coll: Uint128,
+    admin_expected_depo: Uint128,
 ) -> StdResult<()> {
     let msg = snip20::QueryMsg::Balance {
         address: HumanAddr::from("admin".to_string()),
         key: "key".to_string(),
     };
 
-    let query: snip20::QueryAnswer = chain.query(coll.address.clone(), &msg).unwrap();
+    let query: snip20::QueryAnswer = chain.query(depo.address.clone(), &msg).unwrap();
 
     match query {
         snip20::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, admin_expected_coll);
+            assert_eq!(amount, admin_expected_depo);
         }
         _ => assert!(false),
     }

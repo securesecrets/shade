@@ -89,19 +89,19 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
     OpenBond {
-        collateral_asset: Contract,
+        deposit_asset: Contract,
         start_time: u64,
         end_time: u64,
         bond_issuance_limit: Option<Uint128>,
         bonding_period: Option<u64>,
         discount: Option<Uint128>,
-        max_accepted_collateral_price: Uint128,
-        err_collateral_price: Uint128,
+        max_accepted_deposit_price: Uint128,
+        err_deposit_price: Uint128,
         minting_bond: bool,
         padding: Option<String>,
     },
     CloseBond {
-        collateral_asset: Contract,
+        deposit_asset: Contract,
         padding: Option<String>,
     },
     Receive {
@@ -147,13 +147,13 @@ pub enum HandleAnswer {
         bond_issuance_limit: Uint128,
         bonding_period: u64,
         discount: Uint128,
-        max_accepted_collateral_price: Uint128,
-        err_collateral_price: Uint128,
+        max_accepted_deposit_price: Uint128,
+        err_deposit_price: Uint128,
         minting_bond: bool,
     },
     ClosedBond {
         status: ResponseStatus,
-        collateral_asset: Contract,
+        deposit_asset: Contract,
     },
 }
 
@@ -163,7 +163,7 @@ pub enum QueryMsg {
     Config {},
     BondOpportunities {},
     Account { permit: QueryPermit },
-    CollateralAddresses {},
+    DepositAddresses {},
     PriceCheck { asset: String },
     BondInfo {},
     CheckAllowance {},
@@ -182,8 +182,8 @@ pub enum QueryAnswer {
     Account {
         pending_bonds: Vec<PendingBond>,
     },
-    CollateralAddresses {
-        collateral_addresses: Vec<HumanAddr>,
+    DepositAddresses {
+        deposit_addresses: Vec<HumanAddr>,
     },
     PriceCheck {
         price: Uint128,
@@ -272,8 +272,8 @@ pub struct BondOpportunity {
     pub end_time: u64,
     pub bonding_period: u64,
     pub discount: Uint128,
-    pub max_accepted_collateral_price: Uint128,
-    pub err_collateral_price: Uint128,
+    pub max_accepted_deposit_price: Uint128,
+    pub err_deposit_price: Uint128,
     pub minting_bond: bool,
 }
 

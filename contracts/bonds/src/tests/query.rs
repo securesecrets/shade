@@ -34,8 +34,8 @@ pub fn query_opp_parameters(
     end_time: Option<u64>,
     bonding_period: Option<u64>,
     discount: Option<Uint128>,
-    max_accepted_collateral_price: Option<Uint128>,
-    err_collateral_price: Option<Uint128>,
+    max_accepted_deposit_price: Option<Uint128>,
+    err_deposit_price: Option<Uint128>,
     minting_bond: Option<bool>,
 ) -> () {
     let query: bonds::QueryAnswer = chain
@@ -76,16 +76,16 @@ pub fn query_opp_parameters(
             if discount.is_some() {
                 assert_eq!(bond_opportunities[0].discount, discount.unwrap())
             }
-            if max_accepted_collateral_price.is_some() {
+            if max_accepted_deposit_price.is_some() {
                 assert_eq!(
-                    bond_opportunities[0].max_accepted_collateral_price,
-                    max_accepted_collateral_price.unwrap()
+                    bond_opportunities[0].max_accepted_deposit_price,
+                    max_accepted_deposit_price.unwrap()
                 )
             }
-            if err_collateral_price.is_some() {
+            if err_deposit_price.is_some() {
                 assert_eq!(
-                    bond_opportunities[0].err_collateral_price,
-                    err_collateral_price.unwrap()
+                    bond_opportunities[0].err_deposit_price,
+                    err_deposit_price.unwrap()
                 )
             }
             if minting_bond.is_some() {

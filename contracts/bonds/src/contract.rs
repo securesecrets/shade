@@ -17,7 +17,7 @@ use crate::{
     handle::{self, register_receive},
     query,
     state::{
-        allocated_allowance_w, allowance_key_w, collateral_assets_w, config_w,
+        allocated_allowance_w, allowance_key_w, deposit_assets_w, config_w,
         global_total_claimed_w, global_total_issued_w, issued_asset_w,
     },
 };
@@ -91,7 +91,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     global_total_issued_w(&mut deps.storage).save(&Uint128::zero())?;
     global_total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
     allocated_allowance_w(&mut deps.storage).save(&Uint128::zero())?;
-    collateral_assets_w(&mut deps.storage).save(&vec![])?;
+    deposit_assets_w(&mut deps.storage).save(&vec![])?;
 
     Ok(InitResponse {
         messages,
@@ -157,32 +157,32 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 query_auth,
             ),
             HandleMsg::OpenBond {
-                collateral_asset,
+                deposit_asset,
                 start_time,
                 end_time,
                 bond_issuance_limit,
                 bonding_period,
                 discount,
-                max_accepted_collateral_price,
-                err_collateral_price,
+                max_accepted_deposit_price,
+                err_deposit_price,
                 minting_bond,
                 ..
             } => handle::try_open_bond(
                 deps,
                 env,
-                collateral_asset,
+                deposit_asset,
                 start_time,
                 end_time,
                 bond_issuance_limit,
                 bonding_period,
                 discount,
-                max_accepted_collateral_price,
-                err_collateral_price,
+                max_accepted_deposit_price,
+                err_deposit_price,
                 minting_bond,
             ),
             HandleMsg::CloseBond {
-                collateral_asset, ..
-            } => handle::try_close_bond(deps, env, collateral_asset),
+                deposit_asset, ..
+            } => handle::try_close_bond(deps, env, deposit_asset),
             HandleMsg::Receive {
                 sender,
                 from,
@@ -205,7 +205,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::Config {} => to_binary(&query::config(deps)?),
             QueryMsg::BondOpportunities {} => to_binary(&query::bond_opportunities(deps)?),
             QueryMsg::Account { permit } => to_binary(&query::account(deps, permit)?),
-            QueryMsg::CollateralAddresses {} => to_binary(&query::list_collateral_addresses(deps)?),
+            QueryMsg::DepositAddresses {} => to_binary(&query::list_deposit_addresses(deps)?),
             QueryMsg::PriceCheck { asset } => to_binary(&query::price_check(asset, deps)?),
             QueryMsg::BondInfo {} => to_binary(&query::bond_info(deps)?),
             QueryMsg::CheckAllowance {} => to_binary(&query::check_allowance(deps)?),
