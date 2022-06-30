@@ -1,22 +1,16 @@
 use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
 use secret_toolkit::{
     snip20::{allowance_query, balance_query},
-    utils::Query,
 };
 use shade_protocol::{
     contract_interfaces::{
         dao::{
             adapter,
             treasury_manager::{
-                self,
-                Status,
-                Holder,
-                Balance
+                self
             },
         },
-        snip20,
     },
-    utils::asset::Contract,
 };
 
 use crate::state::{
@@ -175,7 +169,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 
     //let allocations = allocations_r(&deps.storage).load(asset.to_string().as_bytes())?;
 
-    let config = config_r(&deps.storage).load()?;
+    let _config = config_r(&deps.storage).load()?;
 
     match holder {
         Some(h) => {
@@ -224,7 +218,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     };
     //TODO claiming needs ordered unbondings so other holders don't get bumped
 
-    let mut reserves = balance_query(
+    let reserves = balance_query(
         &deps.querier,
         self_address_r(&deps.storage).load()?,
         viewing_key_r(&deps.storage).load()?,
@@ -233,16 +227,16 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
         full_asset.contract.address.clone(),
     )?.amount;
 
-    let config = config_r(&deps.storage).load()?;
+    let _config = config_r(&deps.storage).load()?;
 
-    let other_unbondings = Uint128::zero();
+    let _other_unbondings = Uint128::zero();
 
     //TODO other unbondings
     match holder {
         Some(h) => {
             match holder_r(&deps.storage).may_load(&h.as_str().as_bytes())? {
                 Some(holder) => {
-                    let mut unbonding = match holder.unbondings.iter().find(|u| u.token == asset) {
+                    let unbonding = match holder.unbondings.iter().find(|u| u.token == asset) {
                         Some(u) => u.amount,
                         None => Uint128::zero(),
                     };
@@ -305,7 +299,7 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
             None => { return Err(StdError::generic_err("Not an asset")); }
         };
 
-        let mut unbonder = match holder {
+        let unbonder = match holder {
             Some(h) => h,
             None => config.treasury,
         };

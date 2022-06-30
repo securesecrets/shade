@@ -1,8 +1,5 @@
 use cosmwasm_std::{
-    coins, from_binary, to_binary,
-    Extern, HumanAddr, StdError,
-    Binary, StdResult, HandleResponse, Env,
-    InitResponse, Uint128,
+    to_binary, HumanAddr, Uint128,
 };
 
 use secret_toolkit::snip20;
@@ -16,14 +13,11 @@ use shade_protocol::{
     },
     utils::{
         asset::Contract,
-        price::{normalize_price, translate_price},
     },
 };
 
 use contract_harness::harness::{
-    treasury::Treasury,
     treasury_manager::TreasuryManager,
-    scrt_staking::ScrtStaking,
     snip20_reference_impl::Snip20ReferenceImpl as Snip20,
 };
 
@@ -32,7 +26,7 @@ use fadroma::{
         ContractLink,
     },
     ensemble::{
-       MockEnv, MockDeps, 
+       MockEnv, 
        ContractHarness, ContractEnsemble,
     },
 };

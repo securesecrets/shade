@@ -1,5 +1,4 @@
 use cosmwasm_std::{
-    debug_print,
     to_binary,
     Api,
     Binary,
@@ -8,7 +7,6 @@ use cosmwasm_std::{
     HandleResponse,
     InitResponse,
     Querier,
-    StdError,
     StdResult,
     Storage,
 };
@@ -26,11 +24,11 @@ use crate::{
     handle,
     query,
     state::{
-        allocations_w, asset_list_w, config_w, self_address_w, viewing_key_w,
+        asset_list_w, config_w, self_address_w, viewing_key_w,
         holders_w, holder_w,
     },
 };
-use chrono::prelude::*;
+
 use shade_protocol::contract_interfaces::dao::adapter;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(

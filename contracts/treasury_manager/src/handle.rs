@@ -1,10 +1,8 @@
 use cosmwasm_std::{
     self,
-    from_binary,
     to_binary,
     Api,
     Binary,
-    CosmosMsg,
     Env,
     Extern,
     HandleResponse,
@@ -14,7 +12,6 @@ use cosmwasm_std::{
     StdResult,
     Storage,
     Uint128,
-    WasmMsg,
 };
 use secret_toolkit::{
     snip20::{
@@ -22,14 +19,10 @@ use secret_toolkit::{
         batch::SendFromAction,
         balance_query,
         batch_send_from_msg,
-        batch_send_msg,
-        decrease_allowance_msg,
-        increase_allowance_msg,
         register_receive_msg,
         send_msg,
         set_viewing_key_msg,
     },
-    utils::{HandleCallback, Query},
 };
 
 use shade_protocol::{
@@ -40,7 +33,6 @@ use shade_protocol::{
             AllocationType,
             Config,
             HandleAnswer,
-            QueryAnswer,
             Holder,
             Balance,
             Status,
@@ -51,7 +43,6 @@ use shade_protocol::{
 };
 
 use crate::{
-    query,
     state::{
         allocations_r,
         allocations_w,
@@ -67,9 +58,9 @@ use crate::{
         self_address_r,
     },
 };
-use chrono::prelude::*;
+
 use shade_protocol::contract_interfaces::dao::adapter;
-use std::convert::TryFrom;
+
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -77,7 +68,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     _sender: HumanAddr,
     from: HumanAddr,
     amount: Uint128,
-    msg: Option<Binary>,
+    _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
 
     /* TODO
@@ -299,9 +290,9 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     }
 
     let holder = holder_r(&deps.storage).load(&claimer.as_str().as_bytes())?;
-    let mut unbonding = holder.unbondings.iter().find(|u| u.token == asset).unwrap();
+    let unbonding = holder.unbondings.iter().find(|u| u.token == asset).unwrap();
 
-    let mut reserves = balance_query(
+    let reserves = balance_query(
         &deps.querier,
         self_address_r(&deps.storage).load()?,
         viewing_key_r(&deps.storage).load()?,
@@ -424,7 +415,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 
     let total = ((portion_total + allowance + balance) - unbonding)?;
 
-    let mut total_unbond = Uint128::zero();
+    let _total_unbond = Uint128::zero();
     let mut total_input = Uint128::zero();
 
     for adapter in allocations.clone() {
@@ -434,7 +425,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
             }
             AllocationType::Portion => {
                 let desired_amount = adapter.amount.multiply_ratio(total, 10u128.pow(18));
-                let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
+                let _threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
 
                 if adapter.balance < desired_amount {
                     // Need to add more from allowance
@@ -601,7 +592,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             unbond_amount = (unbond_amount - reserves)?;
 
             // Reflect sent funds in unbondings
-            holder_w(&mut deps.storage).update(&unbonder.as_str().as_bytes(), |mut h| {
+            holder_w(&mut deps.storage).update(&unbonder.as_str().as_bytes(), |h| {
                 let mut holder = h.unwrap();
                 if let Some(i) = holder.unbondings.iter().position(|u| u.token == asset) {
                     holder.unbondings[i].amount = (holder.unbondings[i].amount - reserves)?;
@@ -628,7 +619,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             unbond_amount = (unbond_amount - amount)?;
 
             // Reflect sent funds in unbondings
-            holder_w(&mut deps.storage).update(&unbonder.as_str().as_bytes(), |mut h| {
+            holder_w(&mut deps.storage).update(&unbonder.as_str().as_bytes(), |h| {
                 let mut holder = h.unwrap();
                 if let Some(i) = holder.unbondings.iter().position(|u| u.token == asset) {
                     holder.unbondings[i].amount = (holder.unbondings[i].amount - amount)?;
@@ -666,7 +657,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             };
         }
 
-        let mut allowance = allowance_query(
+        let allowance = allowance_query(
             &deps.querier,
             config.treasury.clone(),
             env.contract.address.clone(),
@@ -692,7 +683,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     //TODO: unbond back to desired amount
                 }
                 AllocationType::Portion => {
-                    let desired_amount = total.multiply_ratio(
+                    let _desired_amount = total.multiply_ratio(
                         allocations[i].amount, 10u128.pow(18)
                     );
 
