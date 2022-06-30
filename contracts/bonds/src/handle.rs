@@ -14,7 +14,7 @@ use secret_toolkit::{
 
 use shade_admin::admin::{ValidateAdminPermissionResponse, QueryMsg};
 
-use shade_oracles::{router::{QueryMsg::GetPrice}, common::OraclePrice};
+use shade_oracles::{router::QueryMsg::GetPrice, common::OraclePrice};
 
 use shade_protocol::contract_interfaces::{
     airdrop::HandleMsg::CompleteTask,
