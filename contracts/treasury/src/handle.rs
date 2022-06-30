@@ -63,7 +63,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     _amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-    let _key = sender.as_str().as_bytes();
+    //let _key = sender.as_str().as_bytes();
 
     Ok(HandleResponse {
         messages: vec![],
@@ -85,7 +85,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    config_w(&mut deps.storage).save(&config)?;
+    CONFIG.save(&mut deps.storage, &config)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -120,8 +120,8 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
-    let key = viewing_key_r(&deps.storage).load()?;
-    let self_address = self_address_r(&deps.storage).load()?;
+    let key = VIEWING_KEY.load(&deps.storage)?;
+    let self_address = SELF_ADDRESS.load(&deps.storage)?;
     let mut messages = vec![];
 
     let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
@@ -130,7 +130,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::generic_err("Not an asset"));
         }
     };
-    let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
+    let allowances = ALLOWANCES.load(&deps.storage, &asset.as_str().as_bytes())?;
 
     let token_balance = balance_query(
         &deps.querier,
@@ -153,7 +153,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     */
 
 
-    let managers = managers_r(&deps.storage).load()?;
+    let managers = MANAGERS.load(&deps.storage)?;
 
     // manager_addr: (balance, allowance)
     let mut manager_data: HashMap<HumanAddr, (Uint128, Uint128)> = HashMap::new();
@@ -405,7 +405,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    asset_list_w(&mut deps.storage).update(|mut list| {
+    ASSET_LIST.update(&mut deps.storage, |mut list| {
         list.push(contract.address.clone());
         Ok(list)
     })?;
@@ -454,7 +454,7 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    managers_w(&mut deps.storage).update(|mut adapters| {
+    MANAGERS.update(&mut deps.storage, |mut adapters| {
         if adapters
             .iter()
             .map(|m| m.contract.clone())
@@ -512,14 +512,14 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
-    let config = config_r(&deps.storage).load()?;
+    let config = CONFIG.load(&deps.storage)?;
 
     /* ADMIN ONLY */
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
-    let adapters = managers_r(&deps.storage).load()?;
+    let adapters = MANAGERS.load(&deps.storage)?;
 
     // Disallow Portion on non-adapters
     match allowance {

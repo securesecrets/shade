@@ -19,9 +19,7 @@ pub static ASSET_LIST: &[u8] = b"asset_list";
 pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static ALLOWANCES: &[u8] = b"allowances";
-//pub static CUR_ALLOWANCES: &[u8] = b"allowances";
 pub static MANAGERS: &[u8] = b"managers";
-pub static UNBONDING: &[u8] = b"unbonding";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury::Config> {
     singleton(storage, CONFIG_KEY)
@@ -71,16 +69,6 @@ pub fn allowances_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::Allo
     bucket(ALLOWANCES, storage)
 }
 
-/*
-pub fn current_allowances_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, HumanAddr> {
-    bucket_read(CUR_ALLOWANCES, storage)
-}
-
-pub fn current_allowances_w<S: Storage>(storage: &mut S) -> Bucket<S, HumanAddr> {
-    bucket(CUR_ALLOWANCES, storage)
-}
-*/
-
 pub fn managers_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<treasury::Manager>> {
     singleton_read(storage, MANAGERS)
 }
@@ -89,23 +77,3 @@ pub fn managers_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<treasury::Man
     singleton(storage, MANAGERS)
 }
 
-
-// Total unbonding per asset, to be used in rebalance
-/*
-pub fn total_unbonding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
-    bucket_read(UNBONDING, storage)
-}
-
-pub fn total_unbonding_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
-    bucket(UNBONDING, storage)
-}
-
-// Actually stored in accounts?
-pub fn unbondings_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
-    bucket_read(UNBONDING, storage)
-}
-
-pub fn unbondings_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
-    bucket(UNBONDING, storage)
-}
-*/

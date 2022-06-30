@@ -6,6 +6,13 @@ use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
+pub const CONFIG: Item<Config> = Item::new("config");
+pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+pub const ASSET_LIST: Item<Vec<HumanAddr>> = Item::new("asset_list");
+pub const SELF_ADDRESS: Item<HumanAddr> = Item::new("self_address");
+pub const MANAGERS: Item<Vec<treasury::Manager>> = Item::new("managers");
+pub const ALLOWANCES: Item<Vec<treasury::Allowance>> = Item::new("allowances");
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
@@ -51,40 +58,15 @@ pub struct Manager {
     pub desired: Uint128,
 }
 
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Balance {
-    pub token: HumanAddr,
-    pub amount: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Status {
-    Active,
-    Disabled,
-    Closed,
-    Transferred,
-}
-
-//TODO: move accounts to treasury manager
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Account {
-    pub balances: Vec<Balance>,
-    pub unbondings: Vec<Balance>,
-    pub claimable: Vec<Balance>,
-    pub status: Status,
-}
-*/
 
 // Flag to be sent with funds
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Flag {
     pub flag: String,
 }
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {

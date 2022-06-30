@@ -38,11 +38,16 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         admin: msg.admin.unwrap_or(env.message.sender.clone()),
     })?;
 
+    VIEWING_KEY.save(&mut deps.storage, &msg.viewing_key)?;
+    SELF_ADDRESS.save(&mut deps.storage, &env.contract.address)?;
+    ASSET_LIST.save(&mut deps.storage, &Vec::new())?;
+    MANAGERS.save(&mut deps.storage, &Vec::new())?;
+    /*
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     asset_list_w(&mut deps.storage).save(&Vec::new())?;
     managers_w(&mut deps.storage).save(&Vec::new())?;
-    //account_list_w(&mut deps.storage).save(&Vec::new())?;
+    */
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
