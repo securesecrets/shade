@@ -87,14 +87,14 @@ Opens new bond opportunity for a unique asset
 ##### Request
 | Name                          | Type      | Description                                       | optional  |
 |-------------------------------|-----------|---------------------------------------------------|-----------|
-| deposit_asset              | Contract  | Contract for deposit asset                     | no        |
+| deposit_asset                 | Contract  | Contract for deposit asset                        | no        |
 | start_time                    | u64       | When the opportunity opens in UNIX time           | no        |
 | end_time                      | u64       | When the opportunity closes in UNIX time          | no        |
 | bond_issuance_limit           | Uint128   | Issuance limit for this opportunity               | yes       |
 | bonding_period                | u64       | Bonding period for this opportunity in UNIX time  | yes       |
 | discount                      | Uint128   | Discount % for this opportunity                   | yes       |
-| max_accepted_deposit_price | Uint128   | Maximum accepted price for deposit asset       | no        |
-| err_deposit_price          | Uint128   | Price for deposit asset that causes error      | no        |
+| max_accepted_deposit_price    | Uint128   | Maximum accepted price for deposit asset       | no        |
+| err_deposit_price             | Uint128   | Price for deposit asset that causes error      | no        |
 | minting_bond                  | bool      | True for minting from snip20, false for allowance | no        |
 ##### Response
 ```json
@@ -120,7 +120,7 @@ Closes bond opportunity for a given asset
 ##### Request
 | Name             | Type     | Description                   | optional  |
 |------------------|----------|-------------------------------|-----------|
-| deposit_asset | Contract | Contract for deposit asset | no        |
+| deposit_asset    | Contract | Contract for deposit asset    | no        |
 
 ##### Response
 ```json
@@ -342,8 +342,8 @@ NOTE: The parameters must be in order
 | end_time                      | u64         | Time that bond opportunity will be closed in UNIX time                | no        |                                 
 | bonding_period                | u64         | Time that users that enter the opportunity must wait before claiming  | no        |
 | discount                      | Uint128     | Discount of issued asset when opportunity was purchased               | no        |
-| max_accepted_deposit_price | Uint128     | Maximum accepted price for deposit asset                           | no        |
-| err_deposit_price          | Uint128     | Error-causing limit price for deposit                              | no        |
+| max_accepted_deposit_price    | Uint128     | Maximum accepted price for deposit asset                              | no        |
+| err_deposit_price             | Uint128     | Error-causing limit price for deposit                                 | no        |
 | minting_bond                  | bool        | True for minting from snip20, false for allowance                     | no        |
 
 ## SlipMsg
