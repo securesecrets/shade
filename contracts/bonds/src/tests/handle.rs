@@ -4,7 +4,7 @@ use cosmwasm_std::{HumanAddr};
 use fadroma::core::ContractLink;
 use shade_protocol::contract_interfaces::{
     bonds, 
-    snip20::{self, helpers::Snip20Asset}, 
+    snip20, 
     query_auth,
 };
 use cosmwasm_math_compat::Uint128;

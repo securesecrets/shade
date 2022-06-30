@@ -249,7 +249,7 @@ pub fn init_contracts() -> StdResult<(
             global_err_issued_price: Uint128::new(5_000_000_000_000_000_000),
             allowance_key_entropy: "".into(),
             airdrop: None,
-            shade_admins: Contract { address: shade_admin.address.clone(), code_hash: shade_admin.code_hash.clone() },
+            shade_admin: Contract { address: shade_admin.address.clone(), code_hash: shade_admin.code_hash.clone() },
             query_auth: Contract { address: query_auth.address.clone(), code_hash: query_auth.code_hash.clone() },
         },
         MockEnv::new("admin", ContractLink { 

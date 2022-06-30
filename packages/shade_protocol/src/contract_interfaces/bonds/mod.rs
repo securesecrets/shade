@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub limit_admin: HumanAddr,
-    pub shade_admins: Contract,
+    pub shade_admin: Contract,
     pub oracle: Contract,
     pub treasury: HumanAddr,
     pub issued_asset: Contract,
@@ -45,7 +45,7 @@ pub struct InitMsg {
     pub global_issuance_limit: Uint128,
     pub global_minimum_bonding_period: u64,
     pub global_maximum_discount: Uint128,
-    pub shade_admins: Contract,
+    pub shade_admin: Contract,
     pub oracle: Contract,
     pub treasury: HumanAddr,
     pub issued_asset: Contract,
@@ -65,7 +65,7 @@ pub struct InitMsg {
 pub enum HandleMsg {
     UpdateLimitConfig {
         limit_admin: Option<HumanAddr>,
-        shade_admins: Option<Contract>,
+        shade_admin: Option<Contract>,
         global_issuance_limit: Option<Uint128>,
         global_minimum_bonding_period: Option<u64>,
         global_maximum_discount: Option<Uint128>,

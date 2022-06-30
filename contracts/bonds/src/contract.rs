@@ -33,7 +33,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let state = Config {
         limit_admin: msg.limit_admin,
-        shade_admins: msg.shade_admins,
+        shade_admin: msg.shade_admin,
         oracle: msg.oracle,
         treasury: msg.treasury,
         issued_asset: msg.issued_asset,
@@ -104,7 +104,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         match msg {
             HandleMsg::UpdateLimitConfig {
                 limit_admin,
-                shade_admins,
+                shade_admin,
                 global_issuance_limit,
                 global_minimum_bonding_period,
                 global_maximum_discount,
@@ -115,7 +115,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 deps,
                 env,
                 limit_admin,
-                shade_admins,
+                shade_admin,
                 global_issuance_limit,
                 global_minimum_bonding_period,
                 global_maximum_discount,

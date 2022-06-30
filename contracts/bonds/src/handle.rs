@@ -62,7 +62,7 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
             state.limit_admin = limit_admin;
         }
         if let Some(shade_admins) = shade_admins {
-            state.shade_admins = shade_admins;
+            state.shade_admin = shade_admins;
         }
         if let Some(global_issuance_limit) = global_issuance_limit {
             state.global_issuance_limit = global_issuance_limit;
@@ -122,8 +122,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         admin_address: env.message.sender.to_string(), 
     }.query(
         &deps.querier,
-        cur_config.shade_admins.code_hash,
-        cur_config.shade_admins.address,
+        cur_config.shade_admin.code_hash,
+        cur_config.shade_admin.address,
     )?;
 
     if admin_response.error_msg.is_some() {
@@ -206,8 +206,8 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         admin_address: sender.to_string(), 
     }.query(
         &deps.querier,
-        config.shade_admins.code_hash,
-        config.shade_admins.address,
+        config.shade_admin.code_hash,
+        config.shade_admin.address,
     )?;
 
     if admin_response.error_msg.is_none() {
@@ -467,8 +467,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         admin_address: env.message.sender.to_string(), 
     }.query(
         &deps.querier,
-        config.shade_admins.code_hash,
-        config.shade_admins.address,
+        config.shade_admin.code_hash,
+        config.shade_admin.address,
     )?;
 
     if admin_response.error_msg.is_some() {
@@ -609,8 +609,8 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
         admin_address: env.message.sender.to_string(), 
     }.query(
         &deps.querier,
-        config.shade_admins.code_hash,
-        config.shade_admins.address,
+        config.shade_admin.code_hash,
+        config.shade_admin.address,
     )?;
 
     if admin_response.error_msg.is_some() {

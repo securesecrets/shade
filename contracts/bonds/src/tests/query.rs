@@ -91,7 +91,7 @@ pub fn query_acccount_parameters (
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
     query_auth: &ContractLink<HumanAddr>,
-    sender: &str,
+    _sender: &str,
     deposit_denom: Option<Snip20Asset>,
     end_time: Option<u64>,
     deposit_amount: Option<Uint128>,
@@ -108,7 +108,7 @@ pub fn query_acccount_parameters (
     // Confirm that the permit is valid
     assert!(permit.clone().validate(&deps.api, None).is_ok());
 
-    let query: query_auth::QueryAnswer = chain
+    let _query: query_auth::QueryAnswer = chain
         .query(query_auth.address.clone(), &query_auth::QueryMsg::ValidatePermit {
             permit: permit.clone(),
         })
