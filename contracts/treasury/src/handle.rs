@@ -32,6 +32,7 @@ use shade_protocol::{
             Config,
             HandleAnswer,
             Manager,
+            storage::*,
         },
         snip20,
     },
@@ -42,15 +43,6 @@ use shade_protocol::{
     },
 };
 
-use crate::{
-    state::{
-        allowances_r, allowances_w, asset_list_w,
-        assets_r, assets_w,
-        config_r, config_w,
-        managers_r, managers_w,
-        self_address_r, viewing_key_r,
-    },
-};
 use chrono::prelude::*;
 use shade_protocol::contract_interfaces::dao::adapter;
 use std::collections::HashMap;
@@ -79,7 +71,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = CONFIG.load(&deps.storage)?;
 
     if env.message.sender != cur_config.admin {
         return Err(StdError::unauthorized());
@@ -124,13 +116,14 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     let self_address = SELF_ADDRESS.load(&deps.storage)?;
     let mut messages = vec![];
 
-    let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+    let full_asset = match ASSETS.may_load(&deps.storage, asset)? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err("Not an asset"));
         }
     };
-    let allowances = ALLOWANCES.load(&deps.storage, &asset.as_str().as_bytes())?;
+
+    let allowances = ALLOWANCES.load(&deps.storage, asset)?;
 
     let token_balance = balance_query(
         &deps.querier,
@@ -188,8 +181,8 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     // Total for "amount" allowances (govt, assemblies, etc.)
     let mut amount_total = Uint128::zero();
 
-    managers_w(&mut deps.storage).save(&managers)?;
-    let _config = config_r(&deps.storage).load()?;
+    MANAGERS.save(&mut deps.storage, &managers)?;
+    //let _config = CONFIG.load(&deps.storage)?;
 
     let (
         amount_allowances, 
@@ -399,7 +392,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     contract: &Contract,
     _reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+    let config = CONFIG.load(&deps.storage)?;
 
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
@@ -410,12 +403,13 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         Ok(list)
     })?;
 
-    assets_w(&mut deps.storage).save(
-        contract.address.to_string().as_bytes(),
-        &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
+    ASSETS.save(&mut deps.storage,
+                contract.address,
+                &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
     )?;
 
-    allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
+    ALLOWANCES.save(&mut deps.storage, contract.address, &Vec::new())?;
+    //allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
 
     Ok(HandleResponse {
         messages: vec![
@@ -429,7 +423,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             )?,
             // Set viewing key
             set_viewing_key_msg(
-                viewing_key_r(&deps.storage).load()?,
+                VIEWING_KEY.load(&deps.storage)?,
                 None,
                 256,
                 contract.code_hash.clone(),
@@ -448,7 +442,7 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     contract: &mut Contract,
 ) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+    let config = CONFIG.load(&deps.storage)?;
 
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
@@ -538,8 +532,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 
     let key = asset.as_str().as_bytes();
 
-    let mut apps = allowances_r(&deps.storage)
-        .may_load(key)?
+    let mut apps = ALLOWANCES.may_load(&deps.storage, asset)?
         .unwrap_or_default();
 
     let allow_address = allowance_address(&allowance);
@@ -607,7 +600,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    allowances_w(&mut deps.storage).save(key, &apps)?;
+    ALLOWANCES.save(&mut deps.storage, key, &apps)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -626,8 +619,8 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
     let key = asset.as_str().as_bytes();
 
-    let managers = managers_r(&deps.storage).load()?;
-    let allowances = allowances_r(&deps.storage).load(&key)?;
+    let managers = MANAGERS.load(&deps.storage)?;
+    let allowances = ALLOWANCES.load(&deps.storage, asset)?;
 
     let mut messages = vec![];
 
@@ -672,14 +665,14 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     }
     */
 
-    let managers = managers_r(&deps.storage).load()?;
+    let managers = MANAGERS.load(&deps.storage)?;
 
     let mut messages = vec![];
 
     let mut unbond_amount = amount;
     let mut unbonded = Uint128::zero();
 
-    for allowance in allowances_r(&deps.storage).load(asset.as_str().as_bytes())? {
+    for allowance in ALLOWANCES.load(&deps.storage, asset)? {
         match allowance {
             Allowance::Amount { .. } => {}
             Allowance::Portion { spender, .. } => {

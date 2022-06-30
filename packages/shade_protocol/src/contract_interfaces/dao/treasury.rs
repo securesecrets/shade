@@ -1,4 +1,8 @@
-use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStatus};
+use crate::utils::{
+    asset::Contract,
+    cycle::Cycle,
+    generic_response::ResponseStatus,
+};
 
 use crate::contract_interfaces::dao::adapter;
 use cosmwasm_std::{Binary, HumanAddr, StdResult, Uint128};
@@ -6,12 +10,20 @@ use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
-pub const CONFIG: Item<Config> = Item::new("config");
-pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
-pub const ASSET_LIST: Item<Vec<HumanAddr>> = Item::new("asset_list");
-pub const SELF_ADDRESS: Item<HumanAddr> = Item::new("self_address");
-pub const MANAGERS: Item<Vec<treasury::Manager>> = Item::new("managers");
-pub const ALLOWANCES: Item<Vec<treasury::Allowance>> = Item::new("allowances");
+pub mod storage {
+    use secret_storage_plus::{Map, Item};
+    use cosmwasm_std::HumanAddr;
+    use crate::contract_interfaces::snip20::helpers::Snip20Asset;
+
+    pub const CONFIG: Item<super::Config> = Item::new("config");
+    pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+    pub const ASSET_LIST: Item<Vec<HumanAddr>> = Item::new("asset_list");
+    pub const SELF_ADDRESS: Item<HumanAddr> = Item::new("self_address");
+    pub const MANAGERS: Item<Vec<super::Manager>> = Item::new("managers");
+
+    pub const ALLOWANCES: Map<HumanAddr, Vec<super::Allowance>> = Map::new("allowances");
+    pub const ASSETS: Map<HumanAddr, Snip20Asset> = Map::new("allowances");
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

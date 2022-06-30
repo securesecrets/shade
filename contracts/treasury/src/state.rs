@@ -21,6 +21,7 @@ pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static ALLOWANCES: &[u8] = b"allowances";
 pub static MANAGERS: &[u8] = b"managers";
 
+/*
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury::Config> {
     singleton(storage, CONFIG_KEY)
 }
@@ -76,4 +77,4 @@ pub fn managers_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<treasury:
 pub fn managers_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<treasury::Manager>> {
     singleton(storage, MANAGERS)
 }
-
+*/
