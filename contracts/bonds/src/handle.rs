@@ -1,30 +1,25 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HumanAddr, Querier, StdError, StdResult, Storage,
+    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
+    Querier, StdError, StdResult, Storage,
 };
 
 use secret_toolkit::{
-    snip20::{
-        allowance_query, mint_msg, register_receive_msg, send_msg,
-        transfer_from_msg,
-    },
+    snip20::{allowance_query, mint_msg, register_receive_msg, send_msg, transfer_from_msg},
     utils::{HandleCallback, Query},
 };
 
-use shade_admin::admin::{ValidateAdminPermissionResponse, QueryMsg};
+use shade_admin::admin::{QueryMsg, ValidateAdminPermissionResponse};
 
-use shade_oracles::{router::QueryMsg::GetPrice, common::OraclePrice};
+use shade_oracles::{common::OraclePrice, router::QueryMsg::GetPrice};
 
-use shade_protocol::contract_interfaces::{
-    airdrop::HandleMsg::CompleteTask,
-    snip20::helpers::{Snip20Asset, fetch_snip20},
+use shade_protocol::contract_interfaces::bonds::{
+    errors::*,
+    BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
 };
 use shade_protocol::contract_interfaces::{
-    bonds::{
-        errors::*,
-        BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
-    },
+    airdrop::HandleMsg::CompleteTask,
+    snip20::helpers::{fetch_snip20, Snip20Asset},
 };
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
@@ -32,10 +27,10 @@ use shade_protocol::utils::generic_response::ResponseStatus;
 use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::state::{
-    account_r, account_w, allocated_allowance_r, allocated_allowance_w,
-    allowance_key_r, allowance_key_w, bond_opportunity_r, bond_opportunity_w, collateral_assets_r,
-    collateral_assets_w, config_r, config_w, global_total_claimed_w,
-    global_total_issued_r, global_total_issued_w, issued_asset_r,
+    account_r, account_w, allocated_allowance_r, allocated_allowance_w, allowance_key_r,
+    allowance_key_w, bond_opportunity_r, bond_opportunity_w, collateral_assets_r,
+    collateral_assets_w, config_r, config_w, global_total_claimed_w, global_total_issued_r,
+    global_total_issued_w, issued_asset_r,
 };
 
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
@@ -115,19 +110,19 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let cur_config = config_r(&deps.storage).load()?;
 
-
     // Admin-only
-    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission { 
-        contract_address: cur_config.contract.to_string(), 
-        admin_address: env.message.sender.to_string(), 
-    }.query(
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
+        contract_address: cur_config.contract.to_string(),
+        admin_address: env.message.sender.to_string(),
+    }
+    .query(
         &deps.querier,
         cur_config.shade_admin.code_hash,
         cur_config.shade_admin.address,
     )?;
 
     if admin_response.error_msg.is_some() {
-        return Err(not_admin())
+        return Err(not_admin());
     }
 
     if let Some(allowance_key) = allowance_key {
@@ -201,10 +196,11 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check that sender isn't an admin
-    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission { 
-        contract_address: config.contract.to_string(), 
-        admin_address: sender.to_string(), 
-    }.query(
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
+        contract_address: config.contract.to_string(),
+        admin_address: sender.to_string(),
+    }
+    .query(
         &deps.querier,
         config.shade_admin.code_hash,
         config.shade_admin.address,
@@ -266,7 +262,8 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    let mut opp = bond_opportunity_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
+    let mut opp =
+        bond_opportunity_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     opp.amount_issued += amount_to_issue;
     bond_opportunity_w(&mut deps.storage).save(env.message.sender.to_string().as_bytes(), &opp)?;
 
@@ -310,7 +307,6 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
                 };
                 messages.push(msg.to_cosmos_msg(airdrop.code_hash, airdrop.address, None)?);
             }
-            
 
             Account {
                 address: sender,
@@ -462,17 +458,18 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission { 
-        contract_address: config.contract.to_string(), 
-        admin_address: env.message.sender.to_string(), 
-    }.query(
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
+        contract_address: config.contract.to_string(),
+        admin_address: env.message.sender.to_string(),
+    }
+    .query(
         &deps.querier,
         config.shade_admin.code_hash,
         config.shade_admin.address,
     )?;
 
     if admin_response.error_msg.is_some() {
-        return Err(not_admin())
+        return Err(not_admin());
     }
 
     let mut messages = vec![];
@@ -501,7 +498,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
                 None => {
                     let assets = vec![collateral_asset.address.clone()];
                     collateral_assets_w(&mut deps.storage).save(&assets)?;
-                },
+                }
                 Some(_assets) => {
                     collateral_assets_w(&mut deps.storage).update(|mut assets| {
                         assets.push(collateral_asset.address.clone());
@@ -548,7 +545,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         };
 
         // Increase stored allocated_allowance by the opportunity's issuance limit
-        allocated_allowance_w(&mut deps.storage).update(|allocated| Ok(allocated.checked_add(limit)?))?;
+        allocated_allowance_w(&mut deps.storage)
+            .update(|allocated| Ok(allocated.checked_add(limit)?))?;
     }
 
     let deposit_denom = fetch_snip20(&collateral_asset.clone(), &deps.querier)?;
@@ -574,8 +572,9 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     )?;
 
     // Increase global total issued by bond opportunity's issuance limit
-    global_total_issued_w(&mut deps.storage)
-        .update(|global_total_issued| Ok(global_total_issued.checked_add(bond_opportunity.issuance_limit)?))?;
+    global_total_issued_w(&mut deps.storage).update(|global_total_issued| {
+        Ok(global_total_issued.checked_add(bond_opportunity.issuance_limit)?)
+    })?;
 
     // Return Success response
     Ok(HandleResponse {
@@ -604,17 +603,18 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission { 
-        contract_address: config.contract.to_string(), 
-        admin_address: env.message.sender.to_string(), 
-    }.query(
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
+        contract_address: config.contract.to_string(),
+        admin_address: env.message.sender.to_string(),
+    }
+    .query(
         &deps.querier,
         config.shade_admin.code_hash,
         config.shade_admin.address,
     )?;
 
     if admin_response.error_msg.is_some() {
-        return Err(not_admin())
+        return Err(not_admin());
     }
 
     // Check whether previous bond for this asset exists
@@ -815,10 +815,14 @@ pub fn calculate_issuance(
         discount_price = min_accepted_issued_price
     }
     let issued_amount = collateral_amount.multiply_ratio(collateral_price, discount_price);
-    let difference: i32 = i32::from(issued_decimals).checked_sub(i32::from(collateral_decimals)).unwrap();
+    let difference: i32 = i32::from(issued_decimals)
+        .checked_sub(i32::from(collateral_decimals))
+        .unwrap();
     match difference.cmp(&0) {
         Ordering::Greater => (
-            issued_amount.checked_mul(Uint128::new(10u128.pow(u32::try_from(difference).unwrap()))).unwrap(),
+            issued_amount
+                .checked_mul(Uint128::new(10u128.pow(u32::try_from(difference).unwrap())))
+                .unwrap(),
             discount_price,
         ),
         Ordering::Less => (

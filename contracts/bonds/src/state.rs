@@ -4,13 +4,9 @@ use cosmwasm_storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{
-    contract_interfaces::{
-        bonds::{
-            Account, BondOpportunity, Config,
-        },
-        snip20::helpers::Snip20Asset,
-    },
+use shade_protocol::contract_interfaces::{
+    bonds::{Account, BondOpportunity, Config},
+    snip20::helpers::Snip20Asset,
 };
 
 pub static CONFIG: &[u8] = b"config";

@@ -1,22 +1,27 @@
 use crate::{
     handle::oracle,
     state::{
-        account_r, allowance_key_r, bond_opportunity_r, collateral_assets_r,
-        config_r, global_total_claimed_r, global_total_issued_r, issued_asset_r,
+        account_r, allowance_key_r, bond_opportunity_r, collateral_assets_r, config_r,
+        global_total_claimed_r, global_total_issued_r, issued_asset_r,
     },
 };
 
 use cosmwasm_math_compat::Uint128;
 
-use secret_toolkit::{snip20::{allowance_query, balance_query}, utils::Query};
-
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
-use shade_protocol::contract_interfaces::{
-    bonds::{BondOpportunity, QueryAnswer, errors::{query_auth_bad_response, permit_revoked}},
+use secret_toolkit::{
+    snip20::{allowance_query, balance_query},
+    utils::Query,
 };
 
-use shade_protocol::contract_interfaces::query_auth::{self, QueryMsg::ValidatePermit, QueryPermit};
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::contract_interfaces::bonds::{
+    errors::{permit_revoked, query_auth_bad_response},
+    BondOpportunity, QueryAnswer,
+};
 
+use shade_protocol::contract_interfaces::query_auth::{
+    self, QueryMsg::ValidatePermit, QueryPermit,
+};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -30,22 +35,20 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
     // Validate address
-    let authorized: query_auth::QueryAnswer = ValidatePermit { permit: permit }.query(
-        &deps.querier, 
-        config.query_auth.code_hash, 
-        config.query_auth.address
+    let authorized: query_auth::QueryAnswer = ValidatePermit { permit }.query(
+        &deps.querier,
+        config.query_auth.code_hash,
+        config.query_auth.address,
     )?;
     match authorized {
         query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
             if is_revoked != true {
                 account_information(deps, user)
             } else {
-                return Err(permit_revoked(user.as_str()))
+                return Err(permit_revoked(user.as_str()));
             }
         }
-        _ => {
-            return Err(query_auth_bad_response())
-        }
+        _ => return Err(query_auth_bad_response()),
     }
 }
 

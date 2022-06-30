@@ -1,7 +1,6 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
 };
 
 use secret_toolkit::snip20::{set_viewing_key_msg, token_info_query};
@@ -11,8 +10,8 @@ use shade_protocol::contract_interfaces::{
     snip20::helpers::Snip20Asset,
 };
 
-use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use secret_toolkit::snip20::token_config_query;
+use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 
 use crate::{
     handle::{self, register_receive},
@@ -73,7 +72,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         state.issued_asset.address.clone(),
     )?;
 
-    let token_config = token_config_query(&deps.querier, 256, state.issued_asset.code_hash.clone(), state.issued_asset.address.clone())?;
+    let token_config = token_config_query(
+        &deps.querier,
+        256,
+        state.issued_asset.code_hash.clone(),
+        state.issued_asset.address.clone(),
+    )?;
 
     issued_asset_w(&mut deps.storage).save(&Snip20Asset {
         contract: state.issued_asset.clone(),

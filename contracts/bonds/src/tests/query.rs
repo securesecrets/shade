@@ -1,32 +1,26 @@
-use fadroma::ensemble::{ContractEnsemble};
-use cosmwasm_std::{HumanAddr, Binary, testing::*};
+use cosmwasm_std::{testing::*, Binary, HumanAddr};
 use fadroma::core::ContractLink;
+use fadroma::ensemble::ContractEnsemble;
 use shade_protocol::contract_interfaces::{
-    bonds, 
-    snip20::{helpers::Snip20Asset}, 
+    bonds,
     query_auth::{self, PermitData, QueryPermit},
+    snip20::helpers::Snip20Asset,
 };
 
 use query_authentication::transaction::{PermitSignature, PubKey};
 
 use cosmwasm_math_compat::Uint128;
 
-pub fn query_no_opps(
-    chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
-) -> () {
-    let msg = bonds::QueryMsg::BondOpportunities { };
+pub fn query_no_opps(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAddr>) -> () {
+    let msg = bonds::QueryMsg::BondOpportunities {};
 
-    let query: bonds::QueryAnswer = chain.query(
-        bonds.address.clone(), 
-        &msg,
-    ).unwrap();
+    let query: bonds::QueryAnswer = chain.query(bonds.address.clone(), &msg).unwrap();
 
-    match query{
+    match query {
         bonds::QueryAnswer::BondOpportunities { bond_opportunities } => {
             assert_eq!(bond_opportunities, vec![]);
         }
-        _ => assert!(false)
+        _ => assert!(false),
     }
 }
 
@@ -42,17 +36,24 @@ pub fn query_opp_parameters(
     discount: Option<Uint128>,
     max_accepted_collateral_price: Option<Uint128>,
     err_collateral_price: Option<Uint128>,
-    minting_bond: Option<bool>
+    minting_bond: Option<bool>,
 ) -> () {
-    let query: bonds::QueryAnswer = chain.query(
-        bonds.address.clone(),
-        &bonds::QueryMsg::BondOpportunities {  }
-    ).unwrap();
+    let query: bonds::QueryAnswer = chain
+        .query(
+            bonds.address.clone(),
+            &bonds::QueryMsg::BondOpportunities {},
+        )
+        .unwrap();
 
     match query {
-        bonds::QueryAnswer::BondOpportunities { bond_opportunities, .. } => {
+        bonds::QueryAnswer::BondOpportunities {
+            bond_opportunities, ..
+        } => {
             if issuance_limit.is_some() {
-                assert_eq!(bond_opportunities[0].issuance_limit, issuance_limit.unwrap())
+                assert_eq!(
+                    bond_opportunities[0].issuance_limit,
+                    issuance_limit.unwrap()
+                )
             }
             if amount_issued.is_some() {
                 assert_eq!(bond_opportunities[0].amount_issued, amount_issued.unwrap())
@@ -67,27 +68,35 @@ pub fn query_opp_parameters(
                 assert_eq!(bond_opportunities[0].end_time, end_time.unwrap())
             }
             if bonding_period.is_some() {
-                assert_eq!(bond_opportunities[0].bonding_period, bonding_period.unwrap())
+                assert_eq!(
+                    bond_opportunities[0].bonding_period,
+                    bonding_period.unwrap()
+                )
             }
             if discount.is_some() {
                 assert_eq!(bond_opportunities[0].discount, discount.unwrap())
             }
             if max_accepted_collateral_price.is_some() {
-                assert_eq!(bond_opportunities[0].max_accepted_collateral_price, max_accepted_collateral_price.unwrap())
+                assert_eq!(
+                    bond_opportunities[0].max_accepted_collateral_price,
+                    max_accepted_collateral_price.unwrap()
+                )
             }
             if err_collateral_price.is_some() {
-                assert_eq!(bond_opportunities[0].err_collateral_price, err_collateral_price.unwrap())
+                assert_eq!(
+                    bond_opportunities[0].err_collateral_price,
+                    err_collateral_price.unwrap()
+                )
             }
             if minting_bond.is_some() {
                 assert_eq!(bond_opportunities[0].minting_bond, minting_bond.unwrap())
             }
         }
-        _ => assert!(false)
+        _ => assert!(false),
     };
 }
 
-
-pub fn query_acccount_parameters (
+pub fn query_acccount_parameters(
     chain: &mut ContractEnsemble,
     bonds: &ContractLink<HumanAddr>,
     query_auth: &ContractLink<HumanAddr>,
@@ -99,7 +108,7 @@ pub fn query_acccount_parameters (
     claim_amount: Option<Uint128>,
     claim_price: Option<Uint128>,
     discount: Option<Uint128>,
-    discount_price: Option<Uint128>
+    discount_price: Option<Uint128>,
 ) -> () {
     let permit = get_permit();
 
@@ -109,15 +118,17 @@ pub fn query_acccount_parameters (
     assert!(permit.clone().validate(&deps.api, None).is_ok());
 
     let _query: query_auth::QueryAnswer = chain
-        .query(query_auth.address.clone(), &query_auth::QueryMsg::ValidatePermit {
-            permit: permit.clone(),
-        })
+        .query(
+            query_auth.address.clone(),
+            &query_auth::QueryMsg::ValidatePermit {
+                permit: permit.clone(),
+            },
+        )
         .unwrap();
 
-    let query: bonds::QueryAnswer = chain.query(
-        bonds.address.clone(),
-        &bonds::QueryMsg::Account { permit }
-    ).unwrap();
+    let query: bonds::QueryAnswer = chain
+        .query(bonds.address.clone(), &bonds::QueryMsg::Account { permit })
+        .unwrap();
 
     match query {
         bonds::QueryAnswer::Account { pending_bonds, .. } => {
@@ -146,7 +157,7 @@ pub fn query_acccount_parameters (
                 assert_eq!(pending_bonds[0].discount_price, discount_price.unwrap())
             }
         }
-        _ => assert!(false)
+        _ => assert!(false),
     };
 }
 
