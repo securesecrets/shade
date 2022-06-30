@@ -39,6 +39,7 @@ fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/
   "ensemble",
 ] }
 sky = { version = "0.1.0", path = "../../contracts/sky", optional = true }
+#fadroma = { branch = "staking", git = "https://github.com/a-stgeorge/fadroma-staking" }
 #amm_pair = { git = "https://github.com/securesecrets/shadeswap", optional = true }
 #factory = { git = "https://github.com/securesecrets/shadeswap", optional = true }
 #mock-shade-pair = { branch = "shadeswap-market-oracle", git = "https://github.com/securesecrets/shade-oracle", optional = true }
