@@ -45,6 +45,7 @@ pub fn token_config<S: Storage, A: Api, Q: Querier>(
         redeem_enabled: Config::redeem_enabled(&deps.storage)?,
         mint_enabled: Config::mint_enabled(&deps.storage)?,
         burn_enabled: Config::burn_enabled(&deps.storage)?,
+        transfer_enabled: Config::transfer_enabled(&deps.storage)?,
     })
 }
 

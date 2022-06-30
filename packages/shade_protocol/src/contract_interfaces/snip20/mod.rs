@@ -575,6 +575,7 @@ pub enum QueryAnswer {
         redeem_enabled: bool,
         mint_enabled: bool,
         burn_enabled: bool,
+        transfer_enabled: bool,
     },
     ContractStatus {
         status: ContractStatusLevel,
