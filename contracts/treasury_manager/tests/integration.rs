@@ -28,7 +28,7 @@ use contract_harness::harness::{
 };
 
 use fadroma::{
-    scrt::{
+    core::{
         ContractLink,
     },
     ensemble::{

@@ -12,11 +12,12 @@ use crate::utils::storage::plus::ItemStorage;
 #[cfg(feature = "query_auth_impl")]
 use secret_storage_plus::Item;
 use secret_toolkit::crypto::sha_256;
+use crate::utils::asset::Contract;
 
 #[cfg(feature = "query_auth_impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Admin(pub HumanAddr);
+pub struct Admin(pub Contract);
 
 #[cfg(feature = "query_auth_impl")]
 impl ItemStorage for Admin {
@@ -43,7 +44,7 @@ impl RngSeed {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin_auth: Contract,
     pub prng_seed: Binary
 }
 
@@ -68,8 +69,8 @@ impl ItemStorage for ContractStatus {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    SetAdmin {
-        admin: HumanAddr,
+    SetAdminAuth {
+        admin: Contract,
         padding: Option<String>,
     },
     SetRunState {
@@ -99,7 +100,7 @@ impl HandleCallback for HandleMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    SetAdmin {
+    SetAdminAuth {
         status: ResponseStatus
     },
     SetRunState {
@@ -148,7 +149,7 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config {
-        admin: HumanAddr,
+        admin: Contract,
         state: ContractStatus
     },
     ValidateViewingKey {

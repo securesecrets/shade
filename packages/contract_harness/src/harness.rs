@@ -96,3 +96,12 @@ pub mod query_auth {
     pub struct QueryAuth;
     harness_macro::implement_harness!(QueryAuth, query_auth);
 }
+
+#[cfg(feature = "admin")]
+pub mod admin {
+    use crate::harness_macro;
+    use admin;
+
+    pub struct Admin;
+    harness_macro::implement_harness!(Admin, admin);
+}

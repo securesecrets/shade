@@ -4,13 +4,14 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
     Querier,
     StdError,
     StdResult,
     Storage,
 };
 use query_authentication::viewing_keys::ViewingKey;
+use secret_toolkit::utils::Query;
+use shade_admin::admin::AuthorizedUsersResponse;
 use shade_protocol::{
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
@@ -24,13 +25,24 @@ use shade_protocol::{
         storage::plus::{ItemStorage, MapStorage},
     },
 };
+use shade_protocol::utils::asset::Contract;
+
+fn user_authorized<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, env: Env) -> StdResult<bool> {
+    let contract = Admin::load(&deps.storage)?.0;
+
+    let authorized_users: AuthorizedUsersResponse = shade_admin::admin::QueryMsg::GetAuthorizedUsers {
+        contract_address: env.contract.address.to_string()
+    }.query(&deps.querier, contract.code_hash, contract.address)?;
+
+    Ok(authorized_users.authorized_users.contains(&env.message.sender.to_string()))
+}
 
 pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    admin: HumanAddr,
+    admin: Contract,
 ) -> StdResult<HandleResponse> {
-    if env.message.sender != Admin::load(&deps.storage)?.0 {
+    if  !user_authorized(&deps, env)? {
         return Err(StdError::unauthorized());
     }
 
@@ -39,7 +51,7 @@ pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetAdmin { status: Success })?),
+        data: Some(to_binary(&HandleAnswer::SetAdminAuth { status: Success })?),
     })
 }
 
@@ -48,7 +60,7 @@ pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
     env: Env,
     state: ContractStatus,
 ) -> StdResult<HandleResponse> {
-    if env.message.sender != Admin::load(&deps.storage)?.0 {
+    if  !user_authorized(&deps, env)? {
         return Err(StdError::unauthorized());
     }
 
