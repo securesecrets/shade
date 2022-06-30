@@ -729,7 +729,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
             amount,
         })?),
