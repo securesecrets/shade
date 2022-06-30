@@ -152,7 +152,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
     )?;
 
     match res {
-        mint::QueryAnswer::Mint { asset, amount } => {
+        mint::QueryAnswer::Mint { amount, .. } => {
             first_swap_result = amount;
         }
         _ => {

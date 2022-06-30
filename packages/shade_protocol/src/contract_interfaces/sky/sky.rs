@@ -1,12 +1,12 @@
 use crate::{
     contract_interfaces::{
         dao::adapter,
-        dex::{dex::Dex, sienna::PairInfoResponse},
+        dex::{dex::Dex, secretswap, sienna},
     },
     utils::asset::Contract,
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::HumanAddr;
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, Storage};
 use schemars::JsonSchema;
 use secret_storage_plus::Item;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -63,7 +63,7 @@ impl ItemStorage for Cycles {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<HumanAddr>, //TODO shade admins contract
     pub mint_contract_shd: Contract,
     pub mint_contract_silk: Contract,
     pub market_swap_contract: Contract,
@@ -80,11 +80,27 @@ impl InitCallback for InitMsg {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    UpdateConfig { config: Config },
-    ArbPeg { amount: Uint128 },
-    SetCycles { cycles: Vec<Cycle> },
-    AppendCycles { cycle: Vec<Cycle> },
-    ArbCycle { amount: Uint128, index: Uint128 },
+    UpdateConfig {
+        config: Config,
+        padding: Option<String>,
+    },
+    ArbPeg {
+        amount: Uint128,
+        padding: Option<String>,
+    },
+    SetCycles {
+        cycles: Vec<Cycle>,
+        padding: Option<String>,
+    },
+    AppendCycles {
+        cycle: Vec<Cycle>,
+        padding: Option<String>,
+    },
+    ArbCycle {
+        amount: Uint128,
+        index: Uint128,
+        padding: Option<String>,
+    },
     Adapter(adapter::SubHandleMsg),
 }
 
@@ -117,10 +133,11 @@ pub enum QueryAnswer {
         is_profitable: bool,
         mint_first: bool,
         first_swap_result: Uint128,
+        profit: Uint128,
     },
     Balance {
         shd_bal: Uint128,
-        silk_bal: Uint128,
+        silk_bal: Uint128, //should be zero or close to
     },
     GetCycles {
         cycles: Vec<Cycle>,
@@ -129,18 +146,35 @@ pub enum QueryAnswer {
         is_profitable: bool,
         direction: Cycle,
         swap_amounts: Vec<Uint128>,
+        profit: Uint128,
     },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    Init { status: bool },
-    UpdateConfig { status: bool },
-    ExecuteArb { status: bool },
-    SetCycles { status: bool },
-    AppendCycles { status: bool },
-    ExecuteArbCycle { status: bool },
+    Init {
+        status: bool,
+    },
+    UpdateConfig {
+        status: bool,
+    },
+    ExecuteArb {
+        status: bool,
+        amount: Uint128,
+        after_first_swap: Uint128,
+        final_amount: Uint128,
+    },
+    SetCycles {
+        status: bool,
+    },
+    AppendCycles {
+        status: bool,
+    },
+    ExecuteArbCycle {
+        status: bool,
+        swap_amounts: Vec<Uint128>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -149,6 +183,68 @@ pub struct ArbPair {
     pub pair_contract: Contract,
     pub token0_contract: Contract,
     pub token1_contract: Contract,
+    pub dex: Dex,
+}
+
+impl ArbPair {
+    pub fn simulate_swap<S: Storage, A: Api, Q: Querier>(
+        self,
+        deps: &Extern<S, A, Q>,
+        amount: Uint128,
+        offer_token: Contract,
+    ) -> Result<Uint128, StdError> {
+        let mut swap_result = Uint128::zero();
+        match self.dex {
+            Dex::SecretSwap => {
+                let res = secretswap::PairQuery::Simulation {
+                    offer_asset: secretswap::Asset {
+                        amount,
+                        info: secretswap::AssetInfo {
+                            token: secretswap::Token {
+                                contract_addr: offer_token.address,
+                                token_code_hash: offer_token.code_hash,
+                                viewing_key: "".to_string(), //TODO will sky have to make viewing keys for every asset?
+                            },
+                        },
+                    },
+                }
+                .query(
+                    &deps.querier,
+                    self.pair_contract.code_hash,
+                    self.pair_contract.address,
+                )?;
+                match res {
+                    secretswap::SimulationResponse { return_amount, .. } => {
+                        swap_result = return_amount
+                    }
+                    _ => return Err(StdError::Unauthorized { backtrace: None }),
+                }
+            }
+            Dex::SiennaSwap => {
+                let res = sienna::PairQuery::SwapSimulation {
+                    offer: sienna::TokenTypeAmount {
+                        token: sienna::TokenType::CustomToken {
+                            token_code_hash: offer_token.code_hash.clone(),
+                            contract_addr: offer_token.address.clone(),
+                        },
+                        amount,
+                    },
+                }
+                .query(
+                    &deps.querier,
+                    self.pair_contract.code_hash,
+                    self.pair_contract.address,
+                )?;
+                match res {
+                    sienna::SimulationResponse { return_amount, .. } => swap_result = return_amount,
+                    _ => return Err(StdError::Unauthorized { backtrace: None }),
+                }
+            } //Dex::ShadeSwap => {},
+        }
+        Ok(swap_result)
+    }
+
+    //TODO Return the callback
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -157,44 +253,3 @@ pub struct Cycle {
     pub pair_addrs: Vec<ArbPair>,
     pub start_addr: HumanAddr,
 }
-
-/*impl ArbPair {
-    fn init<S: Storage, A: Api, Q: Querier>(&mut self, deps: &mut Extern<S, A, Q>,env: Env) -> StdResult<bool> {
-        if self.dex_id.eq(&"sienna".to_string()) {
-            let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
-                &deps.querier,
-                env.contract_code_hash.clone(),
-                self.pair_address.clone(),
-            )?;
-            match pool_info.pair_info.pair.token_0 {
-                TokenType::CustomToken { contract_addr, token_code_hash } => self.token1_address = contract_addr.clone(),
-                _ => self.token1_address = HumanAddr("".to_string()),
-            }
-            match pool_info.pair_info.pair.token_1 {
-                TokenType::CustomToken { contract_addr, token_code_hash } => self.token2_address = contract_addr.clone(),
-                _ => self.token2_address = HumanAddr("".to_string()),
-            }
-            self.token1_amount = pool_info.pair_info.amount_0.clone();
-            self.token2_amount = pool_info.pair_info.amount_1.clone();
-        } else if self.dex_id.eq(&"sswap".to_string()) {
-            todo!()
-        } else { //shd swap
-            todo!()
-        }
-
-        Ok(true)
-    }
-    fn expected_amount(&self, swap_amount: Uint128, buy_token1: bool) -> StdResult<Uint128>{
-        if buy_token1 {
-            let out = self.token1_amount.u128() - (self.token1_amount.u128() * self.token2_amount.u128())/
-                (self.token2_amount.u128() + swap_amount.u128());
-            Ok(Uint128(out))
-        } else {
-            let out = self.token2_amount.u128() - (self.token2_amount.u128() * self.token1_amount.u128())/
-                (self.token1_amount.u128() + swap_amount.u128());
-            Ok(Uint128(out))
-
-        }
-
-    }
-}*/
