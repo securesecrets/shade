@@ -17,18 +17,9 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use cosmwasm_math_compat::Uint128;
-use contract_harness::harness::{
-    snip20::Snip20,
-    mock_shdswp::MockShdSwp, 
-    //shadeswap_exchange::ShadeswapExchange,
-    //shadeswap_factory::ShadeswapFactory,
-    //sienna_lp_token::SiennaLpToken,
-};
-use fadroma::{
-    ensemble::{ContractEnsemble, MockEnv}, prelude::{ContractLink, ContractInstantiationInfo, Callback},
-};
+use contract_harness::harness::snip20::Snip20;
 use cosmwasm_math_compat as compat;
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     self,
     coins,
@@ -43,176 +34,179 @@ use cosmwasm_std::{
     StdError,
     StdResult,
 };
+use fadroma::{
+    ensemble::{ContractEnsemble, MockEnv},
+    prelude::{Callback, ContractInstantiationInfo, ContractLink},
+};
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use shade_protocol::{
-    contract_interfaces::{
-        snip20::{self},
-        dex::{self, shadeswap},
-    },
+use serde::{Deserialize, Serialize};
+use shade_protocol::contract_interfaces::{
+    dex::{self, shadeswap},
+    snip20::{self},
 };
 
-fn test_ensemble_sky(
-    swap_amount: Uint128,
-){
+fn test_ensemble_sky(swap_amount: Uint128) {
     let mut ensemble = ContractEnsemble::new(50);
 
     let reg_snip20 = ensemble.register(Box::new(Snip20));
-    
-    let reg_mock_shdswp = ensemble.register(Box::new(MockShdSwp));
+
+    //let reg_mock_shdswp = ensemble.register(Box::new(MockShdSwp));
     //let reg_shadeswap_exchange = ensemble.register(Box::new(ShadeswapExchange));
     //let reg_shadeswap_factory = ensemble.register(Box::new(ShadeswapFactory));
     //let reg_sienna_lp_token = ensemble.register(Box::new(SiennaLpToken));
 
     println!("Deploying sscrt contract");
 
-    let sscrt = ensemble.instantiate(
-        reg_snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
-            name: "secretSCRT".into(),
-            admin: Some(HumanAddr("admin".into())),
-            symbol: "SSCRT".into(),
-            decimals: 6,
-            initial_balances: Some(vec![snip20_reference_impl::msg::InitialBalance {
-                address: HumanAddr("admin".into()),
-                amount: cosmwasm_std::Uint128(100000000000), // 100,000 SSCRT
-            }]),
-            prng_seed: to_binary("").ok().unwrap(),
-            config: None,
-        },
-        MockEnv::new("admin", ContractLink {
-            address: HumanAddr("sscrt".into()),
-            code_hash: reg_snip20.code_hash.clone(),
-        }),
-    ).unwrap();
+    let sscrt = ensemble
+        .instantiate(
+            reg_snip20.id,
+            &snip20_reference_impl::msg::InitMsg {
+                name: "secretSCRT".into(),
+                admin: Some(HumanAddr("admin".into())),
+                symbol: "SSCRT".into(),
+                decimals: 6,
+                initial_balances: Some(vec![snip20_reference_impl::msg::InitialBalance {
+                    address: HumanAddr("admin".into()),
+                    amount: cosmwasm_std::Uint128(100000000000), // 100,000 SSCRT
+                }]),
+                prng_seed: to_binary("").ok().unwrap(),
+                config: None,
+            },
+            MockEnv::new("admin", ContractLink {
+                address: HumanAddr("sscrt".into()),
+                code_hash: reg_snip20.code_hash.clone(),
+            }),
+        )
+        .unwrap();
 
     println!("Sscrt contract addr: {}", sscrt.instance.address);
     println!("Deploying shd contract");
 
-    let shd = ensemble.instantiate(
-        reg_snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
-            name: "Shade".into(),
-            admin: Some(HumanAddr("admin".into())),
-            symbol: "SHD".into(),
-            decimals: 8,
-            initial_balances: Some(vec![snip20_reference_impl::msg::InitialBalance {
-                address: HumanAddr("admin".into()),
-                amount: cosmwasm_std::Uint128(10000000000000), // 100,000 SHD
-            },]),
-            prng_seed: to_binary("").ok().unwrap(),
-            config: None,
-        },
-        MockEnv::new("admin", ContractLink {
-            address: HumanAddr("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek".into()),
-            code_hash: reg_snip20.code_hash.clone(),
-        }),
-    ).unwrap();
+    let shd = ensemble
+        .instantiate(
+            reg_snip20.id,
+            &snip20_reference_impl::msg::InitMsg {
+                name: "Shade".into(),
+                admin: Some(HumanAddr("admin".into())),
+                symbol: "SHD".into(),
+                decimals: 8,
+                initial_balances: Some(vec![snip20_reference_impl::msg::InitialBalance {
+                    address: HumanAddr("admin".into()),
+                    amount: cosmwasm_std::Uint128(10000000000000), // 100,000 SHD
+                }]),
+                prng_seed: to_binary("").ok().unwrap(),
+                config: None,
+            },
+            MockEnv::new("admin", ContractLink {
+                address: HumanAddr("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek".into()),
+                code_hash: reg_snip20.code_hash.clone(),
+            }),
+        )
+        .unwrap();
 
     println!("Shd contract addr: {}", shd.instance.address);
     println!("Deploying silk contract");
 
-    let silk = ensemble.instantiate(
-        reg_snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
-            name: "Silk".into(),
-            admin: Some(HumanAddr("admin".into())),
-            symbol: "SILK".into(),
-            decimals: 6,
-            initial_balances: Some(vec![snip20_reference_impl::msg::InitialBalance {
-                address: HumanAddr("admin".into()),
-                amount: cosmwasm_std::Uint128(100000000000), // 100,000 SILK
-            }]),
-            prng_seed: to_binary("").ok().unwrap(),
-            config: None,
-        },
-        MockEnv::new("admin", ContractLink {
-            address: HumanAddr("secret14m2ffr7fyjhzv8cdknn2yp8sneht3luvsh9495".into()),
-            code_hash: reg_snip20.code_hash.clone(),
-        }),
-    ).unwrap();
+    let silk = ensemble
+        .instantiate(
+            reg_snip20.id,
+            &snip20_reference_impl::msg::InitMsg {
+                name: "Silk".into(),
+                admin: Some(HumanAddr("admin".into())),
+                symbol: "SILK".into(),
+                decimals: 6,
+                initial_balances: Some(vec![snip20_reference_impl::msg::InitialBalance {
+                    address: HumanAddr("admin".into()),
+                    amount: cosmwasm_std::Uint128(100000000000), // 100,000 SILK
+                }]),
+                prng_seed: to_binary("").ok().unwrap(),
+                config: None,
+            },
+            MockEnv::new("admin", ContractLink {
+                address: HumanAddr("secret14m2ffr7fyjhzv8cdknn2yp8sneht3luvsh9495".into()),
+                code_hash: reg_snip20.code_hash.clone(),
+            }),
+        )
+        .unwrap();
 
     println!("Silk contract addr: {}", silk.instance.address);
 
     let key = String::from("key");
 
-    ensemble.execute(
-        &snip20_reference_impl::msg::HandleMsg::SetViewingKey { 
-            key: key.clone(), 
-            padding: None, 
-        },
-        MockEnv::new("admin", sscrt.instance.clone()),
-    ).unwrap();
+    ensemble
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::SetViewingKey {
+                key: key.clone(),
+                padding: None,
+            },
+            MockEnv::new("admin", sscrt.instance.clone()),
+        )
+        .unwrap();
 
-    ensemble.execute(
-        &snip20_reference_impl::msg::HandleMsg::SetViewingKey { 
-            key: key.clone(), 
-            padding: None, 
-        },
-        MockEnv::new("admin", shd.instance.clone()),
-    ).unwrap();
+    ensemble
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::SetViewingKey {
+                key: key.clone(),
+                padding: None,
+            },
+            MockEnv::new("admin", shd.instance.clone()),
+        )
+        .unwrap();
 
-    ensemble.execute(
-        &snip20_reference_impl::msg::HandleMsg::SetViewingKey { 
-            key: key.clone(), 
-            padding: None, 
-        },
-        MockEnv::new("admin", silk.instance.clone()),
-    ).unwrap();
+    ensemble
+        .execute(
+            &snip20_reference_impl::msg::HandleMsg::SetViewingKey {
+                key: key.clone(),
+                padding: None,
+            },
+            MockEnv::new("admin", silk.instance.clone()),
+        )
+        .unwrap();
 
-    let mut query_res = ensemble.query(
-        sscrt.instance.address.clone(),
-        &snip20::QueryMsg::Balance { 
-            address: "admin".into(), 
-            key: key.clone(), 
-        }
-    ).unwrap();
+    let mut query_res = ensemble
+        .query(sscrt.instance.address.clone(), &snip20::QueryMsg::Balance {
+            address: "admin".into(),
+            key: key.clone(),
+        })
+        .unwrap();
 
     match query_res {
-        snip20::QueryAnswer::Balance { 
-            amount 
-        } => {
+        snip20::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::new(100000000000))
         }
-        _=> {
+        _ => {
             assert!(false)
         }
     }
 
-    query_res = ensemble.query(
-        shd.instance.address.clone(),
-        &snip20::QueryMsg::Balance { 
-            address: "admin".into(), 
-            key: key.clone(), 
-        }
-    ).unwrap();
+    query_res = ensemble
+        .query(shd.instance.address.clone(), &snip20::QueryMsg::Balance {
+            address: "admin".into(),
+            key: key.clone(),
+        })
+        .unwrap();
 
     match query_res {
-        snip20::QueryAnswer::Balance { 
-            amount 
-        } => {
+        snip20::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::new(10000000000000))
         }
-        _=> {
+        _ => {
             assert!(false)
         }
     }
 
-    query_res = ensemble.query(
-        silk.instance.address.clone(),
-        &snip20::QueryMsg::Balance { 
-            address: "admin".into(), 
-            key: key.clone(), 
-        }
-    ).unwrap();
+    query_res = ensemble
+        .query(silk.instance.address.clone(), &snip20::QueryMsg::Balance {
+            address: "admin".into(),
+            key: key.clone(),
+        })
+        .unwrap();
 
     match query_res {
-        snip20::QueryAnswer::Balance { 
-            amount 
-        } => {
+        snip20::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::new(100000000000))
         }
-        _=> {
+        _ => {
             assert!(false)
         }
     }
@@ -222,16 +216,16 @@ fn test_ensemble_sky(
 
     let sienna_factory = ensemble.instantiate(
         reg_sienna_factory.id,
-        &factory::InitMsg { 
-            lp_token_contract: reg_sienna_lp_token.clone(), 
-            pair_contract: reg_sienna_exchange.clone(), 
+        &factory::InitMsg {
+            lp_token_contract: reg_sienna_lp_token.clone(),
+            pair_contract: reg_sienna_exchange.clone(),
             exchange_settings: factory::ExchangeSettings{
                 swap_fee: factory::Fee { nom: 0, denom: 0 },
                 sienna_fee: factory::Fee { nom: 0, denom: 0 },
                 sienna_burner: None,
-            }, 
-            admin: Some(HumanAddr("admin".into())), 
-            prng_seed: to_binary("").ok().unwrap(), 
+            },
+            admin: Some(HumanAddr("admin".into())),
+            prng_seed: to_binary("").ok().unwrap(),
         },
         MockEnv::new("admin", ContractLink {
             address: HumanAddr("reg_sienna_factory".into()),
@@ -245,13 +239,13 @@ fn test_ensemble_sky(
     let mut res = ensemble.execute(
         &factory::HandleMsg::CreateExchange {
             pair: sienna::Pair {
-                token_0: sienna::TokenType::CustomToken { 
-                    contract_addr: shd.address, 
+                token_0: sienna::TokenType::CustomToken {
+                    contract_addr: shd.address,
                     token_code_hash: shd.code_hash,
                 },
-                token_1: sienna::TokenType::CustomToken { 
-                    contract_addr: silk.address, 
-                    token_code_hash: silk.code_hash, 
+                token_1: sienna::TokenType::CustomToken {
+                    contract_addr: silk.address,
+                    token_code_hash: silk.code_hash,
                 }
             },
             entropy: to_binary("").ok().unwrap(),
@@ -261,23 +255,23 @@ fn test_ensemble_sky(
 
     println!("here");
 
-/*    let sienna_pair = ensemble.instantiate(
+    /*    let sienna_pair = ensemble.instantiate(
         reg_sienna_exchange.id,
         &amm_pair::InitMsg{
-            pair: sienna::Pair { 
+            pair: sienna::Pair {
                 token_0: sienna::TokenType::CustomToken{
                     contract_addr: shd.address.clone(),
                     token_code_hash: shd.code_hash.clone(),
-                }, 
+                },
                 token_1: sienna::TokenType::CustomToken{
                     contract_addr: silk.address.clone(),
                     token_code_hash: silk.code_hash.clone(),
-                }, 
+                },
             },
             lp_token_contract: reg_sienna_lp_token.clone(),
             factory_info: sienna_factory.clone(),
-            callback: Callback { 
-                msg: to_binary("").ok().unwrap(), 
+            callback: Callback {
+                msg: to_binary("").ok().unwrap(),
                 contract: sienna_factory.clone(),
             },
             prng_seed: to_binary("").ok().unwrap(),
