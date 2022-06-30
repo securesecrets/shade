@@ -41,8 +41,8 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 chrono = "0.4.19"
 time = "0.1.44"
-admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "main"}
-shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "main"}
+admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0" }
+shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0"}
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11"}
 fadroma = { git = "https://github.com/hackbg/fadroma", branch = "v100", features = [] }
 query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.3.0"}
