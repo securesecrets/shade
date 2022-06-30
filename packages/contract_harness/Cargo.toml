@@ -29,7 +29,7 @@ shade-oracles = ["dep:shade-oracles"]
 shade-oracles-ensemble = ["dep:shade-oracles-ensemble"]
 sky = ["dep:sky"]
 #shadeswap_exchange = ["dep:amm_pair"]
-shadeswap_factory = ["dep:factory"]
+#shadeswap_factory = ["dep:factory"]
 mock_shdswp = ["dep:mock-shade-pair"]
 #shadeswap_lp_token = ["dep:lp-token"]
 
@@ -40,7 +40,7 @@ fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/
 ] }
 sky = { version = "0.1.0", path = "../../contracts/sky", optional = true }
 #amm_pair = { git = "https://github.com/securesecrets/shadeswap", optional = true }
-factory = { git = "https://github.com/securesecrets/shadeswap", optional = true }
+#factory = { git = "https://github.com/securesecrets/shadeswap", optional = true }
 mock-shade-pair = { branch = "shadeswap-market-oracle", git = "https://github.com/securesecrets/shade-oracle", optional = true }
 #lp-token = { git = "https://github.com/securesecrets/shadeswap", optional = true }
 mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
