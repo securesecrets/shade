@@ -79,11 +79,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::ArbPeg { amount } => handle::try_execute(deps, env, amount),
-        HandleMsg::SetCycles { cycles } => handle::try_set_cycles(deps, env, cycles),
-        HandleMsg::AppendCycles { cycle } => handle::try_append_cycle(deps, env, cycle),
-        HandleMsg::ArbCycle { amount, index } => handle::try_arb_cycle(deps, env, amount, index),
+        HandleMsg::UpdateConfig { config, .. } => handle::try_update_config(deps, env, config),
+        HandleMsg::ArbPeg { amount, .. } => handle::try_execute(deps, env, amount),
+        HandleMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),
+        HandleMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, cycle),
+        HandleMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, index),
+        HandleMsg::ArbCycle { amount, index, .. } => {
+            handle::try_arb_cycle(deps, env, amount, index)
+        }
         //HandleMsg::ArbAllCycles{ amount } => handle::try_arb_all_cycles(deps, env, amount ),
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {

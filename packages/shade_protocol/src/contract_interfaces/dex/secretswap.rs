@@ -5,8 +5,8 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
 use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
@@ -76,6 +76,17 @@ pub struct PairResponse {
 pub struct PoolResponse {
     pub assets: Vec<Asset>,
     pub total_share: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CallbackMsg {
+    pub swap: CallbackSwap,
+}
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CallbackSwap {
+    pub expected_return: Uint128,
 }
 
 pub fn is_pair<S: Storage, A: Api, Q: Querier>(

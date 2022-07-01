@@ -6,10 +6,13 @@ use crate::{
     utils::asset::Contract,
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, Storage};
+use cosmwasm_std::{to_binary, Api, CosmosMsg, Extern, HumanAddr, Querier, StdError, Storage};
 use schemars::JsonSchema;
 use secret_storage_plus::Item;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
+use secret_toolkit::{
+    snip20::send_msg,
+    utils::{HandleCallback, InitCallback, Query},
+};
 use serde::{Deserialize, Serialize};
 
 /*#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -96,6 +99,10 @@ pub enum HandleMsg {
         cycle: Vec<Cycle>,
         padding: Option<String>,
     },
+    RemoveCycle {
+        index: Uint128,
+        padding: Option<String>,
+    },
     ArbCycle {
         amount: Uint128,
         index: Uint128,
@@ -148,6 +155,12 @@ pub enum QueryAnswer {
         swap_amounts: Vec<Uint128>,
         profit: Uint128,
     },
+    IsAnyCycleProfitable {
+        is_profitable: Vec<bool>,
+        direction: Vec<Cycle>,
+        swap_amounts: Vec<Vec<Uint128>>,
+        profit: Vec<Uint128>,
+    },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -169,6 +182,9 @@ pub enum HandleAnswer {
         status: bool,
     },
     AppendCycles {
+        status: bool,
+    },
+    RemoveCycle {
         status: bool,
     },
     ExecuteArbCycle {
@@ -217,7 +233,6 @@ impl ArbPair {
                     secretswap::SimulationResponse { return_amount, .. } => {
                         swap_result = return_amount
                     }
-                    _ => return Err(StdError::Unauthorized { backtrace: None }),
                 }
             }
             Dex::SiennaSwap => {
@@ -237,14 +252,47 @@ impl ArbPair {
                 )?;
                 match res {
                     sienna::SimulationResponse { return_amount, .. } => swap_result = return_amount,
-                    _ => return Err(StdError::Unauthorized { backtrace: None }),
                 }
             } //Dex::ShadeSwap => {},
         }
         Ok(swap_result)
     }
 
-    //TODO Return the callback
+    pub fn to_cosmos_msg(
+        &self,
+        recipient: HumanAddr,
+        amount: Uint128,
+        expected_return: Uint128,
+        offer_asset: Contract,
+    ) -> Result<CosmosMsg, StdError> {
+        match self.dex {
+            Dex::SiennaSwap => send_msg(
+                recipient,
+                cosmwasm_std::Uint128(amount.u128()),
+                Some(to_binary(&sienna::CallbackMsg {
+                    swap: sienna::CallbackSwap { expected_return },
+                })?),
+                None,
+                None,
+                1,
+                offer_asset.code_hash,
+                offer_asset.address,
+            ),
+            Dex::SecretSwap => send_msg(
+                recipient,
+                cosmwasm_std::Uint128(amount.u128()),
+                Some(to_binary(&secretswap::CallbackMsg {
+                    swap: secretswap::CallbackSwap { expected_return },
+                })?),
+                None,
+                None,
+                1,
+                offer_asset.code_hash,
+                offer_asset.address,
+            ),
+            //Dex::ShadeSwap => return send_msg(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

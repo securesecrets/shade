@@ -19,121 +19,6 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
     })
 }
 
-/*pub fn market_rate<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<QueryAnswer> {
-    let config: Config = Config::load(&deps.storage)?;
-
-    //Query mint contract
-    let mint_info: mint::QueryAnswer = QueryMsg::Mint {
-        offer_asset: config.shd_token_contract.address.clone(),
-        amount: Uint128::new(100000000), //1 SHD
-    }
-    .query(
-        &deps.querier,
-        config.mint_addr_silk.code_hash.clone(),
-        config.mint_addr_silk.address.clone(),
-    )?;
-    let mut mint_price: Uint128 = Uint128::new(0); // SILK/SHD
-    match mint_info {
-        mint::QueryAnswer::Mint { asset: _, amount } => {
-            mint_price = amount.checked_mul(Uint128::new(100))?; // times 100 to make it have 8 decimals
-        }
-        _ => {
-            mint_price = Uint128::new(0);
-        }
-    };
-
-    //TODO Query Pool Amount
-    let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
-        &deps.querier,
-        config.market_swap_addr.code_hash.clone(),
-        config.market_swap_addr.address.clone(),
-    )?;
-
-    Ok(QueryAnswer::GetMarketRate {
-        mint_rate: mint_price,
-        pair: pool_info,
-    })
-}*/
-
-/*pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    amount: Uint128,
-) -> StdResult<QueryAnswer> {
-    let config: Config = Config::load(&deps.storage)?;
-
-    let market_query = market_rate(&deps)?;
-    let mint_price: Uint128;
-    let pool_info: PairInfoResponse;
-
-    match market_query {
-        QueryAnswer::GetMarketRate { mint_rate, pair } => {
-            mint_price = mint_rate;
-            pool_info = pair;
-        }
-        _ => {
-            return Err(StdError::generic_err("failed."));
-        }
-    };
-
-    let mut shd_amount: Uint128 = Uint128::new(1);
-    let mut silk_amount: Uint128 = Uint128::new(1);
-    let mut silk_8d: Uint128 = Uint128::new(1);
-
-    match pool_info.pair_info.pair.token_0 {
-        sienna::TokenType::CustomToken {
-            contract_addr,
-            token_code_hash: _,
-        } => {
-            if contract_addr.eq(&config.shd_token_contract.address) {
-                shd_amount = pool_info.pair_info.amount_0;
-                silk_amount = pool_info.pair_info.amount_1;
-                silk_8d = silk_amount.checked_mul(Uint128::new(100))?;
-            } else {
-                shd_amount = pool_info.pair_info.amount_1;
-                silk_amount = pool_info.pair_info.amount_0;
-                silk_8d = silk_amount.checked_mul(Uint128::new(100))?;
-            }
-        }
-        _ => {}
-    }
-
-    let div_silk_8d: Uint128 = silk_8d.checked_mul(Uint128::new(100000000))?;
-    let dex_price: Uint128 = div_silk_8d.checked_div(shd_amount.clone())?;
-
-    let mut first_swap_amount: Uint128 = Uint128::new(0);
-    let mut second_swap_amount: Uint128 = Uint128::new(0);
-    let mut mint_first: bool = false;
-
-    if mint_price.gt(&dex_price) {
-        mint_first = true;
-        let mul_mint_price: Uint128 = mint_price.checked_mul(amount)?;
-        first_swap_amount = mul_mint_price.checked_div(Uint128::new(100000000))?;
-        let mut first_swap_less_fee = first_swap_amount.checked_div(Uint128::new(325))?;
-        first_swap_less_fee = first_swap_amount.checked_sub(first_swap_less_fee)?;
-        second_swap_amount = pool_take_amount(amount, silk_8d, shd_amount);
-    } else {
-        mint_first = false;
-        let mut amount_less_fee: Uint128 = amount.checked_div(Uint128::new(325))?;
-        amount_less_fee = amount.checked_sub(amount_less_fee)?;
-        first_swap_amount = pool_take_amount(amount_less_fee, shd_amount, silk_8d);
-        let mul_first_swap = first_swap_amount.checked_mul(Uint128::new(100000000))?;
-        second_swap_amount = mul_first_swap.checked_div(mint_price)?;
-    }
-
-    let is_profitable = second_swap_amount.gt(&amount);
-
-    Ok(QueryAnswer::ArbPegProfitability {
-        is_profitable,
-        mint_first,
-        shd_amount,
-        silk_amount,
-        first_swap_amount,
-        second_swap_amount,
-    })
-}*/
-
 pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     amount: Uint128,
@@ -196,6 +81,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
             is_profitable: true,
             mint_first: true,
             first_swap_result,
+            profit: final_amount.checked_sub(amount)?,
         });
     }
 
@@ -236,7 +122,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
     )?;
 
     match res {
-        mint::QueryAnswer::Mint { asset, amount } => {
+        mint::QueryAnswer::Mint { amount, .. } => {
             final_amount = amount;
         }
         _ => {
@@ -252,6 +138,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
             is_profitable: true,
             mint_first: false,
             first_swap_result,
+            profit: final_amount.checked_sub(amount)?,
         });
     }
 
@@ -259,6 +146,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
         is_profitable: false,
         mint_first: false,
         first_swap_result: Uint128::zero(),
+        profit: Uint128::zero(),
     })
 }
 
@@ -358,8 +246,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
             shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => {
                 match current_offer.token {
                     TokenType::CustomToken {
-                        contract_addr,
-                        token_code_hash,
+                        token_code_hash, ..
                     } => {
                         if token_code_hash == arb_pair.token0_contract.code_hash {
                             current_offer = TokenAmount {
@@ -407,6 +294,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
             is_profitable: true,
             direction: cycles[index.u128() as usize].clone(),
             swap_amounts,
+            profit: current_offer.amount.checked_sub(amount)?,
         });
     }
 
@@ -437,8 +325,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
             shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => {
                 match current_offer.token {
                     TokenType::CustomToken {
-                        contract_addr,
-                        token_code_hash,
+                        token_code_hash, ..
                     } => {
                         if token_code_hash == arb_pair.token0_contract.code_hash {
                             current_offer = TokenAmount {
@@ -481,12 +368,13 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         });
     }
 
-    if current_offer.amount.u128() > amount.u128() {
+    if current_offer.amount > amount {
         cycles[index.u128() as usize].pair_addrs.reverse();
         return Ok(QueryAnswer::IsCycleProfitable {
             is_profitable: true,
             direction: cycles[index.u128() as usize].clone(),
             swap_amounts,
+            profit: current_offer.amount.checked_sub(amount)?,
         });
     }
 
@@ -494,6 +382,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         is_profitable: false,
         direction: cycles[0].clone(),
         swap_amounts: vec![],
+        profit: Uint128::zero(),
     })
 }
 
@@ -505,6 +394,7 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
     let mut return_is_profitable = vec![];
     let mut return_directions = vec![];
     let mut return_swap_amounts = vec![];
+    let mut return_profit = vec![];
 
     for index in 0..cycles.len() {
         let res = cycle_profitability(deps, amount, Uint128::from(index as u128)).unwrap();
@@ -513,11 +403,13 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
                 is_profitable,
                 direction,
                 swap_amounts,
+                profit,
             } => {
                 if is_profitable {
                     return_is_profitable.push(is_profitable);
                     return_directions.push(direction);
                     return_swap_amounts.push(swap_amounts);
+                    return_profit.push(profit);
                 }
             }
             _ => {
@@ -529,11 +421,11 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    //TODO Fix this
-    Ok(QueryAnswer::IsCycleProfitable {
-        is_profitable: false,
-        direction: cycles[0].clone(),
-        swap_amounts: vec![],
+    Ok(QueryAnswer::IsAnyCycleProfitable {
+        is_profitable: return_is_profitable,
+        direction: return_directions,
+        swap_amounts: return_swap_amounts,
+        profit: return_profit,
     })
 }
 

@@ -99,6 +99,27 @@ pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    index: Uint128,
+) -> StdResult<HandleResponse> {
+    if env.message.sender != Config::load(&deps.storage)?.admin {
+        return Err(StdError::unauthorized());
+    }
+
+    // I'm pissed I couldn't do this in one line
+    let mut cycles = Cycles::load(&deps.storage)?.0;
+    cycles.remove(index.u128() as usize);
+    Cycles(cycles).save(&mut deps.storage);
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::RemoveCycle { status: true })?),
+    })
+}
+
 pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
@@ -106,24 +127,29 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let config: Config = Config::load(&deps.storage)?;
 
+    //grab profitability data from query
     let res = conversion_mint_profitability(deps, amount)?;
 
     let mut profitable = false;
     let mut is_mint_first = false;
     let mut first_swap_expected = Uint128::zero();
+    let mut profit = Uint128::zero();
     match res {
         sky::QueryAnswer::ArbPegProfitability {
             is_profitable,
             mint_first,
             first_swap_result,
+            profit: new_profit,
         } => {
             profitable = is_profitable;
             is_mint_first = mint_first;
             first_swap_expected = first_swap_result;
+            profit = new_profit;
         }
         _ => {}
     }
 
+    //if tx is not profitable, err out
     if !profitable {
         return Err(StdError::GenericErr {
             msg: String::from("Trade not profitable"),
@@ -134,6 +160,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     if is_mint_first {
+        //if true mint silk from shd then sell the silk on the market
         messages.push(send_msg(
             config.mint_contract_silk.address,
             cosmwasm_std::Uint128(amount.clone().u128()),
@@ -163,6 +190,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
             config.silk_token_contract.address.clone(),
         )?);
     } else {
+        // if false, buy silk with shd then mint shd with the silk
         messages.push(send_msg(
             config.market_swap_contract.address.clone(),
             cosmwasm_std::Uint128(amount.u128()),
@@ -196,7 +224,12 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::ExecuteArb { status: true })?),
+        data: Some(to_binary(&HandleAnswer::ExecuteArb {
+            status: true,
+            amount,
+            after_first_swap: first_swap_expected,
+            final_amount: amount.checked_add(profit)?,
+        })?),
     })
 }
 
@@ -207,33 +240,43 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     index: Uint128,
 ) -> StdResult<HandleResponse> {
     let mut messages = vec![];
-
-    let res = cycle_profitability(deps, amount, index)?;
+    let mut return_swap_amounts = vec![];
+    // cur_asset will keep track of the asset that we have swapped into
+    let mut cur_asset = Contract {
+        address: HumanAddr::default(),
+        code_hash: "".to_string(),
+    };
+    let res = cycle_profitability(deps, amount, index)?; // get profitability data from query
     match res {
         sky::QueryAnswer::IsCycleProfitable {
             is_profitable,
             direction,
             swap_amounts,
+            ..
         } => {
-            let mut cur_asset: Contract;
-            if direction.pair_addrs[0]
+            return_swap_amounts = swap_amounts.clone();
+            if direction.pair_addrs[0] // test to see which of the token attributes are the proposed starting addr
                 .token0_contract
                 .address
-                .eq(&direction.start_addr.clone())
+                == direction.start_addr.clone()
             {
                 cur_asset = direction.pair_addrs[0].token0_contract.clone();
             } else {
                 cur_asset = direction.pair_addrs[0].token1_contract.clone();
             }
+            // if tx is unprofitable, err out
             if !is_profitable {
                 return Err(StdError::GenericErr {
                     msg: "bad".to_string(),
                     backtrace: None,
                 });
             }
+            //loop through the pairs in the cycle
             for (i, arb_pair) in direction.pair_addrs.clone().iter().enumerate() {
                 let msg;
-                if arb_pair.eq(&direction.pair_addrs[direction.pair_addrs.len() - 1]) {
+                // if we're on the last iteration, we set our
+                // minmum expected return to the swap amount to ensure the tx is profitable
+                if direction.pair_addrs.len() == i {
                     msg = Some(to_binary(&SwapTokens {
                         expected_return: Some(amount),
                         to: None,
@@ -241,6 +284,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                         callback_signature: None,
                     })?);
                 } else {
+                    // otherwise set expected return to zero bc we only care about the final trade
                     msg = Some(to_binary(&SwapTokens {
                         expected_return: Some(Uint128::zero()),
                         to: None,
@@ -248,6 +292,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                         callback_signature: None,
                     })?);
                 }
+                //push each msg
                 messages.push(send_msg(
                     arb_pair.pair_contract.address.clone(),
                     cosmwasm_std::Uint128::from(swap_amounts[i].u128()),
@@ -258,7 +303,8 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                     cur_asset.code_hash.clone(),
                     cur_asset.address.clone(),
                 )?);
-                if cur_asset.eq(&arb_pair.token0_contract.clone()) {
+                // reset cur asset to the other asset held in the struct
+                if cur_asset == arb_pair.token0_contract.clone() {
                     cur_asset = arb_pair.token1_contract.clone();
                 } else {
                     cur_asset = arb_pair.token0_contract.clone();
@@ -268,30 +314,21 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
         _ => {}
     }
 
-    Ok(HandleResponse {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ExecuteArbCycle { status: true })?),
-    })
-}
-
-/*pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    _env: Env,
-    _amount: Uint128,
-) -> StdResult<HandleResponse> {
-    let messages = vec![];
-    let cycles = Cycles::load(&deps.storage)?.0;
+    // the final cur_asset should be the same as the start_addr
+    assert!(
+        cur_asset.address.clone()
+            == Cycles::load(&deps.storage)?.0[index.u128() as usize].start_addr
+    );
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
-            status: ResponseStatus::Success,
-            amount: cosmwasm_std::Uint128::zero(),
+        data: Some(to_binary(&HandleAnswer::ExecuteArbCycle {
+            status: true,
+            swap_amounts: return_swap_amounts,
         })?),
     })
-}*/
+}
 
 pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
