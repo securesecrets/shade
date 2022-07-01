@@ -1,6 +1,8 @@
-use cosmwasm_std::{HumanAddr, Uint128};
+/*
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::HumanAddr;
 use serde_json::Result;
-use shade_protocol::{governance, governance::GOVERNANCE_SELF};
+use shade_protocol::contract_interfaces::{governance, governance::GOVERNANCE_SELF};
 
 use crate::utils::{
     generate_label, print_contract, print_header, print_warning, ACCOUNT_KEY, GAS, STORE_GAS,
@@ -115,7 +117,7 @@ pub fn get_latest_proposal(governance: &NetContract) -> Result<Uint128> {
 
     let query: governance::QueryAnswer = query(governance, &query_msg, None)?;
 
-    let mut proposals = Uint128(1);
+    let mut proposals = Uint128::new(1u128);
 
     if let governance::QueryAnswer::TotalProposals { total } = query {
         proposals = total;
@@ -183,3 +185,4 @@ pub fn trigger_latest_proposal(
 
     Ok(proposals)
 }
+*/

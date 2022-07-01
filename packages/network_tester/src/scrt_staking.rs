@@ -4,20 +4,21 @@ use rand::{distributions::Alphanumeric, Rng};
 use secretcli::{cli_types::NetContract,
                 secretcli::{account_address, TestInit, TestHandle,
                             TestQuery, list_contracts_by_code}};
-use shade_protocol::{
+use shade_protocol::contract_interfaces::{
     snip20::{
+        self,
         InitConfig,
         InitialBalance,
     },
-    snip20,
-    scrt_staking,
+    staking::scrt_staking,
 };
-use cosmwasm_std::{HumanAddr, Uint128, to_binary};
+use cosmwasm_std::{HumanAddr, to_binary};
+use cosmwasm_math_compat::Uint128;
 use shade_protocol::asset::Contract;
 use std::fmt::Display;
 use serde::Serialize;
-use shade_protocol::mint::MintLimit;
-use shade_protocol::governance::Proposal;
+use shade_protocol::contract_interfaces::mint::mint::MintLimit;
+use shade_protocol::contract_interfaces::governance::Proposal;
 
 const STORE_GAS: &str = "10000000";
 const GAS: &str = "800000";

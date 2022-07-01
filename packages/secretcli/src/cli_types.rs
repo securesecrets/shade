@@ -75,6 +75,12 @@ pub struct NetContract {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct StoredContract {
+    pub id: String,
+    pub code_hash: String,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct SignedTx {
     pub pub_key: PubKey,
     pub signature: String,

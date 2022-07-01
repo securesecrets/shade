@@ -1,14 +1,34 @@
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    from_binary, Api, Binary, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128,
+    from_binary,
+    Api,
+    Binary,
+    Extern,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::airdrop::account::AddressProofMsg;
-use shade_protocol::airdrop::errors::{permit_contract_mismatch, permit_key_revoked};
-use shade_protocol::airdrop::{
-    account::{authenticate_ownership, Account, AccountPermit, AddressProofPermit},
+use shade_protocol::contract_interfaces::airdrop::{
+    account::{
+        authenticate_ownership,
+        Account,
+        AccountPermit,
+        AddressProofMsg,
+        AddressProofPermit,
+    },
+    errors::{permit_contract_mismatch, permit_key_revoked},
     Config,
 };
 
@@ -128,8 +148,9 @@ pub fn is_permit_revoked<S: Storage>(
     }
 }
 
-pub fn validate_address_permit<S: Storage>(
+pub fn validate_address_permit<S: Storage, A: Api>(
     storage: &S,
+    api: &A,
     permit: &AddressProofPermit,
     params: &AddressProofMsg,
     contract: HumanAddr,
@@ -148,7 +169,7 @@ pub fn validate_address_permit<S: Storage>(
     }
 
     // Authenticate permit
-    authenticate_ownership(permit, params.address.as_str())
+    authenticate_ownership(api, permit, params.address.as_str())
 }
 
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
@@ -165,7 +186,7 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Authenticate permit
-    let address = permit.validate(None)?.as_humanaddr(&deps.api)?;
+    let address = permit.validate(&deps.api, None)?.as_humanaddr(None)?;
 
     // Check that permit is not revoked
     if is_permit_revoked(

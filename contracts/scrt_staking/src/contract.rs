@@ -1,15 +1,33 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
 };
 
-use shade_protocol::scrt_staking::{Config, HandleMsg, InitMsg, QueryMsg};
+use shade_protocol::contract_interfaces::dao::scrt_staking::{
+    Config,
+    HandleMsg,
+    InitMsg,
+    QueryMsg,
+};
 
 use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
+use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{
-    handle, query,
-    state::{config_w, self_address_w, viewing_key_r, viewing_key_w},
+    handle,
+    query,
+    state::{config_w, self_address_w, unbonding_w, viewing_key_r, viewing_key_w},
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -18,12 +36,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let config = Config {
-        admin: match msg.admin {
-            None => env.message.sender.clone(),
-            Some(admin) => admin,
+        admins: match msg.admins {
+            None => vec![env.message.sender.clone()],
+            Some(mut admins) => {
+                if !admins.contains(&env.message.sender) {
+                    admins.push(env.message.sender);
+                }
+                admins
+            }
         },
         sscrt: msg.sscrt,
-        treasury: msg.treasury,
+        owner: msg.owner,
         validator_bounds: msg.validator_bounds,
     };
 
@@ -31,8 +54,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
-
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    unbonding_w(&mut deps.storage).save(&Uint128::zero())?;
 
     Ok(InitResponse {
         messages: vec![
@@ -68,11 +90,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg,
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
-        HandleMsg::UpdateConfig { admin } => handle::try_update_config(deps, env, admin),
-        // Begin unbonding of a certain amount of scrt
-        HandleMsg::Unbond { validator } => handle::unbond(deps, env, validator),
-        // Collect a completed unbonding/rewards
-        HandleMsg::Claim { validator } => handle::claim(deps, env, validator),
+        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        HandleMsg::Adapter(adapter) => match adapter {
+            adapter::SubHandleMsg::Unbond { asset, amount } => {
+                handle::unbond(deps, env, asset, amount)
+            }
+            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
+            adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, asset),
+        },
     }
 }
 
@@ -81,10 +106,14 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
-        // All delegations
+        QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
-        //QueryMsg::Delegation { validator } => to_binary(&query::delegation(deps, validator)?),
-        QueryMsg::Rewards {} => to_binary(&query::rewards(deps)?),
+        QueryMsg::Adapter(adapter) => match adapter {
+            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
+            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
+            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
+            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(deps, asset)?),
+            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(deps, asset)?),
+        }
     }
 }

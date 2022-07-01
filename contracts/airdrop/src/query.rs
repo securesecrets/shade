@@ -1,19 +1,27 @@
-use crate::state::{account_viewkey_r, address_in_account_r, validate_address_permit};
 use crate::{
     handle::decay_factor,
     state::{
-        account_r, account_total_claimed_r, claim_status_r, config_r, decay_claimed_r,
-        total_claimed_r, validate_account_permit,
+        account_r,
+        account_total_claimed_r,
+        account_viewkey_r,
+        address_in_account_r,
+        claim_status_r,
+        config_r,
+        decay_claimed_r,
+        total_claimed_r,
+        validate_account_permit,
+        validate_address_permit,
     },
 };
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
 use query_authentication::viewing_keys::ViewingKey;
-use shade_protocol::airdrop::account::{AccountKey, AddressProofPermit};
-use shade_protocol::airdrop::errors::invalid_viewing_key;
-use shade_protocol::airdrop::AccountVerification;
-use shade_protocol::{
-    airdrop::{account::AccountPermit, claim_info::RequiredTask, QueryAnswer},
-    utils::math::{div, mult},
+use shade_protocol::contract_interfaces::airdrop::{
+    account::{AccountKey, AccountPermit, AddressProofPermit},
+    claim_info::RequiredTask,
+    errors::invalid_viewing_key,
+    AccountVerification,
+    QueryAnswer,
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
@@ -31,7 +39,7 @@ pub fn dates<S: Storage, A: Api, Q: Querier>(
         start: config.start_date,
         end: config.end_date,
         decay_start: config.decay_start,
-        decay_factor: current_date.map(|date| Uint128(100) * decay_factor(date, &config)),
+        decay_factor: current_date.map(|date| Uint128::new(100u128) * decay_factor(date, &config)),
     })
 }
 
@@ -44,10 +52,7 @@ pub fn total_claimed<S: Storage, A: Api, Q: Querier>(
         claimed = total_claimed;
     } else {
         let config = config_r(&deps.storage).load()?;
-        claimed = mult(
-            div(total_claimed, config.query_rounding)?,
-            config.query_rounding,
-        );
+        claimed = total_claimed.checked_div(config.query_rounding)? * config.query_rounding;
     }
     Ok(QueryAnswer::TotalClaimed { claimed })
 }
@@ -85,10 +90,11 @@ fn account_information<S: Storage, A: Api, Q: Querier>(
 
     let mut unclaimed: Uint128;
 
-    if unclaimed_percentage == Uint128(100) {
+    if unclaimed_percentage == Uint128::new(100u128) {
         unclaimed = account.total_claimable;
     } else {
-        unclaimed = unclaimed_percentage.multiply_ratio(account.total_claimable, Uint128(100));
+        unclaimed =
+            unclaimed_percentage.multiply_ratio(account.total_claimable, Uint128::new(100u128));
     }
 
     if let Some(time) = current_date {

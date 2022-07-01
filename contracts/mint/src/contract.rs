@@ -1,16 +1,26 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, Storage, Uint128,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdResult,
+    Storage,
 };
-use secret_toolkit::snip20::token_info_query;
+use secret_toolkit::snip20::{token_info_query, token_config_query};
 
-use shade_protocol::{
-    mint::{Config, HandleMsg, InitMsg, QueryMsg},
-    snip20::{token_config_query, Snip20Asset},
+use shade_protocol::contract_interfaces::{
+    mint::mint::{Config, HandleMsg, InitMsg, QueryMsg},
+    snip20::helpers::Snip20Asset,
 };
 
 use crate::{
-    handle, query,
+    handle,
+    query,
     state::{asset_list_w, asset_peg_w, config_w, limit_w, native_asset_w},
 };
 
@@ -40,7 +50,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         msg.native_asset.address.clone(),
     )?;
 
-    let token_config = token_config_query(&deps.querier, msg.native_asset.clone())?;
+    let token_config = token_config_query(&deps.querier, 256, msg.native_asset.code_hash.clone(), msg.native_asset.address.clone())?;
 
     let peg = match msg.peg {
         Some(p) => p,

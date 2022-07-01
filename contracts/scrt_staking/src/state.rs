@@ -1,12 +1,11 @@
-use cosmwasm_std::{HumanAddr, Storage};
+use cosmwasm_std::{HumanAddr, Storage, Uint128};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use shade_protocol::scrt_staking;
+use shade_protocol::contract_interfaces::dao::scrt_staking;
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static VIEWING_KEY: &[u8] = b"viewing_key";
-
-//pub static DELEGATIONS: &[u8] = b"delegations";
+pub static UNBONDING: &[u8] = b"unbonding";
 
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, scrt_staking::Config> {
     singleton(storage, CONFIG_KEY)
@@ -32,12 +31,10 @@ pub fn viewing_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
     singleton_read(storage, VIEWING_KEY)
 }
 
-/*
-pub fn delegations_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Delegation>> {
-    singleton_read(storage, DELEGATIONS)
+pub fn unbonding_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
+    singleton(storage, UNBONDING)
 }
 
-pub fn delegations_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Delegation>> {
-    singleton(storage, DELEGATIONS)
+pub fn unbonding_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
+    singleton_read(storage, UNBONDING)
 }
-*/

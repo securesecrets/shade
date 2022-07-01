@@ -1,28 +1,65 @@
 use crate::state::{
-    account_r, account_total_claimed_r, account_total_claimed_w, account_viewkey_w, account_w,
-    address_in_account_w, claim_status_r, claim_status_w, config_r, config_w, decay_claimed_w,
-    revoke_permit, total_claimed_r, total_claimed_w, validate_address_permit,
+    account_r,
+    account_total_claimed_r,
+    account_total_claimed_w,
+    account_viewkey_w,
+    account_w,
+    address_in_account_w,
+    claim_status_r,
+    claim_status_w,
+    config_r,
+    config_w,
+    decay_claimed_w,
+    revoke_permit,
+    total_claimed_r,
+    total_claimed_w,
+    validate_address_permit,
 };
+use cosmwasm_math_compat::{Decimal, Uint128};
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HumanAddr, Querier,
-    StdError, StdResult, Storage, Uint128,
+    from_binary,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use query_authentication::viewing_keys::ViewingKey;
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
 use secret_toolkit::snip20::send_msg;
-use shade_protocol::airdrop::account::{AccountKey, AddressProofMsg};
-use shade_protocol::airdrop::errors::{
-    account_already_created, account_does_not_exist, address_already_in_account, airdrop_ended,
-    airdrop_not_started, claim_too_high, decay_claimed, decay_not_set, expected_memo,
-    invalid_dates, invalid_partial_tree, invalid_task_percentage, not_admin, nothing_to_claim,
-    permit_rejected, unexpected_error,
+use shade_protocol::{
+    contract_interfaces::airdrop::{
+        account::{Account, AccountKey, AddressProofMsg, AddressProofPermit},
+        claim_info::RequiredTask,
+        errors::{
+            account_already_created,
+            account_does_not_exist,
+            address_already_in_account,
+            airdrop_ended,
+            airdrop_not_started,
+            claim_too_high,
+            decay_claimed,
+            decay_not_set,
+            expected_memo,
+            invalid_dates,
+            invalid_partial_tree,
+            invalid_task_percentage,
+            not_admin,
+            nothing_to_claim,
+            permit_rejected,
+            unexpected_error,
+        },
+        Config,
+        HandleAnswer,
+    },
+    utils::generic_response::ResponseStatus,
 };
-use shade_protocol::airdrop::{
-    account::{Account, AddressProofPermit},
-    claim_info::RequiredTask,
-    Config, HandleAnswer,
-};
-use shade_protocol::utils::generic_response::ResponseStatus;
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
@@ -163,7 +200,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
             count += task.percent;
         }
 
-        if count > Uint128(100) {
+        if count > Uint128::new(100u128) {
             return Err(invalid_task_percentage(count.to_string().as_str()));
         }
 
@@ -207,6 +244,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
             // Validate permits
             try_add_account_addresses(
                 &mut deps.storage,
+                &deps.api,
                 &config,
                 &env.message.sender,
                 &mut account,
@@ -251,6 +289,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
         // Validate permits
         try_add_account_addresses(
             &mut deps.storage,
+            &deps.api,
             &config,
             &env.message.sender,
             &mut account,
@@ -261,15 +300,15 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
 
     if updating_account && completed_percentage > Uint128::zero() {
         // Calculate the total new address amount
-        let added_address_total = (account.total_claimable - old_claim_amount)?;
+        let added_address_total = account.total_claimable.checked_sub(old_claim_amount)?;
         account_total_claimed_w(&mut deps.storage).update(sender.as_bytes(), |claimed| {
             if let Some(claimed) = claimed {
                 let new_redeem: Uint128;
-                if completed_percentage == Uint128(100) {
+                if completed_percentage == Uint128::new(100u128) {
                     new_redeem = added_address_total * decay_factor(env.block.time, &config);
                 } else {
                     new_redeem = completed_percentage
-                        .multiply_ratio(added_address_total, Uint128(100))
+                        .multiply_ratio(added_address_total, Uint128::new(100u128))
                         * decay_factor(env.block.time, &config);
                 }
 
@@ -286,7 +325,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
 
         messages.push(send_msg(
             env.message.sender.clone(),
-            redeem_amount,
+            redeem_amount.into(),
             None,
             None,
             None,
@@ -415,7 +454,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![send_msg(
             sender.clone(),
-            redeem_amount,
+            redeem_amount.into(),
             None,
             None,
             None,
@@ -452,11 +491,11 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
                     }
                 })?;
 
-                let send_total =
-                    (config.airdrop_amount - total_claimed_r(&deps.storage).load()?)?;
+                let total_claimed = total_claimed_r(&deps.storage).load()?;
+                let send_total = config.airdrop_amount.checked_sub(total_claimed)?;
                 let messages = vec![send_msg(
                     dump_address,
-                    send_total,
+                    send_total.into(),
                     None,
                     None,
                     None,
@@ -544,11 +583,11 @@ pub fn claim_tokens<S: Storage>(
     account_total_claimed_w(storage).update(sender.as_bytes(), |claimed| {
         if let Some(claimed) = claimed {
             // This solves possible uToken inaccuracies
-            if completed_percentage == Uint128(100) {
-                redeem_amount = (account.total_claimable - claimed)?;
+            if completed_percentage == Uint128::new(100u128) {
+                redeem_amount = account.total_claimable.checked_sub(claimed)?;
             } else {
-                redeem_amount =
-                    unclaimed_percentage.multiply_ratio(account.total_claimable, Uint128(100));
+                redeem_amount = unclaimed_percentage
+                    .multiply_ratio(account.total_claimable, Uint128::new(100u128));
             }
 
             // Update redeem amount with the decay multiplier
@@ -564,8 +603,9 @@ pub fn claim_tokens<S: Storage>(
 }
 
 /// Validates all of the information and updates relevant states
-pub fn try_add_account_addresses<S: Storage>(
+pub fn try_add_account_addresses<S: Storage, A: Api>(
     storage: &mut S,
+    api: &A,
     config: &Config,
     sender: &HumanAddr,
     account: &mut Account,
@@ -583,7 +623,7 @@ pub fn try_add_account_addresses<S: Storage>(
             // Avoid verifying sender
             if &params.address != sender {
                 // Check permit legitimacy
-                validate_address_permit(storage, permit, &params, config.contract.clone())?;
+                validate_address_permit(storage, api, permit, &params, config.contract.clone())?;
             }
 
             // Check that airdrop amount does not exceed maximum

@@ -140,7 +140,6 @@ Complete that address' tasks for a given user
     "status": "success",
     "total": "Total airdrop amount",
     "claimed": "Claimed amount",
-    "unclaimed": "Amount available to claim",
     "finished_tasks": "All of the finished tasks",
     "addresses": ["claimed addresses"]
   }
@@ -191,7 +190,6 @@ Claim the user's available claimable amount
     "status": "success",
     "total": "Total airdrop amount",
     "claimed": "Claimed amount",
-    "unclaimed": "Amount available to claim",
     "finished_tasks": "All of the finished tasks",
     "addresses": ["claimed addresses"]
   }

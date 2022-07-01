@@ -1,30 +1,49 @@
 [workspace]
 members = [
   # Packages
-  "packages/network_integration",
+  "packages/cosmwasm_math_compat",
   "packages/shade_protocol",
   "packages/secretcli",
+  "packages/contract_harness",
 
   # Network setups
-  "contracts/initializer",
   "contracts/airdrop",
 
   # Protocol contracts
+  "contracts/snip20",
   "contracts/governance",
-  "contracts/staking",
+  "contracts/bonds",
   "contracts/mint",
   "contracts/mint_router",
-  "contracts/treasury",
   "contracts/oracle",
-  "contracts/snip20",
-  "contracts/scrt_staking",
+  "contracts/sky",
+  "contracts/query_auth",
 
+  "contracts/snip20-reference-impl",
+
+  # DAO
+  # - Core
+  "contracts/treasury",
+  "contracts/treasury_manager",
+  # - Adapters
+  "contracts/scrt_staking",
+  "contracts/rewards_emission",
+  "contracts/lp_shade_swap",
+
+  "contracts/snip20_staking",
+  
   # Mock contracts
   "contracts/mock_band",
+  "contracts/mock_secretswap_pair",
+  "contracts/mock_sienna_pair",
 
   # Tools
-  "tools/doc2book"
+  "tools/doc2book",
+
+  #"packages/network_integration"
 ]
+
+exclude = ["packages/network_integration"]
 
 [profile.release]
 opt-level = 3

@@ -1,19 +1,40 @@
-use crate::handle::{try_account, try_set_viewing_key};
 use crate::{
     handle::{
-        try_add_tasks, try_claim, try_claim_decay, try_complete_task, try_disable_permit_key,
+        try_account,
+        try_add_tasks,
+        try_claim,
+        try_claim_decay,
+        try_complete_task,
+        try_disable_permit_key,
+        try_set_viewing_key,
         try_update_config,
     },
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
 };
+use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError,
-    StdResult, Storage, Uint128,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use secret_toolkit::utils::{pad_handle_result, pad_query_result};
-use shade_protocol::airdrop::errors::{invalid_dates, invalid_task_percentage};
-use shade_protocol::airdrop::{claim_info::RequiredTask, Config, HandleMsg, InitMsg, QueryMsg};
+use shade_protocol::contract_interfaces::airdrop::{
+    claim_info::RequiredTask,
+    errors::{invalid_dates, invalid_task_percentage},
+    Config,
+    HandleMsg,
+    InitMsg,
+    QueryMsg,
+};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -37,7 +58,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         count += claim.percent;
     }
 
-    if count > Uint128(100) {
+    if count > Uint128::new(100u128) {
         return Err(invalid_task_percentage(count.to_string().as_str()));
     }
 

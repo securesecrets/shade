@@ -22,15 +22,12 @@ class Mint(Contract):
             },
         }
         if treasury:
-            init_msg['treasury'] = {
-                'address': treasury.address,
-                'code_hash': treasury.code_hash,
-            }
+            init_msg['treasury'] = treasury.address
 
         if asset_peg:
             init_msg['peg'] = asset_peg
 
-        print(json.dumps(init_msg, indent=2))
+        # print(json.dumps(init_msg, indent=2))
         init_msg = json.dumps(init_msg)
 
         super().__init__(contract, init_msg, label, admin, uploader, backend,

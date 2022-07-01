@@ -23,121 +23,248 @@ chain_config = {
 viewing_key = 'password'
 
 
-account_key = 'a' #if chain_config['chain-id'] == 'holodeck-2' else 'a'
+ACCOUNT_KEY = 'a' #if chain_config['chain-id'] == 'holodeck-2' else 'a'
 backend = 'test' #None if chain_config['chain-id'] == 'holodeck-2' else 'test'
-account = run_command(['secretd', 'keys', 'show', '-a', account_key]).rstrip()
+ACCOUNT = run_command(['secretd', 'keys', 'show', '-a', ACCOUNT_KEY]).rstrip()
 
 
-print('ACCOUNT', account)
+print('ACCOUNT', ACCOUNT)
 
 print('Configuring sSCRT')
 sscrt = SNIP20(gen_label(8), 
             name='secretSCRT', symbol='SSCRT', 
             decimals=6, public_total_supply=True, 
             enable_deposit=True, enable_burn=True,
-            enable_redeem=True, admin=account, 
-            uploader=account, backend=backend)
-print(sscrt.address)
+            enable_redeem=True, admin=ACCOUNT, 
+            uploader=ACCOUNT, backend=backend)
+print('sSCRT', sscrt.address, sscrt.code_hash)
 sscrt.execute({'set_viewing_key': {'key': viewing_key}})
 
-deposit_amount = '200000000uscrt' 
-# lol
-half_amount = '100000000uscrt' 
+seed_amount = 100000000000
 
-print('Depositing', deposit_amount)
-sscrt.execute({'deposit': {}}, account, deposit_amount)
-print('SSCRT', sscrt.get_balance(account, viewing_key))
+print('Depositing', seed_amount)
+sscrt.execute({'deposit': {}}, ACCOUNT, str(seed_amount) + 'uscrt')
 
+print(f'Deploying Treasury')
 treasury = Contract(
     '../compiled/treasury.wasm.gz',
     json.dumps({
-        'admin': account,
+        'admin': ACCOUNT,
         'viewing_key': viewing_key,
+        'sscrt': sscrt.as_dict(),
     }),
     gen_label(8),
 )
 print('TREASURY', treasury.address)
 
-staking_init = {
-    'admin': account,
-    'treasury': treasury.address,
-    'sscrt': {
-        'address': sscrt.address,
-        'code_hash': sscrt.code_hash,
-    },
-    'viewing_key': viewing_key,
-}
+print('Registering Account w/ treasury')
+print(treasury.execute({
+    'add_account': {
+        'holder': ACCOUNT,
+    }
+}))
 
 print('Registering sSCRT w/ treasury')
 print(treasury.execute({
     'register_asset': {
-        'contract': {
-            'address': sscrt.address, 
-            'code_hash': sscrt.code_hash,
-        }
+        'contract': sscrt.as_dict(),
     }
 }))
 
-scrt_staking = Contract(
-    '../compiled/scrt_staking.wasm.gz',
-    json.dumps(staking_init),
+print('Deploying Manager')
+treasury_manager = Contract(
+    '../compiled/treasury_manager.wasm.gz',
+    json.dumps({
+        'admin': ACCOUNT,
+        'treasury': treasury.address,
+        'viewing_key': viewing_key,
+    }),
     gen_label(8),
 )
-print('STAKING', scrt_staking.address)
+print('Manager', treasury_manager.address)
 
-print('Allocating 90% sSCRT to staking')
-allocation = .9
+print('Registering sscrt w/ manager')
+print(treasury_manager.execute({
+        'register_asset': {
+            'contract': sscrt.as_dict(),
+        }
+    },
+    ACCOUNT,
+))
+
+print(f'Registering Manager with Treasury')
 print(treasury.execute({
-    'register_allocation': {
+    'register_manager': {
+        'contract': treasury_manager.as_dict(),
+    }
+}))
+
+tolerance = .05
+allowance = .9
+print(f'Register Manager allowance {allowance * 100}% tolerance {tolerance * 100}%')
+print(treasury.execute({
+    'allowance': {
         'asset': sscrt.address,
-        'allocation': {
-            'staking': {
-                'contract': {
-                    'address': scrt_staking.address, 
-                    'code_hash': scrt_staking.code_hash,
-                },
-                'allocation': str(int(allocation * 10**18)),
-            },
+        'allowance': {
+            'portion': {
+                'spender': treasury_manager.address,
+                'portion': str(int(allowance * 10**18)),
+                'last_refresh': '',
+                'tolerance': str(int(tolerance * 10**18)),
+            }
         }
     }
 }))
 
+print('Deploying SCRT Staking')
+scrt_staking = Contract(
+    '../compiled/scrt_staking.wasm.gz',
+    json.dumps({
+        'admin': ACCOUNT,
+        'treasury': treasury.address,
+        'sscrt': sscrt.as_dict(),
+        'viewing_key': viewing_key,
+    }),
+    gen_label(8),
+)
+print(scrt_staking.address)
+
+allocation = 1
+
+print(f'Allocating {allocation * 100}% sSCRT to scrt-staking')
+print(treasury_manager.execute({
+    'allocate': {
+        'asset': sscrt.address,
+        'allocation': {
+            'nick': 'SCRT Staking',
+            'contract': scrt_staking.as_dict(),
+            'alloc_type': 'portion',
+            'amount': str(int(allocation * 10**18)),
+        }
+    }
+}))
 
 print('Treasury Assets')
 print(treasury.query({'assets': {}}))
 
 print('Treasury sSCRT Balance')
-print(treasury.query({'balance': {'asset': sscrt.address}}))
+print(treasury.query({'adapter': {'balance': {'asset': sscrt.address}}}))
 
-print('Treasury sSCRT Applications')
-print(treasury.query({'allocations': {'asset': sscrt.address}}))
-
-print('Sending 100000000 usscrt to treasury')
-sscrt.execute({
+print(f'Sending {seed_amount} usscrt to treasury')
+print(sscrt.execute({
         "send": {
             "recipient": treasury.address,
-            "amount": str(100000000),
+            "amount": str(seed_amount),
         },
     },
-    account,
-)
-print('Treasury sSCRT Balance')
-print(treasury.query({'balance': {'asset': sscrt.address}}))
+    ACCOUNT,
+))
 
-print('DELEGATIONS')
-delegations = scrt_staking.query({'delegations': {}})
-print(delegations)
 
-print('Waiting for rewards',)
-while scrt_staking.query({'rewards': {}}) == '0':
-    print('.',)
-print()
+while True:
+
+    print('\nTreasury')
+    print('Balance')
+    treasury_balance = treasury.query({
+        'adapter': {
+            'balance': {
+                'asset': sscrt.address
+            },
+        }
+    })['balance']['amount']
+    print(treasury_balance)
+
+    print('\nManager')
+
+    print('Balance')
+    manager_balance = treasury_manager.query({
+        'adapter': {
+            'balance': {
+                'asset': sscrt.address,
+            }
+        }
+    })['balance']['amount']
+    print(manager_balance)
+
+    outstanding = sum(map(int, [manager_balance]))
+    reserves = int(treasury_balance) - outstanding
+
+    print('ALLOCS')
+    print('Manager', int(manager_balance) / int(treasury_balance))
+    print('Reserves', int(reserves) / int(treasury_balance))
     
-print('REWARDS', scrt_staking.query({'rewards': {}}))
+    print('Rebalance...')
+    print(treasury.execute({
+        'adapter': {
+            'update': {
+                'asset': sscrt.address
+            },
+        }
+    }))
+    print(treasury_manager.query({
+        'pending_allowance': {
+            'asset': sscrt.address
+        }
+    }))
 
-print('CLAIMING')
-for delegation in delegations:
-    print(scrt_staking.execute({'claim': {'validator': delegation['validator']}}))
+    print('Unbonding')
+    unbonding = treasury_manager.query({
+        'adapter': {
+            'unbonding': {
+                'asset': sscrt.address,
+            }
+        }
+    })['unbonding']['amount']
+    print(unbonding)
 
-print('Treasury sSCRT Balance')
-print(treasury.query({'balance': {'asset': sscrt.address}}))
+    print('Update Manager...')
+    treasury_manager.execute({
+        'adapter': {
+            'update': {
+                'asset': sscrt.address,
+            }
+        }
+    }, ACCOUNT)
+
+    print('Update SCRT Staking...')
+    scrt_staking.execute({
+        'adapter': {
+            'update': {
+                'asset': sscrt.address,
+            }
+        }
+    }, ACCOUNT)
+
+    print(treasury_manager.query({
+        'pending_allowance': {
+            'asset': sscrt.address
+        }
+    }))
+
+    print(treasury_manager.query({
+        'adapter': {
+            'unbonding': {
+                'asset': sscrt.address,
+            }
+        }
+    }))
+
+    claimable = treasury_manager.query({
+        'adapter': {
+            'claimable': {
+                'asset': sscrt.address,
+            }
+        }
+    })
+    print(claimable)
+    if claimable['claimable']['amount'] != '0': 
+        print('Claiming...')
+        treasury_manager.execute({
+            'adapter': {
+                'claim': {'asset': sscrt.address}
+            }
+        })
+
+
+    print('=' * 20, end='\n')
+

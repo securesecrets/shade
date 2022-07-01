@@ -1,9 +1,19 @@
-use cosmwasm_std::{HumanAddr, Storage, Uint128};
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{HumanAddr, Storage};
 use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    bucket,
+    bucket_read,
+    singleton,
+    singleton_read,
+    Bucket,
+    ReadonlyBucket,
+    ReadonlySingleton,
     Singleton,
 };
-use shade_protocol::{mint_router::Config, snip20::Snip20Asset, utils::asset::Contract};
+use shade_protocol::{
+    contract_interfaces::{mint::mint_router::Config, snip20::helpers::Snip20Asset},
+    utils::asset::Contract,
+};
 
 pub static CONFIG: &[u8] = b"config";
 pub static REGISTERED_ASSETS: &[u8] = b"registered_assets";

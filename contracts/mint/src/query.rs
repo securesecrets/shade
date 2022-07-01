@@ -1,13 +1,21 @@
 use crate::{
     handle::{calculate_portion, mint_amount},
     state::{
-        asset_list_r, asset_peg_r, assets_r, config_r, limit_r, limit_refresh_r, minted_r,
-        native_asset_r, total_burned_r,
+        asset_list_r,
+        asset_peg_r,
+        assets_r,
+        config_r,
+        limit_r,
+        limit_refresh_r,
+        minted_r,
+        native_asset_r,
+        total_burned_r,
     },
 };
 use chrono::prelude::*;
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::mint::QueryAnswer;
+use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
+use shade_protocol::contract_interfaces::mint::mint::QueryAnswer;
 
 pub fn native_asset<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -67,17 +75,17 @@ pub fn mint<S: Storage, A: Api, Q: Querier>(
 
     match assets_r(&deps.storage).may_load(offer_asset.to_string().as_bytes())? {
         Some(asset) => {
-            let fee_amount = calculate_portion(amount, asset.fee);
+            //let fee = calculate_portion(amount, asset.fee);
+            //let amount = mint_amount(deps, amount.checked_sub(fee)?, &asset, &native_asset)?;
+            let amount = mint_amount(deps, amount, &asset, &native_asset)?;
             Ok(QueryAnswer::Mint {
-                asset: native_asset.contract.clone(),
-                amount: mint_amount(deps, (amount - fee_amount)?, &asset, &native_asset)?,
+                asset: native_asset.contract,
+                amount,
             })
         }
-        None => {
-            return Err(StdError::NotFound {
-                kind: offer_asset.to_string(),
-                backtrace: None,
-            });
-        }
+        None => Err(StdError::NotFound {
+            kind: offer_asset.to_string(),
+            backtrace: None,
+        }),
     }
 }
