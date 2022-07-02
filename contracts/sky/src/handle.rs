@@ -111,7 +111,7 @@ pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
     // I'm pissed I couldn't do this in one line
     let mut cycles = Cycles::load(&deps.storage)?.0;
     cycles.remove(index.u128() as usize);
-    Cycles(cycles).save(&mut deps.storage);
+    Cycles(cycles).save(&mut deps.storage)?;
 
     Ok(HandleResponse {
         messages: vec![],
