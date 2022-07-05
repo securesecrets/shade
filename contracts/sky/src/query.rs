@@ -279,10 +279,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    if swap_amounts
-        .len()
-        .gt(&cycles[index.u128() as usize].pair_addrs.clone().len())
-    {
+    if swap_amounts.len() > cycles[index.u128() as usize].pair_addrs.clone().len() {
         return Err(StdError::GenericErr {
             msg: String::from("More swap amounts than arb pairs"),
             backtrace: None,
@@ -358,10 +355,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    if swap_amounts
-        .len()
-        .gt(&cycles[index.u128() as usize].pair_addrs.clone().len())
-    {
+    if swap_amounts.len() > cycles[index.u128() as usize].pair_addrs.clone().len() {
         return Err(StdError::GenericErr {
             msg: String::from("More swap amounts than arb pairs"),
             backtrace: None,
@@ -526,7 +520,7 @@ pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
         QueryAnswer::Balance { shd_bal, silk_bal } => {
             if config.shd_token_contract.address == asset {
                 amount = shd_bal;
-            } else {
+            } else if config.silk_token_contract.address == asset {
                 amount = silk_bal;
             }
         }
