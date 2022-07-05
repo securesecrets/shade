@@ -1,7 +1,7 @@
 use crate::{
     contract_interfaces::{
         dao::adapter,
-        dex::{dex::Dex, secretswap, sienna},
+        dex::{dex::Dex, secretswap, shadeswap, sienna},
     },
     utils::asset::Contract,
 };
@@ -253,7 +253,29 @@ impl ArbPair {
                 match res {
                     sienna::SimulationResponse { return_amount, .. } => swap_result = return_amount,
                 }
-            } //Dex::ShadeSwap => {},
+            }
+            Dex::ShadeSwap => {
+                let res = shadeswap::PairQuery::GetEstimatedPrice {
+                    offer: shadeswap::TokenAmount {
+                        token: shadeswap::TokenType::CustomToken {
+                            token_code_hash: offer_token.code_hash.clone(),
+                            contract_addr: offer_token.address.clone(),
+                        },
+                        amount,
+                    },
+                }
+                .query(
+                    &deps.querier,
+                    self.pair_contract.code_hash,
+                    self.pair_contract.address,
+                )?;
+                match res {
+                    shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => {
+                        swap_result = estimated_price
+                    }
+                    _ => {}
+                }
+            }
         }
         Ok(swap_result)
     }
@@ -290,7 +312,21 @@ impl ArbPair {
                 offer_asset.code_hash,
                 offer_asset.address,
             ),
-            //Dex::ShadeSwap => return send_msg(),
+            Dex::ShadeSwap => send_msg(
+                recipient,
+                cosmwasm_std::Uint128(amount.u128()),
+                Some(to_binary(&shadeswap::SwapTokens {
+                    expected_return: Some(expected_return),
+                    to: None,
+                    router_link: None,
+                    callback_signature: None,
+                })?),
+                None,
+                None,
+                1,
+                offer_asset.code_hash,
+                offer_asset.address,
+            ),
         }
     }
 }

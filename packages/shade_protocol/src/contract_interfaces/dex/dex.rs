@@ -21,7 +21,7 @@ use std::convert::TryFrom;
 pub enum Dex {
     SecretSwap,
     SiennaSwap,
-    //ShadeSwap,
+    ShadeSwap,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -36,11 +36,7 @@ pub struct TradingPair {
  * returns how much to be received from take_pool
  */
 
-pub fn pool_take_amount(
-    give_amount: Uint128,
-    give_pool: Uint128,
-    take_pool: Uint128,
-) -> Uint128 {
+pub fn pool_take_amount(give_amount: Uint128, give_pool: Uint128, take_pool: Uint128) -> Uint128 {
     Uint128::new(
         take_pool.u128() - give_pool.u128() * take_pool.u128() / (give_pool + give_amount).u128(),
     )
@@ -77,13 +73,14 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
                     .u128(),
                 ));
                 pool_sizes.push(Uint512::from(sienna::pool_cp(&deps, pair)?.u128()));
-            } /*
-              ShadeSwap => {
-                  prices.push(shadeswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
-                  pool_sizes.push(shadeswap::pool_size(&deps, pair)?);
-                  return Err(StdErr::generic_err("ShadeSwap Unavailable"));
-              },
-              */
+            }
+            _ => {} /*
+                    ShadeSwap => {
+                        prices.push(shadeswap::price(&deps, pair.clone(), sscrt.clone(), band.clone())?);
+                        pool_sizes.push(shadeswap::pool_size(&deps, pair)?);
+                        return Err(StdErr::generic_err("ShadeSwap Unavailable"));
+                    },
+                    */
         }
     }
 
@@ -131,11 +128,12 @@ pub fn best_price<S: Storage, A: Api, Q: Querier>(
                     sscrt.clone(),
                     band.clone(),
                 )?);
-            } /*
-              ShadeSwap => {
-                  return Err(StdErr::generic_err("ShadeSwap Unavailable"));
-              },
-              */
+            }
+            _ => {} /*
+                    ShadeSwap => {
+                        return Err(StdErr::generic_err("ShadeSwap Unavailable"));
+                    },
+                    */
         }
     }
     let max_amount = results.iter().max().unwrap();
@@ -167,10 +165,10 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
             sscrt.clone(),
             band.clone(),
         )?),
-        /*
-        ShadeSwap => {
-            return Err(StdErr::generic_err("ShadeSwap Unavailable"));
-        },
-        */
+        _ => return Err(StdError::generic_err("ShadeSwap not implemented")), /*
+                                                                             ShadeSwap => {
+                                                                                 return Err(StdErr::generic_err("ShadeSwap Unavailable"));
+                                                                             },
+                                                                             */
     }
 }
