@@ -30,10 +30,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let state = Config {
-        admin: match msg.admin {
-            None => env.message.sender.clone(),
-            Some(admin) => admin,
-        },
+        shade_admin: msg.shade_admin,
         mint_contract_shd: msg.mint_contract_shd,
         mint_contract_silk: msg.mint_contract_silk,
         market_swap_contract: msg.market_swap_contract,
@@ -45,8 +42,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     state.save(&mut deps.storage)?;
     SelfAddr(env.contract.address).save(&mut deps.storage)?;
     Cycles(vec![]).save(&mut deps.storage)?;
-
-    debug_print!("Contract was initialized by {}", env.message.sender);
 
     let messages = vec![
         set_viewing_key_msg(
@@ -79,7 +74,26 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::UpdateConfig { config, .. } => handle::try_update_config(deps, env, config),
+        HandleMsg::UpdateConfig {
+            shade_admin,
+            mint_contract_silk,
+            mint_contract_shd,
+            market_swap_contract,
+            shd_token_contract,
+            silk_token_contract,
+            treasury,
+            ..
+        } => handle::try_update_config(
+            deps,
+            env,
+            shade_admin,
+            mint_contract_shd,
+            mint_contract_silk,
+            market_swap_contract,
+            shd_token_contract,
+            silk_token_contract,
+            treasury,
+        ),
         HandleMsg::ArbPeg { amount, .. } => handle::try_execute(deps, env, amount),
         HandleMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),
         HandleMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, cycle),

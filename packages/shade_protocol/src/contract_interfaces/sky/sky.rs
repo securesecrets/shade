@@ -25,13 +25,13 @@ pub struct TokenContract {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admin: HumanAddr,
+    pub shade_admin: Contract,
     pub mint_contract_shd: Contract,
     pub mint_contract_silk: Contract,
     pub market_swap_contract: Contract,
     pub shd_token_contract: Contract,
     pub silk_token_contract: Contract,
-    pub treasury: HumanAddr,
+    pub treasury: Contract,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -66,13 +66,13 @@ impl ItemStorage for Cycles {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>, //TODO shade admins contract
+    pub shade_admin: Contract,
     pub mint_contract_shd: Contract,
     pub mint_contract_silk: Contract,
     pub market_swap_contract: Contract,
     pub shd_token_contract: Contract,
     pub silk_token_contract: Contract,
-    pub treasury: HumanAddr,
+    pub treasury: Contract,
     pub viewing_key: String,
 }
 
@@ -84,7 +84,13 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        config: Config,
+        shade_admin: Option<Contract>,
+        mint_contract_silk: Option<Contract>,
+        mint_contract_shd: Option<Contract>,
+        market_swap_contract: Option<Contract>,
+        shd_token_contract: Option<Contract>,
+        silk_token_contract: Option<Contract>,
+        treasury: Option<Contract>,
         padding: Option<String>,
     },
     ArbPeg {

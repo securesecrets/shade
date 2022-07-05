@@ -13,44 +13,80 @@ use cosmwasm_std::{
     Storage,
 };
 use secret_toolkit::snip20::{send_msg, set_viewing_key_msg};
+use shade_admin::admin::{self, ValidateAdminPermissionResponse};
 use shade_protocol::{
     contract_interfaces::{
         dao::adapter,
         dex::shadeswap::SwapTokens,
         mint::mint,
-        sky::sky::{self, Config, Cycle, Cycles, HandleAnswer, ViewingKeys},
+        sky::sky::{self, Config, Cycle, Cycles, HandleAnswer, SelfAddr, ViewingKeys},
     },
     utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
 
-/// ## Markdown
-
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    config: Config,
+    shade_admin: Option<Contract>,
+    mint_contract_shd: Option<Contract>,
+    mint_contract_silk: Option<Contract>,
+    market_swap_contract: Option<Contract>,
+    shd_token_contract: Option<Contract>,
+    silk_token_contract: Option<Contract>,
+    treasury: Option<Contract>,
 ) -> StdResult<HandleResponse> {
-    if env.message.sender != Config::load(&deps.storage)?.admin {
+    //Admin-only
+    let config = Config::load(&mut deps.storage)?;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(
+            &deps.querier,
+            config.shade_admin.code_hash,
+            config.shade_admin.address,
+        )?;
+
+    if admin_response.error_msg.is_some() {
         return Err(StdError::unauthorized());
     }
-    config.save(&mut deps.storage)?;
-    let view_key = ViewingKeys::load(&deps.storage)?.0;
-    let messages = vec![
-        set_viewing_key_msg(
-            view_key.clone(),
+
+    let messages = vec![];
+
+    if let Some(shade_admin) = shade_admin {
+        config.shade_admin = shade_admin;
+    }
+    if let Some(mint_contract_shd) = mint_contract_shd {
+        config.mint_contract_shd = mint_contract_shd;
+    }
+    if let Some(mint_contract_silk) = mint_contract_silk {
+        config.mint_contract_silk = mint_contract_silk;
+    }
+    if let Some(market_swap_contract) = market_swap_contract {
+        config.market_swap_contract = market_swap_contract;
+    }
+    if let Some(shd_token_contract) = shd_token_contract {
+        config.shd_token_contract = shd_token_contract;
+        messages.push(set_viewing_key_msg(
+            ViewingKeys::load(&deps.storage)?.0,
             None,
             1,
             config.shd_token_contract.code_hash.clone(),
             config.shd_token_contract.address.clone(),
-        )?,
-        set_viewing_key_msg(
-            view_key.clone(),
+        )?);
+    }
+    if let Some(silk_token_contract) = silk_token_contract {
+        config.silk_token_contract = silk_token_contract;
+        messages.push(set_viewing_key_msg(
+            ViewingKeys::load(&deps.storage)?.0,
             None,
             1,
             config.silk_token_contract.code_hash.clone(),
             config.silk_token_contract.address.clone(),
-        )?,
-    ];
+        )?);
+    }
+    config.save(&mut deps.storage)?;
     Ok(HandleResponse {
         messages,
         log: vec![],
@@ -63,7 +99,16 @@ pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
     env: Env,
     cycles_to_set: Vec<Cycle>,
 ) -> StdResult<HandleResponse> {
-    if env.message.sender != Config::load(&deps.storage)?.admin {
+    //Admin-only
+    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
+
+    if admin_response.error_msg.is_some() {
         return Err(StdError::unauthorized());
     }
 
@@ -82,7 +127,16 @@ pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     cycles_to_add: Vec<Cycle>,
 ) -> StdResult<HandleResponse> {
-    if env.message.sender != Config::load(&deps.storage)?.admin {
+    //Admin-only
+    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
+
+    if admin_response.error_msg.is_some() {
         return Err(StdError::unauthorized());
     }
 
@@ -104,7 +158,16 @@ pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     index: Uint128,
 ) -> StdResult<HandleResponse> {
-    if env.message.sender != Config::load(&deps.storage)?.admin {
+    //Admin-only
+    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
+
+    if admin_response.error_msg.is_some() {
         return Err(StdError::unauthorized());
     }
 
@@ -337,7 +400,7 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
     let config = Config::load(&deps.storage)?;
-    if !(env.message.sender == config.treasury) {
+    if !(env.message.sender == config.treasury.address) {
         return Err(StdError::Unauthorized { backtrace: None });
     }
     if !(config.shd_token_contract.address == asset)
@@ -355,7 +418,7 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
         contract = config.silk_token_contract;
     }
     let messages = vec![send_msg(
-        config.treasury,
+        config.treasury.address,
         cosmwasm_std::Uint128::from(amount.u128()),
         None,
         None,
