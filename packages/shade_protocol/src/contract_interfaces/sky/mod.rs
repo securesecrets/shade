@@ -3,7 +3,7 @@ use crate::{
         dao::adapter,
         dex::{dex::Dex, secretswap, shadeswap, sienna},
     },
-    utils::asset::Contract,
+    utils::{asset::Contract, storage::plus::ItemStorage},
 };
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, Api, CosmosMsg, Extern, HumanAddr, Querier, StdError, Storage};
@@ -45,20 +45,20 @@ pub struct SelfAddr(pub HumanAddr);
 #[serde(rename_all = "snake_case")]
 pub struct Cycles(pub Vec<Cycle>);
 
-#[cfg(feature = "sky-impl")]
-use crate::utils::storage::plus::ItemStorage;
+//#[cfg(feature = "sky-impl")]
+//use crate::utils::storage::plus::ItemStorage;
 impl ItemStorage for Config {
     const ITEM: Item<'static, Config> = Item::new("item_config");
 }
-#[cfg(feature = "sky-impl")]
+//#[cfg(feature = "sky-impl")]
 impl ItemStorage for ViewingKeys {
     const ITEM: Item<'static, ViewingKeys> = Item::new("item_view_keys");
 }
-#[cfg(feature = "sky-impl")]
+//#[cfg(feature = "sky-impl")]
 impl ItemStorage for SelfAddr {
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }
-#[cfg(feature = "sky-impl")]
+//#[cfg(feature = "sky-impl")]
 impl ItemStorage for Cycles {
     const ITEM: Item<'static, Cycles> = Item::new("item_cycles");
 }
