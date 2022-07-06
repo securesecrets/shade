@@ -15,13 +15,6 @@ use secret_toolkit::{
 };
 use serde::{Deserialize, Serialize};
 
-/*#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct TokenContract {
-    pub contract: Contract,
-    pub decimals: Uint128,
-}*/
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
@@ -33,32 +26,31 @@ pub struct Config {
     pub silk_token_contract: Contract,
     pub treasury: Contract,
 }
+
+impl ItemStorage for Config {
+    const ITEM: Item<'static, Config> = Item::new("item_config");
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ViewingKeys(pub String);
+
+impl ItemStorage for ViewingKeys {
+    const ITEM: Item<'static, ViewingKeys> = Item::new("item_view_keys");
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct SelfAddr(pub HumanAddr);
 
+impl ItemStorage for SelfAddr {
+    const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Cycles(pub Vec<Cycle>);
 
-//#[cfg(feature = "sky-impl")]
-//use crate::utils::storage::plus::ItemStorage;
-impl ItemStorage for Config {
-    const ITEM: Item<'static, Config> = Item::new("item_config");
-}
-//#[cfg(feature = "sky-impl")]
-impl ItemStorage for ViewingKeys {
-    const ITEM: Item<'static, ViewingKeys> = Item::new("item_view_keys");
-}
-//#[cfg(feature = "sky-impl")]
-impl ItemStorage for SelfAddr {
-    const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
-}
-//#[cfg(feature = "sky-impl")]
 impl ItemStorage for Cycles {
     const ITEM: Item<'static, Cycles> = Item::new("item_cycles");
 }
