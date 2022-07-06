@@ -30,7 +30,7 @@ cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
 cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "math", "dex", "shadeswap" ] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "math", "dex","sienna", "secretswap", "shadeswap", "adapter", "storage_plus" ] }
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 schemars = "0.7"
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git" }
