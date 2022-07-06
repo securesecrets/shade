@@ -1,7 +1,7 @@
 use chrono::prelude::*;
-use cosmwasm_std::{Env, StdError, StdResult, Uint128};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::c_std::{Env, StdError, StdResult, Uint128};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

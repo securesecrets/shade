@@ -1,9 +1,9 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     Storage, Api, Querier, Extern, Env, StdResult, HandleResponse, to_binary, 
     StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
 };
-use fadroma::scrt::to_cosmos_msg;
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::fadroma::scrt::to_cosmos_msg;
+use shade_protocol::math_compat::Uint128;
 use shade_protocol::{
     utils::{asset::Contract, storage::plus::ItemStorage},
     contract_interfaces::{
@@ -14,8 +14,8 @@ use shade_protocol::{
     mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
     snip20::helpers::Snip20Asset,
 }};
-use secret_toolkit::utils::Query;
-use secret_toolkit::snip20::send_msg;
+use shade_protocol::secret_toolkit::utils::Query;
+use shade_protocol::secret_toolkit::snip20::send_msg;
 use crate::{query::trade_profitability};
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
@@ -210,7 +210,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
         messages.push(send_msg(
             config.market_swap_addr.address.clone(),
-            cosmwasm_std::Uint128(first_swap_min_expected.clone().u128()),
+            shade_protocol::c_std::Uint128(first_swap_min_expected.clone().u128()),
             Some(to_binary(&CallbackSwap{
                 expected_return: second_swap_min_expected.clone(),
             })?),
@@ -224,7 +224,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     else {
         messages.push(send_msg(
             config.market_swap_addr.address.clone(),
-            cosmwasm_std::Uint128(amount.u128()),
+            shade_protocol::c_std::Uint128(amount.u128()),
             Some(to_binary(&CallbackSwap{
                 expected_return: first_swap_min_expected,
             })?),

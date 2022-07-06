@@ -1,15 +1,15 @@
-use cosmwasm_std::{testing::*, Binary, HumanAddr};
-use fadroma::core::ContractLink;
-use fadroma::ensemble::ContractEnsemble;
+use shade_protocol::c_std::{testing::*, Binary, HumanAddr};
+use shade_protocol::fadroma::core::ContractLink;
+use shade_protocol::fadroma::ensemble::ContractEnsemble;
 use shade_protocol::contract_interfaces::{
     bonds,
     query_auth::{self, PermitData, QueryPermit},
     snip20::helpers::Snip20Asset,
 };
 
-use query_authentication::transaction::{PermitSignature, PubKey};
+use shade_protocol::query_authentication::transaction::{PermitSignature, PubKey};
 
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 
 pub fn query_no_opps(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAddr>) -> () {
     let msg = bonds::QueryMsg::BondOpportunities {};

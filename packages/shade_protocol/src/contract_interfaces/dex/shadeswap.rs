@@ -9,10 +9,10 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{Uint128, HumanAddr, StdResult, StdError, Extern, Querier, Api, Storage};
-use schemars::JsonSchema;
+use crate::c_std::{Uint128, HumanAddr, StdResult, StdError, Extern, Querier, Api, Storage};
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::Query;
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 /*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

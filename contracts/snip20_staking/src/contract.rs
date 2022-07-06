@@ -61,10 +61,10 @@ use crate::{
     transaction_history::{get_transfers, get_txs, store_claim_reward, store_mint, store_transfer},
     viewing_key::{ViewingKey, VIEWING_KEY_SIZE},
 };
-use cosmwasm_math_compat::{Uint128, Uint256};
+use shade_protocol::math_compat::{Uint128, Uint256};
 /// This contract implements SNIP-20 standard:
 /// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     from_binary,
     log,
     to_binary,
@@ -84,7 +84,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     permit::{validate, Permission, Permit, RevokedPermits},
     snip20::{register_receive_msg, send_msg, token_info_query},
 };
@@ -655,7 +655,7 @@ pub fn try_mint_impl<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let raw_amount = amount.u128();
 
@@ -768,7 +768,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
     recipient_canon: &CanonicalAddr,
     amount: Uint128,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 
     distributors: &Option<Vec<HumanAddr>>,
     time: u64,
@@ -947,7 +947,7 @@ fn try_send_impl<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     memo: Option<String>,
     msg: Option<Binary>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 
     distributors: &Option<Vec<HumanAddr>>,
     time: u64,
@@ -1589,8 +1589,8 @@ fn is_valid_symbol(symbol: &str) -> bool {
 mod staking_tests {
     use super::*;
     use crate::msg::{InitConfig, ResponseStatus};
-    use cosmwasm_math_compat::Uint256;
-    use cosmwasm_std::{
+    use shade_protocol::math_compat::Uint256;
+    use shade_protocol::c_std::{
         from_binary,
         testing::*,
         BlockInfo,
@@ -3041,7 +3041,7 @@ mod staking_tests {
 mod snip20_tests {
     use super::*;
     use crate::msg::{InitConfig, ResponseStatus};
-    use cosmwasm_std::{
+    use shade_protocol::c_std::{
         from_binary,
         testing::*,
         BlockInfo,

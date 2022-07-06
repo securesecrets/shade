@@ -22,8 +22,8 @@ use crate::{
     },
     query,
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Binary,
@@ -36,7 +36,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::register_receive_msg,
     utils::{pad_handle_result, pad_query_result},
 };

@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     Api, BalanceResponse, BankQuery, Delegation, DistQuery, Extern, FullDelegation, HumanAddr,
     Querier, RewardsResponse, StdError, StdResult, Storage, Uint128,
 };
@@ -11,7 +11,7 @@ use shade_protocol::{
     utils::asset::scrt_balance,
 };
 
-use secret_toolkit::snip20::balance_query;
+use shade_protocol::secret_toolkit::snip20::balance_query;
 
 use crate::{
     state::{config_r, self_address_r, unbonding_r, viewing_key_r},

@@ -1,6 +1,6 @@
-use cosmwasm_std::{Coin, HumanAddr};
-use fadroma::ensemble::MockEnv;
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::c_std::{Coin, HumanAddr};
+use shade_protocol::fadroma::ensemble::MockEnv;
+use shade_protocol::math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitialBalance, QueryAnswer, QueryMsg};
 use shade_protocol::contract_interfaces::snip20::transaction_history::{RichTx, TxAction};
 use crate::tests::{create_vk, init_snip20_with_config};
@@ -121,7 +121,7 @@ fn transaction_history() {
             });
             assert_eq!(txs[0].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: cosmwasm_std::Uint128(1500)
+                amount: shade_protocol::c_std::Uint128(1500)
             });
 
             assert_eq!(txs[1].id, 2);
@@ -132,7 +132,7 @@ fn transaction_history() {
             });
             assert_eq!(txs[1].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: cosmwasm_std::Uint128(200)
+                amount: shade_protocol::c_std::Uint128(200)
             });
 
             assert_eq!(txs[2].id, 3);
@@ -143,7 +143,7 @@ fn transaction_history() {
             });
             assert_eq!(txs[2].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: cosmwasm_std::Uint128(140)
+                amount: shade_protocol::c_std::Uint128(140)
             });
 
             assert_eq!(txs[3].id, 4);
@@ -154,7 +154,7 @@ fn transaction_history() {
             });
             assert_eq!(txs[3].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: cosmwasm_std::Uint128(300)
+                amount: shade_protocol::c_std::Uint128(300)
             });
 
             assert_eq!(txs[4].id, 5);
@@ -165,7 +165,7 @@ fn transaction_history() {
             });
             assert_eq!(txs[4].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: cosmwasm_std::Uint128(540)
+                amount: shade_protocol::c_std::Uint128(540)
             });
 
         },

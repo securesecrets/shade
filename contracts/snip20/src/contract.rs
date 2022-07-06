@@ -22,7 +22,7 @@ use crate::{
     },
     query,
 };
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     from_binary,
     to_binary,
     Api,
@@ -38,7 +38,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
     contract_interfaces::snip20::{
         manager::{ContractStatusLevel, Key, PermitKey},

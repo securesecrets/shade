@@ -1,5 +1,5 @@
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
-use secret_toolkit::{
+use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, balance_query},
     utils::Query,
 };

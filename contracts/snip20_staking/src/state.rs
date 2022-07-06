@@ -1,18 +1,18 @@
 use std::{any::type_name, convert::TryFrom};
 
-use cosmwasm_std::{CanonicalAddr, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage};
-use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
+use shade_protocol::c_std::{CanonicalAddr, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage};
+use shade_protocol::storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
-use secret_toolkit::storage::{TypedStore, TypedStoreMut};
+use shade_protocol::secret_toolkit::storage::{TypedStore, TypedStoreMut};
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use shade_protocol::schemars::JsonSchema;
+use shade_protocol::serde::{Deserialize, Serialize};
 
 use crate::{
     msg::{status_level_to_u8, u8_to_status_level, ContractStatusLevel},
     viewing_key::ViewingKey,
 };
-use serde::de::DeserializeOwned;
+use shade_protocol::serde::de::DeserializeOwned;
 
 // Snip20
 pub static CONFIG_KEY: &[u8] = b"config";
@@ -300,7 +300,7 @@ pub struct Allowance {
 }
 
 impl Allowance {
-    pub fn is_expired_at(&self, block: &cosmwasm_std::BlockInfo) -> bool {
+    pub fn is_expired_at(&self, block: &shade_protocol::c_std::BlockInfo) -> bool {
         match self.expiration {
             Some(time) => block.time >= time,
             None => false, // allowance has no expiration

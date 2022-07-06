@@ -4,10 +4,10 @@ use contract_harness::harness::{
     snip20::Snip20,
     snip20_staking::Snip20Staking,
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, HumanAddr, StdResult};
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use fadroma::core::ContractLink;
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{to_binary, HumanAddr, StdResult};
+use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
+use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
         governance,

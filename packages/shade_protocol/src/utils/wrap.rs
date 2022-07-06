@@ -1,5 +1,5 @@
 use crate::utils::{asset::Contract};
-use cosmwasm_std::{
+use crate::c_std::{
     Binary,
     CosmosMsg,
     HumanAddr,

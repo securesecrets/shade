@@ -1,6 +1,6 @@
 mod test {
     use crate::handle::{active, calculate_claim_date, calculate_issuance};
-    use cosmwasm_math_compat::Uint128;
+    use shade_protocol::math_compat::Uint128;
     use shade_protocol::{
         contract_interfaces::{
             bonds::{errors::*},

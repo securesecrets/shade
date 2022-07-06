@@ -1,5 +1,5 @@
 use crate::state::{config_r, config_w, dex_pairs_r, dex_pairs_w, index_r, index_w};
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
@@ -11,7 +11,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::{token_info_query, TokenInfo},
     utils::Query,
 };
