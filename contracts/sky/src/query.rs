@@ -6,7 +6,7 @@ use shade_protocol::{
         dao::adapter,
         dex::shadeswap::{self, TokenAmount, TokenType},
         mint::mint,
-        sky::sky::{Config, Cycles, QueryAnswer, SelfAddr, ViewingKeys},
+        sky::{Config, Cycles, QueryAnswer, SelfAddr, ViewingKeys},
         snip20,
     },
     utils::storage::plus::ItemStorage,

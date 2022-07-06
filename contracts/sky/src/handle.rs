@@ -12,14 +12,17 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::snip20::{send_msg, set_viewing_key_msg};
+use secret_toolkit::{
+    snip20::{send_msg, set_viewing_key_msg},
+    utils::Query,
+};
 use shade_admin::admin::{self, ValidateAdminPermissionResponse};
 use shade_protocol::{
     contract_interfaces::{
         dao::adapter,
         dex::shadeswap::SwapTokens,
         mint::mint,
-        sky::sky::{self, Config, Cycle, Cycles, HandleAnswer, SelfAddr, ViewingKeys},
+        sky::{self, Config, Cycle, Cycles, HandleAnswer, SelfAddr, ViewingKeys},
     },
     utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
@@ -36,7 +39,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     treasury: Option<Contract>,
 ) -> StdResult<HandleResponse> {
     //Admin-only
-    let config = Config::load(&mut deps.storage)?;
+    let mut config = Config::load(&mut deps.storage)?;
     let admin_response: ValidateAdminPermissionResponse =
         admin::QueryMsg::ValidateAdminPermission {
             contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
@@ -44,15 +47,15 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }
         .query(
             &deps.querier,
-            config.shade_admin.code_hash,
-            config.shade_admin.address,
+            config.shade_admin.code_hash.clone(),
+            config.shade_admin.address.clone(),
         )?;
 
     if admin_response.error_msg.is_some() {
         return Err(StdError::unauthorized());
     }
 
-    let messages = vec![];
+    let mut messages = vec![];
 
     if let Some(shade_admin) = shade_admin {
         config.shade_admin = shade_admin;
@@ -85,6 +88,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             config.silk_token_contract.code_hash.clone(),
             config.silk_token_contract.address.clone(),
         )?);
+    }
+    if let Some(treasury) = treasury {
+        config.treasury = treasury;
     }
     config.save(&mut deps.storage)?;
     Ok(HandleResponse {

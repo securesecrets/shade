@@ -36,7 +36,7 @@ schemars = "0.7"
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git" }
 #shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap", branch = "secret_toolkit_implementation" }
 shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0"}
-
+admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0" }
 [dev-dependencies]
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
 #shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap", features = ["amm_pair"] }

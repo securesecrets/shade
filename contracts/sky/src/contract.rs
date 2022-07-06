@@ -2,7 +2,6 @@ use crate::{handle, query};
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
     self,
-    debug_print,
     to_binary,
     Api,
     Binary,
@@ -19,7 +18,7 @@ use secret_toolkit::snip20::set_viewing_key_msg;
 use shade_protocol::{
     contract_interfaces::{
         dao::adapter,
-        sky::sky::{Config, Cycles, HandleMsg, InitMsg, QueryMsg, SelfAddr, ViewingKeys},
+        sky::{Config, Cycles, HandleMsg, InitMsg, QueryMsg, SelfAddr, ViewingKeys},
     },
     utils::storage::plus::ItemStorage,
 };
