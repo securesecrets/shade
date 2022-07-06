@@ -28,6 +28,7 @@ use shade_protocol::{
     utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
 };
 use std::convert::TryInto;
+use shade_protocol::contract_interfaces::governance::stored_id::UserID;
 
 pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -70,6 +71,9 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
 
     Proposal::save_assembly_vote(&mut deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_assembly_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+
+    // Save data for user queries
+    UserID::add_assembly_vote(&mut deps.storage, sender.clone(), proposal.clone())?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -186,8 +190,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         funders: None,
     };
 
-    let prop_id = ID::add_proposal(&mut deps.storage)?;
-    prop.save(&mut deps.storage, &prop_id)?;
+    prop.save(&mut deps.storage)?;
 
     Ok(HandleResponse {
         messages: vec![],

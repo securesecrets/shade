@@ -37,6 +37,7 @@ use shade_protocol::{
         storage::default::SingletonStorage,
     },
 };
+use shade_protocol::contract_interfaces::governance::stored_id::UserID;
 
 // Initializes a proposal on the public assembly with the blank command
 pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
@@ -364,7 +365,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_receive<S: Storage, A: Api, Q: Querier>(
+pub fn try_receive_funding<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     sender: HumanAddr,
@@ -444,6 +445,9 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             amount: funder_amount,
             claimed: false,
         })?;
+
+        // Add funding info to cross search
+        UserID::add_funding(&mut deps.storage, from.clone(), proposal.clone())?;
     } else {
         return Err(StdError::generic_err("Not in funding status"));
     }
@@ -523,7 +527,7 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
+pub fn try_receive_vote<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     sender: HumanAddr,
@@ -579,6 +583,7 @@ pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
 
     Proposal::save_public_vote(&mut deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_public_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+    UserID::add_vote(&mut deps.storage, sender.clone(), proposal.clone())?;
 
     Ok(HandleResponse {
         messages: vec![],

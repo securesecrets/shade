@@ -29,6 +29,7 @@ pub mod proposal;
 pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
+    query_auth: Option<Contract>,
     treasury: Option<HumanAddr>,
     vote_token: Option<Contract>,
     funding_token: Option<Contract>,
@@ -65,6 +66,10 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
 
     if let Some(treasury) = treasury {
         config.treasury = treasury;
+    }
+
+    if let Some(query_auth) = query_auth {
+        config.query = query_auth;
     }
 
     config.save(&mut deps.storage)?;

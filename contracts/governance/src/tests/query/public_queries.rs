@@ -1,15 +1,3 @@
-// TODO: Verify proposal history
-// TODO: quwery proposals
-
-// TODO: Query user funding
-// TODO: Query where theres no user funding
-
-// TODO: Query user assembly vote
-// TODO: Query where theres no user vote
-
-// TODO: Query user vote
-// TODO: Query where theres no user vote
-
 use crate::tests::{
     admin_only_governance,
     get_assemblies,

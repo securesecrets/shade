@@ -40,7 +40,8 @@ snafu = { version = "0.6.3" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "governance-impl",
   "snip20_staking",
-  "snip20"
+  "snip20",
+  "query_auth"
 ] }
 serde_json = { version = "1.0.67" }
 mockall = "0.10.2"

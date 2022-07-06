@@ -11,6 +11,7 @@ use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{Binary, Coin, HumanAddr, StdResult, Storage};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::contract_interfaces::governance::stored_id::UserID;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::BucketStorage;
@@ -60,22 +61,29 @@ const PUBLIC_VOTES: &'static [u8] = b"total-public-votes-";
 
 #[cfg(feature = "governance-impl")]
 impl Proposal {
-    pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
+    pub fn save<S: Storage>(&self, storage: &mut S) -> StdResult<()> {
+        // Create new ID
+        let id = &ID::add_proposal(&mut deps.storage)?;
+
+        // Create proposers id
+        UserID::add_proposal(storage, self.proposer.clone(), id.clone())?;
+
+        // Save proposal data
         if let Some(msgs) = self.msgs.clone() {
-            Self::save_msg(storage, &id, msgs)?;
+            Self::save_msg(storage, id, msgs)?;
         }
 
-        Self::save_description(storage, &id, ProposalDescription {
+        Self::save_description(storage, id, ProposalDescription {
             proposer: self.proposer.clone(),
             title: self.title.clone(),
             metadata: self.metadata.clone(),
         })?;
 
-        Self::save_assembly(storage, &id, self.assembly)?;
+        Self::save_assembly(storage, id, self.assembly)?;
 
-        Self::save_status(storage, &id, self.status.clone())?;
+        Self::save_status(storage, id, self.status.clone())?;
 
-        Self::save_status_history(storage, &id, self.status_history.clone())?;
+        Self::save_status_history(storage, id, self.status_history.clone())?;
 
         if let Some(funder_list) = self.funders.clone() {
             let mut funders = vec![];
@@ -240,6 +248,7 @@ impl Proposal {
         id: &Uint128,
         user: &HumanAddr,
     ) -> StdResult<Option<Vote>> {
+        // TODO: update all the buckets to maps
         let key = id.to_string() + "-" + user.as_str();
         Ok(Vote::may_load(storage, ASSEMBLY_VOTE, key.as_bytes())?)
     }

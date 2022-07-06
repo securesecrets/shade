@@ -22,6 +22,7 @@ use query_authentication::permit::Permit;
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
+use crate::contract_interfaces::governance::proposal::Funding;
 use crate::contract_interfaces::query_auth::QueryPermit;
 
 #[cfg(feature = "governance-impl")]
@@ -74,8 +75,8 @@ pub enum RuntimeState {
     Normal,
     // Disable staking
     DisableVoteToken,
-    // Allow only specific assemblys and admin
-    SpecificAssemblys { commitees: Vec<Uint128> },
+    // Allow only specific assemblies and admin
+    SpecificAssemblies { committees: Vec<Uint128> },
     // Set as admin only
     AdminOnly,
 }
@@ -90,6 +91,7 @@ impl SingletonStorage for RuntimeState {
 pub enum HandleMsg {
     // Internal config
     SetConfig {
+        query_auth: Option<Contract>,
         treasury: Option<HumanAddr>,
         funding_token: Option<Contract>,
         vote_token: Option<Contract>,
@@ -276,26 +278,24 @@ pub enum HandleAnswer {
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct Pagination {
+    pub page: u64,
+    pub amount: u64
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum AuthQuery {
-
-}
-
-pub type GovPermit = Permit<PermitData>;
-
-#[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct QueryData {
-
+    Proposals { pagination: Pagination },
+    AssemblyVotes { pagination: Pagination },
+    Funding { pagination: Pagination },
+    Votes { pagination: Pagination }
 }
 
 #[remain::sorted]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct PermitData {
-    pub data: QueryData,
-    pub key: String,
-}
+pub struct QueryData {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -325,11 +325,18 @@ pub enum QueryMsg {
 
     WithVK { user: HumanAddr, key: String, query: AuthQuery },
 
-    WithPermit { permit: GovQuery, query: AuthQuery },
+    WithPermit { permit: QueryPermit, query: AuthQuery },
 }
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct ResponseWithID<T> {
+    pub prop_id: Uint128,
+    pub data: T
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -348,4 +355,12 @@ pub enum QueryAnswer {
     Contracts { contracts: Vec<AllowedContract> },
 
     Total { total: Uint128 },
+
+    UserProposals { props: Vec<ResponseWithID<Proposal>>, total: Uint128 },
+
+    UserAssemblyVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
+
+    UserFundingVotes { funds: Vec<ResponseWithID<Funding>>, total: Uint128 },
+
+    UserVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
 }
