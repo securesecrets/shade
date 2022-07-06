@@ -25,7 +25,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: CONFIG.load(&deps.storage)?,
     })
 }
 
@@ -37,7 +37,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
     let managers = MANAGERS.load(&deps.storage)?;
 
-    match ASSETS.may_load(&deps.storage, asset)? {
+    match ASSETS.may_load(&deps.storage, asset.clone())? {
         Some(a) => {
             let mut balance = balance_query(
                 &deps.querier,
@@ -49,7 +49,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
             )?
             .amount;
 
-            for allowance in ALLOWANCES.load(&deps.storage, asset)? {
+            for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
                 match allowance {
                     treasury::Allowance::Portion { spender, .. } => {
                         let manager = managers
@@ -57,7 +57,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
                             .into_iter()
                             .find(|m| m.contract.address == spender)
                             .unwrap();
-                        balance += adapter::balance_query(&deps, &asset, manager.contract)?;
+                        balance += adapter::balance_query(&deps, &asset.clone(), manager.contract)?;
                     }
                     _ => {}
                 };
@@ -79,7 +79,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
 
     let managers = MANAGERS.load(&deps.storage)?;
 
-    match ASSETS.may_load(&deps.storage, asset)? {
+    match ASSETS.may_load(&deps.storage, asset.clone())? {
         Some(a) => {
             let mut reserves = balance_query(
                 &deps.querier,
@@ -90,7 +90,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
                 a.contract.address.clone(),
             )?.amount;
 
-            for allowance in ALLOWANCES.load(&deps.storage, asset)? {
+            for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
                 match allowance {
                     treasury::Allowance::Portion { spender, .. } => {
                         let manager = managers
@@ -98,7 +98,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
                             .find(|m| m.contract.address == spender).unwrap();
                         reserves += adapter::reserves_query(
                             &deps,
-                            &asset,
+                            &asset.clone(),
                             manager.contract
                         )?;
                     }
@@ -121,7 +121,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     let managers = MANAGERS.load(&deps.storage)?;
     let mut unbonding = Uint128::zero();
 
-    for allowance in ALLOWANCES.load(&deps.storage, asset)? {
+    for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
         match allowance {
             treasury::Allowance::Portion { spender, .. } => {
                 let manager = managers
@@ -145,7 +145,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     let managers = MANAGERS.load(&deps.storage)?;
     let mut claimable = Uint128::zero();
 
-    for allowance in ALLOWANCES.load(&deps.storage, asset)? {
+    for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
         match allowance {
             treasury::Allowance::Portion { spender, .. } => {
                 let manager = managers
@@ -170,7 +170,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     let self_address = SELF_ADDRESS.load(&deps.storage)?;
     let key = VIEWING_KEY.load(&deps.storage)?;
 
-    if let Some(full_asset) = ASSETS.may_load(&deps.storage, asset)? {
+    if let Some(full_asset) = ASSETS.may_load(&deps.storage, asset.clone())? {
         let cur_allowance = allowance_query(
             &deps.querier,
             self_address,
@@ -182,7 +182,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         )?;
 
         return Ok(treasury::QueryAnswer::Allowance {
-            allowance: cur_allowance.allowance,
+            amount: cur_allowance.allowance,
         });
     }
 

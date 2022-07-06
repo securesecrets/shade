@@ -1,15 +1,18 @@
 use cosmwasm_math_compat as compat;
 use cosmwasm_std::{
     to_binary,
-    HumanAddr, Uint128, Coin,
+    HumanAddr, Uint128, Coin, Decimal,
+    Validator,
 };
 
 use shade_protocol::{
     contract_interfaces::{
         dao::{
             treasury,
-            treasury_manager,
-            //scrt_staking,
+            treasury_manager::{
+                self, Allocation, AllocationType,
+            },
+            scrt_staking,
             adapter,
         },
         snip20,
@@ -22,27 +25,27 @@ use shade_protocol::{
 use contract_harness::harness::{
     treasury::Treasury,
     treasury_manager::TreasuryManager,
-    //scrt_staking::ScrtStaking,
-    //snip20_reference_impl::Snip20ReferenceImpl as Snip20,
-    snip20::Snip20,
+    scrt_staking::ScrtStaking,
+    snip20_reference_impl::Snip20ReferenceImpl as Snip20,
+    //snip20::Snip20,
 };
 
 use fadroma::{
     core::ContractLink,
     ensemble::{
-       MockEnv, 
-       ContractHarness, ContractEnsemble,
+       MockEnv,
+       ContractHarness,
+       ContractEnsemble,
     },
 };
-
-//fn treasury_base(
-//fn manager_integration(
 
 // Add other adapters here as they come
 fn single_asset_portion_manager_integration(
     deposit: Uint128, 
     allowance: Uint128,
-    allocation: Uint128,
+    expected_allowance: Uint128,
+    alloc_type: AllocationType,
+    alloc_amount: Uint128,
     // expected balances
     expected_treasury: Uint128,
     expected_manager: Uint128,
@@ -98,33 +101,6 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap().instance;
 
-    ensemble.execute(
-        &treasury::HandleMsg::RegisterAsset {
-            contract: Contract {
-                address: token.address.clone(),
-                code_hash: token.code_hash.clone(),
-            },
-            // unused?
-            reserves: None,
-        },
-        MockEnv::new(
-            "admin", 
-            treasury.clone(),
-        ),
-    ).unwrap();
-
-    ensemble.execute(
-        &adapter::HandleMsg::Adapter(
-            adapter::SubHandleMsg::Update {
-                asset: token.address.clone(),
-            }
-        ),
-        MockEnv::new(
-            "admin", 
-            treasury.clone(),
-        ),
-    ).unwrap();
-
     let manager = ensemble.instantiate(
         reg_manager.id,
         &treasury_manager::InitMsg {
@@ -141,6 +117,34 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap().instance;
 
+    let scrt_staking = ensemble.instantiate(
+        reg_scrt_staking.id,
+        &scrt_staking::InitMsg {
+            admins: None,
+            owner: manager.address.clone(),
+            sscrt: Contract {
+                address: token.address.clone(),
+                code_hash: token.code_hash.clone(),
+            },
+            validator_bounds: None,
+            viewing_key: "viewing_key".to_string(),
+        },
+        MockEnv::new(
+            "admin",
+            ContractLink {
+                address: HumanAddr("scrt_staking".into()),
+                code_hash: reg_scrt_staking.code_hash,
+            }
+        )
+    ).unwrap().instance;
+
+    ensemble.add_validator(Validator {
+        address: HumanAddr("validator".into()),
+        commission: Decimal::zero(),
+        max_commission: Decimal::one(),
+        max_change_rate: Decimal::one(),
+    });
+
     // Register treasury assets
     ensemble.execute(
         &treasury::HandleMsg::RegisterAsset {
@@ -148,8 +152,6 @@ fn single_asset_portion_manager_integration(
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
             },
-            // unused?
-            reserves: Some(Uint128::zero()),
         },
         MockEnv::new(
             "admin", 
@@ -171,7 +173,7 @@ fn single_asset_portion_manager_integration(
         ),
     ).unwrap();
 
-    // Register manager -> treasury
+    // Register manager w/ treasury
     ensemble.execute(
         &treasury::HandleMsg::RegisterManager {
             contract: Contract {
@@ -205,18 +207,25 @@ fn single_asset_portion_manager_integration(
         ),
     ).unwrap();
 
-    let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-    ensemble.add_funds(HumanAddr::from("admin"), vec![deposit_coin.clone()]);
-
-    // Wrap L1
+    // Allocate to scrt_staking from manager
     ensemble.execute(
-        &snip20::HandleMsg::Deposit {
-            padding: None,
+        &treasury_manager::HandleMsg::Allocate {
+            asset: token.address.clone(),
+            allocation: Allocation {
+                nick: Some("scrt_staking".to_string()),
+                contract: Contract {
+                    address: scrt_staking.address.clone(),
+                    code_hash: scrt_staking.code_hash.clone(),
+                },
+                alloc_type: alloc_type,
+                amount: alloc_amount,
+                tolerance: Uint128::zero(),
+            }
         },
         MockEnv::new(
-            "admin",
-            token.clone(),
-        ).sent_funds(vec![deposit_coin]),
+            "admin", 
+            manager.clone(),
+        ),
     ).unwrap();
 
     let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
@@ -262,9 +271,23 @@ fn single_asset_portion_manager_integration(
         ),
     ).unwrap();
 
-    //update manager
+    // Check treasury allowance to manager
+    match ensemble.query(
+        treasury.address.clone(),
+        &treasury::QueryMsg::Allowance {
+            asset: token.address.clone(),
+            spender: manager.address.clone(),
+        }
+    ).unwrap() {
+        treasury::QueryAnswer::Allowance { amount } => {
+            assert_eq!(amount, expected_allowance, "Treasury->Manager Allowance");
+        },
+        _ => assert!(false),
+    };
+
+    // Update manager
     ensemble.execute(
-        &treasury::HandleMsg::Adapter(
+        &adapter::HandleMsg::Adapter(
             adapter::SubHandleMsg::Update {
                 asset: token.address.clone(),
             }
@@ -275,16 +298,29 @@ fn single_asset_portion_manager_integration(
         ),
     ).unwrap();
 
-    // Treasury balance check
+    // Update SCRT Staking
+    ensemble.execute(
+        &adapter::HandleMsg::Adapter(
+            adapter::SubHandleMsg::Update {
+                asset: token.address.clone(),
+            }
+        ),
+        MockEnv::new(
+            "admin", 
+            scrt_staking.clone(),
+        ),
+    ).unwrap();
+
+    // Treasury reserves check
     match ensemble.query(
         treasury.address.clone(),
-        &treasury::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Reserves {
                 asset: token.address.clone(),
             }
         )
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, expected_treasury, "Treasury Balance");
         },
         _ => assert!(false),
@@ -293,20 +329,36 @@ fn single_asset_portion_manager_integration(
     // Manager balance check
     match ensemble.query(
         manager.address.clone(),
-        &treasury_manager::QueryMsg::Adapter(
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Reserves {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, expected_manager, "Manager Balance");
+        },
+        _ => assert!(false),
+    };
+
+    // Scrt Staking balance check
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
             adapter::SubQueryMsg::Balance {
                 asset: token.address.clone(),
             }
         )
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, expected_manager, "Manager Balance");
+            assert_eq!(amount, expected_scrt_staking, "SCRT Staking Balance");
         },
         _ => assert!(false),
     };
 
+    /*
     ensemble.execute(
-        &treasury::HandleMsg::Adapter(
+        &adapter::HandleMsg::Adapter(
             adapter::SubHandleMsg::Unbond {
                 amount: 
                 asset: token.address.clone(),
@@ -317,6 +369,7 @@ fn single_asset_portion_manager_integration(
             manager.clone(),
         ),
     ).unwrap();
+    */
 }
 
 macro_rules! single_asset_portion_manager_tests {
@@ -327,13 +380,15 @@ macro_rules! single_asset_portion_manager_tests {
                 let (
                     deposit,
                     allowance,
-                    allocation,
+                    expected_allowance,
+                    alloc_type,
+                    alloc_amount,
                     // expected balances
                     expected_treasury,
                     expected_manager,
                     expected_scrt_staking,
                 ) = $value;
-                single_asset_portion_manager_integration(deposit, allowance, allocation, expected_treasury, expected_manager, expected_scrt_staking);
+                single_asset_portion_manager_integration(deposit, allowance, expected_allowance, alloc_type, alloc_amount, expected_treasury, expected_manager, expected_scrt_staking);
             }
         )*
     }
@@ -342,7 +397,9 @@ macro_rules! single_asset_portion_manager_tests {
 single_asset_portion_manager_tests! {
     single_asset_portion_manager_0: (
         Uint128(100), // deposit 
-        Uint128(9 * 10u128.pow(17)), // allow 90%
+        Uint128(9 * 10u128.pow(17)), // manager allowance 90%
+        Uint128(90), // expected manager allowance
+        AllocationType::Portion,
         Uint128(1 * 10u128.pow(18)), // allocate 100%
         Uint128(10), // treasury 10
         Uint128(0), // manager 0

@@ -90,7 +90,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
             .sum::<u128>(),
     );
 
-    let rewards = rewards(deps)?;
+    let rewards = Uint128::zero(); // TODO: rewards(deps)?;
 
     Ok(adapter::QueryAnswer::Balance {
         amount: delegated + rewards,

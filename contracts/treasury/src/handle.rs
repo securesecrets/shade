@@ -116,14 +116,14 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     let self_address = SELF_ADDRESS.load(&deps.storage)?;
     let mut messages = vec![];
 
-    let full_asset = match ASSETS.may_load(&deps.storage, asset)? {
+    let full_asset = match ASSETS.may_load(&deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err("Not an asset"));
         }
     };
 
-    let allowances = ALLOWANCES.load(&deps.storage, asset)?;
+    let allowances = ALLOWANCES.load(&deps.storage, asset.clone())?;
 
     let token_balance = balance_query(
         &deps.querier,
@@ -390,7 +390,6 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
-    _reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
     let config = CONFIG.load(&deps.storage)?;
 
@@ -398,18 +397,22 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
+    let mut asset_list = ASSET_LIST.load(&deps.storage)?;
+    asset_list.push(contract.address.clone());
+    ASSET_LIST.save(&mut deps.storage, &asset_list)?;
+    /*
     ASSET_LIST.update(&mut deps.storage, |mut list| {
         list.push(contract.address.clone());
         Ok(list)
     })?;
+    */
 
     ASSETS.save(&mut deps.storage,
-                contract.address,
+                contract.address.clone(),
                 &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
     )?;
 
-    ALLOWANCES.save(&mut deps.storage, contract.address, &Vec::new())?;
-    //allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
+    ALLOWANCES.save(&mut deps.storage, contract.address.clone(), &Vec::new())?;
 
     Ok(HandleResponse {
         messages: vec![
@@ -513,6 +516,13 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
+    let full_asset = match ASSETS.may_load(&deps.storage, asset.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Not an asset"));
+        }
+    };
+
     let adapters = MANAGERS.load(&deps.storage)?;
 
     // Disallow Portion on non-adapters
@@ -530,9 +540,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         _ => {}
     };
 
-    let key = asset.as_str().as_bytes();
-
-    let mut apps = ALLOWANCES.may_load(&deps.storage, asset)?
+    let mut apps = ALLOWANCES.may_load(&deps.storage, asset.clone())?
         .unwrap_or_default();
 
     let allow_address = allowance_address(&allowance);
@@ -569,7 +577,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     // Zero the last-refresh
     let datetime: DateTime<Utc> = DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc);
 
-    let _spender = match allowance {
+    let spender = match allowance {
         Allowance::Portion {
             spender,
             portion,
@@ -600,7 +608,18 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    ALLOWANCES.save(&mut deps.storage, key, &apps)?;
+    ALLOWANCES.save(&mut deps.storage, asset, &apps)?;
+    /*
+    set_allowance(
+        &deps,
+        &env,
+        spender,
+        amount.clone(),
+        VIEWING_KEY.load(&deps.storage)?,
+        full_asset.contract,
+        None,
+    )?,
+    */
 
     Ok(HandleResponse {
         messages: vec![],
@@ -620,7 +639,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     let key = asset.as_str().as_bytes();
 
     let managers = MANAGERS.load(&deps.storage)?;
-    let allowances = ALLOWANCES.load(&deps.storage, asset)?;
+    let allowances = ALLOWANCES.load(&deps.storage, asset.clone())?;
 
     let mut messages = vec![];
 
@@ -632,7 +651,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
             Allowance::Portion { spender, .. } => {
                 if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
                     let claimable =
-                        adapter::claimable_query(&deps, &asset, manager.contract.clone())?;
+                        adapter::claimable_query(&deps, &asset.clone(), manager.contract.clone())?;
 
                     if claimable > Uint128::zero() {
                         messages.push(adapter::claim_msg(asset.clone(), manager.contract.clone())?);
@@ -672,7 +691,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     let mut unbond_amount = amount;
     let mut unbonded = Uint128::zero();
 
-    for allowance in ALLOWANCES.load(&deps.storage, asset)? {
+    for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
         match allowance {
             Allowance::Amount { .. } => {}
             Allowance::Portion { spender, .. } => {

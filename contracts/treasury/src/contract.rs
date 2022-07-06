@@ -61,8 +61,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { contract, reserves } => {
-            handle::try_register_asset(deps, &env, &contract, reserves)
+        HandleMsg::RegisterAsset { contract } => {
+            handle::try_register_asset(deps, &env, &contract)
         }
         HandleMsg::RegisterManager { mut contract } => {
             handle::register_manager(deps, &env, &mut contract)

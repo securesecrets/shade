@@ -22,7 +22,7 @@ pub mod storage {
     pub const MANAGERS: Item<Vec<super::Manager>> = Item::new("managers");
 
     pub const ALLOWANCES: Map<HumanAddr, Vec<super::Allowance>> = Map::new("allowances");
-    pub const ASSETS: Map<HumanAddr, Snip20Asset> = Map::new("allowances");
+    pub const ASSETS: Map<HumanAddr, Snip20Asset> = Map::new("assets");
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -105,7 +105,6 @@ pub enum HandleMsg {
     },
     RegisterAsset {
         contract: Contract,
-        reserves: Option<Uint128>,
     },
     RegisterManager {
         contract: Contract,
@@ -187,7 +186,7 @@ pub enum QueryAnswer {
     Assets { assets: Vec<HumanAddr> },
     Allowances { allowances: Vec<Allowance> },
     CurrentAllowances { allowances: Vec<Allowance> },
-    Allowance { allowance: Uint128 },
+    Allowance { amount: Uint128 },
     //Accounts { accounts: Vec<HumanAddr> },
     //Account { account: Account },
 }

@@ -26,7 +26,6 @@ use shade_protocol::{
     contract_interfaces::dao::{
         adapter,
         scrt_staking::{Config, HandleAnswer, ValidatorBounds},
-        treasury::Flag,
     },
     utils::{
         asset::{scrt_balance, Contract},
