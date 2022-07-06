@@ -48,7 +48,7 @@ adapter = []
 snip20 = ["utils", "errors", "dep:base64", "dep:query-authentication"]
 query_auth = ["utils", "dep:query-authentication", "dep:remain"]
 snip20_staking = ["utils", "storage"]
-sky = ["snip20", "utils", "dex", "adapter", "dep:secret-storage-plus"]
+sky = ["snip20", "utils", "dex", "sienna", "secretswap", "shadeswap", "adapter", "storage_plus", "dep:secret-storage-plus"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
