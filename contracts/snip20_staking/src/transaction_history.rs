@@ -1,7 +1,7 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use shade_protocol::schemars::JsonSchema;
+use shade_protocol::serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     Api,
     CanonicalAddr,
     Coin,
@@ -11,10 +11,10 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
+use shade_protocol::storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
-use cosmwasm_math_compat::Uint128;
-use secret_toolkit::storage::{AppendStore, AppendStoreMut};
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::secret_toolkit::storage::{AppendStore, AppendStoreMut};
 
 use crate::state::Config;
 
@@ -369,7 +369,7 @@ impl StoredRichTx {
         action: StoredTxAction,
         coins: Coin,
         memo: Option<String>,
-        block: &cosmwasm_std::BlockInfo,
+        block: &shade_protocol::c_std::BlockInfo,
     ) -> Self {
         Self {
             id,
@@ -423,7 +423,7 @@ pub fn store_transfer<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
     let coins = Coin {
@@ -444,18 +444,18 @@ pub fn store_transfer<S: Storage>(
 
     // Write to the owners history if it's different from the other two addresses
     if owner != sender && owner != receiver {
-        // cosmwasm_std::debug_print("saving transaction history for owner");
+        // shade_protocol::c_std::debug_print("saving transaction history for owner");
         append_tx(store, &tx, owner)?;
         append_transfer(store, &transfer, owner)?;
     }
     // Write to the sender's history if it's different from the receiver
     if sender != receiver {
-        // cosmwasm_std::debug_print("saving transaction history for sender");
+        // shade_protocol::c_std::debug_print("saving transaction history for sender");
         append_tx(store, &tx, sender)?;
         append_transfer(store, &transfer, sender)?;
     }
     // Always write to the recipient's history
-    // cosmwasm_std::debug_print("saving transaction history for receiver");
+    // shade_protocol::c_std::debug_print("saving transaction history for receiver");
     append_tx(store, &tx, receiver)?;
     append_transfer(store, &transfer, receiver)?;
 
@@ -469,7 +469,7 @@ pub fn store_mint<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
     let coins = Coin {
@@ -494,7 +494,7 @@ pub fn store_burn<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
     let coins = Coin {
@@ -518,7 +518,7 @@ pub fn store_stake<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
     let coins = Coin {
@@ -539,7 +539,7 @@ pub fn store_add_reward<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
     let coins = Coin {
@@ -560,7 +560,7 @@ pub fn store_fund_unbond<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
     let coins = Coin {
@@ -581,7 +581,7 @@ pub fn store_unbond<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
     let coins = Coin {
@@ -602,7 +602,7 @@ pub fn store_claim_unbond<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
     let coins = Coin {
@@ -623,7 +623,7 @@ pub fn store_claim_reward<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(store)?;
     let coins = Coin {

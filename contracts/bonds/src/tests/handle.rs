@@ -3,10 +3,10 @@ use crate::tests::{
     query::{query_no_opps, query_opp_parameters},
     set_prices,
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::HumanAddr;
-use fadroma::core::ContractLink;
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::HumanAddr;
+use shade_protocol::fadroma::core::ContractLink;
+use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
 use shade_protocol::contract_interfaces::{bonds, query_auth, snip20};
 use shade_protocol::utils::asset::Contract;
 

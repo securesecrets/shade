@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Binary,
@@ -32,9 +32,9 @@ use shade_protocol::{
     },
     utils::asset::Contract,
 };
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
+use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 
 pub static PAIR_INFO: &[u8] = b"pair_info";
 pub static POOL: &[u8] = b"pool";

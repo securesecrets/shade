@@ -1,7 +1,7 @@
-use cosmwasm_std::{Binary, HumanAddr};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use cosmwasm_math_compat::Uint128;
+use crate::c_std::{Binary, HumanAddr};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]

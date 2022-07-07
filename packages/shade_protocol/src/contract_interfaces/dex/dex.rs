@@ -10,11 +10,11 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::c_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 
-use cosmwasm_math_compat::{Uint128, Uint512};
+use crate::math_compat::{Uint128, Uint512};
 use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

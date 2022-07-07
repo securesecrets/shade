@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod tests {
     /*
-    use cosmwasm_std::{
+    use shade_protocol::c_std::{
         testing::{
             mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier
         },

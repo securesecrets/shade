@@ -1,7 +1,7 @@
-use cosmwasm_std::{Env, HumanAddr, StdResult, Storage};
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use query_authentication::viewing_keys::ViewingKey;
+use crate::c_std::{Env, HumanAddr, StdResult, Storage};
+use crate::serde::{Deserialize, Serialize};
+use crate::schemars::JsonSchema;
+use crate::query_authentication::viewing_keys::ViewingKey;
 use secret_storage_plus::Map;
 use secret_toolkit::crypto::{Prng, sha_256};
 use crate::utils::storage::plus::MapStorage;

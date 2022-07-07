@@ -1,7 +1,7 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{StdResult, Storage};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
+use crate::c_std::{StdResult, Storage};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::NaiveBucketStorage;

@@ -1,5 +1,5 @@
-use cosmwasm_std::Storage;
-use cosmwasm_storage::{
+use shade_protocol::c_std::Storage;
+use shade_protocol::storage::{
     bucket,
     bucket_read,
     singleton,

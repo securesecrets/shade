@@ -29,10 +29,12 @@ flexible_msg = []
 math = []
 storage = ["cosmwasm-storage/iterator"]
 storage_plus = ["storage", "dep:secret-storage-plus"]
+query_auth_lib = ["dep:query-authentication"]
+ensemble = ["dep:fadroma"]
 
 # Protocol contracts
-airdrop = ["utils", "errors", "dep:remain", "dep:query-authentication"]
-bonds = ["utils", "errors", "dep:remain", "airdrop", "dep:query-authentication", "snip20", "query_auth"]
+airdrop = ["utils", "errors", "dep:remain", "query_auth_lib"]
+bonds = ["utils", "errors", "dep:remain", "airdrop", "query_auth_lib", "snip20", "query_auth"]
 governance = ["utils", "flexible_msg"]
 mint = ["utils", "snip20"]
 mint_router = ["utils", "snip20"]
@@ -43,8 +45,8 @@ treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 lp_shade_swap = []
 adapter = []
-snip20 = ["utils", "errors", "dep:base64", "dep:query-authentication"]
-query_auth = ["utils", "dep:query-authentication", "dep:remain"]
+snip20 = ["utils", "errors", "dep:base64", "query_auth_lib"]
+query_auth = ["utils", "query_auth_lib", "dep:remain"]
 snip20_staking = ["utils", "storage"]
 sky = ["snip20", "utils", "dex"]
 
@@ -61,14 +63,23 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
+# Smart contract stuff
+cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std", features = ["staking"] }
 cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
-cosmwasm-math-compat = { path = "../cosmwasm_math_compat" }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }
 cosmwasm-schema = "0.10.1"
-secret-toolkit = { version = "0.2", features = ["crypto"] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
+
+# Temp libs
+cosmwasm-math-compat = { path = "../cosmwasm_math_compat" }
+secret-toolkit = { version = "0.2", features = ["crypto", "permit"] }
+
+# Testing
+fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble", "scrt"], optional = true }
+
+
 # TODO: fix import
 chrono = "0.4.19"
 base64 = { version = "0.12.3", optional = true }
@@ -79,4 +90,3 @@ subtle = { version = "2.2.3", default-features = false }
 sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
-secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }

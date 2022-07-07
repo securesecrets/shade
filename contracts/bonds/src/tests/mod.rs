@@ -4,9 +4,9 @@ pub mod query;
 use contract_harness::harness::{
     admin::Admin, bonds::Bonds, query_auth::QueryAuth, snip20::Snip20,
 };
-use cosmwasm_std::{HumanAddr, StdResult};
-use fadroma::core::ContractLink;
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
+use shade_protocol::c_std::{HumanAddr, StdResult};
+use shade_protocol::fadroma::core::ContractLink;
+use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
 use shade_oracles_ensemble::harness::{MockBand, OracleRouter, ProxyBandOracle};
 use shade_protocol::contract_interfaces::{
     bonds, query_auth,
@@ -14,7 +14,7 @@ use shade_protocol::contract_interfaces::{
 };
 use shade_protocol::utils::asset::Contract;
 
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 use shade_admin::admin;
 use shade_oracles::{
     band::{self, proxy::InitMsg, HandleMsg::UpdateSymbolPrice},

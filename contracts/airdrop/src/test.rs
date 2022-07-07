@@ -1,10 +1,10 @@
 #[cfg(test)]
 pub mod tests {
     use crate::handle::inverse_normalizer;
-    use cosmwasm_math_compat::Uint128;
-    use cosmwasm_std::{from_binary, Binary, HumanAddr};
-    use cosmwasm_std::testing::mock_dependencies;
-    use query_authentication::{
+    use shade_protocol::math_compat::Uint128;
+    use shade_protocol::c_std::{from_binary, Binary, HumanAddr};
+    use shade_protocol::c_std::testing::mock_dependencies;
+    use shade_protocol::query_authentication::{
         permit::bech32_to_canonical,
         transaction::{PermitSignature, PubKey},
     };

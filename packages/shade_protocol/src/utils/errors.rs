@@ -1,6 +1,6 @@
-use cosmwasm_std::StdError;
-use schemars::{JsonSchema, _serde_json::to_string};
-use serde::{Deserialize, Serialize};
+use crate::c_std::StdError;
+use crate::schemars::{JsonSchema, _serde_json::to_string};
+use crate::serde::{Deserialize, Serialize};
 
 #[macro_export]
 macro_rules! impl_into_u8 {
@@ -62,9 +62,9 @@ pub trait CodeType: Into<u8> + Clone {
 #[cfg(test)]
 pub mod tests {
     use crate::utils::errors::{build_string, CodeType, DetailedError};
-    use cosmwasm_std::StdError;
-    use schemars::JsonSchema;
-    use serde::{Deserialize, Serialize};
+    use crate::c_std::StdError;
+    use crate::schemars::JsonSchema;
+    use crate::serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, JsonSchema)]
     #[repr(u8)]

@@ -2,14 +2,14 @@ pub mod handle;
 pub mod query;
 
 use contract_harness::harness::{query_auth::QueryAuth, admin::Admin};
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     Binary,
     HumanAddr,
     StdResult,
 };
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use fadroma::core::ContractLink;
-use query_authentication::transaction::{PermitSignature, PubKey};
+use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
+use shade_protocol::fadroma::core::ContractLink;
+use shade_protocol::query_authentication::transaction::{PermitSignature, PubKey};
 use shade_protocol::contract_interfaces::{
     query_auth::{self, PermitData, QueryPermit},
 };

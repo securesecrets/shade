@@ -3,8 +3,8 @@ pub mod burning;
 pub mod minting;
 pub mod transfers;
 
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     to_binary,
     Api,
     BankMsg,
@@ -19,7 +19,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use query_authentication::viewing_keys::ViewingKey;
+use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use shade_protocol::{
     contract_interfaces::snip20::{
         batch,

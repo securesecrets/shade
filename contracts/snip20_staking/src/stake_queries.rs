@@ -12,8 +12,8 @@ use crate::{
         UserShares,
     },
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Api, Binary, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{to_binary, Api, Binary, Extern, HumanAddr, Querier, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::staking::snip20_staking::stake::{StakeConfig, VecQueue},
     utils::storage::default::{BucketStorage, SingletonStorage},

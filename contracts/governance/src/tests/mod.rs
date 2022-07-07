@@ -3,8 +3,8 @@ pub mod query;
 
 use crate::contract::{handle, init, query};
 use contract_harness::harness::governance::Governance;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     from_binary,
     to_binary,
     Binary,
@@ -15,9 +15,9 @@ use cosmwasm_std::{
     StdError,
     StdResult,
 };
-use fadroma::core::ContractLink;
-use fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
-use serde::Serialize;
+use shade_protocol::fadroma::core::ContractLink;
+use shade_protocol::fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
+use shade_protocol::serde::Serialize;
 use shade_protocol::contract_interfaces::{
     governance,
     governance::{

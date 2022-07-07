@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     debug_print,
     to_binary,
     Api,
@@ -11,7 +11,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::snip20::{token_info_query, token_config_query};
+use shade_protocol::secret_toolkit::snip20::{token_info_query, token_config_query};
 
 use shade_protocol::contract_interfaces::{
     mint::mint::{Config, HandleMsg, InitMsg, QueryMsg},
