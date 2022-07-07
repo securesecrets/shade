@@ -29,7 +29,7 @@ shade-oracles = ["dep:shade-oracles"]
 shade-oracles-ensemble = ["dep:shade-oracles-ensemble"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features = [
   "ensemble",
 ] }
