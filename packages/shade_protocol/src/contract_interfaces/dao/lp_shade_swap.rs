@@ -130,7 +130,7 @@ pub enum QueryAnswer {
  * Otherwise it will be sent straight to treasury on claim
  */
 pub fn is_supported_asset(config: &Config, asset: &HumanAddr) -> bool {
-    if let Some(reward_token) = config.reward_token {
+    if let Some(reward_token) = &config.reward_token {
         if reward_token.address == *asset {
             return true;
         }

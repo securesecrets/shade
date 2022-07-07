@@ -173,13 +173,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    //TODO: needs treasury & manager as admin, maybe just manager?
-    /*
-    if env.message.sender != config.admin && env.message.sender != config.treasury {
-        return Err(StdError::Unauthorized { backtrace: None });
-    }
-    */
-    if !config.admins.contains(&env.message.sender) || config.owner != env.message.sender {
+    if !config.admins.contains(&env.message.sender) && config.owner != env.message.sender {
         return Err(StdError::unauthorized());
     }
 

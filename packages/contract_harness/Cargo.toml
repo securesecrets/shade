@@ -27,7 +27,9 @@ admin = ["dep:admin"]
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 # fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features = [ "ensemble", ] }
-fadroma = { branch = "staking", git = "https://github.com/a-stgeorge/fadroma-staking.git", features = ["ensemble", "scrt"] }
+#fadroma = { branch = "staking", git = "https://github.com/a-stgeorge/fadroma-staking.git", features = ["ensemble", "scrt"] }
+fadroma = { path = "../../../fadroma-staking/crates/fadroma", features = ["ensemble", "scrt"] }
+
 mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
 oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
 mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }

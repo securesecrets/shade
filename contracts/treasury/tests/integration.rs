@@ -373,6 +373,7 @@ fn single_asset_portion_manager_integration(
     };
     */
 
+    /*
     // Treasury unbondable check
     match ensemble.query(
         treasury.address.clone(),
@@ -387,6 +388,7 @@ fn single_asset_portion_manager_integration(
         },
         _ => assert!(false),
     };
+    */
 
     // Unbond all w/ treasury
     ensemble.execute(
