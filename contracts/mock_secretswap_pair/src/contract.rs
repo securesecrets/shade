@@ -5,7 +5,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     InitResponse,
     Querier,
     StdError,
@@ -56,7 +56,7 @@ pub fn pool_w<S: Storage>(storage: &mut S) -> Singleton<S, PoolResponse> {
 }
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    _deps: Deps,
     _env: Env,
     _msg: InitMsg,
 ) -> StdResult<InitResponse> {
@@ -75,7 +75,7 @@ pub enum HandleMsg {
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     _env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
@@ -118,13 +118,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             pair_info_w(&mut deps.storage).save(&PairResponse {
                 asset_infos,
-                contract_addr: HumanAddr("".to_string()),
-                liquidity_token: HumanAddr("".to_string()),
+                contract_addr: Addr("".to_string()),
+                liquidity_token: Addr("".to_string()),
                 token_code_hash: "".to_string(),
                 asset0_volume: Uint128::zero(),
                 asset1_volume: Uint128::zero(),
                 factory: Contract {
-                    address: HumanAddr("".to_string()),
+                    address: Addr("".to_string()),
                     code_hash: "".to_string(),
                 },
             })?;

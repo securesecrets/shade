@@ -1,6 +1,6 @@
 use crate::{contract_interfaces::governance::stored_id::ID, utils::flexible_msg::FlexibleMsg};
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{HumanAddr, StdResult, Storage};
+use cosmwasm_std::{Addr, StdResult, Storage};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -15,7 +15,7 @@ pub struct Assembly {
     // Description of the assembly, preferably in base64
     pub metadata: String,
     // List of members in assembly
-    pub members: Vec<HumanAddr>,
+    pub members: Vec<Addr>,
     // Selected profile
     pub profile: Uint128,
 }
@@ -86,7 +86,7 @@ impl Assembly {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AssemblyData {
-    pub members: Vec<HumanAddr>,
+    pub members: Vec<Addr>,
     pub profile: Uint128,
 }
 

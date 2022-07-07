@@ -10,7 +10,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -49,10 +49,10 @@ use crate::state::{
 };
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    _sender: HumanAddr,
-    from: HumanAddr,
+    _sender: Addr,
+    from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
@@ -228,7 +228,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     limit: Limit,
 ) -> StdResult<Uint128> {
@@ -305,7 +305,7 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
@@ -328,7 +328,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     contract: &Contract,
     capture: Option<Uint128>,
@@ -404,9 +404,9 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     _env: &Env,
-    address: HumanAddr,
+    address: Addr,
 ) -> StdResult<HandleResponse> {
     let address_str = address.to_string();
 

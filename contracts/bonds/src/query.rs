@@ -13,7 +13,7 @@ use secret_toolkit::{
     utils::Query,
 };
 
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use cosmwasm_std::{Api, Deps, Addr, Querier, StdResult, Storage};
 use shade_protocol::contract_interfaces::bonds::{
     errors::{permit_revoked, query_auth_bad_response},
     BondOpportunity, QueryAnswer,
@@ -54,7 +54,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
 
 fn account_information<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account_address: HumanAddr,
+    account_address: Addr,
 ) -> StdResult<QueryAnswer> {
     let account = account_r(&deps.storage).load(account_address.as_str().as_bytes())?;
 

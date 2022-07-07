@@ -5,7 +5,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -21,7 +21,7 @@ use shade_protocol::{
 };
 
 pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     profile: Profile,
 ) -> StdResult<HandleResponse> {
@@ -42,7 +42,7 @@ pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     id: Uint128,
     new_profile: UpdateProfile,

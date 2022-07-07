@@ -1,6 +1,6 @@
 /*
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::HumanAddr;
+use cosmwasm_std::Addr;
 use serde_json::Result;
 use shade_protocol::contract_interfaces::{governance, governance::GOVERNANCE_SELF};
 
@@ -48,7 +48,7 @@ pub fn get_contract(governance: &NetContract, target: String) -> Result<Contract
     let query: governance::QueryAnswer = query(governance, &msg, None)?;
 
     let mut ctrc = Contract {
-        address: HumanAddr::from("not_found".to_string()),
+        address: Addr::from("not_found".to_string()),
         code_hash: "not_found".to_string(),
     };
 
@@ -70,7 +70,7 @@ pub fn add_contract(
     let msg = governance::HandleMsg::AddSupportedContract {
         name: name.clone(),
         contract: Contract {
-            address: HumanAddr::from(target.address.clone()),
+            address: Addr::from(target.address.clone()),
             code_hash: target.code_hash.clone(),
         },
     };

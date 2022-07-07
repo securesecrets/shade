@@ -1,6 +1,6 @@
 use colored::*;
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, HumanAddr};
+use cosmwasm_std::{to_binary, Addr};
 use rand::{distributions::Alphanumeric, Rng};
 use secretcli::{
     cli_types::NetContract,
@@ -106,8 +106,8 @@ fn main() -> Result<()> {
             admin: None,
             prng_seed: Default::default(),
             initial_balances: Some(vec![InitialBalance {
-                address: HumanAddr::from(account.clone()),
-                amount: Uint128(10000000),
+                address: Addr::from(account.clone()),
+                amount: Uint128::new(10000000),
             }]),
         },
         silk: Snip20ContractInfo {
@@ -179,11 +179,11 @@ fn main() -> Result<()> {
     let oracle = oracle::InitMsg {
         admin: None,
         band: Contract {
-            address: HumanAddr::from(band.address),
+            address: Addr::from(band.address),
             code_hash: band.code_hash,
         },
         sscrt: Contract {
-            address: HumanAddr::from(sSCRT.address.clone()),
+            address: Addr::from(sSCRT.address.clone()),
             code_hash: sSCRT.code_hash.clone(),
         },
     }
@@ -202,17 +202,17 @@ fn main() -> Result<()> {
     let mint_shade = mint::InitMsg {
         admin: None,
         native_asset: Contract {
-            address: HumanAddr::from(shade.address.clone()),
+            address: Addr::from(shade.address.clone()),
             code_hash: shade.code_hash.clone(),
         },
         oracle: Contract {
-            address: HumanAddr::from(oracle.address.clone()),
+            address: Addr::from(oracle.address.clone()),
             code_hash: oracle.code_hash.clone(),
         },
         peg: None,
         treasury: None,
-        epoch_frequency: Some(Uint128(120)),
-        epoch_mint_limit: Some(Uint128(1000000000)),
+        epoch_frequency: Some(Uint128::new(120)),
+        epoch_mint_limit: Some(Uint128::new(1000000000)),
     }
     .inst_init(
         "../../compiled/mint.wasm.gz",
@@ -231,17 +231,17 @@ fn main() -> Result<()> {
     let mint_silk = mint::InitMsg {
         admin: None,
         native_asset: Contract {
-            address: HumanAddr::from(silk.address.clone()),
+            address: Addr::from(silk.address.clone()),
             code_hash: silk.code_hash.clone(),
         },
         oracle: Contract {
-            address: HumanAddr::from(oracle.address.clone()),
+            address: Addr::from(oracle.address.clone()),
             code_hash: oracle.code_hash.clone(),
         },
         peg: None,
         treasury: None,
-        epoch_frequency: Some(Uint128(120)),
-        epoch_mint_limit: Some(Uint128(1000000000)),
+        epoch_frequency: Some(Uint128::new(120)),
+        epoch_mint_limit: Some(Uint128::new(1000000000)),
     }
     .inst_init(
         "../../compiled/mint.wasm.gz",
@@ -259,26 +259,26 @@ fn main() -> Result<()> {
     print_header("Registering allowed tokens");
     mint::HandleMsg::RegisterAsset {
         contract: Contract {
-            address: HumanAddr::from(sSCRT.address.clone()),
+            address: Addr::from(sSCRT.address.clone()),
             code_hash: sSCRT.code_hash.clone(),
         },
-        commission: Some(Uint128(1000)),
+        commission: Some(Uint128::new(1000)),
     }
     .t_handle(&mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
     mint::HandleMsg::RegisterAsset {
         contract: Contract {
-            address: HumanAddr::from(silk.address.clone()),
+            address: Addr::from(silk.address.clone()),
             code_hash: silk.code_hash.clone(),
         },
-        commission: Some(Uint128(1000)),
+        commission: Some(Uint128::new(1000)),
     }
     .t_handle(&mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
     mint::HandleMsg::RegisterAsset {
         contract: Contract {
-            address: HumanAddr::from(shade.address.clone()),
+            address: Addr::from(shade.address.clone()),
             code_hash: shade.code_hash.clone(),
         },
-        commission: Some(Uint128(1000)),
+        commission: Some(Uint128::new(1000)),
     }
     .t_handle(&mint_silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
@@ -300,7 +300,7 @@ fn main() -> Result<()> {
     print_header("Setting minters in snip20s");
 
     snip20::HandleMsg::SetMinters {
-        minters: vec![HumanAddr::from(mint_shade.address.clone())],
+        minters: vec![Addr::from(mint_shade.address.clone())],
         padding: None,
     }
     .t_handle(&shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
@@ -313,7 +313,7 @@ fn main() -> Result<()> {
     }
 
     snip20::HandleMsg::SetMinters {
-        minters: vec![HumanAddr::from(mint_silk.address.clone())],
+        minters: vec![Addr::from(mint_silk.address.clone())],
         padding: None,
     }
     .t_handle(&silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
@@ -336,7 +336,7 @@ fn main() -> Result<()> {
             ACCOUNT_KEY,
             mint_shade.address.clone(),
             amount,
-            Uint128(0),
+            Uint128::new(0),
             "test",
         );
     }
@@ -349,14 +349,14 @@ fn main() -> Result<()> {
 
     // Test Mint Limit
     {
-        let amount = Uint128(1000000000);
+        let amount = Uint128::new(1000000000);
         println!("Burning {} uShade for Silk ", amount.to_string().blue());
         mint(
             &shade,
             ACCOUNT_KEY,
             mint_silk.address.clone(),
             amount,
-            Uint128(0),
+            Uint128::new(0),
             "test",
         );
         print_epoch_info(&mint_silk);
@@ -365,15 +365,15 @@ fn main() -> Result<()> {
 
     // Try to send whats left
     {
-        let amount = Uint128(10000000);
-        let expected_total = Uint128(1010000000);
+        let amount = Uint128::new(10000000);
+        let expected_total = Uint128::new(1010000000);
         while get_balance(&silk, account.clone()) != expected_total {
             mint(
                 &shade,
                 ACCOUNT_KEY,
                 mint_silk.address.clone(),
                 amount,
-                Uint128(0),
+                Uint128::new(0),
                 "test",
             );
         }
@@ -427,7 +427,7 @@ fn print_vec<Type: Display>(prefix: &str, vec: Vec<Type>) {
 
 fn get_balance(contract: &NetContract, from: String) -> Uint128 {
     let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(from),
+        address: Addr::from(from),
         key: String::from(VIEW_KEY),
     }
     .t_query(contract)
@@ -437,7 +437,7 @@ fn get_balance(contract: &NetContract, from: String) -> Uint128 {
         return amount;
     }
 
-    Uint128(0)
+    Uint128::new(0)
 }
 
 fn mint(
@@ -449,7 +449,7 @@ fn mint(
     backend: &str,
 ) {
     snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(minter),
+        recipient: Addr::from(minter),
         amount,
         msg: Some(
             to_binary(&mint::MintMsgHook {

@@ -10,7 +10,7 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{self, Api, Deps, Querier, StdError, StdResult, Storage};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -47,7 +47,7 @@ pub fn pool_take_amount(
 }
 
 pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
@@ -106,7 +106,7 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn best_price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
@@ -149,7 +149,7 @@ pub fn best_price<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     pair: TradingPair,
     sscrt: Contract,
     band: Contract,

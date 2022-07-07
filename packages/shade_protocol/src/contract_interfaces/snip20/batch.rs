@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, HumanAddr};
+use cosmwasm_std::{Binary, Addr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_math_compat::Uint128;
@@ -6,7 +6,7 @@ use cosmwasm_math_compat::Uint128;
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct TransferAction {
-    pub recipient: HumanAddr,
+    pub recipient: Addr,
     pub amount: Uint128,
     pub memo: Option<String>,
 }
@@ -14,7 +14,7 @@ pub struct TransferAction {
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct SendAction {
-    pub recipient: HumanAddr,
+    pub recipient: Addr,
     pub recipient_code_hash: Option<String>,
     pub amount: Uint128,
     pub msg: Option<Binary>,
@@ -24,8 +24,8 @@ pub struct SendAction {
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct TransferFromAction {
-    pub owner: HumanAddr,
-    pub recipient: HumanAddr,
+    pub owner: Addr,
+    pub recipient: Addr,
     pub amount: Uint128,
     pub memo: Option<String>,
 }
@@ -33,8 +33,8 @@ pub struct TransferFromAction {
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct SendFromAction {
-    pub owner: HumanAddr,
-    pub recipient: HumanAddr,
+    pub owner: Addr,
+    pub recipient: Addr,
     pub recipient_code_hash: Option<String>,
     pub amount: Uint128,
     pub msg: Option<Binary>,
@@ -44,7 +44,7 @@ pub struct SendFromAction {
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct MintAction {
-    pub recipient: HumanAddr,
+    pub recipient: Addr,
     pub amount: Uint128,
     pub memo: Option<String>,
 }
@@ -52,7 +52,7 @@ pub struct MintAction {
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct BurnFromAction {
-    pub owner: HumanAddr,
+    pub owner: Addr,
     pub amount: Uint128,
     pub memo: Option<String>,
 }

@@ -21,8 +21,8 @@ The sSCRT Staking contract receives sSCRT, redeems it for SCRT, then stakes it w
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | HumanAddr |  contract owner/admin; a valid bech32 address;
-|treasury  | HumanAddre |  contract designated to receive all outgoing funds
+|owner     | Addr |  contract owner/admin; a valid bech32 address;
+|treasury  | Addre |  contract designated to receive all outgoing funds
 |sscrt     | Contract |  sSCRT Snip-20 contract to accept for redemption/staking, all other funds will error
 |validator_bounds | ValidatorBounds | criteria defining an acceptable validator to stake with
 
@@ -34,8 +34,8 @@ Updates the given values
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|owner     | HumanAddr |  contract owner/admin; a valid bech32 address;
-|treasury  | HumanAddre |  contract designated to receive all outgoing funds
+|owner     | Addr |  contract owner/admin; a valid bech32 address;
+|treasury  | Addre |  contract designated to receive all outgoing funds
 |sscrt     | Contract |  sSCRT Snip-20 contract to accept for redemption/staking, all other funds will error
 |validator_bounds | ValidatorBounds | criteria defining an acceptable validator to stake with
 

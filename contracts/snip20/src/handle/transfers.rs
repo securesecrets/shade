@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use cosmwasm_std::{Api, Binary, CosmosMsg, Env, Deps, HandleResponse, Addr, Querier, StdError, StdResult, Storage, to_binary};
 use secret_toolkit::utils::HandleCallback;
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer, ReceiverHandleMsg};
@@ -10,9 +10,9 @@ use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 
 pub fn try_transfer_impl<S: Storage>(
     storage: &mut S,
-    sender: &HumanAddr, //spender when using from
-    owner: Option<&HumanAddr>,
-    recipient: &HumanAddr,
+    sender: &Addr, //spender when using from
+    owner: Option<&Addr>,
+    recipient: &Addr,
     amount: Uint128,
     memo: Option<String>,
     denom: String,
@@ -47,9 +47,9 @@ pub fn try_transfer_impl<S: Storage>(
 }
 
 pub fn try_transfer<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     amount: Uint128,
     memo: Option<String>
 ) -> StdResult<HandleResponse> {
@@ -63,7 +63,7 @@ pub fn try_transfer<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     actions: Vec<batch::TransferAction>,
 ) -> StdResult<HandleResponse> {
@@ -84,11 +84,11 @@ pub fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
 fn try_add_receiver_api_callback<S: Storage>(
     storage: &S,
     messages: &mut Vec<CosmosMsg>,
-    recipient: HumanAddr,
+    recipient: Addr,
     recipient_code_hash: Option<String>,
     msg: Option<Binary>,
-    sender: HumanAddr,
-    from: HumanAddr,
+    sender: Addr,
+    from: Addr,
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<()> {
@@ -109,9 +109,9 @@ fn try_add_receiver_api_callback<S: Storage>(
 pub fn try_send_impl<S: Storage>(
     storage: &mut S,
     messages: &mut Vec<CosmosMsg>,
-    sender: &HumanAddr,
-    owner: Option<&HumanAddr>,
-    recipient: &HumanAddr,
+    sender: &Addr,
+    owner: Option<&Addr>,
+    recipient: &Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
     memo: Option<String>,
@@ -137,9 +137,9 @@ pub fn try_send_impl<S: Storage>(
 }
 
 pub fn try_send<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
     memo: Option<String>,
@@ -170,7 +170,7 @@ pub fn try_send<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_send<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     actions: Vec<batch::SendAction>
 ) -> StdResult<HandleResponse> {

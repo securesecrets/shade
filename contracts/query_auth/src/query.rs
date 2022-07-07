@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use cosmwasm_std::{Api, Deps, Addr, Querier, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::query_auth::{
         auth::{Key, PermitKey},
@@ -19,7 +19,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
 
 pub fn validate_vk<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    user: HumanAddr,
+    user: Addr,
     key: String,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::ValidateViewingKey {

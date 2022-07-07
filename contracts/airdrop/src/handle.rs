@@ -24,7 +24,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -63,10 +63,10 @@ use shade_protocol::{
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    admin: Option<HumanAddr>,
-    dump_address: Option<HumanAddr>,
+    admin: Option<Addr>,
+    dump_address: Option<Addr>,
     query_rounding: Option<Uint128>,
     start_date: Option<u64>,
     end_date: Option<u64>,
@@ -180,7 +180,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     tasks: Vec<RequiredTask>,
 ) -> StdResult<HandleResponse> {
@@ -217,7 +217,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_account<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     addresses: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,
@@ -353,7 +353,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     key: String,
 ) -> StdResult<HandleResponse> {
@@ -369,7 +369,7 @@ pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     key: String,
 ) -> StdResult<HandleResponse> {
@@ -388,9 +388,9 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    account: HumanAddr,
+    account: Addr,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 
@@ -420,7 +420,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
@@ -474,7 +474,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
@@ -607,7 +607,7 @@ pub fn try_add_account_addresses<S: Storage, A: Api>(
     storage: &mut S,
     api: &A,
     config: &Config,
-    sender: &HumanAddr,
+    sender: &Addr,
     account: &mut Account,
     addresses: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,

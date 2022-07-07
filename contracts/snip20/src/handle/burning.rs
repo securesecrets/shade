@@ -5,7 +5,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -23,7 +23,7 @@ use shade_protocol::{
 use shade_protocol::contract_interfaces::snip20::errors::burning_disabled;
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     amount: Uint128,
     memo: Option<String>,
@@ -58,9 +58,9 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    owner: HumanAddr,
+    owner: Addr,
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<HandleResponse> {
@@ -95,7 +95,7 @@ pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     actions: Vec<batch::BurnFromAction>,
 ) -> StdResult<HandleResponse> {

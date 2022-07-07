@@ -1,4 +1,4 @@
-use cosmwasm_std::{Coin, HumanAddr};
+use cosmwasm_std::{Coin, Addr};
 use fadroma::ensemble::MockEnv;
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig};
@@ -19,15 +19,15 @@ fn deposit() {
 
     let scrt_coin = Coin {
         denom: "uscrt".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        amount: cosmwasm_std::Uint128::new(1000)
     };
 
     let not_coin = Coin {
         denom: "token".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        amount: cosmwasm_std::Uint128::new(1000)
     };
 
-    chain.add_funds(HumanAddr::from("Marco"), vec![
+    chain.add_funds(Addr::from("Marco"), vec![
         scrt_coin.clone(), not_coin.clone()]);
 
     // Deposit
@@ -45,7 +45,7 @@ fn deposit() {
     chain.deps(snip.address, |deps| {
         assert_eq!(Balance::load(
             &deps.storage,
-            HumanAddr::from("Marco")).unwrap().0, Uint128::new(1000)
+            Addr::from("Marco")).unwrap().0, Uint128::new(1000)
         );
         assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(1000)
         );
@@ -65,10 +65,10 @@ fn redeem() {
 
     let scrt_coin = Coin {
         denom: "uscrt".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        amount: cosmwasm_std::Uint128::new(1000)
     };
 
-    chain.add_funds(HumanAddr::from("Marco"), vec![
+    chain.add_funds(Addr::from("Marco"), vec![
         scrt_coin.clone()]);
 
     // Deposit
@@ -94,11 +94,11 @@ fn redeem() {
     chain.deps(snip.address, |deps| {
         assert_eq!(Balance::load(
             &deps.storage,
-            HumanAddr::from("Marco")).unwrap().0, Uint128::new(500)
+            Addr::from("Marco")).unwrap().0, Uint128::new(500)
         );
         assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(500)
         );
-        let balance = chain.balances(HumanAddr::from("Marco")).unwrap().get("uscrt").unwrap();
-        assert_eq!(balance, &cosmwasm_std::Uint128(500));
+        let balance = chain.balances(Addr::from("Marco")).unwrap().get("uscrt").unwrap();
+        assert_eq!(balance, &cosmwasm_std::Uint128::new(500));
     });
 }

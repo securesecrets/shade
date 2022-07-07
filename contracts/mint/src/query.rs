@@ -14,7 +14,7 @@ use crate::{
 };
 use chrono::prelude::*;
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{Api, Deps, Addr, Querier, StdError, StdResult, Storage};
 use shade_protocol::contract_interfaces::mint::mint::QueryAnswer;
 
 pub fn native_asset<S: Storage, A: Api, Q: Querier>(
@@ -68,7 +68,7 @@ pub fn limit<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResul
 
 pub fn mint<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    offer_asset: HumanAddr,
+    offer_asset: Addr,
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {
     let native_asset = native_asset_r(&deps.storage).load()?;

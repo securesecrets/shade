@@ -1,5 +1,5 @@
 use cosmwasm_math_compat::{Uint128, Uint256};
-use cosmwasm_std::HumanAddr;
+use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
@@ -59,7 +59,7 @@ impl SingletonStorage for TotalUnbonding {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Distributors(pub Vec<HumanAddr>);
+pub struct Distributors(pub Vec<Addr>);
 
 impl SingletonStorage for Distributors {
     const NAMESPACE: &'static [u8] = b"distributors";

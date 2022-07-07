@@ -32,7 +32,7 @@ Begin unbonding of a given amount from a given asset
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|asset     | HumanAddr |  SNIP-20 asset to unbond
+|asset     | Addr |  SNIP-20 asset to unbond
 
 ##### Response
 ```json
@@ -50,7 +50,7 @@ Claim a given amount from completed unbonding of a given asset
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|asset     | HumanAddr |  SNIP-20 asset to unbond
+|asset     | Addr |  SNIP-20 asset to unbond
 
 ##### Response
 ```json
@@ -71,7 +71,7 @@ Examples:
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|asset     | HumanAddr |  SNIP-20 asset to unbond
+|asset     | Addr |  SNIP-20 asset to unbond
 
 ##### Response
 ```json
@@ -90,7 +90,7 @@ Get the balance of a given asset, Error if unrecognized
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|asset     | HumanAddr |  SNIP-20 asset to query
+|asset     | Addr |  SNIP-20 asset to query
 
 ##### Response
 ```json
@@ -107,7 +107,7 @@ Get the current unbonding amount of a given asset, Error if unrecognized
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|asset     | HumanAddr |  SNIP-20 asset to query
+|asset     | Addr |  SNIP-20 asset to query
 
 ##### Response
 ```json
@@ -124,7 +124,7 @@ Get the current claimable amount of a given asset, Error if unrecognized
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|asset     | HumanAddr | SNIP-20 asset to query
+|asset     | Addr | SNIP-20 asset to query
 
 ##### Response
 ```json
@@ -141,7 +141,7 @@ Get the current unbondable amount of a given asset, Error if unrecognized
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|asset     | HumanAddr | SNIP-20 asset to query
+|asset     | Addr | SNIP-20 asset to query
 
 ##### Response
 ```json

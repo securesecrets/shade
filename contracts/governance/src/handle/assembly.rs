@@ -8,7 +8,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -30,7 +30,7 @@ use shade_protocol::{
 use std::convert::TryInto;
 
 pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     proposal: Uint128,
     vote: Vote,
@@ -81,7 +81,7 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     assembly_id: Uint128,
     title: String,
@@ -199,11 +199,11 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     name: String,
     metadata: String,
-    members: Vec<HumanAddr>,
+    members: Vec<Addr>,
     profile: Uint128,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {
@@ -235,12 +235,12 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     id: Uint128,
     name: Option<String>,
     metadata: Option<String>,
-    members: Option<Vec<HumanAddr>>,
+    members: Option<Vec<Addr>>,
     profile: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != env.contract.address {

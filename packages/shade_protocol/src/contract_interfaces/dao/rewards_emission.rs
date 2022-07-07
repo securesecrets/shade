@@ -2,7 +2,7 @@ use crate::{
     contract_interfaces::dao::adapter,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
+use cosmwasm_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
@@ -10,17 +10,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Reward {
-    pub asset: HumanAddr,
+    pub asset: Addr,
     pub amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admins: Vec<HumanAddr>,
-    pub treasury: HumanAddr,
+    pub admins: Vec<Addr>,
+    pub treasury: Addr,
     pub asset: Contract,
-    pub distributor: HumanAddr,
+    pub distributor: Addr,
     pub rewards: Vec<Reward>,
 }
 
@@ -39,8 +39,8 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -66,7 +66,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -86,7 +86,7 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    PendingAllowance { asset: HumanAddr },
+    PendingAllowance { asset: Addr },
     Adapter(adapter::SubQueryMsg),
 }
 

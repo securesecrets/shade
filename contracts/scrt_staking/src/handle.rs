@@ -10,7 +10,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StakingMsg,
     StdError,
@@ -41,10 +41,10 @@ use crate::{
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    _sender: HumanAddr,
-    _from: HumanAddr,
+    _sender: Addr,
+    _from: Addr,
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
@@ -85,7 +85,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
@@ -111,9 +111,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
  * Send reserves unbonded funds to treasury
  */
 pub fn update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
     let mut messages = vec![];
 
@@ -162,9 +162,9 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
     /* Unbonding to the scrt staking contract
@@ -191,7 +191,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     let self_address = self_address_r(&deps.storage).load()?;
     let delegations = query::delegations(&deps)?;
 
-    let delegated = Uint128(
+    let delegated = Uint128::new(
         delegations
             .iter()
             .map(|d| d.amount.amount.u128())
@@ -302,7 +302,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn withdraw_rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = vec![];
     let address = self_address_r(&deps.storage).load()?;
@@ -318,7 +318,7 @@ pub fn withdraw_rewards<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    _deps: Deps,
     amount: Uint128,
     validator: Validator,
     token: Contract,
@@ -341,9 +341,9 @@ pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
  * and returns them to treasury
  */
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 

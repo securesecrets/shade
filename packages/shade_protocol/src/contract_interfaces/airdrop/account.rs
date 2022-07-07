@@ -1,6 +1,6 @@
 use crate::contract_interfaces::airdrop::errors::permit_rejected;
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Api};
+use cosmwasm_std::{from_binary, Binary, Addr, StdError, StdResult, Api};
 use query_authentication::{
     permit::{bech32_to_canonical, Permit},
     transaction::SignedTx,
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Account {
-    pub addresses: Vec<HumanAddr>,
+    pub addresses: Vec<Addr>,
     pub total_claimable: Uint128,
 }
 
@@ -32,7 +32,7 @@ pub type AccountPermit = Permit<AccountPermitMsg>;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AccountPermitMsg {
-    pub contract: HumanAddr,
+    pub contract: Addr,
     pub key: String,
 }
 
@@ -82,11 +82,11 @@ pub fn authenticate_ownership<A: Api>(api: &A, permit: &AddressProofPermit, perm
 #[serde(rename_all = "snake_case")]
 pub struct AddressProofMsg {
     // Address is necessary since we have other network permits present
-    pub address: HumanAddr,
+    pub address: Addr,
     // Reward amount
     pub amount: Uint128,
     // Used to prevent permits from being used elsewhere
-    pub contract: HumanAddr,
+    pub contract: Addr,
     // Index of the address in the leaves array
     pub index: u32,
     // Used to identify permits

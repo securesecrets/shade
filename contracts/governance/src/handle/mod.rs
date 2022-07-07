@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -27,9 +27,9 @@ pub mod profile;
 pub mod proposal;
 
 pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    treasury: Option<HumanAddr>,
+    treasury: Option<Addr>,
     vote_token: Option<Contract>,
     funding_token: Option<Contract>,
 ) -> StdResult<HandleResponse> {
@@ -78,7 +78,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_runtime_state<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     state: RuntimeState,
 ) -> StdResult<HandleResponse> {

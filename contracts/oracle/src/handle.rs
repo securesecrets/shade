@@ -5,7 +5,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -25,7 +25,7 @@ use shade_protocol::{
 };
 
 pub fn register_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     pair: Contract,
 ) -> StdResult<HandleResponse> {
@@ -99,7 +99,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     symbol: String,
     pair: Contract,
@@ -136,8 +136,8 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
 /// Pair argument must represent Secret Swap contract for {symbol}/sSCRT or sSCRT/{symbol}.
 ///
 fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    sscrt_addr: HumanAddr,
+    deps: Deps,
+    sscrt_addr: Addr,
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
     // Query for snip20's in the pair
@@ -178,8 +178,8 @@ fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
 }
 
 fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    sscrt_addr: HumanAddr,
+    deps: Deps,
+    sscrt_addr: Addr,
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
     // Query for snip20's in the pair
@@ -255,7 +255,7 @@ fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn register_index<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     symbol: String,
     basket: Vec<IndexElement>,
@@ -285,9 +285,9 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    admin: Option<HumanAddr>,
+    admin: Option<Addr>,
     band: Option<Contract>,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;

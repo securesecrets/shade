@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Api,
     Binary,
     Extern,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -153,7 +153,7 @@ pub fn validate_address_permit<S: Storage, A: Api>(
     api: &A,
     permit: &AddressProofPermit,
     params: &AddressProofMsg,
-    contract: HumanAddr,
+    contract: Addr,
 ) -> StdResult<()> {
     // Check that contract matches
     if params.contract != contract {
@@ -175,8 +175,8 @@ pub fn validate_address_permit<S: Storage, A: Api>(
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     permit: &AccountPermit,
-    contract: HumanAddr,
-) -> StdResult<HumanAddr> {
+    contract: Addr,
+) -> StdResult<Addr> {
     // Check that contract matches
     if permit.params.contract != contract {
         return Err(permit_contract_mismatch(

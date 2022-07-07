@@ -1,6 +1,6 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
+    to_binary, Api, Binary, Env, Deps, HandleResponse, InitResponse, Querier, StdResult, Storage,
 };
 
 use secret_toolkit::snip20::{set_viewing_key_msg, token_info_query};
@@ -26,7 +26,7 @@ use crate::{
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
@@ -100,7 +100,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {

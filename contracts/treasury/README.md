@@ -104,7 +104,7 @@ List of configured allowances for things like treasury_manager & rewards
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|asset | HumanAddr |  Asset to query balance of
+|asset | Addr |  Asset to query balance of
 ##### Response
 ```json
 {
@@ -123,8 +123,8 @@ List of configured allowances for things like treasury_manager & rewards
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|asset | HumanAddr |  Asset to query allowance for
-|spender | HumanAddr |  Spender of allowance
+|asset | Addr |  Asset to query allowance for
+|spender | Addr |  Spender of allowance
 ##### Response
 ```json
 {
@@ -155,8 +155,8 @@ Balance of a given account holders assets (e.g. SHD staking)
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|holder | HumanAddr |  Holder of the account
-|asset | HumanAddr |  Asset to query balance of
+|holder | Addr |  Holder of the account
+|asset | Addr |  Asset to query balance of
 ##### Response
 ```json
 {

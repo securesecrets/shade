@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, Extern,
-    HandleResponse, HumanAddr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
+    debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, Deps,
+    HandleResponse, Addr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
 };
 
 use secret_toolkit::snip20::{balance_query};
@@ -35,10 +35,10 @@ use crate::{
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    _sender: HumanAddr,
-    _from: HumanAddr,
+    _sender: Addr,
+    _from: Addr,
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
@@ -71,7 +71,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
@@ -97,9 +97,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
  * Send available unbonded funds to treasury
  */
 pub fn update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
 
     let mut messages = vec![];
@@ -128,9 +128,9 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
 
@@ -176,9 +176,9 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 

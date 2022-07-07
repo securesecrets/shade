@@ -143,7 +143,7 @@ impl BucketStorage for ProfileData {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-// NOTE: 100% = Uint128(10000)
+// NOTE: 100% = Uint128::new(10000)
 pub struct VoteProfile {
     // Deadline for voting
     pub deadline: u64,

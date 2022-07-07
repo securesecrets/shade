@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    Storage, Api, Querier, Extern, StdResult, StdError, debug_print,
+    Storage, Api, Querier, Deps, StdResult, StdError, debug_print,
 };
 use cosmwasm_math_compat::Uint128;
 use secret_toolkit::utils::Query;

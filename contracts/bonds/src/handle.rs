@@ -1,6 +1,6 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
+    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Deps, HandleResponse, Addr,
     Querier, StdError, StdResult, Storage,
 };
 
@@ -34,9 +34,9 @@ use crate::state::{
 };
 
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    limit_admin: Option<HumanAddr>,
+    limit_admin: Option<Addr>,
     shade_admins: Option<Contract>,
     global_issuance_limit: Option<Uint128>,
     global_minimum_bonding_period: Option<u64>,
@@ -93,10 +93,10 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     oracle: Option<Contract>,
-    treasury: Option<HumanAddr>,
+    treasury: Option<Addr>,
     activated: Option<bool>,
     issuance_asset: Option<Contract>,
     bond_issuance_limit: Option<Uint128>,
@@ -177,10 +177,10 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    sender: HumanAddr,
-    _from: HumanAddr,
+    sender: Addr,
+    _from: Addr,
     deposit_amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
@@ -364,7 +364,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
 ) -> StdResult<HandleResponse> {
     // Check if bonding period has elapsed and allow user to claim
@@ -443,7 +443,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     deposit_asset: Contract,
     start_time: u64,
@@ -596,7 +596,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     deposit_asset: Contract,
 ) -> StdResult<HandleResponse> {

@@ -9,7 +9,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -40,7 +40,7 @@ use shade_protocol::{
 
 // Initializes a proposal on the public assembly with the blank command
 pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     title: String,
     metadata: String,
@@ -75,7 +75,7 @@ pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     proposal: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -116,7 +116,7 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     proposal: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -183,7 +183,7 @@ fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> S
 }
 
 pub fn try_update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     proposal: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -325,7 +325,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                                 // Update slash amount
                                 messages.push(send_msg(
                                     config.treasury,
-                                    cosmwasm_std::Uint128(send_amount.u128()),
+                                    cosmwasm_std::Uint128::new(send_amount.u128()),
                                     None,
                                     None,
                                     None,
@@ -366,10 +366,10 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    sender: HumanAddr,
-    from: HumanAddr,
+    sender: Addr,
+    from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
     memo: Option<String>,
@@ -473,7 +473,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     id: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -525,9 +525,9 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    sender: HumanAddr,
+    sender: Addr,
     msg: Option<Binary>,
     balance: Uint128,
     memo: Option<String>,

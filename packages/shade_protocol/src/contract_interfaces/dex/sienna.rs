@@ -5,18 +5,18 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
 use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Addr, Api, Deps, Querier, StdError, StdResult, Storage};
 
 use schemars::JsonSchema;
-use secret_toolkit::{utils::Query, serialization::Base64};
+use secret_toolkit::{serialization::Base64, utils::Query};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TokenType {
     CustomToken {
-        contract_addr: HumanAddr,
+        contract_addr: Addr,
         token_code_hash: String,
     },
     NativeToken {
@@ -55,7 +55,7 @@ pub struct Swap {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct SwapOffer {
-    pub recipient: HumanAddr,
+    pub recipient: Addr,
     pub amount: Uint128,
     pub msg: Base64,
 }
@@ -118,10 +118,7 @@ pub struct PairInfoResponse {
     pub pair_info: PairInfo,
 }
 
-pub fn is_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    pair: Contract,
-) -> StdResult<bool> {
+pub fn is_pair<S: Storage, A: Api, Q: Querier>(deps: Deps, pair: Contract) -> StdResult<bool> {
     Ok(
         match (PairQuery::PairInfo).query::<Q, PairInfoResponse>(
             &deps.querier,
@@ -135,7 +132,7 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
     band: Contract,
@@ -154,7 +151,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
 ) -> StdResult<Uint128> {
@@ -177,7 +174,7 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {
     let pair_info: PairInfoResponse = PairQuery::PairInfo.query(

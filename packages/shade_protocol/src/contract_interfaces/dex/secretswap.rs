@@ -5,8 +5,8 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
 use cosmwasm_math_compat::Uint128;
+use cosmwasm_std::{Addr, Api, Deps, Querier, StdError, StdResult, Storage};
 use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Token {
-    pub contract_addr: HumanAddr,
+    pub contract_addr: Addr,
     pub token_code_hash: String,
     pub viewing_key: String,
 }
@@ -63,8 +63,8 @@ pub struct SimulationResponse {
 #[serde(rename_all = "snake_case")]
 pub struct PairResponse {
     pub asset_infos: Vec<AssetInfo>,
-    pub contract_addr: HumanAddr,
-    pub liquidity_token: HumanAddr,
+    pub contract_addr: Addr,
+    pub liquidity_token: Addr,
     pub token_code_hash: String,
     pub asset0_volume: Uint128,
     pub asset1_volume: Uint128,
@@ -78,10 +78,7 @@ pub struct PoolResponse {
     pub total_share: Uint128,
 }
 
-pub fn is_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    pair: Contract,
-) -> StdResult<bool> {
+pub fn is_pair<S: Storage, A: Api, Q: Querier>(deps: Deps, pair: Contract) -> StdResult<bool> {
     Ok(
         match (PairQuery::Pair {}).query::<Q, PairResponse>(
             &deps.querier,
@@ -95,7 +92,7 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
     band: Contract,
@@ -113,7 +110,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
 ) -> StdResult<Uint128> {
@@ -139,7 +136,7 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {
     let pool: PoolResponse = PairQuery::Pool {}.query(

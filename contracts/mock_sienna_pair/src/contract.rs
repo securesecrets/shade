@@ -5,7 +5,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     InitResponse,
     Querier,
     StdError,
@@ -51,7 +51,7 @@ pub fn pair_info_w<S: Storage>(storage: &mut S) -> Singleton<S, PairInfo> {
 }
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    _deps: Deps,
     _env: Env,
     _msg: InitMsg,
 ) -> StdResult<InitResponse> {
@@ -70,7 +70,7 @@ pub enum HandleMsg {
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     _env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
@@ -83,11 +83,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => {
             let pair_info = PairInfo {
                 liquidity_token: Contract {
-                    address: HumanAddr("".to_string()),
+                    address: Addr("".to_string()),
                     code_hash: "".to_string(),
                 },
                 factory: Contract {
-                    address: HumanAddr("".to_string()),
+                    address: Addr("".to_string()),
                     code_hash: "".to_string(),
                 },
                 pair: Pair {

@@ -2,7 +2,7 @@ use crate::{
     impl_into_u8,
     utils::errors::{build_string, CodeType, DetailedError},
 };
-use cosmwasm_std::{HumanAddr, StdError};
+use cosmwasm_std::{Addr, StdError};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_math_compat::Uint128;
@@ -141,7 +141,7 @@ pub fn minting_disabled() -> StdError {
     DetailedError::from_code(target, Error::MintingDisabled, vec![]).to_error()
 }
 
-pub fn not_minter(user: &HumanAddr) -> StdError {
+pub fn not_minter(user: &Addr) -> StdError {
     DetailedError::from_code(target, Error::NotMinter, vec![user.as_str()]).to_error()
 }
 

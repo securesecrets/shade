@@ -15,7 +15,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -28,9 +28,9 @@ use shade_protocol::{
 };
 
 pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     code_hash: Option<String>,
     msg: Option<Binary>,
     memo: Option<String>,
@@ -61,9 +61,9 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     code_hash: Option<String>,
     msg: Option<Binary>,
     memo: Option<String>,
@@ -110,7 +110,7 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Snip20BalanceReceiverMsg {
-    pub sender: HumanAddr,
+    pub sender: Addr,
     pub balance: Uint128,
     pub memo: Option<String>,
     pub msg: Option<Binary>,
@@ -118,7 +118,7 @@ pub struct Snip20BalanceReceiverMsg {
 
 impl Snip20BalanceReceiverMsg {
     pub fn new(
-        sender: HumanAddr,
+        sender: Addr,
         balance: Uint128,
         memo: Option<String>,
         msg: Option<Binary>,
@@ -131,14 +131,14 @@ impl Snip20BalanceReceiverMsg {
         }
     }
 
-    pub fn to_cosmos_msg(self, code_hash: String, address: HumanAddr) -> StdResult<CosmosMsg> {
+    pub fn to_cosmos_msg(self, code_hash: String, address: Addr) -> StdResult<CosmosMsg> {
         BalanceReceiverHandleMsg::ReceiveBalance(self).to_cosmos_msg(code_hash, address, None)
     }
 
     pub fn to_cosmos_msg_cooldown(
         self,
         code_hash: String,
-        address: HumanAddr,
+        address: Addr,
     ) -> StdResult<CosmosMsg> {
         BalanceReceiverHandleMsg::ReceiveBalanceWithCooldown(self)
             .to_cosmos_msg(code_hash, address, None)

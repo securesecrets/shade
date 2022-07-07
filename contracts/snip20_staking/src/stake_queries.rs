@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Api, Binary, Extern, HumanAddr, Querier, StdResult, Storage};
+use cosmwasm_std::{to_binary, Api, Binary, Deps, Addr, Querier, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::staking::snip20_staking::stake::{StakeConfig, VecQueue},
     utils::storage::default::{BucketStorage, SingletonStorage},
@@ -76,7 +76,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdR
 
 pub fn staked<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account: HumanAddr,
+    account: Addr,
     time: Option<u64>,
 ) -> StdResult<Binary> {
     let tokens = ReadonlyBalances::from_storage(&deps.storage)

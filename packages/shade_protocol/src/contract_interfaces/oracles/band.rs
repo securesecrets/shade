@@ -1,5 +1,5 @@
 use crate::utils::asset::Contract;
-use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage};
+use cosmwasm_std::{Api, Deps, Querier, StdResult, Storage};
 use cosmwasm_math_compat::Uint128;
 use schemars::JsonSchema;
 use secret_toolkit::utils::{InitCallback, Query};
@@ -37,7 +37,7 @@ pub struct ReferenceData {
 }
 
 pub fn reference_data<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     base_symbol: String,
     quote_symbol: String,
     band: Contract,
@@ -50,7 +50,7 @@ pub fn reference_data<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     base_symbols: Vec<String>,
     quote_symbols: Vec<String>,
     band: Contract,

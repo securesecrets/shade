@@ -2,7 +2,7 @@
 pub mod tests {
     use crate::handle::inverse_normalizer;
     use cosmwasm_math_compat::Uint128;
-    use cosmwasm_std::{from_binary, Binary, HumanAddr};
+    use cosmwasm_std::{from_binary, Binary, Addr};
     use cosmwasm_std::testing::mock_dependencies;
     use query_authentication::{
         permit::bech32_to_canonical,
@@ -309,9 +309,9 @@ pub mod tests {
     #[test]
     fn memo_deserialization() {
         let expected_memo = AddressProofMsg {
-            address: HumanAddr("secret19q7h2zy8mgesy3r39el5fcm986nxqjd7cgylrz".to_string()),
+            address: Addr("secret19q7h2zy8mgesy3r39el5fcm986nxqjd7cgylrz".to_string()),
             amount: Uint128::new(1000000u128),
-            contract: HumanAddr("secret1sr62lehajgwhdzpmnl65u35rugjrgznh2572mv".to_string()),
+            contract: Addr("secret1sr62lehajgwhdzpmnl65u35rugjrgznh2572mv".to_string()),
             index: 10,
             key: "account-creation-permit".to_string(),
         };

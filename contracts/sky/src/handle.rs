@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    Storage, Api, Querier, Extern, Env, StdResult, HandleResponse, to_binary, 
-    StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
+    Storage, Api, Querier, Deps, Env, StdResult, HandleResponse, to_binary, 
+    StdError, Addr, CosmosMsg, Binary, WasmMsg
 };
 use fadroma::scrt::to_cosmos_msg;
 use cosmwasm_math_compat::Uint128;
@@ -19,7 +19,7 @@ use secret_toolkit::snip20::send_msg;
 use crate::{query::trade_profitability};
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
@@ -37,7 +37,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 /*pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>( //DEPRECIATED
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -153,7 +153,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }*/
 
 pub fn try_execute<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -210,7 +210,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
         messages.push(send_msg(
             config.market_swap_addr.address.clone(),
-            cosmwasm_std::Uint128(first_swap_min_expected.clone().u128()),
+            cosmwasm_std::Uint128::new(first_swap_min_expected.clone().u128()),
             Some(to_binary(&CallbackSwap{
                 expected_return: second_swap_min_expected.clone(),
             })?),
@@ -224,7 +224,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     else {
         messages.push(send_msg(
             config.market_swap_addr.address.clone(),
-            cosmwasm_std::Uint128(amount.u128()),
+            cosmwasm_std::Uint128::new(amount.u128()),
             Some(to_binary(&CallbackSwap{
                 expected_return: first_swap_min_expected,
             })?),

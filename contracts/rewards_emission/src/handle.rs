@@ -10,7 +10,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StakingMsg,
     StdError,
@@ -50,10 +50,10 @@ use crate::{
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    _sender: HumanAddr,
-    _from: HumanAddr,
+    _sender: Addr,
+    _from: Addr,
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
@@ -69,7 +69,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
@@ -91,7 +91,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn register_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     contract: &Contract,
 ) -> StdResult<HandleResponse> {
@@ -140,7 +140,7 @@ pub fn register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     rewards: Vec<Reward>,
 ) -> StdResult<HandleResponse> {
@@ -186,9 +186,9 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
     Ok(HandleResponse {
         messages: vec![],
@@ -200,9 +200,9 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     _env: Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
     match asset_r(&deps.storage).may_load(&asset.as_str().as_bytes())? {
         Some(_) => Ok(HandleResponse {

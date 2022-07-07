@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use cosmwasm_std::{Api, Env, Deps, HandleResponse, Addr, Querier, StdError, StdResult, Storage, to_binary};
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::errors::{minting_disabled, not_admin, not_minter};
@@ -9,8 +9,8 @@ use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 
 fn try_mint_impl<S: Storage>(
     storage: &mut S,
-    minter: &HumanAddr,
-    recipient: &HumanAddr,
+    minter: &Addr,
+    recipient: &Addr,
     amount: Uint128,
     denom: String,
     memo: Option<String>,
@@ -22,9 +22,9 @@ fn try_mint_impl<S: Storage>(
 }
 
 pub fn try_mint<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<HandleResponse> {
@@ -51,7 +51,7 @@ pub fn try_mint<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     actions: Vec<batch::MintAction>,
 ) -> StdResult<HandleResponse> {
@@ -90,9 +90,9 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    new_minters: Vec<HumanAddr>
+    new_minters: Vec<Addr>
 ) -> StdResult<HandleResponse> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
@@ -114,9 +114,9 @@ pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    minters_to_remove: Vec<HumanAddr>
+    minters_to_remove: Vec<Addr>
 ) -> StdResult<HandleResponse> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
@@ -140,9 +140,9 @@ pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_minters<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    minters: Vec<HumanAddr>
+    minters: Vec<Addr>
 ) -> StdResult<HandleResponse> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {

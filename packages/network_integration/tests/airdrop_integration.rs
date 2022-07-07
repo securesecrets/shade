@@ -1,6 +1,6 @@
 use colored::*;
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Binary, HumanAddr};
+use cosmwasm_std::{to_binary, Binary, Addr};
 use network_integration::utils::store_struct;
 use network_integration::{
     contract_helpers::{
@@ -117,7 +117,7 @@ fn proof_from_tree(indices: &Vec<usize>, tree: &Vec<Vec<[u8; 32]>>) -> Vec<Binar
 }
 
 fn setup_contracts(
-    dump_address: Option<HumanAddr>,
+    dump_address: Option<Addr>,
     start_date: Option<u64>,
     end_date: Option<u64>,
     decay_start: Option<u64>,
@@ -138,7 +138,7 @@ fn setup_contracts(
         symbol: "TEST".to_string(),
         decimals: 6,
         initial_balances: Some(vec![InitialBalance {
-            address: HumanAddr::from(account_a.clone()),
+            address: Addr::from(account_a.clone()),
             amount: airdrop_total,
         }]),
         prng_seed: Default::default(),
@@ -166,7 +166,7 @@ fn setup_contracts(
         admin: None,
         dump_address,
         airdrop_token: Contract {
-            address: HumanAddr::from(snip.address.clone()),
+            address: Addr::from(snip.address.clone()),
             code_hash: snip.code_hash.clone(),
         },
         airdrop_amount: airdrop_total,
@@ -213,7 +213,7 @@ fn setup_contracts(
     /// Assert that we start with nothing
     handle(
         &snip20::HandleMsg::Send {
-            recipient: HumanAddr::from(airdrop.address.clone()),
+            recipient: Addr::from(airdrop.address.clone()),
             amount: airdrop_total,
             msg: None,
             memo: None,
@@ -326,7 +326,7 @@ fn run_airdrop() -> Result<()> {
     let end_date = decay_date + 60;
 
     let (airdrop, snip) = setup_contracts(
-        Some(HumanAddr::from(account_a.clone())),
+        Some(Addr::from(account_a.clone())),
         None,
         Some(end_date),
         Some(decay_date),
@@ -335,7 +335,7 @@ fn run_airdrop() -> Result<()> {
         a_airdrop,
         Uint128::new(50),
         vec![RequiredTask {
-            address: HumanAddr::from(account_a.clone()),
+            address: Addr::from(account_a.clone()),
             percent: Uint128::new(50),
         }],
         Uint128::new(30000000),
@@ -351,9 +351,9 @@ fn run_airdrop() -> Result<()> {
     print_warning("Creating initial permits");
     /// Create AB permit
     let b_address_proof = AddressProofMsg {
-        address: HumanAddr(account_b.clone()),
+        address: Addr(account_b.clone()),
         amount: b_airdrop,
-        contract: HumanAddr(airdrop.address.clone()),
+        contract: Addr(airdrop.address.clone()),
         index: 1,
         key: "key".to_string(),
     };
@@ -366,9 +366,9 @@ fn run_airdrop() -> Result<()> {
     );
 
     let a_address_proof = AddressProofMsg {
-        address: HumanAddr(account_a.clone()),
+        address: Addr(account_a.clone()),
         amount: a_airdrop,
-        contract: HumanAddr(airdrop.address.clone()),
+        contract: Addr(airdrop.address.clone()),
         index: 0,
         key: "key".to_string(),
     };
@@ -384,7 +384,7 @@ fn run_airdrop() -> Result<()> {
     );
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contract: HumanAddr(airdrop.address.clone()),
+            contract: Addr(airdrop.address.clone()),
             key: "key".to_string(),
         },
         None,
@@ -431,7 +431,7 @@ fn run_airdrop() -> Result<()> {
 
     handle(
         &airdrop::HandleMsg::CompleteTask {
-            address: HumanAddr::from(account_a.clone()),
+            address: Addr::from(account_a.clone()),
             padding: None,
         },
         &airdrop,
@@ -481,9 +481,9 @@ fn run_airdrop() -> Result<()> {
     print_warning("Confirming full airdrop after adding C");
 
     let c_address_proof = AddressProofMsg {
-        address: HumanAddr(account_c.clone()),
+        address: Addr(account_c.clone()),
         amount: c_airdrop,
-        contract: HumanAddr(airdrop.address.clone()),
+        contract: Addr(airdrop.address.clone()),
         index: 2,
         key: "key".to_string(),
     };
@@ -553,7 +553,7 @@ fn run_airdrop() -> Result<()> {
 
     let new_account_permit = create_signed_permit(
         AccountPermitMsg {
-            contract: HumanAddr(airdrop.address.clone()),
+            contract: Addr(airdrop.address.clone()),
             key: "new_key".to_string(),
         },
         None,
@@ -587,7 +587,7 @@ fn run_airdrop() -> Result<()> {
     print_warning("Creating Viewing Key");
     {
         let msg = airdrop::QueryMsg::AccountWithKey {
-            account: HumanAddr(account_a.clone()),
+            account: Addr(account_a.clone()),
             current_date: None,
             key: "key".to_string(),
         };
@@ -613,7 +613,7 @@ fn run_airdrop() -> Result<()> {
 
     {
         let msg = airdrop::QueryMsg::AccountWithKey {
-            account: HumanAddr(account_a.clone()),
+            account: Addr(account_a.clone()),
             current_date: None,
             key: "key".to_string(),
         };
@@ -636,7 +636,7 @@ fn run_airdrop() -> Result<()> {
     }
     {
         let msg = airdrop::QueryMsg::AccountWithKey {
-            account: HumanAddr(account_a.clone()),
+            account: Addr(account_a.clone()),
             current_date: None,
             key: "wrong".to_string(),
         };
@@ -655,9 +655,9 @@ fn run_airdrop() -> Result<()> {
 
     {
         let d_address_proof = AddressProofMsg {
-            address: HumanAddr(account_d.clone()),
+            address: Addr(account_d.clone()),
             amount: decay_amount,
-            contract: HumanAddr(airdrop.address.clone()),
+            contract: Addr(airdrop.address.clone()),
             index: 3,
             key: "key".to_string(),
         };
@@ -723,9 +723,9 @@ fn run_airdrop() -> Result<()> {
 
 fn generate_memo(airdrop: &NetContract, address: String, index: u32) -> String {
     let mut memo_content = AddressProofMsg {
-        address: HumanAddr(address),
+        address: Addr(address),
         amount: Uint128::new(1000),
-        contract: HumanAddr(airdrop.address.clone()),
+        contract: Addr(airdrop.address.clone()),
         index,
         key: "key".to_string(),
     };
@@ -841,7 +841,7 @@ fn airdrop_gas_prices() -> Result<()> {
     for _ in 0..loops {
         {
             let (airdrop, snip) = setup_contracts(
-                Some(HumanAddr::from(account_a.clone())),
+                Some(Addr::from(account_a.clone())),
                 None,
                 None,
                 None,
@@ -850,7 +850,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: HumanAddr::from(account_a.clone()),
+                    address: Addr::from(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -871,7 +871,7 @@ fn airdrop_gas_prices() -> Result<()> {
 
         {
             let (airdrop, snip) = setup_contracts(
-                Some(HumanAddr::from(account_a.clone())),
+                Some(Addr::from(account_a.clone())),
                 None,
                 None,
                 None,
@@ -880,7 +880,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: HumanAddr::from(account_a.clone()),
+                    address: Addr::from(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -912,7 +912,7 @@ fn airdrop_gas_prices() -> Result<()> {
     let mut reports_1 = vec![];
     for _ in 0..loops {
         let (airdrop, snip) = setup_contracts(
-            Some(HumanAddr::from(account_a.clone())),
+            Some(Addr::from(account_a.clone())),
             None,
             None,
             None,
@@ -921,7 +921,7 @@ fn airdrop_gas_prices() -> Result<()> {
             Uint128::new(1001),
             Uint128::new(20),
             vec![RequiredTask {
-                address: HumanAddr::from(account_a.clone()),
+                address: Addr::from(account_a.clone()),
                 percent: Uint128::new(80),
             }],
             Uint128::new(30000000),
@@ -952,7 +952,7 @@ fn airdrop_gas_prices() -> Result<()> {
     let mut reports_2 = vec![];
     for _ in 0..loops {
         let (airdrop, snip) = setup_contracts(
-            Some(HumanAddr::from(account_a.clone())),
+            Some(Addr::from(account_a.clone())),
             None,
             None,
             None,
@@ -961,7 +961,7 @@ fn airdrop_gas_prices() -> Result<()> {
             Uint128::new(1001),
             Uint128::new(20),
             vec![RequiredTask {
-                address: HumanAddr::from(account_a.clone()),
+                address: Addr::from(account_a.clone()),
                 percent: Uint128::new(80),
             }],
             Uint128::new(30000000),
@@ -992,7 +992,7 @@ fn airdrop_gas_prices() -> Result<()> {
     let mut reports_3 = vec![];
     for _ in 0..loops {
         let (airdrop, snip) = setup_contracts(
-            Some(HumanAddr::from(account_a.clone())),
+            Some(Addr::from(account_a.clone())),
             None,
             None,
             None,
@@ -1001,7 +1001,7 @@ fn airdrop_gas_prices() -> Result<()> {
             Uint128::new(1001),
             Uint128::new(20),
             vec![RequiredTask {
-                address: HumanAddr::from(account_a.clone()),
+                address: Addr::from(account_a.clone()),
                 percent: Uint128::new(80),
             }],
             Uint128::new(30000000),
@@ -1033,7 +1033,7 @@ fn airdrop_gas_prices() -> Result<()> {
     for _ in 0..loops {
         {
             let (airdrop, snip) = setup_contracts(
-                Some(HumanAddr::from(account_a.clone())),
+                Some(Addr::from(account_a.clone())),
                 None,
                 None,
                 None,
@@ -1042,7 +1042,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: HumanAddr::from(account_a.clone()),
+                    address: Addr::from(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -1068,7 +1068,7 @@ fn airdrop_gas_prices() -> Result<()> {
 
         {
             let (airdrop, snip) = setup_contracts(
-                Some(HumanAddr::from(account_a.clone())),
+                Some(Addr::from(account_a.clone())),
                 None,
                 None,
                 None,
@@ -1077,7 +1077,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: HumanAddr::from(account_a.clone()),
+                    address: Addr::from(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -1115,7 +1115,7 @@ fn airdrop_gas_prices() -> Result<()> {
     for _ in 0..loops {
         {
             let (airdrop, snip) = setup_contracts(
-                Some(HumanAddr::from(account_a.clone())),
+                Some(Addr::from(account_a.clone())),
                 None,
                 None,
                 None,
@@ -1124,7 +1124,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: HumanAddr::from(account_a.clone()),
+                    address: Addr::from(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -1151,7 +1151,7 @@ fn airdrop_gas_prices() -> Result<()> {
 
         {
             let (airdrop, snip) = setup_contracts(
-                Some(HumanAddr::from(account_a.clone())),
+                Some(Addr::from(account_a.clone())),
                 None,
                 None,
                 None,
@@ -1160,7 +1160,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: HumanAddr::from(account_a.clone()),
+                    address: Addr::from(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),

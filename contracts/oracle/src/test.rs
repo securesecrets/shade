@@ -6,7 +6,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     InitResponse,
     StdError,
     StdResult,

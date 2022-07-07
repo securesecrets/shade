@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     coins, from_binary, to_binary,
-    Extern, HumanAddr, StdError,
+    Extern, Addr, StdError,
     Binary, StdResult, HandleResponse, Env,
     InitResponse, Uint128,
 };
@@ -63,7 +63,7 @@ fn single_asset_holder_no_adapters(
             decimals: 6,
             initial_balances: Some(vec![
                 snip20_reference_impl::msg::InitialBalance {
-                    address: HumanAddr("holder".into()),
+                    address: Addr("holder".into()),
                     amount: initial,
                 },
             ]),
@@ -73,7 +73,7 @@ fn single_asset_holder_no_adapters(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("token".into()),
+                address: Addr("token".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }
         )
@@ -82,14 +82,14 @@ fn single_asset_holder_no_adapters(
     let manager = ensemble.instantiate(
         reg_manager.id,
         &treasury_manager::InitMsg {
-            admin: Some(HumanAddr("admin".into())),
-            treasury: HumanAddr("treasury".into()),
+            admin: Some(Addr("admin".into())),
+            treasury: Addr("treasury".into()),
             viewing_key: viewing_key.clone(),
         },
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("manager".into()),
+                address: Addr("manager".into()),
                 code_hash: reg_manager.code_hash,
             }
         )
@@ -124,7 +124,7 @@ fn single_asset_holder_no_adapters(
     // Add 'holder' as holder
     ensemble.execute(
         &treasury_manager::HandleMsg::AddHolder {
-            holder: HumanAddr("holder".into())
+            holder: Addr("holder".into())
         },
         MockEnv::new(
             "admin",
@@ -155,7 +155,7 @@ fn single_asset_holder_no_adapters(
         manager.address.clone(),
         &treasury_manager::QueryMsg::Balance {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
@@ -169,7 +169,7 @@ fn single_asset_holder_no_adapters(
         manager.address.clone(),
         &treasury_manager::QueryMsg::Balance {
             asset: token.address.clone(),
-            holder: HumanAddr("treasury".into()),
+            holder: Addr("treasury".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
@@ -195,7 +195,7 @@ fn single_asset_holder_no_adapters(
     match ensemble.query(
         token.address.clone(),
         &snip20_reference_impl::msg::QueryMsg::Balance {
-            address: HumanAddr("holder".into()),
+            address: Addr("holder".into()),
             key: viewing_key.clone(),
         }
     ).unwrap() {
@@ -233,7 +233,7 @@ fn single_asset_holder_no_adapters(
         _ => assert!(false),
     };
 
-    let unbond_amount = Uint128(deposit.u128() / 2);
+    let unbond_amount = Uint128::new(deposit.u128() / 2);
 
     // unbond from manager
     ensemble.execute(
@@ -255,7 +255,7 @@ fn single_asset_holder_no_adapters(
         })
     ).unwrap() {
         adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond total unbondable");
+            assert_eq!(amount, Uint128::new(deposit.u128() - unbond_amount.u128()), "Post-unbond total unbondable");
         }
         _ => assert!(false),
     };
@@ -263,11 +263,11 @@ fn single_asset_holder_no_adapters(
         manager.address.clone(),
         &treasury_manager::QueryMsg::Unbondable {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond holder unbondable");
+            assert_eq!(amount, Uint128::new(deposit.u128() - unbond_amount.u128()), "Post-unbond holder unbondable");
         }
         _ => assert!(false),
     };
@@ -288,7 +288,7 @@ fn single_asset_holder_no_adapters(
         manager.address.clone(),
         &treasury_manager::QueryMsg::Unbonding {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Unbonding { amount } => {
@@ -314,7 +314,7 @@ fn single_asset_holder_no_adapters(
         //TODO should be manager query not adapter
         &treasury_manager::QueryMsg::Claimable {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
@@ -342,7 +342,7 @@ fn single_asset_holder_no_adapters(
     match ensemble.query(
         token.address.clone(),
         &snip20_reference_impl::msg::QueryMsg::Balance {
-            address: HumanAddr("holder".into()),
+            address: Addr("holder".into()),
             key: viewing_key.clone(),
         },
     ).unwrap() {
@@ -368,8 +368,8 @@ macro_rules! single_asset_holder_no_adapters_tests {
 }
 single_asset_holder_no_adapters_tests! {
     single_asset_holder_no_adapters_0: (
-        Uint128(100_000_000),
-        Uint128(50_000_000),
+        Uint128::new(100_000_000),
+        Uint128::new(50_000_000),
     ),
 }
 
@@ -398,7 +398,7 @@ fn single_asset_holder_1_adapter(
             decimals: 6,
             initial_balances: Some(vec![
                 snip20_reference_impl::msg::InitialBalance {
-                    address: HumanAddr("holder".into()),
+                    address: Addr("holder".into()),
                     amount: initial,
                 },
             ]),
@@ -408,7 +408,7 @@ fn single_asset_holder_1_adapter(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("token".into()),
+                address: Addr("token".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }
         )
@@ -417,14 +417,14 @@ fn single_asset_holder_1_adapter(
     let manager = ensemble.instantiate(
         reg_manager.id,
         &treasury_manager::InitMsg {
-            admin: Some(HumanAddr("admin".into())),
-            treasury: HumanAddr("treasury".into()),
+            admin: Some(Addr("admin".into())),
+            treasury: Addr("treasury".into()),
             viewing_key: viewing_key.clone(),
         },
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("manager".into()),
+                address: Addr("manager".into()),
                 code_hash: reg_manager.code_hash,
             }
         )
@@ -459,7 +459,7 @@ fn single_asset_holder_1_adapter(
     // Add 'holder' as holder
     ensemble.execute(
         &treasury_manager::HandleMsg::AddHolder {
-            holder: HumanAddr("holder".into())
+            holder: Addr("holder".into())
         },
         MockEnv::new(
             "admin",
@@ -490,7 +490,7 @@ fn single_asset_holder_1_adapter(
         manager.address.clone(),
         &treasury_manager::QueryMsg::Balance {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
@@ -504,7 +504,7 @@ fn single_asset_holder_1_adapter(
         manager.address.clone(),
         &treasury_manager::QueryMsg::Balance {
             asset: token.address.clone(),
-            holder: HumanAddr("treasury".into()),
+            holder: Addr("treasury".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
@@ -530,7 +530,7 @@ fn single_asset_holder_1_adapter(
     match ensemble.query(
         token.address.clone(),
         &snip20_reference_impl::msg::QueryMsg::Balance {
-            address: HumanAddr("holder".into()),
+            address: Addr("holder".into()),
             key: viewing_key.clone(),
         }
     ).unwrap() {
@@ -568,7 +568,7 @@ fn single_asset_holder_1_adapter(
         _ => assert!(false),
     };
 
-    let unbond_amount = Uint128(deposit.u128() / 2);
+    let unbond_amount = Uint128::new(deposit.u128() / 2);
 
     // unbond from manager
     ensemble.execute(
@@ -590,7 +590,7 @@ fn single_asset_holder_1_adapter(
         })
     ).unwrap() {
         adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond total unbondable");
+            assert_eq!(amount, Uint128::new(deposit.u128() - unbond_amount.u128()), "Post-unbond total unbondable");
         }
         _ => assert!(false),
     };
@@ -598,11 +598,11 @@ fn single_asset_holder_1_adapter(
         manager.address.clone(),
         &treasury_manager::QueryMsg::Unbondable {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond holder unbondable");
+            assert_eq!(amount, Uint128::new(deposit.u128() - unbond_amount.u128()), "Post-unbond holder unbondable");
         }
         _ => assert!(false),
     };
@@ -623,7 +623,7 @@ fn single_asset_holder_1_adapter(
         manager.address.clone(),
         &treasury_manager::QueryMsg::Unbonding {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Unbonding { amount } => {
@@ -649,7 +649,7 @@ fn single_asset_holder_1_adapter(
         //TODO should be manager query not adapter
         &treasury_manager::QueryMsg::Claimable {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         }
     ).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
@@ -677,7 +677,7 @@ fn single_asset_holder_1_adapter(
     match ensemble.query(
         token.address.clone(),
         &snip20_reference_impl::msg::QueryMsg::Balance {
-            address: HumanAddr("holder".into()),
+            address: Addr("holder".into()),
             key: viewing_key.clone(),
         },
     ).unwrap() {
@@ -703,8 +703,8 @@ macro_rules! single_asset_holder_no_adapters_tests {
 }
 single_asset_holder_no_adapters_tests! {
     single_asset_holder_no_adapters_0: (
-        Uint128(100_000_000),
-        Uint128(50_000_000),
+        Uint128::new(100_000_000),
+        Uint128::new(50_000_000),
     ),
 }
 */

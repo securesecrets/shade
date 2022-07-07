@@ -32,7 +32,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -51,11 +51,11 @@ use std::convert::TryInto;
 //TODO: set errors
 
 pub fn try_update_stake_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     unbond_time: Option<u64>,
     disable_treasury: bool,
-    treasury: Option<HumanAddr>,
+    treasury: Option<Addr>,
 ) -> StdResult<HandleResponse> {
     let config = Config::from_storage(&mut deps.storage);
 
@@ -116,7 +116,7 @@ fn round_date(date: u64) -> u64 {
 fn add_balance<S: Storage>(
     storage: &mut S,
     stake_config: &StakeConfig,
-    sender: &HumanAddr,
+    sender: &Addr,
     sender_canon: &CanonicalAddr,
     amount: Uint128,
 ) -> StdResult<()> {
@@ -209,7 +209,7 @@ fn subtract_internal_supply<S: Storage>(
 fn remove_balance<S: Storage>(
     storage: &mut S,
     stake_config: &StakeConfig,
-    account: &HumanAddr,
+    account: &Addr,
     account_cannon: &CanonicalAddr,
     amount: Uint128,
     time: u64,
@@ -260,7 +260,7 @@ fn remove_balance<S: Storage>(
 pub fn claim_rewards<S: Storage>(
     storage: &mut S,
     stake_config: &StakeConfig,
-    sender: &HumanAddr,
+    sender: &Addr,
     sender_canon: &CanonicalAddr,
 ) -> StdResult<Uint128> {
     let user_shares = UserShares::may_load(storage, sender.as_str().as_bytes())?.expect("No funds");
@@ -374,10 +374,10 @@ pub fn calculate_rewards(
 }
 
 pub fn try_receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    sender: HumanAddr,
-    from: HumanAddr,
+    sender: Addr,
+    from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
     memo: Option<String>,
@@ -517,7 +517,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
 pub fn remove_from_cooldown<S: Storage>(
     store: &mut S,
-    user: &HumanAddr,
+    user: &Addr,
     user_tokens: Uint128,
     remove_amount: Uint128,
     time: u64,
@@ -540,7 +540,7 @@ pub fn remove_from_cooldown<S: Storage>(
 }
 
 pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -632,7 +632,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
 ) -> StdResult<HandleResponse> {
     let sender = &env.message.sender;
@@ -709,7 +709,7 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
 ) -> StdResult<HandleResponse> {
     let stake_config = StakeConfig::load(&deps.storage)?;
@@ -754,7 +754,7 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
 ) -> StdResult<HandleResponse> {
     // Clam rewards

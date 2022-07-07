@@ -8,7 +8,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -67,10 +67,10 @@ use chrono::prelude::*;
 use shade_protocol::contract_interfaces::dao::adapter;
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    sender: HumanAddr,
-    _from: HumanAddr,
+    sender: Addr,
+    _from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
@@ -86,7 +86,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
@@ -124,9 +124,9 @@ pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn rebalance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
     let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
@@ -356,7 +356,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     env: &Env,
-    spender: HumanAddr,
+    spender: Addr,
     amount: Uint128,
     key: String,
     asset: Contract,
@@ -397,7 +397,7 @@ pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     contract: &Contract,
     reserves: Option<Uint128>,
@@ -447,7 +447,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn register_manager<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     contract: &mut Contract,
 ) -> StdResult<HandleResponse> {
@@ -484,7 +484,7 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
 }
 
 // extract contract address if any
-fn allowance_address(allowance: &Allowance) -> Option<&HumanAddr> {
+fn allowance_address(allowance: &Allowance) -> Option<&Addr> {
     match allowance {
         Allowance::Amount { spender, .. } => Some(&spender),
         Allowance::Portion { spender, .. } => Some(&spender),
@@ -508,9 +508,9 @@ fn allowance_amount(allowance: &Allowance) -> Uint128 {
 }
 
 pub fn allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
     allowance: Allowance,
 ) -> StdResult<HandleResponse> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
@@ -622,9 +622,9 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
 
     let key = asset.as_str().as_bytes();
@@ -664,9 +664,9 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
     /*

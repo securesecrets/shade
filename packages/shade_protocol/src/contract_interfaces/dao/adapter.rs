@@ -6,7 +6,7 @@ use cosmwasm_std::{
     Decimal,
     Delegation,
     Extern,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -22,10 +22,10 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub enum SubHandleMsg {
     // Begin unbonding amount
-    Unbond { asset: HumanAddr, amount: Uint128 },
-    Claim { asset: HumanAddr },
+    Unbond { asset: Addr, amount: Uint128 },
+    Claim { asset: Addr },
     // Maintenance trigger e.g. claim rewards and restake
-    Update { asset: HumanAddr },
+    Update { asset: Addr },
 }
 
 impl HandleCallback for SubHandleMsg {
@@ -47,7 +47,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     Unbond {
         status: ResponseStatus,
@@ -65,11 +65,11 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SubQueryMsg {
-    Balance { asset: HumanAddr },
-    Unbonding { asset: HumanAddr },
-    Claimable { asset: HumanAddr },
-    Unbondable { asset: HumanAddr },
-    Reserves { asset: HumanAddr },
+    Balance { asset: Addr },
+    Unbonding { asset: Addr },
+    Claimable { asset: Addr },
+    Unbondable { asset: Addr },
+    Reserves { asset: Addr },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -93,8 +93,8 @@ pub enum QueryAnswer {
 }
 
 pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    deps: Deps,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Adapter(SubQueryMsg::Claimable {
@@ -111,8 +111,8 @@ pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    deps: Deps,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Adapter(SubQueryMsg::Unbonding {
@@ -129,8 +129,8 @@ pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    deps: Deps,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Adapter(SubQueryMsg::Unbondable {
@@ -147,8 +147,8 @@ pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    deps: Deps,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
 
@@ -163,8 +163,8 @@ pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn balance_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    deps: Deps,
+    asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Adapter(SubQueryMsg::Balance {
@@ -180,7 +180,7 @@ pub fn balance_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn claim_msg(asset: HumanAddr, adapter: Contract) -> StdResult<CosmosMsg> {
+pub fn claim_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
     Ok(
         HandleMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
             adapter.code_hash,
@@ -190,7 +190,7 @@ pub fn claim_msg(asset: HumanAddr, adapter: Contract) -> StdResult<CosmosMsg> {
     )
 }
 
-pub fn unbond_msg(asset: HumanAddr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
+pub fn unbond_msg(asset: Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
     Ok(
         HandleMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
             adapter.code_hash,
@@ -200,7 +200,7 @@ pub fn unbond_msg(asset: HumanAddr, amount: Uint128, adapter: Contract) -> StdRe
     )
 }
 
-pub fn update_msg(asset: HumanAddr, adapter: Contract) -> StdResult<CosmosMsg> {
+pub fn update_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
     Ok(
         HandleMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
             adapter.code_hash,

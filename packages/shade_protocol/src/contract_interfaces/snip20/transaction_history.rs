@@ -1,11 +1,12 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{
-    Api, CanonicalAddr, Coin, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage,
+use crate::contract_interfaces::snip20::errors::{
+    legacy_cannot_convert_from_tx,
+    tx_code_invalid_conversion,
 };
 use cosmwasm_math_compat::Uint128;
-use crate::contract_interfaces::snip20::errors::{legacy_cannot_convert_from_tx, tx_code_invalid_conversion};
+use cosmwasm_std::{Addr, Coin, MemoryStorage, StdError, StdResult, Storage};
 
 #[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveMapStorage};
@@ -19,9 +20,9 @@ use secret_storage_plus::{Item, Map};
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 pub struct Tx {
     pub id: u64,
-    pub from: HumanAddr,
-    pub sender: HumanAddr,
-    pub receiver: HumanAddr,
+    pub from: Addr,
+    pub sender: Addr,
+    pub receiver: Addr,
     pub coins: Coin,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
@@ -36,7 +37,7 @@ impl Tx {
     // Inefficient but compliant, not recommended to use deprecated features
     pub fn get<S: Storage>(
         storage: &S,
-        for_address: &HumanAddr,
+        for_address: &Addr,
         page: u32,
         page_size: u32,
     ) -> StdResult<(Vec<Self>, u64)> {
@@ -52,8 +53,7 @@ impl Tx {
                     total += 1;
                     if total >= (start_index + page_size as u64) {
                         break;
-                    }
-                    else if total >= start_index {
+                    } else if total >= start_index {
                         txs.push(tx);
                     }
                 }
@@ -70,17 +70,17 @@ impl Tx {
 #[serde(rename_all = "snake_case")]
 pub enum TxAction {
     Transfer {
-        from: HumanAddr,
-        sender: HumanAddr,
-        recipient: HumanAddr,
+        from: Addr,
+        sender: Addr,
+        recipient: Addr,
     },
     Mint {
-        minter: HumanAddr,
-        recipient: HumanAddr,
+        minter: Addr,
+        recipient: Addr,
     },
     Burn {
-        burner: HumanAddr,
-        owner: HumanAddr,
+        burner: Addr,
+        owner: Addr,
     },
     Deposit {},
     Redeem {},
@@ -106,7 +106,7 @@ pub struct RichTx {
 impl RichTx {
     pub fn get<S: Storage>(
         storage: &S,
-        for_address: &HumanAddr,
+        for_address: &Addr,
         page: u32,
         page_size: u32,
     ) -> StdResult<(Vec<Self>, u64)> {
@@ -115,8 +115,7 @@ impl RichTx {
         let size: u64;
         if (start_index + page_size as u64) > id {
             size = id;
-        }
-        else {
+        } else {
             size = page_size as u64 + start_index;
         }
 
@@ -164,13 +163,13 @@ impl TxCode {
 #[serde(rename_all = "snake_case")]
 struct StoredTxAction {
     tx_type: u8,
-    address1: Option<HumanAddr>,
-    address2: Option<HumanAddr>,
-    address3: Option<HumanAddr>,
+    address1: Option<Addr>,
+    address2: Option<Addr>,
+    address3: Option<Addr>,
 }
 
 impl StoredTxAction {
-    fn transfer(from: HumanAddr, sender: HumanAddr, recipient: HumanAddr) -> Self {
+    fn transfer(from: Addr, sender: Addr, recipient: Addr) -> Self {
         Self {
             tx_type: TxCode::Transfer.to_u8(),
             address1: Some(from),
@@ -178,7 +177,8 @@ impl StoredTxAction {
             address3: Some(recipient),
         }
     }
-    fn mint(minter: HumanAddr, recipient: HumanAddr) -> Self {
+
+    fn mint(minter: Addr, recipient: Addr) -> Self {
         Self {
             tx_type: TxCode::Mint.to_u8(),
             address1: Some(minter),
@@ -186,7 +186,8 @@ impl StoredTxAction {
             address3: None,
         }
     }
-    fn burn(owner: HumanAddr, burner: HumanAddr) -> Self {
+
+    fn burn(owner: Addr, burner: Addr) -> Self {
         Self {
             tx_type: TxCode::Burn.to_u8(),
             address1: Some(burner),
@@ -194,6 +195,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn deposit() -> Self {
         Self {
             tx_type: TxCode::Deposit.to_u8(),
@@ -202,6 +204,7 @@ impl StoredTxAction {
             address3: None,
         }
     }
+
     fn redeem() -> Self {
         Self {
             tx_type: TxCode::Redeem.to_u8(),
@@ -211,7 +214,7 @@ impl StoredTxAction {
         }
     }
 
-    fn into_humanized<>(self) -> StdResult<TxAction> {
+    fn into_humanized(self) -> StdResult<TxAction> {
         let transfer_addr_err = || {
             StdError::generic_err(
                 "Missing address in stored Transfer transaction. Storage is corrupt",
@@ -304,18 +307,17 @@ impl StoredRichTx {
                 coins: self.coins,
                 memo: self.memo,
                 block_time: Some(self.block_time),
-                block_height: Some(self.block_height)
+                block_height: Some(self.block_height),
             })
-        }
-        else {
+        } else {
             Err(legacy_cannot_convert_from_tx())
         }
     }
 }
 
 #[cfg(feature = "snip20-impl")]
-impl MapStorage<'static, (HumanAddr, u64)> for StoredRichTx {
-    const MAP: Map<'static, (HumanAddr, u64), Self> = Map::new("stored-rich-tx-");
+impl MapStorage<'static, (Addr, u64)> for StoredRichTx {
+    const MAP: Map<'static, (Addr, u64), Self> = Map::new("stored-rich-tx-");
 }
 
 // Storage functions:
@@ -342,10 +344,12 @@ struct UserTXTotal(pub u64);
 impl UserTXTotal {
     pub fn append<S: Storage>(
         storage: &mut S,
-        for_address: &HumanAddr,
+        for_address: &Addr,
         tx: &StoredRichTx,
     ) -> StdResult<()> {
-        let id = UserTXTotal::may_load(storage, for_address.clone())?.unwrap_or(UserTXTotal(0)).0;
+        let id = UserTXTotal::may_load(storage, for_address.clone())?
+            .unwrap_or(UserTXTotal(0))
+            .0;
         UserTXTotal(id + 1).save(storage, for_address.clone())?;
         tx.save(storage, (for_address.clone(), id))?;
 
@@ -354,31 +358,34 @@ impl UserTXTotal {
 }
 
 #[cfg(feature = "snip20-impl")]
-impl MapStorage<'static, HumanAddr> for UserTXTotal {
-    const MAP: Map<'static, HumanAddr, Self> = Map::new("user-tx-total-");
+impl MapStorage<'static, Addr> for UserTXTotal {
+    const MAP: Map<'static, Addr, Self> = Map::new("user-tx-total-");
 }
 
 #[cfg(feature = "snip20-impl")]
 #[allow(clippy::too_many_arguments)] // We just need them
 pub fn store_transfer<S: Storage>(
     storage: &mut S,
-    owner: &HumanAddr,
-    sender: &HumanAddr,
-    receiver: &HumanAddr,
+    owner: &Addr,
+    sender: &Addr,
+    receiver: &Addr,
     amount: Uint128,
     denom: String,
     memo: Option<String>,
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
-    let tx = StoredRichTx{
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
+    let tx = StoredRichTx {
         id,
         action: StoredTxAction::transfer(owner.clone(), sender.clone(), receiver.clone()),
         coins,
         memo,
         block_time: 0,
-        block_height: 0
+        block_height: 0,
     };
 
     // Write to the owners history if it's different from the other two addresses
@@ -401,21 +408,23 @@ pub fn store_transfer<S: Storage>(
 #[cfg(feature = "snip20-impl")]
 pub fn store_mint<S: Storage>(
     storage: &mut S,
-    minter: &HumanAddr,
-    recipient: &HumanAddr,
+    minter: &Addr,
+    recipient: &Addr,
     amount: Uint128,
     denom: String,
     memo: Option<String>,
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
     let action = StoredTxAction::mint(minter.clone(), recipient.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
     if minter != recipient {
         UserTXTotal::append(storage, recipient, &tx)?;
-
     }
     UserTXTotal::append(storage, minter, &tx)?;
 
@@ -425,15 +434,18 @@ pub fn store_mint<S: Storage>(
 #[cfg(feature = "snip20-impl")]
 pub fn store_burn<S: Storage>(
     storage: &mut S,
-    owner: &HumanAddr,
-    burner: &HumanAddr,
+    owner: &Addr,
+    burner: &Addr,
     amount: Uint128,
     denom: String,
     memo: Option<String>,
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
     let action = StoredTxAction::burn(owner.clone(), burner.clone());
     let tx = StoredRichTx::new(id, action, coins, memo, block);
 
@@ -448,13 +460,16 @@ pub fn store_burn<S: Storage>(
 #[cfg(feature = "snip20-impl")]
 pub fn store_deposit<S: Storage>(
     storage: &mut S,
-    recipient: &HumanAddr,
+    recipient: &Addr,
     amount: Uint128,
     denom: String,
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
     let action = StoredTxAction::deposit();
     let tx = StoredRichTx::new(id, action, coins, None, block);
 
@@ -466,13 +481,16 @@ pub fn store_deposit<S: Storage>(
 #[cfg(feature = "snip20-impl")]
 pub fn store_redeem<S: Storage>(
     storage: &mut S,
-    redeemer: &HumanAddr,
+    redeemer: &Addr,
     amount: Uint128,
     denom: String,
     block: &cosmwasm_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
-    let coins = Coin { denom, amount: amount.into() };
+    let coins = Coin {
+        denom,
+        amount: amount.into(),
+    };
     let action = StoredTxAction::redeem();
     let tx = StoredRichTx::new(id, action, coins, None, block);
 

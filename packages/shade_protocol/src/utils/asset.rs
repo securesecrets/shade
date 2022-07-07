@@ -1,31 +1,30 @@
 use cosmwasm_std::{
+    Addr,
     Api,
     BalanceResponse,
     BankQuery,
-    Extern,
-    HumanAddr,
+    Deps,
     Querier,
     StdResult,
     Storage,
     Uint128,
 };
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Contract {
-    pub address: HumanAddr,
+    pub address: Addr,
     pub code_hash: String,
 }
 
 pub fn scrt_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    address: HumanAddr,
+    deps: Deps,
+    address: Addr,
 ) -> StdResult<Uint128> {
     let resp: BalanceResponse = deps.querier.query(
         &BankQuery::Balance {
-            address,
+            address: address.into_string(),
             denom: "uscrt".to_string(),
         }
         .into(),

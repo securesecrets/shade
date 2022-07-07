@@ -8,7 +8,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -72,10 +72,10 @@ use shade_protocol::contract_interfaces::dao::adapter;
 use std::convert::TryFrom;
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    _sender: HumanAddr,
-    from: HumanAddr,
+    _sender: Addr,
+    from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
@@ -137,7 +137,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
@@ -159,7 +159,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     contract: &Contract,
 ) -> StdResult<HandleResponse> {
@@ -208,9 +208,9 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn allocate<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
     allocation: Allocation,
 ) -> StdResult<HandleResponse> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
@@ -277,9 +277,9 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
 
     if !asset_list_r(&deps.storage).load()?.contains(&asset) {
@@ -358,9 +358,9 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 
@@ -492,9 +492,9 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
 
@@ -737,9 +737,9 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn add_holder<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    holder: HumanAddr,
+    holder: Addr,
 ) -> StdResult<HandleResponse> {
 
     if env.message.sender != config_r(&deps.storage).load()?.admin {
@@ -772,9 +772,9 @@ pub fn add_holder<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn remove_holder<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
-    holder: HumanAddr,
+    holder: Addr,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != config_r(&deps.storage).load()?.admin {
         return Err(StdError::unauthorized());

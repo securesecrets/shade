@@ -1,7 +1,7 @@
 use crate::impl_into_u8;
 use crate::utils::errors::{build_string, CodeType, DetailedError};
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{HumanAddr, StdError};
+use cosmwasm_std::{Addr, StdError};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -307,7 +307,7 @@ pub fn permit_revoked(user: &str) -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::PermitRevoked, vec![user]).to_error()
 }
 
-pub fn blacklisted(address: HumanAddr) -> StdError {
+pub fn blacklisted(address: Addr) -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::Blacklisted, vec![address.as_str()]).to_error()
 }
 

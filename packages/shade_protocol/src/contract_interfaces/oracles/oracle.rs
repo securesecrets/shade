@@ -1,5 +1,5 @@
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::HumanAddr;
+use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
@@ -19,14 +19,14 @@ pub struct IndexElement {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OracleConfig {
-    pub admin: HumanAddr,
+    pub admin: Addr,
     pub band: Contract,
     pub sscrt: Contract,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Addr>,
     pub band: Contract,
     pub sscrt: Contract,
 }
@@ -39,7 +39,7 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        admin: Option<HumanAddr>,
+        admin: Option<Addr>,
         band: Option<Contract>,
     },
     // Register Secret Swap or Sienna Pair (should be */sSCRT or sSCRT/*)

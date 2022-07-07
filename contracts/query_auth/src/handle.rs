@@ -38,7 +38,7 @@ fn user_authorized<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, env: 
 }
 
 pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     admin: Contract,
 ) -> StdResult<HandleResponse> {
@@ -56,7 +56,7 @@ pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     state: ContractStatus,
 ) -> StdResult<HandleResponse> {
@@ -74,7 +74,7 @@ pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     entropy: String,
 ) -> StdResult<HandleResponse> {
@@ -92,7 +92,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     key: String,
 ) -> StdResult<HandleResponse> {
@@ -106,7 +106,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_block_permit_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     key: String,
 ) -> StdResult<HandleResponse> {

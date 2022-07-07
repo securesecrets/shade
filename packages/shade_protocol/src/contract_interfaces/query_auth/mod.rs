@@ -1,7 +1,7 @@
 #[cfg(feature = "query_auth_impl")]
 pub mod auth;
 
-use cosmwasm_std::{Binary, HumanAddr};
+use cosmwasm_std::{Binary, Addr};
 use schemars::JsonSchema;
 use query_authentication::permit::Permit;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -133,7 +133,7 @@ pub enum QueryMsg {
     Config {},
 
     ValidateViewingKey {
-        user: HumanAddr,
+        user: Addr,
         key: String,
     },
     ValidatePermit {
@@ -156,7 +156,7 @@ pub enum QueryAnswer {
         is_valid: bool
     },
     ValidatePermit {
-        user: HumanAddr,
+        user: Addr,
         is_revoked: bool
     }
 }

@@ -3,7 +3,7 @@ use crate::utils::{
     storage::default::{BucketStorage, SingletonStorage},
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::HumanAddr;
+use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, collections::BinaryHeap};
@@ -15,7 +15,7 @@ pub struct StakeConfig {
     pub unbond_time: u64,
     pub staked_token: Contract,
     pub decimal_difference: u8,
-    pub treasury: Option<HumanAddr>,
+    pub treasury: Option<Addr>,
 }
 
 impl SingletonStorage for StakeConfig {

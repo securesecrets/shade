@@ -13,7 +13,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -48,7 +48,7 @@ use shade_protocol::{
 use shade_protocol::contract_interfaces::snip20::errors::{deposit_disabled, no_tokens_received, not_admin, not_enough_tokens, redeem_disabled, unsupported_token};
 
 pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -91,7 +91,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
 ) -> StdResult<HandleResponse> {
     let sender = env.message.sender;
@@ -132,9 +132,9 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    address: HumanAddr,
+    address: Addr,
 ) -> StdResult<HandleResponse> {
     if env.message.sender != Admin::load(&deps.storage)?.0 {
         return Err(not_admin());
@@ -150,7 +150,7 @@ pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     status_level: ContractStatusLevel,
 ) -> StdResult<HandleResponse> {
@@ -170,7 +170,7 @@ pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     code_hash: String,
 ) -> StdResult<HandleResponse> {
@@ -185,7 +185,7 @@ pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     entropy: String,
 ) -> StdResult<HandleResponse> {
@@ -203,7 +203,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     key: String,
 ) -> StdResult<HandleResponse> {
@@ -219,7 +219,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_revoke_permit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     permit_name: String,
 ) -> StdResult<HandleResponse> {

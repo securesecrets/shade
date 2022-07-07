@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
+    debug_print, to_binary, Api, Binary, Env, Deps, HandleResponse, InitResponse, Querier,
     StdResult, StdError,
     Storage, Uint128,
 };
@@ -33,7 +33,7 @@ use crate::{
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
@@ -191,7 +191,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {

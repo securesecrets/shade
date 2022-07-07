@@ -14,7 +14,7 @@ use crate::{
     },
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use cosmwasm_std::{Api, Deps, Addr, Querier, StdResult, Storage};
 use query_authentication::viewing_keys::ViewingKey;
 use shade_protocol::contract_interfaces::airdrop::{
     account::{AccountKey, AccountPermit, AddressProofPermit},
@@ -59,7 +59,7 @@ pub fn total_claimed<S: Storage, A: Api, Q: Querier>(
 
 fn account_information<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account_address: HumanAddr,
+    account_address: Addr,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
     let account = account_r(&deps.storage).load(account_address.to_string().as_bytes())?;
@@ -126,7 +126,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
 
 pub fn account_with_key<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account: HumanAddr,
+    account: Addr,
     key: String,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {

@@ -11,7 +11,7 @@ use crate::tests::{
     init_governance,
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Binary, HumanAddr, StdResult};
+use cosmwasm_std::{to_binary, Binary, Addr, StdResult};
 use fadroma::ensemble::{ContractEnsemble, MockEnv};
 use fadroma::core::ContractLink;
 use shade_protocol::{
@@ -91,7 +91,7 @@ fn text_only_proposal() {
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
 
-    assert_eq!(prop.proposer, HumanAddr::from("admin"));
+    assert_eq!(prop.proposer, Addr::from("admin"));
     assert_eq!(prop.title, "Title".to_string());
     assert_eq!(prop.metadata, "Text only proposal".to_string());
     assert_eq!(prop.msgs, None);

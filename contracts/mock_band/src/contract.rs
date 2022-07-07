@@ -29,7 +29,7 @@ pub fn price_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
 }
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    _deps: Deps,
     _env: Env,
     _msg: InitMsg,
 ) -> StdResult<InitResponse> {
@@ -43,7 +43,7 @@ pub enum HandleMsg {
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     _env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {

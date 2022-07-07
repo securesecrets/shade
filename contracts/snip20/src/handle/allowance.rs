@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use cosmwasm_std::{Api, Binary, Env, Deps, HandleResponse, Addr, Querier, StdError, StdResult, Storage, to_binary};
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::manager::{Allowance, CoinInfo};
@@ -7,9 +7,9 @@ use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 use crate::handle::transfers::{try_send_impl, try_transfer_impl};
 
 pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    spender: HumanAddr,
+    spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
 ) -> StdResult<HandleResponse> {
@@ -49,9 +49,9 @@ pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    spender: HumanAddr,
+    spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
 ) -> StdResult<HandleResponse> {
@@ -87,10 +87,10 @@ pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    owner: HumanAddr,
-    recipient: HumanAddr,
+    owner: Addr,
+    recipient: Addr,
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<HandleResponse> {
@@ -114,7 +114,7 @@ pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     actions: Vec<batch::TransferFromAction>,
 ) -> StdResult<HandleResponse> {
@@ -143,10 +143,10 @@ pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
-    owner: HumanAddr,
-    recipient: HumanAddr,
+    owner: Addr,
+    recipient: Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
     msg: Option<Binary>,
@@ -176,7 +176,7 @@ pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: Deps,
     env: Env,
     actions: Vec<batch::SendFromAction>
 ) -> StdResult<HandleResponse> {
