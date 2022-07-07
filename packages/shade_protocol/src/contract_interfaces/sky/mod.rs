@@ -57,6 +57,14 @@ impl ItemStorage for Cycles {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct Minted(pub Uint128, pub Uint128); //0: shd, 1: silk
+
+impl ItemStorage for Minted {
+    const ITEM: Item<'static, Minted> = Item::new("item_minted");
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct InitMsg {
     pub shade_admin: Contract,
     pub mint_contract_shd: Contract,
@@ -106,6 +114,11 @@ pub enum HandleMsg {
         index: Uint128,
         padding: Option<String>,
     },
+    ResetMinted {
+        shd: Option<Uint128>,
+        silk: Option<Uint128>,
+        padding: Option<String>,
+    },
     Adapter(adapter::SubHandleMsg),
 }
 
@@ -121,6 +134,8 @@ pub enum QueryMsg {
     Balance {},
     GetCycles {},
     IsCycleProfitable { amount: Uint128, index: Uint128 },
+    IsAnyCycleProfitable { amount: Uint128 },
+    GetMinted {},
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -159,6 +174,10 @@ pub enum QueryAnswer {
         swap_amounts: Vec<Vec<Uint128>>,
         profit: Vec<Uint128>,
     },
+    GetMinted {
+        shd: Uint128,
+        silk: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -188,6 +207,9 @@ pub enum HandleAnswer {
     ExecuteArbCycle {
         status: bool,
         swap_amounts: Vec<Uint128>,
+    },
+    MintedReset {
+        status: bool,
     },
 }
 

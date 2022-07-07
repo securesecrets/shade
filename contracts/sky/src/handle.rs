@@ -22,7 +22,7 @@ use shade_protocol::{
         dao::adapter,
         dex::shadeswap::SwapTokens,
         mint::mint,
-        sky::{self, Config, Cycle, Cycles, HandleAnswer, SelfAddr, ViewingKeys},
+        sky::{self, Config, Cycle, Cycles, HandleAnswer, Minted, SelfAddr, ViewingKeys},
     },
     utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
@@ -227,6 +227,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     }
 
     let mut messages = vec![];
+    let mut minted = Minted::load(&deps.storage)?;
 
     if is_mint_first {
         //if true mint silk from shd then sell the silk on the market
@@ -242,6 +243,8 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
             config.shd_token_contract.code_hash,
             config.shd_token_contract.address,
         )?);
+
+        minted.1 = minted.1.clone().checked_add(first_swap_expected)?;
 
         messages.push(send_msg(
             config.market_swap_contract.address.clone(),
@@ -288,6 +291,8 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
             config.silk_token_contract.code_hash.clone(),
             config.silk_token_contract.address.clone(),
         )?);
+
+        minted.0 = minted.0.clone().checked_add(amount.checked_add(profit)?)?;
     }
 
     Ok(HandleResponse {
@@ -396,6 +401,44 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             status: true,
             swap_amounts: return_swap_amounts,
         })?),
+    })
+}
+
+pub fn try_minted_reset<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    shd: Option<Uint128>,
+    silk: Option<Uint128>,
+) -> StdResult<HandleResponse> {
+    //Admin-only
+    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(StdError::unauthorized());
+    }
+
+    let mut minted = Minted::load(&mut deps.storage)?;
+
+    if let Some(shd) = shd {
+        minted.0 = shd;
+    } else {
+        minted.0 = Uint128::zero();
+    }
+    if let Some(silk) = silk {
+        minted.1 = silk;
+    } else {
+        minted.0 = Uint128::zero();
+    }
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::MintedReset { status: true })?),
     })
 }
 

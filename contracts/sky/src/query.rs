@@ -6,7 +6,7 @@ use shade_protocol::{
         dao::adapter,
         dex::shadeswap::{self, TokenAmount, TokenType},
         mint::mint,
-        sky::{Config, Cycles, QueryAnswer, SelfAddr, ViewingKeys},
+        sky::{Config, Cycles, Minted, QueryAnswer, SelfAddr, ViewingKeys},
         snip20,
     },
     utils::storage::plus::ItemStorage,
@@ -26,6 +26,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
     let config: Config = Config::load(&deps.storage)?;
     let mut first_swap_result;
 
+    // Query sim mint from shd to silk
     let res = mint::QueryMsg::Mint {
         offer_asset: config.shd_token_contract.address.clone(),
         amount,
@@ -56,6 +57,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
         amount: first_swap_result,
     };
 
+    // Query sim but shd with silk
     let mut res2 = shadeswap::PairQuery::GetEstimatedPrice { offer }.query(
         &deps.querier,
         config.market_swap_contract.code_hash.clone(),
@@ -76,6 +78,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    // If end up with more shd then started, return as profitable
     if final_amount > amount {
         return Ok(QueryAnswer::ArbPegProfitability {
             is_profitable: true,
@@ -93,6 +96,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
         amount,
     };
 
+    // Buy silk on market with shd
     res2 = shadeswap::PairQuery::GetEstimatedPrice { offer }.query(
         &deps.querier,
         config.market_swap_contract.code_hash.clone(),
@@ -111,6 +115,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    // Mint shd by burning silk
     let res = mint::QueryMsg::Mint {
         offer_asset: config.silk_token_contract.address.clone(),
         amount: first_swap_result,
@@ -133,6 +138,7 @@ pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    // Again if we end up with more shd then we started with, return true, otherwise, return false
     if final_amount > amount {
         return Ok(QueryAnswer::ArbPegProfitability {
             is_profitable: true,
@@ -420,6 +426,16 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
         direction: return_directions,
         swap_amounts: return_swap_amounts,
         profit: return_profit,
+    })
+}
+
+pub fn get_minted<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<QueryAnswer> {
+    let minted = Minted::load(&deps.storage)?;
+    Ok(QueryAnswer::GetMinted {
+        shd: minted.0.clone(),
+        silk: minted.1.clone(),
     })
 }
 
