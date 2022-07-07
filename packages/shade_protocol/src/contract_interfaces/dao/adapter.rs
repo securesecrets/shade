@@ -1,12 +1,12 @@
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
 use cosmwasm_std::{
+    Addr,
     Api,
     Binary,
     CosmosMsg,
     Decimal,
     Delegation,
-    Extern,
-    Addr,
+    Deps,
     Querier,
     StdError,
     StdResult,
@@ -151,14 +151,16 @@ pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
-
     match (QueryMsg::Adapter(SubQueryMsg::Reserves {
         asset: asset.clone(),
-    }).query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
+    })
+    .query(&deps.querier, adapter.code_hash, adapter.address.clone())?)
+    {
         QueryAnswer::Reserves { amount } => Ok(amount),
-        _ => Err(StdError::generic_err(
-            format!("Failed to query adapter unbondable from {}", adapter.address)
-        ))
+        _ => Err(StdError::generic_err(format!(
+            "Failed to query adapter unbondable from {}",
+            adapter.address
+        ))),
     }
 }
 

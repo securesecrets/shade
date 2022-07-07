@@ -1,15 +1,24 @@
 use cosmwasm_std::{
-    debug_print, to_binary, Api, Binary, Env, Deps, HandleResponse, InitResponse, Querier,
-    StdError, StdResult, Storage, self,
+    self,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Deps,
+    Env,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
 };
 use secret_toolkit::snip20::set_viewing_key_msg;
 
-use crate::{
-    handle, query,
-};
+use crate::{handle, query};
 
 use shade_protocol::{
-    contract_interfaces::sky::sky::{Config, InitMsg, HandleMsg, QueryMsg, ViewingKeys, SelfAddr},
+    contract_interfaces::sky::sky::{Config, HandleMsg, InitMsg, QueryMsg, SelfAddr, ViewingKeys},
     utils::storage::plus::ItemStorage,
 };
 
@@ -19,7 +28,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let state = Config {
-        admin: match msg.admin{
+        admin: match msg.admin {
             None => env.message.sender.clone(),
             Some(admin) => admin,
         },
@@ -38,24 +47,24 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     let mut messages = vec![
         set_viewing_key_msg(
-            msg.viewing_key.clone(), 
-            None, 
-            1, 
-            msg.shd_token.contract.code_hash.clone(), 
-            msg.shd_token.contract.address.clone(),    
+            msg.viewing_key.clone(),
+            None,
+            1,
+            msg.shd_token.contract.code_hash.clone(),
+            msg.shd_token.contract.address.clone(),
         )?,
         set_viewing_key_msg(
-            msg.viewing_key.clone(), 
-            None, 
-            1, 
-            msg.silk_token.contract.code_hash.clone(), 
-            msg.silk_token.contract.address.clone()
-        )?
+            msg.viewing_key.clone(),
+            None,
+            1,
+            msg.silk_token.contract.code_hash.clone(),
+            msg.silk_token.contract.address.clone(),
+        )?,
     ];
 
     ViewingKeys(msg.viewing_key).save(&mut deps.storage)?;
 
-    Ok(InitResponse{
+    Ok(InitResponse {
         messages,
         log: vec![],
     })
@@ -67,8 +76,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::UpdateConfig{ config } => handle::try_update_config(deps, env, config),
-        HandleMsg::ArbPeg{ amount } => handle::try_execute(deps, env, amount),
+        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        HandleMsg::ArbPeg { amount } => handle::try_execute(deps, env, amount),
     }
 }
 
@@ -79,7 +88,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::GetMarketRate {} => to_binary(&query::market_rate(deps)?),
-        QueryMsg::IsProfitable { amount } => to_binary( &query::trade_profitability(deps, amount)?),
-        QueryMsg::Balance{} => to_binary(&query::get_balances(deps)?)
+        QueryMsg::IsProfitable { amount } => to_binary(&query::trade_profitability(deps, amount)?),
+        QueryMsg::Balance {} => to_binary(&query::get_balances(deps)?),
     }
 }

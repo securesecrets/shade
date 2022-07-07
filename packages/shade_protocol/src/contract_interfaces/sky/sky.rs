@@ -1,10 +1,14 @@
 use std::marker::PhantomData;
 
-use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery, TokenType};
-use crate::{utils::asset::Contract, contract_interfaces::snip20::helpers::Snip20Asset};
-use crate::utils::generic_response::ResponseStatus;
+use crate::{
+    contract_interfaces::{
+        dex::sienna::{PairInfoResponse, PairQuery, TokenType},
+        snip20::helpers::Snip20Asset,
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
+};
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, Addr, StdResult, Env, Deps, Querier, Api, Storage};
+use cosmwasm_std::{Addr, Api, Binary, Deps, Env, Querier, StdResult, Storage};
 use schemars::JsonSchema;
 use secret_storage_plus::Item;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -12,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct TokenContract{
+pub struct TokenContract {
     pub contract: Contract,
     pub decimals: Uint128,
 }
@@ -41,16 +45,16 @@ impl ItemStorage for Config {
     const ITEM: Item<'static, Config> = Item::new("item_config");
 }
 #[cfg(feature = "sky-impl")]
-impl ItemStorage for ViewingKeys{
+impl ItemStorage for ViewingKeys {
     const ITEM: Item<'static, ViewingKeys> = Item::new("item_view_keys");
 }
 #[cfg(feature = "sky-impl")]
-impl ItemStorage for SelfAddr{
+impl ItemStorage for SelfAddr {
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg{
+pub struct InitMsg {
     pub admin: Option<Addr>,
     pub mint_addr: Contract,
     pub market_swap_addr: Contract,
@@ -64,12 +68,8 @@ pub struct InitMsg{
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    UpdateConfig {
-        config: Config,
-    },
-    ArbPeg {
-        amount: Uint128,
-    },
+    UpdateConfig { config: Config },
+    ArbPeg { amount: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -77,10 +77,8 @@ pub enum HandleMsg {
 pub enum QueryMsg {
     GetConfig {},
     GetMarketRate {},
-    IsProfitable {
-        amount: Uint128,
-    },
-    Balance{},
+    IsProfitable { amount: Uint128 },
+    Balance {},
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -101,25 +99,19 @@ pub enum QueryAnswer {
         first_swap_amount: Uint128,
         second_swap_amount: Uint128,
     },
-    Balance{
+    Balance {
         error_status: bool,
         shd_bal: Uint128,
         silk_bal: Uint128,
-    }
+    },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-    Init {
-        status: bool,
-    },
-    UpdateConfig {
-        status: bool,
-    },
-    ExecuteArb {
-        status: bool,
-    }
+    Init { status: bool },
+    UpdateConfig { status: bool },
+    ExecuteArb { status: bool },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -139,7 +131,7 @@ pub struct ArbPair {
             let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
                 &deps.querier,
                 env.contract_code_hash.clone(),
-                self.pair_address.clone(),                
+                self.pair_address.clone(),
             )?;
             match pool_info.pair_info.pair.token_0 {
                 TokenType::CustomToken { contract_addr, token_code_hash } => self.token1_address = contract_addr.clone(),
@@ -152,10 +144,10 @@ pub struct ArbPair {
             self.token1_amount = pool_info.pair_info.amount_0.clone();
             self.token2_amount = pool_info.pair_info.amount_1.clone();
         } else if self.dex_id.eq(&"sswap".to_string()) {
-            todo!() 
+            todo!()
         } else { //shd swap
             todo!()
-        }  
+        }
 
         Ok(true)
     }

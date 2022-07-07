@@ -43,4 +43,4 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "mint",
   "band",
 ] }
-snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
+#snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
