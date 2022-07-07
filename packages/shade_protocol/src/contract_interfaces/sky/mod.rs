@@ -5,7 +5,7 @@ use crate::{
     },
     utils::{asset::Contract, storage::plus::ItemStorage},
 };
-use cosmwasm_math_compat::Uint128;
+use cosmwasm_math_compat::{Decimal, Uint128};
 use cosmwasm_std::{to_binary, Api, CosmosMsg, Extern, HumanAddr, Querier, StdError, Storage};
 use schemars::JsonSchema;
 use secret_storage_plus::Item;
@@ -25,6 +25,7 @@ pub struct Config {
     pub shd_token_contract: Contract,
     pub silk_token_contract: Contract,
     pub treasury: Contract,
+    pub payback_percent: Decimal,
 }
 
 impl ItemStorage for Config {
@@ -74,6 +75,7 @@ pub struct InitMsg {
     pub silk_token_contract: Contract,
     pub treasury: Contract,
     pub viewing_key: String,
+    pub payback_percent: Decimal,
 }
 
 impl InitCallback for InitMsg {
@@ -91,6 +93,7 @@ pub enum HandleMsg {
         shd_token_contract: Option<Contract>,
         silk_token_contract: Option<Contract>,
         treasury: Option<Contract>,
+        payback_percent: Option<Decimal>,
         padding: Option<String>,
     },
     ArbPeg {

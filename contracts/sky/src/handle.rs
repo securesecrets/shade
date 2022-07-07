@@ -1,5 +1,5 @@
 use crate::query::{conversion_mint_profitability, cycle_profitability};
-use cosmwasm_math_compat::Uint128;
+use cosmwasm_math_compat::{Decimal, Uint128};
 use cosmwasm_std::{
     to_binary,
     Api,
@@ -320,13 +320,14 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
         address: HumanAddr::default(),
         code_hash: "".to_string(),
     };
+    let mut payback_amount = Uint128::zero();
     let res = cycle_profitability(deps, amount, index)?; // get profitability data from query
     match res {
         sky::QueryAnswer::IsCycleProfitable {
             is_profitable,
             direction,
             swap_amounts,
-            ..
+            profit,
         } => {
             return_swap_amounts = swap_amounts.clone();
             if direction.pair_addrs[0] // test to see which of the token attributes are the proposed starting addr
@@ -384,6 +385,12 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                     cur_asset = arb_pair.token0_contract.clone();
                 }
             }
+            // calculate payback amount
+            let payback_percent = Config::load(&deps.storage)?.payback_percent;
+            if payback_percent > Decimal::zero() {
+                payback_amount =
+                    cosmwasm_std::Decimal::from_atomics(profit, 0).checked_mul(payback_percent)?;
+            }
         }
         _ => {}
     }
@@ -393,6 +400,8 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
         cur_asset.address.clone()
             == Cycles::load(&deps.storage)?.0[index.u128() as usize].start_addr
     );
+
+    // add a payback msg
 
     Ok(HandleResponse {
         messages,

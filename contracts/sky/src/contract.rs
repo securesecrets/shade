@@ -36,6 +36,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         shd_token_contract: msg.shd_token_contract.clone(),
         silk_token_contract: msg.silk_token_contract.clone(),
         treasury: msg.treasury,
+        payback_percent: msg.payback_percent,
     };
 
     state.save(&mut deps.storage)?;
