@@ -90,10 +90,11 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
             .sum::<u128>(),
     );
 
-    let rewards = Uint128::zero(); // TODO: rewards(deps)?;
+    let scrt_balance = scrt_balance(&deps, self_address_r(&deps.storage).load()?)?;
+    let rewards = rewards(deps)?;
 
     Ok(adapter::QueryAnswer::Balance {
-        amount: delegated + rewards,
+        amount: delegated + rewards + scrt_balance,
     })
 }
 
@@ -110,17 +111,10 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
         )));
     }
 
-    let scrt_balance: BalanceResponse = deps.querier.query(
-        &BankQuery::Balance {
-            address: self_address_r(&deps.storage).load()?,
-            denom: "uscrt".to_string(),
-        }
-        .into(),
-    )?;
-
-    let mut amount = scrt_balance.amount.amount;
+    let scrt_balance = scrt_balance(&deps, self_address_r(&deps.storage).load()?)?;
     let unbonding = unbonding_r(&deps.storage).load()?;
 
+    let mut amount = scrt_balance;
     if amount > unbonding {
         amount = unbonding;
     }

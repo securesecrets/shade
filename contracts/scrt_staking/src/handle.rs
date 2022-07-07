@@ -220,7 +220,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                                            config.owner, 
                                            config.sscrt, 
                                            None)?);
-        reserves = (reserves - unbonding)?;
         unbonding = Uint128::zero();
     }
     // Send all reserves
@@ -229,7 +228,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                                            config.owner, 
                                            config.sscrt, 
                                            None)?);
-        reserves = Uint128::zero();
         unbonding = (unbonding - reserves)?;
     }
 

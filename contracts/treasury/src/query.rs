@@ -138,13 +138,17 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     Ok(adapter::QueryAnswer::Unbonding { amount: unbonding })
 }
 
-pub fn claimable<S: Storage, A: Api, Q: Querier>(
+pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
     let managers = MANAGERS.load(&deps.storage)?;
-    let mut claimable = Uint128::zero();
+    let mut unbondable = Uint128::zero();
 
+    for manager in managers {
+        unbondable += adapter::unbondable_query(&deps, &asset, manager.contract)?;
+    }
+    /*
     for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
         match allowance {
             treasury::Allowance::Portion { spender, .. } => {
@@ -153,13 +157,27 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
                     .into_iter()
                     .find(|m| m.contract.address == spender)
                     .unwrap();
-                claimable += adapter::claimable_query(&deps, &asset, manager.contract)?;
+                unbondable += adapter::unbondable_query(&deps, &asset, manager.contract)?;
             }
             _ => {}
         };
     }
+    */
 
-    Ok(adapter::QueryAnswer::Claimable { amount: claimable })
+    Ok(adapter::QueryAnswer::Unbondable { amount: unbondable })
+}
+
+pub fn claimable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<adapter::QueryAnswer> {
+    let managers = MANAGERS.load(&deps.storage)?;
+    let claimable = managers
+        .into_iter()
+        .map(|m| adapter::claimable_query(&deps, &asset, m.contract).ok().unwrap().u128())
+        .sum();
+
+    Ok(adapter::QueryAnswer::Claimable { amount: Uint128(claimable) })
 }
 
 pub fn allowance<S: Storage, A: Api, Q: Querier>(

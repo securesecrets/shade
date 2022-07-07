@@ -341,6 +341,22 @@ fn single_asset_portion_manager_integration(
         _ => assert!(false),
     };
 
+    // Scrt Staking reserves should be 0 (all staked)
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Reserves {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, expected_scrt_staking /* TODO 0 */, "SCRT Staking Balance");
+        },
+        _ => assert!(false),
+    };
+
+    /*
     // Scrt Staking balance check
     match ensemble.query(
         scrt_staking.address.clone(),
@@ -355,21 +371,126 @@ fn single_asset_portion_manager_integration(
         },
         _ => assert!(false),
     };
+    */
 
-    /*
+    // Treasury unbondable check
+    match ensemble.query(
+        treasury.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Unbondable {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Unbondable { amount } => {
+            assert_eq!(amount, expected_scrt_staking + expected_manager, "Treasury Unbondable");
+        },
+        _ => assert!(false),
+    };
+
+    // Unbond all w/ treasury
     ensemble.execute(
         &adapter::HandleMsg::Adapter(
             adapter::SubHandleMsg::Unbond {
-                amount: 
+                amount: expected_scrt_staking + expected_manager, 
                 asset: token.address.clone(),
             }
         ),
         MockEnv::new(
             "admin", 
-            manager.clone(),
+            treasury.clone(),
         ),
     ).unwrap();
-    */
+
+    // Treasury reserves check
+    match ensemble.query(
+        treasury.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Reserves {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, deposit, "Treasury Reserves Post-Unbond");
+        },
+        _ => assert!(false),
+    };
+
+    // Treasury balance check
+    match ensemble.query(
+        treasury.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, deposit, "Treasury Balance Post-Unbond");
+        },
+        _ => assert!(false),
+    };
+
+    // Manager reserves check
+    match ensemble.query(
+        manager.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Reserves {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Manager Reserves Post-Unbond");
+        },
+        _ => assert!(false),
+    };
+
+    // Manager balance check
+    match ensemble.query(
+        manager.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Manager Balance Post-Unbond");
+        },
+        _ => assert!(false),
+    };
+
+    // Scrt Staking reserves
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Reserves {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, Uint128::zero(), "SCRT Staking Balance Post Unbond");
+        },
+        _ => assert!(false),
+    };
+
+    // Scrt Staking balance
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, Uint128::zero(), "SCRT Staking Balance Post Unbond");
+        },
+        _ => assert!(false),
+    };
 }
 
 macro_rules! single_asset_portion_manager_tests {

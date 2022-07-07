@@ -41,4 +41,5 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 
 [dev-dependencies]
-fadroma = { branch = "v100", commit = "76867e0", git = "https://github.com/hackbg/fadroma.git", features = ["ensemble"]}
+#fadroma = { branch = "v100", commit = "76867e0", git = "https://github.com/hackbg/fadroma.git", features = ["ensemble"]}
+fadroma = { branch = "v100", git = "https://github.com/a-stgeorge/fadroma-staking.git", features = ["ensemble", "scrt"] }

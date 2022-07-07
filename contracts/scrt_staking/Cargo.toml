@@ -38,3 +38,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
+
+[dev-dependencies]
+fadroma = { branch = "staking", git = "https://github.com/a-stgeorge/fadroma-staking.git", features = ["ensemble", "scrt"] }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["scrt_staking", "snip20_reference_impl", "snip20" ] }

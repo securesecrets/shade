@@ -331,10 +331,12 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
         )?.amount;
 
         for alloc in allocations {
+            /*
             if unbondable >= (balance - unbonding)? {
                 unbondable = (balance - unbonding)?;
                 break;
             }
+            */
             unbondable += adapter::unbondable_query(&deps,
                                   &asset, alloc.contract.clone())?;
         }

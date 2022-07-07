@@ -45,5 +45,6 @@ fadroma = { branch = "staking", git = "https://github.com/a-stgeorge/fadroma-sta
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "mint",
   "band",
+  "storage_plus",
 ] }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
