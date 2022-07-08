@@ -30,7 +30,7 @@ pub enum Status {
     Transferred,
 }
 
-//TODO: move accounts to treasury manager
+//TODO rename to Holding
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Holder {
