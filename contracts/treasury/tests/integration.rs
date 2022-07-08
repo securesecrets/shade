@@ -524,7 +524,16 @@ macro_rules! single_asset_portion_manager_tests {
                     expected_manager,
                     expected_scrt_staking,
                 ) = $value;
-                single_asset_portion_manager_integration(deposit, allowance, expected_allowance, alloc_type, alloc_amount, expected_treasury, expected_manager, expected_scrt_staking);
+                single_asset_portion_manager_integration(
+                    deposit,
+                    allowance,
+                    expected_allowance,
+                    alloc_type,
+                    alloc_amount,
+                    expected_treasury,
+                    expected_manager,
+                    expected_scrt_staking
+                );
             }
         )*
     }
