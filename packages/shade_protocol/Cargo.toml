@@ -27,7 +27,7 @@ utils = []
 errors = []
 flexible_msg = []
 math = []
-storage = ["cosmwasm-storage/iterator"]
+storage = []
 storage_plus = ["storage", "dep:secret-storage-plus"]
 query_auth_lib = ["dep:query-authentication"]
 ensemble = ["dep:fadroma"]
@@ -60,12 +60,12 @@ sky-impl = ["sky", "storage_plus"]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
-debug-print = ["cosmwasm-std/debug-print"]
+debug-print = [] # TODO: remove this from all cargo configs
 
 [dependencies]
 # Smart contract stuff
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std", features = ["staking"] }
-cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", features = ["staking"] }
+cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }
 cosmwasm-schema = "0.10.1"
 schemars = "0.7"
@@ -73,7 +73,6 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 
 # Temp libs
-cosmwasm-math-compat = { path = "../cosmwasm_math_compat" }
 secret-toolkit = { version = "0.2", features = ["crypto", "permit"] }
 
 # Testing

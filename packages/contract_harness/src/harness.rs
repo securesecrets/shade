@@ -88,15 +88,6 @@ pub mod admin {
     harness_macro::implement_harness!(Admin, admin);
 }
 
-#[cfg(feature = "snip20_reference_impl")]
-pub mod snip20_reference_impl {
-    use crate::harness_macro;
-    use snip20_reference_impl;
-
-    pub struct Snip20ReferenceImpl;
-    harness_macro::implement_harness!(Snip20ReferenceImpl, snip20_reference_impl);
-}
-
 #[cfg(feature = "treasury_manager")]
 pub mod treasury_manager {
     use crate::harness_macro;

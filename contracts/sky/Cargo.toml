@@ -31,6 +31,3 @@ schemars = "0.7"
 [dev-dependencies]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["ensemble"] }
 contract_harness = { version = "0.1.0", path = "../../packages/contract_harness" }
-snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
-oracle = { version = "0.1.0", path = "../../contracts/oracle" }
-mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }

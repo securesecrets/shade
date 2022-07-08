@@ -31,7 +31,4 @@ schemars = "0.7"
 chrono = "0.4.19"
 
 [dev-dependencies]
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["mint", "snip20_reference_impl", "mock_band", "oracle"] }
-snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
-oracle = { version = "0.1.0", path = "../../contracts/oracle" }
-mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["mint", "snip20", "mock_band", "oracle"] }

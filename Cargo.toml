@@ -1,7 +1,6 @@
 [workspace]
 members = [
   # Packages
-  "packages/cosmwasm_math_compat",
   "packages/shade_protocol",
   "packages/secretcli",
   "packages/contract_harness",
@@ -18,8 +17,6 @@ members = [
   "contracts/oracle",
   "contracts/sky",
   "contracts/query_auth",
-
-  "contracts/snip20-reference-impl",
 
   # DAO
   # - Core
