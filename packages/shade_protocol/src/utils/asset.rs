@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use crate::c_std::{
     Api,
     BalanceResponse,
     BankQuery,
@@ -9,8 +9,8 @@ use cosmwasm_std::{
     Storage,
     Uint128,
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
@@ -10,7 +10,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::snip20::register_receive_msg;
+use shade_protocol::secret_toolkit::snip20::register_receive_msg;
 use shade_protocol::{
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
     utils::{

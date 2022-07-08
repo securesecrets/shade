@@ -16,12 +16,12 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, Coin, GovQuery, HumanAddr};
-use query_authentication::permit::Permit;
-use schemars::JsonSchema;
+use crate::math_compat::Uint128;
+use crate::c_std::{Binary, Coin, GovQuery, HumanAddr};
+use crate::schemars::JsonSchema;
+use crate::query_authentication::permit::Permit;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 use crate::contract_interfaces::governance::proposal::Funding;
 use crate::contract_interfaces::query_auth::QueryPermit;
 

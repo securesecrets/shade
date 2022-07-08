@@ -1,22 +1,27 @@
 use crate::{
     handle::oracle,
     state::{
-        account_r, allowance_key_r, bond_opportunity_r, collateral_assets_r,
-        config_r, global_total_claimed_r, global_total_issued_r, issued_asset_r,
+        account_r, allowance_key_r, bond_opportunity_r, deposit_assets_r, config_r,
+        global_total_claimed_r, global_total_issued_r, issued_asset_r,
     },
 };
 
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 
-use secret_toolkit::{snip20::{allowance_query, balance_query}, utils::Query};
-
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
-use shade_protocol::contract_interfaces::{
-    bonds::{BondOpportunity, QueryAnswer, errors::{query_auth_bad_response, permit_revoked}},
+use shade_protocol::secret_toolkit::{
+    snip20::{allowance_query, balance_query},
+    utils::Query,
 };
 
-use shade_protocol::contract_interfaces::query_auth::{self, QueryMsg::ValidatePermit, QueryPermit};
+use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::contract_interfaces::bonds::{
+    errors::{permit_revoked, query_auth_bad_response},
+    BondOpportunity, QueryAnswer,
+};
 
+use shade_protocol::contract_interfaces::query_auth::{
+    self, QueryMsg::ValidatePermit, QueryPermit,
+};
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -30,22 +35,20 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
     // Validate address
-    let authorized: query_auth::QueryAnswer = ValidatePermit { permit: permit }.query(
-        &deps.querier, 
-        config.query_auth.code_hash, 
-        config.query_auth.address
+    let authorized: query_auth::QueryAnswer = ValidatePermit { permit }.query(
+        &deps.querier,
+        config.query_auth.code_hash,
+        config.query_auth.address,
     )?;
     match authorized {
         query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
-            if is_revoked!=false {
+            if !is_revoked {
                 account_information(deps, user)
             } else {
-                return Err(permit_revoked())
+                return Err(permit_revoked(user.as_str()));
             }
         }
-        _ => {
-            return Err(query_auth_bad_response())
-        }
+        _ => return Err(query_auth_bad_response()),
     }
 }
 
@@ -65,13 +68,13 @@ fn account_information<S: Storage, A: Api, Q: Querier>(
 pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
-    let collateral_assets = collateral_assets_r(&deps.storage).load()?;
-    if collateral_assets.is_empty() {
+    let deposit_assets = deposit_assets_r(&deps.storage).load()?;
+    if deposit_assets.is_empty() {
         return Ok(QueryAnswer::BondOpportunities {
             bond_opportunities: vec![],
         });
     } else {
-        let iter = collateral_assets.iter();
+        let iter = deposit_assets.iter();
         let mut bond_opportunities: Vec<BondOpportunity> = vec![];
         for asset in iter {
             bond_opportunities
@@ -95,12 +98,12 @@ pub fn bond_info<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdR
     })
 }
 
-pub fn list_collateral_addresses<S: Storage, A: Api, Q: Querier>(
+pub fn list_deposit_addresses<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
-    let collateral_addresses = collateral_assets_r(&deps.storage).load()?;
-    Ok(QueryAnswer::CollateralAddresses {
-        collateral_addresses,
+    let deposit_addresses = deposit_assets_r(&deps.storage).load()?;
+    Ok(QueryAnswer::DepositAddresses {
+        deposit_addresses,
     })
 }
 

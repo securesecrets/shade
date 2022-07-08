@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::query_auth::{
         auth::{Key, PermitKey},

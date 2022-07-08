@@ -4,7 +4,7 @@ use crate::{
     state::Config,
     state_staking::{Distributors, DistributorsEnabled},
 };
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Binary,

@@ -2,9 +2,9 @@ pub mod handle;
 pub mod query;
 
 use contract_harness::harness::snip20::Snip20;
-use cosmwasm_std::{Binary, HumanAddr, StdResult};
-use fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
-use fadroma::core::ContractLink;
+use shade_protocol::c_std::{Binary, HumanAddr, StdResult};
+use shade_protocol::fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
+use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::contract_interfaces::{
     snip20,
     snip20::{InitConfig, InitialBalance},

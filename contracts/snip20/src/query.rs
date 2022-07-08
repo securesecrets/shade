@@ -1,5 +1,5 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Api, Extern, HumanAddr, Querier, QueryResult, StdResult, Storage};
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{to_binary, Api, Extern, HumanAddr, Querier, QueryResult, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::snip20::{
         manager::{
@@ -45,6 +45,7 @@ pub fn token_config<S: Storage, A: Api, Q: Querier>(
         redeem_enabled: Config::redeem_enabled(&deps.storage)?,
         mint_enabled: Config::mint_enabled(&deps.storage)?,
         burn_enabled: Config::burn_enabled(&deps.storage)?,
+        transfer_enabled: Config::transfer_enabled(&deps.storage)?,
     })
 }
 

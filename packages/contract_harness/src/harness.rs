@@ -61,6 +61,33 @@ pub mod snip20 {
     harness_macro::implement_harness!(Snip20, snip20);
 }
 
+#[cfg(feature = "bonds")]
+pub mod bonds {
+    use crate::harness_macro;
+    use bonds;
+
+    pub struct Bonds;
+    harness_macro::implement_harness!(Bonds, bonds);
+}
+
+#[cfg(feature = "query_auth")]
+pub mod query_auth {
+    use crate::harness_macro;
+    use query_auth;
+
+    pub struct QueryAuth;
+    harness_macro::implement_harness!(QueryAuth, query_auth);
+}
+
+#[cfg(feature = "admin")]
+pub mod admin {
+    use crate::harness_macro;
+    use admin;
+
+    pub struct Admin;
+    harness_macro::implement_harness!(Admin, admin);
+}
+
 #[cfg(feature = "snip20_reference_impl")]
 pub mod snip20_reference_impl {
     use crate::harness_macro;
@@ -86,22 +113,4 @@ pub mod treasury {
 
     pub struct Treasury;
     harness_macro::implement_harness!(Treasury, treasury);
-}
-
-#[cfg(feature = "query_auth")]
-pub mod query_auth {
-    use crate::harness_macro;
-    use query_auth;
-
-    pub struct QueryAuth;
-    harness_macro::implement_harness!(QueryAuth, query_auth);
-}
-
-#[cfg(feature = "admin")]
-pub mod admin {
-    use crate::harness_macro;
-    use admin;
-
-    pub struct Admin;
-    harness_macro::implement_harness!(Admin, admin);
 }

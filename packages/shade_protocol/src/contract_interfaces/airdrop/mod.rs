@@ -9,11 +9,11 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, HumanAddr};
-use schemars::JsonSchema;
+use crate::math_compat::Uint128;
+use crate::c_std::{Binary, HumanAddr};
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {

@@ -1,9 +1,9 @@
 use crate::impl_into_u8;
 use crate::utils::errors::{build_string, CodeType, DetailedError};
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{HumanAddr, StdError};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
+use crate::c_std::{HumanAddr, StdError};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, JsonSchema)]
 #[repr(u8)]
@@ -24,13 +24,14 @@ pub enum Error {
     BondDiscountAboveMaximumRate,
     BondIssuanceExceedsAllowance,
     NotLimitAdmin,
-    CollateralPriceExceedsLimit,
+    DepositPriceExceedsLimit,
     IssuedPriceBelowMinimum,
     SlippageToleranceExceeded,
     Blacklisted,
     IssuedAssetDeposit,
     NotTreasuryBond,
     NoBondsClaimable,
+    NotAdmin,
     QueryAuthBadResponse,
 }
 
@@ -58,7 +59,7 @@ impl CodeType for Error {
                 build_string("Bonds contract is currently not active. Governance must activate the contract before functionality can resume.", context)
             }
             Error::NoBondFound => {
-                build_string("No bond opportunity found for collateral contract {}", context)
+                build_string("No bond opportunity found for deposit contract {}", context)
             }
             Error::NoPendingBonds => {
                 build_string("No pending bonds for user address {}", context)
@@ -78,8 +79,8 @@ impl CodeType for Error {
             Error::NotLimitAdmin => {
                 build_string("Global limit parameters can only be changed by the limit admin", context)
             }
-            Error::CollateralPriceExceedsLimit => {
-                build_string("Collateral asset price of {} exceeds limit price of {}, cannot enter bond opportunity", context)
+            Error::DepositPriceExceedsLimit => {
+                build_string("Deposit asset price of {} exceeds limit price of {}, cannot enter bond opportunity", context)
             }
             Error::IssuedPriceBelowMinimum => {
                 build_string("Issued asset price of {} is below minimum value of {}, cannot enter opportunity", context)
@@ -91,7 +92,7 @@ impl CodeType for Error {
                 build_string("Permit isn't valid for {}", context)
             }
             Error::PermitRevoked => {
-                build_string("Permit is revoked", context)
+                build_string("Permit is revoked for user {}", context)
             }
             Error::Blacklisted => {
                 build_string("Cannot enter bond opportunity, sender address of {} is blacklisted", context)
@@ -104,6 +105,9 @@ impl CodeType for Error {
             }
             Error::NoBondsClaimable => {
                 build_string("Pending bonds not redeemable, nothing claimed", context)
+            }
+            Error::NotAdmin => {
+                build_string("Not registered as admin address via Shade-Admin", context)
             }
             Error::QueryAuthBadResponse => {
                 build_string("Query Authentication returned unrecognized response, cannot access information", context)
@@ -161,11 +165,11 @@ pub fn contract_not_active() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::ContractNotActive, vec![""]).to_error()
 }
 
-pub fn no_bond_found(collateral_asset_address: &str) -> StdError {
+pub fn no_bond_found(deposit_asset_address: &str) -> StdError {
     DetailedError::from_code(
         BOND_TARGET,
         Error::NoBondFound,
-        vec![collateral_asset_address],
+        vec![deposit_asset_address],
     )
     .to_error()
 }
@@ -248,15 +252,15 @@ pub fn not_limit_admin() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::NotLimitAdmin, vec![]).to_error()
 }
 
-pub fn collateral_price_exceeds_limit(collateral_price: Uint128, limit: Uint128) -> StdError {
-    let collateral_string = collateral_price.to_string();
-    let collateral_str = collateral_string.as_str();
+pub fn deposit_price_exceeds_limit(deposit_price: Uint128, limit: Uint128) -> StdError {
+    let deposit_string = deposit_price.to_string();
+    let deposit_str = deposit_string.as_str();
     let limit_string = limit.to_string();
     let limit_str = limit_string.as_str();
     DetailedError::from_code(
         BOND_TARGET,
-        Error::CollateralPriceExceedsLimit,
-        vec![collateral_str, limit_str],
+        Error::DepositPriceExceedsLimit,
+        vec![deposit_str, limit_str],
     )
     .to_error()
 }
@@ -299,8 +303,8 @@ pub fn permit_contract_mismatch(expected: &str) -> StdError {
     .to_error()
 }
 
-pub fn permit_revoked() -> StdError {
-    DetailedError::from_code(BOND_TARGET, Error::PermitRevoked, vec![]).to_error()
+pub fn permit_revoked(user: &str) -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::PermitRevoked, vec![user]).to_error()
 }
 
 pub fn blacklisted(address: HumanAddr) -> StdError {
@@ -317,6 +321,10 @@ pub fn not_treasury_bond() -> StdError {
 
 pub fn no_bonds_claimable() -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::NoBondsClaimable, vec![]).to_error()
+}
+
+pub fn not_admin() -> StdError {
+    DetailedError::from_code(BOND_TARGET, Error::NotAdmin, vec![]).to_error()
 }
 
 pub fn query_auth_bad_response() -> StdError {

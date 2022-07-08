@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Binary,
@@ -12,10 +12,10 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
+use shade_protocol::math_compat::Uint128;
 use schemars::JsonSchema;
-use secret_toolkit::utils::{InitCallback, Query};
+use shade_protocol::secret_toolkit::utils::{InitCallback, Query};
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
     contract_interfaces::dex::{

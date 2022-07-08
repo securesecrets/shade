@@ -19,33 +19,25 @@ crate-type = ["cdylib", "rlib"]
 default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
-debug-print = ["cosmwasm-std/debug-print"]
+backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std" }
-cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
-cosmwasm-schema = "0.10.1"
-secret-toolkit = { version = "0.2" }
-cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "governance-impl",
   "snip20_staking",
+  "query_auth"
 ] }
 schemars = "0.7"
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "0.6.3" }
 
 [dev-dependencies]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "governance-impl",
   "snip20_staking",
   "snip20",
-  "query_auth"
+  "query_auth",
+  "ensemble"
 ] }
 serde_json = { version = "1.0.67" }
-mockall = "0.10.2"
-mockall_double = "0.2.0"
-fadroma = { branch = "v100", git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"]  }
 contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "governance", "snip20_staking", "snip20"  ] }
 spip_stkd_0 = { version = "0.1.0", path = "../snip20_staking" }

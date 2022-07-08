@@ -4,13 +4,13 @@ pub mod transaction_history;
 pub mod errors;
 pub mod helpers;
 
-use cosmwasm_std::{Binary, Env, HumanAddr, StdError, StdResult, Storage};
-use query_authentication::permit::Permit;
-use schemars::JsonSchema;
+use crate::c_std::{Binary, Env, HumanAddr, StdError, StdResult, Storage};
+use crate::query_authentication::permit::Permit;
+use crate::schemars::JsonSchema;
 use secret_toolkit::crypto::sha_256;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
-use cosmwasm_math_compat::Uint128;
+use crate::serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
 use crate::contract_interfaces::snip20::errors::{invalid_decimals, invalid_name_format, invalid_symbol_format};
 use crate::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, ContractStatusLevel, Minters, RandSeed, TotalSupply};
 use crate::contract_interfaces::snip20::transaction_history::{RichTx, Tx};
@@ -575,6 +575,7 @@ pub enum QueryAnswer {
         redeem_enabled: bool,
         mint_enabled: bool,
         burn_enabled: bool,
+        transfer_enabled: bool,
     },
     ContractStatus {
         status: ContractStatusLevel,

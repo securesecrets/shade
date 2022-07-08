@@ -7,10 +7,10 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, Coin, HumanAddr, StdResult, Storage};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
+use crate::c_std::{Binary, Coin, HumanAddr, StdResult, Storage};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 use crate::contract_interfaces::governance::stored_id::UserID;
 
 #[cfg(feature = "governance-impl")]

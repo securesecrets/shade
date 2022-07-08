@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Binary,
@@ -14,9 +14,9 @@ use cosmwasm_std::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::contract_interfaces::oracles::band::{InitMsg, ReferenceData};
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 
-use cosmwasm_storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
+use shade_protocol::storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
 
 pub static PRICE: &[u8] = b"prices";
 

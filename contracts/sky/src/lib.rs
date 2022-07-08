@@ -5,7 +5,7 @@ pub mod query;
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::contract;
-    use cosmwasm_std::{
+    use shade_protocol::c_std::{
         do_handle, do_init, do_query, ExternalApi, ExternalQuerier, ExternalStorage,
     };
 

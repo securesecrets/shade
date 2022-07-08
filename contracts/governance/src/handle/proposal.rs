@@ -1,6 +1,6 @@
 use crate::handle::assembly::try_assembly_proposal;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     from_binary,
     to_binary,
     Api,
@@ -16,7 +16,7 @@ use cosmwasm_std::{
     Storage,
     WasmMsg,
 };
-use secret_toolkit::{snip20::send_msg, utils::Query};
+use shade_protocol::secret_toolkit::{snip20::send_msg, utils::Query};
 use shade_protocol::{
     contract_interfaces::{
         governance::{
@@ -325,7 +325,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                                 // Update slash amount
                                 messages.push(send_msg(
                                     config.treasury,
-                                    cosmwasm_std::Uint128(send_amount.u128()),
+                                    shade_protocol::c_std::Uint128(send_amount.u128()),
                                     None,
                                     None,
                                     None,

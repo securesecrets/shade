@@ -1,6 +1,6 @@
-use cosmwasm_std::{StdError, StdResult, Storage};
-pub use secret_storage_plus::{Item, Map, PrimaryKey};
-use serde::{de::DeserializeOwned, Serialize};
+use crate::c_std::{StdError, StdResult, Storage};
+use secret_storage_plus::{Item, Map, PrimaryKey};
+use crate::serde::{de::DeserializeOwned, Serialize};
 
 pub trait NaiveItemStorage: Serialize + DeserializeOwned {
     fn load<S: Storage>(storage: &S, item: Item<Self>) -> StdResult<Self> {

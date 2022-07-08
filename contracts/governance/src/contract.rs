@@ -22,26 +22,34 @@ use crate::{
     },
     query,
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, HumanAddr, from_binary};
-use secret_toolkit::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+};
+use shade_protocol::secret_toolkit::{
     snip20::register_receive_msg,
     utils::{pad_handle_result, pad_query_result},
 };
-use secret_toolkit::utils::Query;
 use shade_protocol::{
-    contract_interfaces::{
-        governance::{
-            assembly::{Assembly, AssemblyMsg},
-            contract::AllowedContract,
-            stored_id::ID,
-            Config,
-            HandleMsg,
-            InitMsg,
-            QueryMsg,
-            MSG_VARIABLE,
-        },
-        query_auth
+    contract_interfaces::governance::{
+        assembly::{Assembly, AssemblyMsg},
+        contract::AllowedContract,
+        stored_id::ID,
+        Config,
+        HandleMsg,
+        InitMsg,
+        QueryMsg,
+        MSG_VARIABLE,
     },
     utils::{
         asset::Contract,

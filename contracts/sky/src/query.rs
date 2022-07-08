@@ -1,8 +1,8 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     Storage, Api, Querier, Extern, StdResult, StdError, debug_print,
 };
-use cosmwasm_math_compat::Uint128;
-use secret_toolkit::utils::Query;
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::secret_toolkit::utils::Query;
 use shade_protocol::{
     contract_interfaces::{
         sky::sky::{QueryAnswer, Config, ViewingKeys, SelfAddr},

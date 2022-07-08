@@ -2,10 +2,10 @@ use crate::utils::{
     asset::Contract,
     storage::default::{BucketStorage, SingletonStorage},
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::HumanAddr;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
+use crate::c_std::HumanAddr;
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, collections::BinaryHeap};
 
 // Configuration file for staking
@@ -150,7 +150,7 @@ mod tests {
         QueueItem,
         VecQueue,
     };
-    use cosmwasm_math_compat::Uint128;
+    use crate::math_compat::Uint128;
 
     #[test]
     fn is_funded() {

@@ -1,7 +1,7 @@
 use crate::utils::storage::default::NaiveSingletonStorage;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{HumanAddr, StdResult, Storage};
-use serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
+use crate::c_std::{StdResult, Storage};
+use crate::serde::{Deserialize, Serialize};
 use crate::utils::storage::plus::{Map, NaiveMapStorage};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
