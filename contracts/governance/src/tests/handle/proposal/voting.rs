@@ -1,6 +1,6 @@
-use crate::tests::{get_proposals, init_governance};
+use crate::tests::{get_proposals, init_query_auth};
 use contract_harness::harness::{
-    governance::Governance,
+    self,
     snip20::Snip20,
     snip20_staking::Snip20Staking,
 };
@@ -134,11 +134,15 @@ fn init_voting_governance_with_proposal() -> StdResult<(
     )?;
 
     // Register governance
-    let gov = chain.register(Box::new(Governance));
-    let gov = chain.instantiate(
-        gov.id,
+    let auth = init_query_auth(&mut chain)?;
+    let gov = harness::governance::init(
+        &mut chain,
         &InitMsg {
             treasury: HumanAddr::from("treasury"),
+            query_auth: Contract {
+                address: auth.address,
+                code_hash: auth.code_hash
+            },
             admin_members: vec![
                 HumanAddr::from("alpha"),
                 HumanAddr::from("beta"),
@@ -176,12 +180,8 @@ fn init_voting_governance_with_proposal() -> StdResult<(
                 address: stkd_tkn.address.clone(),
                 code_hash: stkd_tkn.code_hash.clone(),
             }),
-        },
-        MockEnv::new("admin", ContractLink {
-            address: "gov".into(),
-            code_hash: gov.code_hash,
-        }),
-    )?.instance;
+        }
+    )?;
 
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
@@ -1337,12 +1337,15 @@ fn vote_count_percentage() {
         .unwrap();
 
     // Register governance
-    let gov = chain.register(Box::new(Governance));
-    let gov = chain
-        .instantiate(
-            gov.id,
+    let auth = init_query_auth(&mut chain).unwrap();
+    let gov = harness::governance::init(
+            &mut chain,
             &InitMsg {
                 treasury: HumanAddr::from("treasury"),
+                query_auth: Contract {
+                    address: auth.address,
+                    code_hash: auth.code_hash
+                },
                 admin_members: vec![
                     HumanAddr::from("alpha"),
                     HumanAddr::from("beta"),
@@ -1374,13 +1377,9 @@ fn vote_count_percentage() {
                     address: stkd_tkn.address.clone(),
                     code_hash: stkd_tkn.code_hash.clone(),
                 }),
-            },
-            MockEnv::new("admin", ContractLink {
-                address: "gov".into(),
-                code_hash: gov.code_hash,
-            }),
+            }
         )
-        .unwrap().instance;
+        .unwrap();
 
     chain
         .execute(

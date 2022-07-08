@@ -214,7 +214,7 @@ pub fn user_assembly_votes<S: Storage, A: Api, Q: Querier>(
     let total = UserID::total_assembly_votes(&deps.storage, user.clone())?;
 
     let start = pagination.amount.checked_mul(pagination.page).unwrap();
-    let mut props = vec![];
+    let mut votes = vec![];
 
     for i in start..start+pagination.amount {
         let id = match UserID::assembly_vote(&deps.storage, user.clone(), Uint128::new(i as u128)) {
@@ -222,9 +222,9 @@ pub fn user_assembly_votes<S: Storage, A: Api, Q: Querier>(
             Err(_) => break
         };
 
-        props.push(ResponseWithID {
+        votes.push(ResponseWithID {
             prop_id: id,
-            data: Proposal::assembly_vote(&deps.storage, &id, &user)?
+            data: Proposal::assembly_vote(&deps.storage, &id, &user)?.unwrap()
         });
     }
 
@@ -264,7 +264,7 @@ pub fn user_votes<S: Storage, A: Api, Q: Querier>(
     let total = UserID::total_votes(&deps.storage, user.clone())?;
 
     let start = pagination.amount.checked_mul(pagination.page).unwrap();
-    let mut props = vec![];
+    let mut votes = vec![];
 
     for i in start..start+pagination.amount {
         let id = match UserID::votes(&deps.storage, user.clone(), Uint128::new(i as u128)) {
@@ -272,9 +272,9 @@ pub fn user_votes<S: Storage, A: Api, Q: Querier>(
             Err(_) => break
         };
 
-        props.push(ResponseWithID {
+        votes.push(ResponseWithID {
             prop_id: id,
-            data: Proposal::public_vote(&deps.storage, &id, &user)?
+            data: Proposal::public_vote(&deps.storage, &id, &user)?.unwrap()
         });
     }
 

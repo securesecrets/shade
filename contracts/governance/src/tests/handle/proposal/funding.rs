@@ -4,9 +4,9 @@ use crate::tests::{
     get_proposals,
     gov_generic_proposal,
     gov_msg_proposal,
-    init_governance,
+    init_query_auth
 };
-use contract_harness::harness::{governance::Governance, snip20::Snip20};
+use contract_harness::harness::{self, snip20::Snip20};
 use shade_protocol::math_compat::Uint128;
 use shade_protocol::c_std::{to_binary, Binary, HumanAddr, StdResult};
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
@@ -65,11 +65,15 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     )?.instance;
 
     // Register governance
-    let gov = chain.register(Box::new(Governance));
-    let gov = chain.instantiate(
-        gov.id,
+    let auth = init_query_auth(&mut chain)?;
+    let gov = harness::governance::init(
+        &mut chain,
         &InitMsg {
             treasury: HumanAddr::from("treasury"),
+            query_auth: Contract {
+                address: auth.address,
+                code_hash: auth.code_hash
+            },
             admin_members: vec![
                 HumanAddr::from("alpha"),
                 HumanAddr::from("beta"),
@@ -101,12 +105,8 @@ fn init_funding_governance_with_proposal() -> StdResult<(
                 code_hash: snip20.code_hash.clone(),
             }),
             vote_token: None,
-        },
-        MockEnv::new("admin", ContractLink {
-            address: "gov".into(),
-            code_hash: gov.code_hash,
-        }),
-    )?.instance;
+        }
+    )?;
 
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {
@@ -325,6 +325,7 @@ fn fake_funding_token() {
     chain
         .execute(
             &governance::HandleMsg::SetConfig {
+                query_auth: None,
                 treasury: None,
                 funding_token: Some(Contract {
                     address: other.address.clone(),
@@ -791,11 +792,15 @@ fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
     )?.instance;
 
     // Register governance
-    let gov = chain.register(Box::new(Governance));
-    let gov = chain.instantiate(
-        gov.id,
+    let auth = init_query_auth(&mut chain)?;
+    let gov = harness::governance::init(
+        &mut chain,
         &InitMsg {
             treasury: HumanAddr::from("treasury"),
+            query_auth: Contract {
+                address: auth.address,
+                code_hash: auth.code_hash
+            },
             admin_members: vec![
                 HumanAddr::from("alpha"),
                 HumanAddr::from("beta"),
@@ -827,12 +832,8 @@ fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
                 code_hash: snip20.code_hash.clone(),
             }),
             vote_token: None,
-        },
-        MockEnv::new("admin", ContractLink {
-            address: "gov".into(),
-            code_hash: gov.code_hash,
-        }),
-    )?.instance;
+        }
+    )?;
 
     chain.execute(
         &governance::HandleMsg::AssemblyProposal {

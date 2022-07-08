@@ -23,19 +23,7 @@ use crate::{
     query,
 };
 use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
+use shade_protocol::c_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, from_binary, HumanAddr};
 use shade_protocol::secret_toolkit::{
     snip20::register_receive_msg,
     utils::{pad_handle_result, pad_query_result},
@@ -58,6 +46,8 @@ use shade_protocol::{
     },
 };
 use shade_protocol::contract_interfaces::governance::{AuthQuery, QueryData};
+use shade_protocol::contract_interfaces::query_auth;
+use shade_protocol::secret_toolkit::utils::Query;
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -374,6 +364,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::WithPermit { permit, query } => {
                 // Query Permit info
                 let authenticator = Config::load(&deps.storage)?.query;
+                let args: QueryData = from_binary(&permit.params.data)?;
                 let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidatePermit {
                     permit
                 }.query(&deps.querier, authenticator.code_hash, authenticator.address)?;
@@ -389,8 +380,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                     },
                     _ => return Err(StdError::unauthorized())
                 }
-
-                let args: QueryData = from_binary(&permit.params.data)?;
 
                 auth_queries(deps, query, sender)
 

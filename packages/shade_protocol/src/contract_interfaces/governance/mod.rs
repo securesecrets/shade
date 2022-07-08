@@ -276,14 +276,14 @@ pub enum HandleAnswer {
     SetContract { status: ResponseStatus },
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Pagination {
     pub page: u64,
     pub amount: u64
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthQuery {
     Proposals { pagination: Pagination },

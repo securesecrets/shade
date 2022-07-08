@@ -63,7 +63,7 @@ const PUBLIC_VOTES: &'static [u8] = b"total-public-votes-";
 impl Proposal {
     pub fn save<S: Storage>(&self, storage: &mut S) -> StdResult<()> {
         // Create new ID
-        let id = &ID::add_proposal(&mut deps.storage)?;
+        let id = &ID::add_proposal(storage)?;
 
         // Create proposers id
         UserID::add_proposal(storage, self.proposer.clone(), id.clone())?;

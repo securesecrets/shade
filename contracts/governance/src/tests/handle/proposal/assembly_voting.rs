@@ -4,9 +4,9 @@ use crate::tests::{
     get_proposals,
     gov_generic_proposal,
     gov_msg_proposal,
-    init_governance,
+    init_query_auth
 };
-use contract_harness::harness::{governance::Governance, snip20_staking::Snip20Staking};
+use contract_harness::harness::{self, snip20_staking::Snip20Staking};
 use shade_protocol::math_compat::Uint128;
 use shade_protocol::c_std::{to_binary, Binary, HumanAddr, StdResult};
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
@@ -26,8 +26,15 @@ use shade_protocol::{
 
 fn init_assembly_governance_with_proposal() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)>
 {
-    let (mut chain, gov) = init_governance(InitMsg {
+    let mut chain = ContractEnsemble::new(50);
+    let auth = init_query_auth(&mut chain)?;
+
+    let gov = harness::governance::init(&mut chain, &InitMsg {
         treasury: HumanAddr::from("treasury"),
+        query_auth: Contract {
+            address: auth.address,
+            code_hash: auth.code_hash
+        },
         admin_members: vec![
             HumanAddr::from("alpha"),
             HumanAddr::from("beta"),
@@ -915,8 +922,15 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let (mut chain, gov) = init_governance(InitMsg {
+
+    let mut chain = ContractEnsemble::new(50);
+    let auth = init_query_auth(&mut chain).unwrap();
+    let gov = harness::governance::init(&mut chain, &InitMsg {
         treasury: HumanAddr::from("treasury"),
+        query_auth: Contract {
+            address: auth.address,
+            code_hash: auth.code_hash
+        },
         admin_members: vec![
             HumanAddr::from("alpha"),
             HumanAddr::from("beta"),

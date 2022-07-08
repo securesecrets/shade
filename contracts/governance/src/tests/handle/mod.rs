@@ -45,6 +45,7 @@ fn set_config_msg() {
     chain
         .execute(
             &governance::HandleMsg::SetConfig {
+                query_auth: None,
                 treasury: Some(HumanAddr::from("random")),
                 funding_token: Some(Contract {
                     address: snip20.address.clone(),
@@ -78,6 +79,7 @@ fn unauthorised_set_config_msg() {
     chain
         .execute(
             &governance::HandleMsg::SetConfig {
+                query_auth: None,
                 treasury: None,
                 funding_token: None,
                 vote_token: None,
@@ -119,6 +121,7 @@ fn reject_disable_config_tokens() {
     chain
         .execute(
             &governance::HandleMsg::SetConfig {
+                query_auth: None,
                 treasury: Some(HumanAddr::from("random")),
                 funding_token: Some(Contract {
                     address: snip20.address.clone(),
@@ -143,6 +146,7 @@ fn reject_disable_config_tokens() {
     chain
         .execute(
             &governance::HandleMsg::SetConfig {
+                query_auth: None,
                 treasury: None,
                 funding_token: None,
                 vote_token: None,

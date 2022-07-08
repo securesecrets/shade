@@ -8,7 +8,6 @@ use crate::tests::{
     get_proposals,
     gov_generic_proposal,
     gov_msg_proposal,
-    init_governance,
 };
 use shade_protocol::math_compat::Uint128;
 use shade_protocol::c_std::{to_binary, Binary, HumanAddr, StdResult};
