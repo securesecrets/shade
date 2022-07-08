@@ -81,11 +81,11 @@ pub fn holders_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<HumanAddr>> {
     singleton(storage, HOLDERS)
 }
 
-pub fn holder_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury_manager::Holder> {
+pub fn holding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury_manager::Holding> {
     bucket_read(HOLDER, storage)
 }
 
-pub fn holder_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury_manager::Holder> {
+pub fn holding_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury_manager::Holding> {
     bucket(HOLDER, storage)
 }
 
@@ -96,13 +96,3 @@ pub fn unbondings_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<treasury_m
 pub fn unbondings_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury_manager::Unbonding>> {
     bucket(HOLDER, storage)
 }
-
-/*
-pub fn unbonding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
-    bucket_read(UNBONDING, storage)
-}
-
-pub fn unbonding_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
-    bucket(UNBONDING, storage)
-}
-*/

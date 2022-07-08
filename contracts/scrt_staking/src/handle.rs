@@ -215,7 +215,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     // Send full unbonding
     if unbonding < reserves {
-        assert!(false, "first {}", unbonding);
         messages.append(&mut wrap_and_send(unbonding, 
                                            config.owner, 
                                            config.sscrt, 
@@ -224,7 +223,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     }
     // Send all reserves
     else if !reserves.is_zero(){
-        assert!(false, "second {}", reserves);
         messages.append(&mut wrap_and_send(reserves, 
                                            config.owner, 
                                            config.sscrt, 
@@ -259,12 +257,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
                 // This delegation isn't enough to fully unbond
                 if delegation.amount.amount.clone() < unbonding {
-                    /*
-                    assert!(false, "Undelegate partial {}, {}", 
-                            delegation.validator.clone(), 
-                            delegation.amount.amount.clone(),
-                        );
-                    */
                     messages.push(
                         CosmosMsg::Staking(
                             StakingMsg::Undelegate {
@@ -276,12 +268,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     unbonding = (unbonding - delegation.amount.amount.clone())?;
                 }
                 else {
-                    /*
-                    assert!(false, "Undelegate full {}, {}, {}", 
-                            delegation.validator.clone(), 
-                            delegation.amount.amount.clone(),
-                        );
-                    */
                     messages.push(
                         CosmosMsg::Staking(
                             StakingMsg::Undelegate {

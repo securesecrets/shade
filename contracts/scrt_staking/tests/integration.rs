@@ -100,37 +100,45 @@ fn basic_scrt_staking_integration(
         max_change_rate: Decimal::one(),
     });
 
-    let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-    ensemble.add_funds(HumanAddr::from("admin"), vec![deposit_coin.clone()]);
+    if !deposit.is_zero() {
+        let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
+        ensemble.add_funds(HumanAddr::from("admin"), vec![deposit_coin.clone()]);
 
-    // Wrap L1 into tokens
-    ensemble.execute(
-        &snip20::HandleMsg::Deposit {
-            padding: None,
-        },
-        MockEnv::new(
-            "admin",
-            token.clone(),
-        ).sent_funds(vec![deposit_coin]),
-    ).unwrap();
-    //assert!(false, "deposit success");
+        // Wrap L1 into tokens
+        ensemble.execute(
+            &snip20::HandleMsg::Deposit {
+                padding: None,
+            },
+            MockEnv::new(
+                "admin",
+                token.clone(),
+            ).sent_funds(vec![deposit_coin]),
+        ).unwrap();
+        //assert!(false, "deposit success");
 
-    // Deposit funds in scrt staking
-    ensemble.execute(
-        &snip20::HandleMsg::Send {
-            recipient: scrt_staking.address.clone(),
-            recipient_code_hash: None,
-            amount: compat::Uint128::new(deposit.u128()),
-            msg: None,
-            memo: None,
-            padding: None,
-        },
-        MockEnv::new(
-            "admin",
-            token.clone(),
-        ),
-    ).unwrap();
-    
+        // Deposit funds in scrt staking
+        ensemble.execute(
+            &snip20::HandleMsg::Send {
+                recipient: scrt_staking.address.clone(),
+                recipient_code_hash: None,
+                amount: compat::Uint128::new(deposit.u128()),
+                msg: None,
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new(
+                "admin",
+                token.clone(),
+            ),
+        ).unwrap();
+
+        // Delegations
+        let delegations: Vec<Delegation> = ensemble.query(
+            scrt_staking.address.clone(),
+            &scrt_staking::QueryMsg::Delegations {},
+        ).unwrap();
+        assert!(!delegations.is_empty());
+    }
 
     // reserves should be 0 (all staked)
     match ensemble.query(
@@ -162,13 +170,6 @@ fn basic_scrt_staking_integration(
         _ => assert!(false),
     };
 
-    // Delegations
-    let delegations: Vec<Delegation> = ensemble.query(
-        scrt_staking.address.clone(),
-        &scrt_staking::QueryMsg::Delegations {},
-    ).unwrap();
-    assert!(!delegations.is_empty());
-
     // Rewards
     let cur_rewards: Uint128 = ensemble.query(
         scrt_staking.address.clone(),
@@ -183,7 +184,12 @@ fn basic_scrt_staking_integration(
         scrt_staking.address.clone(),
         &scrt_staking::QueryMsg::Rewards {},
     ).unwrap();
-    assert_eq!(cur_rewards, rewards, "Rewards Post-add");
+
+    if deposit.is_zero() {
+        assert_eq!(cur_rewards, Uint128::zero(), "Rewards Post-add");
+    } else {
+        assert_eq!(cur_rewards, rewards, "Rewards Post-add");
+    }
 
     // reserves should be rewards
     match ensemble.query(
@@ -195,7 +201,11 @@ fn basic_scrt_staking_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, rewards, "Reserves Post-Rewards");
+            if deposit.is_zero() {
+                assert_eq!(amount, Uint128::zero(), "Reserves Post-Rewards");
+            } else {
+                assert_eq!(amount, rewards, "Reserves Post-Rewards");
+            }
         },
         _ => assert!(false),
     };
@@ -404,5 +414,11 @@ basic_scrt_staking_tests! {
         Uint128(100), // deposit
         Uint128(50),   // rewards
         Uint128(150), // balance
+    ),
+
+    basic_scrt_staking_2: (
+        Uint128(0), // deposit
+        Uint128(1000),   // rewards
+        Uint128(0), // balance
     ),
 }

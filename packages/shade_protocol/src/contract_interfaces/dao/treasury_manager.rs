@@ -33,7 +33,7 @@ pub enum Status {
 //TODO rename to Holding
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Holder {
+pub struct Holding {
     pub balances: Vec<Balance>,
     pub unbondings: Vec<Balance>,
     //pub claimable: Vec<Balance>,

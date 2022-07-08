@@ -402,7 +402,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 pub fn holders<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury_manager::QueryAnswer> {
-    Ok(treasury_manager::QueryAnswer::Holders {
+    Ok(treasury_manager::QueryAnswer::Holdings {
         holders: holders_r(&deps.storage).load()?,
     })
 }
@@ -412,7 +412,7 @@ pub fn holder<S: Storage, A: Api, Q: Querier>(
     holder: HumanAddr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     match holder_r(&deps.storage).may_load(holder.as_str().as_bytes())? {
-        Some(h) => Ok(treasury_manager::QueryAnswer::Holder { holder: h }),
+        Some(h) => Ok(treasury_manager::QueryAnswer::Holding { holder: h }),
         None => Err(StdError::generic_err("Not a holder")),
     }
 }
