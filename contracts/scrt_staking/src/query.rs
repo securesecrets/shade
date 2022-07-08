@@ -91,6 +91,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     );
 
     let scrt_balance = scrt_balance(&deps, self_address_r(&deps.storage).load()?)?;
+
     let rewards = rewards(deps)?;
 
     Ok(adapter::QueryAnswer::Balance {
@@ -112,7 +113,9 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     }
 
     let scrt_balance = scrt_balance(&deps, self_address_r(&deps.storage).load()?)?;
+    //assert!(false, "balance {}", scrt_balance);
     let unbonding = unbonding_r(&deps.storage).load()?;
+    //assert!(false, "unbonding {}", unbonding);
 
     let mut amount = scrt_balance;
     if amount > unbonding {
@@ -180,8 +183,14 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
 
     let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
 
+    let rewards = rewards(&deps)?;
+    //assert!(false, "rewards {}", rewards);
+
+    if !scrt_balance.is_zero() {
+        assert!(false, "scrt bal {}", scrt_balance);
+    }
     Ok(adapter::QueryAnswer::Reserves {
-        amount: scrt_balance + rewards(&deps)?,
+        amount: scrt_balance + rewards,
     })
 }
 

@@ -2,7 +2,7 @@ use cosmwasm_math_compat as compat;
 use cosmwasm_std::{
     to_binary,
     HumanAddr, Uint128, Coin, Decimal,
-    Validator,
+    Validator, Delegation,
 };
 
 use shade_protocol::{
@@ -34,7 +34,7 @@ use fadroma::{
 };
 
 // Add other adapters here as they come
-fn single_asset_portion_manager_integration(
+fn basic_scrt_staking_integration(
     deposit: Uint128, 
     rewards: Uint128,
     expected_scrt_staking: Uint128,
@@ -103,7 +103,7 @@ fn single_asset_portion_manager_integration(
     let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
     ensemble.add_funds(HumanAddr::from("admin"), vec![deposit_coin.clone()]);
 
-    // Wrap L1
+    // Wrap L1 into tokens
     ensemble.execute(
         &snip20::HandleMsg::Deposit {
             padding: None,
@@ -113,8 +113,9 @@ fn single_asset_portion_manager_integration(
             token.clone(),
         ).sent_funds(vec![deposit_coin]),
     ).unwrap();
+    //assert!(false, "deposit success");
 
-    // Deposit funds
+    // Deposit funds in scrt staking
     ensemble.execute(
         &snip20::HandleMsg::Send {
             recipient: scrt_staking.address.clone(),
@@ -130,7 +131,90 @@ fn single_asset_portion_manager_integration(
         ),
     ).unwrap();
     
-    /*
+
+    // reserves should be 0 (all staked)
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Reserves {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Reserves Pre-Rewards");
+        },
+        _ => assert!(false),
+    };
+
+    // Balance
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, deposit, "Balance Pre-Rewards");
+        },
+        _ => assert!(false),
+    };
+
+    // Delegations
+    let delegations: Vec<Delegation> = ensemble.query(
+        scrt_staking.address.clone(),
+        &scrt_staking::QueryMsg::Delegations {},
+    ).unwrap();
+    assert!(!delegations.is_empty());
+
+    // Rewards
+    let cur_rewards: Uint128 = ensemble.query(
+        scrt_staking.address.clone(),
+        &scrt_staking::QueryMsg::Rewards {},
+    ).unwrap();
+    assert_eq!(cur_rewards, Uint128::zero(), "Rewards Pre-add");
+
+    ensemble.add_rewards(rewards);
+
+    // Rewards
+    let cur_rewards: Uint128 = ensemble.query(
+        scrt_staking.address.clone(),
+        &scrt_staking::QueryMsg::Rewards {},
+    ).unwrap();
+    assert_eq!(cur_rewards, rewards, "Rewards Post-add");
+
+    // reserves should be rewards
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Reserves {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, rewards, "Reserves Post-Rewards");
+        },
+        _ => assert!(false),
+    };
+
+    // Balance
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, expected_scrt_staking, "Balance Post-Rewards");
+        },
+        _ => assert!(false),
+    };
+
     // Update SCRT Staking
     ensemble.execute(
         &adapter::HandleMsg::Adapter(
@@ -143,9 +227,8 @@ fn single_asset_portion_manager_integration(
             scrt_staking.clone(),
         ),
     ).unwrap();
-    */
 
-    // Scrt Staking reserves should be 0 (all staked)
+    // reserves should be rewards
     match ensemble.query(
         scrt_staking.address.clone(),
         &adapter::QueryMsg::Adapter(
@@ -155,12 +238,12 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Reserves Pre-Unbond");
+            assert_eq!(amount, Uint128::zero(), "Reserves Post-Update");
         },
         _ => assert!(false),
     };
 
-    // balance check
+    // Balance
     match ensemble.query(
         scrt_staking.address.clone(),
         &adapter::QueryMsg::Adapter(
@@ -170,12 +253,12 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Balance Pre-Unbond");
+            assert_eq!(amount, expected_scrt_staking, "Balance Post-Update");
         },
         _ => assert!(false),
     };
 
-    // claimable check
+    // Claimable
     match ensemble.query(
         scrt_staking.address.clone(),
         &adapter::QueryMsg::Adapter(
@@ -186,6 +269,21 @@ fn single_asset_portion_manager_integration(
     ).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Claimable Pre-Unbond");
+        },
+        _ => assert!(false),
+    };
+
+    // Unbondable
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Unbondable {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Unbondable { amount } => {
+            assert_eq!(amount, expected_scrt_staking, "Unbondable Pre-Unbond");
         },
         _ => assert!(false),
     };
@@ -204,6 +302,23 @@ fn single_asset_portion_manager_integration(
         ),
     ).unwrap();
 
+    // Unbonding 
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Unbonding {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Unbonding { amount } => {
+            assert_eq!(amount, expected_scrt_staking, "Unbonding Pre fast forward");
+        },
+        _ => assert!(false),
+    };
+
+    ensemble.fast_forward_delegation_waits();
+
     // Claimable
     match ensemble.query(
         scrt_staking.address.clone(),
@@ -214,7 +329,7 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Claimable Pre-Unbond");
+            assert_eq!(amount, expected_scrt_staking, "Claimable Post unbond fast forward");
         },
         _ => assert!(false),
     };
@@ -263,7 +378,7 @@ fn single_asset_portion_manager_integration(
     };
 }
 
-macro_rules! single_asset_portion_manager_tests {
+macro_rules! basic_scrt_staking_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
@@ -273,16 +388,21 @@ macro_rules! single_asset_portion_manager_tests {
                     rewards,
                     expected_scrt_staking,
                 ) = $value;
-                single_asset_portion_manager_integration(deposit, rewards, expected_scrt_staking);
+                basic_scrt_staking_integration(deposit, rewards, expected_scrt_staking);
             }
         )*
     }
 }
 
-single_asset_portion_manager_tests! {
-    single_asset_portion_manager_0: (
+basic_scrt_staking_tests! {
+    basic_scrt_staking_0: (
         Uint128(100), // deposit
         Uint128(0),   // rewards
-        Uint128(100), // balance 90
+        Uint128(100), // balance
+    ),
+    basic_scrt_staking_1: (
+        Uint128(100), // deposit
+        Uint128(50),   // rewards
+        Uint128(150), // balance
     ),
 }

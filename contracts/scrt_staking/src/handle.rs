@@ -126,7 +126,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 
     // Claim Rewards
     let rewards = query::rewards(&deps)?;
-    if rewards >= Uint128::zero() {
+    if !rewards.is_zero() { 
         messages.append(&mut withdraw_rewards(deps)?);
     }
 
@@ -193,11 +193,16 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     let scrt_balance = scrt_balance(&deps, self_address)?;
     let rewards = query::rewards(deps)?;
 
-
     let mut messages = vec![];
+
+    if !rewards.is_zero() {
+        messages.append(&mut withdraw_rewards(deps)?);
+    }
+
     let mut undelegated = vec![];
 
-    let mut unbonding = unbonding_r(&deps.storage).load()? + amount;
+    let mut unbonding = amount + unbonding_r(&deps.storage).load()?;
+
     let total = scrt_balance + rewards + delegated;
     let mut reserves = scrt_balance + rewards;
 
@@ -210,6 +215,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     // Send full unbonding
     if unbonding < reserves {
+        assert!(false, "first {}", unbonding);
         messages.append(&mut wrap_and_send(unbonding, 
                                            config.owner, 
                                            config.sscrt, 
@@ -217,7 +223,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         unbonding = Uint128::zero();
     }
     // Send all reserves
-    else {
+    else if !reserves.is_zero(){
+        assert!(false, "second {}", reserves);
         messages.append(&mut wrap_and_send(reserves, 
                                            config.owner, 
                                            config.sscrt, 
@@ -225,7 +232,9 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         unbonding = (unbonding - reserves)?;
     }
 
-    while unbonding > Uint128::zero() {
+    unbonding_w(&mut deps.storage).save(&unbonding)?;
+
+    while !unbonding.is_zero() {
 
         // Unbond from largest validator first
         let max_delegation = delegations.iter().max_by_key(|d| {
@@ -250,6 +259,12 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
                 // This delegation isn't enough to fully unbond
                 if delegation.amount.amount.clone() < unbonding {
+                    /*
+                    assert!(false, "Undelegate partial {}, {}", 
+                            delegation.validator.clone(), 
+                            delegation.amount.amount.clone(),
+                        );
+                    */
                     messages.push(
                         CosmosMsg::Staking(
                             StakingMsg::Undelegate {
@@ -261,6 +276,12 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     unbonding = (unbonding - delegation.amount.amount.clone())?;
                 }
                 else {
+                    /*
+                    assert!(false, "Undelegate full {}, {}, {}", 
+                            delegation.validator.clone(), 
+                            delegation.amount.amount.clone(),
+                        );
+                    */
                     messages.push(
                         CosmosMsg::Staking(
                             StakingMsg::Undelegate {
@@ -279,8 +300,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             }
         }
     }
-
-    unbonding_w(&mut deps.storage).save(&unbonding)?;
 
     Ok(HandleResponse {
         messages,
@@ -342,9 +361,12 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    if !config.admins.contains(&env.message.sender) || !(config.owner == env.message.sender) {
+    /*
+    // Anyone can probably do this, as it just sends claimable to owner
+    if !config.admins.contains(&env.message.sender) && config.owner != env.message.sender {
         return Err(StdError::unauthorized());
     }
+    */
 
     let mut messages = vec![];
 
@@ -359,7 +381,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         // Claim Rewards
         let rewards = query::rewards(&deps)?;
 
-        if rewards >= Uint128::zero() {
+        if !rewards.is_zero() {
             messages.append(&mut withdraw_rewards(deps)?);
         }
 
@@ -370,14 +392,16 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    messages.append(&mut wrap_and_send(
-        claim_amount,
-        config.owner,
-        config.sscrt,
-        None,
-    )?);
+    if !claim_amount.is_zero() {
+        messages.append(&mut wrap_and_send(
+            claim_amount,
+            config.owner,
+            config.sscrt,
+            None,
+        )?);
+        unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
+    }
 
-    unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
 
     Ok(HandleResponse {
         messages,
