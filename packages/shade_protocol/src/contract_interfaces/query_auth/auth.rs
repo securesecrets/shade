@@ -6,7 +6,7 @@ use secret_storage_plus::Map;
 use secret_toolkit::crypto::{Prng, sha_256};
 use crate::utils::storage::plus::MapStorage;
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default)]
 pub struct Key(pub String);
 
 impl Key {
@@ -48,7 +48,7 @@ impl ToString for Key {
 const KEY_SIZE: usize = 32;
 impl ViewingKey<KEY_SIZE> for Key{}
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct HashedKey(pub [u8; KEY_SIZE]);
 
 impl MapStorage<'static, HumanAddr> for HashedKey {
@@ -56,7 +56,7 @@ impl MapStorage<'static, HumanAddr> for HashedKey {
 }
 
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PermitKey(pub bool);
 
 impl MapStorage<'static, (HumanAddr, String)> for PermitKey {

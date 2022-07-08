@@ -1,5 +1,5 @@
 use crate::c_std::StdError;
-use crate::schemars::{JsonSchema, _serde_json::to_string};
+use crate::schemars::{_serde_json::to_string};
 use crate::serde::{Deserialize, Serialize};
 
 #[macro_export]
@@ -13,7 +13,7 @@ macro_rules! impl_into_u8 {
     };
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct DetailedError<T: CodeType> {
     pub target: String,
@@ -66,7 +66,7 @@ pub mod tests {
     use crate::schemars::JsonSchema;
     use crate::serde::{Deserialize, Serialize};
 
-    #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, JsonSchema)]
+    #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
     #[repr(u8)]
     #[serde(rename_all = "snake_case")]
     enum TestCode {

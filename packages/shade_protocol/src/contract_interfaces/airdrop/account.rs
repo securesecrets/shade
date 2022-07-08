@@ -9,7 +9,7 @@ use crate::query_authentication::{
 use crate::schemars::JsonSchema;
 use crate::serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Account {
     pub addresses: Vec<HumanAddr>,
@@ -29,7 +29,7 @@ impl Default for Account {
 pub type AccountPermit = Permit<AccountPermitMsg>;
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AccountPermitMsg {
     pub contract: HumanAddr,
@@ -37,7 +37,7 @@ pub struct AccountPermitMsg {
 }
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct FillerMsg {
     pub coins: Vec<String>,
@@ -58,7 +58,7 @@ impl Default for FillerMsg {
 }
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct EmptyMsg {}
 
@@ -78,7 +78,7 @@ pub fn authenticate_ownership<A: Api>(api: &A, permit: &AddressProofPermit, perm
 }
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AddressProofMsg {
     // Address is necessary since we have other network permits present
@@ -93,7 +93,7 @@ pub struct AddressProofMsg {
     pub key: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AccountKey(pub String);
 

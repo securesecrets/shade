@@ -18,7 +18,7 @@ use super::{Fraction, Isqrt, Uint256};
 /// The greatest possible value that can be represented is
 /// 115792089237316195423570985008687907853269984665640564039457.584007913129639935
 /// (which is (2^256 - 1) / 10^18)
-#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Decimal256(#[schemars(with = "String")] Uint256);
 
 #[derive(Snafu, Debug, PartialEq)]

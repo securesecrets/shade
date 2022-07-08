@@ -13,7 +13,7 @@ use crate::{
 pub const VIEWING_KEY_SIZE: usize = 32;
 pub const VIEWING_KEY_PREFIX: &str = "api_key_";
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ViewingKey(pub String);
 
 impl ViewingKey {

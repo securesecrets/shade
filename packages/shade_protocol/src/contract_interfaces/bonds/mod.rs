@@ -18,7 +18,7 @@ use crate::schemars::JsonSchema;
 use secret_toolkit::utils::HandleCallback;
 use crate::serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
     pub limit_admin: HumanAddr,
     pub shade_admin: Contract,
@@ -39,7 +39,7 @@ pub struct Config {
     pub query_auth: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
     pub limit_admin: HumanAddr,
     pub global_issuance_limit: Uint128,
@@ -60,7 +60,7 @@ pub struct InitMsg {
     pub query_auth: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateLimitConfig {
@@ -120,7 +120,7 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     UpdateLimitConfig {
@@ -157,7 +157,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
@@ -170,7 +170,7 @@ pub enum QueryMsg {
     CheckBalance {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config {
@@ -203,14 +203,14 @@ pub enum QueryAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Account {
     pub address: HumanAddr,
     pub pending_bonds: Vec<PendingBond>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct SnipViewingKey(pub String);
 
@@ -248,7 +248,7 @@ impl SnipViewingKey {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct PendingBond {
     pub deposit_denom: Snip20Asset,
@@ -262,7 +262,7 @@ pub struct PendingBond {
 }
 
 // When users deposit and try to use the bond, a Bond Opportunity is selected via deposit denom
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct BondOpportunity {
     pub issuance_limit: Uint128,
@@ -277,7 +277,7 @@ pub struct BondOpportunity {
     pub minting_bond: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct SlipMsg {
     pub minimum_expected_amount: Uint128,

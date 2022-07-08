@@ -7,7 +7,7 @@ use crate::c_std::{StdResult, Storage};
 use crate::schemars::JsonSchema;
 use crate::serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AllowedContract {
     pub name: String,
@@ -84,7 +84,7 @@ impl AllowedContract {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AllowedContractData {
     pub contract: Contract,
@@ -97,7 +97,7 @@ impl BucketStorage for AllowedContractData {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AllowedContractDescription {
     pub name: String,

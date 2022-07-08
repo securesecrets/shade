@@ -15,7 +15,7 @@ use secret_toolkit::crypto::sha_256;
 use crate::utils::asset::Contract;
 
 #[cfg(feature = "query_auth_impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Admin(pub Contract);
 
@@ -25,7 +25,7 @@ impl ItemStorage for Admin {
 }
 
 #[cfg(feature = "query_auth_impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct RngSeed(pub Vec<u8>);
 
@@ -41,7 +41,7 @@ impl RngSeed {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
     pub admin_auth: Contract,
@@ -52,7 +52,7 @@ impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ContractStatus {
     Default,
@@ -66,7 +66,7 @@ impl ItemStorage for ContractStatus {
     const ITEM: Item<'static, Self> = Item::new("contract-status-");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     SetAdminAuth {
@@ -97,7 +97,7 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     SetAdminAuth {
@@ -120,14 +120,14 @@ pub enum HandleAnswer {
 pub type QueryPermit = Permit<PermitData>;
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct PermitData {
     pub data: Binary,
     pub key: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
@@ -145,7 +145,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config {

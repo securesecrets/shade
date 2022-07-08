@@ -8,7 +8,7 @@ use crate::serde::{Deserialize, Serialize};
 use crate::math_compat::Uint128;
 use crate::contract_interfaces::snip20::Permission;
 
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]
 pub enum Error {

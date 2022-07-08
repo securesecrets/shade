@@ -10,14 +10,14 @@ use secret_storage_plus::Item;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct TokenContract{
     pub contract: Contract,
     pub decimals: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
     pub admin: HumanAddr,
     pub mint_addr: Contract,
@@ -27,11 +27,11 @@ pub struct Config {
     pub treasury: HumanAddr,
     pub limit: Option<String>,
 }
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct ViewingKeys(pub String);
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct SelfAddr(pub HumanAddr);
 
@@ -49,7 +49,7 @@ impl ItemStorage for SelfAddr{
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg{
     pub admin: Option<HumanAddr>,
     pub mint_addr: Contract,
@@ -61,7 +61,7 @@ pub struct InitMsg{
     pub limit: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
@@ -72,7 +72,7 @@ pub enum HandleMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetConfig {},
@@ -83,7 +83,7 @@ pub enum QueryMsg {
     Balance{},
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config {
@@ -108,7 +108,7 @@ pub enum QueryAnswer {
     }
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     Init {
@@ -122,7 +122,7 @@ pub enum HandleAnswer {
     }
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
     pair_address: HumanAddr,

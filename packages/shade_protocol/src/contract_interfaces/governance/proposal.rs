@@ -16,7 +16,7 @@ use crate::serde::{Deserialize, Serialize};
 use crate::utils::storage::default::BucketStorage;
 use crate::utils::storage::default::NaiveBucketStorage;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Proposal {
     // Description
@@ -307,7 +307,7 @@ impl Proposal {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct ProposalDescription {
     pub proposer: HumanAddr,
@@ -320,7 +320,7 @@ impl BucketStorage for ProposalDescription {
     const NAMESPACE: &'static [u8] = b"proposal_description-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct ProposalMsg {
     pub target: Uint128,
@@ -330,7 +330,7 @@ pub struct ProposalMsg {
     pub send: Vec<Coin>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 struct ProposalMsgs(pub Vec<ProposalMsg>);
 
@@ -339,7 +339,7 @@ impl BucketStorage for ProposalMsgs {
     const NAMESPACE: &'static [u8] = b"proposal_msgs-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 struct ProposalAssembly(pub Uint128);
 
@@ -348,7 +348,7 @@ impl BucketStorage for ProposalAssembly {
     const NAMESPACE: &'static [u8] = b"proposal_assembly-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     // Assembly voting period
@@ -394,7 +394,7 @@ impl BucketStorage for Status {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 struct StatusHistory(pub Vec<Status>);
 
@@ -404,7 +404,7 @@ impl BucketStorage for StatusHistory {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 struct Funders(pub Vec<HumanAddr>);
 
@@ -414,7 +414,7 @@ impl BucketStorage for Funders {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Funding {
     pub amount: Uint128,

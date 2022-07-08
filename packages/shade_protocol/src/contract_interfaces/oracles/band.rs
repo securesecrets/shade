@@ -5,14 +5,14 @@ use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {}
 
 impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum BandQuery {
     GetReferenceData {
@@ -29,7 +29,7 @@ impl Query for BandQuery {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub struct ReferenceData {
     pub rate: Uint128,
     pub last_updated_base: u64,

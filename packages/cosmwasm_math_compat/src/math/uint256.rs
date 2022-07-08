@@ -53,7 +53,7 @@ use uints::U256;
 /// ]);
 /// assert_eq!(a, b);
 /// ```
-#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Uint256(#[schemars(with = "String")] U256);
 
 impl Uint256 {

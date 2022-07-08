@@ -6,7 +6,7 @@ use shade_protocol::serde::{Deserialize, Serialize};
 use shade_protocol::math_compat::Uint128;
 use shade_protocol::c_std::{Binary, HumanAddr};
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct TransferAction {
     pub recipient: HumanAddr,
@@ -14,7 +14,7 @@ pub struct TransferAction {
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct SendAction {
     pub recipient: HumanAddr,
@@ -24,7 +24,7 @@ pub struct SendAction {
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct TransferFromAction {
     pub owner: HumanAddr,
@@ -33,7 +33,7 @@ pub struct TransferFromAction {
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct SendFromAction {
     pub owner: HumanAddr,
@@ -44,7 +44,7 @@ pub struct SendFromAction {
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct MintAction {
     pub recipient: HumanAddr,
@@ -52,7 +52,7 @@ pub struct MintAction {
     pub memo: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct BurnFromAction {
     pub owner: HumanAddr,

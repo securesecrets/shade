@@ -17,14 +17,14 @@ use crate::serde::{Deserialize, Serialize};
 use crate::math_compat::{Uint128, Uint512};
 use std::convert::TryFrom;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Dex {
     SecretSwap,
     SiennaSwap,
     //ShadeSwap,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct TradingPair {
     pub dex: Dex,

@@ -28,7 +28,7 @@ use crate::utils::storage::default::SingletonStorage;
 // Admin command variable spot
 pub const MSG_VARIABLE: &str = "{~}";
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub treasury: HumanAddr,
@@ -43,7 +43,7 @@ impl SingletonStorage for Config {
     const NAMESPACE: &'static [u8] = b"config-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
     pub treasury: HumanAddr,
@@ -62,7 +62,7 @@ impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum RuntimeState {
     // Run like normal
@@ -80,7 +80,7 @@ impl SingletonStorage for RuntimeState {
     const NAMESPACE: &'static [u8] = b"runtime_state-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     // Internal config
@@ -245,7 +245,7 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     SetConfig { status: ResponseStatus },
@@ -269,7 +269,7 @@ pub enum HandleAnswer {
     SetContract { status: ResponseStatus },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     // TODO: Query individual user vote with VK and permit
@@ -300,7 +300,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },

@@ -7,7 +7,7 @@ use crate::serde::{Deserialize, Serialize};
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::BucketStorage;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Assembly {
     // Readable name
@@ -83,7 +83,7 @@ impl Assembly {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AssemblyData {
     pub members: Vec<HumanAddr>,
@@ -96,7 +96,7 @@ impl BucketStorage for AssemblyData {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AssemblyDescription {
     pub name: String,
@@ -108,7 +108,7 @@ impl BucketStorage for AssemblyDescription {
     const NAMESPACE: &'static [u8] = b"assembly_description-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 // A generic msg is created at init, its a black msg where the variable is the start
 pub struct AssemblyMsg {
@@ -177,7 +177,7 @@ impl AssemblyMsg {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AssemblyMsgData {
     pub assemblies: Vec<Uint128>,
@@ -190,7 +190,7 @@ impl BucketStorage for AssemblyMsgData {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 struct AssemblyMsgDescription(pub String);
 

@@ -107,7 +107,7 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Snip20BalanceReceiverMsg {
     pub sender: HumanAddr,
@@ -145,7 +145,7 @@ impl Snip20BalanceReceiverMsg {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum BalanceReceiverHandleMsg {
     ReceiveBalance(Snip20BalanceReceiverMsg),

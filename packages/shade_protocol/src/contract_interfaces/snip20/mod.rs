@@ -24,13 +24,13 @@ use secret_storage_plus::Item;
 
 pub const VERSION: &str = "SNIP24";
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct InitialBalance {
     pub address: HumanAddr,
     pub amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 pub struct InitMsg {
     pub name: String,
     pub admin: Option<HumanAddr>,
@@ -110,7 +110,7 @@ impl InitMsg {
     }
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct InitConfig {
     /// Indicates whether the total supply is public or should be kept secret.
@@ -183,7 +183,7 @@ impl InitCallback for InitMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     // Native coin interactions
@@ -330,7 +330,7 @@ impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct Snip20ReceiveMsg {
     pub sender: HumanAddr,
@@ -341,7 +341,7 @@ pub struct Snip20ReceiveMsg {
     pub msg: Option<Binary>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum ReceiverHandleMsg {
     Receive(Snip20ReceiveMsg),
@@ -369,7 +369,7 @@ impl HandleCallback for ReceiverHandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     // Native
@@ -469,7 +469,7 @@ pub enum HandleAnswer {
 
 pub type QueryPermit = Permit<PermitParams>;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct PermitParams {
     pub allowed_tokens: Vec<HumanAddr>,
@@ -483,7 +483,7 @@ impl PermitParams {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Permission {
     /// Allowance for SNIP-20 - Permission to query allowance of the owner & spender
@@ -502,7 +502,7 @@ pub enum Permission {
     Owner,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     TokenInfo {},
@@ -541,7 +541,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryWithPermit {
     Allowance {
@@ -559,7 +559,7 @@ pub enum QueryWithPermit {
     },
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     TokenInfo {

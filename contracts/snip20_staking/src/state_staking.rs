@@ -13,7 +13,7 @@ use shade_protocol::{
 };
 
 // used to determine what each token is worth to calculate rewards
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct TotalShares(pub Uint256);
 
@@ -22,7 +22,7 @@ impl SingletonStorage for TotalShares {
 }
 
 // used to separate tokens minted from total tokens (includes rewards)
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct TotalTokens(pub Uint128);
 
@@ -30,7 +30,7 @@ impl SingletonStorage for TotalTokens {
     const NAMESPACE: &'static [u8] = b"total_tokens";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct UserShares(pub Uint256);
 
@@ -39,7 +39,7 @@ impl BucketStorage for UserShares {
 }
 
 // stores received token info if no treasury is set
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct UnsentStakedTokens(pub Uint128);
 
@@ -47,7 +47,7 @@ impl SingletonStorage for UnsentStakedTokens {
     const NAMESPACE: &'static [u8] = b"unsent_staked_tokens";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct TotalUnbonding(pub Uint128);
 
@@ -57,7 +57,7 @@ impl SingletonStorage for TotalUnbonding {
 
 // Distributors wrappers
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Distributors(pub Vec<HumanAddr>);
 
@@ -65,7 +65,7 @@ impl SingletonStorage for Distributors {
     const NAMESPACE: &'static [u8] = b"distributors";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct DistributorsEnabled(pub bool);
 
@@ -75,7 +75,7 @@ impl SingletonStorage for DistributorsEnabled {
 
 // Unbonding Queues
 
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct UnbondingQueue(pub VecQueue<Unbonding>);
 
@@ -83,7 +83,7 @@ impl BucketStorage for UnbondingQueue {
     const NAMESPACE: &'static [u8] = b"unbonding_queue";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct DailyUnbondingQueue(pub VecQueue<DailyUnbonding>);
 
@@ -92,7 +92,7 @@ impl SingletonStorage for DailyUnbondingQueue {
 }
 
 // Used for vote cooldown after send
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct UserCooldown {
     pub total: Uint128,

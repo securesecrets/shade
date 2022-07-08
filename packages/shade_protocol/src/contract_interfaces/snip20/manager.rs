@@ -11,7 +11,7 @@ use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveItemStorage};
 #[cfg(feature = "snip20-impl")]
 use secret_storage_plus::{Item, Map};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]
 pub enum ContractStatusLevel {
@@ -38,7 +38,7 @@ impl ContractStatusLevel {
 }
 impl_into_u8!(ContractStatusLevel);
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ContractStatus(pub u8);
 
 #[cfg(feature = "snip20-impl")]
@@ -46,7 +46,7 @@ impl ItemStorage for ContractStatus {
     const ITEM: Item<'static, Self> = Item::new("contract-status-level-");
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct CoinInfo {
     pub name: String,
@@ -59,7 +59,7 @@ impl ItemStorage for CoinInfo {
     const ITEM: Item<'static, Self> = Item::new("coin-info-");
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Admin(pub HumanAddr);
 
 #[cfg(feature = "snip20-impl")]
@@ -67,7 +67,7 @@ impl ItemStorage for Admin {
     const ITEM: Item<'static, Self> = Item::new("admin-");
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct RandSeed(pub Vec<u8>);
 
 #[cfg(feature = "snip20-impl")]
@@ -75,7 +75,7 @@ impl ItemStorage for RandSeed {
     const ITEM: Item<'static, Self> = Item::new("rand-seed-");
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Setting(pub bool);
 
 #[cfg(feature = "snip20-impl")]
@@ -94,7 +94,7 @@ const ENABLE_BURN: Item<'static, Setting> = Item::new("enable-burn-");
 #[cfg(feature = "snip20-impl")]
 const ENABLE_TRANSFER: Item<'static, Setting> = Item::new("enable-transfer-");
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub public_total_supply: bool,
@@ -172,7 +172,7 @@ impl Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct TotalSupply(pub Uint128);
 
 #[cfg(feature = "snip20-impl")]
@@ -197,7 +197,7 @@ impl TotalSupply {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Balance(pub Uint128);
 
 #[cfg(feature = "snip20-impl")]
@@ -242,7 +242,7 @@ impl Balance {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Minters(pub Vec<HumanAddr>);
 
 #[cfg(feature = "snip20-impl")]
@@ -250,7 +250,7 @@ impl ItemStorage for Minters {
     const ITEM: Item<'static, Self> = Item::new("minters-");
 }
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq)]
 pub struct Allowance {
     pub amount: Uint128,
     pub expiration: Option<u64>,
@@ -303,7 +303,7 @@ impl MapStorage<'static, (HumanAddr, HumanAddr)> for Allowance {
     const MAP: Map<'static, (HumanAddr, HumanAddr), Self> = Map::new("allowance-");
 }
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default)]
 pub struct ReceiverHash(pub String);
 
 #[cfg(feature = "snip20-impl")]
@@ -312,7 +312,7 @@ impl MapStorage<'static, HumanAddr> for ReceiverHash {
 }
 
 // Auth
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default)]
 pub struct Key(pub String);
 
 #[cfg(feature = "snip20-impl")]
@@ -355,7 +355,7 @@ impl ToString for Key {
 const KEY_SIZE: usize = 32;
 impl ViewingKey<32> for Key{}
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct HashedKey(pub [u8; KEY_SIZE]);
 
 #[cfg(feature = "snip20-impl")]
@@ -363,7 +363,7 @@ impl MapStorage<'static, HumanAddr> for HashedKey {
     const MAP: Map<'static, HumanAddr, Self> = Map::new("hashed-viewing-key-");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PermitKey(pub bool);
 
 #[cfg(feature = "snip20-impl")]

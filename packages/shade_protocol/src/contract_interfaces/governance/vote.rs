@@ -6,14 +6,14 @@ use crate::serde::{Deserialize, Serialize};
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::NaiveBucketStorage;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct ReceiveBalanceMsg {
     pub vote: Vote,
     pub proposal: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Vote {
     pub yes: Uint128,

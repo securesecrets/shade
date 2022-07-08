@@ -38,7 +38,7 @@ use crate::{
 /// let c = Uint128::from(70u32);
 /// assert_eq!(c.u128(), 70);
 /// ```
-#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Uint128(#[schemars(with = "String")] u128);
 
 impl Uint128 {

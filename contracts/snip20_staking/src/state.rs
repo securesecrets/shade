@@ -32,7 +32,7 @@ pub const PREFIX_RECEIVERS: &[u8] = b"receivers";
 
 // Config
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq)]
 pub struct Constants {
     pub name: String,
     pub admin: HumanAddr,
@@ -293,7 +293,7 @@ impl<'a, S: ReadonlyStorage> ReadonlyBalancesImpl<'a, S> {
 
 // Allowances
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default, JsonSchema)]
+#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default)]
 pub struct Allowance {
     pub amount: u128,
     pub expiration: Option<u64>,

@@ -16,7 +16,7 @@ use secret_storage_plus::{Item, Map};
 // Since it's 64 bits long, even at 50 tx/s it would take
 // over 11 billion years for it to rollback. I'm pretty sure
 // we'll have bigger issues by then.
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Tx {
     pub id: u64,
     pub from: HumanAddr,
@@ -66,7 +66,7 @@ impl Tx {
     }
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum TxAction {
     Transfer {
@@ -90,7 +90,7 @@ pub enum TxAction {
 // Since it's 64 bits long, even at 50 tx/s it would take
 // over 11 billion years for it to rollback. I'm pretty sure
 // we'll have bigger issues by then.
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct RichTx {
     pub id: u64,
@@ -319,7 +319,7 @@ impl MapStorage<'static, (HumanAddr, u64)> for StoredRichTx {
 }
 
 // Storage functions:
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 struct TXCount(pub u64);
 
 #[cfg(feature = "snip20-impl")]
@@ -335,7 +335,7 @@ fn increment_tx_count<S: Storage>(storage: &mut S) -> StdResult<u64> {
 }
 
 // User tx index
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 struct UserTXTotal(pub u64);
 
 #[cfg(feature = "snip20-impl")]

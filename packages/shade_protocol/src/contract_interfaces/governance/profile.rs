@@ -12,7 +12,7 @@ use crate::utils::storage::default::NaiveBucketStorage;
 /// Allow better control over the safety and privacy features that proposals will need if
 /// Assemblys are implemented. If a profile is disabled then its assembly will also be disabled.
 /// All percentages are taken as follows 100000 = 100%
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Profile {
     pub name: String,
@@ -127,7 +127,7 @@ impl Profile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct ProfileData {
     pub name: String,
@@ -141,7 +141,7 @@ impl BucketStorage for ProfileData {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 // NOTE: 100% = Uint128(10000)
 pub struct VoteProfile {
@@ -156,7 +156,7 @@ pub struct VoteProfile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 struct VoteProfileType(pub Option<VoteProfile>);
 
@@ -164,7 +164,7 @@ struct VoteProfileType(pub Option<VoteProfile>);
 impl NaiveBucketStorage for VoteProfileType {}
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct FundProfile {
     // Deadline for funding
@@ -178,7 +178,7 @@ pub struct FundProfile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 struct FundProfileType(pub Option<FundProfile>);
 
@@ -188,14 +188,14 @@ impl BucketStorage for FundProfileType {
 }
 
 /// Helps simplify the given limits
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Count {
     Percentage { percent: u16 },
     LiteralCount { count: Uint128 },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct UpdateProfile {
     pub name: Option<String>,
@@ -218,7 +218,7 @@ pub struct UpdateProfile {
     pub cancel_deadline: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct UpdateVoteProfile {
     // Deadline for voting
@@ -273,7 +273,7 @@ impl UpdateVoteProfile {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct UpdateFundProfile {
     // Deadline for funding

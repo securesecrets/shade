@@ -6,7 +6,7 @@ use secret_toolkit::utils::Query;
 use crate::contract_interfaces::snip20::{QueryAnswer, QueryMsg};
 use crate::utils::asset::Contract;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Snip20Asset {
     pub contract: Contract,

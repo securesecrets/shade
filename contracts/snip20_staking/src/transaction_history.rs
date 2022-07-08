@@ -25,7 +25,7 @@ const PREFIX_TRANSFERS: &[u8] = b"transfers";
 // Since it's 64 bits long, even at 50 tx/s it would take
 // over 11 billion years for it to rollback. I'm pretty sure
 // we'll have bigger issues by then.
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Tx {
     pub id: u64,
     pub from: HumanAddr,
@@ -40,7 +40,7 @@ pub struct Tx {
     pub block_height: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum TxAction {
     Transfer {
@@ -82,7 +82,7 @@ pub enum TxAction {
 // Since it's 64 bits long, even at 50 tx/s it would take
 // over 11 billion years for it to rollback. I'm pretty sure
 // we'll have bigger issues by then.
-#[derive(Serialize, Deserialize, JsonSchema, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct RichTx {
     pub id: u64,
