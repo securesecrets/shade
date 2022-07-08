@@ -231,6 +231,8 @@ fn single_asset_portion_manager_integration(
     let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
     ensemble.add_funds(HumanAddr::from("admin"), vec![deposit_coin.clone()]);
 
+    assert!(deposit_coin.amount > Uint128::zero());
+
     // Wrap L1
     ensemble.execute(
         &snip20::HandleMsg::Deposit {
@@ -321,12 +323,12 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, expected_treasury, "Treasury Balance");
+            assert_eq!(amount, expected_treasury, "Treasury Reserves");
         },
         _ => assert!(false),
     };
 
-    // Manager balance check
+    // Manager reserves
     match ensemble.query(
         manager.address.clone(),
         &adapter::QueryMsg::Adapter(
@@ -336,7 +338,7 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, expected_manager, "Manager Balance");
+            assert_eq!(amount, expected_manager, "Manager Reserves");
         },
         _ => assert!(false),
     };
@@ -351,12 +353,11 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, expected_scrt_staking /* TODO 0 */, "SCRT Staking Balance");
+            assert_eq!(amount, Uint128::zero(), "SCRT Staking Reserves");
         },
         _ => assert!(false),
     };
 
-    /*
     // Scrt Staking balance check
     match ensemble.query(
         scrt_staking.address.clone(),
@@ -371,9 +372,7 @@ fn single_asset_portion_manager_integration(
         },
         _ => assert!(false),
     };
-    */
 
-    /*
     // Treasury unbondable check
     match ensemble.query(
         treasury.address.clone(),
@@ -388,7 +387,6 @@ fn single_asset_portion_manager_integration(
         },
         _ => assert!(false),
     };
-    */
 
     // Unbond all w/ treasury
     ensemble.execute(
@@ -401,6 +399,21 @@ fn single_asset_portion_manager_integration(
         MockEnv::new(
             "admin", 
             treasury.clone(),
+        ),
+    ).unwrap();
+
+    ensemble.fast_forward_delegation_waits();
+
+    // Claim manager
+    ensemble.execute(
+        &adapter::HandleMsg::Adapter(
+            adapter::SubHandleMsg::Claim {
+                asset: token.address.clone(),
+            }
+        ),
+        MockEnv::new(
+            "admin", 
+            manager.clone(),
         ),
     ).unwrap();
 
@@ -474,7 +487,7 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, Uint128::zero(), "SCRT Staking Balance Post Unbond");
+            assert_eq!(amount, Uint128::zero(), "SCRT Staking Reserves Post Unbond");
         },
         _ => assert!(false),
     };
@@ -527,5 +540,15 @@ single_asset_portion_manager_tests! {
         Uint128(10), // treasury 10
         Uint128(0), // manager 0
         Uint128(90), // scrt_staking 90
+    ),
+    single_asset_portion_manager_1: (
+        Uint128(100), // deposit 
+        Uint128(9 * 10u128.pow(17)), // manager allowance 90%
+        Uint128(90), // expected manager allowance
+        AllocationType::Portion,
+        Uint128(5 * 10u128.pow(17)), // 50% allocate
+        Uint128(55), // treasury 55 (manager won't pull unused allowance
+        Uint128(0), // manager 0
+        Uint128(45), // scrt_staking 90
     ),
 }

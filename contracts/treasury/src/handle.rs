@@ -674,15 +674,14 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    _env: &Env,
+    env: &Env,
     asset: HumanAddr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
-    /*
-    if env.message.sender != config_r(&deps.storage).load()?.admin {
+
+    if env.message.sender != CONFIG.load(&deps.storage)?.admin {
         return Err(StdError::unauthorized());
     }
-    */
 
     let managers = MANAGERS.load(&deps.storage)?;
 
