@@ -1,29 +1,28 @@
 use crate::handle::assembly::try_assembly_proposal;
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    Coin,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    WasmMsg,
-};
-use shade_protocol::secret_toolkit::{snip20::send_msg, utils::Query};
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Api,
+        Binary,
+        Coin,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+        WasmMsg,
+    },
     contract_interfaces::{
         governance::{
             assembly::Assembly,
             contract::AllowedContract,
             profile::{Count, Profile, VoteProfile},
             proposal::{Funding, Proposal, ProposalMsg, Status},
+            stored_id::UserID,
             vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
             Config,
             HandleAnswer,
@@ -31,13 +30,14 @@ use shade_protocol::{
         },
         staking::snip20_staking,
     },
+    math_compat::Uint128,
+    secret_toolkit::{snip20::send_msg, utils::Query},
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
         storage::default::SingletonStorage,
     },
 };
-use shade_protocol::contract_interfaces::governance::stored_id::UserID;
 
 // Initializes a proposal on the public assembly with the blank command
 pub fn try_proposal<S: Storage, A: Api, Q: Querier>(

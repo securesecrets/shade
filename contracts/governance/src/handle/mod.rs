@@ -1,18 +1,18 @@
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use shade_protocol::secret_toolkit::snip20::register_receive_msg;
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Api,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
+    secret_toolkit::snip20::register_receive_msg,
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,

@@ -360,7 +360,7 @@ pub enum QueryAnswer {
 
     UserAssemblyVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
 
-    UserFundingVotes { funds: Vec<ResponseWithID<Funding>>, total: Uint128 },
+    UserFunding { funds: Vec<ResponseWithID<Funding>>, total: Uint128 },
 
     UserVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
 }

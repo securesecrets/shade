@@ -1,10 +1,18 @@
 use crate::tests::{admin_only_governance, get_profiles};
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::HumanAddr;
-use shade_protocol::fadroma::ensemble::MockEnv;
-use shade_protocol::contract_interfaces::{
-    governance,
-    governance::profile::{Count, Profile, UpdateFundProfile, UpdateProfile, UpdateVoteProfile},
+use shade_protocol::{
+    c_std::HumanAddr,
+    contract_interfaces::{
+        governance,
+        governance::profile::{
+            Count,
+            Profile,
+            UpdateFundProfile,
+            UpdateProfile,
+            UpdateVoteProfile,
+        },
+    },
+    fadroma::ensemble::MockEnv,
+    math_compat::Uint128,
 };
 
 #[test]

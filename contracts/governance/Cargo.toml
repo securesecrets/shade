@@ -40,5 +40,5 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "ensemble"
 ] }
 serde_json = { version = "1.0.67" }
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "governance", "snip20_staking", "snip20", "query_auth"  ] }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "governance", "snip20_staking", "snip20", "query_auth", "admin"  ] }
 spip_stkd_0 = { version = "0.1.0", path = "../snip20_staking" }

@@ -6,9 +6,7 @@ use crate::tests::{
     get_contract,
     get_profiles,
 };
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::StdError;
-use shade_protocol::contract_interfaces::governance;
+use shade_protocol::{c_std::StdError, contract_interfaces::governance, math_compat::Uint128};
 
 #[test]
 fn query_total_assembly_msg() {
@@ -191,20 +189,3 @@ fn query_config() {
 
     get_config(&mut chain, &gov).unwrap();
 }
-
-// Proposal testing completion
-
-// #[test]
-// fn query_total_proposals() {
-//     todo!()
-// }
-//
-// #[test]
-// fn query_proposals() {
-//     todo!()
-// }
-//
-// #[test]
-// fn query_proposals_funder_privacy() {
-//     todo!()
-// }

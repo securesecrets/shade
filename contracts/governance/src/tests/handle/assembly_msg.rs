@@ -1,7 +1,9 @@
 use crate::tests::{admin_only_governance, get_assembly_msgs};
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::fadroma::ensemble::MockEnv;
-use shade_protocol::contract_interfaces::{governance, governance::assembly::AssemblyMsg};
+use shade_protocol::{
+    contract_interfaces::{governance, governance::assembly::AssemblyMsg},
+    fadroma::ensemble::MockEnv,
+    math_compat::Uint128,
+};
 
 #[test]
 fn add_assembly_msg() {

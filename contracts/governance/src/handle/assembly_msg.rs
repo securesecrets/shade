@@ -1,23 +1,23 @@
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Api,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::governance::{
         assembly::AssemblyMsg,
         stored_id::ID,
         HandleAnswer,
         MSG_VARIABLE,
     },
+    math_compat::Uint128,
     utils::{
         flexible_msg::FlexibleMsg,
         generic_response::ResponseStatus,

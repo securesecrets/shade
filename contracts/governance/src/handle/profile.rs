@@ -1,22 +1,22 @@
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Api,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::governance::{
         profile::{Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
         stored_id::ID,
         HandleAnswer,
     },
+    math_compat::Uint128,
     utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
 };
 

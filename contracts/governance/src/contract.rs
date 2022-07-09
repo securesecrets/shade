@@ -22,22 +22,41 @@ use crate::{
     },
     query,
 };
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdError, StdResult, Storage, from_binary, HumanAddr};
-use shade_protocol::secret_toolkit::{
-    snip20::register_receive_msg,
-    utils::{pad_handle_result, pad_query_result},
-};
 use shade_protocol::{
-    contract_interfaces::governance::{
-        assembly::{Assembly, AssemblyMsg},
-        contract::AllowedContract,
-        stored_id::ID,
-        Config,
-        HandleMsg,
-        InitMsg,
-        QueryMsg,
-        MSG_VARIABLE,
+    c_std::{
+        from_binary,
+        to_binary,
+        Api,
+        Binary,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        InitResponse,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
+    contract_interfaces::{
+        governance::{
+            assembly::{Assembly, AssemblyMsg},
+            contract::AllowedContract,
+            stored_id::ID,
+            AuthQuery,
+            Config,
+            HandleMsg,
+            InitMsg,
+            QueryData,
+            QueryMsg,
+            MSG_VARIABLE,
+        },
+        query_auth,
+    },
+    math_compat::Uint128,
+    secret_toolkit::{
+        snip20::register_receive_msg,
+        utils::{pad_handle_result, pad_query_result, Query},
     },
     utils::{
         asset::Contract,
@@ -45,9 +64,6 @@ use shade_protocol::{
         storage::default::{BucketStorage, SingletonStorage},
     },
 };
-use shade_protocol::contract_interfaces::governance::{AuthQuery, QueryData};
-use shade_protocol::contract_interfaces::query_auth;
-use shade_protocol::secret_toolkit::utils::Query;
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -341,33 +357,41 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 
             QueryMsg::Config {} => to_binary(&query::config(deps)?),
 
-            QueryMsg::WithVK {user, key, query} => {
+            QueryMsg::WithVK { user, key, query } => {
                 // Query VK info
                 let authenticator = Config::load(&deps.storage)?.query;
                 let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidateViewingKey {
-                    user: user.clone(), key
-                }.query(&deps.querier, authenticator.code_hash, authenticator.address)?;
+                    user: user.clone(),
+                    key,
+                }
+                .query(
+                    &deps.querier,
+                    authenticator.code_hash,
+                    authenticator.address,
+                )?;
 
                 match res {
                     query_auth::QueryAnswer::ValidateViewingKey { is_valid } => {
                         if !is_valid {
-                            return Err(StdError::unauthorized())
+                            return Err(StdError::unauthorized());
                         }
-                    },
-                    _ => return Err(StdError::unauthorized())
+                    }
+                    _ => return Err(StdError::unauthorized()),
                 }
 
                 auth_queries(deps, query, user)
-
-            },
+            }
 
             QueryMsg::WithPermit { permit, query } => {
                 // Query Permit info
                 let authenticator = Config::load(&deps.storage)?.query;
                 let args: QueryData = from_binary(&permit.params.data)?;
-                let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidatePermit {
-                    permit
-                }.query(&deps.querier, authenticator.code_hash, authenticator.address)?;
+                let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidatePermit { permit }
+                    .query(
+                        &deps.querier,
+                        authenticator.code_hash,
+                        authenticator.address,
+                    )?;
 
                 let sender: HumanAddr;
 
@@ -375,14 +399,13 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                     query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
                         sender = user;
                         if is_revoked {
-                            return Err(StdError::unauthorized())
+                            return Err(StdError::unauthorized());
                         }
-                    },
-                    _ => return Err(StdError::unauthorized())
+                    }
+                    _ => return Err(StdError::unauthorized()),
                 }
 
                 auth_queries(deps, query, sender)
-
             }
         },
         RESPONSE_BLOCK_SIZE,
@@ -392,15 +415,14 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 pub fn auth_queries<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: AuthQuery,
-    user: HumanAddr
+    user: HumanAddr,
 ) -> StdResult<Binary> {
-    pad_query_result(
-        to_binary(& match msg {
-            AuthQuery::Proposals { pagination } => query::user_proposals(deps, user, pagination),
-            AuthQuery::AssemblyVotes { pagination } => query::user_assembly_votes(deps, user, pagination),
-            AuthQuery::Funding { pagination } => query::user_funding(deps, user, pagination),
-            AuthQuery::Votes { pagination } => query::user_votes(deps, user, pagination),
-        }),
-        RESPONSE_BLOCK_SIZE
-    )
+    to_binary(&match msg {
+        AuthQuery::Proposals { pagination } => query::user_proposals(deps, user, pagination)?,
+        AuthQuery::AssemblyVotes { pagination } => {
+            query::user_assembly_votes(deps, user, pagination)?
+        }
+        AuthQuery::Funding { pagination } => query::user_funding(deps, user, pagination)?,
+        AuthQuery::Votes { pagination } => query::user_votes(deps, user, pagination)?,
+    })
 }

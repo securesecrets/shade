@@ -1,34 +1,33 @@
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    Coin,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Api,
+        Binary,
+        Coin,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
         profile::{Profile, VoteProfile},
         proposal::{Proposal, ProposalMsg, Status},
-        stored_id::ID,
+        stored_id::{UserID, ID},
         vote::Vote,
         HandleAnswer,
         MSG_VARIABLE,
     },
+    math_compat::Uint128,
     utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
 };
 use std::convert::TryInto;
-use shade_protocol::contract_interfaces::governance::stored_id::UserID;
 
 pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

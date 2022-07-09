@@ -9,11 +9,8 @@ use crate::tests::{
     gov_generic_proposal,
     gov_msg_proposal,
 };
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{to_binary, Binary, HumanAddr, StdResult};
-use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
-use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::{
+    c_std::{to_binary, Binary, HumanAddr, StdResult},
     contract_interfaces::{
         governance,
         governance::{
@@ -23,6 +20,11 @@ use shade_protocol::{
             InitMsg,
         },
     },
+    fadroma::{
+        core::ContractLink,
+        ensemble::{ContractEnsemble, MockEnv},
+    },
+    math_compat::Uint128,
     utils::asset::Contract,
 };
 

@@ -6,10 +6,12 @@ pub mod proposal;
 
 use crate::tests::{admin_only_governance, get_config};
 use contract_harness::harness::snip20::Snip20;
-use shade_protocol::c_std::HumanAddr;
-use shade_protocol::fadroma::ensemble::MockEnv;
-use shade_protocol::fadroma::core::ContractLink;
-use shade_protocol::{contract_interfaces::{governance, snip20}, utils::asset::Contract};
+use shade_protocol::{
+    c_std::HumanAddr,
+    contract_interfaces::{governance, snip20},
+    fadroma::{core::ContractLink, ensemble::MockEnv},
+    utils::asset::Contract,
+};
 
 #[test]
 fn init_contract() {
@@ -40,7 +42,8 @@ fn set_config_msg() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap().instance;
+        .unwrap()
+        .instance;
 
     chain
         .execute(
@@ -116,7 +119,8 @@ fn reject_disable_config_tokens() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap().instance;
+        .unwrap()
+        .instance;
 
     chain
         .execute(
