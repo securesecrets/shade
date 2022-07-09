@@ -1242,8 +1242,6 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
-
     let mut chain = ContractEnsemble::new(50);
 
     // Register snip20

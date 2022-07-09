@@ -1,20 +1,9 @@
 pub mod handle;
 pub mod query;
 
-use crate::contract::{handle, init, query};
 use contract_harness::harness;
 use shade_protocol::{
-    c_std::{
-        from_binary,
-        to_binary,
-        Binary,
-        Env,
-        HandleResponse,
-        HumanAddr,
-        InitResponse,
-        StdError,
-        StdResult,
-    },
+    c_std::{to_binary, Binary, HumanAddr, StdError, StdResult},
     contract_interfaces::{
         governance,
         governance::{
@@ -28,10 +17,9 @@ use shade_protocol::{
     },
     fadroma::{
         core::ContractLink,
-        ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
+        ensemble::{ContractEnsemble, MockEnv},
     },
     math_compat::Uint128,
-    serde::Serialize,
     utils::asset::Contract,
 };
 

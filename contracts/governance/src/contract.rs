@@ -58,11 +58,7 @@ use shade_protocol::{
         snip20::register_receive_msg,
         utils::{pad_handle_result, pad_query_result, Query},
     },
-    utils::{
-        asset::Contract,
-        flexible_msg::FlexibleMsg,
-        storage::default::{BucketStorage, SingletonStorage},
-    },
+    utils::{asset::Contract, flexible_msg::FlexibleMsg, storage::default::SingletonStorage},
 };
 
 // Used to pad up responses for better privacy.
@@ -385,7 +381,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             QueryMsg::WithPermit { permit, query } => {
                 // Query Permit info
                 let authenticator = Config::load(&deps.storage)?.query;
-                let args: QueryData = from_binary(&permit.params.data)?;
+                let _args: QueryData = from_binary(&permit.params.data)?;
                 let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidatePermit { permit }
                     .query(
                         &deps.querier,

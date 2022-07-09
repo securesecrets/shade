@@ -10,22 +10,13 @@ use crate::tests::{
     gov_msg_proposal,
 };
 use shade_protocol::{
-    c_std::{to_binary, Binary, HumanAddr, StdResult},
+    c_std::{to_binary, HumanAddr},
     contract_interfaces::{
         governance,
-        governance::{
-            profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
-            proposal::{ProposalMsg, Status},
-            vote::Vote,
-            InitMsg,
-        },
+        governance::proposal::{ProposalMsg, Status},
     },
-    fadroma::{
-        core::ContractLink,
-        ensemble::{ContractEnsemble, MockEnv},
-    },
+    fadroma::{core::ContractLink, ensemble::MockEnv},
     math_compat::Uint128,
-    utils::asset::Contract,
 };
 
 #[test]
@@ -220,7 +211,8 @@ fn multi_msg_proposal() {
             .unwrap(),
             send: vec![],
         },
-    ]);
+    ])
+    .unwrap();
 
     let old_assembly =
         get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();

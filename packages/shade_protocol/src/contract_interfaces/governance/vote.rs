@@ -1,5 +1,5 @@
 use crate::math_compat::Uint128;
-use crate::c_std::{StdResult, Storage};
+use crate::c_std::StdResult;
 use crate::schemars::JsonSchema;
 use crate::serde::{Deserialize, Serialize};
 

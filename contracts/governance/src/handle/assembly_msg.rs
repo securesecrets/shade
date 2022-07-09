@@ -1,16 +1,5 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Api,
-        Env,
-        Extern,
-        HandleResponse,
-        HumanAddr,
-        Querier,
-        StdError,
-        StdResult,
-        Storage,
-    },
+    c_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage},
     contract_interfaces::governance::{
         assembly::AssemblyMsg,
         stored_id::ID,
@@ -18,11 +7,7 @@ use shade_protocol::{
         MSG_VARIABLE,
     },
     math_compat::Uint128,
-    utils::{
-        flexible_msg::FlexibleMsg,
-        generic_response::ResponseStatus,
-        storage::default::BucketStorage,
-    },
+    utils::{flexible_msg::FlexibleMsg, generic_response::ResponseStatus},
 };
 
 pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(

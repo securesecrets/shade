@@ -4,7 +4,6 @@ use shade_protocol::{
         to_binary,
         Api,
         Binary,
-        Coin,
         Env,
         Extern,
         HandleResponse,
@@ -17,7 +16,7 @@ use shade_protocol::{
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
-        profile::{Profile, VoteProfile},
+        profile::Profile,
         proposal::{Proposal, ProposalMsg, Status},
         stored_id::{UserID, ID},
         vote::Vote,
@@ -25,9 +24,8 @@ use shade_protocol::{
         MSG_VARIABLE,
     },
     math_compat::Uint128,
-    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+    utils::generic_response::ResponseStatus,
 };
-use std::convert::TryInto;
 
 pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,

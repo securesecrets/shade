@@ -1,12 +1,12 @@
 use crate::utils::{
     asset::Contract,
-    storage::default::{BucketStorage, SingletonStorage},
+    storage::default::SingletonStorage,
 };
 use crate::math_compat::Uint128;
 use crate::c_std::HumanAddr;
 use crate::schemars::JsonSchema;
 use crate::serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, collections::BinaryHeap};
+use std::cmp::Ordering;
 
 // Configuration file for staking
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

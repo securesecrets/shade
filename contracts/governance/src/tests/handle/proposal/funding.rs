@@ -1,19 +1,12 @@
-use crate::tests::{
-    admin_only_governance,
-    get_assemblies,
-    get_proposals,
-    gov_generic_proposal,
-    gov_msg_proposal,
-    init_query_auth,
-};
+use crate::tests::{get_proposals, init_query_auth};
 use contract_harness::harness::{self, snip20::Snip20};
 use shade_protocol::{
-    c_std::{to_binary, Binary, HumanAddr, StdResult},
+    c_std::{to_binary, HumanAddr, StdResult},
     contract_interfaces::{
         governance,
         governance::{
-            profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
-            proposal::{ProposalMsg, Status},
+            profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile},
+            proposal::Status,
             vote::Vote,
             InitMsg,
         },
@@ -553,16 +546,18 @@ fn update_when_fully_funded() {
         )
         .unwrap();
 
-    chain.execute(
-        &governance::HandleMsg::Update {
-            proposal: Uint128::zero(),
-            padding: None,
-        },
-        MockEnv::new("beta", ContractLink {
-            address: gov.address.clone(),
-            code_hash: gov.code_hash.clone(),
-        }),
-    );
+    chain
+        .execute(
+            &governance::HandleMsg::Update {
+                proposal: Uint128::zero(),
+                padding: None,
+            },
+            MockEnv::new("beta", ContractLink {
+                address: gov.address.clone(),
+                code_hash: gov.code_hash.clone(),
+            }),
+        )
+        .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -596,16 +591,18 @@ fn update_after_failed_funding() {
 
     chain.block_mut().time += 10000;
 
-    chain.execute(
-        &governance::HandleMsg::Update {
-            proposal: Uint128::zero(),
-            padding: None,
-        },
-        MockEnv::new("beta", ContractLink {
-            address: gov.address.clone(),
-            code_hash: gov.code_hash.clone(),
-        }),
-    );
+    chain
+        .execute(
+            &governance::HandleMsg::Update {
+                proposal: Uint128::zero(),
+                padding: None,
+            },
+            MockEnv::new("beta", ContractLink {
+                address: gov.address.clone(),
+                code_hash: gov.code_hash.clone(),
+            }),
+        )
+        .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -676,16 +673,18 @@ fn claim_after_failing() {
 
     chain.block_mut().time += 10000;
 
-    chain.execute(
-        &governance::HandleMsg::Update {
-            proposal: Uint128::zero(),
-            padding: None,
-        },
-        MockEnv::new("beta", ContractLink {
-            address: gov.address.clone(),
-            code_hash: gov.code_hash.clone(),
-        }),
-    );
+    chain
+        .execute(
+            &governance::HandleMsg::Update {
+                proposal: Uint128::zero(),
+                padding: None,
+            },
+            MockEnv::new("beta", ContractLink {
+                address: gov.address.clone(),
+                code_hash: gov.code_hash.clone(),
+            }),
+        )
+        .unwrap();
 
     chain
         .execute(
@@ -736,16 +735,18 @@ fn claim_after_passing() {
         )
         .unwrap();
 
-    chain.execute(
-        &governance::HandleMsg::Update {
-            proposal: Uint128::zero(),
-            padding: None,
-        },
-        MockEnv::new("beta", ContractLink {
-            address: gov.address.clone(),
-            code_hash: gov.code_hash.clone(),
-        }),
-    );
+    chain
+        .execute(
+            &governance::HandleMsg::Update {
+                proposal: Uint128::zero(),
+                padding: None,
+            },
+            MockEnv::new("beta", ContractLink {
+                address: gov.address.clone(),
+                code_hash: gov.code_hash.clone(),
+            }),
+        )
+        .unwrap();
 
     chain
         .execute(

@@ -79,22 +79,24 @@ fn set_config_msg() {
 fn unauthorised_set_config_msg() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::SetConfig {
-                query_auth: None,
-                treasury: None,
-                funding_token: None,
-                vote_token: None,
-                padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                "random",
-                gov.clone(),
-            ),
-        )
-        .is_err();
+    assert!(
+        chain
+            .execute(
+                &governance::HandleMsg::SetConfig {
+                    query_auth: None,
+                    treasury: None,
+                    funding_token: None,
+                    vote_token: None,
+                    padding: None,
+                },
+                MockEnv::new(
+                    // Sender is self
+                    "random",
+                    gov.clone(),
+                ),
+            )
+            .is_err()
+    );
 }
 
 #[test]

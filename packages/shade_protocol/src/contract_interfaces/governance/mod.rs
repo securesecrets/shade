@@ -17,9 +17,8 @@ use crate::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use crate::math_compat::Uint128;
-use crate::c_std::{Binary, Coin, GovQuery, HumanAddr};
+use crate::c_std::{Binary, Coin, HumanAddr};
 use crate::schemars::JsonSchema;
-use crate::query_authentication::permit::Permit;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 use crate::contract_interfaces::governance::proposal::Funding;

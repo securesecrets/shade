@@ -1,19 +1,12 @@
-use crate::tests::{
-    admin_only_governance,
-    get_assemblies,
-    get_proposals,
-    gov_generic_proposal,
-    gov_msg_proposal,
-    init_query_auth,
-};
-use contract_harness::harness::{self, snip20_staking::Snip20Staking};
+use crate::tests::{get_proposals, init_query_auth};
+use contract_harness::harness;
 use shade_protocol::{
-    c_std::{to_binary, Binary, HumanAddr, StdResult},
+    c_std::{HumanAddr, StdResult},
     contract_interfaces::{
         governance,
         governance::{
-            profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
-            proposal::{ProposalMsg, Status},
+            profile::{Count, Profile, VoteProfile},
+            proposal::Status,
             vote::Vote,
             InitMsg,
         },

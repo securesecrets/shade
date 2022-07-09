@@ -5,7 +5,6 @@ use crate::{
         stored_id::ID,
         vote::Vote,
     },
-    utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use crate::math_compat::Uint128;
 use crate::c_std::{Binary, Coin, HumanAddr, StdResult, Storage};

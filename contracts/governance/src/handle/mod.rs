@@ -83,9 +83,9 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_runtime_state<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    state: RuntimeState,
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    _state: RuntimeState,
 ) -> StdResult<HandleResponse> {
     todo!();
     Ok(HandleResponse {

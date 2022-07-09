@@ -1,23 +1,12 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Api,
-        Env,
-        Extern,
-        HandleResponse,
-        HumanAddr,
-        Querier,
-        StdError,
-        StdResult,
-        Storage,
-    },
+    c_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage},
     contract_interfaces::governance::{
-        profile::{Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
+        profile::{Profile, UpdateProfile},
         stored_id::ID,
         HandleAnswer,
     },
     math_compat::Uint128,
-    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+    utils::generic_response::ResponseStatus,
 };
 
 pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(

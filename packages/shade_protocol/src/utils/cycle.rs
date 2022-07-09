@@ -60,7 +60,7 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
             now.num_days_from_ce() - last_refresh.num_days_from_ce() >= days.u128() as i32
         }
         Cycle::Monthly { months } => {
-            let mut month_diff = 0u32;
+            let month_diff: u32;
 
             if now.year() > last_refresh.year() {
                 month_diff = (12u32 - last_refresh.month()) + now.month();

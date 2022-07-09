@@ -17,7 +17,7 @@ use shade_protocol::{
     },
     fadroma::{
         core::ContractLink,
-        ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
+        ensemble::{ContractEnsemble, MockEnv},
     },
     math_compat::Uint128,
     utils::asset::Contract,

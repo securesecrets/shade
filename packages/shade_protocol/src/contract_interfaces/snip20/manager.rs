@@ -1,4 +1,4 @@
-use crate::c_std::{Binary, Env, HumanAddr, StdError, StdResult, Storage};
+use crate::c_std::{Env, HumanAddr, StdResult, Storage};
 use crate::query_authentication::viewing_keys::ViewingKey;
 use crate::schemars::JsonSchema;
 use secret_toolkit::crypto::{Prng, sha_256};

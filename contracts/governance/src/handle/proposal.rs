@@ -26,7 +26,6 @@ use shade_protocol::{
             vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
             Config,
             HandleAnswer,
-            HandleMsg::Receive,
         },
         staking::snip20_staking,
     },
@@ -77,7 +76,7 @@ pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
 
 pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     proposal: Uint128,
 ) -> StdResult<HandleResponse> {
     let mut messages = vec![];
@@ -123,7 +122,7 @@ pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     // Check if passed, and check if current time > cancel time
     let status = Proposal::status(&deps.storage, &proposal)?;
-    if let Status::Passed { start, end } = status {
+    if let Status::Passed { end, .. } = status {
         if env.block.time < end {
             return Err(StdError::unauthorized());
         }
@@ -198,7 +197,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     match status.clone() {
-        Status::AssemblyVote { start, end } => {
+        Status::AssemblyVote { end, .. } => {
             if end > env.block.time {
                 return Err(StdError::unauthorized());
             }
@@ -246,7 +245,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 
             new_status = vote_conclusion;
         }
-        Status::Funding { amount, start, end } => {
+        Status::Funding { amount, end, .. } => {
             // This helps combat the possibility of the profile changing
             // before another proposal is finished
             if let Some(setting) = Profile::funding(&deps.storage, &profile)? {
@@ -278,7 +277,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                 }
             }
         }
-        Status::Voting { start, end } => {
+        Status::Voting { end, .. } => {
             if end > env.block.time {
                 return Err(StdError::unauthorized());
             }
@@ -295,7 +294,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 
             // Get total staking power
             let total_power = match query {
-                snip20_staking::QueryAnswer::TotalStaked { shares, tokens } => tokens.into(),
+                snip20_staking::QueryAnswer::TotalStaked { tokens, .. } => tokens.into(),
                 _ => return Err(StdError::generic_err("Wrong query returned")),
             };
 
@@ -368,11 +367,11 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 pub fn try_receive_funding<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    sender: HumanAddr,
+    _sender: HumanAddr,
     from: HumanAddr,
     amount: Uint128,
     msg: Option<Binary>,
-    memo: Option<String>,
+    _memo: Option<String>,
 ) -> StdResult<HandleResponse> {
     // Check if sent token is the funding token
     let funding_token: Contract;
@@ -533,7 +532,7 @@ pub fn try_receive_vote<S: Storage, A: Api, Q: Querier>(
     sender: HumanAddr,
     msg: Option<Binary>,
     balance: Uint128,
-    memo: Option<String>,
+    _memo: Option<String>,
 ) -> StdResult<HandleResponse> {
     if let Some(token) = Config::load(&deps.storage)?.vote_token {
         if env.message.sender != token.address {
