@@ -52,7 +52,7 @@ sky = ["snip20", "utils", "dex"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
-governance-impl = ["governance", "storage"]
+governance-impl = ["governance", "storage_plus"]
 snip20-impl = ["snip20", "storage_plus"]
 query_auth_impl = ["query_auth", "storage_plus", "dep:base64"]
 sky-impl = ["sky", "storage_plus"]
