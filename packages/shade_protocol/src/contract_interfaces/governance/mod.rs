@@ -21,6 +21,8 @@ use crate::c_std::{Binary, Coin, HumanAddr};
 use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
+use crate::contract_interfaces::governance::proposal::Funding;
+use crate::contract_interfaces::query_auth::QueryPermit;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::SingletonStorage;
@@ -31,6 +33,8 @@ pub const MSG_VARIABLE: &str = "{~}";
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
+    pub query: Contract,
+
     pub treasury: HumanAddr,
     // When public voting is enabled, a voting token is expected
     pub vote_token: Option<Contract>,
@@ -47,6 +51,7 @@ impl SingletonStorage for Config {
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
     pub treasury: HumanAddr,
+    pub query_auth: Contract,
 
     // Admin rules
     pub admin_members: Vec<HumanAddr>,
@@ -69,8 +74,8 @@ pub enum RuntimeState {
     Normal,
     // Disable staking
     DisableVoteToken,
-    // Allow only specific assemblys and admin
-    SpecificAssemblys { commitees: Vec<Uint128> },
+    // Allow only specific assemblies and admin
+    SpecificAssemblies { committees: Vec<Uint128> },
     // Set as admin only
     AdminOnly,
 }
@@ -85,6 +90,7 @@ impl SingletonStorage for RuntimeState {
 pub enum HandleMsg {
     // Internal config
     SetConfig {
+        query_auth: Option<Contract>,
         treasury: Option<HumanAddr>,
         funding_token: Option<Contract>,
         vote_token: Option<Contract>,
@@ -271,6 +277,27 @@ pub enum HandleAnswer {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct Pagination {
+    pub page: u64,
+    pub amount: u64
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthQuery {
+    Proposals { pagination: Pagination },
+    AssemblyVotes { pagination: Pagination },
+    Funding { pagination: Pagination },
+    Votes { pagination: Pagination }
+}
+
+#[remain::sorted]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct QueryData {}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     // TODO: Query individual user vote with VK and permit
     Config {},
@@ -294,10 +321,21 @@ pub enum QueryMsg {
     TotalContracts {},
 
     Contracts { start: Uint128, end: Uint128 },
+
+    WithVK { user: HumanAddr, key: String, query: AuthQuery },
+
+    WithPermit { permit: QueryPermit, query: AuthQuery },
 }
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct ResponseWithID<T> {
+    pub prop_id: Uint128,
+    pub data: T
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -316,4 +354,12 @@ pub enum QueryAnswer {
     Contracts { contracts: Vec<AllowedContract> },
 
     Total { total: Uint128 },
+
+    UserProposals { props: Vec<ResponseWithID<Proposal>>, total: Uint128 },
+
+    UserAssemblyVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
+
+    UserFunding { funds: Vec<ResponseWithID<Funding>>, total: Uint128 },
+
+    UserVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
 }

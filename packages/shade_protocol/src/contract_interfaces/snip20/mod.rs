@@ -4,7 +4,7 @@ pub mod transaction_history;
 pub mod errors;
 pub mod helpers;
 
-use crate::c_std::{Binary, Env, HumanAddr, StdError, StdResult, Storage};
+use crate::c_std::{Binary, Env, HumanAddr, StdResult, Storage};
 use crate::query_authentication::permit::Permit;
 use crate::schemars::JsonSchema;
 use secret_toolkit::crypto::sha_256;
@@ -19,8 +19,6 @@ use crate::contract_interfaces::snip20::transaction_history::store_mint;
 use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::ItemStorage;
-#[cfg(feature = "snip20-impl")]
-use secret_storage_plus::Item;
 
 pub const VERSION: &str = "SNIP24";
 

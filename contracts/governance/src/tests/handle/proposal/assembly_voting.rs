@@ -1,33 +1,66 @@
-use crate::tests::{
-    admin_only_governance,
-    get_assemblies,
-    get_proposals,
-    gov_generic_proposal,
-    gov_msg_proposal,
-    init_governance,
-};
-use contract_harness::harness::{governance::Governance, snip20_staking::Snip20Staking};
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{to_binary, Binary, HumanAddr, StdResult};
-use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
-use shade_protocol::fadroma::core::ContractLink;
+use crate::tests::{get_proposals, init_query_auth};
+use contract_harness::harness;
 use shade_protocol::{
+    c_std::{HumanAddr, StdResult},
     contract_interfaces::{
         governance,
         governance::{
-            profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
-            proposal::{ProposalMsg, Status},
+            profile::{Count, Profile, VoteProfile},
+            proposal::Status,
             vote::Vote,
             InitMsg,
         },
+        query_auth,
     },
+    fadroma::{
+        core::ContractLink,
+        ensemble::{ContractEnsemble, MockEnv},
+    },
+    math_compat::Uint128,
     utils::asset::Contract,
 };
 
-fn init_assembly_governance_with_proposal() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)>
-{
-    let (mut chain, gov) = init_governance(InitMsg {
+pub fn init_assembly_governance_with_proposal()
+-> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)> {
+    let mut chain = ContractEnsemble::new(50);
+    let auth = init_query_auth(&mut chain)?;
+
+    chain
+        .execute(
+            &query_auth::HandleMsg::SetViewingKey {
+                key: "password".to_string(),
+                padding: None,
+            },
+            MockEnv::new("alpha", auth.clone()),
+        )
+        .unwrap();
+
+    chain
+        .execute(
+            &query_auth::HandleMsg::SetViewingKey {
+                key: "password".to_string(),
+                padding: None,
+            },
+            MockEnv::new("beta", auth.clone()),
+        )
+        .unwrap();
+
+    chain
+        .execute(
+            &query_auth::HandleMsg::SetViewingKey {
+                key: "password".to_string(),
+                padding: None,
+            },
+            MockEnv::new("charlie", auth.clone()),
+        )
+        .unwrap();
+
+    let gov = harness::governance::init(&mut chain, &InitMsg {
         treasury: HumanAddr::from("treasury"),
+        query_auth: Contract {
+            address: auth.address,
+            code_hash: auth.code_hash,
+        },
         admin_members: vec![
             HumanAddr::from("alpha"),
             HumanAddr::from("beta"),
@@ -87,6 +120,11 @@ fn assembly_voting() {
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+
+    assert_eq!(prop.title, "Title".to_string());
+    assert_eq!(prop.metadata, "Text only proposal".to_string());
+    assert_eq!(prop.proposer, HumanAddr::from("alpha"));
+    assert_eq!(prop.assembly, Uint128::new(1));
 
     match prop.status {
         Status::AssemblyVote { .. } => assert!(true),
@@ -910,8 +948,14 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let (mut chain, gov) = init_governance(InitMsg {
+    let mut chain = ContractEnsemble::new(50);
+    let auth = init_query_auth(&mut chain).unwrap();
+    let gov = harness::governance::init(&mut chain, &InitMsg {
         treasury: HumanAddr::from("treasury"),
+        query_auth: Contract {
+            address: auth.address,
+            code_hash: auth.code_hash,
+        },
         admin_members: vec![
             HumanAddr::from("alpha"),
             HumanAddr::from("beta"),
