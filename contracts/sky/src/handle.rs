@@ -1,28 +1,29 @@
 use crate::query::{conversion_mint_profitability, cycle_profitability};
-use cosmwasm_math_compat::{Decimal, Uint128};
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use secret_toolkit::{
-    snip20::{send_msg, set_viewing_key_msg},
-    utils::Query,
-};
 use shade_admin::admin::{self, ValidateAdminPermissionResponse};
 use shade_protocol::{
+    c_std::{
+        self,
+        to_binary,
+        Api,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::{
         dao::adapter,
         dex::shadeswap::SwapTokens,
         mint::mint,
         sky::{self, Config, Cycle, Cycles, HandleAnswer, Minted, SelfAddr, ViewingKeys},
+    },
+    math_compat::Uint128,
+    secret_toolkit::{
+        snip20::{send_msg, set_viewing_key_msg},
+        utils::Query,
     },
     utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
@@ -233,7 +234,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
         //if true mint silk from shd then sell the silk on the market
         messages.push(send_msg(
             config.mint_contract_silk.address,
-            cosmwasm_std::Uint128(amount.clone().u128()),
+            c_std::Uint128(amount.clone().u128()),
             Some(to_binary(&mint::MintMsgHook {
                 minimum_expected_amount: Uint128::zero(),
             })?),
@@ -248,7 +249,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
         messages.push(send_msg(
             config.market_swap_contract.address.clone(),
-            cosmwasm_std::Uint128(first_swap_expected.clone().u128()),
+            c_std::Uint128(first_swap_expected.clone().u128()),
             Some(to_binary(&SwapTokens {
                 expected_return: Some(amount.clone()),
                 to: None,
@@ -265,7 +266,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
         // if false, buy silk with shd then mint shd with the silk
         messages.push(send_msg(
             config.market_swap_contract.address.clone(),
-            cosmwasm_std::Uint128(amount.u128()),
+            c_std::Uint128(amount.u128()),
             Some(to_binary(&SwapTokens {
                 expected_return: Some(Uint128::zero()),
                 to: None,
@@ -281,7 +282,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
         messages.push(send_msg(
             config.mint_contract_shd.address.clone(),
-            cosmwasm_std::Uint128(first_swap_expected.clone().u128()),
+            c_std::Uint128(first_swap_expected.clone().u128()),
             Some(to_binary(&mint::MintMsgHook {
                 minimum_expected_amount: amount.clone(),
             })?),
@@ -370,7 +371,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                 //push each msg
                 messages.push(send_msg(
                     arb_pair.pair_contract.address.clone(),
-                    cosmwasm_std::Uint128::from(swap_amounts[i].u128()),
+                    c_std::Uint128::from(swap_amounts[i].u128()),
                     msg,
                     None,
                     None,
@@ -387,10 +388,9 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             }
             // calculate payback amount
             let payback_percent = Config::load(&deps.storage)?.payback_percent;
-            if payback_percent > Decimal::zero() {
-                payback_amount =
-                    cosmwasm_std::Decimal::from_atomics(profit, 0).checked_mul(payback_percent)?;
-            }
+            //if payback_percent > Decimal::zero() {
+            //    payback_amount = Decimal::from_atomics(profit, 0).checked_mul(payback_percent)?;
+            //}
         }
         _ => {}
     }
@@ -477,7 +477,7 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     }
     let messages = vec![send_msg(
         config.treasury.address,
-        cosmwasm_std::Uint128::from(amount.u128()),
+        c_std::Uint128::from(amount.u128()),
         None,
         None,
         None,
@@ -491,7 +491,7 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
-            amount: cosmwasm_std::Uint128::from(amount.u128()),
+            amount: c_std::Uint128::from(amount.u128()),
         })?),
     })
 }
@@ -506,7 +506,7 @@ pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,
-            amount: cosmwasm_std::Uint128::zero(),
+            amount: c_std::Uint128::zero(),
         })?),
     })
 }

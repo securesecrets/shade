@@ -1,7 +1,5 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{debug_print, Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
-use secret_toolkit::utils::Query;
 use shade_protocol::{
+    c_std::{self, Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage},
     contract_interfaces::{
         dao::adapter,
         dex::shadeswap::{self, TokenAmount, TokenType},
@@ -9,6 +7,8 @@ use shade_protocol::{
         sky::{Config, Cycles, Minted, QueryAnswer, SelfAddr, ViewingKeys},
         snip20,
     },
+    math_compat::Uint128,
+    secret_toolkit::utils::Query,
     utils::storage::plus::ItemStorage,
 };
 use std::convert::TryInto;
@@ -172,8 +172,6 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         config.shd_token_contract.code_hash.clone(),
         config.shd_token_contract.address.clone(),
     )?;
-
-    debug_print!("{}", viewing_key);
 
     let mut shd_bal = Uint128::new(0);
 
@@ -465,7 +463,7 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
         _ => {}
     }
     Ok(adapter::QueryAnswer::Balance {
-        amount: cosmwasm_std::Uint128(amount.u128()),
+        amount: c_std::Uint128(amount.u128()),
     })
 }
 
@@ -474,7 +472,7 @@ pub fn adapter_claimable<S: Storage, A: Api, Q: Querier>(
     _asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
     Ok(adapter::QueryAnswer::Claimable {
-        amount: cosmwasm_std::Uint128::zero(),
+        amount: c_std::Uint128::zero(),
     })
 }
 
@@ -504,7 +502,7 @@ pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
         _ => {}
     }
     Ok(adapter::QueryAnswer::Unbondable {
-        amount: cosmwasm_std::Uint128(amount.u128()),
+        amount: c_std::Uint128(amount.u128()),
     })
 }
 
@@ -513,7 +511,7 @@ pub fn adapter_unbonding<S: Storage, A: Api, Q: Querier>(
     _asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
     Ok(adapter::QueryAnswer::Unbonding {
-        amount: cosmwasm_std::Uint128::zero(),
+        amount: c_std::Uint128::zero(),
     })
 }
 
@@ -543,6 +541,6 @@ pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
         _ => {}
     }
     Ok(adapter::QueryAnswer::Reserves {
-        amount: cosmwasm_std::Uint128(amount.u128()),
+        amount: c_std::Uint128(amount.u128()),
     })
 }

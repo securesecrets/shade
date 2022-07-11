@@ -1,11 +1,11 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     coins, from_binary, to_binary,
     Extern, HumanAddr, StdError,
     Binary, StdResult, HandleResponse, Env,
     InitResponse, Uint128,
 };
 
-use secret_toolkit::snip20;
+use shade_protocol::secret_toolkit::snip20;
 
 use shade_protocol::{
     contract_interfaces::{
@@ -27,7 +27,7 @@ use contract_harness::harness::{
     snip20_reference_impl::Snip20ReferenceImpl as Snip20,
 };
 
-use fadroma::{
+use shade_protocol::fadroma::{
     core::{
         ContractLink,
     },

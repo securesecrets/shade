@@ -6,10 +6,10 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use cosmwasm_std::{Binary, HumanAddr, Uint128};
-use schemars::JsonSchema;
+use crate::c_std::{Binary, HumanAddr, Uint128};
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct InitMsg {

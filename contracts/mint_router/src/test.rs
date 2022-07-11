@@ -1,7 +1,7 @@
 /*
 #[cfg(test)]
 pub mod tests {
-    use cosmwasm_std::{
+    use shade_protocol::c_std::{
         coins, from_binary,
         testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
         Extern, StdError, Uint128,
@@ -16,8 +16,8 @@ pub mod tests {
 
     mod mock_secret_toolkit {
 
-        use cosmwasm_std::{HumanAddr, Querier, StdResult, Uint128};
-        use secret_toolkit::snip20::TokenInfo;
+        use shade_protocol::c_std::{HumanAddr, Querier, StdResult, Uint128};
+        use shade_protocol::secret_toolkit::snip20::TokenInfo;
 
         pub fn mock_token_info_query<Q: Querier>(
             _querier: &Q,
@@ -35,7 +35,7 @@ pub mod tests {
     }
 
     #[double]
-    use mock_secret_toolkit::token_info_query;
+    use mock_shade_protocol::secret_toolkit::token_info_query;
     use shade_protocol::utils::asset::Contract;
 
     fn create_contract(address: &str, code_hash: &str) -> Contract {

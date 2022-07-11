@@ -6,9 +6,9 @@ pub mod proposal;
 
 use crate::tests::{admin_only_governance, get_config};
 use contract_harness::harness::snip20::Snip20;
-use cosmwasm_std::HumanAddr;
-use fadroma::ensemble::MockEnv;
-use fadroma::core::ContractLink;
+use shade_protocol::c_std::HumanAddr;
+use shade_protocol::fadroma::ensemble::MockEnv;
+use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::{contract_interfaces::{governance, snip20}, utils::asset::Contract};
 
 #[test]

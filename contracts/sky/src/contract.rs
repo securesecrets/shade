@@ -1,25 +1,23 @@
 use crate::{handle, query};
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    self,
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdResult,
-    Storage,
-};
-use secret_toolkit::snip20::set_viewing_key_msg;
-
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Api,
+        Binary,
+        Env,
+        Extern,
+        HandleResponse,
+        InitResponse,
+        Querier,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::{
         dao::adapter,
         sky::{Config, Cycles, HandleMsg, InitMsg, Minted, QueryMsg, SelfAddr, ViewingKeys},
     },
+    math_compat::Uint128,
+    secret_toolkit::snip20::set_viewing_key_msg,
     utils::storage::plus::ItemStorage,
 };
 

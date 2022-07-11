@@ -1,5 +1,5 @@
-use cosmwasm_math_compat::{Uint128, Uint256};
-use cosmwasm_std::HumanAddr;
+use shade_protocol::math_compat::{Uint128, Uint256};
+use shade_protocol::c_std::HumanAddr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::{

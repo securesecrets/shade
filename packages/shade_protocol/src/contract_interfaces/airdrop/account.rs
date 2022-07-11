@@ -1,13 +1,13 @@
 use crate::contract_interfaces::airdrop::errors::permit_rejected;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Api};
-use query_authentication::{
+use crate::math_compat::Uint128;
+use crate::c_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Api};
+use crate::query_authentication::{
     permit::{bech32_to_canonical, Permit},
     transaction::SignedTx,
     viewing_keys::ViewingKey,
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

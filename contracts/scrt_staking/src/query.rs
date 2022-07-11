@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     Api,
     BalanceResponse,
     BankQuery,

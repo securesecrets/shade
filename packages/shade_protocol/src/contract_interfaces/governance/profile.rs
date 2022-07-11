@@ -1,8 +1,8 @@
 use crate::contract_interfaces::governance::stored_id::ID;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{StdError, StdResult, Storage};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
+use crate::c_std::{StdError, StdResult, Storage};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::BucketStorage;

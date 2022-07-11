@@ -1,6 +1,6 @@
-use cosmwasm_std::{Coin, HumanAddr};
-use fadroma::ensemble::MockEnv;
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::c_std::{Coin, HumanAddr};
+use shade_protocol::fadroma::ensemble::MockEnv;
+use shade_protocol::math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig, InitialBalance};
 use shade_protocol::contract_interfaces::snip20::manager::{ContractStatusLevel, HashedKey, Key, ReceiverHash};
 use shade_protocol::utils::storage::plus::MapStorage;
@@ -117,7 +117,7 @@ fn contract_status_stop_all() {
 
     let scrt_coin = Coin {
         denom: "uscrt".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        amount: shade_protocol::c_std::Uint128(1000)
     };
 
     chain.add_funds(HumanAddr::from("Bob"), vec![
@@ -179,7 +179,7 @@ fn contract_status_stop_all_but_redeem() {
 
     let scrt_coin = Coin {
         denom: "uscrt".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        amount: shade_protocol::c_std::Uint128(1000)
     };
 
     chain.add_funds(HumanAddr::from("Bob"), vec![

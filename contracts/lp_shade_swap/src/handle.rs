@@ -1,9 +1,9 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, Extern,
     HandleResponse, HumanAddr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
 };
 
-use secret_toolkit::snip20::{balance_query};
+use shade_protocol::secret_toolkit::snip20::{balance_query};
 
 use shade_protocol::{
     contract_interfaces::dao::{

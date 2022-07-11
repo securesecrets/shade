@@ -1,6 +1,6 @@
 use chrono::prelude::*;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     debug_print,
     from_binary,
     to_binary,
@@ -16,7 +16,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query,
              token_config_query, TokenConfig},
     utils::Query,

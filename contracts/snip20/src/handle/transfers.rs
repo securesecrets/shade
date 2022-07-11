@@ -1,6 +1,6 @@
-use cosmwasm_std::{Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
-use secret_toolkit::utils::HandleCallback;
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::c_std::{Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use shade_protocol::secret_toolkit::utils::HandleCallback;
+use shade_protocol::math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer, ReceiverHandleMsg};
 use shade_protocol::contract_interfaces::snip20::errors::transfer_disabled;
 use shade_protocol::contract_interfaces::snip20::manager::{Allowance, Balance, CoinInfo, Config, ContractStatusLevel, ReceiverHash};
@@ -16,7 +16,7 @@ pub fn try_transfer_impl<S: Storage>(
     amount: Uint128,
     memo: Option<String>,
     denom: String,
-    block: &cosmwasm_std::BlockInfo
+    block: &shade_protocol::c_std::BlockInfo
 ) -> StdResult<()> {
 
     if !Config::transfer_enabled(storage)? {
@@ -117,7 +117,7 @@ pub fn try_send_impl<S: Storage>(
     memo: Option<String>,
     msg: Option<Binary>,
     denom: String,
-    block: &cosmwasm_std::BlockInfo
+    block: &shade_protocol::c_std::BlockInfo
 ) -> StdResult<()> {
 
     try_transfer_impl(storage, &sender, owner, &recipient, amount, memo.clone(), denom, block)?;

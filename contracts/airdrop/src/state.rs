@@ -1,5 +1,5 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     from_binary,
     Api,
     Binary,
@@ -10,7 +10,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use cosmwasm_storage::{
+use shade_protocol::storage::{
     bucket,
     bucket_read,
     singleton,

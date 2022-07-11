@@ -2,7 +2,7 @@ pub mod errors;
 pub mod rand;
 pub mod utils;
 
-use cosmwasm_std::Env;
+use crate::c_std::Env;
 
 use crate::contract_interfaces::bonds::rand::{sha_256, Prng};
 use crate::contract_interfaces::bonds::utils::{
@@ -12,11 +12,11 @@ use crate::contract_interfaces::snip20::helpers::Snip20Asset;
 use crate::contract_interfaces::query_auth::QueryPermit;
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, HumanAddr};
-use schemars::JsonSchema;
+use crate::math_compat::Uint128;
+use crate::c_std::{Binary, HumanAddr};
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::HandleCallback;
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {

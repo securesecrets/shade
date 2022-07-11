@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     debug_print,
     to_binary,
     Api,
@@ -20,7 +20,7 @@ use cosmwasm_std::{
     Validator,
 };
 
-use secret_toolkit::snip20::{
+use shade_protocol::secret_toolkit::snip20::{
     batch::SendFromAction,
     batch_send_from_msg,
     deposit_msg,

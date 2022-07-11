@@ -1,16 +1,16 @@
 use crate::{
+    c_std::{Api, Binary, Extern, HumanAddr, Querier, StdError, StdResult, Storage},
     contract_interfaces::{dex, mint, oracles::band},
+    math_compat::Uint128,
+    schemars::JsonSchema,
+    serde::{Deserialize, Serialize},
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Api, Binary, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
 use fadroma::prelude::ContractLink;
-use schemars::JsonSchema;
 use secret_toolkit::utils::Query;
-use serde::{Deserialize, Serialize};
 
 /*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
