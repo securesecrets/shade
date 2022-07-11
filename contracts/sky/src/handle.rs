@@ -18,9 +18,9 @@ use shade_protocol::{
         dao::adapter,
         dex::shadeswap::SwapTokens,
         mint::mint,
-        sky::{self, Config, Cycle, Cycles, HandleAnswer, Minted, SelfAddr, ViewingKeys},
+        sky::{self, Config, Cycle, Cycles, HandleAnswer, Minted, Offer, SelfAddr, ViewingKeys},
     },
-    math_compat::Uint128,
+    math_compat::{Decimal, Uint128},
     secret_toolkit::{
         snip20::{send_msg, set_viewing_key_msg},
         utils::Query,
@@ -37,7 +37,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     market_swap_contract: Option<Contract>,
     shd_token_contract: Option<Contract>,
     silk_token_contract: Option<Contract>,
+    sscrt_token_contract: Option<Contract>,
     treasury: Option<Contract>,
+    payback_rate: Option<Decimal>,
 ) -> StdResult<HandleResponse> {
     //Admin-only
     let mut config = Config::load(&mut deps.storage)?;
@@ -90,8 +92,21 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             config.silk_token_contract.address.clone(),
         )?);
     }
+    if let Some(sscrt_token_contract) = sscrt_token_contract {
+        config.sscrt_token_contract = sscrt_token_contract;
+        messages.push(set_viewing_key_msg(
+            ViewingKeys::load(&deps.storage)?.0,
+            None,
+            1,
+            config.sscrt_token_contract.code_hash.clone(),
+            config.sscrt_token_contract.address.clone(),
+        )?);
+    }
     if let Some(treasury) = treasury {
         config.treasury = treasury;
+    }
+    if let Some(payback_rate) = payback_rate {
+        config.payback_rate = payback_rate;
     }
     config.save(&mut deps.storage)?;
     Ok(HandleResponse {
@@ -310,7 +325,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
 pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    _env: Env,
+    env: Env,
     amount: Uint128,
     index: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -333,7 +348,6 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             return_swap_amounts = swap_amounts.clone();
             if direction.pair_addrs[0] // test to see which of the token attributes are the proposed starting addr
                 .token0_contract
-                .address
                 == direction.start_addr.clone()
             {
                 cur_asset = direction.pair_addrs[0].token0_contract.clone();
@@ -342,15 +356,12 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             }
             // if tx is unprofitable, err out
             if !is_profitable {
-                return Err(StdError::GenericErr {
-                    msg: "bad".to_string(),
-                    backtrace: None,
-                });
+                return Err(StdError::generic_err("Unprofitable"));
             }
             //loop through the pairs in the cycle
             for (i, arb_pair) in direction.pair_addrs.clone().iter().enumerate() {
-                let msg;
-                // if we're on the last iteration, we set our
+                //let msg;
+                /*// if we're on the last iteration, we set our
                 // minmum expected return to the swap amount to ensure the tx is profitable
                 if direction.pair_addrs.len() == i {
                     msg = Some(to_binary(&SwapTokens {
@@ -378,7 +389,26 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                     256,
                     cur_asset.code_hash.clone(),
                     cur_asset.address.clone(),
-                )?);
+                )?);*/
+                if direction.pair_addrs.len() == i {
+                    messages.push(arb_pair.to_cosmos_msg(
+                        &deps,
+                        Offer {
+                            asset: cur_asset.clone(),
+                            amount: swap_amounts[i],
+                        },
+                        amount,
+                    )?);
+                } else {
+                    messages.push(arb_pair.to_cosmos_msg(
+                        &deps,
+                        Offer {
+                            asset: cur_asset.clone(),
+                            amount: swap_amounts[i],
+                        },
+                        Uint128::zero(),
+                    )?);
+                }
                 // reset cur asset to the other asset held in the struct
                 if cur_asset == arb_pair.token0_contract.clone() {
                     cur_asset = arb_pair.token1_contract.clone();
@@ -387,21 +417,26 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                 }
             }
             // calculate payback amount
-            let payback_percent = Config::load(&deps.storage)?.payback_percent;
-            //if payback_percent > Decimal::zero() {
-            //    payback_amount = Decimal::from_atomics(profit, 0).checked_mul(payback_percent)?;
-            //}
+            let payback_percent = Config::load(&deps.storage)?.payback_rate;
+            if payback_percent > Decimal::zero() {
+                payback_amount = profit * payback_percent;
+            }
         }
         _ => {}
     }
 
     // the final cur_asset should be the same as the start_addr
-    assert!(
-        cur_asset.address.clone()
-            == Cycles::load(&deps.storage)?.0[index.u128() as usize].start_addr
-    );
-
-    // add a payback msg
+    assert!(cur_asset.clone() == Cycles::load(&deps.storage)?.0[index.u128() as usize].start_addr);
+    messages.push(send_msg(
+        env.message.sender,
+        c_std::Uint128(payback_amount.u128()),
+        None,
+        None,
+        None,
+        1,
+        cur_asset.code_hash.clone(),
+        cur_asset.address.clone(),
+    )?);
 
     Ok(HandleResponse {
         messages,

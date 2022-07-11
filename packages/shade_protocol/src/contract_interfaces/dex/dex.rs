@@ -1,18 +1,18 @@
 use crate::{
+    c_std::{self, Api, Extern, Querier, StdError, StdResult, Storage},
     contract_interfaces::{
         dex::{secretswap, sienna},
         mint::mint,
         oracles::band,
         snip20::helpers::Snip20Asset,
     },
+    schemars::JsonSchema,
+    serde::{Deserialize, Serialize},
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
-use crate::schemars::JsonSchema;
-use crate::serde::{Deserialize, Serialize};
 
 use crate::math_compat::{Uint128, Uint512};
 use std::convert::TryFrom;
@@ -22,6 +22,7 @@ pub enum Dex {
     SecretSwap,
     SiennaSwap,
     ShadeSwap,
+    Mint,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

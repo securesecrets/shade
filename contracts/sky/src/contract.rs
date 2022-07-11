@@ -33,8 +33,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         market_swap_contract: msg.market_swap_contract,
         shd_token_contract: msg.shd_token_contract.clone(),
         silk_token_contract: msg.silk_token_contract.clone(),
+        sscrt_token_contract: msg.sscrt_token_contract.clone(),
         treasury: msg.treasury,
-        payback_percent: msg.payback_percent,
+        payback_rate: msg.payback_rate,
     };
 
     state.save(&mut deps.storage)?;
@@ -56,6 +57,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             1,
             msg.silk_token_contract.code_hash.clone(),
             msg.silk_token_contract.address.clone(),
+        )?,
+        set_viewing_key_msg(
+            msg.viewing_key.clone(),
+            None,
+            1,
+            msg.sscrt_token_contract.code_hash.clone(),
+            msg.sscrt_token_contract.address.clone(),
         )?,
     ];
 
@@ -80,7 +88,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             market_swap_contract,
             shd_token_contract,
             silk_token_contract,
+            sscrt_token_contract,
             treasury,
+            payback_rate,
             ..
         } => handle::try_update_config(
             deps,
@@ -91,7 +101,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             market_swap_contract,
             shd_token_contract,
             silk_token_contract,
+            sscrt_token_contract,
             treasury,
+            payback_rate,
         ),
         HandleMsg::ArbPeg { amount, .. } => handle::try_execute(deps, env, amount),
         HandleMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),

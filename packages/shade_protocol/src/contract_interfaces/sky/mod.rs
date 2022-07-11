@@ -2,6 +2,7 @@ use crate::{
     contract_interfaces::{
         dao::adapter,
         dex::{dex::Dex, secretswap, shadeswap, sienna},
+        mint::mint,
     },
     utils::{asset::Contract, storage::plus::ItemStorage},
 };
@@ -21,11 +22,12 @@ pub struct Config {
     pub shade_admin: Contract,
     pub mint_contract_shd: Contract,
     pub mint_contract_silk: Contract,
-    pub market_swap_contract: Contract,
+    pub market_swap_contract: Contract, // Get rid eventually
     pub shd_token_contract: Contract,
     pub silk_token_contract: Contract,
+    pub sscrt_token_contract: Contract,
     pub treasury: Contract,
-    pub payback_percent: Decimal,
+    pub payback_rate: Decimal,
 }
 
 impl ItemStorage for Config {
@@ -73,9 +75,10 @@ pub struct InitMsg {
     pub market_swap_contract: Contract,
     pub shd_token_contract: Contract,
     pub silk_token_contract: Contract,
+    pub sscrt_token_contract: Contract,
     pub treasury: Contract,
     pub viewing_key: String,
-    pub payback_percent: Decimal,
+    pub payback_rate: Decimal,
 }
 
 impl InitCallback for InitMsg {
@@ -92,8 +95,9 @@ pub enum HandleMsg {
         market_swap_contract: Option<Contract>,
         shd_token_contract: Option<Contract>,
         silk_token_contract: Option<Contract>,
+        sscrt_token_contract: Option<Contract>,
         treasury: Option<Contract>,
-        payback_percent: Option<Decimal>,
+        payback_rate: Option<Decimal>,
         padding: Option<String>,
     },
     ArbPeg {
@@ -219,7 +223,7 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
-    pub pair_contract: Contract,
+    pub pair_contract: Option<Contract>,
     pub token0_contract: Contract,
     pub token1_contract: Contract,
     pub dex: Dex,
@@ -229,19 +233,18 @@ impl ArbPair {
     pub fn simulate_swap<S: Storage, A: Api, Q: Querier>(
         self,
         deps: &Extern<S, A, Q>,
-        amount: Uint128,
-        offer_token: Contract,
+        offer: Offer,
     ) -> Result<Uint128, StdError> {
         let mut swap_result = Uint128::zero();
         match self.dex {
             Dex::SecretSwap => {
                 let res = secretswap::PairQuery::Simulation {
                     offer_asset: secretswap::Asset {
-                        amount,
+                        amount: offer.amount,
                         info: secretswap::AssetInfo {
                             token: secretswap::Token {
-                                contract_addr: offer_token.address,
-                                token_code_hash: offer_token.code_hash,
+                                contract_addr: offer.asset.address,
+                                token_code_hash: offer.asset.code_hash,
                                 viewing_key: "".to_string(), //TODO will sky have to make viewing keys for every asset?
                             },
                         },
@@ -249,8 +252,8 @@ impl ArbPair {
                 }
                 .query(
                     &deps.querier,
-                    self.pair_contract.code_hash,
-                    self.pair_contract.address,
+                    self.pair_contract.clone().unwrap().code_hash,
+                    self.pair_contract.clone().unwrap().address,
                 )?;
                 match res {
                     secretswap::SimulationResponse { return_amount, .. } => {
@@ -262,16 +265,16 @@ impl ArbPair {
                 let res = sienna::PairQuery::SwapSimulation {
                     offer: sienna::TokenTypeAmount {
                         token: sienna::TokenType::CustomToken {
-                            token_code_hash: offer_token.code_hash.clone(),
-                            contract_addr: offer_token.address.clone(),
+                            token_code_hash: offer.asset.code_hash.clone(),
+                            contract_addr: offer.asset.address.clone(),
                         },
-                        amount,
+                        amount: offer.amount,
                     },
                 }
                 .query(
                     &deps.querier,
-                    self.pair_contract.code_hash,
-                    self.pair_contract.address,
+                    self.pair_contract.clone().unwrap().code_hash,
+                    self.pair_contract.clone().unwrap().address,
                 )?;
                 match res {
                     sienna::SimulationResponse { return_amount, .. } => swap_result = return_amount,
@@ -281,16 +284,16 @@ impl ArbPair {
                 let res = shadeswap::PairQuery::GetEstimatedPrice {
                     offer: shadeswap::TokenAmount {
                         token: shadeswap::TokenType::CustomToken {
-                            token_code_hash: offer_token.code_hash.clone(),
-                            contract_addr: offer_token.address.clone(),
+                            token_code_hash: offer.asset.code_hash.clone(),
+                            contract_addr: offer.asset.address.clone(),
                         },
-                        amount,
+                        amount: offer.amount,
                     },
                 }
                 .query(
                     &deps.querier,
-                    self.pair_contract.code_hash,
-                    self.pair_contract.address,
+                    self.pair_contract.clone().unwrap().code_hash,
+                    self.pair_contract.clone().unwrap().address,
                 )?;
                 match res {
                     shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => {
@@ -299,45 +302,60 @@ impl ArbPair {
                     _ => {}
                 }
             }
+            Dex::Mint => {
+                let mint_contract = get_mint_contract(deps, offer.asset.clone())?;
+                let res = mint::QueryMsg::Mint {
+                    offer_asset: offer.asset.address,
+                    amount: offer.amount,
+                }
+                .query(
+                    &deps.querier,
+                    mint_contract.code_hash,
+                    mint_contract.address,
+                )?;
+                match res {
+                    mint::QueryAnswer::Mint { amount, .. } => swap_result = amount,
+                    _ => {}
+                }
+            }
         }
         Ok(swap_result)
     }
 
-    pub fn to_cosmos_msg(
+    pub fn to_cosmos_msg<S: Storage, A: Api, Q: Querier>(
         &self,
-        recipient: HumanAddr,
-        amount: Uint128,
+        deps: &Extern<S, A, Q>,
+        offer: Offer,
         expected_return: Uint128,
-        offer_asset: Contract,
     ) -> Result<CosmosMsg, StdError> {
         match self.dex {
             Dex::SiennaSwap => send_msg(
-                recipient,
-                cosmwasm_std::Uint128(amount.u128()),
+                self.pair_contract.clone().unwrap().address.clone(),
+                cosmwasm_std::Uint128(offer.amount.u128()),
                 Some(to_binary(&sienna::CallbackMsg {
                     swap: sienna::CallbackSwap { expected_return },
                 })?),
                 None,
                 None,
                 1,
-                offer_asset.code_hash,
-                offer_asset.address,
+                offer.asset.code_hash,
+                offer.asset.address,
             ),
             Dex::SecretSwap => send_msg(
-                recipient,
-                cosmwasm_std::Uint128(amount.u128()),
+                self.pair_contract.clone().unwrap().address.clone(),
+                cosmwasm_std::Uint128(offer.amount.u128()),
                 Some(to_binary(&secretswap::CallbackMsg {
                     swap: secretswap::CallbackSwap { expected_return },
                 })?),
                 None,
                 None,
                 1,
-                offer_asset.code_hash,
-                offer_asset.address,
+                offer.asset.code_hash,
+                offer.asset.address,
             ),
             Dex::ShadeSwap => send_msg(
-                recipient,
-                cosmwasm_std::Uint128(amount.u128()),
+                self.pair_contract.clone().unwrap().address.clone(),
+                cosmwasm_std::Uint128(offer.amount.u128()),
                 Some(to_binary(&shadeswap::SwapTokens {
                     expected_return: Some(expected_return),
                     to: None,
@@ -347,10 +365,41 @@ impl ArbPair {
                 None,
                 None,
                 1,
-                offer_asset.code_hash,
-                offer_asset.address,
+                offer.asset.code_hash,
+                offer.asset.address,
             ),
+            Dex::Mint => {
+                let mint_contract = get_mint_contract(deps, offer.asset.clone())?;
+                send_msg(
+                    mint_contract.address.clone(),
+                    cosmwasm_std::Uint128(offer.amount.u128()),
+                    Some(to_binary(&mint::MintMsgHook {
+                        minimum_expected_amount: expected_return,
+                    })?),
+                    None,
+                    None,
+                    1,
+                    offer.asset.code_hash,
+                    offer.asset.address,
+                )
+            }
         }
+    }
+}
+
+pub fn get_mint_contract<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    offer_contract: Contract,
+) -> Result<Contract, StdError> {
+    let config = Config::load(&deps.storage)?;
+    if offer_contract.clone() == config.shd_token_contract {
+        Ok(config.mint_contract_silk)
+    } else if offer_contract.clone() == config.silk_token_contract {
+        Ok(config.mint_contract_shd)
+    } else {
+        Err(StdError::generic_err(
+            "Must be sending either silk or shd to mint contracts",
+        ))
     }
 }
 
@@ -358,5 +407,12 @@ impl ArbPair {
 #[serde(rename_all = "snake_case")]
 pub struct Cycle {
     pub pair_addrs: Vec<ArbPair>,
-    pub start_addr: HumanAddr,
+    pub start_addr: Contract,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Offer {
+    pub asset: Contract,
+    pub amount: Uint128,
 }

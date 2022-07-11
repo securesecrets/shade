@@ -2,9 +2,9 @@ use shade_protocol::{
     c_std::{self, Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage},
     contract_interfaces::{
         dao::adapter,
-        dex::shadeswap::{self, TokenAmount, TokenType},
+        dex::shadeswap::{self, TokenAmount},
         mint::mint,
-        sky::{Config, Cycles, Minted, QueryAnswer, SelfAddr, ViewingKeys},
+        sky::{Config, Cycles, Minted, Offer, QueryAnswer, SelfAddr, ViewingKeys},
         snip20,
     },
     math_compat::Uint128,
@@ -229,57 +229,32 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         });
     }
 
-    let mut current_offer: TokenAmount = TokenAmount {
-        token: TokenType::CustomToken {
-            contract_addr: config.shd_token_contract.address.clone(),
-            token_code_hash: config.shd_token_contract.code_hash.clone(),
-        },
+    // set up inital offer
+    let mut current_offer = Offer {
+        asset: cycles[index.u128() as usize].start_addr.clone(),
         amount,
     };
 
+    //loop through the pairs in the cycle
     for arb_pair in cycles[index.u128() as usize].pair_addrs.clone() {
-        let res = shadeswap::PairQuery::GetEstimatedPrice {
-            offer: current_offer.clone(),
-        }
-        .query(
-            &deps.querier,
-            arb_pair.pair_contract.code_hash.clone(),
-            arb_pair.pair_contract.address.clone(),
-        )?;
-        match res {
-            shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => {
-                match current_offer.token {
-                    TokenType::CustomToken {
-                        token_code_hash, ..
-                    } => {
-                        if token_code_hash == arb_pair.token0_contract.code_hash {
-                            current_offer = TokenAmount {
-                                token: TokenType::CustomToken {
-                                    contract_addr: arb_pair.token1_contract.address.clone(),
-                                    token_code_hash: arb_pair.token1_contract.code_hash,
-                                },
-                                amount: estimated_price,
-                            };
-                        } else {
-                            current_offer = TokenAmount {
-                                token: TokenType::CustomToken {
-                                    contract_addr: arb_pair.token0_contract.address.clone(),
-                                    token_code_hash: arb_pair.token0_contract.code_hash,
-                                },
-                                amount: estimated_price,
-                            };
-                        }
-                        swap_amounts.push(estimated_price.clone());
-                    }
-                    _ => {}
-                }
-            }
-            _ => {
-                return Err(StdError::GenericErr {
-                    msg: "Unexpected result".to_string(),
-                    backtrace: None,
-                });
-            }
+        // simulate swap will run a query with respect to which dex or minting that the pair says
+        // it is
+        let estimated_return = arb_pair
+            .clone()
+            .simulate_swap(&deps, current_offer.clone())?;
+        swap_amounts.push(estimated_return.clone());
+        // set up the next offer with the other token contract in the pair and the expected return
+        // from the last query
+        if current_offer.asset.code_hash.clone() == arb_pair.token0_contract.code_hash.clone() {
+            current_offer = Offer {
+                asset: arb_pair.token1_contract.clone(),
+                amount: estimated_return,
+            };
+        } else {
+            current_offer = Offer {
+                asset: arb_pair.token0_contract.clone(),
+                amount: estimated_return,
+            };
         }
     }
 
@@ -290,6 +265,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         });
     }
 
+    // if the last calculated swap is greater than the initial amount, return true
     if current_offer.amount.u128() > amount.u128() {
         return Ok(QueryAnswer::IsCycleProfitable {
             is_profitable: true,
@@ -299,12 +275,10 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         });
     }
 
+    // reset these variables in order to check the other way
     swap_amounts = vec![amount];
-    current_offer = TokenAmount {
-        token: TokenType::CustomToken {
-            contract_addr: config.shd_token_contract.address,
-            token_code_hash: config.shd_token_contract.code_hash,
-        },
+    current_offer = Offer {
+        asset: cycles[index.u128() as usize].start_addr.clone(),
         amount,
     };
 
@@ -314,48 +288,20 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         .iter()
         .rev()
     {
-        let res = shadeswap::PairQuery::GetEstimatedPrice {
-            offer: current_offer.clone(),
-        }
-        .query(
-            &deps.querier,
-            arb_pair.pair_contract.code_hash.clone(),
-            arb_pair.pair_contract.address.clone(),
-        )?;
-        match res {
-            shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => {
-                match current_offer.token {
-                    TokenType::CustomToken {
-                        token_code_hash, ..
-                    } => {
-                        if token_code_hash == arb_pair.token0_contract.code_hash {
-                            current_offer = TokenAmount {
-                                token: TokenType::CustomToken {
-                                    contract_addr: arb_pair.token1_contract.address.clone(),
-                                    token_code_hash: arb_pair.token1_contract.code_hash.clone(),
-                                },
-                                amount: estimated_price,
-                            };
-                        } else {
-                            current_offer = TokenAmount {
-                                token: TokenType::CustomToken {
-                                    contract_addr: arb_pair.token0_contract.address.clone(),
-                                    token_code_hash: arb_pair.token0_contract.code_hash.clone(),
-                                },
-                                amount: estimated_price,
-                            };
-                        }
-                    }
-                    _ => {}
-                }
-                swap_amounts.push(estimated_price.clone());
-            }
-            _ => {
-                return Err(StdError::GenericErr {
-                    msg: "Unexpected result".to_string(),
-                    backtrace: None,
-                });
-            }
+        let estimated_return = arb_pair
+            .clone()
+            .simulate_swap(&deps, current_offer.clone())?;
+        swap_amounts.push(estimated_return.clone());
+        if current_offer.asset.code_hash.clone() == arb_pair.token0_contract.code_hash.clone() {
+            current_offer = Offer {
+                asset: arb_pair.token1_contract.clone(),
+                amount: estimated_return,
+            };
+        } else {
+            current_offer = Offer {
+                asset: arb_pair.token0_contract.clone(),
+                amount: estimated_return,
+            };
         }
     }
 
