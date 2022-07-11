@@ -91,6 +91,11 @@ pub enum HandleMsg {
         cycle: Vec<Cycle>,
         padding: Option<String>,
     },
+    UpdateCycle {
+        cycle: Cycle,
+        index: Uint128,
+        padding: Option<String>,
+    },
     RemoveCycle {
         index: Uint128,
         padding: Option<String>,
@@ -163,6 +168,9 @@ pub enum HandleAnswer {
         status: bool,
     },
     AppendCycles {
+        status: bool,
+    },
+    UpdateCycle {
         status: bool,
     },
     RemoveCycle {
@@ -359,6 +367,47 @@ impl ArbPair {
 pub struct Cycle {
     pub pair_addrs: Vec<ArbPair>,
     pub start_addr: Contract,
+}
+
+impl Cycle {
+    pub fn validate_cycle(&self) -> Result<bool, StdError> {
+        // check if start address is in both the first arb pair and the last arb pair
+        let start_addr_in_first_pair = self.start_addr == self.pair_addrs[0].token0_contract
+            || self.start_addr == self.pair_addrs[0].token1_contract;
+        let start_addr_in_last_pair = self.start_addr
+            == self.pair_addrs[self.pair_addrs.len() - 1].token0_contract
+            || self.start_addr == self.pair_addrs[self.pair_addrs.len() - 1].token1_contract;
+        if !(start_addr_in_first_pair && start_addr_in_last_pair) {
+            return Err(StdError::generic_err(
+                "First and last pair in cycle must contain start addr",
+            ));
+        }
+        // check to see if each arb pair has the necessary information and if there is an actual
+        // path
+        let mut cur_asset = self.start_addr.clone();
+        for arb_pair in self.pair_addrs.clone() {
+            match arb_pair.dex {
+                Dex::Mint => {
+                    arb_pair
+                        .mint_info
+                        .expect("Mint arb pairs must include mint info");
+                }
+                _ => {
+                    arb_pair
+                        .pair_contract
+                        .expect("Dex pairs must include pair contract");
+                }
+            }
+            if arb_pair.token0_contract == cur_asset {
+                cur_asset = arb_pair.token1_contract;
+            } else if arb_pair.token1_contract == cur_asset {
+                cur_asset = arb_pair.token0_contract;
+            } else {
+                return Err(StdError::generic_err("cycle not complete"));
+            }
+        }
+        Ok(true)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

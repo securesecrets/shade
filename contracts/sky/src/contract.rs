@@ -97,6 +97,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         ),
         HandleMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),
         HandleMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, cycle),
+        HandleMsg::UpdateCycle { cycle, index, .. } => {
+            handle::try_update_cycle(deps, env, cycle, index)
+        }
         HandleMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, index),
         HandleMsg::ArbCycle { amount, index, .. } => {
             handle::try_arb_cycle(deps, env, amount, index)

@@ -120,6 +120,10 @@ pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
+    for cycle in cycles_to_set.clone() {
+        cycle.validate_cycle();
+    }
+
     let new_cycles = Cycles(cycles_to_set);
     new_cycles.save(&mut deps.storage)?;
 
@@ -148,6 +152,10 @@ pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
+    for cycle in cycles_to_add.clone() {
+        cycle.validate_cycle();
+    }
+
     let mut cycles = Cycles::load(&deps.storage)?;
 
     cycles.0.append(&mut cycles_to_add.clone());
@@ -161,6 +169,36 @@ pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+pub fn try_update_cycle<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    cycle: Cycle,
+    index: Uint128,
+) -> StdResult<HandleResponse> {
+    // Admin-only
+    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let admin_response: ValidateAdminPermissionResponse =
+        admin::QueryMsg::ValidateAdminPermission {
+            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            admin_address: env.message.sender.to_string(),
+        }
+        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(StdError::unauthorized());
+    }
+
+    cycle.validate_cycle();
+    let mut cycles = Cycles::load(&deps.storage)?;
+    cycles.0[index.u128() as usize] = cycle;
+    cycles.save(&mut deps.storage)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::UpdateCycle { status: true })?),
+    })
+}
 pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
