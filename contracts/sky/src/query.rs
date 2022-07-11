@@ -2,9 +2,7 @@ use shade_protocol::{
     c_std::{self, Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage},
     contract_interfaces::{
         dao::adapter,
-        dex::shadeswap::{self, TokenAmount},
-        mint::mint,
-        sky::{Config, Cycles, Minted, Offer, QueryAnswer, SelfAddr, ViewingKeys},
+        sky::{Config, Cycles, Offer, QueryAnswer, SelfAddr, ViewingKeys},
         snip20,
     },
     math_compat::Uint128,
@@ -16,143 +14,6 @@ use std::convert::TryInto;
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: Config::load(&deps.storage)?,
-    })
-}
-
-pub fn conversion_mint_profitability<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    amount: Uint128,
-) -> StdResult<QueryAnswer> {
-    let config: Config = Config::load(&deps.storage)?;
-    let mut first_swap_result;
-
-    // Query sim mint from shd to silk
-    let res = mint::QueryMsg::Mint {
-        offer_asset: config.shd_token_contract.address.clone(),
-        amount,
-    }
-    .query(
-        &deps.querier,
-        config.mint_contract_silk.code_hash.clone(),
-        config.mint_contract_silk.address.clone(),
-    )?;
-
-    match res {
-        mint::QueryAnswer::Mint { amount, .. } => {
-            first_swap_result = amount;
-        }
-        _ => {
-            return Err(StdError::GenericErr {
-                msg: String::from("Unexpected query result"),
-                backtrace: None,
-            });
-        }
-    }
-
-    let mut offer = TokenAmount {
-        token: shadeswap::TokenType::CustomToken {
-            contract_addr: config.silk_token_contract.address.clone(),
-            token_code_hash: config.silk_token_contract.code_hash.clone(),
-        },
-        amount: first_swap_result,
-    };
-
-    // Query sim but shd with silk
-    let mut res2 = shadeswap::PairQuery::GetEstimatedPrice { offer }.query(
-        &deps.querier,
-        config.market_swap_contract.code_hash.clone(),
-        config.market_swap_contract.address.clone(),
-    )?;
-
-    let mut final_amount;
-
-    match res2 {
-        shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => {
-            final_amount = estimated_price;
-        }
-        _ => {
-            return Err(StdError::GenericErr {
-                msg: String::from("unexpected query result"),
-                backtrace: None,
-            });
-        }
-    }
-
-    // If end up with more shd then started, return as profitable
-    if final_amount > amount {
-        return Ok(QueryAnswer::ArbPegProfitability {
-            is_profitable: true,
-            mint_first: true,
-            first_swap_result,
-            profit: final_amount.checked_sub(amount)?,
-        });
-    }
-
-    offer = TokenAmount {
-        token: shadeswap::TokenType::CustomToken {
-            contract_addr: config.shd_token_contract.address.clone(),
-            token_code_hash: config.shd_token_contract.code_hash.clone(),
-        },
-        amount,
-    };
-
-    // Buy silk on market with shd
-    res2 = shadeswap::PairQuery::GetEstimatedPrice { offer }.query(
-        &deps.querier,
-        config.market_swap_contract.code_hash.clone(),
-        config.market_swap_contract.address.clone(),
-    )?;
-
-    match res2 {
-        shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => {
-            first_swap_result = estimated_price;
-        }
-        _ => {
-            return Err(StdError::GenericErr {
-                msg: String::from("unexpected query response"),
-                backtrace: None,
-            });
-        }
-    }
-
-    // Mint shd by burning silk
-    let res = mint::QueryMsg::Mint {
-        offer_asset: config.silk_token_contract.address.clone(),
-        amount: first_swap_result,
-    }
-    .query(
-        &deps.querier,
-        config.mint_contract_shd.code_hash.clone(),
-        config.mint_contract_shd.address.clone(),
-    )?;
-
-    match res {
-        mint::QueryAnswer::Mint { amount, .. } => {
-            final_amount = amount;
-        }
-        _ => {
-            return Err(StdError::GenericErr {
-                msg: String::from("Unexpected query result"),
-                backtrace: None,
-            });
-        }
-    }
-
-    // Again if we end up with more shd then we started with, return true, otherwise, return false
-    if final_amount > amount {
-        return Ok(QueryAnswer::ArbPegProfitability {
-            is_profitable: true,
-            mint_first: false,
-            first_swap_result,
-            profit: final_amount.checked_sub(amount)?,
-        });
-    }
-
-    Ok(QueryAnswer::ArbPegProfitability {
-        is_profitable: false,
-        mint_first: false,
-        first_swap_result: Uint128::zero(),
-        profit: Uint128::zero(),
     })
 }
 
@@ -241,7 +102,6 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     index: Uint128,
 ) -> StdResult<QueryAnswer> {
-    let config = Config::load(&deps.storage)?;
     let mut cycles = Cycles::load(&deps.storage)?.0;
     let mut swap_amounts = vec![amount];
 
@@ -393,16 +253,6 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
         direction: return_directions,
         swap_amounts: return_swap_amounts,
         profit: return_profit,
-    })
-}
-
-pub fn get_minted<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<QueryAnswer> {
-    let minted = Minted::load(&deps.storage)?;
-    Ok(QueryAnswer::GetMinted {
-        shd: minted.0.clone(),
-        silk: minted.1.clone(),
     })
 }
 

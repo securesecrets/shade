@@ -20,9 +20,6 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub shade_admin: Contract,
-    pub mint_contract_shd: Contract,
-    pub mint_contract_silk: Contract,
-    pub market_swap_contract: Contract, // Get rid eventually
     pub shd_token_contract: Contract,
     pub silk_token_contract: Contract,
     pub sscrt_token_contract: Contract,
@@ -60,19 +57,8 @@ impl ItemStorage for Cycles {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Minted(pub Uint128, pub Uint128); //0: shd, 1: silk
-
-impl ItemStorage for Minted {
-    const ITEM: Item<'static, Minted> = Item::new("item_minted");
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct InitMsg {
     pub shade_admin: Contract,
-    pub mint_contract_shd: Contract,
-    pub mint_contract_silk: Contract,
-    pub market_swap_contract: Contract,
     pub shd_token_contract: Contract,
     pub silk_token_contract: Contract,
     pub sscrt_token_contract: Contract,
@@ -90,18 +76,11 @@ impl InitCallback for InitMsg {
 pub enum HandleMsg {
     UpdateConfig {
         shade_admin: Option<Contract>,
-        mint_contract_silk: Option<Contract>,
-        mint_contract_shd: Option<Contract>,
-        market_swap_contract: Option<Contract>,
         shd_token_contract: Option<Contract>,
         silk_token_contract: Option<Contract>,
         sscrt_token_contract: Option<Contract>,
         treasury: Option<Contract>,
         payback_rate: Option<Decimal>,
-        padding: Option<String>,
-    },
-    ArbPeg {
-        amount: Uint128,
         padding: Option<String>,
     },
     SetCycles {
@@ -121,11 +100,6 @@ pub enum HandleMsg {
         index: Uint128,
         padding: Option<String>,
     },
-    ResetMinted {
-        shd: Option<Uint128>,
-        silk: Option<Uint128>,
-        padding: Option<String>,
-    },
     Adapter(adapter::SubHandleMsg),
 }
 
@@ -137,12 +111,10 @@ impl HandleCallback for HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetConfig {},
-    IsArbPegProfitable { amount: Uint128 },
     Balance {},
     GetCycles {},
     IsCycleProfitable { amount: Uint128, index: Uint128 },
     IsAnyCycleProfitable { amount: Uint128 },
-    GetMinted {},
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -155,12 +127,6 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config {
         config: Config,
-    },
-    ArbPegProfitability {
-        is_profitable: bool,
-        mint_first: bool,
-        first_swap_result: Uint128,
-        profit: Uint128,
     },
     Balance {
         shd_bal: Uint128,
@@ -182,10 +148,6 @@ pub enum QueryAnswer {
         swap_amounts: Vec<Vec<Uint128>>,
         profit: Vec<Uint128>,
     },
-    GetMinted {
-        shd: Uint128,
-        silk: Uint128,
-    },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -196,12 +158,6 @@ pub enum HandleAnswer {
     },
     UpdateConfig {
         status: bool,
-    },
-    ExecuteArb {
-        status: bool,
-        amount: Uint128,
-        after_first_swap: Uint128,
-        final_amount: Uint128,
     },
     SetCycles {
         status: bool,
@@ -216,9 +172,6 @@ pub enum HandleAnswer {
         status: bool,
         swap_amounts: Vec<Uint128>,
         payback_amount: Uint128,
-    },
-    MintedReset {
-        status: bool,
     },
 }
 

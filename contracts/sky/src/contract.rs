@@ -14,7 +14,7 @@ use shade_protocol::{
     },
     contract_interfaces::{
         dao::adapter,
-        sky::{Config, Cycles, HandleMsg, InitMsg, Minted, QueryMsg, SelfAddr, ViewingKeys},
+        sky::{Config, Cycles, HandleMsg, InitMsg, QueryMsg, SelfAddr, ViewingKeys},
     },
     math_compat::Uint128,
     secret_toolkit::snip20::set_viewing_key_msg,
@@ -28,9 +28,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let state = Config {
         shade_admin: msg.shade_admin,
-        mint_contract_shd: msg.mint_contract_shd,
-        mint_contract_silk: msg.mint_contract_silk,
-        market_swap_contract: msg.market_swap_contract,
         shd_token_contract: msg.shd_token_contract.clone(),
         silk_token_contract: msg.silk_token_contract.clone(),
         sscrt_token_contract: msg.sscrt_token_contract.clone(),
@@ -41,7 +38,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     state.save(&mut deps.storage)?;
     SelfAddr(env.contract.address).save(&mut deps.storage)?;
     Cycles(vec![]).save(&mut deps.storage)?;
-    Minted(Uint128::zero(), Uint128::zero()).save(&mut deps.storage)?;
 
     let messages = vec![
         set_viewing_key_msg(
@@ -83,9 +79,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::UpdateConfig {
             shade_admin,
-            mint_contract_silk,
-            mint_contract_shd,
-            market_swap_contract,
             shd_token_contract,
             silk_token_contract,
             sscrt_token_contract,
@@ -96,23 +89,18 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             deps,
             env,
             shade_admin,
-            mint_contract_shd,
-            mint_contract_silk,
-            market_swap_contract,
             shd_token_contract,
             silk_token_contract,
             sscrt_token_contract,
             treasury,
             payback_rate,
         ),
-        HandleMsg::ArbPeg { amount, .. } => handle::try_execute(deps, env, amount),
         HandleMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),
         HandleMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, cycle),
         HandleMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, index),
         HandleMsg::ArbCycle { amount, index, .. } => {
             handle::try_arb_cycle(deps, env, amount, index)
         }
-        HandleMsg::ResetMinted { shd, silk, .. } => handle::try_minted_reset(deps, env, shd, silk),
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {
                 handle::try_adapter_unbond(deps, env, asset, Uint128::from(amount.u128()))
@@ -129,9 +117,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
-        QueryMsg::IsArbPegProfitable { amount } => {
-            to_binary(&query::conversion_mint_profitability(deps, amount)?)
-        }
         QueryMsg::Balance {} => to_binary(&query::get_balances(deps)?),
         QueryMsg::GetCycles {} => to_binary(&query::get_cycles(deps)?),
         QueryMsg::IsCycleProfitable { amount, index } => {
@@ -140,7 +125,6 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::IsAnyCycleProfitable { amount } => {
             to_binary(&query::any_cycles_profitable(deps, amount)?)
         }
-        QueryMsg::GetMinted {} => to_binary(&query::get_minted(deps)?),
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => {
                 to_binary(&query::adapter_balance(deps, asset)?)
