@@ -121,7 +121,7 @@ pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
     }
 
     for cycle in cycles_to_set.clone() {
-        cycle.validate_cycle();
+        cycle.validate_cycle()?;
     }
 
     let new_cycles = Cycles(cycles_to_set);
@@ -153,7 +153,7 @@ pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
     }
 
     for cycle in cycles_to_add.clone() {
-        cycle.validate_cycle();
+        cycle.validate_cycle()?;
     }
 
     let mut cycles = Cycles::load(&deps.storage)?;
@@ -188,7 +188,7 @@ pub fn try_update_cycle<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    cycle.validate_cycle();
+    cycle.validate_cycle()?;
     let mut cycles = Cycles::load(&deps.storage)?;
     cycles.0[index.u128() as usize] = cycle;
     cycles.save(&mut deps.storage)?;
