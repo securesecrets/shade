@@ -165,6 +165,7 @@ pub enum QueryAnswer {
     Balance {
         shd_bal: Uint128,
         silk_bal: Uint128, //should be zero or close to
+        sscrt_bal: Uint128,
     },
     GetCycles {
         cycles: Vec<Cycle>,
@@ -214,6 +215,7 @@ pub enum HandleAnswer {
     ExecuteArbCycle {
         status: bool,
         swap_amounts: Vec<Uint128>,
+        payback_amount: Uint128,
     },
     MintedReset {
         status: bool,
@@ -224,6 +226,7 @@ pub enum HandleAnswer {
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
     pub pair_contract: Option<Contract>,
+    pub mint_info: Option<MintInfo>,
     pub token0_contract: Contract,
     pub token1_contract: Contract,
     pub dex: Dex,
@@ -303,7 +306,7 @@ impl ArbPair {
                 }
             }
             Dex::Mint => {
-                let mint_contract = get_mint_contract(deps, offer.asset.clone())?;
+                let mint_contract = self.get_mint_contract(offer.asset.clone())?;
                 let res = mint::QueryMsg::Mint {
                     offer_asset: offer.asset.address,
                     amount: offer.amount,
@@ -322,9 +325,8 @@ impl ArbPair {
         Ok(swap_result)
     }
 
-    pub fn to_cosmos_msg<S: Storage, A: Api, Q: Querier>(
+    pub fn to_cosmos_msg(
         &self,
-        deps: &Extern<S, A, Q>,
         offer: Offer,
         expected_return: Uint128,
     ) -> Result<CosmosMsg, StdError> {
@@ -369,7 +371,7 @@ impl ArbPair {
                 offer.asset.address,
             ),
             Dex::Mint => {
-                let mint_contract = get_mint_contract(deps, offer.asset.clone())?;
+                let mint_contract = self.get_mint_contract(offer.asset.clone())?;
                 send_msg(
                     mint_contract.address.clone(),
                     cosmwasm_std::Uint128(offer.amount.u128()),
@@ -385,21 +387,17 @@ impl ArbPair {
             }
         }
     }
-}
 
-pub fn get_mint_contract<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    offer_contract: Contract,
-) -> Result<Contract, StdError> {
-    let config = Config::load(&deps.storage)?;
-    if offer_contract.clone() == config.shd_token_contract {
-        Ok(config.mint_contract_silk)
-    } else if offer_contract.clone() == config.silk_token_contract {
-        Ok(config.mint_contract_shd)
-    } else {
-        Err(StdError::generic_err(
-            "Must be sending either silk or shd to mint contracts",
-        ))
+    pub fn get_mint_contract(&self, offer_contract: Contract) -> Result<Contract, StdError> {
+        if offer_contract.clone() == self.mint_info.clone().unwrap().shd_token_contract {
+            Ok(self.mint_info.clone().unwrap().mint_contract_silk)
+        } else if offer_contract == self.mint_info.clone().unwrap().silk_token_contract {
+            Ok(self.mint_info.clone().unwrap().mint_contract_shd)
+        } else {
+            Err(StdError::generic_err(
+                "Must be sending either silk or shd to mint contracts",
+            ))
+        }
     }
 }
 
@@ -415,4 +413,13 @@ pub struct Cycle {
 pub struct Offer {
     pub asset: Contract,
     pub amount: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct MintInfo {
+    pub mint_contract_shd: Contract,
+    pub mint_contract_silk: Contract,
+    pub shd_token_contract: Contract,
+    pub silk_token_contract: Contract,
 }

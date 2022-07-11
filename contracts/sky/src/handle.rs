@@ -392,7 +392,6 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                 )?);*/
                 if direction.pair_addrs.len() == i {
                     messages.push(arb_pair.to_cosmos_msg(
-                        &deps,
                         Offer {
                             asset: cur_asset.clone(),
                             amount: swap_amounts[i],
@@ -401,7 +400,6 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                     )?);
                 } else {
                     messages.push(arb_pair.to_cosmos_msg(
-                        &deps,
                         Offer {
                             asset: cur_asset.clone(),
                             amount: swap_amounts[i],
@@ -444,6 +442,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
         data: Some(to_binary(&HandleAnswer::ExecuteArbCycle {
             status: true,
             swap_amounts: return_swap_amounts,
+            payback_amount,
         })?),
     })
 }
@@ -494,10 +493,11 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let config = Config::load(&deps.storage)?;
     if !(env.message.sender == config.treasury.address) {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::unauthorized());
     }
-    if !(config.shd_token_contract.address == asset)
-        && !(config.silk_token_contract.address == asset)
+    if !(config.shd_token_contract.address == asset
+        || config.silk_token_contract.address == asset
+        || config.sscrt_token_contract.address == asset)
     {
         return Err(StdError::GenericErr {
             msg: String::from("Unrecognized asset"),
@@ -507,8 +507,10 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     let contract;
     if config.shd_token_contract.address == asset {
         contract = config.shd_token_contract;
-    } else {
+    } else if config.silk_token_contract.address == asset {
         contract = config.silk_token_contract;
+    } else {
+        contract = config.sscrt_token_contract;
     }
     let messages = vec![send_msg(
         config.treasury.address,
