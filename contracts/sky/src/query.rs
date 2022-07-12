@@ -24,6 +24,7 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
     let self_addr = SelfAddr::load(&deps.storage)?.0;
     let config = Config::load(&deps.storage)?;
 
+    // Query shd balance
     let mut res = snip20::QueryMsg::Balance {
         address: self_addr.clone(),
         key: viewing_key.clone(),
@@ -43,6 +44,7 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         _ => {}
     }
 
+    // Query silk balance
     res = snip20::QueryMsg::Balance {
         address: self_addr.clone(),
         key: viewing_key.clone(),
@@ -62,6 +64,7 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         _ => {}
     }
 
+    // Query sscrt balance
     res = snip20::QueryMsg::Balance {
         address: self_addr.clone(),
         key: viewing_key.clone(),
@@ -105,7 +108,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     let mut cycles = Cycles::load(&deps.storage)?.0;
     let mut swap_amounts = vec![amount];
 
-    if index.u128() > cycles.len().try_into().unwrap() {
+    if (index.u128() as usize) >= cycles.len() {
         return Err(StdError::GenericErr {
             msg: "Index passed is out of bounds".to_string(),
             backtrace: None,
@@ -165,16 +168,19 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         amount,
     };
 
+    // this is a fancy way of iterating through a vec in reverse
     for arb_pair in cycles[index.u128() as usize]
         .pair_addrs
         .clone()
         .iter()
         .rev()
     {
+        // get the estimated return from the simulate swap function
         let estimated_return = arb_pair
             .clone()
             .simulate_swap(&deps, current_offer.clone())?;
         swap_amounts.push(estimated_return.clone());
+        // set the current offer to the other asset we are swapping into
         if current_offer.asset.code_hash.clone() == arb_pair.token0_contract.code_hash.clone() {
             current_offer = Offer {
                 asset: arb_pair.token1_contract.clone(),
@@ -188,14 +194,9 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    if swap_amounts.len() > cycles[index.u128() as usize].pair_addrs.clone().len() {
-        return Err(StdError::GenericErr {
-            msg: String::from("More swap amounts than arb pairs"),
-            backtrace: None,
-        });
-    }
-
+    // check to see if this direction was profitable
     if current_offer.amount > amount {
+        // do an inplace reversal of the pair_addrs so that we know which way the opportunity goes
         cycles[index.u128() as usize].pair_addrs.reverse();
         return Ok(QueryAnswer::IsCycleProfitable {
             is_profitable: true,
@@ -205,6 +206,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         });
     }
 
+    // If both possible directions are unprofitable, return false
     Ok(QueryAnswer::IsCycleProfitable {
         is_profitable: false,
         direction: cycles[0].clone(),
@@ -223,7 +225,9 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
     let mut return_swap_amounts = vec![];
     let mut return_profit = vec![];
 
+    // loop through the cycles with an index
     for index in 0..cycles.len() {
+        // for each cycle, check its profitability
         let res = cycle_profitability(deps, amount, Uint128::from(index as u128)).unwrap();
         match res {
             QueryAnswer::IsCycleProfitable {
@@ -233,6 +237,7 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
                 profit,
             } => {
                 if is_profitable {
+                    // push the results to a vec
                     return_is_profitable.push(is_profitable);
                     return_directions.push(direction);
                     return_swap_amounts.push(swap_amounts);
@@ -261,6 +266,7 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
+    // if the treasury is asking about an asset we don't know about, error out
     if !(config.shd_token_contract.address == asset
         || config.silk_token_contract.address == asset
         || config.sscrt_token_contract.address == asset)
@@ -270,6 +276,7 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
             backtrace: None,
         });
     }
+    // get the balances and save the one the treasury is asking for
     let res = get_balances(deps)?;
     let mut amount = Uint128::zero();
     match res {
@@ -302,6 +309,7 @@ pub fn adapter_claimable<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+// Same as adapter_balance
 pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
@@ -348,6 +356,7 @@ pub fn adapter_unbonding<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+// Same as adapter_balance
 pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,

@@ -105,11 +105,47 @@ pub enum HandleMsg {
         index: Uint128,
         padding: Option<String>,
     },
+    ArbAllCycles {
+        amount: Uint128,
+        padding: Option<String>,
+    },
     Adapter(adapter::SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
     const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HandleAnswer {
+    Init {
+        status: bool,
+    },
+    UpdateConfig {
+        status: bool,
+    },
+    SetCycles {
+        status: bool,
+    },
+    AppendCycles {
+        status: bool,
+    },
+    UpdateCycle {
+        status: bool,
+    },
+    RemoveCycle {
+        status: bool,
+    },
+    ExecuteArbCycle {
+        status: bool,
+        swap_amounts: Vec<Uint128>,
+        payback_amount: Uint128,
+    },
+    ArbAllCycles {
+        status: bool,
+        payback_amount: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -155,34 +191,6 @@ pub enum QueryAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
-    Init {
-        status: bool,
-    },
-    UpdateConfig {
-        status: bool,
-    },
-    SetCycles {
-        status: bool,
-    },
-    AppendCycles {
-        status: bool,
-    },
-    UpdateCycle {
-        status: bool,
-    },
-    RemoveCycle {
-        status: bool,
-    },
-    ExecuteArbCycle {
-        status: bool,
-        swap_amounts: Vec<Uint128>,
-        payback_amount: Uint128,
-    },
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
@@ -194,6 +202,7 @@ pub struct ArbPair {
 }
 
 impl ArbPair {
+    // Returns the calculated swap result when passed an offer with respect to the dex enum option
     pub fn simulate_swap<S: Storage, A: Api, Q: Querier>(
         self,
         deps: &Extern<S, A, Q>,
@@ -286,6 +295,8 @@ impl ArbPair {
         Ok(swap_result)
     }
 
+    // Returns the snip20 send_msg that will execute a swap for each of the possible Dex enum
+    // options
     pub fn to_cosmos_msg(
         &self,
         offer: Offer,
@@ -349,6 +360,7 @@ impl ArbPair {
         }
     }
 
+    // Returns either the silk mint or the shade mint contract depending on what the input asset is
     pub fn get_mint_contract(&self, offer_contract: Contract) -> Result<Contract, StdError> {
         if offer_contract.clone() == self.mint_info.clone().unwrap().shd_token_contract {
             Ok(self.mint_info.clone().unwrap().mint_contract_silk)
@@ -360,6 +372,23 @@ impl ArbPair {
             ))
         }
     }
+
+    // Gatekeeper that validates the ArbPair for entry into contract storage
+    pub fn validate_pair(&self) -> Result<bool, StdError> {
+        match self.dex {
+            Dex::Mint => {
+                self.clone()
+                    .mint_info
+                    .expect("Mint arb pairs must include mint info");
+            }
+            _ => {
+                self.clone()
+                    .pair_contract
+                    .expect("Dex pairs must include pair contract");
+            }
+        }
+        Ok(true)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -370,6 +399,7 @@ pub struct Cycle {
 }
 
 impl Cycle {
+    // Gatekeeper that validates if the contract should accept the cycle into storage
     pub fn validate_cycle(&self) -> Result<bool, StdError> {
         // check if start address is in both the first arb pair and the last arb pair
         let start_addr_in_first_pair = self.start_addr == self.pair_addrs[0].token0_contract
@@ -384,6 +414,9 @@ impl Cycle {
         }
         // check to see if each arb pair has the necessary information and if there is an actual
         // path
+
+        // initialize this for later use
+        let mut hash_vec = vec![];
         let mut cur_asset = self.start_addr.clone();
         for arb_pair in self.pair_addrs.clone() {
             match arb_pair.dex {
@@ -395,7 +428,9 @@ impl Cycle {
                 _ => {
                     arb_pair
                         .pair_contract
+                        .clone()
                         .expect("Dex pairs must include pair contract");
+                    hash_vec.push(arb_pair.pair_contract.unwrap().code_hash.clone());
                 }
             }
             if arb_pair.token0_contract == cur_asset {
@@ -405,6 +440,16 @@ impl Cycle {
             } else {
                 return Err(StdError::generic_err("cycle not complete"));
             }
+        }
+        let initial_len = hash_vec.clone().len();
+        // Sorting and dedup ing will remove any dublicates and tell us if there's 2 of the same
+        // pair contract included in the cycle
+        hash_vec.sort();
+        hash_vec.dedup();
+        if hash_vec.len() < initial_len {
+            return Err(StdError::generic_err(
+                "cycles should include one copy of each pair",
+            ));
         }
         Ok(true)
     }

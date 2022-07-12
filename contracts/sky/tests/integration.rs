@@ -17,7 +17,7 @@
 //!      });
 //! 4. Anywhere you see query(&deps, ...) you must replace it with query(&mut deps, ...)
 
-use contract_harness::harness::snip20::Snip20;
+/*use contract_harness::harness::snip20::Snip20;
 use cosmwasm_math_compat as compat;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{
@@ -315,4 +315,4 @@ pub struct InitMsg {
     pub callback: Callback<HumanAddr>,
     pub prng_seed: Binary,
     pub entropy: Binary,
-}
+}*/

@@ -37,6 +37,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     state.save(&mut deps.storage)?;
     SelfAddr(env.contract.address).save(&mut deps.storage)?;
+    // Cycles have to be added in a separate msg
     Cycles(vec![]).save(&mut deps.storage)?;
 
     let messages = vec![
@@ -104,6 +105,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::ArbCycle { amount, index, .. } => {
             handle::try_arb_cycle(deps, env, amount, index)
         }
+        HandleMsg::ArbAllCycles { amount, .. } => handle::try_arb_all_cycles(deps, env, amount),
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {
                 handle::try_adapter_unbond(deps, env, asset, Uint128::from(amount.u128()))

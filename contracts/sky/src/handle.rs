@@ -1,4 +1,4 @@
-use crate::query::cycle_profitability;
+use crate::query::{any_cycles_profitable, cycle_profitability};
 use shade_admin::admin::{self, ValidateAdminPermissionResponse};
 use shade_protocol::{
     c_std::{
@@ -21,7 +21,7 @@ use shade_protocol::{
     math_compat::{Decimal, Uint128},
     secret_toolkit::{
         snip20::{send_msg, set_viewing_key_msg},
-        utils::Query,
+        utils::{HandleCallback, Query},
     },
     utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
@@ -120,6 +120,7 @@ pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
+    // validate cycles
     for cycle in cycles_to_set.clone() {
         cycle.validate_cycle()?;
     }
@@ -237,12 +238,15 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let mut messages = vec![];
     let mut return_swap_amounts = vec![];
-    // cur_asset will keep track of the asset that we have swapped into
+    let mut payback_amount = Uint128::zero();
+    // cur_asset will keep track of the asset that we currently "have"
     let mut cur_asset = Contract {
         address: HumanAddr::default(),
         code_hash: "".to_string(),
     };
-    let mut payback_amount = Uint128::zero();
+
+    // don't need to check for an index out of bounds since that check will happen in
+    // cycle_profitability
     let res = cycle_profitability(deps, amount, index)?; // get profitability data from query
     match res {
         sky::QueryAnswer::IsCycleProfitable {
@@ -266,7 +270,9 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             }
             //loop through the pairs in the cycle
             for (i, arb_pair) in direction.pair_addrs.clone().iter().enumerate() {
-                if direction.pair_addrs.len() == i {
+                // if it's the last pair, set our minimum expected amount, otherwise, this field
+                // should be zero
+                if direction.pair_addrs.len() - 1 == i {
                     messages.push(arb_pair.to_cosmos_msg(
                         Offer {
                             asset: cur_asset.clone(),
@@ -295,29 +301,78 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             if payback_percent > Decimal::zero() {
                 payback_amount = profit * payback_percent;
             }
+            // add the payback msg
+            messages.push(send_msg(
+                env.message.sender,
+                c_std::Uint128(payback_amount.u128()),
+                None,
+                None,
+                None,
+                1,
+                cur_asset.code_hash.clone(),
+                cur_asset.address.clone(),
+            )?);
         }
         _ => {}
     }
 
     // the final cur_asset should be the same as the start_addr
     assert!(cur_asset.clone() == Cycles::load(&deps.storage)?.0[index.u128() as usize].start_addr);
-    messages.push(send_msg(
-        env.message.sender,
-        c_std::Uint128(payback_amount.u128()),
-        None,
-        None,
-        None,
-        1,
-        cur_asset.code_hash.clone(),
-        cur_asset.address.clone(),
-    )?);
-
     Ok(HandleResponse {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ExecuteArbCycle {
             status: true,
             swap_amounts: return_swap_amounts,
+            payback_amount,
+        })?),
+    })
+}
+
+pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    amount: Uint128,
+) -> StdResult<HandleResponse> {
+    let mut total_profit = Uint128::zero();
+    let mut messages = vec![];
+    let res = any_cycles_profitable(deps, amount)?; // get profitability data from query
+    match res {
+        sky::QueryAnswer::IsAnyCycleProfitable {
+            is_profitable,
+            profit,
+            ..
+        } => {
+            // loop through the data returned for each cycle
+            for (i, profit_bool) in is_profitable.iter().enumerate() {
+                // if a cycle is profitable call the try_arb_cycle fn and keep track of the
+                // total_profit
+                if profit_bool.clone() {
+                    messages.push(
+                        sky::HandleMsg::ArbCycle {
+                            amount,
+                            index: Uint128::from(i as u16),
+                            padding: None,
+                        }
+                        .to_cosmos_msg(
+                            env.contract_code_hash.clone(),
+                            env.contract.address.clone(),
+                            None,
+                        )?,
+                    );
+                    total_profit = total_profit.clone().checked_add(profit[i])?;
+                }
+            }
+        }
+        _ => {}
+    }
+    // calculate payback_amount
+    let payback_amount = total_profit * Config::load(&deps.storage)?.payback_rate;
+    Ok(HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::ArbAllCycles {
+            status: true,
             payback_amount,
         })?),
     })
@@ -330,9 +385,11 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
     let config = Config::load(&deps.storage)?;
+    // Error out if anyone other than the treasury is asking for money
     if !(env.message.sender == config.treasury.address) {
         return Err(StdError::unauthorized());
     }
+    // Error out if the treasury is asking for an asset sky doesn't account for
     if !(config.shd_token_contract.address == asset
         || config.silk_token_contract.address == asset
         || config.sscrt_token_contract.address == asset)
@@ -342,6 +399,7 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
             backtrace: None,
         });
     }
+    // initialize this var to whichever token the treasury is asking for
     let contract;
     if config.shd_token_contract.address == asset {
         contract = config.shd_token_contract;
@@ -350,6 +408,7 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     } else {
         contract = config.sscrt_token_contract;
     }
+    // send the msg
     let messages = vec![send_msg(
         config.treasury.address,
         c_std::Uint128::from(amount.u128()),
@@ -371,6 +430,7 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+// Unessesary for sky
 pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
@@ -386,6 +446,7 @@ pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+// Unessesary for sky
 pub fn try_adapter_update<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
