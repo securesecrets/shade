@@ -14,6 +14,7 @@ use shade_protocol::{
             },
             scrt_staking,
             adapter,
+            manager,
         },
         snip20,
     },
@@ -289,8 +290,8 @@ fn single_asset_portion_manager_integration(
 
     // Update manager
     ensemble.execute(
-        &adapter::HandleMsg::Adapter(
-            adapter::SubHandleMsg::Update {
+        &manager::HandleMsg::Manager(
+            manager::SubHandleMsg::Update {
                 asset: token.address.clone(),
             }
         ),
@@ -331,9 +332,10 @@ fn single_asset_portion_manager_integration(
     // Manager reserves
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Reserves {
                 asset: token.address.clone(),
+                holder: treasury.address.clone(),
             }
         )
     ).unwrap() {
@@ -402,9 +404,9 @@ fn single_asset_portion_manager_integration(
         ),
     ).unwrap();
 
-    ensemble.fast_forward_delegation_waits();
+    //ensemble.fast_forward_delegation_waits();
 
-    // Claim manager
+    // Claim Treasury
     ensemble.execute(
         &adapter::HandleMsg::Adapter(
             adapter::SubHandleMsg::Claim {
@@ -413,9 +415,24 @@ fn single_asset_portion_manager_integration(
         ),
         MockEnv::new(
             "admin", 
-            manager.clone(),
+            treasury.clone(),
         ),
     ).unwrap();
+
+    // Treasury balance check
+    match ensemble.query(
+        treasury.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, deposit, "Treasury Balance Post-Unbond");
+        },
+        _ => assert!(false),
+    };
 
     // Treasury reserves check
     match ensemble.query(
@@ -429,8 +446,57 @@ fn single_asset_portion_manager_integration(
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, deposit, "Treasury Reserves Post-Unbond");
         },
+        _ => panic!("Bad Reserves Query Response"),
+    };
+
+    // Scrt Staking reserves
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Reserves {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, Uint128::zero(), "SCRT Staking Reserves Post Unbond");
+        },
         _ => assert!(false),
     };
+
+    // Scrt Staking balance
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, Uint128::zero(), "SCRT Staking Balance Post Unbond");
+        },
+        _ => assert!(false),
+    };
+    // Manager balance check
+    match ensemble.query(
+        manager.address.clone(),
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+                holder: treasury.address.clone(),
+            }
+        )
+    ).unwrap() {
+        manager::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Manager Balance Post-Unbond");
+        },
+        _ => assert!(false),
+    };
+
+
+
+
 
     // Treasury balance check
     match ensemble.query(
@@ -450,13 +516,14 @@ fn single_asset_portion_manager_integration(
     // Manager reserves check
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Reserves {
                 asset: token.address.clone(),
+                holder: treasury.address.clone(),
             }
         )
     ).unwrap() {
-        adapter::QueryAnswer::Reserves { amount } => {
+        manager::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Reserves Post-Unbond");
         },
         _ => assert!(false),
@@ -465,13 +532,14 @@ fn single_asset_portion_manager_integration(
     // Manager balance check
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Balance {
                 asset: token.address.clone(),
+                holder: treasury.address.clone(),
             }
         )
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Balance Post-Unbond");
         },
         _ => assert!(false),
@@ -550,6 +618,7 @@ single_asset_portion_manager_tests! {
         Uint128(0), // manager 0
         Uint128(90), // scrt_staking 90
     ),
+    /*
     single_asset_portion_manager_1: (
         Uint128(100), // deposit 
         Uint128(9 * 10u128.pow(17)), // manager allowance 90%
@@ -560,4 +629,5 @@ single_asset_portion_manager_tests! {
         Uint128(0), // manager 0
         Uint128(45), // scrt_staking 90
     ),
+    */
 }

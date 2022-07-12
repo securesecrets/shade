@@ -58,7 +58,7 @@ use crate::{
         config_w,
         viewing_key_r,
         holding_r, holding_w,
-        holdings_r, holdings_w,
+        holders_r, holders_w,
         self_address_r,
     },
 };
@@ -83,14 +83,14 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
     let asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
 
-    // Is Valid Holding
-    let holding = match holdings_r(&deps.storage).load()?.contains(&from) {
+    // Default to treasury if not sent by a holder
+    let holder = match holders_r(&deps.storage).load()?.contains(&from) {
         true => from,
-        false=> config.treasury,
+        false => config.treasury,
     };
 
     // Update holdings
-    holding_w(&mut deps.storage).update(holding.as_str().as_bytes(), |h| {
+    holding_w(&mut deps.storage).update(holder.as_str().as_bytes(), |h| {
         let mut holding = h.unwrap();
         if let Some(i) = holding.balances.iter().position(|b| b.token == asset.contract.address) {
             holding.balances[i].amount += amount;
@@ -269,6 +269,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     let mut claimer = env.message.sender.clone();
 
     if claimer == config.admin {
+        //assert!(false, "CLAIMER TREASURY");
         claimer = config.treasury;
     }
 
@@ -277,14 +278,14 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     if !holders.contains(&claimer) {
         return Err(StdError::unauthorized());
     }
-    let holder = holding_r(&deps.storage).load(&claimer.as_str().as_bytes())?;
+    let mut holding = holding_r(&deps.storage).load(&claimer.as_str().as_bytes())?;
 
-    let unbonding = match holder.unbondings.iter().find(|u| u.token == asset) {
+    let unbonding = match holding.unbondings.iter().find(|u| u.token == asset) {
         Some(u) => u,
         None => {
             return Err(StdError::generic_err(
-                    format!("No unbondings for token: {}, holder: {}", 
-                             asset, claimer)
+                    format!("{} has no completed unbondings for {}",
+                             claimer, asset)
             ));
         }
     };
@@ -303,6 +304,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
     // Claim if more funds are needed
     if unbonding.amount > reserves {
+        //assert!(false, "reduce claim_amount {} - {}", unbonding.amount, reserves);
         let mut claim_amount = (unbonding.amount - reserves)?;
 
         for alloc in allocations_r(&deps.storage).load(asset.to_string().as_bytes())? {
@@ -314,17 +316,49 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
             if claim > Uint128::zero() {
                 messages.push(adapter::claim_msg(asset.clone(), alloc.contract)?);
-                claim_amount = (claim_amount - claim)?;
+                assert!(false, "claim_amount - claim: {} - {}", claim_amount, claim);
+                if claim > claim_amount {
+                    claim_amount = Uint128::zero();
+                }
+                else {
+                    claim_amount = (claim_amount - claim)?;
+                }
                 total_claimed += claim;
             }
         }
+        // Adjust unbonding amounts
+        match holding.unbondings.iter_mut().find(|u| u.token == asset) {
+            Some(mut u) => {
+                //assert!(false, "reduce unbonding {} - {}", u.amount, claim_amount);
+                u.amount = (u.amount - claim_amount)?
+            }
+            None => {
+                return Err(StdError::generic_err(
+                        format!("{} has no completed unbondings for {}",
+                                 claimer, asset)
+                ));
+            }
+        };
+    }
+
+    holding_w(&mut deps.storage).save(&claimer.as_str().as_bytes(), &holding)?;
+
+    panic!("Manager sends {} -> treasury", reserves + total_claimed);
+
+    let mut send_amount = Uint128::zero();
+
+    if unbonding.amount > reserves + total_claimed {
+        send_amount = reserves + total_claimed;
+    }
+    else {
+        send_amount = unbonding.amount;
     }
 
     // Send claimed funds
     messages.push(
         send_msg(
             claimer.clone(),
-            reserves + total_claimed,
+            send_amount,
             None,
             None,
             None,
@@ -591,29 +625,34 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     // Adjust holder balance
     if holders.contains(&unbonder) {
-        let mut holder = holding_r(&deps.storage).load(unbonder.as_str().as_bytes())?;
+        let mut holding = holding_r(&deps.storage).load(unbonder.as_str().as_bytes())?;
 
-        if holder.status != Status::Active {
+        if holding.status != Status::Active {
             return Err(StdError::generic_err("Inactive Holding"));
         }
 
-        if let Some(b) = holder.balances.iter().position(|h| h.token == asset) {
+        if let Some(b) = holding.balances.iter().position(|h| h.token == asset) {
 
             // Check balance exceeds unbond amount
-            if holder.balances[b].amount < amount {
+            if holding.balances[b].amount < amount {
                 return Err(StdError::generic_err("Not enough funds to unbond"));
             }
-            // Reduce balance
+            // Reduce balance TODO: Should be done in claim unless funds are sent
             else {
-                holder.balances[b].amount = (holder.balances[b].amount - amount)?;
+                /*
+                assert!(false, "Reduce Balance {} by {}", 
+                        holding.balances[b].amount,
+                        amount);
+                */
+                //holding.balances[b].amount = (holding.balances[b].amount - amount)?;
             }
 
             // Add unbonding
-            if let Some(u) = holder.unbondings.iter().position(|h| h.token == asset) {
-                holder.unbondings[u].amount += amount;
+            if let Some(u) = holding.unbondings.iter().position(|h| h.token == asset) {
+                holding.unbondings[u].amount += amount;
             }
             else {
-                holder.unbondings.push(
+                holding.unbondings.push(
                     Balance {
                         token: asset.clone(),
                         amount,
@@ -622,10 +661,12 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             }
         }
         else {
-            return Err(StdError::generic_err("Cannot unbond, holder has no balance"));
+            return Err(StdError::generic_err(
+                    format!("Cannot unbond, holder has no holdings of {}", asset)
+            ));
         }
 
-        holding_w(&mut deps.storage).save(&unbonder.as_str().as_bytes(), &holder)?;
+        holding_w(&mut deps.storage).save(&unbonder.as_str().as_bytes(), &holding)?;
     }
     else {
         return Err(StdError::unauthorized());
@@ -848,7 +889,7 @@ pub fn add_holder<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddHolding {
+        data: Some(to_binary(&HandleAnswer::AddHolder {
             status: ResponseStatus::Success,
         })?),
     })
@@ -875,16 +916,17 @@ pub fn remove_holder<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveHolding {
+        data: Some(to_binary(&HandleAnswer::RemoveHolder {
             status: ResponseStatus::Success,
         })?),
     })
 }
 
+/*
 pub fn distribute_gain(
     gain: Uint128,
     token: HumanAddr,
-    holders: mut HashMap<HumanAddr, Holding>, 
+    holders: &mut HashMap<HumanAddr, Holding>, 
 ) -> StdResult<HashMap<HumanAddr, Holding>> {
     let ratios = holding_ratios(&mut holders);
 
@@ -907,31 +949,34 @@ pub fn distribute_loss(
 
     Ok(holders)
 }
+*/
 
 /* Builds a map of { HumanAddr: <asset_portion * 10^18> }
  */
-pub fn holding_ratios(
-    holdings: mut Vec<Holding>, 
+pub fn holding_shares(
+    holdings: HashMap<HumanAddr, Holding>, 
+    asset: HumanAddr,
 ) -> HashMap<HumanAddr, Uint128> {
 
-    let ratios = HashMap<HumanAddr, Uint128>::new();
+    let mut ratios: HashMap<HumanAddr, Uint128> = HashMap::new();
     let denominator = 10u128.pow(18);
 
-    let sum = holdings
+    let total = holdings
         .iter()
         .map(|(addr, holding)| {
-            match holding.balances.iter().find(|u| u.token == asset) {
-                Some(b) => b.u128(),
+            match holding.balances.iter().find(|b| b.token == asset) {
+                Some(b) => b.amount.u128(),
                 None => 0u128,
             }
-        }).sum();
+        }).sum::<u128>();
 
-    for (addr, holding) in holding {
-        let balance = match holding.balances.iter().find(|u| u.token == asset) {
-            Some(b) => b,
+    for (addr, holding) in holdings {
+        let balance = match holding.balances.iter().find(|b| b.token == asset) {
+            Some(b) => b.amount,
             None => Uint128::zero(),
-        }
-        ratios.insert(&addr, balance.multiply_ratio(10u128.pow(18), total));
+        };
+
+        ratios.insert(addr, balance.multiply_ratio(10u128.pow(18), total));
     }
 
     ratios

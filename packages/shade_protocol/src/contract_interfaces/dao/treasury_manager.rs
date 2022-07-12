@@ -1,5 +1,5 @@
 use crate::{
-    contract_interfaces::dao::adapter,
+    contract_interfaces::dao::manager,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
@@ -30,7 +30,6 @@ pub enum Status {
     Transferred,
 }
 
-//TODO rename to Holding
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Holding {
@@ -113,7 +112,7 @@ pub enum HandleMsg {
     RemoveHolder {
         holder: HumanAddr,
     },
-    Adapter(adapter::SubHandleMsg),
+    Manager(manager::SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -145,7 +144,7 @@ pub enum HandleAnswer {
     RemoveHolder {
         status: ResponseStatus,
     },
-    Adapter(adapter::HandleAnswer),
+    Manager(manager::HandleAnswer),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -156,12 +155,14 @@ pub enum QueryMsg {
     Allocations { asset: HumanAddr },
     PendingAllowance { asset: HumanAddr },
     Holders { },
-    Holder { holder: HumanAddr },
+    Holding { holder: HumanAddr },
+    /*
     Balance { asset: HumanAddr, holder: HumanAddr },
     Unbonding { asset: HumanAddr, holder: HumanAddr },
     Unbondable { asset: HumanAddr, holder: HumanAddr },
     Claimable { asset: HumanAddr, holder: HumanAddr },
-    Adapter(adapter::SubQueryMsg),
+    */
+    Manager(manager::SubQueryMsg),
 }
 
 impl Query for QueryMsg {
@@ -176,6 +177,6 @@ pub enum QueryAnswer {
     Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
     Holders { holders: Vec<HumanAddr> },
-    Holder { holder: Holder },
-    Adapter(adapter::QueryAnswer),
+    Holding { holding: Holding},
+    Manager(manager::QueryAnswer),
 }

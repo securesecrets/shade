@@ -368,6 +368,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         let rewards = query::rewards(&deps)?;
 
         if !rewards.is_zero() {
+            assert!(false, "withdraw rewards");
             messages.append(&mut withdraw_rewards(deps)?);
         }
 
@@ -385,6 +386,8 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
             config.sscrt,
             None,
         )?);
+
+        assert!(false, "u - claim_amount: {} - {}", unbond_amount, claim_amount);
         unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
     }
 

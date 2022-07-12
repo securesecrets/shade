@@ -9,6 +9,7 @@ use shade_protocol::{
         dao::{
             treasury_manager,
             adapter,
+            manager,
         },
     },
     utils::{
@@ -147,12 +148,14 @@ fn single_asset_holder_no_adapters(
     // manager reported holder balance
     match ensemble.query(
         manager.address.clone(),
-        &treasury_manager::QueryMsg::Balance {
-            asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
-        }
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+                holder: HumanAddr("holder".into()),
+            }
+        )
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond Manager Holder Balance");
         },
         _ => assert!(false),
@@ -161,12 +164,12 @@ fn single_asset_holder_no_adapters(
     // manager reported treasury balance
     match ensemble.query(
         manager.address.clone(),
-        &treasury_manager::QueryMsg::Balance {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
             asset: token.address.clone(),
             holder: HumanAddr("treasury".into()),
-        }
+        })
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "Pre-unbond Manager Treasury Balance");
         },
         _ => assert!(false),
@@ -175,11 +178,12 @@ fn single_asset_holder_no_adapters(
     // Manager reported total asset balance
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
             asset: token.address.clone(),
+            holder: HumanAddr("holder".into()),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond Manager Total Balance");
         }
         _ => assert!(false),
@@ -204,11 +208,12 @@ fn single_asset_holder_no_adapters(
     // Unbondable
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
             asset: token.address.clone(),
+            holder: HumanAddr("holder".into()),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Unbondable { amount } => {
+        manager::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond unbondable");
         }
         _ => assert!(false),
@@ -217,11 +222,12 @@ fn single_asset_holder_no_adapters(
     // Reserves
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
             asset: token.address.clone(),
+            holder: HumanAddr("holder".into()),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Reserves { amount } => {
+        manager::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond reserves");
         }
         _ => assert!(false),
@@ -231,7 +237,7 @@ fn single_asset_holder_no_adapters(
 
     // unbond from manager
     ensemble.execute(
-        &adapter::HandleMsg::Adapter(adapter::SubHandleMsg::Unbond {
+        &manager::HandleMsg::Manager(manager::SubHandleMsg::Unbond {
             asset: token.address.clone(),
             amount: unbond_amount,
         }),
@@ -244,23 +250,26 @@ fn single_asset_holder_no_adapters(
     // Unbondable
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
             asset: token.address.clone(),
+            holder: HumanAddr("holder".into()),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Unbondable { amount } => {
+        manager::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond total unbondable");
         }
         _ => assert!(false),
     };
     match ensemble.query(
         manager.address.clone(),
-        &treasury_manager::QueryMsg::Unbondable {
-            asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
-        }
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Unbondable {
+                asset: token.address.clone(),
+                holder: HumanAddr("holder".into()),
+            }
+        )
     ).unwrap() {
-        adapter::QueryAnswer::Unbondable { amount } => {
+        manager::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond holder unbondable");
         }
         _ => assert!(false),
@@ -269,23 +278,28 @@ fn single_asset_holder_no_adapters(
     // Unbonding
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
-            asset: token.address.clone(),
-        })
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Unbonding {
+                asset: token.address.clone(),
+                holder: HumanAddr("holder".into()),
+            }
+        )
     ).unwrap() {
-        adapter::QueryAnswer::Unbonding { amount } => {
+        manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond total unbonding");
         }
         _ => assert!(false),
     };
     match ensemble.query(
         manager.address.clone(),
-        &treasury_manager::QueryMsg::Unbonding {
-            asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
-        }
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Unbonding {
+                asset: token.address.clone(),
+                holder: HumanAddr("holder".into()),
+            }
+        )
     ).unwrap() {
-        adapter::QueryAnswer::Unbonding { amount } => {
+        manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond Holder Unbonding");
         }
         _ => assert!(false),
@@ -294,24 +308,28 @@ fn single_asset_holder_no_adapters(
     // Claimable (zero as its immediately claimed)
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
-        })
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Claimable {
+                asset: token.address.clone(),
+                holder: HumanAddr("holder".into()),
+            }
+        )
     ).unwrap() {
-        adapter::QueryAnswer::Claimable { amount } => {
+        manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond total claimable");
         }
         _ => assert!(false),
     };
     match ensemble.query(
         manager.address.clone(),
-        //TODO should be manager query not adapter
-        &treasury_manager::QueryMsg::Claimable {
-            asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
-        }
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Claimable {
+                asset: token.address.clone(),
+                holder: HumanAddr("holder".into()),
+            }
+        )
     ).unwrap() {
-        adapter::QueryAnswer::Claimable { amount } => {
+        manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond holder claimable"); 
         }
         _ => assert!(false),
@@ -320,11 +338,14 @@ fn single_asset_holder_no_adapters(
     // Manager reflects unbonded
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-        }),
+        &manager::QueryMsg::Manager(
+            manager::SubQueryMsg::Balance {
+                asset: token.address.clone(),
+                holder: HumanAddr("holder".into()),
+            }
+        ),
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount.u128(), deposit.u128() - unbond_amount.u128());
         }
         _ => {
@@ -487,7 +508,7 @@ fn single_asset_holder_1_adapter(
             holder: HumanAddr("holder".into()),
         }
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond Manager Holder Balance");
         },
         _ => assert!(false),
@@ -501,7 +522,7 @@ fn single_asset_holder_1_adapter(
             holder: HumanAddr("treasury".into()),
         }
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "Pre-unbond Manager Treasury Balance");
         },
         _ => assert!(false),
@@ -510,11 +531,11 @@ fn single_asset_holder_1_adapter(
     // Manager reported total asset balance
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
             asset: token.address.clone(),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond Manager Total Balance");
         }
         _ => assert!(false),
@@ -539,11 +560,11 @@ fn single_asset_holder_1_adapter(
     // Unbondable
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
             asset: token.address.clone(),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Unbondable { amount } => {
+        manager::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond unbondable");
         }
         _ => assert!(false),
@@ -552,11 +573,11 @@ fn single_asset_holder_1_adapter(
     // Reserves
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
             asset: token.address.clone(),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Reserves { amount } => {
+        manager::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond reserves");
         }
         _ => assert!(false),
@@ -566,7 +587,7 @@ fn single_asset_holder_1_adapter(
 
     // unbond from manager
     ensemble.execute(
-        &adapter::HandleMsg::Adapter(adapter::SubHandleMsg::Unbond {
+        &manager::HandleMsg::Manager(manager::SubHandleMsg::Unbond {
             asset: token.address.clone(),
             amount: unbond_amount,
         }),
@@ -579,11 +600,11 @@ fn single_asset_holder_1_adapter(
     // Unbondable
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
             asset: token.address.clone(),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Unbondable { amount } => {
+        manager::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond total unbondable");
         }
         _ => assert!(false),
@@ -595,7 +616,7 @@ fn single_asset_holder_1_adapter(
             holder: HumanAddr("holder".into()),
         }
     ).unwrap() {
-        adapter::QueryAnswer::Unbondable { amount } => {
+        manager::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond holder unbondable");
         }
         _ => assert!(false),
@@ -604,11 +625,11 @@ fn single_asset_holder_1_adapter(
     // Unbonding
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbonding {
             asset: token.address.clone(),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Unbonding { amount } => {
+        manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond total unbonding");
         }
         _ => assert!(false),
@@ -620,7 +641,7 @@ fn single_asset_holder_1_adapter(
             holder: HumanAddr("holder".into()),
         }
     ).unwrap() {
-        adapter::QueryAnswer::Unbonding { amount } => {
+        manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond Holder Unbonding");
         }
         _ => assert!(false),
@@ -629,11 +650,11 @@ fn single_asset_holder_1_adapter(
     // Claimable (zero as its immediately claimed)
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Claimable {
             asset: token.address.clone(),
         })
     ).unwrap() {
-        adapter::QueryAnswer::Claimable { amount } => {
+        manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond total claimable");
         }
         _ => assert!(false),
@@ -646,7 +667,7 @@ fn single_asset_holder_1_adapter(
             holder: HumanAddr("holder".into()),
         }
     ).unwrap() {
-        adapter::QueryAnswer::Claimable { amount } => {
+        manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond holder claimable"); 
         }
         _ => assert!(false),
@@ -655,11 +676,11 @@ fn single_asset_holder_1_adapter(
     // Manager reflects unbonded
     match ensemble.query(
         manager.address.clone(),
-        &adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+        &manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
             asset: token.address.clone(),
         }),
     ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
+        manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount.u128(), deposit.u128() - unbond_amount.u128());
         }
         _ => {

@@ -81,6 +81,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
+        /*
         HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
         HandleMsg::RegisterAsset {
             contract,
@@ -89,6 +90,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             unlimited,
         } => handle::try_register_asset(deps, &env, &contract, capture, fee, unlimited),
         HandleMsg::RemoveAsset { address } => handle::try_remove_asset(deps, &env, address),
+        */
         HandleMsg::Receive {
             sender,
             from,
