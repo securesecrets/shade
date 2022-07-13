@@ -34,14 +34,10 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         config.shd_token.address.clone(),
     )?;
 
-    let mut shd_bal = Uint128::new(0);
-
-    match res {
-        snip20::QueryAnswer::Balance { amount } => {
-            shd_bal = amount.clone();
-        }
-        _ => {}
-    }
+    let shd_bal = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
 
     // Query silk balance
     res = snip20::QueryMsg::Balance {
@@ -54,14 +50,10 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         config.silk_token.address.clone(),
     )?;
 
-    let mut silk_bal = Uint128::new(0);
-
-    match res {
-        snip20::QueryAnswer::Balance { amount } => {
-            silk_bal = amount;
-        }
-        _ => {}
-    }
+    let silk_bal = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
 
     // Query sscrt balance
     res = snip20::QueryMsg::Balance {
@@ -74,14 +66,10 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
         config.sscrt_token.address.clone(),
     )?;
 
-    let mut sscrt_bal = Uint128::new(0);
-
-    match res {
-        snip20::QueryAnswer::Balance { amount } => {
-            sscrt_bal = amount;
-        }
-        _ => {}
-    }
+    let sscrt_bal = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
 
     Ok(QueryAnswer::Balance {
         shd_bal,
@@ -108,10 +96,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     let mut swap_amounts = vec![amount];
 
     if (index.u128() as usize) >= cycles.len() {
-        return Err(StdError::GenericErr {
-            msg: "Index passed is out of bounds".to_string(),
-            backtrace: None,
-        });
+        return Err(StdError::generic_err("Index passed is out of bounds"));
     }
 
     // set up inital offer
@@ -144,10 +129,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     }
 
     if swap_amounts.len() > cycles[index.u128() as usize].pair_addrs.clone().len() {
-        return Err(StdError::GenericErr {
-            msg: String::from("More swap amounts than arb pairs"),
-            backtrace: None,
-        });
+        return Err(StdError::generic_err("More swap amounts than arb pairs"));
     }
 
     // if the last calculated swap is greater than the initial amount, return true
@@ -244,10 +226,7 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
                 }
             }
             _ => {
-                return Err(StdError::GenericErr {
-                    msg: "Unexpected result".to_string(),
-                    backtrace: None,
-                });
+                return Err(StdError::generic_err("Unexpected result"));
             }
         }
     }
@@ -270,10 +249,7 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
         || config.silk_token.address == asset
         || config.sscrt_token.address == asset)
     {
-        return Err(StdError::GenericErr {
-            msg: String::from("Unrecognized asset"),
-            backtrace: None,
-        });
+        return Err(StdError::generic_err("Unrecognized asset"));
     }
     // get the balances and save the one the treasury is asking for
     let res = get_balances(deps)?;
@@ -318,10 +294,7 @@ pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
         || config.silk_token.address == asset
         || config.sscrt_token.address == asset)
     {
-        return Err(StdError::GenericErr {
-            msg: String::from("Unrecognized asset"),
-            backtrace: None,
-        });
+        return Err(StdError::generic_err("Unrecognized asset"));
     }
     let res = get_balances(deps)?;
     let mut amount = Uint128::zero();
@@ -365,10 +338,7 @@ pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
         || config.silk_token.address == asset
         || config.sscrt_token.address == asset)
     {
-        return Err(StdError::GenericErr {
-            msg: String::from("Unrecognized asset"),
-            backtrace: None,
-        });
+        return Err(StdError::generic_err("Unrecognized asset"));
     }
     let res = get_balances(deps)?;
     let mut amount = Uint128::zero();
