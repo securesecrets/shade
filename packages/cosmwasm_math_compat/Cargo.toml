@@ -12,4 +12,4 @@ cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
-uint = "=0.9.1"
+uint = "^0.9.1"
