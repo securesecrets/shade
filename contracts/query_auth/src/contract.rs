@@ -1,5 +1,5 @@
 use crate::{handle, query};
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
@@ -12,7 +12,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
     contract_interfaces::query_auth::{
         Admin,

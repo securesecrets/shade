@@ -1,5 +1,5 @@
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_std::{
+use crate::c_std::{
     Api,
     Binary,
     CosmosMsg,
@@ -14,9 +14,9 @@ use cosmwasm_std::{
     Uint128,
     Validator,
 };
-use schemars::JsonSchema;
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

@@ -1,17 +1,17 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
 };
 
-use secret_toolkit::snip20::{set_viewing_key_msg, token_info_query};
+use shade_protocol::secret_toolkit::snip20::{set_viewing_key_msg, token_info_query};
 
 use shade_protocol::contract_interfaces::{
     bonds::{Config, HandleMsg, InitMsg, QueryMsg, SnipViewingKey},
     snip20::helpers::Snip20Asset,
 };
 
-use secret_toolkit::snip20::token_config_query;
-use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::secret_toolkit::snip20::token_config_query;
+use shade_protocol::secret_toolkit::utils::{pad_handle_result, pad_query_result};
 
 use crate::{
     handle::{self, register_receive},

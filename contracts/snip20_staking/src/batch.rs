@@ -1,10 +1,10 @@
 //! Types used in batch operations
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use shade_protocol::schemars::JsonSchema;
+use shade_protocol::serde::{Deserialize, Serialize};
 
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, HumanAddr};
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{Binary, HumanAddr};
 
 #[derive(Serialize, Deserialize, JsonSchema, Clone, Debug)]
 #[serde(rename_all = "snake_case")]

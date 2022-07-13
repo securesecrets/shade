@@ -1,8 +1,8 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
     StdError, StdResult, Storage, self,
 };
-use secret_toolkit::snip20::set_viewing_key_msg;
+use shade_protocol::secret_toolkit::snip20::set_viewing_key_msg;
 
 use crate::{
     handle, query,

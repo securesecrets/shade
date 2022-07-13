@@ -3,12 +3,12 @@ use std::marker::PhantomData;
 use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery, TokenType};
 use crate::{utils::asset::Contract, contract_interfaces::snip20::helpers::Snip20Asset};
 use crate::utils::generic_response::ResponseStatus;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, HumanAddr, StdResult, Env, Extern, Querier, Api, Storage};
-use schemars::JsonSchema;
+use crate::math_compat::Uint128;
+use crate::c_std::{Binary, HumanAddr, StdResult, Env, Extern, Querier, Api, Storage};
+use crate::schemars::JsonSchema;
 use secret_storage_plus::Item;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

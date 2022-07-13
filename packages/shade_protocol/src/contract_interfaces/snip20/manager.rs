@@ -1,9 +1,9 @@
-use cosmwasm_std::{Binary, Env, HumanAddr, StdError, StdResult, Storage};
-use query_authentication::viewing_keys::ViewingKey;
-use schemars::JsonSchema;
+use crate::c_std::{Env, HumanAddr, StdResult, Storage};
+use crate::query_authentication::viewing_keys::ViewingKey;
+use crate::schemars::JsonSchema;
 use secret_toolkit::crypto::{Prng, sha_256};
-use serde::{Deserialize, Serialize};
-use cosmwasm_math_compat::Uint128;
+use crate::serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
 use crate::contract_interfaces::snip20::errors::{allowance_expired, contract_status_level_invalid, insufficient_allowance, no_funds, not_enough_funds};
 use crate::impl_into_u8;
 #[cfg(feature = "snip20-impl")]
@@ -267,7 +267,7 @@ impl Default for Allowance {
 
 #[cfg(feature = "snip20-impl")]
 impl Allowance {
-    pub fn is_expired(&self, block: &cosmwasm_std::BlockInfo) -> bool {
+    pub fn is_expired(&self, block: &crate::c_std::BlockInfo) -> bool {
         match self.expiration {
             Some(time) => block.time >= time,
             None => false
@@ -279,7 +279,7 @@ impl Allowance {
         owner: &HumanAddr,
         spender: &HumanAddr,
         amount: Uint128,
-        block: &cosmwasm_std::BlockInfo
+        block: &crate::c_std::BlockInfo
     ) -> StdResult<()> {
         let mut allowance = Allowance::load(storage, (owner.clone(), spender.clone()))?;
 

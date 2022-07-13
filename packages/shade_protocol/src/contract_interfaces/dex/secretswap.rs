@@ -5,11 +5,11 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
-use cosmwasm_math_compat::Uint128;
-use schemars::JsonSchema;
+use crate::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
+use crate::math_compat::Uint128;
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::Query;
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

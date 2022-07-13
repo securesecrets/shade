@@ -6,10 +6,12 @@ pub mod proposal;
 
 use crate::tests::{admin_only_governance, get_config};
 use contract_harness::harness::snip20::Snip20;
-use cosmwasm_std::HumanAddr;
-use fadroma::ensemble::MockEnv;
-use fadroma::core::ContractLink;
-use shade_protocol::{contract_interfaces::{governance, snip20}, utils::asset::Contract};
+use shade_protocol::{
+    c_std::HumanAddr,
+    contract_interfaces::{governance, snip20},
+    fadroma::{core::ContractLink, ensemble::MockEnv},
+    utils::asset::Contract,
+};
 
 #[test]
 fn init_contract() {
@@ -40,11 +42,13 @@ fn set_config_msg() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap().instance;
+        .unwrap()
+        .instance;
 
     chain
         .execute(
             &governance::HandleMsg::SetConfig {
+                query_auth: None,
                 treasury: Some(HumanAddr::from("random")),
                 funding_token: Some(Contract {
                     address: snip20.address.clone(),
@@ -75,21 +79,24 @@ fn set_config_msg() {
 fn unauthorised_set_config_msg() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::SetConfig {
-                treasury: None,
-                funding_token: None,
-                vote_token: None,
-                padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                "random",
-                gov.clone(),
-            ),
-        )
-        .is_err();
+    assert!(
+        chain
+            .execute(
+                &governance::HandleMsg::SetConfig {
+                    query_auth: None,
+                    treasury: None,
+                    funding_token: None,
+                    vote_token: None,
+                    padding: None,
+                },
+                MockEnv::new(
+                    // Sender is self
+                    "random",
+                    gov.clone(),
+                ),
+            )
+            .is_err()
+    );
 }
 
 #[test]
@@ -114,11 +121,13 @@ fn reject_disable_config_tokens() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap().instance;
+        .unwrap()
+        .instance;
 
     chain
         .execute(
             &governance::HandleMsg::SetConfig {
+                query_auth: None,
                 treasury: Some(HumanAddr::from("random")),
                 funding_token: Some(Contract {
                     address: snip20.address.clone(),
@@ -143,6 +152,7 @@ fn reject_disable_config_tokens() {
     chain
         .execute(
             &governance::HandleMsg::SetConfig {
+                query_auth: None,
                 treasury: None,
                 funding_token: None,
                 vote_token: None,

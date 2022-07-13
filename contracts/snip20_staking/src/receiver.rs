@@ -1,10 +1,10 @@
 #![allow(clippy::field_reassign_with_default)] // This is triggered in `#[derive(JsonSchema)]`
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use shade_protocol::schemars::JsonSchema;
+use shade_protocol::serde::{Deserialize, Serialize};
 
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Binary, CosmosMsg, HumanAddr, StdResult, WasmMsg};
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{to_binary, Binary, CosmosMsg, HumanAddr, StdResult, WasmMsg};
 
 use crate::{contract::RESPONSE_BLOCK_SIZE, msg::space_pad};
 

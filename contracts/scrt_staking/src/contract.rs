@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     debug_print,
     to_binary,
     Api,
@@ -21,7 +21,7 @@ use shade_protocol::contract_interfaces::dao::scrt_staking::{
     QueryMsg,
 };
 
-use secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
+use shade_protocol::secret_toolkit::snip20::{register_receive_msg, set_viewing_key_msg};
 use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{

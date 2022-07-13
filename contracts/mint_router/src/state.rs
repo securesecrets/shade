@@ -1,6 +1,6 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{HumanAddr, Storage};
-use cosmwasm_storage::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{HumanAddr, Storage};
+use shade_protocol::storage::{
     bucket,
     bucket_read,
     singleton,

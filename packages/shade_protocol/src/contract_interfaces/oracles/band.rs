@@ -1,9 +1,9 @@
 use crate::utils::asset::Contract;
-use cosmwasm_std::{Api, Extern, Querier, StdResult, Storage};
-use cosmwasm_math_compat::Uint128;
-use schemars::JsonSchema;
+use crate::c_std::{Api, Extern, Querier, StdResult, Storage};
+use crate::math_compat::Uint128;
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {}

@@ -1,5 +1,5 @@
-use cosmwasm_std::{HumanAddr, Storage, Uint128};
-use cosmwasm_storage::{bucket, bucket_read, Bucket, ReadonlyBucket, singleton, singleton_read, ReadonlySingleton, Singleton};
+use shade_protocol::c_std::{HumanAddr, Storage, Uint128};
+use shade_protocol::storage::{bucket, bucket_read, Bucket, ReadonlyBucket, singleton, singleton_read, ReadonlySingleton, Singleton};
 use shade_protocol::contract_interfaces::dao::lp_shade_swap;
 
 pub static CONFIG_KEY: &[u8] = b"config";

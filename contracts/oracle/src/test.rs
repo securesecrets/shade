@@ -1,5 +1,5 @@
 use crate::contract::{handle, init, query};
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     coins,
     from_binary,
     Binary,
@@ -11,7 +11,7 @@ use cosmwasm_std::{
     StdError,
     StdResult,
 };
-use fadroma::{
+use shade_protocol::fadroma::{
     ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
 };
 

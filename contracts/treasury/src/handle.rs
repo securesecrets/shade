@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     self,
     from_binary,
     to_binary,
@@ -15,7 +15,7 @@ use cosmwasm_std::{
     Storage,
     Uint128,
 };
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::{
         allowance_query,
         balance_query,

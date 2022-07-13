@@ -13,9 +13,9 @@ use crate::{
         validate_address_permit,
     },
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
-use query_authentication::viewing_keys::ViewingKey;
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use shade_protocol::contract_interfaces::airdrop::{
     account::{AccountKey, AccountPermit, AddressProofPermit},
     claim_info::RequiredTask,
