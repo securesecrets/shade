@@ -23,6 +23,7 @@ storage = []
 storage_plus = ["storage", "dep:secret-storage-plus"]
 query_auth_lib = ["dep:query-authentication"]
 ensemble = ["dep:fadroma"]
+multi_test = ["secret-multi-test"]
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
@@ -84,12 +85,13 @@ debug-print = [] # TODO: remove this from all cargo configs
 # Smart contract stuff
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", features = ["staking"] }
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0", optional = true }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 cosmwasm-schema = "0.10.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 
 # Testing
+secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble", "scrt"], optional = true }
 
 

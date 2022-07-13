@@ -92,8 +92,8 @@ pub enum QueryAnswer {
     Reserves { amount: Uint128 },
 }
 
-pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn claimable_query(
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
@@ -110,8 +110,8 @@ pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn unbonding_query(
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
@@ -128,8 +128,8 @@ pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn unbondable_query(
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
@@ -146,8 +146,8 @@ pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn reserves_query(
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
@@ -162,8 +162,8 @@ pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn balance_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn balance_query(
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {

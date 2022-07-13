@@ -1,13 +1,10 @@
 use crate::c_std::{
-    Api,
     BalanceResponse,
     BankQuery,
-    Extern,
     Addr,
-    Querier,
     StdResult,
-    Storage,
     Uint128,
+    Deps,
 };
 
 use crate::serde::{Deserialize, Serialize};
@@ -20,8 +17,8 @@ pub struct Contract {
 }
 
 //TODO:  move away from here
-pub fn scrt_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn scrt_balance(
+    deps: Deps,
     address: Addr,
 ) -> StdResult<Uint128> {
     let resp: BalanceResponse = deps.querier.query(

@@ -9,8 +9,7 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::c_std::Uint128;
-use crate::c_std::{Binary, Addr};
+use crate::c_std::{Uint128, Binary, Addr};
 
 use crate::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};

@@ -91,7 +91,7 @@ pub trait NaiveBucketStorage: Serialize + DeserializeOwned {
 pub trait BucketStorage: Serialize + DeserializeOwned {
     const NAMESPACE: &'static [u8];
 
-    fn read<S: Storage>(storage: &S) -> ReadonlyBucket<SSelf> {
+    fn read<S: Storage>(storage: &S) -> ReadonlyBucket<Self> {
         bucket_read(storage, Self::NAMESPACE)
     }
 

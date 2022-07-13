@@ -5,8 +5,7 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage};
-use crate::c_std::Uint128;
+use crate::c_std::{Addr, StdError, StdResult, Deps, DepsMut, Uint128};
 
 
 use secret_toolkit::{utils::Query, serialization::Base64};
@@ -118,12 +117,12 @@ pub struct PairInfoResponse {
     pub pair_info: PairInfo,
 }
 
-pub fn is_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn is_pair(
+    deps: DepsMut,
     pair: Contract,
 ) -> StdResult<bool> {
     Ok(
-        match (PairQuery::PairInfo).query::<Q, PairInfoResponse>(
+        match (PairQuery::PairInfo).query::<PairInfoResponse>(
             &deps.querier,
             pair.code_hash,
             pair.address.clone(),
@@ -134,8 +133,8 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
     )
 }
 
-pub fn price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn price(
+    deps: Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
     band: Contract,
@@ -153,8 +152,8 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     ))
 }
 
-pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn amount_per_scrt(
+    deps: Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
 ) -> StdResult<Uint128> {
@@ -176,8 +175,8 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
     Ok(response.return_amount)
 }
 
-pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn pool_cp(
+    deps: Deps,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {
     let pair_info: PairInfoResponse = PairQuery::PairInfo.query(

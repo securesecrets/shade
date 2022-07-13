@@ -10,7 +10,7 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
+use crate::c_std::{self, Api, Deps, Querier, StdError, StdResult, Storage};
 
 use crate::serde::{Deserialize, Serialize};
 
@@ -46,8 +46,8 @@ pub fn pool_take_amount(
     )
 }
 
-pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn aggregate_price(
+    deps: Deps,
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
@@ -105,8 +105,8 @@ pub fn aggregate_price<S: Storage, A: Api, Q: Querier>(
     Ok(price)
 }
 
-pub fn best_price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn best_price(
+    deps: Deps,
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
@@ -148,8 +148,8 @@ pub fn best_price<S: Storage, A: Api, Q: Querier>(
     ))
 }
 
-pub fn price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn price(
+    deps: Deps,
     pair: TradingPair,
     sscrt: Contract,
     band: Contract,

@@ -2,7 +2,7 @@
 use crate::serde::{Deserialize, Serialize};
 
 use crate::c_std::{
-    Api, CanonicalAddr, Coin, Addr, ReadonlyStorage, StdError, StdResult, Storage,
+    Api, CanonicalAddr, Coin, Addr, StdError, StdResult, Storage,
 };
 use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{legacy_cannot_convert_from_tx, tx_code_invalid_conversion};

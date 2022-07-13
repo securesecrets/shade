@@ -3,8 +3,7 @@ use std::marker::PhantomData;
 use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery, TokenType};
 use crate::{utils::asset::Contract, contract_interfaces::snip20::helpers::Snip20Asset};
 use crate::utils::generic_response::ResponseStatus;
-use crate::c_std::Uint128;
-use crate::c_std::{Binary, Addr, StdResult, Env, Extern, Querier, Api, Storage};
+use crate::c_std::{Uint128, Binary, Addr, StdResult, Env, Deps, DepsMut};
 
 use secret_storage_plus::Item;
 use crate::utils::{HandleCallback, InitCallback, Query};
@@ -134,7 +133,7 @@ pub struct ArbPair {
 }
 
 /*impl ArbPair {
-    fn init<S: Storage, A: Api, Q: Querier>(&mut self, deps: &mut Extern<S, A, Q>,env: Env) -> StdResult<bool> {
+    fn init(&mut self, deps: DepsMut,env: Env) -> StdResult<bool> {
         if self.dex_id.eq(&"sienna".to_string()) {
             let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
                 &deps.querier,

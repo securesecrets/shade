@@ -1,6 +1,4 @@
-use crate::c_std::Uint128;
-use crate::c_std::Addr;
-
+use crate::c_std::{Uint128, Addr};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
