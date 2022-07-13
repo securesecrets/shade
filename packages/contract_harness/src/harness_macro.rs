@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! implement_harness {
     ($x:ident, $s:ident) => {
         use cosmwasm_std::{from_binary, Binary, Env, HandleResponse, InitResponse, StdResult};
@@ -23,4 +24,3 @@ macro_rules! implement_harness {
     };
 }
 
-pub use implement_harness;
