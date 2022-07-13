@@ -18,11 +18,11 @@ default = ["utils"]
 # TODO: Normalize usage, some features are using - while others use _
 
 # Templates
-dex = ["utils", "math", "snip20", "mint", "band", "dep:fadroma"]
+dex = ["utils", "math", "snip20", "band"]
 band = []
 secretswap = ["utils"]
 sienna = ["utils", "math"]
-shadeswap = ["mint", "dex", "band", "dep:fadroma"]
+shadeswap = ["math", "utils", "dep:fadroma"]
 
 # Utils
 utils = []

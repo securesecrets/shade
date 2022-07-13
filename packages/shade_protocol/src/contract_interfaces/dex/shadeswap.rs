@@ -1,13 +1,9 @@
 use crate::{
-    c_std::{Api, Binary, Extern, HumanAddr, Querier, StdError, StdResult, Storage},
-    contract_interfaces::{dex, mint, oracles::band},
+    c_std::{Api, Binary, Extern, HumanAddr, Querier, StdResult, Storage},
     math_compat::Uint128,
     schemars::JsonSchema,
     serde::{Deserialize, Serialize},
-    utils::{
-        asset::Contract,
-        price::{normalize_price, translate_price},
-    },
+    utils::asset::Contract,
 };
 use fadroma::prelude::ContractLink;
 use secret_toolkit::utils::Query;

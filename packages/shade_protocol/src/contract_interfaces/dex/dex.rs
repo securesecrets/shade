@@ -1,8 +1,7 @@
 use crate::{
-    c_std::{self, Api, Extern, Querier, StdError, StdResult, Storage},
+    c_std::{Api, Extern, Querier, StdError, StdResult, Storage},
     contract_interfaces::{
         dex::{secretswap, sienna},
-        mint::mint,
         oracles::band,
         snip20::helpers::Snip20Asset,
     },
