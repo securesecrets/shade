@@ -17,8 +17,8 @@ use crate::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use crate::math_compat::Uint128;
-use crate::c_std::{Binary, Coin, HumanAddr};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Coin, Addr};
+
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
@@ -31,7 +31,7 @@ pub const MSG_VARIABLE: &str = "{~}";
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
     // When public voting is enabled, a voting token is expected
     pub vote_token: Option<Contract>,
     // When funding is enabled, a funding token is expected
@@ -46,10 +46,10 @@ impl SingletonStorage for Config {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
 
     // Admin rules
-    pub admin_members: Vec<HumanAddr>,
+    pub admin_members: Vec<Addr>,
     pub admin_profile: Profile,
 
     // Public rules
@@ -85,7 +85,7 @@ impl SingletonStorage for RuntimeState {
 pub enum HandleMsg {
     // Internal config
     SetConfig {
-        treasury: Option<HumanAddr>,
+        treasury: Option<Addr>,
         funding_token: Option<Contract>,
         vote_token: Option<Contract>,
         padding: Option<String>,
@@ -130,8 +130,8 @@ pub enum HandleMsg {
     },
     /// Funds a proposal, msg is a prop ID
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         msg: Option<Binary>,
         memo: Option<String>,
@@ -148,7 +148,7 @@ pub enum HandleMsg {
     },
     /// Votes on voting token
     ReceiveBalance {
-        sender: HumanAddr,
+        sender: Addr,
         msg: Option<Binary>,
         balance: Uint128,
         memo: Option<String>,
@@ -170,7 +170,7 @@ pub enum HandleMsg {
     AddAssembly {
         name: String,
         metadata: String,
-        members: Vec<HumanAddr>,
+        members: Vec<Addr>,
         profile: Uint128,
         padding: Option<String>,
     },
@@ -179,7 +179,7 @@ pub enum HandleMsg {
         id: Uint128,
         name: Option<String>,
         metadata: Option<String>,
-        members: Option<Vec<HumanAddr>>,
+        members: Option<Vec<Addr>>,
         profile: Option<Uint128>,
         padding: Option<String>,
     },

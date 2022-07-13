@@ -9,8 +9,8 @@ use shade_protocol::c_std::{
     CosmosMsg,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StakingMsg,
     StdError,
@@ -52,14 +52,14 @@ use crate::{
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    _sender: HumanAddr,
-    _from: HumanAddr,
+    _sender: Addr,
+    _from: Addr,
     amount: Uint128,
     _msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     //TODO: forward to distributor (quick fix mechanism)
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Receive {
@@ -72,7 +72,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     config: Config,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
     if !cur_config.admins.contains(&env.message.sender) {
@@ -81,7 +81,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&config)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
@@ -94,7 +94,7 @@ pub fn register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     contract: &Contract,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     if !config.admins.contains(&env.message.sender) {
@@ -113,7 +113,7 @@ pub fn register_asset<S: Storage, A: Api, Q: Querier>(
         &fetch_snip20(contract, &deps.querier)?,
     )?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![
             // Register contract in asset
             register_receive_msg(
@@ -143,7 +143,7 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     rewards: Vec<Reward>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.distributor {
@@ -176,7 +176,7 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
         )?);
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RefillRewards {
@@ -188,9 +188,9 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
 pub fn update<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
-    Ok(HandleResponse {
+    asset: Addr,
+) -> StdResult<Response> {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Update {
@@ -202,10 +202,10 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
+    asset: Addr,
+) -> StdResult<Response> {
     match asset_r(&deps.storage).may_load(&asset.as_str().as_bytes())? {
-        Some(_) => Ok(HandleResponse {
+        Some(_) => Ok(Response {
             messages: vec![],
             log: vec![],
             data: Some(to_binary(&adapter::HandleAnswer::Claim {

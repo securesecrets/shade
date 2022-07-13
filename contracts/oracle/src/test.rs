@@ -5,8 +5,8 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     InitResponse,
     StdError,
     StdResult,
@@ -28,7 +28,7 @@ impl ContractHarness for Oracle {
         )
     }
 
-    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<HandleResponse> {
+    fn handle(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<Response> {
         handle(
             deps,
             env,

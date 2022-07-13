@@ -2,8 +2,8 @@ use crate::{
     impl_into_u8,
     utils::errors::{build_string, CodeType, DetailedError},
 };
-use crate::c_std::{HumanAddr, StdError};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Addr, StdError};
+
 use crate::serde::{Deserialize, Serialize};
 use crate::math_compat::Uint128;
 use crate::contract_interfaces::snip20::Permission;
@@ -141,7 +141,7 @@ pub fn minting_disabled() -> StdError {
     DetailedError::from_code(target, Error::MintingDisabled, vec![]).to_error()
 }
 
-pub fn not_minter(user: &HumanAddr) -> StdError {
+pub fn not_minter(user: &Addr) -> StdError {
     DetailedError::from_code(target, Error::NotMinter, vec![user.as_str()]).to_error()
 }
 

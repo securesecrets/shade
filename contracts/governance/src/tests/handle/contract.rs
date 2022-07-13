@@ -1,6 +1,6 @@
 use crate::tests::{admin_only_governance, get_contract};
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::HumanAddr;
+use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::Addr;
 use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::{contract_interfaces::governance, utils::asset::Contract};
 
@@ -14,7 +14,7 @@ fn add_contract() {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
-                    address: HumanAddr::from("contract"),
+                    address: Addr::from("contract"),
                     code_hash: "hash".to_string(),
                 },
                 assemblies: None,
@@ -42,7 +42,7 @@ fn unauthorised_add_contract() {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
-                    address: HumanAddr::from("contract"),
+                    address: Addr::from("contract"),
                     code_hash: "hash".to_string(),
                 },
                 assemblies: None,
@@ -50,7 +50,7 @@ fn unauthorised_add_contract() {
             },
             MockEnv::new(
                 // Sender is self
-                HumanAddr::from("random"),
+                Addr::from("random"),
                 gov.clone(),
             ),
         )
@@ -66,7 +66,7 @@ fn set_contract() {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
-                    address: HumanAddr::from("contract"),
+                    address: Addr::from("contract"),
                     code_hash: "hash".to_string(),
                 },
                 assemblies: None,
@@ -90,7 +90,7 @@ fn set_contract() {
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
                 contract: Some(Contract {
-                    address: HumanAddr::from("new contract"),
+                    address: Addr::from("new contract"),
                     code_hash: "other hash".to_string(),
                 }),
                 disable_assemblies: false,
@@ -127,7 +127,7 @@ fn disable_contract_assemblies() {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
-                    address: HumanAddr::from("contract"),
+                    address: Addr::from("contract"),
                     code_hash: "hash".to_string(),
                 },
                 assemblies: Some(vec![Uint128::zero()]),
@@ -151,7 +151,7 @@ fn disable_contract_assemblies() {
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
                 contract: Some(Contract {
-                    address: HumanAddr::from("new contract"),
+                    address: Addr::from("new contract"),
                     code_hash: "other hash".to_string(),
                 }),
                 disable_assemblies: true,
@@ -189,7 +189,7 @@ fn enable_contract_assemblies() {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
-                    address: HumanAddr::from("contract"),
+                    address: Addr::from("contract"),
                     code_hash: "hash".to_string(),
                 },
                 assemblies: None,
@@ -213,7 +213,7 @@ fn enable_contract_assemblies() {
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
                 contract: Some(Contract {
-                    address: HumanAddr::from("new contract"),
+                    address: Addr::from("new contract"),
                     code_hash: "other hash".to_string(),
                 }),
                 disable_assemblies: false,
@@ -252,7 +252,7 @@ fn unauthorised_set_contract() {
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
                 contract: Some(Contract {
-                    address: HumanAddr::from("new contract"),
+                    address: Addr::from("new contract"),
                     code_hash: "other hash".to_string(),
                 }),
                 disable_assemblies: false,
@@ -261,7 +261,7 @@ fn unauthorised_set_contract() {
             },
             MockEnv::new(
                 // Sender is self
-                HumanAddr::from("random"),
+                Addr::from("random"),
                 gov.clone(),
             ),
         )
@@ -277,7 +277,7 @@ fn add_contract_assemblies() {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
-                    address: HumanAddr::from("contract"),
+                    address: Addr::from("contract"),
                     code_hash: "hash".to_string(),
                 },
                 assemblies: Some(vec![Uint128::zero()]),

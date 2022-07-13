@@ -1,11 +1,11 @@
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -27,7 +27,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     env: Env,
     amount: Uint128,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = &env.message.sender;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
@@ -50,7 +50,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         &env.block,
     )?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Burn { status: Success })?),
@@ -60,10 +60,10 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: HumanAddr,
+    owner: Addr,
     amount: Uint128,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = &env.message.sender;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
@@ -87,7 +87,7 @@ pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
         &env.block,
     )?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BurnFrom { status: Success })?),
@@ -98,7 +98,7 @@ pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     actions: Vec<batch::BurnFromAction>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = &env.message.sender;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
@@ -136,7 +136,7 @@ pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
 
     supply.save(&mut deps.storage)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BatchBurnFrom { status: Success })?),

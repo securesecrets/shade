@@ -29,11 +29,10 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
-    HandleResult,
+    Response,
     InitResponse,
     Querier,
-    QueryResult,
+
     StdError,
     StdResult,
     Storage,
@@ -74,7 +73,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Check if transfers are allowed
     let status = ContractStatusLevel::load(&deps.storage)?;
     match status {
@@ -213,7 +212,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     )
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
+pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         to_binary(&match msg {
             QueryMsg::TokenInfo {} => query::token_info(deps)?,
@@ -224,7 +223,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
 
             QueryMsg::WithPermit { permit, query } => {
                 // Validate permit and get account
-                let account = permit.validate(&deps.api, None)?.as_humanaddr(None)?;
+                let account = permit.validate(&deps.api, None)?.as_Addr(None)?;
 
                 // Check that permit is not revoked
                 if PermitKey::may_load(

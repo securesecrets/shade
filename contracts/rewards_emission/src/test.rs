@@ -5,7 +5,7 @@ pub mod tests {
         testing::{
             mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier
         },
-        HumanAddr,
+        Addr,
         coins, from_binary, StdError, Uint128,
         Extern,
     };
@@ -34,7 +34,7 @@ pub mod tests {
     fn dummy_init(admin: String, viewing_key: String) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
         let msg = InitMsg {
-            admin: Option::from(HumanAddr(admin.clone())),
+            admin: Option::from(Addr(admin.clone())),
             viewing_key,
         };
         let env = mock_env(admin, &coins(1000, "earth"));

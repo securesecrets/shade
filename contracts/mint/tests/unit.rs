@@ -1,4 +1,4 @@
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     self,
     coins,
@@ -7,8 +7,8 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     InitResponse,
     StdError,
     StdResult,

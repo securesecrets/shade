@@ -5,17 +5,17 @@ use crate::{
         generic_response::ResponseStatus
     },
 };
-use crate::c_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
+use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
 
-use crate::schemars::JsonSchema;
+
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admin: HumanAddr,
-    pub treasury: HumanAddr,
+    pub admin: Addr,
+    pub treasury: Addr,
     pub pair: Contract,
     pub token_a: Contract,
     pub token_b: Contract,
@@ -27,8 +27,8 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
-    pub treasury: HumanAddr,
+    pub admin: Option<Addr>,
+    pub treasury: Addr,
     pub viewing_key: String,
     pub pair: Contract,
     pub token_a: Contract,
@@ -50,8 +50,8 @@ pub enum HandleMsg {
      * - Bond the share token, to be used when unbonding
      */
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -71,7 +71,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -107,7 +107,7 @@ pub enum QueryAnswer {
  * it will be treated as such
  * Otherwise it will be sent straight to treasury on claim
  */
-pub fn is_supported_asset(config: &Config, asset: &HumanAddr) -> bool {
+pub fn is_supported_asset(config: &Config, asset: &Addr) -> bool {
     vec![
         config.token_a.address.clone(),
         config.token_b.address.clone(),
@@ -117,7 +117,7 @@ pub fn is_supported_asset(config: &Config, asset: &HumanAddr) -> bool {
 
 pub fn get_supported_asset(
     config: &Config, 
-    asset: &HumanAddr
+    asset: &Addr
 ) -> Contract {
     vec![
         config.token_a.clone(),

@@ -1,9 +1,9 @@
 use shade_protocol::c_std::{
-    Storage, Api, Querier, Extern, Env, StdResult, HandleResponse, to_binary, 
-    StdError, HumanAddr, CosmosMsg, Binary, WasmMsg
+    Storage, Api, Querier, Extern, Env, StdResult, Response, to_binary,
+    StdError, Addr, CosmosMsg, Binary, WasmMsg
 };
 use shade_protocol::fadroma::scrt::to_cosmos_msg;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::{
     utils::{asset::Contract, storage::plus::ItemStorage},
     contract_interfaces::{
@@ -22,12 +22,12 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     config: Config,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != Config::load(&deps.storage)?.admin {
         return Err(StdError::unauthorized())
     }
     config.save(&mut deps.storage)?;
-    Ok(HandleResponse{
+    Ok(Response{
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig{
@@ -40,7 +40,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config: Config = Config::load(&deps.storage)?;
     let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
         &deps.querier,
@@ -143,7 +143,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         }));
     }
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ExecuteArb{
@@ -156,7 +156,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
 
     let config: Config = Config::load(&deps.storage)?;
 
@@ -210,7 +210,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
 
         messages.push(send_msg(
             config.market_swap_addr.address.clone(),
-            shade_protocol::c_std::Uint128(first_swap_min_expected.clone().u128()),
+            Uint128::new(first_swap_min_expected.clone().u128()),
             Some(to_binary(&CallbackSwap{
                 expected_return: second_swap_min_expected.clone(),
             })?),
@@ -224,7 +224,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     else {
         messages.push(send_msg(
             config.market_swap_addr.address.clone(),
-            shade_protocol::c_std::Uint128(amount.u128()),
+            Uint128::new(amount.u128()),
             Some(to_binary(&CallbackSwap{
                 expected_return: first_swap_min_expected,
             })?),
@@ -250,7 +250,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
         )?);
     }
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ExecuteArb{

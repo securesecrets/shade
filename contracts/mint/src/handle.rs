@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     debug_print,
     from_binary,
@@ -9,8 +9,8 @@ use shade_protocol::c_std::{
     CosmosMsg,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -51,11 +51,11 @@ use crate::state::{
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    _sender: HumanAddr,
-    from: HumanAddr,
+    _sender: Addr,
+    from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     // Check if contract enabled
     if !config.activated {
@@ -217,7 +217,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         mint_asset.contract.address,
     )?);
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Mint {
@@ -308,7 +308,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     config: Config,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
     // Admin-only
@@ -318,7 +318,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&config)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
@@ -334,7 +334,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     capture: Option<Uint128>,
     fee: Option<Uint128>,
     unlimited: Option<bool>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
     if env.message.sender != config.admin {
@@ -394,7 +394,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     // Register contract in asset
     let messages = vec![register_receive(env, contract)?];
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RegisterAsset {
@@ -406,8 +406,8 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: &Env,
-    address: HumanAddr,
-) -> StdResult<HandleResponse> {
+    address: Addr,
+) -> StdResult<Response> {
     let address_str = address.to_string();
 
     // Remove asset from the array
@@ -421,7 +421,7 @@ pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
 
     // We wont remove the total burned since we want to keep track of all the burned assets
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RemoveAsset {

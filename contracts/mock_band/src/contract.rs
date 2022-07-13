@@ -4,7 +4,7 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
+    Response,
     InitResponse,
     Querier,
     StdError,
@@ -14,7 +14,7 @@ use shade_protocol::c_std::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::contract_interfaces::oracles::band::{InitMsg, ReferenceData};
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 
 use shade_protocol::storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
 
@@ -46,11 +46,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     return match msg {
         HandleMsg::MockPrice { symbol, price } => {
             price_w(&mut deps.storage).save(symbol.as_bytes(), &price)?;
-            Ok(HandleResponse::default())
+            Ok(Response::default())
         }
     };
 }

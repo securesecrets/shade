@@ -1,5 +1,5 @@
-use shade_protocol::c_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{Api, Env, Extern, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
+use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::errors::{minting_disabled, not_admin, not_minter};
 use shade_protocol::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, Minters, ReceiverHash, TotalSupply};
@@ -9,8 +9,8 @@ use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 
 fn try_mint_impl<S: Storage>(
     storage: &mut S,
-    minter: &HumanAddr,
-    recipient: &HumanAddr,
+    minter: &Addr,
+    recipient: &Addr,
     amount: Uint128,
     denom: String,
     memo: Option<String>,
@@ -24,10 +24,10 @@ fn try_mint_impl<S: Storage>(
 pub fn try_mint<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     amount: Uint128,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
         return Err(minting_disabled())
@@ -43,7 +43,7 @@ pub fn try_mint<S: Storage, A: Api, Q: Querier>(
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     try_mint_impl(&mut deps.storage, &sender, &recipient, amount, denom, memo, &block)?;
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Mint { status: Success })?)
@@ -54,7 +54,7 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     actions: Vec<batch::MintAction>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
         return Err(minting_disabled())
@@ -82,7 +82,7 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
     }
     supply.save(&mut deps.storage)?;
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BatchMint { status: Success })?)
@@ -92,8 +92,8 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
 pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    new_minters: Vec<HumanAddr>
-) -> StdResult<HandleResponse> {
+    new_minters: Vec<Addr>
+) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
         return Err(minting_disabled())
@@ -106,7 +106,7 @@ pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
     minters.0.extend(new_minters);
     minters.save(&mut deps.storage)?;
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddMinters { status: Success })?)
@@ -116,8 +116,8 @@ pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
 pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    minters_to_remove: Vec<HumanAddr>
-) -> StdResult<HandleResponse> {
+    minters_to_remove: Vec<Addr>
+) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
         return Err(minting_disabled())
@@ -132,7 +132,7 @@ pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
     }
     minters.save(&mut deps.storage)?;
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RemoveMinters { status: Success })?)
@@ -142,8 +142,8 @@ pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
 pub fn try_set_minters<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    minters: Vec<HumanAddr>
-) -> StdResult<HandleResponse> {
+    minters: Vec<Addr>
+) -> StdResult<Response> {
     // Mint enabled
     if !Config::mint_enabled(&deps.storage)? {
         return Err(minting_disabled())
@@ -154,7 +154,7 @@ pub fn try_set_minters<S: Storage, A: Api, Q: Querier>(
 
     Minters(minters).save(&mut deps.storage)?;
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetMinters { status: Success })?)

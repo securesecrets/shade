@@ -4,10 +4,10 @@ use shade_protocol::c_std::{
     Api,
     Env,
     Extern,
-    HandleResponse,
+    Response,
     InitResponse,
     Querier,
-    QueryResult,
+
     StdError,
     StdResult,
     Storage,
@@ -50,7 +50,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Check what msgs are allowed
     let status = ContractStatus::load(&deps.storage)?;
     match status {
@@ -91,7 +91,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     )
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
+pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> StdResult<Binary> {
     let status = ContractStatus::load(&deps.storage)?;
     match status {
         // Do nothing

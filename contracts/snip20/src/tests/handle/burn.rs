@@ -1,6 +1,6 @@
-use shade_protocol::c_std::HumanAddr;
+use shade_protocol::c_std::Addr;
 use shade_protocol::fadroma::ensemble::MockEnv;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig, InitialBalance};
 use shade_protocol::contract_interfaces::snip20::batch::BurnFromAction;
 use shade_protocol::contract_interfaces::snip20::manager::{Balance, TotalSupply};
@@ -11,7 +11,7 @@ use crate::tests::init_snip20_with_config;
 fn burn() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("Finger"),
+            address: Addr::from("Finger"),
             amount: (Uint128::new(5000))
         },
     ]), Some(InitConfig {
@@ -43,7 +43,7 @@ fn burn() {
     chain.deps(snip.address, |deps| {
         assert_eq!(Balance::load(
             &deps.storage,
-            HumanAddr::from("Finger")).unwrap().0, Uint128::new(1000)
+            Addr::from("Finger")).unwrap().0, Uint128::new(1000)
         );
         assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(1000)
         );
@@ -55,11 +55,11 @@ fn burn() {
 fn burn_from() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("Sam"),
+            address: Addr::from("Sam"),
             amount: (Uint128::new(5000))
         },
         InitialBalance {
-            address: HumanAddr::from("Esmail"),
+            address: Addr::from("Esmail"),
             amount: Uint128::new(1)
         },
     ]), Some(InitConfig {
@@ -75,14 +75,14 @@ fn burn_from() {
 
     // Insufficient allowance
     assert!(chain.execute(&HandleMsg::BurnFrom {
-        owner: HumanAddr::from("Sam"),
+        owner: Addr::from("Sam"),
         amount: Uint128::new(1000),
         padding: None,
         memo: None
     }, MockEnv::new("Esmail", snip.clone())).is_err());
 
     assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(700),
         expiration: Some(1_000_000_000),
         padding: None
@@ -90,7 +90,7 @@ fn burn_from() {
 
     // Transfer more than allowed amount
     assert!(chain.execute(&HandleMsg::BurnFrom {
-        owner: HumanAddr::from("Sam"),
+        owner: Addr::from("Sam"),
         amount: Uint128::new(1000),
         padding: None,
         memo: None
@@ -100,21 +100,21 @@ fn burn_from() {
 
     // Transfer expired
     assert!(chain.execute(&HandleMsg::BurnFrom {
-        owner: HumanAddr::from("Sam"),
+        owner: Addr::from("Sam"),
         amount: Uint128::new(1000),
         padding: None,
         memo: None
     }, MockEnv::new("Esmail", snip.clone())).is_err());
 
     assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(1000),
         expiration: None,
         padding: None
     }, MockEnv::new("Sam", snip.clone())).is_ok());
 
     assert!(chain.execute(&HandleMsg::BurnFrom {
-        owner: HumanAddr::from("Sam"),
+        owner: Addr::from("Sam"),
         amount: Uint128::new(800),
         padding: None,
         memo: None
@@ -122,7 +122,7 @@ fn burn_from() {
 
     // Check that allowance gets spent
     assert!(chain.execute(&HandleMsg::BurnFrom {
-        owner: HumanAddr::from("Sam"),
+        owner: Addr::from("Sam"),
         amount: Uint128::new(300),
         padding: None,
         memo: None
@@ -133,19 +133,19 @@ fn burn_from() {
 fn batch_burn_from() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("Eliot"),
+            address: Addr::from("Eliot"),
             amount: (Uint128::new(5000))
         },
         InitialBalance{
-            address: HumanAddr::from("Alderson"),
+            address: Addr::from("Alderson"),
             amount: (Uint128::new(5000))
         },
         InitialBalance{
-            address: HumanAddr::from("Sam"),
+            address: Addr::from("Sam"),
             amount: (Uint128::new(5000))
         },
         InitialBalance {
-            address: HumanAddr::from("Esmail"),
+            address: Addr::from("Esmail"),
             amount: Uint128::new(1)
         },
     ]), Some(InitConfig {
@@ -163,7 +163,7 @@ fn batch_burn_from() {
 
     let batch: Vec<_> = granters.iter().map(|name| {
         BurnFromAction {
-            owner: HumanAddr::from(*name),
+            owner: Addr::from(*name),
             amount: Uint128::new(800),
             memo: None
         }
@@ -177,7 +177,7 @@ fn batch_burn_from() {
 
     for granter in granters.iter() {
         assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-            spender: HumanAddr::from("Esmail"),
+            spender: Addr::from("Esmail"),
             amount: Uint128::new(700),
             expiration: Some(1_000_000_000),
             padding: None
@@ -200,7 +200,7 @@ fn batch_burn_from() {
 
     for granter in granters.iter() {
         assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-            spender: HumanAddr::from("Esmail"),
+            spender: Addr::from("Esmail"),
             amount: Uint128::new(1000),
             expiration: None,
             padding: None

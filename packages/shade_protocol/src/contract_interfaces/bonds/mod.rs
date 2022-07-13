@@ -13,17 +13,17 @@ use crate::contract_interfaces::query_auth::QueryPermit;
 use crate::utils::asset::Contract;
 use crate::utils::generic_response::ResponseStatus;
 use crate::math_compat::Uint128;
-use crate::c_std::{Binary, HumanAddr};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Addr};
+
 use secret_toolkit::utils::HandleCallback;
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
-    pub limit_admin: HumanAddr,
+    pub limit_admin: Addr,
     pub shade_admin: Contract,
     pub oracle: Contract,
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
     pub issued_asset: Contract,
     pub activated: bool,
     pub bond_issuance_limit: Uint128,
@@ -34,20 +34,20 @@ pub struct Config {
     pub global_maximum_discount: Uint128,
     pub global_min_accepted_issued_price: Uint128,
     pub global_err_issued_price: Uint128,
-    pub contract: HumanAddr,
+    pub contract: Addr,
     pub airdrop: Option<Contract>,
     pub query_auth: Contract,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
-    pub limit_admin: HumanAddr,
+    pub limit_admin: Addr,
     pub global_issuance_limit: Uint128,
     pub global_minimum_bonding_period: u64,
     pub global_maximum_discount: Uint128,
     pub shade_admin: Contract,
     pub oracle: Contract,
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
     pub issued_asset: Contract,
     pub activated: bool,
     pub bond_issuance_limit: Uint128,
@@ -64,7 +64,7 @@ pub struct InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateLimitConfig {
-        limit_admin: Option<HumanAddr>,
+        limit_admin: Option<Addr>,
         shade_admin: Option<Contract>,
         global_issuance_limit: Option<Uint128>,
         global_minimum_bonding_period: Option<u64>,
@@ -75,7 +75,7 @@ pub enum HandleMsg {
     },
     UpdateConfig {
         oracle: Option<Contract>,
-        treasury: Option<HumanAddr>,
+        treasury: Option<Addr>,
         issued_asset: Option<Contract>,
         activated: Option<bool>,
         bond_issuance_limit: Option<Uint128>,
@@ -105,8 +105,8 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         msg: Option<Binary>,
         padding: Option<String>,
@@ -183,7 +183,7 @@ pub enum QueryAnswer {
         pending_bonds: Vec<PendingBond>,
     },
     DepositAddresses {
-        deposit_addresses: Vec<HumanAddr>,
+        deposit_addresses: Vec<Addr>,
     },
     PriceCheck {
         price: Uint128,
@@ -206,7 +206,7 @@ pub enum QueryAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Account {
-    pub address: HumanAddr,
+    pub address: Addr,
     pub pending_bonds: Vec<PendingBond>,
 }
 

@@ -25,7 +25,7 @@ share one viewing key.
 ##### Request
 | Name      | Type      | Description                                    | optional |
 |-----------|-----------|------------------------------------------------|----------|
-| admin     | HumanAddr | Contract admin                                 | yes      |
+| admin     | Addr | Contract admin                                 | yes      |
 | prng_seed | Binary    | Randomness seed for the viewing key generation | no       |
 
 ## Admin
@@ -37,7 +37,7 @@ Changes the current admin
 ##### Request
 | Name    | Type      | Description                                          | optional |
 |---------|-----------|------------------------------------------------------|----------|
-| admin   | HumanAddr | New contract admin; SHOULD be a valid bech32 address | no       |
+| admin   | Addr | New contract admin; SHOULD be a valid bech32 address | no       |
 | padding | String    | Randomly generated data to pad the message           | yes      |
 
 
@@ -149,7 +149,7 @@ Validates the users viewing key
 ##### Request
 | Name | Type      | Description        | optional |
 |------|-----------|--------------------|----------|
-| user | HumanAddr | User to verify     | no       |
+| user | Addr | User to verify     | no       |
 | key  | String    | User's viewing key | no       |
 
 ##### Response

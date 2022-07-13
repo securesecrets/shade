@@ -7,8 +7,8 @@ use crate::tests::{
     init_governance,
 };
 use contract_harness::harness::{governance::Governance, snip20_staking::Snip20Staking};
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{to_binary, Binary, HumanAddr, StdResult};
+use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{to_binary, Binary, Addr, StdResult};
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
 use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::{
@@ -24,14 +24,14 @@ use shade_protocol::{
     utils::asset::Contract,
 };
 
-fn init_assembly_governance_with_proposal() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)>
+fn init_assembly_governance_with_proposal() -> StdResult<(ContractEnsemble, ContractLink<Addr>)>
 {
     let (mut chain, gov) = init_governance(InitMsg {
-        treasury: HumanAddr::from("treasury"),
+        treasury: Addr::from("treasury"),
         admin_members: vec![
-            HumanAddr::from("alpha"),
-            HumanAddr::from("beta"),
-            HumanAddr::from("charlie"),
+            Addr::from("alpha"),
+            Addr::from("beta"),
+            Addr::from("charlie"),
         ],
         admin_profile: Profile {
             name: "admin".to_string(),
@@ -911,11 +911,11 @@ fn vote_count() {
 #[test]
 fn vote_count_percentage() {
     let (mut chain, gov) = init_governance(InitMsg {
-        treasury: HumanAddr::from("treasury"),
+        treasury: Addr::from("treasury"),
         admin_members: vec![
-            HumanAddr::from("alpha"),
-            HumanAddr::from("beta"),
-            HumanAddr::from("charlie"),
+            Addr::from("alpha"),
+            Addr::from("beta"),
+            Addr::from("charlie"),
         ],
         admin_profile: Profile {
             name: "admin".to_string(),

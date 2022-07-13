@@ -1,11 +1,11 @@
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -24,7 +24,7 @@ pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     profile: Profile,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -32,7 +32,7 @@ pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
     let id = ID::add_profile(&mut deps.storage)?;
     profile.save(&mut deps.storage, &id)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddProfile {
@@ -46,7 +46,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
     env: Env,
     id: Uint128,
     new_profile: UpdateProfile,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -88,7 +88,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
 
     profile.save(&mut deps.storage, &id)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetProfile {

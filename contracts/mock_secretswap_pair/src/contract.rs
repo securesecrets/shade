@@ -4,8 +4,8 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     InitResponse,
     Querier,
     StdError,
@@ -32,7 +32,7 @@ use shade_protocol::{
     },
     utils::asset::Contract,
 };
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 
 use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 
@@ -78,7 +78,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     return match msg {
         HandleMsg::MockPool {
             token_a,
@@ -118,17 +118,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             pair_info_w(&mut deps.storage).save(&PairResponse {
                 asset_infos,
-                contract_addr: HumanAddr("".to_string()),
-                liquidity_token: HumanAddr("".to_string()),
+                contract_addr: Addr::unchecked("".to_string()),
+                liquidity_token: Addr::unchecked("".to_string()),
                 token_code_hash: "".to_string(),
                 asset0_volume: Uint128::zero(),
                 asset1_volume: Uint128::zero(),
                 factory: Contract {
-                    address: HumanAddr("".to_string()),
+                    address: Addr::unchecked("".to_string()),
                     code_hash: "".to_string(),
                 },
             })?;
-            Ok(HandleResponse::default())
+            Ok(Response::default())
         }
     };
 }

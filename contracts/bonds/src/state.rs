@@ -1,5 +1,5 @@
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{HumanAddr, Storage};
+use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{Addr, Storage};
 use shade_protocol::storage::{
     bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
     Singleton,
@@ -46,11 +46,11 @@ pub fn global_total_claimed_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, U
 }
 
 /* List of assets that have bond opportunities stored */
-pub fn deposit_assets_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<HumanAddr>> {
+pub fn deposit_assets_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Addr>> {
     singleton(storage, DEPOSIT_ASSETS)
 }
 
-pub fn deposit_assets_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<HumanAddr>> {
+pub fn deposit_assets_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Addr>> {
     singleton_read(storage, DEPOSIT_ASSETS)
 }
 

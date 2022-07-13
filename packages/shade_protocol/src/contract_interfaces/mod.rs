@@ -1,11 +1,16 @@
+#[cfg(feature = "dex")]
 pub mod dex;
 
+#[cfg(feature = "dao")]
 pub mod dao;
 
+#[cfg(feature = "oracles")]
 pub mod oracles;
 
+#[cfg(feature = "mint")]
 pub mod mint;
 
+#[cfg(feature = "scrt_staking")]
 pub mod staking;
 
 pub mod sky;

@@ -3,8 +3,8 @@ use crate::tests::{
     query::{query_no_opps, query_opp_parameters},
     set_prices,
 };
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::HumanAddr;
+use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::Addr;
 use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
 use shade_protocol::contract_interfaces::{bonds, query_auth, snip20};
@@ -293,7 +293,7 @@ pub fn test_bonds() {
     );
 }
 
-fn claim(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAddr>) -> () {
+fn claim(chain: &mut ContractEnsemble, bonds: &ContractLink<Addr>) -> () {
     let msg = bonds::HandleMsg::Claim { padding: None };
 
     chain
@@ -309,8 +309,8 @@ fn claim(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAddr>) -> () {
 
 fn buy_opp(
     chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
-    depo: &ContractLink<HumanAddr>,
+    bonds: &ContractLink<Addr>,
+    depo: &ContractLink<Addr>,
     amount: Uint128,
 ) -> () {
     let msg = snip20::HandleMsg::Send {
@@ -335,8 +335,8 @@ fn buy_opp(
 
 fn buy_opp_fail(
     chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
-    depo: &ContractLink<HumanAddr>,
+    bonds: &ContractLink<Addr>,
+    depo: &ContractLink<Addr>,
 ) -> () {
     let msg = snip20::HandleMsg::Send {
         recipient: bonds.address.clone(),
@@ -361,8 +361,8 @@ fn buy_opp_fail(
 
 fn open_opp(
     chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
-    depo: &ContractLink<HumanAddr>,
+    bonds: &ContractLink<Addr>,
+    depo: &ContractLink<Addr>,
     sender: &str,
     time_till_opp_end: Option<u64>,
     bond_issuance_limit: Option<Uint128>,
@@ -400,8 +400,8 @@ fn open_opp(
 
 fn open_opp_fail(
     chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
-    depo: &ContractLink<HumanAddr>,
+    bonds: &ContractLink<Addr>,
+    depo: &ContractLink<Addr>,
     sender: &str,
     time_till_opp_end: Option<u64>,
     bond_issuance_limit: Option<Uint128>,
@@ -444,8 +444,8 @@ fn open_opp_fail(
 
 fn close_opp(
     chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
-    depo: &ContractLink<HumanAddr>,
+    bonds: &ContractLink<Addr>,
+    depo: &ContractLink<Addr>,
     sender: &str,
 ) -> () {
     let msg = bonds::HandleMsg::CloseBond {
@@ -463,10 +463,10 @@ fn close_opp(
 
 fn update_config(
     chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
+    bonds: &ContractLink<Addr>,
     sender: &str,
     oracle: Option<Contract>,
-    treasury: Option<HumanAddr>,
+    treasury: Option<Addr>,
     issued_asset: Option<Contract>,
     activated: Option<bool>,
     bond_issuance_limit: Option<Uint128>,

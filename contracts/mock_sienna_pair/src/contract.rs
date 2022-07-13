@@ -4,8 +4,8 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     InitResponse,
     Querier,
     StdError,
@@ -13,7 +13,7 @@ use shade_protocol::c_std::{
     Storage,
 };
 use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use schemars::JsonSchema;
 use shade_protocol::secret_toolkit::utils::{InitCallback, Query};
 use serde::{Deserialize, Serialize};
@@ -73,7 +73,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     match msg {
         HandleMsg::MockPool {
             token_a,
@@ -83,11 +83,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => {
             let pair_info = PairInfo {
                 liquidity_token: Contract {
-                    address: HumanAddr("".to_string()),
+                    address: Addr::unchecked("".to_string()),
                     code_hash: "".to_string(),
                 },
                 factory: Contract {
-                    address: HumanAddr("".to_string()),
+                    address: Addr::unchecked("".to_string()),
                     code_hash: "".to_string(),
                 },
                 pair: Pair {
@@ -108,7 +108,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             pair_info_w(&mut deps.storage).save(&pair_info)?;
 
-            Ok(HandleResponse::default())
+            Ok(Response::default())
         }
     }
 

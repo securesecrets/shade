@@ -1,7 +1,7 @@
 use crate::contract_interfaces::governance::stored_id::ID;
 use crate::math_compat::Uint128;
 use crate::c_std::{StdError, StdResult, Storage};
-use crate::schemars::JsonSchema;
+
 use crate::serde::{Deserialize, Serialize};
 
 #[cfg(feature = "governance-impl")]
@@ -143,7 +143,7 @@ impl BucketStorage for ProfileData {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
-// NOTE: 100% = Uint128(10000)
+// NOTE: 100% = Uint128::new(10000)
 pub struct VoteProfile {
     // Deadline for voting
     pub deadline: u64,

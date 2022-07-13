@@ -1,5 +1,13 @@
 // Helper libraries
 
+#[cfg(feature = "interface")]
+pub mod callback;
+#[cfg(feature = "interface")]
+pub use callback::*;
+
+pub mod padding;
+pub use padding::*;
+
 #[cfg(feature = "utils")]
 pub mod asset;
 
@@ -21,3 +29,4 @@ pub mod wrap;
 
 #[cfg(feature = "math")]
 pub mod price;
+

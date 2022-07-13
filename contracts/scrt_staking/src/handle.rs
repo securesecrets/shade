@@ -9,8 +9,8 @@ use shade_protocol::c_std::{
     CosmosMsg,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StakingMsg,
     StdError,
@@ -43,11 +43,11 @@ use crate::{
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    _sender: HumanAddr,
-    _from: HumanAddr,
+    _sender: Addr,
+    _from: Addr,
     amount: Uint128,
     _msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     debug_print!("Received {}", amount);
 
     let config = config_r(&deps.storage).load()?;
@@ -58,7 +58,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let validator = choose_validator(&deps, env.block.time)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![
             redeem_msg(
                 amount,
@@ -88,7 +88,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     config: Config,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
     if cur_config.admins.contains(&env.message.sender) {
@@ -98,7 +98,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     // Save new info
     config_w(&mut deps.storage).save(&config)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
@@ -113,8 +113,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 pub fn update<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
+    asset: Addr,
+) -> StdResult<Response> {
     let mut messages = vec![];
 
     let config = config_r(&deps.storage).load()?;
@@ -152,7 +152,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
         }));
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Update {
@@ -164,9 +164,9 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     /* Unbonding to the scrt staking contract
      * Once scrt is on balance sheet, treasury can claim
      * and this contract will take all scrt->sscrt and send
@@ -191,7 +191,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     let self_address = self_address_r(&deps.storage).load()?;
     let delegations = query::delegations(&deps)?;
 
-    let delegated = Uint128(
+    let delegated = Uint128::new(
         delegations
             .iter()
             .map(|d| d.amount.amount.u128())
@@ -291,7 +291,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     unbonding_w(&mut deps.storage).save(&unbonding)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Unbond {
@@ -343,8 +343,8 @@ pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
+    asset: Addr,
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     if asset != config.sscrt.address {
@@ -388,7 +388,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
     unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Claim {

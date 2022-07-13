@@ -33,13 +33,13 @@ Generic contract responsible for protocol and treasury bond opportunities
 ##### Request
 | Name                              | Type      | Description                                                                | optional |
 |-----------------------------------|-----------|----------------------------------------------------------------------------|----------|
-| limit_admin                       | HumanAddr | Limit Assembly/Admin; SHOULD be a valid bech32 address                     | no       |
+| limit_admin                       | Addr | Limit Assembly/Admin; SHOULD be a valid bech32 address                     | no       |
 | global_issuance_limit             | Uint128   | Total number of tokens this contract can issue before limit reset          | no       |
 | global_minimum_bonding_period     | u64       | Minimum amount of time before any pending bonds can be claimed.            | no       |
 | global_maximum_discount           | Uint128   | Maximum allowed discount for any bond opportunities                        | no       |
-| admin                             | HumanAddr | Bonds Assembly/Admin; SHOULD be a valid bech32 address                     | no       |
+| admin                             | Addr | Bonds Assembly/Admin; SHOULD be a valid bech32 address                     | no       |
 | oracle                            | Contract  | Oracle contract                                                            | no       |
-| treasury                          | HumanAddr | Treasury address for allowance and deposit assets                       | no       |
+| treasury                          | Addr | Treasury address for allowance and deposit assets                       | no       |
 | issued_asset                      | Contract  | Issued asset for this bonds contract                                       | no       |
 | activated                         | bool      | Turns entering opportunities contract-wide on/off                          | no       |
 | bond_issuance_limit               | Uint128   | Default issuance limit for new bond opportunities                          | no       |
@@ -59,9 +59,9 @@ Updates the given values
 ##### Request
 | Name                              | Type      | Description                                                                                   | optional  |
 |-----------------------------------|-----------|-----------------------------------------------------------------------------------------------|-----------|
-| admin                             | HumanAddr | New contract admin; SHOULD be a valid bech32 address                                          | yes       |
+| admin                             | Addr | New contract admin; SHOULD be a valid bech32 address                                          | yes       |
 | oracle                            | Contract  | Oracle address                                                                                | yes       |
-| treasury                          | HumanAddr | Treasury address                                                                              | yes       |
+| treasury                          | Addr | Treasury address                                                                              | yes       |
 | issued_asset                      | Contract  | The asset this bond contract will issue to users                                              | yes       |
 | activated                         | bool      | If true, bond opportunities can be entered into                                               | yes       |
 | minting_bond                      | bool      | If true, bond is minting issued asset. If false, bond is spending on allowance from treasury  | yes       |
@@ -141,7 +141,7 @@ Update the given limit config values
 ##### Request
 | Name                          | Type      | Description                                                 | optional  |
 |-------------------------------|-----------|-------------------------------------------------------------|-----------|
-| limit_admin                   | HumanAddr | New contract limit admin; SHOULD be a valid bech32 address  | yes       |
+| limit_admin                   | Addr | New contract limit admin; SHOULD be a valid bech32 address  | yes       |
 | global_isuance_limit          | Uint128   | asset issuance limit, cumulative across all opportunities   | yes       |
 | global_minimum_bonding_period | u64       | minimum bonding time for all opportunities, in UNIX time    | yes       |
 | global_maximum_discount       | Uint128   | maximum percent discount for all new opportunities          | yes       |
@@ -225,7 +225,7 @@ Get the account's pending bonds using a viewing key
 ##### Request
 | Name         | Type       | Description                 | optional |
 |--------------|------------|-----------------------------|----------|
-| account      | HumanAddr  | Accounts address            | yes      |
+| account      | Addr  | Accounts address            | yes      |
 | permit       | Permit     | User's signed permit        | no       |
 
 ##### Response
@@ -244,7 +244,7 @@ Get the list of addresses for currently recognized deposit addresses, correlated
 ```json
 {
   "deposit_addresses": {
-    "deposit_addresses": "List of deposit addresses Vec<HumanAddr>",
+    "deposit_addresses": "List of deposit addresses Vec<Addr>",
   }
 }
 ```
@@ -307,7 +307,7 @@ User account, stores address
 ### Structure
 | Name            | Type              | Description                                                           | optional  |
 |-----------------|-------------------|-----------------------------------------------------------------------|---------- |
-| address         | HumanAddr         | User address                                                          | no        |
+| address         | Addr         | User address                                                          | no        |
 | pending_bonds   | Vec<PendingBond>  | Bond opportunities purchased by user that are unclaimed and maturing  | no        |
 
 

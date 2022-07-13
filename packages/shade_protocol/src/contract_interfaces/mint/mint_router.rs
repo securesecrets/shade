@@ -3,14 +3,14 @@ use crate::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use crate::math_compat::Uint128;
-use crate::c_std::{Binary, HumanAddr};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Addr};
+
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
-    pub admin: HumanAddr,
+    pub admin: Addr,
     pub path: Vec<Contract>,
 }
 
@@ -26,16 +26,16 @@ pub struct MintMsgHook {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct PathNode {
-    pub input_asset: HumanAddr,
+    pub input_asset: Addr,
     pub input_amount: Uint128,
-    pub mint: HumanAddr,
-    pub output_asset: HumanAddr,
+    pub mint: Addr,
+    pub output_asset: Addr,
     pub output_amount: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Addr>,
     pub path: Vec<Contract>,
 }
 
@@ -50,8 +50,8 @@ pub enum HandleMsg {
         config: Config,
     },
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -67,7 +67,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -83,7 +83,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Route { asset: HumanAddr, amount: Uint128 },
+    Route { asset: Addr, amount: Uint128 },
 }
 
 impl Query for QueryMsg {

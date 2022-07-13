@@ -15,7 +15,7 @@ use crate::state::{
     total_claimed_w,
     validate_address_permit,
 };
-use shade_protocol::math_compat::{Decimal, Uint128};
+use shade_protocol::c_std::{Decimal, Uint128};
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
@@ -23,8 +23,8 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -65,13 +65,13 @@ use shade_protocol::{
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    admin: Option<HumanAddr>,
-    dump_address: Option<HumanAddr>,
+    admin: Option<Addr>,
+    dump_address: Option<Addr>,
     query_rounding: Option<Uint128>,
     start_date: Option<u64>,
     end_date: Option<u64>,
     decay_start: Option<u64>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
     if env.message.sender != config.admin {
@@ -170,7 +170,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         Ok(state)
     })?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
@@ -183,7 +183,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     tasks: Vec<RequiredTask>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
     if env.message.sender != config.admin {
@@ -207,7 +207,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
         Ok(config)
     })?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddTask {
@@ -221,7 +221,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     addresses: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Check if airdrop active
     let config = config_r(&deps.storage).load()?;
 
@@ -338,7 +338,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     // Save account
     account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Account {
@@ -356,10 +356,10 @@ pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     key: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     revoke_permit(&mut deps.storage, env.message.sender.to_string(), key);
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::DisablePermitKey {
@@ -372,13 +372,13 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     key: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     account_viewkey_w(&mut deps.storage).save(
         &env.message.sender.to_string().as_bytes(),
         &AccountKey(key).hash(),
     )?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetViewingKey {
@@ -390,8 +390,8 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    account: HumanAddr,
-) -> StdResult<HandleResponse> {
+    account: Addr,
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     for (i, task) in config.task_claim.iter().enumerate() {
@@ -410,7 +410,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::CompleteTask {
@@ -422,7 +422,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
 pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     // Check that airdrop hasn't ended
@@ -451,7 +451,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 
     total_claimed_w(&mut deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![send_msg(
             sender.clone(),
             redeem_amount.into(),
@@ -476,7 +476,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     // Check if airdrop ended
@@ -504,7 +504,7 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
                     config.airdrop_snip20.address,
                 )?];
 
-                return Ok(HandleResponse {
+                return Ok(Response {
                     messages,
                     log: vec![],
                     data: Some(to_binary(&HandleAnswer::ClaimDecay {
@@ -607,7 +607,7 @@ pub fn try_add_account_addresses<S: Storage, A: Api>(
     storage: &mut S,
     api: &A,
     config: &Config,
-    sender: &HumanAddr,
+    sender: &Addr,
     account: &mut Account,
     addresses: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,

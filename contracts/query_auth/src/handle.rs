@@ -3,7 +3,7 @@ use shade_protocol::c_std::{
     Api,
     Env,
     Extern,
-    HandleResponse,
+    Response,
     Querier,
     StdError,
     StdResult,
@@ -41,14 +41,14 @@ pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     admin: Contract,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if  !user_authorized(&deps, env)? {
         return Err(StdError::unauthorized());
     }
 
     Admin(admin).save(&mut deps.storage)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetAdminAuth { status: Success })?),
@@ -59,14 +59,14 @@ pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     state: ContractStatus,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if  !user_authorized(&deps, env)? {
         return Err(StdError::unauthorized());
     }
 
     state.save(&mut deps.storage)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetRunState { status: Success })?),
@@ -77,14 +77,14 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     entropy: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let seed = RngSeed::load(&deps.storage)?.0;
 
     let key = Key::generate(&env, seed.as_slice(), &entropy.as_ref());
 
     HashedKey(key.hash()).save(&mut deps.storage, env.message.sender)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::CreateViewingKey { key: key.0 })?),
@@ -95,10 +95,10 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     key: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     HashedKey(Key(key).hash()).save(&mut deps.storage, env.message.sender)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetViewingKey { status: Success })?),
@@ -109,9 +109,9 @@ pub fn try_block_permit_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     key: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     PermitKey::revoke(&mut deps.storage, key, env.message.sender)?;
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BlockPermitKey {

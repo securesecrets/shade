@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128};
 use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, balance_query},
     utils::Query,
@@ -28,7 +28,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     //TODO: restrict to admin?
 
@@ -70,7 +70,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
 pub fn reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     //TODO: restrict to admin?
 
@@ -113,7 +113,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let managers = managers_r(&deps.storage).load()?;
     let mut unbonding = Uint128::zero();
@@ -137,7 +137,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let managers = managers_r(&deps.storage).load()?;
     let mut claimable = Uint128::zero();
@@ -161,8 +161,8 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
 
 pub fn allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
-    spender: &HumanAddr,
+    asset: &Addr,
+    spender: &Addr,
 ) -> StdResult<treasury::QueryAnswer> {
     let self_address = self_address_r(&deps.storage).load()?;
     let key = viewing_key_r(&deps.storage).load()?;
@@ -196,7 +196,7 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
 
 pub fn allowances<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Allowances {
         allowances: match allowances_r(&deps.storage).may_load(asset.to_string().as_bytes())? {

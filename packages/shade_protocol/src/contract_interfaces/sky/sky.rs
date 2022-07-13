@@ -4,8 +4,8 @@ use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery, Token
 use crate::{utils::asset::Contract, contract_interfaces::snip20::helpers::Snip20Asset};
 use crate::utils::generic_response::ResponseStatus;
 use crate::math_compat::Uint128;
-use crate::c_std::{Binary, HumanAddr, StdResult, Env, Extern, Querier, Api, Storage};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Addr, StdResult, Env, Extern, Querier, Api, Storage};
+
 use secret_storage_plus::Item;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
@@ -19,12 +19,12 @@ pub struct TokenContract{
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
-    pub admin: HumanAddr,
+    pub admin: Addr,
     pub mint_addr: Contract,
     pub market_swap_addr: Contract,
     pub shd_token: TokenContract,
     pub silk_token: TokenContract,
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
     pub limit: Option<String>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -33,7 +33,7 @@ pub struct ViewingKeys(pub String);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub struct SelfAddr(pub HumanAddr);
+pub struct SelfAddr(pub Addr);
 
 #[cfg(feature = "sky-impl")]
 use crate::utils::storage::plus::ItemStorage;
@@ -51,12 +51,12 @@ impl ItemStorage for SelfAddr{
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg{
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Addr>,
     pub mint_addr: Contract,
     pub market_swap_addr: Contract,
     pub shd_token: TokenContract,
     pub silk_token: TokenContract,
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
     pub viewing_key: String,
     pub limit: Option<String>,
 }
@@ -125,11 +125,11 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
-    pair_address: HumanAddr,
+    pair_address: Addr,
     dex_id: String, //sienna, scrtswap, shdswap
-    token1_address: HumanAddr,
+    token1_address: Addr,
     token1_amount: Uint128,
-    token2_address: HumanAddr,
+    token2_address: Addr,
     token2_amount: Uint128,
 }
 
@@ -143,11 +143,11 @@ pub struct ArbPair {
             )?;
             match pool_info.pair_info.pair.token_0 {
                 TokenType::CustomToken { contract_addr, token_code_hash } => self.token1_address = contract_addr.clone(),
-                _ => self.token1_address = HumanAddr("".to_string()),
+                _ => self.token1_address = Addr::unchecked("".to_string()),
             }
             match pool_info.pair_info.pair.token_1 {
                 TokenType::CustomToken { contract_addr, token_code_hash } => self.token2_address = contract_addr.clone(),
-                _ => self.token2_address = HumanAddr("".to_string()),
+                _ => self.token2_address = Addr::unchecked("".to_string()),
             }
             self.token1_amount = pool_info.pair_info.amount_0.clone();
             self.token2_amount = pool_info.pair_info.amount_1.clone();
@@ -163,11 +163,11 @@ pub struct ArbPair {
         if buy_token1 {
             let out = self.token1_amount.u128() - (self.token1_amount.u128() * self.token2_amount.u128())/
                 (self.token2_amount.u128() + swap_amount.u128());
-            Ok(Uint128(out))
+            Ok(Uint128::new(out))
         } else {
             let out = self.token2_amount.u128() - (self.token2_amount.u128() * self.token1_amount.u128())/
                 (self.token1_amount.u128() + swap_amount.u128());
-            Ok(Uint128(out))
+            Ok(Uint128::new(out))
 
         }
 

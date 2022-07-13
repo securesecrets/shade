@@ -1,6 +1,6 @@
 use shade_protocol::c_std::{
     debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, Extern,
-    HandleResponse, HumanAddr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
+    Response, Addr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
 };
 
 use shade_protocol::secret_toolkit::snip20::{balance_query};
@@ -37,11 +37,11 @@ use crate::{
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    _sender: HumanAddr,
-    _from: HumanAddr,
+    _sender: Addr,
+    _from: Addr,
     amount: Uint128,
     _msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
 
     let config = config_r(&deps.storage).load()?;
 
@@ -60,7 +60,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
      * deposit into rewards pool
      */
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Receive {
@@ -74,7 +74,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     config: Config,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
     if env.message.sender != cur_config.admin {
@@ -84,7 +84,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     // Save new info
     config_w(&mut deps.storage).save(&config)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
@@ -99,8 +99,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 pub fn update<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
+    asset: Addr,
+) -> StdResult<Response> {
 
     let mut messages = vec![];
 
@@ -118,7 +118,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
      *
      * Else send direct to treasury e.g. sSCRT/sETH w/ SHD rewards
      */
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Update {
@@ -130,9 +130,9 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
 
     let config = config_r(&deps.storage).load()?;
 
@@ -165,7 +165,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     unbonding_w(&mut deps.storage).update(asset.as_str().as_bytes(), |u| Ok(u.unwrap_or_else(|| Uint128::zero()) + amount))?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Unbond {
@@ -178,8 +178,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
+    asset: Addr,
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     if !is_supported_asset(&config, &asset) {
@@ -207,7 +207,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
     unbonding_w(&mut deps.storage).update(asset.as_str().as_bytes(), |u| Ok((u.unwrap() - claim_amount)?))?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Claim {

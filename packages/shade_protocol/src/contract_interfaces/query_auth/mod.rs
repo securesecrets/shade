@@ -1,8 +1,8 @@
 #[cfg(feature = "query_auth_impl")]
 pub mod auth;
 
-use crate::c_std::{Binary, HumanAddr};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Addr};
+
 use crate::query_authentication::permit::Permit;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
@@ -133,7 +133,7 @@ pub enum QueryMsg {
     Config {},
 
     ValidateViewingKey {
-        user: HumanAddr,
+        user: Addr,
         key: String,
     },
     ValidatePermit {
@@ -156,7 +156,7 @@ pub enum QueryAnswer {
         is_valid: bool
     },
     ValidatePermit {
-        user: HumanAddr,
+        user: Addr,
         is_revoked: bool
     }
 }

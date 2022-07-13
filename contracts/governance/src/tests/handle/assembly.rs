@@ -1,6 +1,6 @@
 use crate::tests::{admin_only_governance, get_assemblies};
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::HumanAddr;
+use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::Addr;
 use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::contract_interfaces::governance;
 
@@ -45,7 +45,7 @@ fn unauthorised_add_assembly() {
             },
             MockEnv::new(
                 // Sender is self
-                HumanAddr::from("random"),
+                Addr::from("random"),
                 gov.clone(),
             ),
         )
@@ -102,7 +102,7 @@ fn unauthorised_set_assembly() {
             },
             MockEnv::new(
                 // Sender is self
-                HumanAddr::from("random"),
+                Addr::from("random"),
                 gov.clone(),
             ),
         )

@@ -1,11 +1,11 @@
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -31,7 +31,7 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
     name: String,
     msg: String,
     assemblies: Vec<Uint128>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -52,7 +52,7 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
     }
     .save(&mut deps.storage, &id)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddAssemblyMsg {
@@ -68,7 +68,7 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
     name: Option<String>,
     msg: Option<String>,
     assemblies: Option<Vec<Uint128>>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -92,7 +92,7 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
 
     assembly_msg.save(&mut deps.storage, &id)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetAssemblyMsg {
@@ -106,7 +106,7 @@ pub fn try_add_assembly_msg_assemblies<S: Storage, A: Api, Q: Querier>(
     env: Env,
     id: Uint128,
     assemblies: Vec<Uint128>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -122,7 +122,7 @@ pub fn try_add_assembly_msg_assemblies<S: Storage, A: Api, Q: Querier>(
 
     AssemblyMsg::save_data(&mut deps.storage, &id, assembly_msg)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetAssemblyMsg {

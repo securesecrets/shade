@@ -1,6 +1,6 @@
-use shade_protocol::c_std::HumanAddr;
+use shade_protocol::c_std::Addr;
 use shade_protocol::fadroma::ensemble::MockEnv;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitialBalance, QueryMsg, QueryAnswer};
 use shade_protocol::contract_interfaces::snip20::manager::Balance;
 use crate::tests::init_snip20_with_config;
@@ -9,22 +9,22 @@ use crate::tests::init_snip20_with_config;
 fn total_supply_overflow() {
     assert!(init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("John"),
+            address: Addr::from("John"),
             amount: Uint128::MAX
         }
     ]), None).is_ok());
 
     assert!(init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("John"),
+            address: Addr::from("John"),
             amount: (Uint128::MAX - Uint128::new(1))
         },
         InitialBalance {
-            address: HumanAddr::from("Salchi"),
+            address: Addr::from("Salchi"),
             amount: Uint128::new(1)
         },
         InitialBalance {
-            address: HumanAddr::from("Chonn"),
+            address: Addr::from("Chonn"),
             amount: Uint128::new(1)
         }
     ]), None).is_err());
@@ -34,17 +34,17 @@ fn total_supply_overflow() {
 fn transfer() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("Bob"),
+            address: Addr::from("Bob"),
             amount: (Uint128::new(1000))
         },
         InitialBalance {
-            address: HumanAddr::from("Dylan"),
+            address: Addr::from("Dylan"),
             amount: Uint128::new(1000)
         },
     ]), None).unwrap();
 
     assert!(chain.execute(&HandleMsg::Transfer {
-        recipient: HumanAddr::from("Dylan"),
+        recipient: Addr::from("Dylan"),
         amount: Uint128::new(100),
         memo: None,
         padding: None
@@ -54,7 +54,7 @@ fn transfer() {
         let answer: QueryAnswer = chain.query(
             snip.address.clone(),
             &QueryMsg::Balance {
-                address: HumanAddr::from("Bob"),
+                address: Addr::from("Bob"),
                 key: "password".to_string()
             }
         ).unwrap();
@@ -67,7 +67,7 @@ fn transfer() {
         let answer: QueryAnswer = chain.query(
             snip.address.clone(),
             &QueryMsg::Balance {
-                address: HumanAddr::from("Dylan"),
+                address: Addr::from("Dylan"),
                 key: "password".to_string()
             }
         ).unwrap();
@@ -79,7 +79,7 @@ fn transfer() {
     }
 
     assert!(chain.execute(&HandleMsg::Transfer {
-        recipient: HumanAddr::from("Dylan"),
+        recipient: Addr::from("Dylan"),
         amount: Uint128::new(1000),
         memo: None,
         padding: None
@@ -90,17 +90,17 @@ fn transfer() {
 fn send() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("Bob"),
+            address: Addr::from("Bob"),
             amount: (Uint128::new(1000))
         },
         InitialBalance {
-            address: HumanAddr::from("Dylan"),
+            address: Addr::from("Dylan"),
             amount: Uint128::new(1000)
         },
     ]), None).unwrap();
 
     assert!(chain.execute(&HandleMsg::Send {
-        recipient: HumanAddr::from("Dylan"),
+        recipient: Addr::from("Dylan"),
         amount: Uint128::new(100),
         recipient_code_hash: None,
         memo: None,
@@ -112,7 +112,7 @@ fn send() {
         let answer: QueryAnswer = chain.query(
             snip.address.clone(),
             &QueryMsg::Balance {
-                address: HumanAddr::from("Bob"),
+                address: Addr::from("Bob"),
                 key: "password".to_string()
             }
         ).unwrap();
@@ -125,7 +125,7 @@ fn send() {
         let answer: QueryAnswer = chain.query(
             snip.address.clone(),
             &QueryMsg::Balance {
-                address: HumanAddr::from("Dylan"),
+                address: Addr::from("Dylan"),
                 key: "password".to_string()
             }
         ).unwrap();
@@ -137,7 +137,7 @@ fn send() {
     }
 
     assert!(chain.execute(&HandleMsg::Send {
-        recipient: HumanAddr::from("Dylan"),
+        recipient: Addr::from("Dylan"),
         amount: Uint128::new(1000),
         recipient_code_hash: None,
         memo: None,

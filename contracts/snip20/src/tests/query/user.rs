@@ -1,6 +1,6 @@
-use shade_protocol::c_std::{Coin, HumanAddr};
+use shade_protocol::c_std::{Coin, Addr};
 use shade_protocol::fadroma::ensemble::MockEnv;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitialBalance, QueryAnswer, QueryMsg};
 use shade_protocol::contract_interfaces::snip20::transaction_history::{RichTx, TxAction};
 use crate::tests::{create_vk, init_snip20_with_config};
@@ -12,7 +12,7 @@ fn allowance_vk() {
     create_vk(&mut chain, &snip, "Saul", None).unwrap();
 
     chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Goodman"),
+        spender: Addr::from("Goodman"),
         amount: Uint128::new(100),
         expiration: None,
         padding: None
@@ -21,16 +21,16 @@ fn allowance_vk() {
     let answer: QueryAnswer = chain.query(
         snip.address.clone(),
         &QueryMsg::Allowance {
-            owner: HumanAddr::from("Saul"),
-            spender: HumanAddr::from("Goodman"),
+            owner: Addr::from("Saul"),
+            spender: Addr::from("Goodman"),
             key: "password".to_string()
         }
     ).unwrap();
 
     match answer {
         QueryAnswer::Allowance { spender, owner, allowance, expiration} => {
-            assert_eq!(owner, HumanAddr::from("Saul"));
-            assert_eq!(spender, HumanAddr::from("Goodman"));
+            assert_eq!(owner, Addr::from("Saul"));
+            assert_eq!(spender, Addr::from("Goodman"));
             assert_eq!(allowance, Uint128::new(100));
             assert_eq!(expiration, None);
         },
@@ -41,14 +41,14 @@ fn allowance_vk() {
 #[test]
 fn balance_vk() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![InitialBalance {
-        address: HumanAddr::from("Robinson"),
+        address: Addr::from("Robinson"),
         amount: Uint128::new(1500)
     }]), None).unwrap();
 
     let answer: QueryAnswer = chain.query(
         snip.address.clone(),
         &QueryMsg::Balance {
-            address: HumanAddr::from("Robinson"),
+            address: Addr::from("Robinson"),
             key: "password".to_string()
         }
     ).unwrap();
@@ -66,19 +66,19 @@ fn balance_vk() {
 #[test]
 fn transaction_history() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![InitialBalance {
-        address: HumanAddr::from("Setsuna"),
+        address: Addr::from("Setsuna"),
         amount: Uint128::new(1500)
     }]), None).unwrap();
 
     chain.execute(&HandleMsg::Transfer {
-        recipient: HumanAddr::from("Stratos"),
+        recipient: Addr::from("Stratos"),
         amount: Uint128::new(200),
         memo: None,
         padding: None
     }, MockEnv::new("Setsuna", snip.clone())).unwrap();
 
     chain.execute(&HandleMsg::Send {
-        recipient: HumanAddr::from("Smirnoff"),
+        recipient: Addr::from("Smirnoff"),
         recipient_code_hash: None,
         amount: Uint128::new(140),
         msg: None,
@@ -87,14 +87,14 @@ fn transaction_history() {
     }, MockEnv::new("Setsuna", snip.clone())).unwrap();
 
     chain.execute(&HandleMsg::Transfer {
-        recipient: HumanAddr::from("Felt"),
+        recipient: Addr::from("Felt"),
         amount: Uint128::new(300),
         memo: None,
         padding: None
     }, MockEnv::new("Setsuna", snip.clone())).unwrap();
 
     chain.execute(&HandleMsg::Transfer {
-        recipient: HumanAddr::from("Tieria"),
+        recipient: Addr::from("Tieria"),
         amount: Uint128::new(540),
         memo: None,
         padding: None
@@ -103,7 +103,7 @@ fn transaction_history() {
     let answer: QueryAnswer = chain.query(
         snip.address.clone(),
         &QueryMsg::TransactionHistory {
-            address: HumanAddr::from("Setsuna"),
+            address: Addr::from("Setsuna"),
             key: "password".to_string(),
             page: None,
             page_size: 10
@@ -116,56 +116,56 @@ fn transaction_history() {
 
             assert_eq!(txs[0].id, 1);
             assert_eq!(txs[0].action, TxAction::Mint {
-                minter: HumanAddr::from("admin"),
-                recipient: HumanAddr::from("Setsuna")
+                minter: Addr::from("admin"),
+                recipient: Addr::from("Setsuna")
             });
             assert_eq!(txs[0].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: shade_protocol::c_std::Uint128(1500)
+                amount: Uint128::new(1500)
             });
 
             assert_eq!(txs[1].id, 2);
             assert_eq!(txs[1].action, TxAction::Transfer {
-                from: HumanAddr::from("Setsuna"),
-                sender: HumanAddr::from("Setsuna"),
-                recipient: HumanAddr::from("Stratos")
+                from: Addr::from("Setsuna"),
+                sender: Addr::from("Setsuna"),
+                recipient: Addr::from("Stratos")
             });
             assert_eq!(txs[1].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: shade_protocol::c_std::Uint128(200)
+                amount: Uint128::new(200)
             });
 
             assert_eq!(txs[2].id, 3);
             assert_eq!(txs[2].action, TxAction::Transfer {
-                from: HumanAddr::from("Setsuna"),
-                sender: HumanAddr::from("Setsuna"),
-                recipient: HumanAddr::from("Smirnoff")
+                from: Addr::from("Setsuna"),
+                sender: Addr::from("Setsuna"),
+                recipient: Addr::from("Smirnoff")
             });
             assert_eq!(txs[2].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: shade_protocol::c_std::Uint128(140)
+                amount: Uint128::new(140)
             });
 
             assert_eq!(txs[3].id, 4);
             assert_eq!(txs[3].action, TxAction::Transfer {
-                from: HumanAddr::from("Setsuna"),
-                sender: HumanAddr::from("Setsuna"),
-                recipient: HumanAddr::from("Felt")
+                from: Addr::from("Setsuna"),
+                sender: Addr::from("Setsuna"),
+                recipient: Addr::from("Felt")
             });
             assert_eq!(txs[3].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: shade_protocol::c_std::Uint128(300)
+                amount: Uint128::new(300)
             });
 
             assert_eq!(txs[4].id, 5);
             assert_eq!(txs[4].action, TxAction::Transfer {
-                from: HumanAddr::from("Setsuna"),
-                sender: HumanAddr::from("Setsuna"),
-                recipient: HumanAddr::from("Tieria")
+                from: Addr::from("Setsuna"),
+                sender: Addr::from("Setsuna"),
+                recipient: Addr::from("Tieria")
             });
             assert_eq!(txs[4].coins, Coin {
                 denom: "TKN".to_string(),
-                amount: shade_protocol::c_std::Uint128(540)
+                amount: Uint128::new(540)
             });
 
         },

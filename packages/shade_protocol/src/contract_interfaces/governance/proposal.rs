@@ -8,8 +8,8 @@ use crate::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use crate::math_compat::Uint128;
-use crate::c_std::{Binary, Coin, HumanAddr, StdResult, Storage};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Coin, Addr, StdResult, Storage};
+
 use crate::serde::{Deserialize, Serialize};
 
 #[cfg(feature = "governance-impl")]
@@ -21,7 +21,7 @@ use crate::utils::storage::default::NaiveBucketStorage;
 pub struct Proposal {
     // Description
     // Address of the proposal proposer
-    pub proposer: HumanAddr,
+    pub proposer: Addr,
     // Proposal title
     pub title: String,
     // Description of proposal, can be in base64
@@ -50,7 +50,7 @@ pub struct Proposal {
     // Funders
     // Leave as an option so we can hide the data if None
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub funders: Option<Vec<(HumanAddr, Uint128)>>,
+    pub funders: Option<Vec<(Addr, Uint128)>>,
 }
 
 const ASSEMBLY_VOTE: &'static [u8] = b"user-assembly-vote-";
@@ -111,7 +111,7 @@ impl Proposal {
             funders_arr.push((funder.clone(), Self::funding(storage, &id, &funder)?.amount))
         }
 
-        let mut funders: Option<Vec<(HumanAddr, Uint128)>> = None;
+        let mut funders: Option<Vec<(Addr, Uint128)>> = None;
         if !funders_arr.is_empty() {
             if let Some(prof) =
                 Profile::funding(storage, &Assembly::data(storage, &assembly)?.profile)?
@@ -203,7 +203,7 @@ impl Proposal {
         StatusHistory(data).save(storage, &id.to_be_bytes())
     }
 
-    pub fn funders<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vec<HumanAddr>> {
+    pub fn funders<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vec<Addr>> {
         let funders = match Funders::may_load(storage, &id.to_be_bytes())? {
             None => vec![],
             Some(item) => item.0,
@@ -214,12 +214,12 @@ impl Proposal {
     pub fn save_funders<S: Storage>(
         storage: &mut S,
         id: &Uint128,
-        data: Vec<HumanAddr>,
+        data: Vec<Addr>,
     ) -> StdResult<()> {
         Funders(data).save(storage, &id.to_be_bytes())
     }
 
-    pub fn funding<S: Storage>(storage: &S, id: &Uint128, user: &HumanAddr) -> StdResult<Funding> {
+    pub fn funding<S: Storage>(storage: &S, id: &Uint128, user: &Addr) -> StdResult<Funding> {
         let key = id.to_string() + "-" + user.as_str();
         Funding::load(storage, key.as_bytes())
     }
@@ -227,7 +227,7 @@ impl Proposal {
     pub fn save_funding<S: Storage>(
         storage: &mut S,
         id: &Uint128,
-        user: &HumanAddr,
+        user: &Addr,
         data: Funding,
     ) -> StdResult<()> {
         let key = id.to_string() + "-" + user.as_str();
@@ -238,7 +238,7 @@ impl Proposal {
     pub fn assembly_vote<S: Storage>(
         storage: &S,
         id: &Uint128,
-        user: &HumanAddr,
+        user: &Addr,
     ) -> StdResult<Option<Vote>> {
         let key = id.to_string() + "-" + user.as_str();
         Ok(Vote::may_load(storage, ASSEMBLY_VOTE, key.as_bytes())?)
@@ -247,7 +247,7 @@ impl Proposal {
     pub fn save_assembly_vote<S: Storage>(
         storage: &mut S,
         id: &Uint128,
-        user: &HumanAddr,
+        user: &Addr,
         data: &Vote,
     ) -> StdResult<()> {
         let key = id.to_string() + "-" + user.as_str();
@@ -274,7 +274,7 @@ impl Proposal {
     pub fn public_vote<S: Storage>(
         storage: &S,
         id: &Uint128,
-        user: &HumanAddr,
+        user: &Addr,
     ) -> StdResult<Option<Vote>> {
         let key = id.to_string() + "-" + user.as_str();
         Ok(Vote::may_load(storage, PUBLIC_VOTE, key.as_bytes())?)
@@ -283,7 +283,7 @@ impl Proposal {
     pub fn save_public_vote<S: Storage>(
         storage: &mut S,
         id: &Uint128,
-        user: &HumanAddr,
+        user: &Addr,
         data: &Vote,
     ) -> StdResult<()> {
         let key = id.to_string() + "-" + user.as_str();
@@ -310,7 +310,7 @@ impl Proposal {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct ProposalDescription {
-    pub proposer: HumanAddr,
+    pub proposer: Addr,
     pub title: String,
     pub metadata: String,
 }
@@ -406,7 +406,7 @@ impl BucketStorage for StatusHistory {
 #[cfg(feature = "governance-impl")]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
-struct Funders(pub Vec<HumanAddr>);
+struct Funders(pub Vec<Addr>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for Funders {

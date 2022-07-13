@@ -3,7 +3,7 @@ use crate::{
     utils::errors::{build_string, CodeType, DetailedError},
 };
 use crate::c_std::StdError;
-use crate::schemars::JsonSchema;
+
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]

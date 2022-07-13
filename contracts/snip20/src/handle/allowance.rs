@@ -1,5 +1,5 @@
-use shade_protocol::c_std::{Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{Api, Binary, Env, Extern, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
+use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::manager::{Allowance, CoinInfo};
 use shade_protocol::utils::generic_response::ResponseStatus::Success;
@@ -9,10 +9,10 @@ use crate::handle::transfers::{try_send_impl, try_transfer_impl};
 pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    spender: HumanAddr,
+    spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let owner = env.message.sender;
 
     let mut allowance = Allowance::may_load(
@@ -37,7 +37,7 @@ pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
 
     allowance.save(&mut deps.storage, (owner.clone(), spender.clone()))?;
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::IncreaseAllowance {
@@ -51,10 +51,10 @@ pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
 pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    spender: HumanAddr,
+    spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let owner = env.message.sender;
 
     let mut allowance = Allowance::load(&deps.storage, (owner.clone(), spender.clone()))?;
@@ -75,7 +75,7 @@ pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
 
     allowance.save(&mut deps.storage, (owner.clone(), spender.clone()))?;
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::IncreaseAllowance {
@@ -89,11 +89,11 @@ pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
 pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: HumanAddr,
-    recipient: HumanAddr,
+    owner: Addr,
+    recipient: Addr,
     amount: Uint128,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     try_transfer_impl(
         &mut deps.storage,
@@ -106,7 +106,7 @@ pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
         &env.block
     )?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::TransferFrom { status: Success })?),
@@ -117,7 +117,7 @@ pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     actions: Vec<batch::TransferFromAction>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     let block = &env.block;
     for action in actions {
@@ -133,7 +133,7 @@ pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BatchTransferFrom {
@@ -145,13 +145,13 @@ pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
 pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: HumanAddr,
-    recipient: HumanAddr,
+    owner: Addr,
+    recipient: Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
     msg: Option<Binary>,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let mut messages = vec![];
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     try_send_impl(
@@ -168,7 +168,7 @@ pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
         &env.block
     )?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SendFrom { status: Success })?),
@@ -179,7 +179,7 @@ pub fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     actions: Vec<batch::SendFromAction>
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let mut messages = vec![];
     let sender = env.message.sender;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
@@ -200,7 +200,7 @@ pub fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    Ok(HandleResponse{
+    Ok(Response{
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BatchSendFrom { status: Success })?)

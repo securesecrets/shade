@@ -1,7 +1,7 @@
 use crate::utils::asset::Contract;
 use crate::c_std::{Api, Extern, Querier, StdResult, Storage};
 use crate::math_compat::Uint128;
-use crate::schemars::JsonSchema;
+
 use secret_toolkit::utils::{InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 

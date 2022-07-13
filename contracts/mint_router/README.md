@@ -30,7 +30,7 @@ Contract responsible to mint a paired snip20 asset
 |oracle           | Contract   |  Oracle contract                                                              |  no      |
 |peg              | String     |  Symbol to peg to when querying oracle (defaults to native_asset symbol)      |  yes     |
 |treasury         | Contract   |  Treasury contract                                                            |  yes     |
-|secondary_burn   | HumanAddrr |  Where non-burnable assets will go                                            |  yes     |
+|secondary_burn   | Addrr |  Where non-burnable assets will go                                            |  yes     |
 ## Admin
 
 ### Messages
@@ -42,7 +42,7 @@ Updates the given values
 |admin          | string     |  New contract admin; SHOULD be a valid bech32 address |  yes     |
 |oracle         | Contract   |  Oracle contract                                      |  yes     |
 |treasury       | Contract   |  Treasury contract                                    |  yes     |
-|secondary_burn | HumanAddrr |  Where non-burnable assets will go                    |  yes     |
+|secondary_burn | Addrr |  Where non-burnable assets will go                    |  yes     |
 ##### Response
 ```json
 {

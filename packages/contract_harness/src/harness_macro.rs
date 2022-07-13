@@ -1,6 +1,6 @@
 macro_rules! implement_harness {
     ($x:ident, $s:ident) => {
-        use shade_protocol::c_std::{from_binary, Binary, Env, HandleResponse, InitResponse, StdResult};
+        use shade_protocol::c_std::{from_binary, Binary, Env, Response, InitResponse, StdResult};
         use shade_protocol::fadroma::ensemble::{ContractHarness, MockDeps};
         impl ContractHarness for $x {
             fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
@@ -12,7 +12,7 @@ macro_rules! implement_harness {
                 deps: &mut MockDeps,
                 env: Env,
                 msg: Binary,
-            ) -> StdResult<HandleResponse> {
+            ) -> StdResult<Response> {
                 $s::contract::handle(deps, env, from_binary(&msg)?)
             }
 

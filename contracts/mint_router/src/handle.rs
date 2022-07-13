@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     debug_print,
     from_binary,
@@ -9,8 +9,8 @@ use shade_protocol::c_std::{
     CosmosMsg,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -51,11 +51,11 @@ use crate::state::{
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    sender: HumanAddr,
-    from: HumanAddr,
+    sender: Addr,
+    from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let mut messages = vec![];
     let asset_paths = asset_path_r(&deps.storage);
 
@@ -120,7 +120,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
         input_asset.address.clone(),
     )?);
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Mint {
@@ -134,7 +134,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     config: Config,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
     // Admin-only
@@ -150,7 +150,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&config)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {

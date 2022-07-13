@@ -1,4 +1,4 @@
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
@@ -7,8 +7,8 @@ use shade_protocol::c_std::{
     Coin,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -34,7 +34,7 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     env: Env,
     proposal: Uint128,
     vote: Vote,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = env.message.sender;
 
     // Check if proposal in assembly voting
@@ -71,7 +71,7 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     Proposal::save_assembly_vote(&mut deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_assembly_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AssemblyVote {
@@ -87,7 +87,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     title: String,
     metadata: String,
     msgs: Option<Vec<ProposalMsg>>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Get assembly
     let assembly_data = Assembly::data(&deps.storage, &assembly_id)?;
 
@@ -189,7 +189,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     let prop_id = ID::add_proposal(&mut deps.storage)?;
     prop.save(&mut deps.storage, &prop_id)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AssemblyProposal {
@@ -203,9 +203,9 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
     env: Env,
     name: String,
     metadata: String,
-    members: Vec<HumanAddr>,
+    members: Vec<Addr>,
     profile: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -225,7 +225,7 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
     }
     .save(&mut deps.storage, &id)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddAssembly {
@@ -240,9 +240,9 @@ pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
     id: Uint128,
     name: Option<String>,
     metadata: Option<String>,
-    members: Option<Vec<HumanAddr>>,
+    members: Option<Vec<Addr>>,
     profile: Option<Uint128>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -274,7 +274,7 @@ pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
 
     assembly.save(&mut deps.storage, &id)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetAssembly {

@@ -9,8 +9,8 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{Uint128, HumanAddr, StdResult, StdError, Extern, Querier, Api, Storage};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Uint128, Addr, StdResult, StdError, Extern, Querier, Api, Storage};
+
 use secret_toolkit::utils::Query;
 use crate::serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ use crate::serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Token {
-    pub contract_addr: HumanAddr,
+    pub contract_addr: Addr,
     pub token_code_hash: String,
     pub viewing_key: String,
 }
@@ -57,7 +57,7 @@ impl Query for PairQuery {
 #[serde(rename_all = "snake_case")]
 pub enum TokenType {
     CustomToken {
-        contract_addr: HumanAddr,
+        contract_addr: Addr,
         token_code_hash: String,
     },
     NativeToken {
@@ -144,7 +144,7 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
 
     let response: SimulationResponse = PairQuery::Simulation {
         offer_asset: Asset {
-            amount: Uint128(1_000_000), // 1 sSCRT (6 decimals)
+            amount: Uint128::new(1_000_000), // 1 sSCRT (6 decimals)
             info: AssetInfo {
                 token: Token {
                     contract_addr: sscrt.address,
@@ -174,6 +174,6 @@ pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
     )?;
 
     // Constant Product
-    Ok(Uint128(pool.assets[0].amount.u128() * pool.assets[1].amount.u128()))
+    Ok(Uint128::new(pool.assets[0].amount.u128() * pool.assets[1].amount.u128()))
 }
 */

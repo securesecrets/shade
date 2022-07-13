@@ -1,5 +1,5 @@
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{to_binary, Api, Extern, HumanAddr, Querier, QueryResult, StdResult, Storage};
+use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{to_binary, Api, Extern, Addr, Querier,  StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::snip20::{
         manager::{
@@ -89,8 +89,8 @@ pub fn minters<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
 
 pub fn allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    owner: HumanAddr,
-    spender: HumanAddr,
+    owner: Addr,
+    spender: Addr,
 ) -> StdResult<QueryAnswer> {
     let allowance = Allowance::may_load(
         &deps.storage,
@@ -107,7 +107,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account: HumanAddr,
+    account: Addr,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Balance {
         amount: Balance::may_load(&deps.storage, account)?.unwrap_or(Balance(Uint128::zero())).0,
@@ -116,7 +116,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
 pub fn transfer_history<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account: HumanAddr,
+    account: Addr,
     page: u32,
     page_size: u32,
 ) -> StdResult<QueryAnswer> {
@@ -129,7 +129,7 @@ pub fn transfer_history<S: Storage, A: Api, Q: Querier>(
 
 pub fn transaction_history<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account: HumanAddr,
+    account: Addr,
     page: u32,
     page_size: u32,
 ) -> StdResult<QueryAnswer> {

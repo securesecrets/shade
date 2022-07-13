@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{testing::*, Binary, HumanAddr};
+use shade_protocol::c_std::{testing::*, Binary, Addr};
 use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::fadroma::ensemble::ContractEnsemble;
 use shade_protocol::contract_interfaces::{
@@ -9,9 +9,9 @@ use shade_protocol::contract_interfaces::{
 
 use shade_protocol::query_authentication::transaction::{PermitSignature, PubKey};
 
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 
-pub fn query_no_opps(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAddr>) -> () {
+pub fn query_no_opps(chain: &mut ContractEnsemble, bonds: &ContractLink<Addr>) -> () {
     let msg = bonds::QueryMsg::BondOpportunities {};
 
     let query: bonds::QueryAnswer = chain.query(bonds.address.clone(), &msg).unwrap();
@@ -26,7 +26,7 @@ pub fn query_no_opps(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAdd
 
 pub fn query_opp_parameters(
     chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
+    bonds: &ContractLink<Addr>,
     issuance_limit: Option<Uint128>,
     amount_issued: Option<Uint128>,
     deposit_denom: Option<Snip20Asset>,
@@ -98,8 +98,8 @@ pub fn query_opp_parameters(
 
 pub fn query_acccount_parameters(
     chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
-    query_auth: &ContractLink<HumanAddr>,
+    bonds: &ContractLink<Addr>,
+    query_auth: &ContractLink<Addr>,
     _sender: &str,
     deposit_denom: Option<Snip20Asset>,
     end_time: Option<u64>,

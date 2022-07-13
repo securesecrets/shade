@@ -1,8 +1,8 @@
 use shade_protocol::math_compat as compat;
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
-    Extern, HumanAddr, StdError,
-    Binary, StdResult, HandleResponse, Env,
+    Extern, Addr, StdError,
+    Binary, StdResult, Response, Env,
     InitResponse, Uint128,
 };
 
@@ -72,7 +72,7 @@ fn single_asset_portion_full_dao_integration(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("token".into()),
+                address: Addr::unchecked("token".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }
         )
@@ -81,13 +81,13 @@ fn single_asset_portion_full_dao_integration(
     let treasury = ensemble.instantiate(
         reg_treasury.id,
         &treasury::InitMsg {
-            admin: Some(HumanAddr("admin".into())),
+            admin: Some(Addr::unchecked("admin".into())),
             viewing_key: "viewing_key".to_string(),
         },
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("treasury".into()),
+                address: Addr::unchecked("treasury".into()),
                 code_hash: reg_treasury.code_hash,
             }
         )
@@ -96,14 +96,14 @@ fn single_asset_portion_full_dao_integration(
     let manager = ensemble.instantiate(
         reg_manager.id,
         &treasury_manager::InitMsg {
-            admin: Some(HumanAddr("admin".into())),
-            treasury: HumanAddr("treasury".into()),
+            admin: Some(Addr::unchecked("admin".into())),
+            treasury: Addr::unchecked("treasury".into()),
             viewing_key: "viewing_key".to_string(),
         },
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("manager".into()),
+                address: Addr::unchecked("manager".into()),
                 code_hash: reg_manager.code_hash,
             }
         )
@@ -112,8 +112,8 @@ fn single_asset_portion_full_dao_integration(
     let scrt_staking = ensemble.instantiate(
         reg_scrt_staking.id,
         &scrt_staking::InitMsg {
-            admins: Some(vec![HumanAddr("admin".into())]),
-            owner: HumanAddr("manager".into()),
+            admins: Some(vec![Addr::unchecked("admin".into())]),
+            owner: Addr::unchecked("manager".into()),
             sscrt: Contract {
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
@@ -124,7 +124,7 @@ fn single_asset_portion_full_dao_integration(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("scrt_staking".into()),
+                address: Addr::unchecked("scrt_staking".into()),
                 code_hash: reg_scrt_staking.code_hash,
             }
         )
@@ -206,7 +206,7 @@ fn single_asset_portion_full_dao_integration(
                 // to be removed
                 last_refresh: "".to_string(),
                 // 100% (adapter balance will 2x before unbond)
-                tolerance: Uint128(10u128.pow(18)),
+                tolerance: Uint128::new(10u128.pow(18)),
             },
         },
         MockEnv::new(
@@ -244,11 +244,11 @@ macro_rules! single_asset_portion_full_dao_tests {
 }
 single_asset_portion_full_dao_tests! {
     single_asset_portion_full_dao_0: (
-        Uint128(100), // deposit 
-        Uint128(9 * 10u128.pow(17)), // allow 90%
-        Uint128(1 * 10u128.pow(18)), // allocate 100%
-        Uint128(10), // treasury 10
-        Uint128(0), // manager 0
-        Uint128(90), // scrt_staking 90
+        Uint128::new(100), // deposit
+        Uint128::new(9 * 10u128.pow(17)), // allow 90%
+        Uint128::new(1 * 10u128.pow(18)), // allocate 100%
+        Uint128::new(10), // treasury 10
+        Uint128::new(0), // manager 0
+        Uint128::new(90), // scrt_staking 90
     ),
 }

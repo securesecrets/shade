@@ -6,7 +6,7 @@ use shade_protocol::c_std::{
     DistQuery,
     Extern,
     FullDelegation,
-    HumanAddr,
+    Addr,
     Querier,
     RewardsResponse,
     StdError,
@@ -72,7 +72,7 @@ pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdRes
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
 
@@ -83,7 +83,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
         )));
     }
 
-    let delegated = Uint128(
+    let delegated = Uint128::new(
         delegations(deps)?
             .into_iter()
             .map(|d| d.amount.amount.u128())
@@ -99,7 +99,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
 
@@ -130,7 +130,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
 
@@ -148,7 +148,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 
 pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
 
@@ -175,7 +175,7 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
 
 pub fn reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
     let config = config_r(&deps.storage).load()?;
@@ -195,7 +195,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
 /*
 pub fn delegation<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    validator: HumanAddr,
+    validator: Addr,
 ) -> StdResult<Option<FullDelegation>> {
     let address = self_address_r(&deps.storage).load()?;
     deps.querier.query_delegation(address, validator)

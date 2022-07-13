@@ -2,22 +2,22 @@ use crate::{
     contract_interfaces::dao::adapter,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::c_std::{Binary, HumanAddr, Uint128};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Addr, Uint128};
+
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admin: HumanAddr,
-    pub treasury: HumanAddr,
+    pub admin: Addr,
+    pub treasury: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Balance {
-    pub token: HumanAddr,
+    pub token: Addr,
     pub amount: Uint128,
 }
 
@@ -43,7 +43,7 @@ pub struct Holder {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Unbonding {
-    pub holder: HumanAddr,
+    pub holder: Addr,
     pub amount: Uint128,
 }
 
@@ -78,9 +78,9 @@ pub struct AllocationMeta {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Addr>,
     pub viewing_key: String,
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
 }
 
 impl InitCallback for InitMsg {
@@ -91,8 +91,8 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -104,14 +104,14 @@ pub enum HandleMsg {
         contract: Contract,
     },
     Allocate {
-        asset: HumanAddr,
+        asset: Addr,
         allocation: Allocation,
     },
     AddHolder {
-        holder: HumanAddr,
+        holder: Addr,
     },
     RemoveHolder {
-        holder: HumanAddr,
+        holder: Addr,
     },
     Adapter(adapter::SubHandleMsg),
 }
@@ -125,7 +125,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     Receive {
         status: ResponseStatus,
@@ -153,14 +153,14 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Allocations { asset: HumanAddr },
-    PendingAllowance { asset: HumanAddr },
+    Allocations { asset: Addr },
+    PendingAllowance { asset: Addr },
     Holders { },
-    Holder { holder: HumanAddr },
-    Balance { asset: HumanAddr, holder: HumanAddr },
-    Unbonding { asset: HumanAddr, holder: HumanAddr },
-    Unbondable { asset: HumanAddr, holder: HumanAddr },
-    Claimable { asset: HumanAddr, holder: HumanAddr },
+    Holder { holder: Addr },
+    Balance { asset: Addr, holder: Addr },
+    Unbonding { asset: Addr, holder: Addr },
+    Unbondable { asset: Addr, holder: Addr },
+    Claimable { asset: Addr, holder: Addr },
     Adapter(adapter::SubQueryMsg),
 }
 
@@ -172,10 +172,10 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
-    Assets { assets: Vec<HumanAddr> },
+    Assets { assets: Vec<Addr> },
     Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
-    Holders { holders: Vec<HumanAddr> },
+    Holders { holders: Vec<Addr> },
     Holder { holder: Holder },
     Adapter(adapter::QueryAnswer),
 }

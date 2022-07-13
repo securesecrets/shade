@@ -10,8 +10,8 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdResult,
     Storage,
@@ -20,7 +20,7 @@ use shade_protocol::utils::storage::default::SingletonStorage;
 
 pub fn get_distributor<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-) -> StdResult<Option<Vec<HumanAddr>>> {
+) -> StdResult<Option<Vec<Addr>>> {
     Ok(match DistributorsEnabled::load(&deps.storage)?.0 {
         true => Some(Distributors::load(&deps.storage)?.0),
         false => None,
@@ -31,14 +31,14 @@ pub fn try_set_distributors_status<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     enabled: bool,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = Config::from_storage(&mut deps.storage);
 
     check_if_admin(&config, &env.message.sender)?;
 
     DistributorsEnabled(enabled).save(&mut deps.storage)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetDistributorsStatus {
@@ -50,8 +50,8 @@ pub fn try_set_distributors_status<S: Storage, A: Api, Q: Querier>(
 pub fn try_add_distributors<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    new_distributors: Vec<HumanAddr>,
-) -> StdResult<HandleResponse> {
+    new_distributors: Vec<Addr>,
+) -> StdResult<Response> {
     let config = Config::from_storage(&mut deps.storage);
 
     check_if_admin(&config, &env.message.sender)?;
@@ -60,7 +60,7 @@ pub fn try_add_distributors<S: Storage, A: Api, Q: Querier>(
     distributors.0.extend(new_distributors);
     distributors.save(&mut deps.storage)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddDistributors {
@@ -72,15 +72,15 @@ pub fn try_add_distributors<S: Storage, A: Api, Q: Querier>(
 pub fn try_set_distributors<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    distributors: Vec<HumanAddr>,
-) -> StdResult<HandleResponse> {
+    distributors: Vec<Addr>,
+) -> StdResult<Response> {
     let config = Config::from_storage(&mut deps.storage);
 
     check_if_admin(&config, &env.message.sender)?;
 
     Distributors(distributors).save(&mut deps.storage)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetDistributors {

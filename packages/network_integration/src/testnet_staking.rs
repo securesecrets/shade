@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, HumanAddr, Uint128};
+use cosmwasm_std::{Binary, Addr, Uint128};
 use cosmwasm_math_compat as compat;
 use network_integration::utils::{
     generate_label, print_contract, print_header, SHD_STAKING_FILE, GAS, SNIP20_FILE, STORE_GAS,
@@ -26,7 +26,7 @@ fn main() -> Result<()> {
         symbol: "SHD".to_string(),
         decimals: 8,
         initial_balances: Some(vec![InitialBalance {
-            address: HumanAddr::from("secret1xtl6rt2pwhseuzct00h8uw6trkzjj2l8lu38se".to_string()),
+            address: Addr::from("secret1xtl6rt2pwhseuzct00h8uw6trkzjj2l8lu38se".to_string()),
             amount: compat::Uint128::new(1000000000000000),
         }]),
         prng_seed: Default::default(),
@@ -64,8 +64,8 @@ fn main() -> Result<()> {
         prng_seed: Default::default(),
         public_total_supply: true,
         unbond_time: 180,
-        staked_token: Contract { address: HumanAddr(snip.address.clone()), code_hash: snip.code_hash },
-        treasury: Some(HumanAddr(snip.address)),
+        staked_token: Contract { address: Addr(snip.address.clone()), code_hash: snip.code_hash },
+        treasury: Some(Addr(snip.address)),
         treasury_code_hash: None,
         limit_transfer: true,
         distributors: None

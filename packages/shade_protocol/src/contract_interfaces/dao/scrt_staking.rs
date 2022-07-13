@@ -1,18 +1,18 @@
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use crate::c_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
+use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
 
 use crate::contract_interfaces::dao::adapter;
-use crate::schemars::JsonSchema;
+
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admins: Vec<HumanAddr>,
-    //pub treasury: HumanAddr,
+    pub admins: Vec<Addr>,
+    //pub treasury: Addr,
     // This is the contract that will "unbond" funds
-    pub owner: HumanAddr,
+    pub owner: Addr,
     pub sscrt: Contract,
     pub validator_bounds: Option<ValidatorBounds>,
 }
@@ -28,8 +28,8 @@ pub struct ValidatorBounds {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
-    pub admins: Option<Vec<HumanAddr>>,
-    pub owner: HumanAddr,
+    pub admins: Option<Vec<Addr>>,
+    pub owner: Addr,
     pub sscrt: Contract,
     pub validator_bounds: Option<ValidatorBounds>,
     pub viewing_key: String,
@@ -43,8 +43,8 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -64,7 +64,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -79,7 +79,7 @@ pub enum HandleAnswer {
     },
     Unbond {
         status: ResponseStatus,
-        delegations: Vec<HumanAddr>,
+        delegations: Vec<Addr>,
     },
     */
 }

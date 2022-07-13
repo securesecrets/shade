@@ -1,6 +1,6 @@
-use crate::c_std::{Binary, Env, HumanAddr, StdError, StdResult, Storage};
+use crate::c_std::{Binary, Env, Addr, StdError, StdResult, Storage};
 use crate::query_authentication::viewing_keys::ViewingKey;
-use crate::schemars::JsonSchema;
+
 use secret_toolkit::crypto::{Prng, sha_256};
 use crate::serde::{Deserialize, Serialize};
 use crate::math_compat::Uint128;
@@ -60,7 +60,7 @@ impl ItemStorage for CoinInfo {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct Admin(pub HumanAddr);
+pub struct Admin(pub Addr);
 
 #[cfg(feature = "snip20-impl")]
 impl ItemStorage for Admin {
@@ -201,16 +201,16 @@ impl TotalSupply {
 pub struct Balance(pub Uint128);
 
 #[cfg(feature = "snip20-impl")]
-impl MapStorage<'static, HumanAddr> for Balance {
-    const MAP: Map<'static, HumanAddr, Self> = Map::new("balance-");
+impl MapStorage<'static, Addr> for Balance {
+    const MAP: Map<'static, Addr, Self> = Map::new("balance-");
 }
 
 #[cfg(feature = "snip20-impl")]
 impl Balance {
-    pub fn set<S: Storage>(storage: &mut S, amount: Uint128, addr: &HumanAddr) -> StdResult<()> {
+    pub fn set<S: Storage>(storage: &mut S, amount: Uint128, addr: &Addr) -> StdResult<()> {
         Balance(amount).save(storage, addr.clone())
     }
-    pub fn add<S: Storage>(storage: &mut S, amount: Uint128, addr: &HumanAddr) -> StdResult<Uint128> {
+    pub fn add<S: Storage>(storage: &mut S, amount: Uint128, addr: &Addr) -> StdResult<Uint128> {
         let supply = Self::may_load(storage, addr.clone())?
             .unwrap_or(Self(Uint128::zero())).0
             .checked_add(amount)?;
@@ -218,7 +218,7 @@ impl Balance {
         Balance::set(storage, supply, addr)?;
         Ok(supply)
     }
-    pub fn sub<S: Storage>(storage: &mut S, amount: Uint128, addr: &HumanAddr) -> StdResult<Uint128> {
+    pub fn sub<S: Storage>(storage: &mut S, amount: Uint128, addr: &Addr) -> StdResult<Uint128> {
         let subtractee = match Self::load(storage, addr.clone()) {
             Ok(amount) => amount.0,
             Err(_) => return Err(no_funds())
@@ -233,8 +233,8 @@ impl Balance {
     pub fn transfer<S: Storage>(
         storage: &mut S,
         amount: Uint128,
-        sender: &HumanAddr,
-        recipient: &HumanAddr
+        sender: &Addr,
+        recipient: &Addr
     ) -> StdResult<()> {
         Self::sub(storage, amount, sender)?;
         Self::add(storage, amount, recipient)?;
@@ -243,7 +243,7 @@ impl Balance {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct Minters(pub Vec<HumanAddr>);
+pub struct Minters(pub Vec<Addr>);
 
 #[cfg(feature = "snip20-impl")]
 impl ItemStorage for Minters {
@@ -276,8 +276,8 @@ impl Allowance {
 
     pub fn spend<S: Storage>(
         storage: &mut S,
-        owner: &HumanAddr,
-        spender: &HumanAddr,
+        owner: &Addr,
+        spender: &Addr,
         amount: Uint128,
         block: &crate::c_std::BlockInfo
     ) -> StdResult<()> {
@@ -299,16 +299,16 @@ impl Allowance {
 }
 // (Owner, Spender)
 #[cfg(feature = "snip20-impl")]
-impl MapStorage<'static, (HumanAddr, HumanAddr)> for Allowance {
-    const MAP: Map<'static, (HumanAddr, HumanAddr), Self> = Map::new("allowance-");
+impl MapStorage<'static, (Addr, Addr)> for Allowance {
+    const MAP: Map<'static, (Addr, Addr), Self> = Map::new("allowance-");
 }
 
 #[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default)]
 pub struct ReceiverHash(pub String);
 
 #[cfg(feature = "snip20-impl")]
-impl MapStorage<'static, HumanAddr> for ReceiverHash {
-    const MAP: Map<'static, HumanAddr, Self> = Map::new("receiver-hash-");
+impl MapStorage<'static, Addr> for ReceiverHash {
+    const MAP: Map<'static, Addr, Self> = Map::new("receiver-hash-");
 }
 
 // Auth
@@ -336,7 +336,7 @@ impl Key {
         Self(base64::encode(key))
     }
 
-    pub fn verify<S: Storage>(storage: &S, address: HumanAddr, key: String) -> StdResult<bool> {
+    pub fn verify<S: Storage>(storage: &S, address: Addr, key: String) -> StdResult<bool> {
         Ok(match HashedKey::may_load(storage, address)? {
             None => {
                 Key(key).compare(&[0u8; KEY_SIZE]);
@@ -359,25 +359,25 @@ impl ViewingKey<32> for Key{}
 pub struct HashedKey(pub [u8; KEY_SIZE]);
 
 #[cfg(feature = "snip20-impl")]
-impl MapStorage<'static, HumanAddr> for HashedKey {
-    const MAP: Map<'static, HumanAddr, Self> = Map::new("hashed-viewing-key-");
+impl MapStorage<'static, Addr> for HashedKey {
+    const MAP: Map<'static, Addr, Self> = Map::new("hashed-viewing-key-");
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PermitKey(pub bool);
 
 #[cfg(feature = "snip20-impl")]
-impl MapStorage<'static, (HumanAddr, String)> for PermitKey {
-    const MAP: Map<'static, (HumanAddr, String), Self> = Map::new("revoked-permit-");
+impl MapStorage<'static, (Addr, String)> for PermitKey {
+    const MAP: Map<'static, (Addr, String), Self> = Map::new("revoked-permit-");
 }
 
 #[cfg(feature = "snip20-impl")]
 impl PermitKey {
-    pub fn revoke<S: Storage>(storage: &mut S, key: String, user: HumanAddr) -> StdResult<()> {
+    pub fn revoke<S: Storage>(storage: &mut S, key: String, user: Addr) -> StdResult<()> {
         PermitKey(true).save(storage, (user, key))
     }
 
-    pub fn is_revoked<S: Storage>(storage: &mut S, key: String, user: HumanAddr) -> StdResult<bool> {
+    pub fn is_revoked<S: Storage>(storage: &mut S, key: String, user: Addr) -> StdResult<bool> {
         Ok(match PermitKey::may_load(storage, (user, key))? {
             None => false,
             Some(_) => true

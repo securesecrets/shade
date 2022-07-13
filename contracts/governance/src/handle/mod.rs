@@ -3,8 +3,8 @@ use shade_protocol::c_std::{
     Api,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -29,10 +29,10 @@ pub mod proposal;
 pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    treasury: Option<HumanAddr>,
+    treasury: Option<Addr>,
     vote_token: Option<Contract>,
     funding_token: Option<Contract>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -68,7 +68,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
     }
 
     config.save(&mut deps.storage)?;
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetConfig {
@@ -81,9 +81,9 @@ pub fn try_set_runtime_state<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     state: RuntimeState,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     todo!();
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetRuntimeState {

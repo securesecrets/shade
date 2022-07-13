@@ -5,7 +5,7 @@ use shade_protocol::c_std::{
     Api,
     CanonicalAddr,
     Coin,
-    HumanAddr,
+    Addr,
     ReadonlyStorage,
     StdError,
     StdResult,
@@ -13,7 +13,7 @@ use shade_protocol::c_std::{
 };
 use shade_protocol::storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::secret_toolkit::storage::{AppendStore, AppendStoreMut};
 
 use crate::state::Config;
@@ -28,9 +28,9 @@ const PREFIX_TRANSFERS: &[u8] = b"transfers";
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Tx {
     pub id: u64,
-    pub from: HumanAddr,
-    pub sender: HumanAddr,
-    pub receiver: HumanAddr,
+    pub from: Addr,
+    pub sender: Addr,
+    pub receiver: Addr,
     pub coins: Coin,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
@@ -44,37 +44,37 @@ pub struct Tx {
 #[serde(rename_all = "snake_case")]
 pub enum TxAction {
     Transfer {
-        from: HumanAddr,
-        sender: HumanAddr,
-        recipient: HumanAddr,
+        from: Addr,
+        sender: Addr,
+        recipient: Addr,
     },
     Mint {
-        minter: HumanAddr,
-        recipient: HumanAddr,
+        minter: Addr,
+        recipient: Addr,
     },
     Burn {
-        burner: HumanAddr,
-        owner: HumanAddr,
+        burner: Addr,
+        owner: Addr,
     },
     Deposit {},
     Redeem {},
     Stake {
-        staker: HumanAddr,
+        staker: Addr,
     },
     AddReward {
-        funder: HumanAddr,
+        funder: Addr,
     },
     FundUnbond {
-        funder: HumanAddr,
+        funder: Addr,
     },
     Unbond {
-        staker: HumanAddr,
+        staker: Addr,
     },
     ClaimUnbond {
-        staker: HumanAddr,
+        staker: Addr,
     },
     ClaimReward {
-        staker: HumanAddr,
+        staker: Addr,
     },
 }
 

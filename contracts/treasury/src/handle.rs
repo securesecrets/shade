@@ -7,8 +7,8 @@ use shade_protocol::c_std::{
     CosmosMsg,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -69,14 +69,14 @@ use shade_protocol::contract_interfaces::dao::adapter;
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    sender: HumanAddr,
-    _from: HumanAddr,
+    sender: Addr,
+    _from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let key = sender.as_str().as_bytes();
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Receive {
@@ -89,7 +89,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     config: Config,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
     if env.message.sender != cur_config.admin {
@@ -98,7 +98,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&config)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
@@ -126,8 +126,8 @@ pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
 pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
+    asset: Addr,
+) -> StdResult<Response> {
     let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
@@ -344,7 +344,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Rebalance {
@@ -356,7 +356,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     env: &Env,
-    spender: HumanAddr,
+    spender: Addr,
     amount: Uint128,
     key: String,
     asset: Contract,
@@ -401,7 +401,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     contract: &Contract,
     reserves: Option<Uint128>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin {
@@ -420,7 +420,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
     allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![
             // Register contract in asset
             register_receive_msg(
@@ -450,7 +450,7 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &mut Contract,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin {
@@ -474,7 +474,7 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
         Ok(adapters)
     })?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RegisterAsset {
@@ -484,7 +484,7 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
 }
 
 // extract contract address if any
-fn allowance_address(allowance: &Allowance) -> Option<&HumanAddr> {
+fn allowance_address(allowance: &Allowance) -> Option<&Addr> {
     match allowance {
         Allowance::Amount { spender, .. } => Some(&spender),
         Allowance::Portion { spender, .. } => Some(&spender),
@@ -510,9 +510,9 @@ fn allowance_amount(allowance: &Allowance) -> Uint128 {
 pub fn allowance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
     allowance: Allowance,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
     let config = config_r(&deps.storage).load()?;
@@ -612,7 +612,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 
     allowances_w(&mut deps.storage).save(key, &apps)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Allowance {
@@ -624,8 +624,8 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
+    asset: Addr,
+) -> StdResult<Response> {
 
     let key = asset.as_str().as_bytes();
 
@@ -653,7 +653,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Claim {
@@ -666,9 +666,9 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     /*
     if env.message.sender != config_r(&deps.storage).load()?.admin {
         return Err(StdError::unauthorized());
@@ -729,7 +729,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         )));
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Claim {

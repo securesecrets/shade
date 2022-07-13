@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128};
 use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, balance_query},
     utils::Query,
@@ -40,7 +40,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 
 pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
     let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
@@ -67,7 +67,7 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
 
 pub fn reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         let reserves = balance_query(
@@ -97,7 +97,7 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
 
 pub fn allocations<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Allocations {
         allocations: match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
@@ -110,8 +110,8 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
 /*
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: Option<HumanAddr>,
+    asset: Addr,
+    holder: Option<Addr>,
 ) -> StdResult<adapter::QueryAnswer> {
     let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => a,
@@ -165,8 +165,8 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: Option<HumanAddr>,
+    asset: Addr,
+    holder: Option<Addr>,
 ) -> StdResult<adapter::QueryAnswer> {
 
     if assets_r(&deps.storage).may_load(asset.to_string().as_bytes())?.is_none() {
@@ -212,8 +212,8 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: Option<HumanAddr>,
+    asset: Addr,
+    holder: Option<Addr>,
 ) -> StdResult<adapter::QueryAnswer> {
 
     let full_asset = match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
@@ -294,8 +294,8 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
  */
 pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: Option<HumanAddr>,
+    asset: Addr,
+    holder: Option<Addr>,
 ) -> StdResult<adapter::QueryAnswer> {
 
     if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
@@ -355,8 +355,8 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: Option<HumanAddr>,
+    asset: Addr,
+    holder: Option<Addr>,
 ) -> StdResult<adapter::QueryAnswer> {
 
     match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
@@ -413,7 +413,7 @@ pub fn holders<S: Storage, A: Api, Q: Querier>(
 
 pub fn holder<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    holder: HumanAddr,
+    holder: Addr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     match holder_r(&deps.storage).may_load(holder.as_str().as_bytes())? {
         Some(h) => Ok(treasury_manager::QueryAnswer::Holder { holder: h }),

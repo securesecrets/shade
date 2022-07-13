@@ -1,8 +1,8 @@
 /*
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
-    Extern, HumanAddr, StdError,
-    Binary, StdResult, HandleResponse, Env,
+    Extern, Addr, StdError,
+    Binary, StdResult, Response, Env,
     InitResponse, Uint128,
 };
 
@@ -25,12 +25,12 @@ macro_rules! test_function_tests {
 
 test_function_tests! {
     test_function_0: (
-        Uint128(1),
-        Uint128(1),
+        Uint128::new(1),
+        Uint128::new(1),
     ),
     test_function_1: (
-        Uint128(1),
-        Uint128(2),
+        Uint128::new(1),
+        Uint128::new(2),
     ),
 }
 */

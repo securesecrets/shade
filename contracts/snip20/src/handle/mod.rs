@@ -3,7 +3,7 @@ pub mod burning;
 pub mod minting;
 pub mod transfers;
 
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     to_binary,
     Api,
@@ -12,8 +12,8 @@ use shade_protocol::c_std::{
     CosmosMsg,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -51,7 +51,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = env.message.sender;
 
     if !Config::redeem_enabled(&deps.storage)? {
@@ -79,7 +79,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
 
     store_redeem(&mut deps.storage, &sender, amount, denom, &env.block)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![CosmosMsg::Bank(BankMsg::Send {
             from_address: env.contract.address,
             to_address: sender,
@@ -93,7 +93,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = env.message.sender;
     let mut amount = Uint128::zero();
     for coin in &env.message.sent_funds {
@@ -124,7 +124,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         &env.block,
     )?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Deposit { status: Success })?),
@@ -134,15 +134,15 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    address: HumanAddr,
-) -> StdResult<HandleResponse> {
+    address: Addr,
+) -> StdResult<Response> {
     if env.message.sender != Admin::load(&deps.storage)?.0 {
         return Err(not_admin());
     }
 
     Admin(address).save(&mut deps.storage)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?),
@@ -153,14 +153,14 @@ pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     status_level: ContractStatusLevel,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != Admin::load(&deps.storage)?.0 {
         return Err(not_admin());
     }
 
     status_level.save(&mut deps.storage)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetContractStatus {
@@ -173,9 +173,9 @@ pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     code_hash: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     ReceiverHash(code_hash).save(&mut deps.storage, env.message.sender)?;
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RegisterReceive {
@@ -188,14 +188,14 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     entropy: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let seed = RandSeed::load(&deps.storage)?.0;
 
     let key = Key::generate(&env, seed.as_slice(), (&entropy).as_ref());
 
     HashedKey(key.hash()).save(&mut deps.storage, env.message.sender)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::CreateViewingKey { key: key.0 })?),
@@ -206,12 +206,12 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     key: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let seed = RandSeed::load(&deps.storage)?.0;
 
     HashedKey(Key(key).hash()).save(&mut deps.storage, env.message.sender)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetViewingKey { status: Success })?),
@@ -222,10 +222,10 @@ pub fn try_revoke_permit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     permit_name: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     PermitKey::revoke(&mut deps.storage, permit_name, env.message.sender)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RevokePermit { status: Success })?),

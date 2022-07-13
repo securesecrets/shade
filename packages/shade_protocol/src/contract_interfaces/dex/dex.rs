@@ -11,7 +11,7 @@ use crate::{
     },
 };
 use crate::c_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
-use crate::schemars::JsonSchema;
+
 use crate::serde::{Deserialize, Serialize};
 
 use crate::math_compat::{Uint128, Uint512};

@@ -4,8 +4,8 @@ use contract_harness::harness::{
     snip20::Snip20,
     snip20_staking::Snip20Staking,
 };
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{to_binary, HumanAddr, StdResult};
+use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{to_binary, Addr, StdResult};
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
 use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::{
@@ -25,8 +25,8 @@ use shade_protocol::{
 
 fn init_voting_governance_with_proposal() -> StdResult<(
     ContractEnsemble,
-    ContractLink<HumanAddr>,
-    ContractLink<HumanAddr>,
+    ContractLink<Addr>,
+    ContractLink<Addr>,
 )> {
     let mut chain = ContractEnsemble::new(50);
 
@@ -41,15 +41,15 @@ fn init_voting_governance_with_proposal() -> StdResult<(
             decimals: 6,
             initial_balances: Some(vec![
                 snip20::InitialBalance {
-                    address: HumanAddr::from("alpha"),
+                    address: Addr::from("alpha"),
                     amount: Uint128::new(20_000_000),
                 },
                 snip20::InitialBalance {
-                    address: HumanAddr::from("beta"),
+                    address: Addr::from("beta"),
                     amount: Uint128::new(20_000_000),
                 },
                 snip20::InitialBalance {
-                    address: HumanAddr::from("charlie"),
+                    address: Addr::from("charlie"),
                     amount: Uint128::new(20_000_000),
                 },
             ]),
@@ -138,11 +138,11 @@ fn init_voting_governance_with_proposal() -> StdResult<(
     let gov = chain.instantiate(
         gov.id,
         &InitMsg {
-            treasury: HumanAddr::from("treasury"),
+            treasury: Addr::from("treasury"),
             admin_members: vec![
-                HumanAddr::from("alpha"),
-                HumanAddr::from("beta"),
-                HumanAddr::from("charlie"),
+                Addr::from("alpha"),
+                Addr::from("beta"),
+                Addr::from("charlie"),
             ],
             admin_profile: Profile {
                 name: "admin".to_string(),
@@ -1218,15 +1218,15 @@ fn vote_count_percentage() {
                 decimals: 6,
                 initial_balances: Some(vec![
                     snip20::InitialBalance {
-                        address: HumanAddr::from("alpha"),
+                        address: Addr::from("alpha"),
                         amount: Uint128::new(20_000_000),
                     },
                     snip20::InitialBalance {
-                        address: HumanAddr::from("beta"),
+                        address: Addr::from("beta"),
                         amount: Uint128::new(20_000_000),
                     },
                     snip20::InitialBalance {
-                        address: HumanAddr::from("charlie"),
+                        address: Addr::from("charlie"),
                         amount: Uint128::new(20_000_000),
                     },
                 ]),
@@ -1331,11 +1331,11 @@ fn vote_count_percentage() {
         .instantiate(
             gov.id,
             &InitMsg {
-                treasury: HumanAddr::from("treasury"),
+                treasury: Addr::from("treasury"),
                 admin_members: vec![
-                    HumanAddr::from("alpha"),
-                    HumanAddr::from("beta"),
-                    HumanAddr::from("charlie"),
+                    Addr::from("alpha"),
+                    Addr::from("beta"),
+                    Addr::from("charlie"),
                 ],
                 admin_profile: Profile {
                     name: "admin".to_string(),

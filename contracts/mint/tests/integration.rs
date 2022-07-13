@@ -6,14 +6,14 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     InitResponse,
     StdError,
     StdResult,
 };
 
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::{
     contract_interfaces::{
         snip20,
@@ -73,7 +73,7 @@ fn test_ensemble(
                 config: None,
             },
             MockEnv::new("admin", ContractLink {
-                address: HumanAddr("sscrt".into()),
+                address: Addr::unchecked("sscrt".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
@@ -92,7 +92,7 @@ fn test_ensemble(
                 config: None,
             },
             MockEnv::new("admin", ContractLink {
-                address: HumanAddr("shade".into()),
+                address: Addr::unchecked("shade".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
@@ -103,7 +103,7 @@ fn test_ensemble(
             reg_band.id,
             &shade_protocol::contract_interfaces::oracles::band::InitMsg {},
             MockEnv::new("admin", ContractLink {
-                address: HumanAddr("band".into()),
+                address: Addr::unchecked("band".into()),
                 code_hash: reg_band.code_hash.clone(),
             }),
         )
@@ -113,7 +113,7 @@ fn test_ensemble(
         .instantiate(
             reg_oracle.id,
             &shade_protocol::contract_interfaces::oracles::oracle::InitMsg {
-                admin: Some(HumanAddr("admin".into())),
+                admin: Some(Addr::unchecked("admin".into())),
                 band: Contract {
                     address: band.address.clone(),
                     code_hash: band.code_hash.clone(),
@@ -124,7 +124,7 @@ fn test_ensemble(
                 },
             },
             MockEnv::new("admin", ContractLink {
-                address: HumanAddr("oracle".into()),
+                address: Addr::unchecked("oracle".into()),
                 code_hash: reg_oracle.code_hash.clone(),
             }),
         )
@@ -134,7 +134,7 @@ fn test_ensemble(
         .instantiate(
             reg_mint.id,
             &shade_protocol::contract_interfaces::mint::mint::InitMsg {
-                admin: Some(HumanAddr("admin".into())),
+                admin: Some(Addr::unchecked("admin".into())),
                 oracle: Contract {
                     address: oracle.address.clone(),
                     code_hash: oracle.code_hash.clone(),
@@ -144,12 +144,12 @@ fn test_ensemble(
                     code_hash: shade.code_hash.clone(),
                 },
                 peg: None,
-                treasury: HumanAddr("admin".into()),
+                treasury: Addr::unchecked("admin".into()),
                 secondary_burn: None,
                 limit: None,
             },
             MockEnv::new("admin", ContractLink {
-                address: HumanAddr("mint".into()),
+                address: Addr::unchecked("mint".into()),
                 code_hash: reg_mint.code_hash,
             }),
         )
@@ -207,7 +207,7 @@ fn test_ensemble(
         }
         _ => (
             Contract {
-                address: HumanAddr("".into()),
+                address: Addr::unchecked("".into()),
                 code_hash: "".into(),
             },
             compat::Uint128::new(0),

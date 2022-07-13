@@ -1,10 +1,10 @@
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     from_binary,
     Api,
     Binary,
     Extern,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -153,7 +153,7 @@ pub fn validate_address_permit<S: Storage, A: Api>(
     api: &A,
     permit: &AddressProofPermit,
     params: &AddressProofMsg,
-    contract: HumanAddr,
+    contract: Addr,
 ) -> StdResult<()> {
     // Check that contract matches
     if params.contract != contract {
@@ -175,8 +175,8 @@ pub fn validate_address_permit<S: Storage, A: Api>(
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     permit: &AccountPermit,
-    contract: HumanAddr,
-) -> StdResult<HumanAddr> {
+    contract: Addr,
+) -> StdResult<Addr> {
     // Check that contract matches
     if permit.params.contract != contract {
         return Err(permit_contract_mismatch(
@@ -186,7 +186,7 @@ pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Authenticate permit
-    let address = permit.validate(&deps.api, None)?.as_humanaddr(None)?;
+    let address = permit.validate(&deps.api, None)?.as_Addr(None)?;
 
     // Check that permit is not revoked
     if is_permit_revoked(

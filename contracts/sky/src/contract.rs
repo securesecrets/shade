@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
+    debug_print, to_binary, Api, Binary, Env, Extern, Response, InitResponse, Querier,
     StdError, StdResult, Storage, self,
 };
 use shade_protocol::secret_toolkit::snip20::set_viewing_key_msg;
@@ -65,7 +65,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     match msg {
         HandleMsg::UpdateConfig{ config } => handle::try_update_config(deps, env, config),
         HandleMsg::ArbPeg{ amount } => handle::try_execute(deps, env, amount),

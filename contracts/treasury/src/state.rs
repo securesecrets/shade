@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{HumanAddr, Storage, Uint128};
+use shade_protocol::c_std::{Addr, Storage, Uint128};
 use shade_protocol::storage::{
     bucket,
     bucket_read,
@@ -32,11 +32,11 @@ pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, treasury::Confi
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn asset_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<HumanAddr>> {
+pub fn asset_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Addr>> {
     singleton_read(storage, ASSET_LIST)
 }
 
-pub fn asset_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<HumanAddr>> {
+pub fn asset_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Addr>> {
     singleton(storage, ASSET_LIST)
 }
 
@@ -56,11 +56,11 @@ pub fn viewing_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
     singleton(storage, VIEWING_KEY)
 }
 
-pub fn self_address_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, HumanAddr> {
+pub fn self_address_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Addr> {
     singleton_read(storage, SELF_ADDRESS)
 }
 
-pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
+pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
     singleton(storage, SELF_ADDRESS)
 }
 
@@ -73,11 +73,11 @@ pub fn allowances_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::Allo
 }
 
 /*
-pub fn current_allowances_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, HumanAddr> {
+pub fn current_allowances_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Addr> {
     bucket_read(CUR_ALLOWANCES, storage)
 }
 
-pub fn current_allowances_w<S: Storage>(storage: &mut S) -> Bucket<S, HumanAddr> {
+pub fn current_allowances_w<S: Storage>(storage: &mut S) -> Bucket<S, Addr> {
     bucket(CUR_ALLOWANCES, storage)
 }
 */

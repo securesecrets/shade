@@ -3,8 +3,8 @@
 use shade_protocol::schemars::JsonSchema;
 use shade_protocol::serde::{Deserialize, Serialize};
 
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{to_binary, Binary, CosmosMsg, HumanAddr, StdResult, WasmMsg};
+use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{to_binary, Binary, CosmosMsg, Addr, StdResult, WasmMsg};
 
 use crate::{contract::RESPONSE_BLOCK_SIZE, msg::space_pad};
 
@@ -12,8 +12,8 @@ use crate::{contract::RESPONSE_BLOCK_SIZE, msg::space_pad};
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct Snip20ReceiveMsg {
-    pub sender: HumanAddr,
-    pub from: HumanAddr,
+    pub sender: Addr,
+    pub from: Addr,
     pub amount: Uint128,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
@@ -22,8 +22,8 @@ pub struct Snip20ReceiveMsg {
 
 impl Snip20ReceiveMsg {
     pub fn new(
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<String>,
         msg: Option<Binary>,
@@ -49,7 +49,7 @@ impl Snip20ReceiveMsg {
     pub fn into_cosmos_msg(
         self,
         callback_code_hash: String,
-        contract_addr: HumanAddr,
+        contract_addr: Addr,
     ) -> StdResult<CosmosMsg> {
         let msg = self.into_binary()?;
         let execute = WasmMsg::Execute {

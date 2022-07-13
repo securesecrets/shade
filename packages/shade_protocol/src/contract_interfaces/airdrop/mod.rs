@@ -10,18 +10,18 @@ use crate::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use crate::math_compat::Uint128;
-use crate::c_std::{Binary, HumanAddr};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Addr};
+
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
-    pub admin: HumanAddr,
+    pub admin: Addr,
     // Used for permit validation when querying
-    pub contract: HumanAddr,
+    pub contract: Addr,
     // Where the decayed tokens will be dumped, if none then nothing happens
-    pub dump_address: Option<HumanAddr>,
+    pub dump_address: Option<Addr>,
     // The snip20 to be minted
     pub airdrop_snip20: Contract,
     // Airdrop amount
@@ -47,9 +47,9 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Addr>,
     // Where the decayed tokens will be dumped, if none then nothing happens
-    pub dump_address: Option<HumanAddr>,
+    pub dump_address: Option<Addr>,
     pub airdrop_token: Contract,
     // Airdrop amount
     pub airdrop_amount: Uint128,
@@ -81,8 +81,8 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        admin: Option<HumanAddr>,
-        dump_address: Option<HumanAddr>,
+        admin: Option<Addr>,
+        dump_address: Option<Addr>,
         query_rounding: Option<Uint128>,
         start_date: Option<u64>,
         end_date: Option<u64>,
@@ -94,7 +94,7 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
     CompleteTask {
-        address: HumanAddr,
+        address: Addr,
         padding: Option<String>,
     },
     Account {
@@ -142,7 +142,7 @@ pub enum HandleAnswer {
         claimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
         // Addresses claimed
-        addresses: Vec<HumanAddr>,
+        addresses: Vec<Addr>,
     },
     DisablePermitKey {
         status: ResponseStatus,
@@ -158,7 +158,7 @@ pub enum HandleAnswer {
         claimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
         // Addresses claimed
-        addresses: Vec<HumanAddr>,
+        addresses: Vec<Addr>,
     },
     ClaimDecay {
         status: ResponseStatus,
@@ -178,7 +178,7 @@ pub enum QueryMsg {
         current_date: Option<u64>,
     },
     AccountWithKey {
-        account: HumanAddr,
+        account: Addr,
         key: String,
         current_date: Option<u64>,
     },
@@ -212,13 +212,13 @@ pub enum QueryAnswer {
         unclaimed: Uint128,
         finished_tasks: Vec<RequiredTask>,
         // Addresses claimed
-        addresses: Vec<HumanAddr>,
+        addresses: Vec<Addr>,
     },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct AccountVerification {
-    pub account: HumanAddr,
+    pub account: Addr,
     pub claimed: bool,
 }

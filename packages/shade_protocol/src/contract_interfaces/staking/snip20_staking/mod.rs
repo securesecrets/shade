@@ -6,15 +6,15 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::c_std::{Binary, HumanAddr, Uint128};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Addr, Uint128};
+
 use secret_toolkit::utils::{HandleCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct InitMsg {
     pub name: String,
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Addr>,
     pub symbol: String,
     // Will default to staked token decimals if not set
     pub decimals: Option<u8>,
@@ -25,12 +25,12 @@ pub struct InitMsg {
     // Stake
     pub unbond_time: u64,
     pub staked_token: Contract,
-    pub treasury: Option<HumanAddr>,
+    pub treasury: Option<Addr>,
     pub treasury_code_hash: Option<String>,
 
     // Distributors
     pub limit_transfer: bool,
-    pub distributors: Option<Vec<HumanAddr>>,
+    pub distributors: Option<Vec<Addr>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -60,12 +60,12 @@ pub enum HandleMsg {
     UpdateStakeConfig {
         unbond_time: Option<u64>,
         disable_treasury: bool,
-        treasury: Option<HumanAddr>,
+        treasury: Option<Addr>,
         padding: Option<String>,
     },
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         msg: Option<Binary>,
         memo: Option<String>,
@@ -87,7 +87,7 @@ pub enum HandleMsg {
 
     // Balance
     ExposeBalance {
-        recipient: HumanAddr,
+        recipient: Addr,
         code_hash: Option<String>,
         msg: Option<Binary>,
         memo: Option<String>,
@@ -95,7 +95,7 @@ pub enum HandleMsg {
     },
 
     ExposeBalanceWithCooldown {
-        recipient: HumanAddr,
+        recipient: Addr,
         code_hash: Option<String>,
         msg: Option<Binary>,
         memo: Option<String>,
@@ -108,11 +108,11 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
     AddDistributors {
-        distributors: Vec<HumanAddr>,
+        distributors: Vec<Addr>,
         padding: Option<String>,
     },
     SetDistributors {
-        distributors: Vec<HumanAddr>,
+        distributors: Vec<Addr>,
         padding: Option<String>,
     },
 
@@ -121,7 +121,7 @@ pub enum HandleMsg {
     },
     // Implement this to receive balance information
     // ReceiveBalance {
-    //      sender: HumanAddr,
+    //      sender: Addr,
     //      msg: Option<Binary>,
     //      balance: Uint128
     //      memo: Option<String>
@@ -161,7 +161,7 @@ pub enum QueryMsg {
         total: u64,
     },
     Staked {
-        address: HumanAddr,
+        address: Addr,
         key: String,
         time: Option<u64>,
     },
@@ -216,6 +216,6 @@ pub enum QueryAnswer {
 
     // Distributors
     Distributors {
-        distributors: Option<Vec<HumanAddr>>,
+        distributors: Option<Vec<Addr>>,
     },
 }

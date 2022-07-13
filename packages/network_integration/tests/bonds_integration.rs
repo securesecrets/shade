@@ -1,5 +1,5 @@
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Binary, HumanAddr, Uint128 as prevUint128};
+use cosmwasm_std::{to_binary, Binary, Addr, Uint128 as prevUint128};
 use mock_band::contract::*;
 use network_integration::{
     contract_helpers::minter::get_balance,
@@ -94,7 +94,7 @@ fn setup_contracts(
         symbol: "DEPO".to_string(),
         decimals: 6,
         initial_balances: Some(vec![InitialBalance {
-            address: HumanAddr::from(account_a.clone()),
+            address: Addr::from(account_a.clone()),
             amount: Uint128::new(1_000_000_000_000_000),
         }]),
         prng_seed: Default::default(),
@@ -138,13 +138,13 @@ fn setup_contracts(
     print_header("Mockband initiated");
 
     let oracle_init_msg = oracle::InitMsg {
-        admin: Some(HumanAddr::from(account_limit_admin.clone())),
+        admin: Some(Addr::from(account_limit_admin.clone())),
         band: Contract {
-            address: HumanAddr::from(mockband.address.clone()),
+            address: Addr::from(mockband.address.clone()),
             code_hash: mockband.code_hash.clone(),
         },
         sscrt: Contract {
-            address: HumanAddr::from(""),
+            address: Addr::from(""),
             code_hash: "".to_string(),
         },
     };
@@ -163,19 +163,19 @@ fn setup_contracts(
     print_header("Oracle Initiated");
 
     let bonds_init_msg = bonds::InitMsg {
-        limit_admin: HumanAddr::from(account_admin.clone()),
+        limit_admin: Addr::from(account_admin.clone()),
         global_issuance_limit,
         global_minimum_bonding_period,
         global_maximum_discount,
-        admin: vec![HumanAddr::from(account_admin.clone())],
+        admin: vec![Addr::from(account_admin.clone())],
         oracle: Contract {
-            address: HumanAddr::from(oracle.address.clone()),
+            address: Addr::from(oracle.address.clone()),
             code_hash: oracle.code_hash.clone(),
         },
-        treasury: HumanAddr::from(account_admin),
+        treasury: Addr::from(account_admin),
         issued_asset: Contract {
-            address: HumanAddr::from(issu_snip.address.clone()),
-            //address: HumanAddr::from("hehe"),
+            address: Addr::from(issu_snip.address.clone()),
+            //address: Addr::from("hehe"),
             code_hash: issu_snip.code_hash.clone(),
             //code_hash: "hehe".to_string(),
         },
@@ -263,7 +263,7 @@ fn setup_contracts_allowance(
         symbol: "ISSU".to_string(),
         decimals: 6,
         initial_balances: Some(vec![InitialBalance {
-            address: HumanAddr::from(account_admin.clone()),
+            address: Addr::from(account_admin.clone()),
             amount: Uint128::new(1_000_000_000_000_000),
         }]),
         prng_seed: Default::default(),
@@ -296,7 +296,7 @@ fn setup_contracts_allowance(
         symbol: "DEPO".to_string(),
         decimals: 6,
         initial_balances: Some(vec![InitialBalance {
-            address: HumanAddr::from(account_a.clone()),
+            address: Addr::from(account_a.clone()),
             amount: Uint128::new(1_000_000_000_000_000),
         }]),
         prng_seed: Default::default(),
@@ -340,13 +340,13 @@ fn setup_contracts_allowance(
     print_header("Mockband initiated");
 
     let oracle_init_msg = oracle::InitMsg {
-        admin: Some(HumanAddr::from(account_limit_admin.clone())),
+        admin: Some(Addr::from(account_limit_admin.clone())),
         band: Contract {
-            address: HumanAddr::from(mockband.address.clone()),
+            address: Addr::from(mockband.address.clone()),
             code_hash: mockband.code_hash.clone(),
         },
         sscrt: Contract {
-            address: HumanAddr::from(""),
+            address: Addr::from(""),
             code_hash: "".to_string(),
         },
     };
@@ -365,19 +365,19 @@ fn setup_contracts_allowance(
     print_header("Oracle Initiated");
 
     let bonds_init_msg = bonds::InitMsg {
-        limit_admin: HumanAddr::from(account_limit_admin.clone()),
+        limit_admin: Addr::from(account_limit_admin.clone()),
         global_issuance_limit,
         global_minimum_bonding_period,
         global_maximum_discount,
-        admin: vec![HumanAddr::from(account_admin.clone())],
+        admin: vec![Addr::from(account_admin.clone())],
         oracle: Contract {
-            address: HumanAddr::from(oracle.address.clone()),
+            address: Addr::from(oracle.address.clone()),
             code_hash: oracle.code_hash.clone(),
         },
-        treasury: HumanAddr::from(account_admin),
+        treasury: Addr::from(account_admin),
         issued_asset: Contract {
-            address: HumanAddr::from(issued_snip.address.clone()),
-            //address: HumanAddr::from("hehe"),
+            address: Addr::from(issued_snip.address.clone()),
+            //address: Addr::from("hehe"),
             code_hash: issued_snip.code_hash.clone(),
             //code_hash: "hehe".to_string(),
         },
@@ -444,7 +444,7 @@ fn setup_additional_snip20_with_vk(
         symbol,
         decimals,
         initial_balances: Some(vec![InitialBalance {
-            address: HumanAddr::from(account_a.clone()),
+            address: Addr::from(account_a.clone()),
             amount: Uint128::new(1_000_000_000_000_000),
         }]),
         prng_seed: Default::default(),
@@ -505,7 +505,7 @@ fn open_bond(
 ) -> Result<()> {
     let msg = bonds::HandleMsg::OpenBond {
         deposit_asset: Contract {
-            address: HumanAddr::from(deposit_snip.address.clone()),
+            address: Addr::from(deposit_snip.address.clone()),
             code_hash: deposit_snip.code_hash.clone(),
         },
         start_time: now,
@@ -537,9 +537,9 @@ fn open_bond(
 }
 
 fn update_bonds_config(
-    admin: Option<HumanAddr>,
+    admin: Option<Addr>,
     oracle: Option<Contract>,
-    treasury: Option<HumanAddr>,
+    treasury: Option<Addr>,
     issued_asset: Option<Contract>,
     activated: Option<bool>,
     minting_bond: Option<bool>,
@@ -585,7 +585,7 @@ fn update_bonds_config(
 }
 
 fn update_bonds_limit_config(
-    limit_admin: Option<HumanAddr>,
+    limit_admin: Option<Addr>,
     global_issuance_limit: Option<Uint128>,
     global_minimum_bonding_period: Option<u64>,
     global_maximum_discount: Option<Uint128>,
@@ -628,7 +628,7 @@ fn close_bond(
 ) -> Result<()> {
     let msg = bonds::HandleMsg::CloseBond {
         deposit_asset: Contract {
-            address: HumanAddr::from(deposit_snip.address.clone()),
+            address: Addr::from(deposit_snip.address.clone()),
             code_hash: deposit_snip.code_hash.clone(),
         },
         padding: None,
@@ -658,7 +658,7 @@ fn buy_bond(
     bonds: &NetContract,
 ) -> Result<()> {
     let msg = snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(bonds.address.clone()),
+        recipient: Addr::from(bonds.address.clone()),
         amount,
         msg: None,
         memo: None,
@@ -730,7 +730,7 @@ fn print_pending_bonds(bonds: &NetContract, reports: &mut Vec<Report>) -> Result
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contracts: vec![HumanAddr(bonds.address.clone())],
+            contracts: vec![Addr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,
@@ -892,7 +892,7 @@ fn set_minting_privileges(
     reports: &mut Vec<Report>,
 ) -> Result<()> {
     let msg = snip20::HandleMsg::SetMinters {
-        minters: vec![HumanAddr::from(bonds.address.clone())],
+        minters: vec![Addr::from(bonds.address.clone())],
         padding: None,
     };
 
@@ -922,8 +922,8 @@ fn increase_allowance(
 ) -> Result<()> {
     let account_admin = account_address(ADMIN_KEY)?;
     let allowance_snip_msg = snip20::HandleMsg::IncreaseAllowance {
-        owner: HumanAddr::from(account_admin.clone()),
-        spender: HumanAddr::from(bonds.address.clone()),
+        owner: Addr::from(account_admin.clone()),
+        spender: Addr::from(bonds.address.clone()),
         amount,
     };
 
@@ -989,7 +989,7 @@ fn add_admin(
     let new_admin = account_address(recipient)?;
 
     let msg = bonds::HandleMsg::AddAdmin { 
-        admin_to_add: HumanAddr::from(new_admin), 
+        admin_to_add: Addr::from(new_admin),
         padding: None 
     };
 
@@ -1021,7 +1021,7 @@ fn remove_admin(
     let removed_admin = account_address(recipient)?;
 
     let msg = bonds::HandleMsg::RemoveAdmin { 
-        admin_to_remove: HumanAddr::from(removed_admin), 
+        admin_to_remove: Addr::from(removed_admin),
         padding: None, 
     };
     
@@ -1108,7 +1108,7 @@ fn run_bonds_singular() -> Result<()> {
 
     // print_config(&bonds)?;
 
-    let msg = bonds::HandleMsg::AddAdmin { admin_to_add: HumanAddr::from(account_a.clone()), padding: None };
+    let msg = bonds::HandleMsg::AddAdmin { admin_to_add: Addr::from(account_a.clone()), padding: None };
     let tx = handle(
         &msg,
         &bonds,
@@ -1221,7 +1221,7 @@ fn run_bonds_singular() -> Result<()> {
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contracts: vec![HumanAddr(bonds.address.clone())],
+            contracts: vec![Addr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,
@@ -1276,7 +1276,7 @@ fn run_bonds_singular() -> Result<()> {
     }
 
     let issued_snip_query_msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account_a),
+        address: Addr::from(account_a),
         key: VIEW_KEY.to_string(),
     };
     let issued_snip_query: snip20::QueryAnswer = query(&mint_snip, issued_snip_query_msg, None)?;
@@ -1288,7 +1288,7 @@ fn run_bonds_singular() -> Result<()> {
     }
 
     let deposit_snip_query_msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account_admin),
+        address: Addr::from(account_admin),
         key: VIEW_KEY.to_string(),
     };
     let deposit_snip_query: snip20::QueryAnswer =
@@ -1456,7 +1456,7 @@ fn run_bonds_multiple_opps() -> Result<()> {
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contracts: vec![HumanAddr(bonds.address.clone())],
+            contracts: vec![Addr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,
@@ -1489,7 +1489,7 @@ fn run_bonds_multiple_opps() -> Result<()> {
     print_pending_bonds(&bonds, &mut reports)?;
 
     let issued_snip_query_msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account_a),
+        address: Addr::from(account_a),
         key: VIEW_KEY.to_string(),
     };
     let issued_snip_query: snip20::QueryAnswer = query(&mint_snip, issued_snip_query_msg, None)?;
@@ -1627,7 +1627,7 @@ fn run_bonds_singular_allowance() -> Result<()> {
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contracts: vec![HumanAddr(bonds.address.clone())],
+            contracts: vec![Addr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,
@@ -1682,7 +1682,7 @@ fn run_bonds_singular_allowance() -> Result<()> {
     }
 
     let issued_snip_query_msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account_a),
+        address: Addr::from(account_a),
         key: VIEW_KEY.to_string(),
     };
     let issued_snip_query: snip20::QueryAnswer = query(&issued_snip, issued_snip_query_msg, None)?;
@@ -1694,7 +1694,7 @@ fn run_bonds_singular_allowance() -> Result<()> {
     }
 
     let deposit_snip_query_msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account_admin),
+        address: Addr::from(account_admin),
         key: VIEW_KEY.to_string(),
     };
     let deposit_snip_query: snip20::QueryAnswer =
@@ -1876,7 +1876,7 @@ fn run_bonds_bad_opportunities() -> Result<()> {
     // Create permit
     let account_permit = create_signed_permit(
         AccountPermitMsg {
-            contracts: vec![HumanAddr(bonds.address.clone())],
+            contracts: vec![Addr(bonds.address.clone())],
             key: "key".to_string(),
         },
         None,
@@ -1931,7 +1931,7 @@ fn run_bonds_bad_opportunities() -> Result<()> {
     }
 
     let issued_snip_query_msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account_a),
+        address: Addr::from(account_a),
         key: VIEW_KEY.to_string(),
     };
     let issued_snip_query: snip20::QueryAnswer = query(&issued_snip, issued_snip_query_msg, None)?;
@@ -1943,7 +1943,7 @@ fn run_bonds_bad_opportunities() -> Result<()> {
     }
 
     let deposit_snip_query_msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(account_admin),
+        address: Addr::from(account_admin),
         key: VIEW_KEY.to_string(),
     };
     let deposit_snip_query: snip20::QueryAnswer =

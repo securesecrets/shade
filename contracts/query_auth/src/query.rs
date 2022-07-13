@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::query_auth::{
         auth::{Key, PermitKey},
@@ -19,7 +19,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
 
 pub fn validate_vk<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    user: HumanAddr,
+    user: Addr,
     key: String,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::ValidateViewingKey {
@@ -31,7 +31,7 @@ pub fn validate_permit<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     permit: QueryPermit,
 ) -> StdResult<QueryAnswer> {
-    let user = permit.validate(&deps.api, None)?.as_humanaddr(None)?;
+    let user = permit.validate(&deps.api, None)?.as_Addr(None)?;
 
     Ok(QueryAnswer::ValidatePermit {
         user: user.clone(),

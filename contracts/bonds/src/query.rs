@@ -6,14 +6,14 @@ use crate::{
     },
 };
 
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 
 use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, balance_query},
     utils::Query,
 };
 
-use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdResult, Storage};
 use shade_protocol::contract_interfaces::bonds::{
     errors::{permit_revoked, query_auth_bad_response},
     BondOpportunity, QueryAnswer,
@@ -54,7 +54,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
 
 fn account_information<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account_address: HumanAddr,
+    account_address: Addr,
 ) -> StdResult<QueryAnswer> {
     let account = account_r(&deps.storage).load(account_address.as_str().as_bytes())?;
 

@@ -1,5 +1,5 @@
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{Binary, HumanAddr};
+use cosmwasm_std::{Binary, Addr};
 use network_integration::utils::{
     generate_label, print_contract, print_header, store_struct, AIRDROP_FILE, GAS, STORE_GAS,
 };
@@ -25,7 +25,7 @@ struct Args {
     db_path: String,
 
     // Airdrop config
-    admin: Option<HumanAddr>,
+    admin: Option<Addr>,
     dump_address: Option<String>,
     start_date: u64,
     end_date: Option<u64>,
@@ -103,7 +103,7 @@ fn main() -> serde_json::Result<()> {
     let airdrop_init_msg = airdrop::InitMsg {
         admin: args.admin,
         dump_address: match args.dump_address {
-            Some(addr) => Some(HumanAddr(addr)),
+            Some(addr) => Some(Addr(addr)),
             None => None,
         },
         airdrop_token: args.shade.clone(),
@@ -142,7 +142,7 @@ fn main() -> serde_json::Result<()> {
         };
         handle(
             &snip20::HandleMsg::Send {
-                recipient: HumanAddr(airdrop.address),
+                recipient: Addr(airdrop.address),
                 recipient_code_hash: None,
                 amount: airdrop_amount,
                 msg: None,

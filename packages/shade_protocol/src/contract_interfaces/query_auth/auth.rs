@@ -1,6 +1,6 @@
-use crate::c_std::{Env, HumanAddr, StdResult, Storage};
+use crate::c_std::{Env, Addr, StdResult, Storage};
 use crate::serde::{Deserialize, Serialize};
-use crate::schemars::JsonSchema;
+
 use crate::query_authentication::viewing_keys::ViewingKey;
 use secret_storage_plus::Map;
 use secret_toolkit::crypto::{Prng, sha_256};
@@ -28,7 +28,7 @@ impl Key {
         Self(base64::encode(key))
     }
 
-    pub fn verify<S: Storage>(storage: &S, address: HumanAddr, key: String) -> StdResult<bool> {
+    pub fn verify<S: Storage>(storage: &S, address: Addr, key: String) -> StdResult<bool> {
         Ok(match HashedKey::may_load(storage, address)? {
             None => {
                 // Empty compare for security reasons
@@ -51,24 +51,24 @@ impl ViewingKey<KEY_SIZE> for Key{}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct HashedKey(pub [u8; KEY_SIZE]);
 
-impl MapStorage<'static, HumanAddr> for HashedKey {
-    const MAP: Map<'static, HumanAddr, Self> = Map::new("hashed-viewing-key-");
+impl MapStorage<'static, Addr> for HashedKey {
+    const MAP: Map<'static, Addr, Self> = Map::new("hashed-viewing-key-");
 }
 
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PermitKey(pub bool);
 
-impl MapStorage<'static, (HumanAddr, String)> for PermitKey {
-    const MAP: Map<'static, (HumanAddr, String), Self> = Map::new("permit-key-");
+impl MapStorage<'static, (Addr, String)> for PermitKey {
+    const MAP: Map<'static, (Addr, String), Self> = Map::new("permit-key-");
 }
 
 impl PermitKey {
-    pub fn revoke<S: Storage>(storage: &mut S, key: String, user: HumanAddr) -> StdResult<()> {
+    pub fn revoke<S: Storage>(storage: &mut S, key: String, user: Addr) -> StdResult<()> {
         PermitKey(true).save(storage, (user, key))
     }
 
-    pub fn is_revoked<S: Storage>(storage: &mut S, key: String, user: HumanAddr) -> StdResult<bool> {
+    pub fn is_revoked<S: Storage>(storage: &mut S, key: String, user: Addr) -> StdResult<bool> {
         Ok(match PermitKey::may_load(storage, (user, key))? {
             None => false,
             Some(_) => true

@@ -1,6 +1,6 @@
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
+    to_binary, Api, Binary, Env, Extern, Response, InitResponse, Querier, StdResult, Storage,
 };
 
 use shade_protocol::secret_toolkit::snip20::{set_viewing_key_msg, token_info_query};
@@ -103,7 +103,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     pad_handle_result(
         match msg {
             HandleMsg::UpdateLimitConfig {

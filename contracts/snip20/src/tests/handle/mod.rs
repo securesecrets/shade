@@ -1,6 +1,6 @@
-use shade_protocol::c_std::{Coin, HumanAddr};
+use shade_protocol::c_std::{Coin, Addr};
 use shade_protocol::fadroma::ensemble::MockEnv;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig, InitialBalance};
 use shade_protocol::contract_interfaces::snip20::manager::{ContractStatusLevel, HashedKey, Key, ReceiverHash};
 use shade_protocol::utils::storage::plus::MapStorage;
@@ -22,7 +22,7 @@ fn register_receive() {
     }, MockEnv::new("contract", snip.clone())).is_ok());
 
     chain.deps(snip.address, |borrowed_chain| {
-        let hash = ReceiverHash::load(&borrowed_chain.storage, HumanAddr::from("contract")).unwrap();
+        let hash = ReceiverHash::load(&borrowed_chain.storage, Addr::from("contract")).unwrap();
         assert_eq!(hash.0, "some_hash".to_string());
     }).unwrap();
 }
@@ -38,7 +38,7 @@ fn create_viewing_key() {
 
     chain.deps(snip.address, |borrowed_chain| {
         assert!(HashedKey::
-        may_load(&borrowed_chain.storage, HumanAddr::from("Sam"))
+        may_load(&borrowed_chain.storage, Addr::from("Sam"))
             .unwrap().is_some());
     }).unwrap();
 }
@@ -55,7 +55,7 @@ fn set_viewing_key() {
     chain.deps(snip.address, |borrowed_chain| {
         assert!(Key::verify(
             &borrowed_chain.storage,
-            HumanAddr::from("Sam"),
+            Addr::from("Sam"),
             "some_key".to_string()
         ).unwrap());
     }).unwrap();
@@ -66,17 +66,17 @@ fn change_admin() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
 
     assert!(chain.execute(&HandleMsg::ChangeAdmin {
-        address: HumanAddr::from("NewAdmin"),
+        address: Addr::from("NewAdmin"),
         padding: None
     }, MockEnv::new("NotAdmin", snip.clone())).is_err());
 
     assert!(chain.execute(&HandleMsg::ChangeAdmin {
-        address: HumanAddr::from("NewAdmin"),
+        address: Addr::from("NewAdmin"),
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     assert!(chain.execute(&HandleMsg::ChangeAdmin {
-        address: HumanAddr::from("OtherAdmin"),
+        address: Addr::from("OtherAdmin"),
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_err());
 }
@@ -117,10 +117,10 @@ fn contract_status_stop_all() {
 
     let scrt_coin = Coin {
         denom: "uscrt".to_string(),
-        amount: shade_protocol::c_std::Uint128(1000)
+        amount: Uint128::new(1000)
     };
 
-    chain.add_funds(HumanAddr::from("Bob"), vec![
+    chain.add_funds(Addr::from("Bob"), vec![
         scrt_coin.clone()]);
 
     // Deposit
@@ -135,7 +135,7 @@ fn contract_status_stop_all() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     assert!(chain.execute(&HandleMsg::Transfer {
-        recipient: HumanAddr::from("Dylan"),
+        recipient: Addr::from("Dylan"),
         amount: Uint128::new(100),
         memo: None,
         padding: None
@@ -153,7 +153,7 @@ fn contract_status_stop_all() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     assert!(chain.execute(&HandleMsg::Transfer {
-        recipient: HumanAddr::from("Dylan"),
+        recipient: Addr::from("Dylan"),
         amount: Uint128::new(100),
         memo: None,
         padding: None
@@ -179,10 +179,10 @@ fn contract_status_stop_all_but_redeem() {
 
     let scrt_coin = Coin {
         denom: "uscrt".to_string(),
-        amount: shade_protocol::c_std::Uint128(1000)
+        amount: Uint128::new(1000)
     };
 
-    chain.add_funds(HumanAddr::from("Bob"), vec![
+    chain.add_funds(Addr::from("Bob"), vec![
         scrt_coin.clone()]);
 
     // Deposit
@@ -197,7 +197,7 @@ fn contract_status_stop_all_but_redeem() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     assert!(chain.execute(&HandleMsg::Transfer {
-        recipient: HumanAddr::from("Dylan"),
+        recipient: Addr::from("Dylan"),
         amount: Uint128::new(100),
         memo: None,
         padding: None
@@ -215,7 +215,7 @@ fn contract_status_stop_all_but_redeem() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     assert!(chain.execute(&HandleMsg::Transfer {
-        recipient: HumanAddr::from("Dylan"),
+        recipient: Addr::from("Dylan"),
         amount: Uint128::new(100),
         memo: None,
         padding: None

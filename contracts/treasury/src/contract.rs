@@ -5,7 +5,7 @@ use shade_protocol::c_std::{
     Binary,
     Env,
     Extern,
-    HandleResponse,
+    Response,
     InitResponse,
     Querier,
     StdError,
@@ -58,7 +58,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     match msg {
         HandleMsg::Receive {
             sender,

@@ -1,10 +1,10 @@
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
     Extern,
-    HandleResponse,
+    Response,
     Querier,
     StdError,
     StdResult,
@@ -22,7 +22,7 @@ pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
     metadata: String,
     contract: Contract,
     assemblies: Option<Vec<Uint128>>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -46,7 +46,7 @@ pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
     }
     .save(&mut deps.storage, &id)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddContract {
@@ -64,7 +64,7 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
     contract: Option<Contract>,
     disable_assemblies: bool,
     assemblies: Option<Vec<Uint128>>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -103,7 +103,7 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
 
     allowed_contract.save(&mut deps.storage, &id)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddContract {
@@ -117,7 +117,7 @@ pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
     env: Env,
     id: Uint128,
     assemblies: Vec<Uint128>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if env.message.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
@@ -144,7 +144,7 @@ pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
 
     AllowedContract::save_data(&mut deps.storage, &id, allowed_contract)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddContract {

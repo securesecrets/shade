@@ -16,20 +16,20 @@ pub mod tests {
 
     mod mock_secret_toolkit {
 
-        use shade_protocol::c_std::{HumanAddr, Querier, StdResult, Uint128};
+        use shade_protocol::c_std::{Addr, Querier, StdResult, Uint128};
         use shade_protocol::secret_toolkit::snip20::TokenInfo;
 
         pub fn mock_token_info_query<Q: Querier>(
             _querier: &Q,
             _block_size: usize,
             _callback_code_hash: String,
-            _contract_addr: HumanAddr,
+            _contract_addr: Addr,
         ) -> StdResult<TokenInfo> {
             Ok(TokenInfo {
                 name: "Token".to_string(),
                 symbol: "TKN".to_string(),
                 decimals: 6,
-                total_supply: Option::from(Uint128(150)),
+                total_supply: Option::from(Uint128::new(150)),
             })
         }
     }
@@ -86,7 +86,7 @@ pub mod tests {
             peg: Option::from("TKN".to_string()),
             treasury: Option::from(create_contract("", "")),
             // 1%
-            capture: Option::from(Uint128(100)),
+            capture: Option::from(Uint128::new(100)),
         };
         let env = mock_env("creator", &coins(1000, "earth"));
 
@@ -102,7 +102,7 @@ pub mod tests {
         let native_asset = create_contract("snip20", "hash");
         let oracle = create_contract("oracle", "hash");
         let treasury = create_contract("treasury", "hash");
-        let capture = Uint128(100);
+        let capture = Uint128::new(100);
 
         let admin_env = mock_env("admin", &coins(1000, "earth"));
         let mut deps = dummy_init("admin".to_string(),
@@ -115,7 +115,7 @@ pub mod tests {
         // new config vars
         let new_oracle = Option::from(create_contract("new_oracle", "hash"));
         let new_treasury = Option::from(create_contract("new_treasury", "hash"));
-        let new_capture = Option::from(Uint128(200));
+        let new_capture = Option::from(Uint128::new(200));
 
         // Update config
         let update_msg = HandleMsg::UpdateConfig {
@@ -312,7 +312,7 @@ pub mod tests {
         let msg = HandleMsg::Receive {
             sender: dummy_contract.address,
             from: Default::default(),
-            amount: Uint128(100),
+            amount: Uint128::new(100),
             msg: None,
             memo: None
         };
@@ -354,7 +354,7 @@ pub mod tests {
         let msg = HandleMsg::Receive {
             sender: dummy_contract.address,
             from: Default::default(),
-            amount: Uint128(100),
+            amount: Uint128::new(100),
             msg: None,
             memo: None
         };
@@ -367,10 +367,10 @@ pub mod tests {
     */
     #[test]
     fn capture_calc() {
-        let amount = Uint128(1_000_000_000_000_000_000);
+        let amount = Uint128::new(1_000_000_000_000_000_000);
         //10%
-        let capture = Uint128(100_000_000_000_000_000);
-        let expected = Uint128(100_000_000_000_000_000);
+        let capture = Uint128::new(100_000_000_000_000_000);
+        let expected = Uint128::new(100_000_000_000_000_000);
         let value = calculate_capture(amount, capture);
         assert_eq!(value, expected);
     }
@@ -378,9 +378,9 @@ pub mod tests {
     fn mint_algorithm_simple() {
         // In this example the "sent" value is 1 with 6 decimal places
         // The mint value will be 1 with 3 decimal places
-        let price = Uint128(1_000_000_000_000_000_000);
-        let in_amount = Uint128(1_000_000);
-        let expected_value = Uint128(1_000);
+        let price = Uint128::new(1_000_000_000_000_000_000);
+        let in_amount = Uint128::new(1_000_000);
+        let expected_value = Uint128::new(1_000);
         let value = calculate_mint(price, in_amount, 6, price, 3);
 
         assert_eq!(value, expected_value);
@@ -390,10 +390,10 @@ pub mod tests {
     fn mint_algorithm_complex_1() {
         // In this example the "sent" value is 1.8 with 6 decimal places
         // The mint value will be 3.6 with 12 decimal places
-        let in_price = Uint128(2_000_000_000_000_000_000);
-        let target_price = Uint128(1_000_000_000_000_000_000);
-        let in_amount = Uint128(1_800_000);
-        let expected_value = Uint128(3_600_000_000_000);
+        let in_price = Uint128::new(2_000_000_000_000_000_000);
+        let target_price = Uint128::new(1_000_000_000_000_000_000);
+        let in_amount = Uint128::new(1_800_000);
+        let expected_value = Uint128::new(3_600_000_000_000);
         let value = calculate_mint(in_price, in_amount, 6, target_price, 12);
 
         assert_eq!(value, expected_value);
@@ -403,10 +403,10 @@ pub mod tests {
     fn mint_algorithm_complex_2() {
         // In amount is 50.000 valued at 20
         // target price is 100$ with 6 decimals
-        let in_price = Uint128(20_000_000_000_000_000_000);
-        let target_price = Uint128(100_000_000_000_000_000_000);
-        let in_amount = Uint128(50_000);
-        let expected_value = Uint128(10_000_000);
+        let in_price = Uint128::new(20_000_000_000_000_000_000);
+        let target_price = Uint128::new(100_000_000_000_000_000_000);
+        let in_amount = Uint128::new(50_000);
+        let expected_value = Uint128::new(10_000_000);
         let value = calculate_mint(in_price, in_amount, 3, target_price, 6);
 
         assert_eq!(value, expected_value);

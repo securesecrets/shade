@@ -1,15 +1,15 @@
 use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStatus};
 
 use crate::contract_interfaces::dao::adapter;
-use crate::c_std::{Binary, HumanAddr, StdResult, Uint128};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Addr, StdResult, Uint128};
+
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub admin: HumanAddr,
+    pub admin: Addr,
 }
 
 /* Examples:
@@ -26,7 +26,7 @@ pub enum Allowance {
     // Monthly refresh, not counted in rebalance
     Amount {
         //nick: Option<String>,
-        spender: HumanAddr,
+        spender: Addr,
         // Unlike others, this is a direct number of uTKN to allow monthly
         cycle: Cycle,
         amount: Uint128,
@@ -34,7 +34,7 @@ pub enum Allowance {
     },
     Portion {
         //nick: Option<String>,
-        spender: HumanAddr,
+        spender: Addr,
         portion: Uint128,
         //TODO: This needs to be omitted from the handle msg
         last_refresh: String,
@@ -55,7 +55,7 @@ pub struct Manager {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Balance {
-    pub token: HumanAddr,
+    pub token: Addr,
     pub amount: Uint128,
 }
 
@@ -88,7 +88,7 @@ pub struct Flag {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Addr>,
     pub viewing_key: String,
 }
 
@@ -100,8 +100,8 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -118,7 +118,7 @@ pub enum HandleMsg {
     },
     // Setup a new allowance
     Allowance {
-        asset: HumanAddr,
+        asset: Addr,
         allowance: Allowance,
     },
     /* TODO: Maybe?
@@ -137,7 +137,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -166,17 +166,17 @@ pub enum QueryMsg {
     Assets {},
     // List of recurring allowances configured
     Allowances {
-        asset: HumanAddr,
+        asset: Addr,
     },
     // List of actual current amounts
     Allowance {
-        asset: HumanAddr,
-        spender: HumanAddr,
+        asset: Addr,
+        spender: Addr,
     },
     /*
     AccountHolders { },
     Account { 
-        holder: HumanAddr,
+        holder: Addr,
     },
     */
     Adapter(adapter::SubQueryMsg),
@@ -190,10 +190,10 @@ impl Query for QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config { config: Config },
-    Assets { assets: Vec<HumanAddr> },
+    Assets { assets: Vec<Addr> },
     Allowances { allowances: Vec<Allowance> },
     CurrentAllowances { allowances: Vec<Allowance> },
     Allowance { allowance: Uint128 },
-    //Accounts { accounts: Vec<HumanAddr> },
+    //Accounts { accounts: Vec<Addr> },
     //Account { account: Account },
 }

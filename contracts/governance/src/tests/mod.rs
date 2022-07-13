@@ -3,14 +3,14 @@ pub mod query;
 
 use crate::contract::{handle, init, query};
 use contract_harness::harness::governance::Governance;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
     Binary,
     Env,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     InitResponse,
     StdError,
     StdResult,
@@ -31,7 +31,7 @@ use shade_protocol::contract_interfaces::{
 
 pub fn init_governance(
     msg: governance::InitMsg,
-) -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)> {
+) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     let mut chain = ContractEnsemble::new(50);
 
     // Register governance
@@ -48,10 +48,10 @@ pub fn init_governance(
     Ok((chain, gov))
 }
 
-pub fn admin_only_governance() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)> {
+pub fn admin_only_governance() -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     init_governance(governance::InitMsg {
-        treasury: HumanAddr("treasury".to_string()),
-        admin_members: vec![HumanAddr("admin".to_string())],
+        treasury: Addr::unchecked("treasury".to_string()),
+        admin_members: vec![Addr::unchecked("admin".to_string())],
         admin_profile: Profile {
             name: "admin".to_string(),
             enabled: true,
@@ -75,7 +75,7 @@ pub fn admin_only_governance() -> StdResult<(ContractEnsemble, ContractLink<Huma
 
 pub fn gov_generic_proposal(
     chain: &mut ContractEnsemble,
-    gov: &ContractLink<HumanAddr>,
+    gov: &ContractLink<Addr>,
     sender: &str,
     msg: governance::HandleMsg,
 ) -> StdResult<()> {
@@ -89,7 +89,7 @@ pub fn gov_generic_proposal(
 
 pub fn gov_msg_proposal(
     chain: &mut ContractEnsemble,
-    gov: &ContractLink<HumanAddr>,
+    gov: &ContractLink<Addr>,
     sender: &str,
     msgs: Vec<ProposalMsg>,
 ) -> StdResult<()> {
@@ -108,7 +108,7 @@ pub fn gov_msg_proposal(
 
 pub fn get_assembly_msgs(
     chain: &mut ContractEnsemble,
-    gov: &ContractLink<HumanAddr>,
+    gov: &ContractLink<Addr>,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<AssemblyMsg>> {
@@ -128,7 +128,7 @@ pub fn get_assembly_msgs(
 
 pub fn get_contract(
     chain: &mut ContractEnsemble,
-    gov: &ContractLink<HumanAddr>,
+    gov: &ContractLink<Addr>,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<AllowedContract>> {
@@ -146,7 +146,7 @@ pub fn get_contract(
 
 pub fn get_profiles(
     chain: &mut ContractEnsemble,
-    gov: &ContractLink<HumanAddr>,
+    gov: &ContractLink<Addr>,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<Profile>> {
@@ -164,7 +164,7 @@ pub fn get_profiles(
 
 pub fn get_assemblies(
     chain: &mut ContractEnsemble,
-    gov: &ContractLink<HumanAddr>,
+    gov: &ContractLink<Addr>,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<Assembly>> {
@@ -182,7 +182,7 @@ pub fn get_assemblies(
 
 pub fn get_proposals(
     chain: &mut ContractEnsemble,
-    gov: &ContractLink<HumanAddr>,
+    gov: &ContractLink<Addr>,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<Proposal>> {
@@ -200,7 +200,7 @@ pub fn get_proposals(
 
 pub fn get_config(
     chain: &mut ContractEnsemble,
-    gov: &ContractLink<HumanAddr>,
+    gov: &ContractLink<Addr>,
 ) -> StdResult<Config> {
     let query: governance::QueryAnswer =
         chain.query(gov.address.clone(), &governance::QueryMsg::Config {})?;

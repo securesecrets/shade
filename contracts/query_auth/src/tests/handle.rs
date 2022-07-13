@@ -1,5 +1,5 @@
 use crate::tests::{get_permit, init_contract};
-use shade_protocol::c_std::{from_binary, HumanAddr};
+use shade_protocol::c_std::{from_binary, Addr};
 use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::{
     contract_interfaces::{query_auth, query_auth::ContractStatus},
@@ -12,7 +12,7 @@ fn set_admin() {
 
     let msg = query_auth::HandleMsg::SetAdminAuth {
         admin: Contract {
-            address: HumanAddr::from("some_addr"),
+            address: Addr::from("some_addr"),
             code_hash: "some_hash".to_string()
         },
         padding: None,
@@ -36,7 +36,7 @@ fn set_admin() {
 
     match query {
         query_auth::QueryAnswer::Config { admin, .. } => {
-            assert_eq!(admin.address, HumanAddr::from("some_addr"));
+            assert_eq!(admin.address, Addr::from("some_addr"));
         }
         _ => assert!(false),
     };
@@ -137,7 +137,7 @@ fn runstate_block_permits() {
     let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidateViewingKey {
-            user: HumanAddr::from("user"),
+            user: Addr::from("user"),
             key: "key".to_string(),
         },
     );
@@ -207,7 +207,7 @@ fn runstate_block_vks() {
     let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidateViewingKey {
-            user: HumanAddr::from("user"),
+            user: Addr::from("user"),
             key: "key".to_string(),
         },
     );
@@ -277,7 +277,7 @@ fn runstate_block_all() {
     let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidateViewingKey {
-            user: HumanAddr::from("user"),
+            user: Addr::from("user"),
             key: "key".to_string(),
         },
     );
@@ -333,7 +333,7 @@ fn create_vk() {
         .query(
             auth.address.clone(),
             &query_auth::QueryMsg::ValidateViewingKey {
-                user: HumanAddr::from("user"),
+                user: Addr::from("user"),
                 key,
             },
         )

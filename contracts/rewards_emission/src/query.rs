@@ -6,7 +6,7 @@ use shade_protocol::c_std::{
     DistQuery,
     Extern,
     FullDelegation,
-    HumanAddr,
+    Addr,
     Querier,
     RewardsResponse,
     StdError,
@@ -33,7 +33,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResu
 
 pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<QueryAnswer> {
     let full_asset = match asset_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
         Some(a) => a,
@@ -63,7 +63,7 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let full_asset = match asset_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
         Some(a) => a,

@@ -61,7 +61,7 @@ use crate::{
     transaction_history::{get_transfers, get_txs, store_claim_reward, store_mint, store_transfer},
     viewing_key::{ViewingKey, VIEWING_KEY_SIZE},
 };
-use shade_protocol::math_compat::{Uint128, Uint256};
+use shade_protocol::c_std::{Uint128, Uint256};
 /// This contract implements SNIP-20 standard:
 /// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
 use shade_protocol::c_std::{
@@ -74,11 +74,11 @@ use shade_protocol::c_std::{
     CosmosMsg,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     InitResponse,
     Querier,
-    QueryResult,
+
     ReadonlyStorage,
     StdError,
     StdResult,
@@ -210,7 +210,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-fn pad_response(response: StdResult<HandleResponse>) -> StdResult<HandleResponse> {
+fn pad_response(response: StdResult<Response>) -> StdResult<Response> {
     response.map(|mut response| {
         response.data = response.data.map(|mut data| {
             space_pad(RESPONSE_BLOCK_SIZE, &mut data.0);
@@ -224,7 +224,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let contract_status = ReadonlyConfig::from_storage(&deps.storage).contract_status();
 
     match contract_status {
@@ -412,7 +412,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     pad_response(response)
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
+pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::StakeConfig {} => stake_queries::stake_config(deps),
         QueryMsg::TotalStaked {} => stake_queries::total_staked(deps),
@@ -507,7 +507,7 @@ fn permit_queries<S: Storage, A: Api, Q: Querier>(
 pub fn viewing_keys_queries<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
-) -> QueryResult {
+) -> StdResult<Binary> {
     let (addresses, key) = msg.get_validation_params();
 
     for address in addresses {
@@ -549,7 +549,7 @@ pub fn viewing_keys_queries<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-fn query_token_info<S: ReadonlyStorage>(storage: &S) -> QueryResult {
+fn query_token_info<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
     let config = ReadonlyConfig::from_storage(storage);
     let constants = config.constants()?;
 
@@ -567,7 +567,7 @@ fn query_token_info<S: ReadonlyStorage>(storage: &S) -> QueryResult {
     })
 }
 
-fn query_token_config<S: ReadonlyStorage>(storage: &S) -> QueryResult {
+fn query_token_config<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
     let config = ReadonlyConfig::from_storage(storage);
     let constants = config.constants()?;
 
@@ -576,7 +576,7 @@ fn query_token_config<S: ReadonlyStorage>(storage: &S) -> QueryResult {
     })
 }
 
-fn query_contract_status<S: ReadonlyStorage>(storage: &S) -> QueryResult {
+fn query_contract_status<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
     let config = ReadonlyConfig::from_storage(storage);
 
     to_binary(&QueryAnswer::ContractStatus {
@@ -586,7 +586,7 @@ fn query_contract_status<S: ReadonlyStorage>(storage: &S) -> QueryResult {
 
 pub fn query_transfers<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account: &HumanAddr,
+    account: &Addr,
     page: u32,
     page_size: u32,
 ) -> StdResult<Binary> {
@@ -602,7 +602,7 @@ pub fn query_transfers<S: Storage, A: Api, Q: Querier>(
 
 pub fn query_transactions<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account: &HumanAddr,
+    account: &Addr,
     page: u32,
     page_size: u32,
 ) -> StdResult<Binary> {
@@ -618,7 +618,7 @@ pub fn query_transactions<S: Storage, A: Api, Q: Querier>(
 
 pub fn query_balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    account: &HumanAddr,
+    account: &Addr,
 ) -> StdResult<Binary> {
     let address = deps.api.canonical_address(account)?;
 
@@ -631,8 +631,8 @@ pub fn query_balance<S: Storage, A: Api, Q: Querier>(
 fn change_admin<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    address: HumanAddr,
-) -> StdResult<HandleResponse> {
+    address: Addr,
+) -> StdResult<Response> {
     let mut config = Config::from_storage(&mut deps.storage);
 
     check_if_admin(&config, &env.message.sender)?;
@@ -641,7 +641,7 @@ fn change_admin<S: Storage, A: Api, Q: Querier>(
     consts.admin = address;
     config.set_constants(&consts)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?),
@@ -686,13 +686,13 @@ pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     key: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let vk = ViewingKey(key);
 
     let message_sender = deps.api.canonical_address(&env.message.sender)?;
     write_viewing_key(&mut deps.storage, &message_sender, &vk);
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetViewingKey { status: Success })?),
@@ -703,7 +703,7 @@ pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     entropy: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let constants = ReadonlyConfig::from_storage(&deps.storage).constants()?;
     let prng_seed = constants.prng_seed;
 
@@ -712,7 +712,7 @@ pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
     let message_sender = deps.api.canonical_address(&env.message.sender)?;
     write_viewing_key(&mut deps.storage, &message_sender, &key);
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::CreateViewingKey { key })?),
@@ -723,14 +723,14 @@ fn set_contract_status<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     status_level: ContractStatusLevel,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let mut config = Config::from_storage(&mut deps.storage);
 
     check_if_admin(&config, &env.message.sender)?;
 
     config.set_contract_status(status_level);
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SetContractStatus {
@@ -741,8 +741,8 @@ fn set_contract_status<S: Storage, A: Api, Q: Querier>(
 
 pub fn query_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    owner: HumanAddr,
-    spender: HumanAddr,
+    owner: Addr,
+    spender: Addr,
 ) -> StdResult<Binary> {
     let owner_address = deps.api.canonical_address(&owner)?;
     let spender_address = deps.api.canonical_address(&spender)?;
@@ -762,15 +762,15 @@ pub fn query_allowance<S: Storage, A: Api, Q: Querier>(
 fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     messages: &mut Vec<CosmosMsg>,
-    sender: &HumanAddr,
+    sender: &Addr,
     sender_canon: &CanonicalAddr,
-    recipient: &HumanAddr,
+    recipient: &Addr,
     recipient_canon: &CanonicalAddr,
     amount: Uint128,
     memo: Option<String>,
     block: &shade_protocol::c_std::BlockInfo,
 
-    distributors: &Option<Vec<HumanAddr>>,
+    distributors: &Option<Vec<Addr>>,
     time: u64,
 ) -> StdResult<()> {
     // Verify that this transfer is allowed
@@ -833,10 +833,10 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
 fn try_transfer<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     amount: Uint128,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = env.message.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
     let recipient_canon = deps.api.canonical_address(&recipient)?;
@@ -859,7 +859,7 @@ fn try_transfer<S: Storage, A: Api, Q: Querier>(
         env.block.time,
     )?;
 
-    let res = HandleResponse {
+    let res = Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Transfer { status: Success })?),
@@ -871,7 +871,7 @@ fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     actions: Vec<batch::TransferAction>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = env.message.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
 
@@ -897,7 +897,7 @@ fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    let res = HandleResponse {
+    let res = Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BatchTransfer { status: Success })?),
@@ -909,11 +909,11 @@ fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
 fn try_add_receiver_api_callback<S: ReadonlyStorage>(
     storage: &S,
     messages: &mut Vec<CosmosMsg>,
-    recipient: HumanAddr,
+    recipient: Addr,
     recipient_code_hash: Option<String>,
     msg: Option<Binary>,
-    sender: HumanAddr,
-    from: HumanAddr,
+    sender: Addr,
+    from: Addr,
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<()> {
@@ -940,16 +940,16 @@ fn try_add_receiver_api_callback<S: ReadonlyStorage>(
 fn try_send_impl<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     messages: &mut Vec<CosmosMsg>,
-    sender: HumanAddr,
+    sender: Addr,
     sender_canon: &CanonicalAddr, // redundant but more efficient
-    recipient: HumanAddr,
+    recipient: Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
     memo: Option<String>,
     msg: Option<Binary>,
     block: &shade_protocol::c_std::BlockInfo,
 
-    distributors: &Option<Vec<HumanAddr>>,
+    distributors: &Option<Vec<Addr>>,
     time: u64,
 ) -> StdResult<()> {
     let recipient_canon = deps.api.canonical_address(&recipient)?;
@@ -985,12 +985,12 @@ fn try_send_impl<S: Storage, A: Api, Q: Querier>(
 fn try_send<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
     memo: Option<String>,
     msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let mut messages = vec![];
     let sender = env.message.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
@@ -1012,7 +1012,7 @@ fn try_send<S: Storage, A: Api, Q: Querier>(
         env.block.time,
     )?;
 
-    let res = HandleResponse {
+    let res = Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Send { status: Success })?),
@@ -1024,7 +1024,7 @@ fn try_batch_send<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     actions: Vec<batch::SendAction>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let mut messages = vec![];
     let sender = env.message.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
@@ -1048,7 +1048,7 @@ fn try_batch_send<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    let res = HandleResponse {
+    let res = Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BatchSend { status: Success })?),
@@ -1060,9 +1060,9 @@ fn try_register_receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     code_hash: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     set_receiver_hash(&mut deps.storage, &env.message.sender, code_hash);
-    let res = HandleResponse {
+    let res = Response {
         messages: vec![],
         log: vec![log("register_status", "success")],
         data: Some(to_binary(&HandleAnswer::RegisterReceive {
@@ -1106,16 +1106,16 @@ fn use_allowance<S: Storage>(
 fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    spender: &HumanAddr,
+    spender: &Addr,
     spender_canon: &CanonicalAddr,
-    owner: &HumanAddr,
+    owner: &Addr,
     owner_canon: &CanonicalAddr,
-    recipient: &HumanAddr,
+    recipient: &Addr,
     recipient_canon: &CanonicalAddr,
     amount: Uint128,
     memo: Option<String>,
 
-    distributors: &Option<Vec<HumanAddr>>,
+    distributors: &Option<Vec<Addr>>,
     time: u64,
 ) -> StdResult<()> {
     // Verify that this transfer is allowed
@@ -1167,11 +1167,11 @@ fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
 fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    owner: &HumanAddr,
-    recipient: &HumanAddr,
+    owner: &Addr,
+    recipient: &Addr,
     amount: Uint128,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let spender = &env.message.sender;
     let spender_canon = deps.api.canonical_address(spender)?;
     let owner_canon = deps.api.canonical_address(owner)?;
@@ -1191,7 +1191,7 @@ fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
         env.block.time,
     )?;
 
-    let res = HandleResponse {
+    let res = Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::TransferFrom { status: Success })?),
@@ -1203,7 +1203,7 @@ fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     actions: Vec<batch::TransferFromAction>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let spender = &env.message.sender;
     let spender_canon = deps.api.canonical_address(spender)?;
 
@@ -1228,7 +1228,7 @@ fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    let res = HandleResponse {
+    let res = Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BatchTransferFrom {
@@ -1243,16 +1243,16 @@ fn try_send_from_impl<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     messages: &mut Vec<CosmosMsg>,
-    spender: &HumanAddr,
+    spender: &Addr,
     spender_canon: &CanonicalAddr, // redundant but more efficient
-    owner: HumanAddr,
-    recipient: HumanAddr,
+    owner: Addr,
+    recipient: Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
     memo: Option<String>,
     msg: Option<Binary>,
 
-    distributors: &Option<Vec<HumanAddr>>,
+    distributors: &Option<Vec<Addr>>,
 ) -> StdResult<()> {
     let owner_canon = deps.api.canonical_address(&owner)?;
     let recipient_canon = deps.api.canonical_address(&recipient)?;
@@ -1290,13 +1290,13 @@ fn try_send_from_impl<S: Storage, A: Api, Q: Querier>(
 fn try_send_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    owner: HumanAddr,
-    recipient: HumanAddr,
+    owner: Addr,
+    recipient: Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
     memo: Option<String>,
     msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let spender = &env.message.sender.clone();
     let spender_canon = deps.api.canonical_address(spender)?;
 
@@ -1316,7 +1316,7 @@ fn try_send_from<S: Storage, A: Api, Q: Querier>(
         &get_distributor(deps)?,
     )?;
 
-    let res = HandleResponse {
+    let res = Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::SendFrom { status: Success })?),
@@ -1328,7 +1328,7 @@ fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     actions: Vec<batch::SendFromAction>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let spender = &env.message.sender;
     let spender_canon = deps.api.canonical_address(spender)?;
     let mut messages = vec![];
@@ -1352,7 +1352,7 @@ fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    let res = HandleResponse {
+    let res = Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::BatchSendFrom { status: Success })?),
@@ -1363,10 +1363,10 @@ fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
 fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    spender: HumanAddr,
+    spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let owner_address = deps.api.canonical_address(&env.message.sender)?;
     let spender_address = deps.api.canonical_address(&spender)?;
 
@@ -1393,7 +1393,7 @@ fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
         allowance,
     )?;
 
-    let res = HandleResponse {
+    let res = Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::IncreaseAllowance {
@@ -1408,10 +1408,10 @@ fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
 fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    spender: HumanAddr,
+    spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let owner_address = deps.api.canonical_address(&env.message.sender)?;
     let spender_address = deps.api.canonical_address(&spender)?;
 
@@ -1438,7 +1438,7 @@ fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
         allowance,
     )?;
 
-    let res = HandleResponse {
+    let res = Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::DecreaseAllowance {
@@ -1452,9 +1452,9 @@ fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
 
 fn perform_transfer<T: Storage>(
     store: &mut T,
-    from: &HumanAddr,
+    from: &Addr,
     from_canon: &CanonicalAddr,
-    to: &HumanAddr,
+    to: &Addr,
     to_canon: &CanonicalAddr,
     amount: Uint128,
     time: u64,
@@ -1531,7 +1531,7 @@ fn revoke_permit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     permit_name: String,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     RevokedPermits::revoke_permit(
         &mut deps.storage,
         PREFIX_REVOKED_PERMITS,
@@ -1539,14 +1539,14 @@ fn revoke_permit<S: Storage, A: Api, Q: Querier>(
         &permit_name,
     );
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RevokePermit { status: Success })?),
     })
 }
 
-fn is_admin<S: Storage>(config: &Config<S>, account: &HumanAddr) -> StdResult<bool> {
+fn is_admin<S: Storage>(config: &Config<S>, account: &Addr) -> StdResult<bool> {
     let consts = config.constants()?;
     if &consts.admin != account {
         return Ok(false);
@@ -1555,7 +1555,7 @@ fn is_admin<S: Storage>(config: &Config<S>, account: &HumanAddr) -> StdResult<bo
     Ok(true)
 }
 
-pub fn check_if_admin<S: Storage>(config: &Config<S>, account: &HumanAddr) -> StdResult<()> {
+pub fn check_if_admin<S: Storage>(config: &Config<S>, account: &Addr) -> StdResult<()> {
     if !is_admin(config, account)? {
         return Err(StdError::generic_err(
             "This is an admin command. Admin commands can only be run from admin address",
@@ -1589,14 +1589,14 @@ fn is_valid_symbol(symbol: &str) -> bool {
 mod staking_tests {
     use super::*;
     use crate::msg::{InitConfig, ResponseStatus};
-    use shade_protocol::math_compat::Uint256;
+    use shade_protocol::c_std::Uint256;
     use shade_protocol::c_std::{
         from_binary,
         testing::*,
         BlockInfo,
         ContractInfo,
         MessageInfo,
-        QueryResponse,
+        Binary,
         WasmMsg,
     };
     use shade_protocol::{
@@ -1613,7 +1613,7 @@ mod staking_tests {
         let env = mock_env("instantiator", &[]);
         let init_msg = InitMsg {
             name: "sec-sec".to_string(),
-            admin: Some(HumanAddr("admin".to_string())),
+            admin: Some(Addr::unchecked("admin".to_string())),
             symbol: "SECSEC".to_string(),
             decimals: Some(8),
             share_decimals: 18,
@@ -1621,13 +1621,13 @@ mod staking_tests {
             config: None,
             unbond_time: 10,
             staked_token: Contract {
-                address: HumanAddr("token".to_string()),
+                address: Addr::unchecked("token".to_string()),
                 code_hash: "hash".to_string(),
             },
-            treasury: Some(HumanAddr("treasury".to_string())),
+            treasury: Some(Addr::unchecked("treasury".to_string())),
             treasury_code_hash: None,
             limit_transfer: true,
-            distributors: Some(vec![HumanAddr("distributor".to_string())]),
+            distributors: Some(vec![Addr::unchecked("distributor".to_string())]),
         };
 
         (init(&mut deps, env, init_msg), deps)
@@ -1670,7 +1670,7 @@ mod staking_tests {
         stake: Uint128,
     ) {
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr(acc.to_string()),
+            sender: Addr(acc.to_string()),
             from: Default::default(),
             amount: stake,
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
@@ -1709,7 +1709,7 @@ mod staking_tests {
         let (init_result, mut deps) = init_helper_staking();
 
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("foo".to_string()),
+            sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
@@ -1738,7 +1738,7 @@ mod staking_tests {
         new_staked_account(&mut deps, "bar", "key", Uint128::new(100 * 10u128.pow(8)));
         // Query user stake
         let query_balance_msg = QueryMsg::Staked {
-            address: HumanAddr("bar".to_string()),
+            address: Addr::unchecked("bar".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -1828,7 +1828,7 @@ mod staking_tests {
 
         // Query user stake
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -1889,7 +1889,7 @@ mod staking_tests {
 
         // Fund half the unbond
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("treasury".to_string()),
+            sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(25 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Unbond).unwrap()),
@@ -1934,7 +1934,7 @@ mod staking_tests {
 
         // Overflow unbond
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("treasury".to_string()),
+            sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(500 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Unbond).unwrap()),
@@ -1976,7 +1976,7 @@ mod staking_tests {
 
         // Fund the unbond
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("treasury".to_string()),
+            sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(25 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Unbond).unwrap()),
@@ -1988,7 +1988,7 @@ mod staking_tests {
 
         // Query user stake
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2021,7 +2021,7 @@ mod staking_tests {
 
         // Query user stake
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: Some(10),
         };
@@ -2054,7 +2054,7 @@ mod staking_tests {
 
         // Query user stake
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: Some(10),
         };
@@ -2113,7 +2113,7 @@ mod staking_tests {
 
         // Add rewards; foo should get 50 tkn and bar 25
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("treasury".to_string()),
+            sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(75 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
@@ -2125,7 +2125,7 @@ mod staking_tests {
 
         // Query user stake
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2151,7 +2151,7 @@ mod staking_tests {
 
         // Query user stake
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bar".to_string()),
+            address: Addr::unchecked("bar".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2189,7 +2189,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2222,7 +2222,7 @@ mod staking_tests {
 
         // Add rewards
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("treasury".to_string()),
+            sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(50 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
@@ -2234,7 +2234,7 @@ mod staking_tests {
 
         // Check account to confirm it works
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2263,7 +2263,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2298,7 +2298,7 @@ mod staking_tests {
 
         // Add rewards; foo should get 50 tkn and bar 25
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("treasury".to_string()),
+            sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(75 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
@@ -2310,7 +2310,7 @@ mod staking_tests {
 
         // Query user stake
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2336,7 +2336,7 @@ mod staking_tests {
 
         // Query user stake
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bar".to_string()),
+            address: Addr::unchecked("bar".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2376,7 +2376,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2433,7 +2433,7 @@ mod staking_tests {
         };
 
         let handle_msg = HandleMsg::AddDistributors {
-            distributors: vec![HumanAddr("new_distrib".to_string())],
+            distributors: vec![Addr::unchecked("new_distrib".to_string())],
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("not_admin", &[]), handle_msg.clone());
@@ -2449,7 +2449,7 @@ mod staking_tests {
             QueryAnswer::Distributors { distributors } => {
                 let distrib = distributors.unwrap();
                 assert_eq!(distrib.len(), 2);
-                assert_eq!(distrib[1], HumanAddr("new_distrib".to_string()));
+                assert_eq!(distrib[1], Addr::unchecked("new_distrib".to_string()));
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -2460,7 +2460,7 @@ mod staking_tests {
         let (init_result, mut deps) = init_helper_staking();
 
         let handle_msg = HandleMsg::SetDistributors {
-            distributors: vec![HumanAddr("new_distrib".to_string())],
+            distributors: vec![Addr::unchecked("new_distrib".to_string())],
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("not_admin", &[]), handle_msg.clone());
@@ -2476,7 +2476,7 @@ mod staking_tests {
             QueryAnswer::Distributors { distributors } => {
                 let distrib = distributors.unwrap();
                 assert_eq!(distrib.len(), 1);
-                assert_eq!(distrib[0], HumanAddr("new_distrib".to_string()));
+                assert_eq!(distrib[0], Addr::unchecked("new_distrib".to_string()));
             }
             _ => panic!("Unexpected result from query"),
         };
@@ -2505,7 +2505,7 @@ mod staking_tests {
         );
 
         let handle_msg = HandleMsg::SetDistributors {
-            distributors: vec![HumanAddr("distrib".to_string())],
+            distributors: vec![Addr::unchecked("distrib".to_string())],
             padding: None,
         };
 
@@ -2514,7 +2514,7 @@ mod staking_tests {
 
         // Distrib is sender
         let handle_msg = HandleMsg::Send {
-            recipient: HumanAddr("someone".to_string()),
+            recipient: Addr::unchecked("someone".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
@@ -2530,7 +2530,7 @@ mod staking_tests {
 
         // Send to distrib
         let handle_msg = HandleMsg::Send {
-            recipient: HumanAddr("distrib".to_string()),
+            recipient: Addr::unchecked("distrib".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
@@ -2542,7 +2542,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         let handle_msg = HandleMsg::Send {
-            recipient: HumanAddr("not_distrib".to_string()),
+            recipient: Addr::unchecked("not_distrib".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
@@ -2569,7 +2569,7 @@ mod staking_tests {
 
         // Add rewards
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("treasury".to_string()),
+            sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(50 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
@@ -2581,7 +2581,7 @@ mod staking_tests {
 
         // Check account to confirm it works
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2607,7 +2607,7 @@ mod staking_tests {
 
         // Send msg
         let handle_msg = HandleMsg::Send {
-            recipient: HumanAddr("other".to_string()),
+            recipient: Addr::unchecked("other".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
@@ -2619,7 +2619,7 @@ mod staking_tests {
 
         // Check that it was autoclaimed
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("foo".to_string()),
+            address: Addr::unchecked("foo".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2660,7 +2660,7 @@ mod staking_tests {
 
         // Send msg
         let handle_msg = HandleMsg::Send {
-            recipient: HumanAddr("bar".to_string()),
+            recipient: Addr::unchecked("bar".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
@@ -2672,7 +2672,7 @@ mod staking_tests {
 
         // Check that it was autoclaimed
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bar".to_string()),
+            address: Addr::unchecked("bar".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2701,7 +2701,7 @@ mod staking_tests {
 
         // Send msg
         let handle_msg = HandleMsg::Send {
-            recipient: HumanAddr("foo".to_string()),
+            recipient: Addr::unchecked("foo".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(100 * 10u128.pow(8)),
             msg: None,
@@ -2713,7 +2713,7 @@ mod staking_tests {
 
         // Check that it was autoclaimed
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bar".to_string()),
+            address: Addr::unchecked("bar".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2742,7 +2742,7 @@ mod staking_tests {
 
         // Send msg
         let handle_msg = HandleMsg::Send {
-            recipient: HumanAddr("foo".to_string()),
+            recipient: Addr::unchecked("foo".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
@@ -2754,7 +2754,7 @@ mod staking_tests {
 
         // Check that it was autoclaimed
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bar".to_string()),
+            address: Addr::unchecked("bar".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2797,7 +2797,7 @@ mod staking_tests {
 
         // Send msg
         let handle_msg = HandleMsg::Send {
-            recipient: HumanAddr("bar".to_string()),
+            recipient: Addr::unchecked("bar".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
             msg: None,
@@ -2809,7 +2809,7 @@ mod staking_tests {
 
         // Check that it was autoclaimed
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bar".to_string()),
+            address: Addr::unchecked("bar".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2846,7 +2846,7 @@ mod staking_tests {
 
         // Check that it was autoclaimed
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bar".to_string()),
+            address: Addr::unchecked("bar".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2883,7 +2883,7 @@ mod staking_tests {
 
         // Check that it was autoclaimed
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bar".to_string()),
+            address: Addr::unchecked("bar".to_string()),
             key: "key".to_string(),
             time: None,
         };
@@ -2932,7 +2932,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         let send_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("account".to_string()),
+            recipient: Addr::unchecked("account".to_string()),
             amount: Uint128::new(123),
             memo: None,
             padding: None,
@@ -2941,7 +2941,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("foo".to_string()),
+            sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
@@ -2953,7 +2953,7 @@ mod staking_tests {
         assert!(handle_result.is_err());
 
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("foo".to_string()),
+            sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
@@ -2995,7 +2995,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         let send_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("account".to_string()),
+            recipient: Addr::unchecked("account".to_string()),
             amount: Uint128::new(123),
             memo: None,
             padding: None,
@@ -3004,7 +3004,7 @@ mod staking_tests {
         assert!(handle_result.is_err());
 
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("foo".to_string()),
+            sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
@@ -3016,7 +3016,7 @@ mod staking_tests {
         assert!(handle_result.is_err());
 
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("foo".to_string()),
+            sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
             msg: Some(to_binary(&ReceiveType::Reward).unwrap()),
@@ -3048,7 +3048,7 @@ mod snip20_tests {
         Coin,
         ContractInfo,
         MessageInfo,
-        QueryResponse,
+        Binary,
         WasmMsg,
     };
     use shade_protocol::{
@@ -3072,7 +3072,7 @@ mod snip20_tests {
         stake: Uint128,
     ) {
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr(acc.to_string()),
+            sender: Addr(acc.to_string()),
             from: Default::default(),
             amount: stake,
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
@@ -3101,7 +3101,7 @@ mod snip20_tests {
 
         let init_msg = InitMsg {
             name: "sec-sec".to_string(),
-            admin: Some(HumanAddr("admin".to_string())),
+            admin: Some(Addr::unchecked("admin".to_string())),
             symbol: "SECSEC".to_string(),
             decimals: Some(8),
             share_decimals: 18,
@@ -3109,10 +3109,10 @@ mod snip20_tests {
             config: None,
             unbond_time: 10,
             staked_token: Contract {
-                address: HumanAddr("token".to_string()),
+                address: Addr::unchecked("token".to_string()),
                 code_hash: "hash".to_string(),
             },
-            treasury: Some(HumanAddr("treasury".to_string())),
+            treasury: Some(Addr::unchecked("treasury".to_string())),
             treasury_code_hash: None,
             limit_transfer: false,
             distributors: None,
@@ -3158,7 +3158,7 @@ mod snip20_tests {
         .unwrap();
         let init_msg = InitMsg {
             name: "sec-sec".to_string(),
-            admin: Some(HumanAddr("admin".to_string())),
+            admin: Some(Addr::unchecked("admin".to_string())),
             symbol: "SECSEC".to_string(),
             decimals: Some(8),
             share_decimals: 18,
@@ -3166,10 +3166,10 @@ mod snip20_tests {
             config: Some(init_config),
             unbond_time: 10,
             staked_token: Contract {
-                address: HumanAddr("token".to_string()),
+                address: Addr::unchecked("token".to_string()),
                 code_hash: "hash".to_string(),
             },
-            treasury: Some(HumanAddr("treasury".to_string())),
+            treasury: Some(Addr::unchecked("treasury".to_string())),
             treasury_code_hash: None,
             limit_transfer: false,
             distributors: None,
@@ -3213,7 +3213,7 @@ mod snip20_tests {
         match error {
             Ok(response) => {
                 let bin_err = (&response as &dyn Any)
-                    .downcast_ref::<QueryResponse>()
+                    .downcast_ref::<Binary>()
                     .expect("An error was expected, but no error could be extracted");
                 match from_binary(bin_err).unwrap() {
                     QueryAnswer::ViewingKeyError { msg } => msg,
@@ -3227,7 +3227,7 @@ mod snip20_tests {
         }
     }
 
-    fn ensure_success(handle_result: HandleResponse) -> bool {
+    fn ensure_success(handle_result: Response) -> bool {
         let handle_result: HandleAnswer = from_binary(&handle_result.data.unwrap()).unwrap();
 
         match handle_result {
@@ -3272,7 +3272,7 @@ mod snip20_tests {
         assert_eq!(config.total_supply(), 5000);
         assert_eq!(config.contract_status(), ContractStatusLevel::NormalRun);
         assert_eq!(constants.name, "sec-sec".to_string());
-        assert_eq!(constants.admin, HumanAddr("admin".to_string()));
+        assert_eq!(constants.admin, Addr::unchecked("admin".to_string()));
         assert_eq!(constants.symbol, "STKD-SECSEC".to_string());
         assert_eq!(constants.decimals, 8);
         assert_eq!(
@@ -3302,7 +3302,7 @@ mod snip20_tests {
         assert_eq!(config.total_supply(), 5000);
         assert_eq!(config.contract_status(), ContractStatusLevel::NormalRun);
         assert_eq!(constants.name, "sec-sec".to_string());
-        assert_eq!(constants.admin, HumanAddr("admin".to_string()));
+        assert_eq!(constants.admin, Addr::unchecked("admin".to_string()));
         assert_eq!(constants.symbol, "STKD-SECSEC".to_string());
         assert_eq!(constants.decimals, 8);
         assert_eq!(
@@ -3331,7 +3331,7 @@ mod snip20_tests {
             stake: Uint128::new(u128::MAX),
         }]);
         let handle_msg = HandleMsg::Receive {
-            sender: HumanAddr("giannis".to_string()),
+            sender: Addr::unchecked("giannis".to_string()),
             from: Default::default(),
             amount: Uint128::new(1),
             msg: Some(to_binary(&ReceiveType::Bond { use_from: None }).unwrap()),
@@ -3357,7 +3357,7 @@ mod snip20_tests {
         );
 
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "pwd".to_string(),
             time: None,
         };
@@ -3393,7 +3393,7 @@ mod snip20_tests {
         };
 
         let handle_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("alice".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(1000),
             memo: None,
             padding: None,
@@ -3403,18 +3403,18 @@ mod snip20_tests {
         assert!(ensure_success(result));
         let bob_canonical = deps
             .api
-            .canonical_address(&HumanAddr("bob".to_string()))
+            .canonical_address(&Addr::unchecked("bob".to_string()))
             .unwrap();
         let alice_canonical = deps
             .api
-            .canonical_address(&HumanAddr("alice".to_string()))
+            .canonical_address(&Addr::unchecked("alice".to_string()))
             .unwrap();
         let balances = ReadonlyBalances::from_storage(&deps.storage);
         assert_eq!(5000 - 1000, balances.account_amount(&bob_canonical));
         assert_eq!(1000, balances.account_amount(&alice_canonical));
 
         let handle_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("alice".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(10000),
             memo: None,
             padding: None,
@@ -3424,7 +3424,7 @@ mod snip20_tests {
         assert!(error.contains("insufficient funds"));
 
         let query_msg = QueryMsg::Staked {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "pwd".to_string(),
             time: None,
         };
@@ -3482,7 +3482,7 @@ mod snip20_tests {
         assert!(ensure_success(result));
 
         let handle_msg = HandleMsg::Send {
-            recipient: HumanAddr("contract".to_string()),
+            recipient: Addr::unchecked("contract".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(100),
             memo: Some("my memo".to_string()),
@@ -3494,11 +3494,11 @@ mod snip20_tests {
         assert!(ensure_success(result.clone()));
         assert!(
             result.messages.contains(&CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: HumanAddr("contract".to_string()),
+                contract_addr: Addr::unchecked("contract".to_string()),
                 callback_code_hash: "this_is_a_hash_of_a_code".to_string(),
                 msg: Snip20ReceiveMsg::new(
-                    HumanAddr("bob".to_string()),
-                    HumanAddr("bob".to_string()),
+                    Addr::unchecked("bob".to_string()),
+                    Addr::unchecked("bob".to_string()),
                     Uint128::new(100),
                     Some("my memo".to_string()),
                     Some(to_binary("hey hey you you").unwrap())
@@ -3531,7 +3531,7 @@ mod snip20_tests {
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
-        let hash = get_receiver_hash(&deps.storage, &HumanAddr("contract".to_string()))
+        let hash = get_receiver_hash(&deps.storage, &Addr::unchecked("contract".to_string()))
             .unwrap()
             .unwrap();
         assert_eq!(hash, "this_is_a_hash_of_a_code".to_string());
@@ -3568,7 +3568,7 @@ mod snip20_tests {
         };
         let bob_canonical = deps
             .api
-            .canonical_address(&HumanAddr("bob".to_string()))
+            .canonical_address(&Addr::unchecked("bob".to_string()))
             .unwrap();
         let saved_vk = read_viewing_key(&deps.storage, &bob_canonical).unwrap();
         assert!(key.check_viewing_key(saved_vk.as_slice()));
@@ -3618,7 +3618,7 @@ mod snip20_tests {
         );
         let bob_canonical = deps
             .api
-            .canonical_address(&HumanAddr("bob".to_string()))
+            .canonical_address(&Addr::unchecked("bob".to_string()))
             .unwrap();
         let saved_vk = read_viewing_key(&deps.storage, &bob_canonical).unwrap();
         assert!(actual_vk.check_viewing_key(&saved_vk));
@@ -3639,8 +3639,8 @@ mod snip20_tests {
 
         // Transfer before allowance
         let handle_msg = HandleMsg::TransferFrom {
-            owner: HumanAddr("bob".to_string()),
-            recipient: HumanAddr("alice".to_string()),
+            owner: Addr::unchecked("bob".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2500),
             memo: None,
             padding: None,
@@ -3651,7 +3651,7 @@ mod snip20_tests {
 
         // Transfer more than allowance
         let handle_msg = HandleMsg::IncreaseAllowance {
-            spender: HumanAddr("alice".to_string()),
+            spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
             expiration: Some(1_571_797_420),
@@ -3663,8 +3663,8 @@ mod snip20_tests {
             handle_result.err().unwrap()
         );
         let handle_msg = HandleMsg::TransferFrom {
-            owner: HumanAddr("bob".to_string()),
-            recipient: HumanAddr("alice".to_string()),
+            owner: Addr::unchecked("bob".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2500),
             memo: None,
             padding: None,
@@ -3675,8 +3675,8 @@ mod snip20_tests {
 
         // Transfer after allowance expired
         let handle_msg = HandleMsg::TransferFrom {
-            owner: HumanAddr("bob".to_string()),
-            recipient: HumanAddr("alice".to_string()),
+            owner: Addr::unchecked("bob".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             memo: None,
             padding: None,
@@ -3690,11 +3690,11 @@ mod snip20_tests {
                     chain_id: "cosmos-testnet-14002".to_string(),
                 },
                 message: MessageInfo {
-                    sender: HumanAddr("bob".to_string()),
+                    sender: Addr::unchecked("bob".to_string()),
                     sent_funds: vec![],
                 },
                 contract: ContractInfo {
-                    address: HumanAddr::from(MOCK_CONTRACT_ADDR),
+                    address: Addr::from(MOCK_CONTRACT_ADDR),
                 },
                 contract_key: Some("".to_string()),
                 contract_code_hash: "".to_string(),
@@ -3706,8 +3706,8 @@ mod snip20_tests {
 
         // Sanity check
         let handle_msg = HandleMsg::TransferFrom {
-            owner: HumanAddr("bob".to_string()),
-            recipient: HumanAddr("alice".to_string()),
+            owner: Addr::unchecked("bob".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             memo: None,
             padding: None,
@@ -3720,11 +3720,11 @@ mod snip20_tests {
         );
         let bob_canonical = deps
             .api
-            .canonical_address(&HumanAddr("bob".to_string()))
+            .canonical_address(&Addr::unchecked("bob".to_string()))
             .unwrap();
         let alice_canonical = deps
             .api
-            .canonical_address(&HumanAddr("alice".to_string()))
+            .canonical_address(&Addr::unchecked("alice".to_string()))
             .unwrap();
         let bob_balance = crate::state::ReadonlyBalances::from_storage(&deps.storage)
             .account_amount(&bob_canonical);
@@ -3737,8 +3737,8 @@ mod snip20_tests {
 
         // Second send more than allowance
         let handle_msg = HandleMsg::TransferFrom {
-            owner: HumanAddr("bob".to_string()),
-            recipient: HumanAddr("alice".to_string()),
+            owner: Addr::unchecked("bob".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(1),
             memo: None,
             padding: None,
@@ -3763,8 +3763,8 @@ mod snip20_tests {
 
         // Send before allowance
         let handle_msg = HandleMsg::SendFrom {
-            owner: HumanAddr("bob".to_string()),
-            recipient: HumanAddr("alice".to_string()),
+            owner: Addr::unchecked("bob".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(2500),
             memo: None,
@@ -3777,7 +3777,7 @@ mod snip20_tests {
 
         // Send more than allowance
         let handle_msg = HandleMsg::IncreaseAllowance {
-            spender: HumanAddr("alice".to_string()),
+            spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
             expiration: None,
@@ -3789,8 +3789,8 @@ mod snip20_tests {
             handle_result.err().unwrap()
         );
         let handle_msg = HandleMsg::SendFrom {
-            owner: HumanAddr("bob".to_string()),
-            recipient: HumanAddr("alice".to_string()),
+            owner: Addr::unchecked("bob".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(2500),
             memo: None,
@@ -3814,15 +3814,15 @@ mod snip20_tests {
         );
         let send_msg = Binary::from(r#"{ "some_msg": { "some_key": "some_val" } }"#.as_bytes());
         let snip20_msg = Snip20ReceiveMsg::new(
-            HumanAddr("alice".to_string()),
-            HumanAddr("bob".to_string()),
+            Addr::unchecked("alice".to_string()),
+            Addr::unchecked("bob".to_string()),
             Uint128::new(2000),
             Some("my memo".to_string()),
             Some(send_msg.clone()),
         );
         let handle_msg = HandleMsg::SendFrom {
-            owner: HumanAddr("bob".to_string()),
-            recipient: HumanAddr("contract".to_string()),
+            owner: Addr::unchecked("bob".to_string()),
+            recipient: Addr::unchecked("contract".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(2000),
             memo: Some("my memo".to_string()),
@@ -3838,17 +3838,17 @@ mod snip20_tests {
         assert!(
             handle_result.unwrap().messages.contains(
                 &snip20_msg
-                    .into_cosmos_msg("lolz".to_string(), HumanAddr("contract".to_string()))
+                    .into_cosmos_msg("lolz".to_string(), Addr::unchecked("contract".to_string()))
                     .unwrap()
             )
         );
         let bob_canonical = deps
             .api
-            .canonical_address(&HumanAddr("bob".to_string()))
+            .canonical_address(&Addr::unchecked("bob".to_string()))
             .unwrap();
         let contract_canonical = deps
             .api
-            .canonical_address(&HumanAddr("contract".to_string()))
+            .canonical_address(&Addr::unchecked("contract".to_string()))
             .unwrap();
         let bob_balance = crate::state::ReadonlyBalances::from_storage(&deps.storage)
             .account_amount(&bob_canonical);
@@ -3861,8 +3861,8 @@ mod snip20_tests {
 
         // Second send more than allowance
         let handle_msg = HandleMsg::SendFrom {
-            owner: HumanAddr("bob".to_string()),
-            recipient: HumanAddr("alice".to_string()),
+            owner: Addr::unchecked("bob".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(1),
             memo: None,
@@ -3888,7 +3888,7 @@ mod snip20_tests {
         );
 
         let handle_msg = HandleMsg::DecreaseAllowance {
-            spender: HumanAddr("alice".to_string()),
+            spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
             expiration: None,
@@ -3902,11 +3902,11 @@ mod snip20_tests {
 
         let bob_canonical = deps
             .api
-            .canonical_address(&HumanAddr("bob".to_string()))
+            .canonical_address(&Addr::unchecked("bob".to_string()))
             .unwrap();
         let alice_canonical = deps
             .api
-            .canonical_address(&HumanAddr("alice".to_string()))
+            .canonical_address(&Addr::unchecked("alice".to_string()))
             .unwrap();
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
@@ -3916,7 +3916,7 @@ mod snip20_tests {
         });
 
         let handle_msg = HandleMsg::IncreaseAllowance {
-            spender: HumanAddr("alice".to_string()),
+            spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
             expiration: None,
@@ -3929,7 +3929,7 @@ mod snip20_tests {
         );
 
         let handle_msg = HandleMsg::DecreaseAllowance {
-            spender: HumanAddr("alice".to_string()),
+            spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(50),
             padding: None,
             expiration: None,
@@ -3962,7 +3962,7 @@ mod snip20_tests {
         );
 
         let handle_msg = HandleMsg::IncreaseAllowance {
-            spender: HumanAddr("alice".to_string()),
+            spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
             expiration: None,
@@ -3976,11 +3976,11 @@ mod snip20_tests {
 
         let bob_canonical = deps
             .api
-            .canonical_address(&HumanAddr("bob".to_string()))
+            .canonical_address(&Addr::unchecked("bob".to_string()))
             .unwrap();
         let alice_canonical = deps
             .api
-            .canonical_address(&HumanAddr("alice".to_string()))
+            .canonical_address(&Addr::unchecked("alice".to_string()))
             .unwrap();
 
         let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
@@ -3990,7 +3990,7 @@ mod snip20_tests {
         });
 
         let handle_msg = HandleMsg::IncreaseAllowance {
-            spender: HumanAddr("alice".to_string()),
+            spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
             expiration: None,
@@ -4023,7 +4023,7 @@ mod snip20_tests {
         );
 
         let handle_msg = HandleMsg::ChangeAdmin {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg);
@@ -4037,7 +4037,7 @@ mod snip20_tests {
             .constants()
             .unwrap()
             .admin;
-        assert_eq!(admin, HumanAddr("bob".to_string()));
+        assert_eq!(admin, Addr::unchecked("bob".to_string()));
     }
 
     #[test]
@@ -4101,7 +4101,7 @@ mod snip20_tests {
         assert!(error.contains(&admin_err.clone()));
 
         let change_admin_msg = HandleMsg::ChangeAdmin {
-            address: HumanAddr("not_admin".to_string()),
+            address: Addr::unchecked("not_admin".to_string()),
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("not_admin", &[]), change_admin_msg);
@@ -4135,7 +4135,7 @@ mod snip20_tests {
         );
 
         let send_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("account".to_string()),
+            recipient: Addr::unchecked("account".to_string()),
             amount: Uint128::new(123),
             memo: None,
             padding: None,
@@ -4164,7 +4164,7 @@ mod snip20_tests {
         );
 
         let no_vk_yet_query_msg = QueryMsg::Balance {
-            address: HumanAddr("giannis".to_string()),
+            address: Addr::unchecked("giannis".to_string()),
             key: "no_vk_yet".to_string(),
         };
         let query_result = query(&deps, no_vk_yet_query_msg);
@@ -4185,7 +4185,7 @@ mod snip20_tests {
         };
 
         let query_balance_msg = QueryMsg::Balance {
-            address: HumanAddr("giannis".to_string()),
+            address: Addr::unchecked("giannis".to_string()),
             key: vk.0,
         };
 
@@ -4197,7 +4197,7 @@ mod snip20_tests {
         assert_eq!(balance, Uint128::new(5000));
 
         let wrong_vk_query_msg = QueryMsg::Balance {
-            address: HumanAddr("giannis".to_string()),
+            address: Addr::unchecked("giannis".to_string()),
             key: "wrong_vk".to_string(),
         };
         let query_result = query(&deps, wrong_vk_query_msg);
@@ -4211,7 +4211,7 @@ mod snip20_tests {
     #[test]
     fn test_query_token_info() {
         let init_name = "sec-sec".to_string();
-        let init_admin = HumanAddr("admin".to_string());
+        let init_admin = Addr::unchecked("admin".to_string());
         let init_symbol = "SECSEC".to_string();
         let init_decimals = 8;
         let init_config: InitConfig = from_binary(&Binary::from(
@@ -4232,10 +4232,10 @@ mod snip20_tests {
             config: Some(init_config),
             unbond_time: 10,
             staked_token: Contract {
-                address: HumanAddr("token".to_string()),
+                address: Addr::unchecked("token".to_string()),
                 code_hash: "hash".to_string(),
             },
-            treasury: Some(HumanAddr("treasury".to_string())),
+            treasury: Some(Addr::unchecked("treasury".to_string())),
             treasury_code_hash: None,
             limit_transfer: true,
             distributors: None,
@@ -4276,7 +4276,7 @@ mod snip20_tests {
     #[test]
     fn test_query_token_config() {
         let init_name = "sec-sec".to_string();
-        let init_admin = HumanAddr("admin".to_string());
+        let init_admin = Addr::unchecked("admin".to_string());
         let init_symbol = "SECSEC".to_string();
         let init_decimals = 8;
         let init_config: InitConfig = from_binary(&Binary::from(
@@ -4304,10 +4304,10 @@ mod snip20_tests {
             config: Some(init_config),
             unbond_time: 10,
             staked_token: Contract {
-                address: HumanAddr("token".to_string()),
+                address: Addr::unchecked("token".to_string()),
                 code_hash: "hash".to_string(),
             },
-            treasury: Some(HumanAddr("treasury".to_string())),
+            treasury: Some(Addr::unchecked("treasury".to_string())),
             treasury_code_hash: None,
             limit_transfer: true,
             distributors: None,
@@ -4353,7 +4353,7 @@ mod snip20_tests {
         );
 
         let handle_msg = HandleMsg::IncreaseAllowance {
-            spender: HumanAddr("lebron".to_string()),
+            spender: Addr::unchecked("lebron".to_string()),
             amount: Uint128::new(2000),
             padding: None,
             expiration: None,
@@ -4369,8 +4369,8 @@ mod snip20_tests {
         let vk2 = ViewingKey("key2".to_string());
 
         let query_msg = QueryMsg::Allowance {
-            owner: HumanAddr("giannis".to_string()),
-            spender: HumanAddr("lebron".to_string()),
+            owner: Addr::unchecked("giannis".to_string()),
+            spender: Addr::unchecked("lebron".to_string()),
             key: vk1.0.clone(),
         };
         let query_result = query(&deps, query_msg);
@@ -4413,8 +4413,8 @@ mod snip20_tests {
         );
 
         let query_msg = QueryMsg::Allowance {
-            owner: HumanAddr("giannis".to_string()),
-            spender: HumanAddr("lebron".to_string()),
+            owner: Addr::unchecked("giannis".to_string()),
+            spender: Addr::unchecked("lebron".to_string()),
             key: vk1.0.clone(),
         };
         let query_result = query(&deps, query_msg);
@@ -4425,8 +4425,8 @@ mod snip20_tests {
         assert_eq!(allowance, Uint128::new(2000));
 
         let query_msg = QueryMsg::Allowance {
-            owner: HumanAddr("giannis".to_string()),
-            spender: HumanAddr("lebron".to_string()),
+            owner: Addr::unchecked("giannis".to_string()),
+            spender: Addr::unchecked("lebron".to_string()),
             key: vk2.0.clone(),
         };
         let query_result = query(&deps, query_msg);
@@ -4437,8 +4437,8 @@ mod snip20_tests {
         assert_eq!(allowance, Uint128::new(2000));
 
         let query_msg = QueryMsg::Allowance {
-            owner: HumanAddr("lebron".to_string()),
-            spender: HumanAddr("giannis".to_string()),
+            owner: Addr::unchecked("lebron".to_string()),
+            spender: Addr::unchecked("giannis".to_string()),
             key: vk2.0.clone(),
         };
         let query_result = query(&deps, query_msg);
@@ -4478,7 +4478,7 @@ mod snip20_tests {
         );
 
         let query_msg = QueryMsg::Balance {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "wrong_key".to_string(),
         };
         let query_result = query(&deps, query_msg);
@@ -4486,7 +4486,7 @@ mod snip20_tests {
         assert!(error.contains("Wrong viewing key"));
 
         let query_msg = QueryMsg::Balance {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "key".to_string(),
         };
         let query_result = query(&deps, query_msg);
@@ -4518,7 +4518,7 @@ mod snip20_tests {
         assert!(ensure_success(handle_result.unwrap()));
 
         let handle_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("alice".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(1000),
             memo: None,
             padding: None,
@@ -4527,7 +4527,7 @@ mod snip20_tests {
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
         let handle_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("banana".to_string()),
+            recipient: Addr::unchecked("banana".to_string()),
             amount: Uint128::new(500),
             memo: None,
             padding: None,
@@ -4536,7 +4536,7 @@ mod snip20_tests {
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
         let handle_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("mango".to_string()),
+            recipient: Addr::unchecked("mango".to_string()),
             amount: Uint128::new(2500),
             memo: None,
             padding: None,
@@ -4546,7 +4546,7 @@ mod snip20_tests {
         assert!(ensure_success(result));
 
         let query_msg = QueryMsg::TransferHistory {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "key".to_string(),
             page: None,
             page_size: 0,
@@ -4561,7 +4561,7 @@ mod snip20_tests {
         assert!(transfers.is_empty());
 
         let query_msg = QueryMsg::TransferHistory {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "key".to_string(),
             page: None,
             page_size: 10,
@@ -4574,7 +4574,7 @@ mod snip20_tests {
         assert_eq!(transfers.len(), 3);
 
         let query_msg = QueryMsg::TransferHistory {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "key".to_string(),
             page: None,
             page_size: 2,
@@ -4587,7 +4587,7 @@ mod snip20_tests {
         assert_eq!(transfers.len(), 2);
 
         let query_msg = QueryMsg::TransferHistory {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "key".to_string(),
             page: Some(1),
             page_size: 2,
@@ -4628,7 +4628,7 @@ mod snip20_tests {
         assert!(ensure_success(handle_result.unwrap()));
 
         let handle_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("alice".to_string()),
+            recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(1000),
             memo: Some("my transfer message #1".to_string()),
             padding: None,
@@ -4638,7 +4638,7 @@ mod snip20_tests {
         assert!(ensure_success(result));
 
         let handle_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("banana".to_string()),
+            recipient: Addr::unchecked("banana".to_string()),
             amount: Uint128::new(500),
             memo: Some("my transfer message #2".to_string()),
             padding: None,
@@ -4648,7 +4648,7 @@ mod snip20_tests {
         assert!(ensure_success(result));
 
         let handle_msg = HandleMsg::Transfer {
-            recipient: HumanAddr("mango".to_string()),
+            recipient: Addr::unchecked("mango".to_string()),
             amount: Uint128::new(2500),
             memo: Some("my transfer message #3".to_string()),
             padding: None,
@@ -4658,7 +4658,7 @@ mod snip20_tests {
         assert!(ensure_success(result));
 
         let query_msg = QueryMsg::TransferHistory {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "key".to_string(),
             page: None,
             page_size: 10,
@@ -4671,7 +4671,7 @@ mod snip20_tests {
         assert_eq!(transfers.len(), 3);
 
         let query_msg = QueryMsg::TransactionHistory {
-            address: HumanAddr("bob".to_string()),
+            address: Addr::unchecked("bob".to_string()),
             key: "key".to_string(),
             page: None,
             page_size: 10,
@@ -4687,9 +4687,9 @@ mod snip20_tests {
             RichTx {
                 id: 4,
                 action: TxAction::Transfer {
-                    from: HumanAddr("bob".to_string()),
-                    sender: HumanAddr("bob".to_string()),
-                    recipient: HumanAddr("mango".to_string()),
+                    from: Addr::unchecked("bob".to_string()),
+                    sender: Addr::unchecked("bob".to_string()),
+                    recipient: Addr::unchecked("mango".to_string()),
                 },
                 coins: Coin {
                     denom: "STKD-SECSEC".to_string(),
@@ -4702,9 +4702,9 @@ mod snip20_tests {
             RichTx {
                 id: 3,
                 action: TxAction::Transfer {
-                    from: HumanAddr("bob".to_string()),
-                    sender: HumanAddr("bob".to_string()),
-                    recipient: HumanAddr("banana".to_string()),
+                    from: Addr::unchecked("bob".to_string()),
+                    sender: Addr::unchecked("bob".to_string()),
+                    recipient: Addr::unchecked("banana".to_string()),
                 },
                 coins: Coin {
                     denom: "STKD-SECSEC".to_string(),
@@ -4717,9 +4717,9 @@ mod snip20_tests {
             RichTx {
                 id: 2,
                 action: TxAction::Transfer {
-                    from: HumanAddr("bob".to_string()),
-                    sender: HumanAddr("bob".to_string()),
-                    recipient: HumanAddr("alice".to_string()),
+                    from: Addr::unchecked("bob".to_string()),
+                    sender: Addr::unchecked("bob".to_string()),
+                    recipient: Addr::unchecked("alice".to_string()),
                 },
                 coins: Coin {
                     denom: "STKD-SECSEC".to_string(),
@@ -4732,7 +4732,7 @@ mod snip20_tests {
             RichTx {
                 id: 1,
                 action: TxAction::Stake {
-                    staker: HumanAddr("bob".to_string()),
+                    staker: Addr::unchecked("bob".to_string()),
                 },
                 coins: Coin {
                     denom: "STKD-SECSEC".to_string(),

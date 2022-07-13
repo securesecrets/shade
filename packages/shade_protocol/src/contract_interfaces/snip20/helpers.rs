@@ -1,5 +1,5 @@
 use crate::serde::{Deserialize, Serialize};
-use crate::schemars::JsonSchema;
+
 use crate::c_std::{Querier, StdError, StdResult};
 use secret_toolkit::snip20::{token_config_query, token_info_query, TokenConfig, TokenInfo};
 use secret_toolkit::utils::Query;

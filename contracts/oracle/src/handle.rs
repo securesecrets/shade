@@ -4,8 +4,8 @@ use shade_protocol::c_std::{
     Api,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -28,7 +28,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     pair: Contract,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
@@ -82,7 +82,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
                 dex_pairs_w(&mut deps.storage).save(td.1.symbol.as_bytes(), &vec![tp.clone()])?;
             }
 
-            return Ok(HandleResponse {
+            return Ok(Response {
                 messages: vec![],
                 log: vec![],
                 data: Some(to_binary(&HandleAnswer::RegisterPair {
@@ -103,7 +103,7 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
     env: Env,
     symbol: String,
     pair: Contract,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -118,7 +118,7 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
 
             dex_pairs_w(&mut deps.storage).save(symbol.as_bytes(), &pair_list)?;
 
-            return Ok(HandleResponse {
+            return Ok(Response {
                 messages: vec![],
                 log: vec![],
                 data: Some(to_binary(&HandleAnswer::UnregisterPair {
@@ -137,7 +137,7 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
 ///
 fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    sscrt_addr: HumanAddr,
+    sscrt_addr: Addr,
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
     // Query for snip20's in the pair
@@ -179,7 +179,7 @@ fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
 
 fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    sscrt_addr: HumanAddr,
+    sscrt_addr: Addr,
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
     // Query for snip20's in the pair
@@ -259,7 +259,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
     env: Env,
     symbol: String,
     basket: Vec<IndexElement>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -275,7 +275,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
 
     index_w(&mut deps.storage).save(symbol.as_bytes(), &basket)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RegisterIndex {
@@ -287,9 +287,9 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    admin: Option<HumanAddr>,
+    admin: Option<Addr>,
     band: Option<Contract>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     if env.message.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -308,7 +308,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         Ok(state)
     })?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {

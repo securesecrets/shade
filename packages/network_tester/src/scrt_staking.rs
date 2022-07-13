@@ -12,7 +12,7 @@ use shade_protocol::contract_interfaces::{
     },
     staking::scrt_staking,
 };
-use cosmwasm_std::{HumanAddr, to_binary};
+use cosmwasm_std::{Addr, to_binary};
 use cosmwasm_math_compat::Uint128;
 use shade_protocol::asset::Contract;
 use std::fmt::Display;
@@ -78,8 +78,8 @@ fn main() -> Result<()> {
                 Some("test"))?;
 
     snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(minter),
-        Uint128(100),
+        recipient: Addr::from(minter),
+        Uint128::new(100),
         memo: None,
         padding: None
     }.t_handle(snip, sender, Some(GAS), Some(backend), None).unwrap();
@@ -108,7 +108,7 @@ fn main() -> Result<()> {
             label: shade.label.clone(),
             admin: None,
             prng_seed: Default::default(),
-            initial_balances: Some(vec![InitialBalance{ address: HumanAddr::from(account.clone()), amount: Uint128(10000000) }])
+            initial_balances: Some(vec![InitialBalance{ address: Addr::from(account.clone()), amount: Uint128::new(10000000) }])
         },
         silk: Snip20ContractInfo {
             label: silk.label.clone(),
@@ -164,8 +164,8 @@ fn main() -> Result<()> {
     print_header("Initializing Oracle");
     let oracle = oracle::InitMsg {
         admin: None,
-        band: Contract { address: HumanAddr::from(band.address), code_hash: band.code_hash },
-        sscrt: Contract { address: HumanAddr::from(sSCRT.address.clone()),
+        band: Contract { address: Addr::from(band.address), code_hash: band.code_hash },
+        sscrt: Contract { address: Addr::from(sSCRT.address.clone()),
             code_hash: sSCRT.code_hash.clone() }
     }.inst_init("../../compiled/oracle.wasm.gz", &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
@@ -177,7 +177,7 @@ fn main() -> Result<()> {
     let governance = governance::InitMsg {
         admin: None,
         proposal_deadline: 0,
-        quorum: Uint128(0)
+        quorum: Uint128::new(0)
     }.inst_init("../../compiled/governance.wasm.gz", &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
@@ -186,17 +186,17 @@ fn main() -> Result<()> {
 
     print_header("Initializing Mint-Shade");
     let mint_shade = mint::InitMsg {
-        admin: Some(HumanAddr::from(governance.address.clone())),
-        native_asset: Contract { address: HumanAddr::from(shade.address.clone()),
+        admin: Some(Addr::from(governance.address.clone())),
+        native_asset: Contract { address: Addr::from(shade.address.clone()),
             code_hash: shade.code_hash.clone() },
-        oracle: Contract { address: HumanAddr::from(oracle.address.clone()),
+        oracle: Contract { address: Addr::from(oracle.address.clone()),
             code_hash: oracle.code_hash.clone() },
         peg: None,
         treasury: None,
         secondary_burn: None,
         start_epoch: None,
-        epoch_frequency: Some(Uint128(120)),
-        epoch_mint_limit: Some(Uint128(1000000000)),
+        epoch_frequency: Some(Uint128::new(120)),
+        epoch_mint_limit: Some(Uint128::new(1000000000)),
     }.inst_init("../../compiled/mint.wasm.gz", &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
                 Some("test"))?;
@@ -212,7 +212,7 @@ fn main() -> Result<()> {
         proposal: serde_json::to_string(&governance::HandleMsg::AddSupportedContract {
             name: "mint-shade".to_string(),
             contract: Contract{
-                address: HumanAddr::from(mint_shade.address.clone()),
+                address: Addr::from(mint_shade.address.clone()),
                 code_hash: mint_shade.code_hash.clone()
             }
         })?,
@@ -222,7 +222,7 @@ fn main() -> Result<()> {
 
     {
         let query: governance::QueryAnswer = governance::QueryMsg::GetProposals {
-            start: Uint128(0), total: Uint128(4)
+            start: Uint128::new(0), total: Uint128::new(4)
         }.t_query(&governance)?;
 
         if let governance::QueryAnswer::Proposals { proposals } = query {
@@ -232,7 +232,7 @@ fn main() -> Result<()> {
 
     print_header("Trigger add mint-shade to governance");
 
-    governance::HandleMsg::TriggerProposal { proposal_id: Uint128(1)
+    governance::HandleMsg::TriggerProposal { proposal_id: Uint128::new(1)
     }.t_handle(&governance, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
     {
@@ -261,7 +261,7 @@ fn main() -> Result<()> {
         let msg = serde_json::to_string(&mint::HandleMsg::UpdateMintLimit {
             start_epoch: None,
             epoch_frequency: None,
-            epoch_limit: Some(Uint128(2000000000)),
+            epoch_limit: Some(Uint128::new(2000000000)),
         })?;
 
         println!("{}",msg);
@@ -272,7 +272,7 @@ fn main() -> Result<()> {
             description: "Extend mint limit because of x and y reason".to_string()
         }.t_handle(&governance, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
-        governance::HandleMsg::TriggerProposal { proposal_id: Uint128(2)
+        governance::HandleMsg::TriggerProposal { proposal_id: Uint128::new(2)
         }.t_handle(&governance, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
     }
 
@@ -299,7 +299,7 @@ fn main() -> Result<()> {
             description: "Give admin power to modify whenever for x and y reason".to_string()
         }.t_handle(&governance, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
 
-        governance::HandleMsg::TriggerProposal { proposal_id: Uint128(3)
+        governance::HandleMsg::TriggerProposal { proposal_id: Uint128::new(3)
         }.t_handle(&governance, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
     }
     {
@@ -389,7 +389,7 @@ fn print_vec<Type: Display>(prefix: &str, vec: Vec<Type>) {
 
 fn get_balance(contract: &NetContract, from: String, ) -> Uint128 {
     let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(from),
+        address: Addr::from(from),
         key: String::from(VIEW_KEY),
     }.t_query(contract).unwrap();
 
@@ -397,13 +397,13 @@ fn get_balance(contract: &NetContract, from: String, ) -> Uint128 {
         return amount
     }
 
-    Uint128(0)
+    Uint128::new(0)
 }
 
 fn mint(snip: &NetContract, sender: &str, minter: String, amount: Uint128,
         minimum_expected: Uint128, backend: &str) {
     snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(minter),
+        recipient: Addr::from(minter),
         amount,
         msg: Some(to_binary(&mint::MintMsgHook {
             minimum_expected_amount: minimum_expected}).unwrap()),

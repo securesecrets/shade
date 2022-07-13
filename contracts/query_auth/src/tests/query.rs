@@ -1,7 +1,7 @@
 use crate::{
     tests::{get_permit, init_contract},
 };
-use shade_protocol::c_std::{testing::*, HumanAddr};
+use shade_protocol::c_std::{testing::*, Addr};
 use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::contract_interfaces::{
     query_auth,
@@ -18,7 +18,7 @@ fn get_config() {
 
     match query {
         query_auth::QueryAnswer::Config { admin, state } => {
-            assert_eq!(admin.address, HumanAddr::from("admin_contract"));
+            assert_eq!(admin.address, Addr::from("admin_contract"));
             assert_eq!(state, ContractStatus::Default);
         }
         _ => assert!(false),
@@ -33,7 +33,7 @@ fn validate_vk() {
         .query(
             auth.address.clone(),
             &query_auth::QueryMsg::ValidateViewingKey {
-                user: HumanAddr::from("user"),
+                user: Addr::from("user"),
                 key: "password".to_string(),
             },
         )
@@ -62,7 +62,7 @@ fn validate_vk() {
         .query(
             auth.address.clone(),
             &query_auth::QueryMsg::ValidateViewingKey {
-                user: HumanAddr::from("user"),
+                user: Addr::from("user"),
                 key: "not_password".to_string(),
             },
         )
@@ -77,7 +77,7 @@ fn validate_vk() {
 
     let query: query_auth::QueryAnswer = chain
         .query(auth.address, &query_auth::QueryMsg::ValidateViewingKey {
-            user: HumanAddr::from("user"),
+            user: Addr::from("user"),
             key: "password".to_string(),
         })
         .unwrap();
@@ -112,7 +112,7 @@ fn validate_permit() {
             assert!(!is_revoked);
             assert_eq!(
                 user,
-                HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq")
+                Addr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq")
             )
         }
         _ => assert!(false),

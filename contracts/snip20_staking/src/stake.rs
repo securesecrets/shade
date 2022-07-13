@@ -21,7 +21,7 @@ use crate::{
         store_unbond,
     },
 };
-use shade_protocol::math_compat::{Uint128, Uint256};
+use shade_protocol::c_std::{Uint128, Uint256};
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
@@ -31,8 +31,8 @@ use shade_protocol::c_std::{
     Decimal,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -55,8 +55,8 @@ pub fn try_update_stake_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     unbond_time: Option<u64>,
     disable_treasury: bool,
-    treasury: Option<HumanAddr>,
-) -> StdResult<HandleResponse> {
+    treasury: Option<Addr>,
+) -> StdResult<Response> {
     let config = Config::from_storage(&mut deps.storage);
 
     check_if_admin(&config, &env.message.sender)?;
@@ -92,7 +92,7 @@ pub fn try_update_stake_config<S: Storage, A: Api, Q: Querier>(
 
     stake_config.save(&mut deps.storage)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateStakeConfig {
@@ -116,7 +116,7 @@ fn round_date(date: u64) -> u64 {
 fn add_balance<S: Storage>(
     storage: &mut S,
     stake_config: &StakeConfig,
-    sender: &HumanAddr,
+    sender: &Addr,
     sender_canon: &CanonicalAddr,
     amount: Uint128,
 ) -> StdResult<()> {
@@ -209,7 +209,7 @@ fn subtract_internal_supply<S: Storage>(
 fn remove_balance<S: Storage>(
     storage: &mut S,
     stake_config: &StakeConfig,
-    account: &HumanAddr,
+    account: &Addr,
     account_cannon: &CanonicalAddr,
     amount: Uint128,
     time: u64,
@@ -260,7 +260,7 @@ fn remove_balance<S: Storage>(
 pub fn claim_rewards<S: Storage>(
     storage: &mut S,
     stake_config: &StakeConfig,
-    sender: &HumanAddr,
+    sender: &Addr,
     sender_canon: &CanonicalAddr,
 ) -> StdResult<Uint128> {
     let user_shares = UserShares::may_load(storage, sender.as_str().as_bytes())?.expect("No funds");
@@ -376,12 +376,12 @@ pub fn calculate_rewards(
 pub fn try_receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    sender: HumanAddr,
-    from: HumanAddr,
+    sender: Addr,
+    from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender_canon = deps.api.canonical_address(&sender)?;
 
     let stake_config = StakeConfig::load(&deps.storage)?;
@@ -508,7 +508,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Receive { status: Success })?),
@@ -517,7 +517,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
 pub fn remove_from_cooldown<S: Storage>(
     store: &mut S,
-    user: &HumanAddr,
+    user: &Addr,
     user_tokens: Uint128,
     remove_amount: Uint128,
     time: u64,
@@ -543,7 +543,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = env.message.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
 
@@ -624,7 +624,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         &env.block,
     )?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Unbond { status: Success })?),
@@ -634,7 +634,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
 pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let sender = &env.message.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
 
@@ -701,7 +701,7 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
         stake_config.staked_token.address,
     )?];
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ClaimUnbond { status: Success })?),
@@ -711,7 +711,7 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
 pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let stake_config = StakeConfig::load(&deps.storage)?;
 
     let sender = &env.message.sender;
@@ -746,7 +746,7 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
         &env.block,
     )?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ClaimRewards { status: Success })?),
@@ -756,7 +756,7 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
 pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Clam rewards
     let symbol = ReadonlyConfig::from_storage(&deps.storage)
         .constants()?
@@ -818,7 +818,7 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
         stored_tokens.save(&mut deps.storage)?;
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::StakeRewards { status: Success })?),
@@ -1015,7 +1015,7 @@ mod tests {
         assert_eq!(reward_token, Uint128::zero());
     }
 
-    use shade_protocol::math_compat::{Uint128, Uint256};
+    use shade_protocol::c_std::{Uint128, Uint256};
     use rand::Rng;
 
     #[test]

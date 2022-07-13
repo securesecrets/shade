@@ -4,7 +4,7 @@ use crate::{
     utils::{print_contract, print_epoch_info, print_header, print_vec, GAS, MINT_FILE, VIEW_KEY},
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, HumanAddr};
+use cosmwasm_std::{to_binary, Addr};
 use secretcli::secretcli::Report;
 use secretcli::{
     cli_types::NetContract,
@@ -28,11 +28,11 @@ pub fn initialize_minter(
         contract_name,
         MINT_FILE,
         mint::InitMsg {
-            admin: Some(HumanAddr::from(governance.address.clone())),
+            admin: Some(Addr::from(governance.address.clone())),
             native_asset: native_asset.clone(),
             oracle: get_contract(governance, "oracle".to_string())?,
             peg: None,
-            treasury: HumanAddr("".to_string()),
+            treasury: Addr::unchecked("".to_string()),
             secondary_burn: None,
             limit: Some(mint::Limit::Daily {
                 supply_portion: Uint128::new(1_000_000_000_000u128),
@@ -64,7 +64,7 @@ pub fn setup_minters(
         "shade_minter".to_string(),
         mint::HandleMsg::RegisterAsset {
             contract: Contract {
-                address: HumanAddr::from(sscrt.address.clone()),
+                address: Addr::from(sscrt.address.clone()),
                 code_hash: sscrt.code_hash.clone(),
             },
             capture: Some(Uint128::new(1000u128)),
@@ -105,7 +105,7 @@ pub fn setup_minters(
         governance,
         "shade".to_string(),
         snip20::HandleMsg::SetMinters {
-            minters: vec![HumanAddr::from(mint_shade.address.clone())],
+            minters: vec![Addr::from(mint_shade.address.clone())],
             padding: None,
         },
         Some("Set minters"),
@@ -135,7 +135,7 @@ pub fn setup_minters(
         governance,
         "silk".to_string(),
         snip20::HandleMsg::SetMinters {
-            minters: vec![HumanAddr::from(mint_silk.address.clone())],
+            minters: vec![Addr::from(mint_silk.address.clone())],
             padding: None,
         },
         Some("Set minters"),
@@ -165,7 +165,7 @@ pub fn setup_minters(
 
 pub fn get_balance(contract: &NetContract, from: String) -> Uint128 {
     let msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from(from),
+        address: Addr::from(from),
         key: String::from(VIEW_KEY),
     };
 
@@ -188,7 +188,7 @@ pub fn mint(
     report: &mut Vec<Report>,
 ) {
     let msg = snip20::HandleMsg::Send {
-        recipient: HumanAddr::from(minter),
+        recipient: Addr::from(minter),
         recipient_code_hash: None,
         amount,
         msg: Some(

@@ -2,7 +2,7 @@ pub mod handle;
 pub mod query;
 
 use contract_harness::harness::snip20::Snip20;
-use shade_protocol::c_std::{Binary, HumanAddr, StdResult};
+use shade_protocol::c_std::{Binary, Addr, StdResult};
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
 use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::contract_interfaces::{
@@ -12,7 +12,7 @@ use shade_protocol::contract_interfaces::{
 
 //TODO: test rng
 
-pub fn init_snip20(msg: snip20::InitMsg) -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)> {
+pub fn init_snip20(msg: snip20::InitMsg) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     let mut chain = ContractEnsemble::new(50);
 
     // Register governance
@@ -32,7 +32,7 @@ pub fn init_snip20(msg: snip20::InitMsg) -> StdResult<(ContractEnsemble, Contrac
 pub fn init_snip20_with_config(
     initial_balances: Option<Vec<InitialBalance>>,
     config: Option<InitConfig>,
-) -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)> {
+) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     let (mut chain, snip) = init_snip20(snip20::InitMsg {
         name: "Token".to_string(),
         admin: None,
@@ -54,7 +54,7 @@ pub fn init_snip20_with_config(
 
 pub fn create_vk(
     chain: &mut ContractEnsemble,
-    snip: &ContractLink<HumanAddr>,
+    snip: &ContractLink<Addr>,
     addr: &str,
     key: Option<String>,
 ) -> StdResult<()> {

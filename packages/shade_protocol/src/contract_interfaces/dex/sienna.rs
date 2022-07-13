@@ -5,10 +5,10 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
+use crate::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage};
 use crate::math_compat::Uint128;
 
-use crate::schemars::JsonSchema;
+
 use secret_toolkit::{utils::Query, serialization::Base64};
 use crate::serde::{Deserialize, Serialize};
 
@@ -16,7 +16,7 @@ use crate::serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub enum TokenType {
     CustomToken {
-        contract_addr: HumanAddr,
+        contract_addr: Addr,
         token_code_hash: String,
     },
     NativeToken {
@@ -55,7 +55,7 @@ pub struct Swap {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct SwapOffer {
-    pub recipient: HumanAddr,
+    pub recipient: Addr,
     pub amount: Uint128,
     pub msg: Base64,
 }

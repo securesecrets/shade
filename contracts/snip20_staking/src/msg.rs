@@ -8,8 +8,8 @@ use crate::{
     transaction_history::{RichTx, Tx},
     viewing_key::ViewingKey,
 };
-use shade_protocol::math_compat::{Uint128, Uint256};
-use shade_protocol::c_std::{Binary, HumanAddr, StdError, StdResult};
+use shade_protocol::c_std::{Uint128, Uint256};
+use shade_protocol::c_std::{Binary, Addr, StdError, StdResult};
 use shade_protocol::secret_toolkit::permit::Permit;
 use shade_protocol::{
     contract_interfaces::staking::snip20_staking::stake::{QueueItem, StakeConfig, VecQueue},
@@ -19,7 +19,7 @@ use shade_protocol::{
 #[derive(Serialize, Deserialize)]
 pub struct InitMsg {
     pub name: String,
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Addr>,
     pub symbol: String,
     // Will default to staked token decimals if not set
     pub decimals: Option<u8>,
@@ -30,12 +30,12 @@ pub struct InitMsg {
     // Stake
     pub unbond_time: u64,
     pub staked_token: Contract,
-    pub treasury: Option<HumanAddr>,
+    pub treasury: Option<Addr>,
     pub treasury_code_hash: Option<String>,
 
     // Distributors
     pub limit_transfer: bool,
-    pub distributors: Option<Vec<HumanAddr>>,
+    pub distributors: Option<Vec<Addr>>,
 }
 
 impl InitMsg {
@@ -68,12 +68,12 @@ pub enum HandleMsg {
     UpdateStakeConfig {
         unbond_time: Option<u64>,
         disable_treasury: bool,
-        treasury: Option<HumanAddr>,
+        treasury: Option<Addr>,
         padding: Option<String>,
     },
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         msg: Option<Binary>,
         memo: Option<String>,
@@ -95,14 +95,14 @@ pub enum HandleMsg {
 
     // Balance
     ExposeBalance {
-        recipient: HumanAddr,
+        recipient: Addr,
         code_hash: Option<String>,
         msg: Option<Binary>,
         memo: Option<String>,
         padding: Option<String>,
     },
     ExposeBalanceWithCooldown {
-        recipient: HumanAddr,
+        recipient: Addr,
         code_hash: Option<String>,
         msg: Option<Binary>,
         memo: Option<String>,
@@ -115,23 +115,23 @@ pub enum HandleMsg {
         padding: Option<String>,
     },
     AddDistributors {
-        distributors: Vec<HumanAddr>,
+        distributors: Vec<Addr>,
         padding: Option<String>,
     },
     SetDistributors {
-        distributors: Vec<HumanAddr>,
+        distributors: Vec<Addr>,
         padding: Option<String>,
     },
 
     // Base ERC-20 stuff
     Transfer {
-        recipient: HumanAddr,
+        recipient: Addr,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
     },
     Send {
-        recipient: HumanAddr,
+        recipient: Addr,
         recipient_code_hash: Option<String>,
         amount: Uint128,
         msg: Option<Binary>,
@@ -161,27 +161,27 @@ pub enum HandleMsg {
 
     // Allowance
     IncreaseAllowance {
-        spender: HumanAddr,
+        spender: Addr,
         amount: Uint128,
         expiration: Option<u64>,
         padding: Option<String>,
     },
     DecreaseAllowance {
-        spender: HumanAddr,
+        spender: Addr,
         amount: Uint128,
         expiration: Option<u64>,
         padding: Option<String>,
     },
     TransferFrom {
-        owner: HumanAddr,
-        recipient: HumanAddr,
+        owner: Addr,
+        recipient: Addr,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
     },
     SendFrom {
-        owner: HumanAddr,
-        recipient: HumanAddr,
+        owner: Addr,
+        recipient: Addr,
         recipient_code_hash: Option<String>,
         amount: Uint128,
         msg: Option<Binary>,
@@ -199,7 +199,7 @@ pub enum HandleMsg {
 
     // Admin
     ChangeAdmin {
-        address: HumanAddr,
+        address: Addr,
         padding: Option<String>,
     },
     SetContractStatus {
@@ -273,13 +273,13 @@ pub enum HandleAnswer {
 
     // Allowance
     IncreaseAllowance {
-        spender: HumanAddr,
-        owner: HumanAddr,
+        spender: Addr,
+        owner: Addr,
         allowance: Uint128,
     },
     DecreaseAllowance {
-        spender: HumanAddr,
-        owner: HumanAddr,
+        spender: Addr,
+        owner: Addr,
         allowance: Uint128,
     },
     TransferFrom {
@@ -323,7 +323,7 @@ pub enum QueryMsg {
         total: u64,
     },
     Staked {
-        address: HumanAddr,
+        address: Addr,
         key: String,
         time: Option<u64>,
     },
@@ -336,22 +336,22 @@ pub enum QueryMsg {
     TokenConfig {},
     ContractStatus {},
     Allowance {
-        owner: HumanAddr,
-        spender: HumanAddr,
+        owner: Addr,
+        spender: Addr,
         key: String,
     },
     Balance {
-        address: HumanAddr,
+        address: Addr,
         key: String,
     },
     TransferHistory {
-        address: HumanAddr,
+        address: Addr,
         key: String,
         page: Option<u32>,
         page_size: u32,
     },
     TransactionHistory {
-        address: HumanAddr,
+        address: Addr,
         key: String,
         page: Option<u32>,
         page_size: u32,
@@ -363,7 +363,7 @@ pub enum QueryMsg {
 }
 
 impl QueryMsg {
-    pub fn get_validation_params(&self) -> (Vec<&HumanAddr>, ViewingKey) {
+    pub fn get_validation_params(&self) -> (Vec<&Addr>, ViewingKey) {
         match self {
             Self::Staked { address, key, .. } => (vec![address], ViewingKey(key.clone())),
             Self::Balance { address, key } => (vec![address], ViewingKey(key.clone())),
@@ -391,8 +391,8 @@ pub enum QueryWithPermit {
 
     // Snip20 stuff
     Allowance {
-        owner: HumanAddr,
-        spender: HumanAddr,
+        owner: Addr,
+        spender: Addr,
     },
     Balance {},
     TransferHistory {
@@ -437,7 +437,7 @@ pub enum QueryAnswer {
 
     // Distributors
     Distributors {
-        distributors: Option<Vec<HumanAddr>>,
+        distributors: Option<Vec<Addr>>,
     },
 
     // Snip20 stuff
@@ -458,8 +458,8 @@ pub enum QueryAnswer {
         denom: String,
     },
     Allowance {
-        spender: HumanAddr,
-        owner: HumanAddr,
+        spender: Addr,
+        owner: Addr,
         allowance: Uint128,
         expiration: Option<u64>,
     },

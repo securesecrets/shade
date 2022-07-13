@@ -7,8 +7,8 @@ use shade_protocol::c_std::{
     CosmosMsg,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -74,11 +74,11 @@ use std::convert::TryFrom;
 pub fn receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    _sender: HumanAddr,
-    from: HumanAddr,
+    _sender: Addr,
+    from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
 
     /* TODO
      * All assets received from a "holder" will be credited to their account
@@ -127,7 +127,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
         })?;
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Receive {
@@ -140,7 +140,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     config: Config,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
     if env.message.sender != cur_config.admin {
@@ -149,7 +149,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&config)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
@@ -162,7 +162,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     if env.message.sender != config.admin {
@@ -181,7 +181,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 
     allocations_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![
             // Register contract in asset
             register_receive_msg(
@@ -210,9 +210,9 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 pub fn allocate<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
     allocation: Allocation,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
     let config = config_r(&deps.storage).load()?;
@@ -267,7 +267,7 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
 
     allocations_w(&mut deps.storage).save(key, &apps)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Allocate {
@@ -279,8 +279,8 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
+    asset: Addr,
+) -> StdResult<Response> {
 
     if !asset_list_r(&deps.storage).load()?.contains(&asset) {
         return Err(StdError::generic_err("Unrecognized asset"));
@@ -347,7 +347,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         )?
     );
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Claim {
@@ -360,8 +360,8 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 pub fn update<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    asset: HumanAddr,
-) -> StdResult<HandleResponse> {
+    asset: Addr,
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
@@ -482,7 +482,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
         )?);
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Update {
@@ -494,9 +494,9 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
 
     let config = config_r(&deps.storage).load()?;
 
@@ -726,7 +726,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&adapter::HandleAnswer::Unbond {
@@ -739,8 +739,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 pub fn add_holder<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    holder: HumanAddr,
-) -> StdResult<HandleResponse> {
+    holder: Addr,
+) -> StdResult<Response> {
 
     if env.message.sender != config_r(&deps.storage).load()?.admin {
         return Err(StdError::unauthorized());
@@ -762,7 +762,7 @@ pub fn add_holder<S: Storage, A: Api, Q: Querier>(
         status: Status::Active,
     })?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::AddHolder {
@@ -774,8 +774,8 @@ pub fn add_holder<S: Storage, A: Api, Q: Querier>(
 pub fn remove_holder<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    holder: HumanAddr,
-) -> StdResult<HandleResponse> {
+    holder: Addr,
+) -> StdResult<Response> {
     if env.message.sender != config_r(&deps.storage).load()?.admin {
         return Err(StdError::unauthorized());
     }
@@ -789,7 +789,7 @@ pub fn remove_holder<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Not an authorized holder"));
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RemoveHolder {

@@ -259,7 +259,7 @@ use some_other_dep::module;
 // book_include_code
 pub struct Contract {
     /// The address of the contract
-    pub address: HumanAddr,
+    pub address: Addr,
     /// The hex encoded hash of the contract code
     pub code_hash: String,
 }
@@ -277,7 +277,7 @@ Represents another contract on the network
 ```rust
 pub struct Contract {
     /// The address of the contract
-    pub address: HumanAddr,
+    pub address: Addr,
     /// The hex encoded hash of the contract code
     pub code_hash: String,
 }

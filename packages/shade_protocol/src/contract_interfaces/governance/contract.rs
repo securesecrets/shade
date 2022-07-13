@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::math_compat::Uint128;
 use crate::c_std::{StdResult, Storage};
-use crate::schemars::JsonSchema;
+
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

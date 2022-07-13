@@ -1,6 +1,6 @@
-use shade_protocol::c_std::HumanAddr;
+use shade_protocol::c_std::Addr;
 use shade_protocol::fadroma::ensemble::MockEnv;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitialBalance, QueryAnswer, QueryMsg};
 use crate::tests::init_snip20_with_config;
 
@@ -8,11 +8,11 @@ use crate::tests::init_snip20_with_config;
 fn increase_allowance() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("Sam"),
+            address: Addr::from("Sam"),
             amount: (Uint128::new(5000))
         },
         InitialBalance {
-            address: HumanAddr::from("Esmail"),
+            address: Addr::from("Esmail"),
             amount: Uint128::new(1)
         },
     ]), None).unwrap();
@@ -20,7 +20,7 @@ fn increase_allowance() {
     chain.block_mut().time = 0;
 
     assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(1000),
         expiration: Some(1_000_000_000),
         padding: None
@@ -29,8 +29,8 @@ fn increase_allowance() {
     let answer: QueryAnswer = chain.query(
         snip.address.clone(),
         &QueryMsg::Allowance {
-            owner: HumanAddr::from("Sam"),
-            spender: HumanAddr::from("Esmail"),
+            owner: Addr::from("Sam"),
+            spender: Addr::from("Esmail"),
             key: "password".to_string()
         }
     ).unwrap();
@@ -43,7 +43,7 @@ fn increase_allowance() {
     }
 
     assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(1000),
         expiration: Some(1_000_000_000),
         padding: None
@@ -52,8 +52,8 @@ fn increase_allowance() {
     let answer: QueryAnswer = chain.query(
         snip.address.clone(),
         &QueryMsg::Allowance {
-            owner: HumanAddr::from("Sam"),
-            spender: HumanAddr::from("Esmail"),
+            owner: Addr::from("Sam"),
+            spender: Addr::from("Esmail"),
             key: "password".to_string()
         }
     ).unwrap();
@@ -70,11 +70,11 @@ fn increase_allowance() {
 fn decrease_allowance() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("Sam"),
+            address: Addr::from("Sam"),
             amount: (Uint128::new(5000))
         },
         InitialBalance {
-            address: HumanAddr::from("Esmail"),
+            address: Addr::from("Esmail"),
             amount: Uint128::new(1)
         },
     ]), None).unwrap();
@@ -82,14 +82,14 @@ fn decrease_allowance() {
     chain.block_mut().time = 0;
 
     assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(1000),
         expiration: Some(1_000_000_000),
         padding: None
     }, MockEnv::new("Sam", snip.clone())).is_ok());
 
     assert!(chain.execute(&HandleMsg::DecreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(600),
         expiration: Some(1_000_000_000),
         padding: None
@@ -98,8 +98,8 @@ fn decrease_allowance() {
     let answer: QueryAnswer = chain.query(
         snip.address.clone(),
         &QueryMsg::Allowance {
-            owner: HumanAddr::from("Sam"),
-            spender: HumanAddr::from("Esmail"),
+            owner: Addr::from("Sam"),
+            spender: Addr::from("Esmail"),
             key: "password".to_string()
         }
     ).unwrap();
@@ -116,11 +116,11 @@ fn decrease_allowance() {
 fn transfer_from() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("Sam"),
+            address: Addr::from("Sam"),
             amount: (Uint128::new(5000))
         },
         InitialBalance {
-            address: HumanAddr::from("Esmail"),
+            address: Addr::from("Esmail"),
             amount: Uint128::new(1)
         },
     ]), None).unwrap();
@@ -129,15 +129,15 @@ fn transfer_from() {
 
     // Insufficient allowance
     assert!(chain.execute(&HandleMsg::TransferFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         amount: Uint128::new(100),
         memo: None,
         padding: None
     }, MockEnv::new("Esmail", snip.clone())).is_err());
 
     assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(1000),
         expiration: Some(1_000_000_000),
         padding: None
@@ -145,8 +145,8 @@ fn transfer_from() {
 
     // Transfer more than allowed amount
     assert!(chain.execute(&HandleMsg::TransferFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         amount: Uint128::new(1100),
         memo: None,
         padding: None
@@ -156,23 +156,23 @@ fn transfer_from() {
 
     // Transfer expired
     assert!(chain.execute(&HandleMsg::TransferFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         amount: Uint128::new(900),
         memo: None,
         padding: None
     }, MockEnv::new("Esmail", snip.clone())).is_err());
 
     assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(1000),
         expiration: None,
         padding: None
     }, MockEnv::new("Sam", snip.clone())).is_ok());
 
     assert!(chain.execute(&HandleMsg::TransferFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         amount: Uint128::new(900),
         memo: None,
         padding: None
@@ -180,8 +180,8 @@ fn transfer_from() {
 
     // Check that allowance gets spent
     assert!(chain.execute(&HandleMsg::TransferFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         amount: Uint128::new(200),
         memo: None,
         padding: None
@@ -192,11 +192,11 @@ fn transfer_from() {
 fn send_from() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![
         InitialBalance{
-            address: HumanAddr::from("Sam"),
+            address: Addr::from("Sam"),
             amount: (Uint128::new(5000))
         },
         InitialBalance {
-            address: HumanAddr::from("Esmail"),
+            address: Addr::from("Esmail"),
             amount: Uint128::new(1)
         },
     ]), None).unwrap();
@@ -205,8 +205,8 @@ fn send_from() {
 
     // Insufficient allowance
     assert!(chain.execute(&HandleMsg::SendFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         recipient_code_hash: None,
         amount: Uint128::new(100),
         msg: None,
@@ -215,7 +215,7 @@ fn send_from() {
     }, MockEnv::new("Esmail", snip.clone())).is_err());
 
     assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(1000),
         expiration: Some(1_000_000_000),
         padding: None
@@ -223,8 +223,8 @@ fn send_from() {
 
     // Transfer more than allowed amount
     assert!(chain.execute(&HandleMsg::SendFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         recipient_code_hash: None,
         amount: Uint128::new(1100),
         msg: None,
@@ -236,8 +236,8 @@ fn send_from() {
 
     // Transfer expired
     assert!(chain.execute(&HandleMsg::SendFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         recipient_code_hash: None,
         amount: Uint128::new(900),
         msg: None,
@@ -246,15 +246,15 @@ fn send_from() {
     }, MockEnv::new("Esmail", snip.clone())).is_err());
 
     assert!(chain.execute(&HandleMsg::IncreaseAllowance {
-        spender: HumanAddr::from("Esmail"),
+        spender: Addr::from("Esmail"),
         amount: Uint128::new(1000),
         expiration: None,
         padding: None
     }, MockEnv::new("Sam", snip.clone())).is_ok());
 
     assert!(chain.execute(&HandleMsg::SendFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         recipient_code_hash: None,
         amount: Uint128::new(900),
         msg: None,
@@ -264,8 +264,8 @@ fn send_from() {
 
     // Check that allowance gets spent
     assert!(chain.execute(&HandleMsg::SendFrom {
-        owner: HumanAddr::from("Sam"),
-        recipient: HumanAddr::from("Eliot"),
+        owner: Addr::from("Sam"),
+        recipient: Addr::from("Eliot"),
         recipient_code_hash: None,
         amount: Uint128::new(200),
         msg: None,

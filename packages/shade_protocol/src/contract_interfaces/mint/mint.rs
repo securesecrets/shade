@@ -3,19 +3,19 @@ use crate::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use crate::math_compat::Uint128;
-use crate::c_std::{Binary, HumanAddr};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Binary, Addr};
+
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Config {
-    pub admin: HumanAddr,
+    pub admin: Addr,
     pub oracle: Contract,
     // Both treasury & Commission must be set to function
-    pub treasury: HumanAddr,
-    pub secondary_burn: Option<HumanAddr>,
+    pub treasury: Addr,
+    pub secondary_burn: Option<Addr>,
     pub activated: bool,
     pub limit: Option<Limit>,
 }
@@ -45,7 +45,7 @@ pub enum Limit {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InitMsg {
-    pub admin: Option<HumanAddr>,
+    pub admin: Option<Addr>,
     pub oracle: Contract,
 
     // Asset that is minted
@@ -55,10 +55,10 @@ pub struct InitMsg {
     pub peg: Option<String>,
 
     // Both treasury & asset capture must be set to function properly
-    pub treasury: HumanAddr,
+    pub treasury: Addr,
 
     // This is where the non-burnable assets will go, if not defined they will stay in this contract
-    pub secondary_burn: Option<HumanAddr>,
+    pub secondary_burn: Option<Addr>,
 
     pub limit: Option<Limit>,
 }
@@ -81,11 +81,11 @@ pub enum HandleMsg {
         unlimited: Option<bool>,
     },
     RemoveAsset {
-        address: HumanAddr,
+        address: Addr,
     },
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -100,7 +100,7 @@ impl HandleCallback for HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub struct SnipMsgHook {
     pub minimum_expected_amount: Uint128,
-    pub to_mint: HumanAddr,
+    pub to_mint: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -114,7 +114,7 @@ pub struct MintMsgHook {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -142,7 +142,7 @@ pub enum QueryMsg {
     Config {},
     Limit {},
     Mint {
-        offer_asset: HumanAddr,
+        offer_asset: Addr,
         amount: Uint128,
     },
 }

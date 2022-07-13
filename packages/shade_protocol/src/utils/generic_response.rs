@@ -1,4 +1,4 @@
-use crate::schemars::JsonSchema;
+
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

@@ -1,5 +1,5 @@
 use crate::handle::assembly::try_assembly_proposal;
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
@@ -8,8 +8,8 @@ use shade_protocol::c_std::{
     Coin,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -47,7 +47,7 @@ pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
     contract: Option<Uint128>,
     msg: Option<String>,
     coins: Option<Vec<Coin>>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let msgs: Option<Vec<ProposalMsg>>;
 
     if contract.is_some() && msg.is_some() {
@@ -65,7 +65,7 @@ pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     try_assembly_proposal(deps, env, Uint128::zero(), title, metadata, msgs)?;
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Proposal {
@@ -78,7 +78,7 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     proposal: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let mut messages = vec![];
     let status = Proposal::status(&deps.storage, &proposal)?;
     if let Status::Passed { .. } = status {
@@ -106,7 +106,7 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
     } else {
         return Err(StdError::unauthorized());
     }
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Trigger {
@@ -119,7 +119,7 @@ pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     proposal: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Check if passed, and check if current time > cancel time
     let status = Proposal::status(&deps.storage, &proposal)?;
     if let Status::Passed { start, end } = status {
@@ -134,7 +134,7 @@ pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Cancel {
@@ -186,7 +186,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     proposal: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let mut history = Proposal::status_history(&deps.storage, &proposal)?;
     let status = Proposal::status(&deps.storage, &proposal)?;
     let mut new_status: Status;
@@ -325,7 +325,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                                 // Update slash amount
                                 messages.push(send_msg(
                                     config.treasury,
-                                    shade_protocol::c_std::Uint128(send_amount.u128()),
+                                    Uint128::new(send_amount.u128()),
                                     None,
                                     None,
                                     None,
@@ -356,7 +356,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
     // Save new status
     Proposal::save_status(&mut deps.storage, &proposal, new_status.clone())?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Update {
@@ -368,12 +368,12 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 pub fn try_receive<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    sender: HumanAddr,
-    from: HumanAddr,
+    sender: Addr,
+    from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Check if sent token is the funding token
     let funding_token: Contract;
     if let Some(token) = Config::load(&deps.storage)?.funding_token {
@@ -463,7 +463,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
         )?);
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Receive {
@@ -476,7 +476,7 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     id: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let reduction = match Proposal::status(&deps.storage, &id)? {
         Status::AssemblyVote { .. } | Status::Funding { .. } | Status::Voting { .. } => {
             return Err(StdError::generic_err("Cannot claim funding"));
@@ -506,7 +506,7 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
         Some(token) => token,
     };
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![send_msg(
             env.message.sender,
             return_amount.into(),
@@ -527,11 +527,11 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
 pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    sender: HumanAddr,
+    sender: Addr,
     msg: Option<Binary>,
     balance: Uint128,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     if let Some(token) = Config::load(&deps.storage)?.vote_token {
         if env.message.sender != token.address {
             return Err(StdError::generic_err("Must be the set voting token"));
@@ -581,7 +581,7 @@ pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
     Proposal::save_public_vote(&mut deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_public_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ReceiveBalance {

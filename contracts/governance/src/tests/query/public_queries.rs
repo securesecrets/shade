@@ -23,7 +23,7 @@ use crate::tests::{
     get_contract,
     get_profiles,
 };
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::StdError;
 use shade_protocol::contract_interfaces::governance;
 

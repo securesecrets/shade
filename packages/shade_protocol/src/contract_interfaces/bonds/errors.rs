@@ -1,8 +1,8 @@
 use crate::impl_into_u8;
 use crate::utils::errors::{build_string, CodeType, DetailedError};
 use crate::math_compat::Uint128;
-use crate::c_std::{HumanAddr, StdError};
-use crate::schemars::JsonSchema;
+use crate::c_std::{Addr, StdError};
+
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
@@ -307,7 +307,7 @@ pub fn permit_revoked(user: &str) -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::PermitRevoked, vec![user]).to_error()
 }
 
-pub fn blacklisted(address: HumanAddr) -> StdError {
+pub fn blacklisted(address: Addr) -> StdError {
     DetailedError::from_code(BOND_TARGET, Error::Blacklisted, vec![address.as_str()]).to_error()
 }
 

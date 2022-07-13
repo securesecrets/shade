@@ -21,9 +21,9 @@ The treasury contract holds network funds from things such as mint commission an
 ##### Request
 |Name      |Type      |Description                                                                                                        | optional |
 |----------|----------|-------------------------------------------------------------------------------------------------------------------|----------|
-|admin     | HumanAddr|  Admin address
+|admin     | Addr|  Admin address
 |viewing_key | String |  Key set on relevant SNIP-20's
-|treasury    | HumanAddr |  treasury that is owner of funds
+|treasury    | Addr |  treasury that is owner of funds
 
 ## Interface
 
@@ -67,7 +67,7 @@ Note: Will return an error if there's an asset with that address already registe
 ##### Request
 |Name        |Type    |Description                                                                                                            | optional |
 |------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
-|asset       | HumanAddr |  Desired SNIP-20
+|asset       | Addr |  Desired SNIP-20
 |allocation  | Allocation | Allocation data
 ##### Response
 ```json
@@ -108,7 +108,7 @@ Get the allocations for a given asset
 ##### Request
 |Name        |Type    |Description                                                                                                            | optional |
 |------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
-|asset      | HumanAddr | Address of desired SNIP-20 asset
+|asset      | Addr | Address of desired SNIP-20 asset
 
 ##### Response
 ```json
@@ -130,7 +130,7 @@ Get the pending allowance for a given asset
 ##### Request
 |Name        |Type    |Description                                                                                                            | optional |
 |------------|--------|-----------------------------------------------------------------------------------------------------------------------|----------|
-|asset      | HumanAddr | Address of desired SNIP-20 asset
+|asset      | Addr | Address of desired SNIP-20 asset
 
 ##### Response
 ```json

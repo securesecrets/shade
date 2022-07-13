@@ -2,7 +2,7 @@ use crate::utils::{asset::Contract};
 use crate::c_std::{
     Binary,
     CosmosMsg,
-    HumanAddr,
+    Addr,
     StdResult,
     Uint128,
 };
@@ -24,7 +24,7 @@ pub fn wrap(
 
 pub fn wrap_and_send(
     amount: Uint128,
-    recipient: HumanAddr,
+    recipient: Addr,
     token: Contract,
     //denom: Option<String>,
     msg: Option<Binary>,

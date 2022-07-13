@@ -4,7 +4,7 @@ pub mod query;
 use contract_harness::harness::{query_auth::QueryAuth, admin::Admin};
 use shade_protocol::c_std::{
     Binary,
-    HumanAddr,
+    Addr,
     StdResult,
 };
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
@@ -15,7 +15,7 @@ use shade_protocol::contract_interfaces::{
 };
 use shade_protocol::utils::asset::Contract;
 
-pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<HumanAddr>)> {
+pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     let mut chain = ContractEnsemble::new(20);
 
     let admin = chain.register(Box::new(Admin));

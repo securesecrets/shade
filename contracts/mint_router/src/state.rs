@@ -1,5 +1,5 @@
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{HumanAddr, Storage};
+use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{Addr, Storage};
 use shade_protocol::storage::{
     bucket,
     bucket_read,
@@ -49,11 +49,11 @@ pub fn asset_path_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Contract> {
     bucket_read(ASSET_PATH, storage)
 }
 
-pub fn final_asset_w<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
+pub fn final_asset_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
     singleton(storage, FINAL_ASSET)
 }
 
-pub fn final_asset_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, HumanAddr> {
+pub fn final_asset_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Addr> {
     singleton_read(storage, FINAL_ASSET)
 }
 
@@ -67,10 +67,10 @@ pub fn current_assets_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Con
 
 /* Needs to track the originating user across receive calls
  */
-pub fn user_w<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
+pub fn user_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
     singleton(storage, USER)
 }
 
-pub fn user_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, HumanAddr> {
+pub fn user_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Addr> {
     singleton_read(storage, USER)
 }

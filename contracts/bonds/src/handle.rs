@@ -1,6 +1,6 @@
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
+    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, Response, Addr,
     Querier, StdError, StdResult, Storage,
 };
 
@@ -36,14 +36,14 @@ use crate::state::{
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    limit_admin: Option<HumanAddr>,
+    limit_admin: Option<Addr>,
     shade_admins: Option<Contract>,
     global_issuance_limit: Option<Uint128>,
     global_minimum_bonding_period: Option<u64>,
     global_maximum_discount: Option<Uint128>,
     reset_total_issued: Option<bool>,
     reset_total_claimed: Option<bool>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
     // Limit admin only
@@ -83,7 +83,7 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateLimitConfig {
@@ -96,7 +96,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     oracle: Option<Contract>,
-    treasury: Option<HumanAddr>,
+    treasury: Option<Addr>,
     activated: Option<bool>,
     issuance_asset: Option<Contract>,
     bond_issuance_limit: Option<Uint128>,
@@ -107,7 +107,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     allowance_key: Option<String>,
     airdrop: Option<Contract>,
     query_auth: Option<Contract>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
     // Admin-only
@@ -167,7 +167,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         Ok(state)
     })?;
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
@@ -179,11 +179,11 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    sender: HumanAddr,
-    _from: HumanAddr,
+    sender: Addr,
+    _from: Addr,
     deposit_amount: Uint128,
     msg: Option<Binary>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     // Check that sender isn't the treasury
@@ -351,7 +351,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Return Success response
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Deposit {
@@ -366,7 +366,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Check if bonding period has elapsed and allow user to claim
     // however much of the issuance asset they paid for with their deposit
     let config = config_r(&deps.storage).load()?;
@@ -432,7 +432,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     )?);
 
     // Return Success response
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::Claim {
@@ -454,7 +454,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     max_accepted_deposit_price: Uint128,
     err_deposit_price: Uint128,
     minting_bond: bool,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
@@ -577,7 +577,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     })?;
 
     // Return Success response
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::OpenBond {
@@ -599,7 +599,7 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     deposit_asset: Contract,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
@@ -654,7 +654,7 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
     let messages = vec![];
 
     // Return Success response
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ClosedBond {

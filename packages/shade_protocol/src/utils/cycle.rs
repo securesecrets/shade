@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use crate::c_std::{Env, StdError, StdResult, Uint128};
-use crate::schemars::JsonSchema;
+
 use crate::serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
@@ -38,11 +38,11 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
         Cycle::Once => false,
         //Cycle::Block { blocks } => {},
         Cycle::Seconds { seconds } => {
-            seconds >= Uint128((now.timestamp() - last_refresh.timestamp()) as u128)
+            seconds >= Uint128::new((now.timestamp() - last_refresh.timestamp()) as u128)
         }
         Cycle::Minutes { minutes } => {
             minutes
-                >= Uint128(
+                >= Uint128::new(
                     ((now.timestamp() - last_refresh.timestamp()) / 60)
                         .try_into()
                         .unwrap(),
@@ -50,7 +50,7 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
         }
         Cycle::Hourly { hours } => {
             hours
-                >= Uint128(
+                >= Uint128::new(
                     ((now.timestamp() - last_refresh.timestamp()) / 60 / 60)
                         .try_into()
                         .unwrap(),

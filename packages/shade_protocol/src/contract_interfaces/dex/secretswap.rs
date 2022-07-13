@@ -5,16 +5,16 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
+use crate::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage};
 use crate::math_compat::Uint128;
-use crate::schemars::JsonSchema;
+
 use secret_toolkit::utils::Query;
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Token {
-    pub contract_addr: HumanAddr,
+    pub contract_addr: Addr,
     pub token_code_hash: String,
     pub viewing_key: String,
 }
@@ -63,8 +63,8 @@ pub struct SimulationResponse {
 #[serde(rename_all = "snake_case")]
 pub struct PairResponse {
     pub asset_infos: Vec<AssetInfo>,
-    pub contract_addr: HumanAddr,
-    pub liquidity_token: HumanAddr,
+    pub contract_addr: Addr,
+    pub liquidity_token: Addr,
     pub token_code_hash: String,
     pub asset0_volume: Uint128,
     pub asset1_volume: Uint128,

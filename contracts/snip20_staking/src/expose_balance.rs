@@ -6,7 +6,7 @@ use crate::{
     state::{get_receiver_hash, Balances},
     state_staking::UserCooldown,
 };
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     to_binary,
     Api,
@@ -14,8 +14,8 @@ use shade_protocol::c_std::{
     CosmosMsg,
     Env,
     Extern,
-    HandleResponse,
-    HumanAddr,
+    Response,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -30,11 +30,11 @@ use shade_protocol::{
 pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     code_hash: Option<String>,
     msg: Option<Binary>,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Get balance to expose
     let balance = Balances::from_storage(&mut deps.storage)
         .balance(&deps.api.canonical_address(&env.message.sender)?);
@@ -53,7 +53,7 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
             .to_cosmos_msg(receiver_hash, recipient)?,
     ];
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ExposeBalance { status: Success })?),
@@ -63,11 +63,11 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
 pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    recipient: HumanAddr,
+    recipient: Addr,
     code_hash: Option<String>,
     msg: Option<Binary>,
     memo: Option<String>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     // Get balance to expose
     let balance = Balances::from_storage(&mut deps.storage)
         .balance(&deps.api.canonical_address(&env.message.sender)?);
@@ -100,7 +100,7 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
         .to_cosmos_msg_cooldown(receiver_hash, recipient)?,
     ];
 
-    Ok(HandleResponse {
+    Ok(Response {
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ExposeBalance { status: Success })?),
@@ -110,7 +110,7 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Snip20BalanceReceiverMsg {
-    pub sender: HumanAddr,
+    pub sender: Addr,
     pub balance: Uint128,
     pub memo: Option<String>,
     pub msg: Option<Binary>,
@@ -118,7 +118,7 @@ pub struct Snip20BalanceReceiverMsg {
 
 impl Snip20BalanceReceiverMsg {
     pub fn new(
-        sender: HumanAddr,
+        sender: Addr,
         balance: Uint128,
         memo: Option<String>,
         msg: Option<Binary>,
@@ -131,14 +131,14 @@ impl Snip20BalanceReceiverMsg {
         }
     }
 
-    pub fn to_cosmos_msg(self, code_hash: String, address: HumanAddr) -> StdResult<CosmosMsg> {
+    pub fn to_cosmos_msg(self, code_hash: String, address: Addr) -> StdResult<CosmosMsg> {
         BalanceReceiverHandleMsg::ReceiveBalance(self).to_cosmos_msg(code_hash, address, None)
     }
 
     pub fn to_cosmos_msg_cooldown(
         self,
         code_hash: String,
-        address: HumanAddr,
+        address: Addr,
     ) -> StdResult<CosmosMsg> {
         BalanceReceiverHandleMsg::ReceiveBalanceWithCooldown(self)
             .to_cosmos_msg(code_hash, address, None)

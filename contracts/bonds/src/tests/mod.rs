@@ -4,7 +4,7 @@ pub mod query;
 use contract_harness::harness::{
     admin::Admin, bonds::Bonds, query_auth::QueryAuth, snip20::Snip20,
 };
-use shade_protocol::c_std::{HumanAddr, StdResult};
+use shade_protocol::c_std::{Addr, StdResult};
 use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
 use shade_oracles_ensemble::harness::{MockBand, OracleRouter, ProxyBandOracle};
@@ -14,7 +14,7 @@ use shade_protocol::contract_interfaces::{
 };
 use shade_protocol::utils::asset::Contract;
 
-use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_admin::admin;
 use shade_oracles::{
     band::{self, proxy::InitMsg, HandleMsg::UpdateSymbolPrice},
@@ -23,14 +23,14 @@ use shade_oracles::{
 
 pub fn init_contracts() -> StdResult<(
     ContractEnsemble,
-    ContractLink<HumanAddr>,
-    ContractLink<HumanAddr>,
-    ContractLink<HumanAddr>,
-    ContractLink<HumanAddr>,
-    ContractLink<HumanAddr>,
-    ContractLink<HumanAddr>,
-    ContractLink<HumanAddr>,
-    ContractLink<HumanAddr>,
+    ContractLink<Addr>,
+    ContractLink<Addr>,
+    ContractLink<Addr>,
+    ContractLink<Addr>,
+    ContractLink<Addr>,
+    ContractLink<Addr>,
+    ContractLink<Addr>,
+    ContractLink<Addr>,
 )> {
     let mut chain = ContractEnsemble::new(50);
 
@@ -57,11 +57,11 @@ pub fn init_contracts() -> StdResult<(
             issu.id,
             &snip20::InitMsg {
                 name: "Issued".into(),
-                admin: Some(HumanAddr::from("admin")),
+                admin: Some(Addr::from("admin")),
                 symbol: "ISSU".into(),
                 decimals: 8,
                 initial_balances: Some(vec![InitialBalance {
-                    address: HumanAddr::from("admin"),
+                    address: Addr::from("admin"),
                     amount: Uint128::new(1_000_000_000_000_000),
                 }]),
                 prng_seed: Default::default(),
@@ -97,11 +97,11 @@ pub fn init_contracts() -> StdResult<(
             depo.id,
             &snip20::InitMsg {
                 name: "Deposit".into(),
-                admin: Some(HumanAddr::from("admin")),
+                admin: Some(Addr::from("admin")),
                 symbol: "DEPO".into(),
                 decimals: 8,
                 initial_balances: Some(vec![InitialBalance {
-                    address: HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
+                    address: Addr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
                     amount: Uint128::new(1_000_000_000_000_000),
                 }]),
                 prng_seed: Default::default(),
@@ -131,11 +131,11 @@ pub fn init_contracts() -> StdResult<(
             atom.id,
             &snip20::InitMsg {
                 name: "Atom".into(),
-                admin: Some(HumanAddr::from("admin")),
+                admin: Some(Addr::from("admin")),
                 symbol: "ATOM".into(),
                 decimals: 6,
                 initial_balances: Some(vec![InitialBalance {
-                    address: HumanAddr::from("other_user"),
+                    address: Addr::from("other_user"),
                     amount: Uint128::new(1_000_000_000_000_000),
                 }]),
                 prng_seed: Default::default(),
@@ -339,7 +339,7 @@ pub fn init_contracts() -> StdResult<(
         .instantiate(
             bonds.id,
             &bonds::InitMsg {
-                limit_admin: HumanAddr::from("limit_admin"),
+                limit_admin: Addr::from("limit_admin"),
                 global_issuance_limit: Uint128::new(100_000_000_000_000_000),
                 global_minimum_bonding_period: 0,
                 global_maximum_discount: Uint128::new(10_000),
@@ -347,7 +347,7 @@ pub fn init_contracts() -> StdResult<(
                     address: router.address.clone(),
                     code_hash: router.code_hash.clone(),
                 },
-                treasury: HumanAddr::from("admin"),
+                treasury: Addr::from("admin"),
                 issued_asset: Contract {
                     address: issu.address.clone(),
                     code_hash: issu.code_hash.clone(),
@@ -394,7 +394,7 @@ pub fn init_contracts() -> StdResult<(
 
 pub fn set_prices(
     chain: &mut ContractEnsemble,
-    band: &ContractLink<HumanAddr>,
+    band: &ContractLink<Addr>,
     issu_price: Uint128,
     depo_price: Uint128,
     atom_price: Uint128,
@@ -434,13 +434,13 @@ pub fn set_prices(
 
 pub fn check_balances(
     chain: &mut ContractEnsemble,
-    issu: &ContractLink<HumanAddr>,
-    depo: &ContractLink<HumanAddr>,
+    issu: &ContractLink<Addr>,
+    depo: &ContractLink<Addr>,
     user_expected_issu: Uint128,
     admin_expected_depo: Uint128,
 ) -> StdResult<()> {
     let msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from("admin".to_string()),
+        address: Addr::from("admin".to_string()),
         key: "key".to_string(),
     };
 
@@ -454,7 +454,7 @@ pub fn check_balances(
     }
 
     let msg = snip20::QueryMsg::Balance {
-        address: HumanAddr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq".to_string()),
+        address: Addr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq".to_string()),
         key: "key".to_string(),
     };
 
@@ -472,8 +472,8 @@ pub fn check_balances(
 
 pub fn setup_admin(
     chain: &mut ContractEnsemble,
-    shade_admins: &ContractLink<HumanAddr>,
-    bonds: &ContractLink<HumanAddr>,
+    shade_admins: &ContractLink<Addr>,
+    bonds: &ContractLink<Addr>,
 ) -> () {
     let msg = admin::HandleMsg::AddContract {
         contract_address: bonds.address.clone().to_string(),
@@ -486,8 +486,8 @@ pub fn setup_admin(
 
 pub fn increase_allowance(
     chain: &mut ContractEnsemble,
-    bonds: &ContractLink<HumanAddr>,
-    issu: &ContractLink<HumanAddr>,
+    bonds: &ContractLink<Addr>,
+    issu: &ContractLink<Addr>,
 ) -> () {
     let msg = snip20::HandleMsg::IncreaseAllowance {
         spender: bonds.address.clone(),
