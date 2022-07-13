@@ -47,7 +47,7 @@ pub fn pool_take_amount(
 }
 
 pub fn aggregate_price(
-    deps: &Deps,
+    deps: Deps,
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
@@ -106,7 +106,7 @@ pub fn aggregate_price(
 }
 
 pub fn best_price(
-    deps: &Deps,
+    deps: Deps,
     pairs: Vec<TradingPair>,
     sscrt: Contract,
     band: Contract,
@@ -149,7 +149,7 @@ pub fn best_price(
 }
 
 pub fn price(
-    deps: &Deps,
+    deps: Deps,
     pair: TradingPair,
     sscrt: Contract,
     band: Contract,

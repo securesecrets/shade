@@ -93,7 +93,7 @@ pub enum QueryAnswer {
 }
 
 pub fn claimable_query(
-    deps: &Deps,
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
@@ -111,7 +111,7 @@ pub fn claimable_query(
 }
 
 pub fn unbonding_query(
-    deps: &Deps,
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
@@ -129,7 +129,7 @@ pub fn unbonding_query(
 }
 
 pub fn unbondable_query(
-    deps: &Deps,
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
@@ -147,7 +147,7 @@ pub fn unbondable_query(
 }
 
 pub fn reserves_query(
-    deps: &Deps,
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
@@ -163,7 +163,7 @@ pub fn reserves_query(
 }
 
 pub fn balance_query(
-    deps: &Deps,
+    deps: Deps,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {

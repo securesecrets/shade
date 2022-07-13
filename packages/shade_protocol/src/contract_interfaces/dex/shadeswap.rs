@@ -101,7 +101,7 @@ pub struct PoolResponse {
 */
 
 pub fn is_pair(
-    deps: &DepsMut,
+    deps: DepsMut,
     pair: Contract,
 ) -> StdResult<bool> {
     Ok(
@@ -118,7 +118,7 @@ pub fn is_pair(
 
 /*
 pub fn price(
-    deps: &Deps,
+    deps: Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
     band: Contract,
@@ -137,7 +137,7 @@ pub fn price(
 }
 
 pub fn amount_per_scrt(
-    deps: &Deps,
+    deps: Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
 ) -> StdResult<Uint128> {
@@ -164,7 +164,7 @@ pub fn amount_per_scrt(
 }
 
 pub fn pool_cp(
-    deps: &Deps,
+    deps: Deps,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {
     let pool: PoolResponse = PairQuery::Pool {}.query(

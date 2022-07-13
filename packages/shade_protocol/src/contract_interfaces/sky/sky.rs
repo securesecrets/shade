@@ -133,7 +133,7 @@ pub struct ArbPair {
 }
 
 /*impl ArbPair {
-    fn init(&mut self, deps: &DepsMut,env: Env) -> StdResult<bool> {
+    fn init(&mut self, deps: DepsMut,env: Env) -> StdResult<bool> {
         if self.dex_id.eq(&"sienna".to_string()) {
             let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
                 &deps.querier,
