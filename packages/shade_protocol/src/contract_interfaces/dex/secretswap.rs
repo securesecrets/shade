@@ -1,15 +1,15 @@
 use crate::{
-    contract_interfaces::{dex::dex, mint::mint, oracles::band},
+    c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage},
+    contract_interfaces::{dex::dex, oracles::band},
+    math_compat::Uint128,
+    schemars::JsonSchema,
+    serde::{Deserialize, Serialize},
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage};
-use crate::math_compat::Uint128;
-use crate::schemars::JsonSchema;
 use secret_toolkit::utils::Query;
-use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -76,6 +76,17 @@ pub struct PairResponse {
 pub struct PoolResponse {
     pub assets: Vec<Asset>,
     pub total_share: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CallbackMsg {
+    pub swap: CallbackSwap,
+}
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CallbackSwap {
+    pub expected_return: Uint128,
 }
 
 pub fn is_pair<S: Storage, A: Api, Q: Querier>(

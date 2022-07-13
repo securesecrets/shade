@@ -8,6 +8,7 @@ pub mod mint;
 
 pub mod staking;
 
+#[cfg(feature = "sky")]
 pub mod sky;
 
 #[cfg(feature = "snip20")]

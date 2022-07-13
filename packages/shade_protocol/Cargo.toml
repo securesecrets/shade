@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = [
   "Guy Garcia <guysebastiangarcia@gmail.com>",
   "Jackson Swenson <jacksonswenson22@gmail.com>",
-  "Kyle Wahlberg <kyle.s.wahlberg@gmail.com>"
+  "Kyle Wahlberg <kyle.s.wahlberg@gmail.com>",
+  "Jack Sisson <sissonjack67@gmail.com>",
 ]
 edition = "2018"
 
@@ -17,10 +18,11 @@ default = ["utils"]
 # TODO: Normalize usage, some features are using - while others use _
 
 # Templates
-dex = ["utils", "math", "snip20", "mint", "band"]
+dex = ["utils", "band", "math", "snip20", "band", "mint", "dep:fadroma"]
 band = []
-secretswap = ["utils"]
-sienna = ["utils", "math"]
+secretswap = []
+sienna = []
+shadeswap = []
 
 # Utils
 utils = []
@@ -48,14 +50,14 @@ adapter = []
 snip20 = ["utils", "errors", "dep:base64", "query_auth_lib"]
 query_auth = ["utils", "query_auth_lib", "dep:remain"]
 snip20_staking = ["utils", "storage"]
-sky = ["snip20", "utils", "dex"]
+sky = ["utils", "adapter", "storage_plus"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
 governance-impl = ["governance", "storage_plus"]
 snip20-impl = ["snip20", "storage_plus"]
 query_auth_impl = ["query_auth", "storage_plus", "dep:base64"]
-sky-impl = ["sky", "storage_plus"]
+sky-impl = ["sky", "dex", "secretswap", "sienna", "shadeswap", "mint"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces

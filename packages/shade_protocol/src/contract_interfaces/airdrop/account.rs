@@ -1,13 +1,15 @@
-use crate::contract_interfaces::airdrop::errors::permit_rejected;
-use crate::math_compat::Uint128;
-use crate::c_std::{from_binary, Binary, HumanAddr, StdError, StdResult, Api};
-use crate::query_authentication::{
-    permit::{bech32_to_canonical, Permit},
-    transaction::SignedTx,
-    viewing_keys::ViewingKey,
+use crate::{
+    c_std::{from_binary, Api, Binary, HumanAddr, StdError, StdResult},
+    contract_interfaces::airdrop::errors::permit_rejected,
+    math_compat::Uint128,
+    query_authentication::{
+        permit::{bech32_to_canonical, Permit},
+        transaction::SignedTx,
+        viewing_keys::ViewingKey,
+    },
+    schemars::JsonSchema,
+    serde::{Deserialize, Serialize},
 };
-use crate::schemars::JsonSchema;
-use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -65,7 +67,11 @@ pub struct EmptyMsg {}
 // Used to prove ownership over IBC addresses
 pub type AddressProofPermit = Permit<FillerMsg>;
 
-pub fn authenticate_ownership<A: Api>(api: &A, permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
+pub fn authenticate_ownership<A: Api>(
+    api: &A,
+    permit: &AddressProofPermit,
+    permit_address: &str,
+) -> StdResult<()> {
     let signer_address = permit
         .validate(api, Some("wasm/MsgExecuteContract".to_string()))?
         .as_canonical();
