@@ -112,7 +112,7 @@ pub mod treasury {
     use treasury;
 
     pub struct Treasury;
-    harness_macro::implement_harness!(Treasury, treasury);
+    implement_harness!(Treasury, treasury);
 }
 
 #[cfg(feature = "sky")]
