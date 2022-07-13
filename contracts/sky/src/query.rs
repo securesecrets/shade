@@ -2,14 +2,13 @@ use shade_protocol::{
     c_std::{self, Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage},
     contract_interfaces::{
         dao::adapter,
-        sky::{Config, Cycles, Offer, QueryAnswer, SelfAddr, ViewingKeys},
+        sky::{cycles::Offer, Config, Cycles, QueryAnswer, SelfAddr, ViewingKeys},
         snip20,
     },
     math_compat::Uint128,
     secret_toolkit::utils::Query,
     utils::storage::plus::ItemStorage,
 };
-use std::convert::TryInto;
 
 pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -31,8 +30,8 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
     }
     .query(
         &deps.querier,
-        config.shd_token_contract.code_hash.clone(),
-        config.shd_token_contract.address.clone(),
+        config.shd_token.code_hash.clone(),
+        config.shd_token.address.clone(),
     )?;
 
     let mut shd_bal = Uint128::new(0);
@@ -51,8 +50,8 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
     }
     .query(
         &deps.querier,
-        config.silk_token_contract.code_hash.clone(),
-        config.silk_token_contract.address.clone(),
+        config.silk_token.code_hash.clone(),
+        config.silk_token.address.clone(),
     )?;
 
     let mut silk_bal = Uint128::new(0);
@@ -71,8 +70,8 @@ pub fn get_balances<S: Storage, A: Api, Q: Querier>(
     }
     .query(
         &deps.querier,
-        config.sscrt_token_contract.code_hash.clone(),
-        config.sscrt_token_contract.address.clone(),
+        config.sscrt_token.code_hash.clone(),
+        config.sscrt_token.address.clone(),
     )?;
 
     let mut sscrt_bal = Uint128::new(0);
@@ -131,14 +130,14 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         swap_amounts.push(estimated_return.clone());
         // set up the next offer with the other token contract in the pair and the expected return
         // from the last query
-        if current_offer.asset.code_hash.clone() == arb_pair.token0_contract.code_hash.clone() {
+        if current_offer.asset.code_hash.clone() == arb_pair.token0.code_hash.clone() {
             current_offer = Offer {
-                asset: arb_pair.token1_contract.clone(),
+                asset: arb_pair.token1.clone(),
                 amount: estimated_return,
             };
         } else {
             current_offer = Offer {
-                asset: arb_pair.token0_contract.clone(),
+                asset: arb_pair.token0.clone(),
                 amount: estimated_return,
             };
         }
@@ -181,14 +180,14 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
             .simulate_swap(&deps, current_offer.clone())?;
         swap_amounts.push(estimated_return.clone());
         // set the current offer to the other asset we are swapping into
-        if current_offer.asset.code_hash.clone() == arb_pair.token0_contract.code_hash.clone() {
+        if current_offer.asset.code_hash.clone() == arb_pair.token0.code_hash.clone() {
             current_offer = Offer {
-                asset: arb_pair.token1_contract.clone(),
+                asset: arb_pair.token1.clone(),
                 amount: estimated_return,
             };
         } else {
             current_offer = Offer {
-                asset: arb_pair.token0_contract.clone(),
+                asset: arb_pair.token0.clone(),
                 amount: estimated_return,
             };
         }
@@ -267,9 +266,9 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
     // if the treasury is asking about an asset we don't know about, error out
-    if !(config.shd_token_contract.address == asset
-        || config.silk_token_contract.address == asset
-        || config.sscrt_token_contract.address == asset)
+    if !(config.shd_token.address == asset
+        || config.silk_token.address == asset
+        || config.sscrt_token.address == asset)
     {
         return Err(StdError::GenericErr {
             msg: String::from("Unrecognized asset"),
@@ -285,9 +284,9 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
             silk_bal,
             sscrt_bal,
         } => {
-            if config.shd_token_contract.address == asset {
+            if config.shd_token.address == asset {
                 amount = shd_bal;
-            } else if config.silk_token_contract.address == asset {
+            } else if config.silk_token.address == asset {
                 amount = silk_bal;
             } else {
                 amount = sscrt_bal;
@@ -315,9 +314,9 @@ pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
-    if !(config.shd_token_contract.address == asset
-        || config.silk_token_contract.address == asset
-        || config.sscrt_token_contract.address == asset)
+    if !(config.shd_token.address == asset
+        || config.silk_token.address == asset
+        || config.sscrt_token.address == asset)
     {
         return Err(StdError::GenericErr {
             msg: String::from("Unrecognized asset"),
@@ -332,9 +331,9 @@ pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
             silk_bal,
             sscrt_bal,
         } => {
-            if config.shd_token_contract.address == asset {
+            if config.shd_token.address == asset {
                 amount = shd_bal;
-            } else if config.silk_token_contract.address == asset {
+            } else if config.silk_token.address == asset {
                 amount = silk_bal;
             } else {
                 amount = sscrt_bal;
@@ -362,9 +361,9 @@ pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
-    if !(config.shd_token_contract.address == asset
-        || config.silk_token_contract.address == asset
-        || config.sscrt_token_contract.address == asset)
+    if !(config.shd_token.address == asset
+        || config.silk_token.address == asset
+        || config.sscrt_token.address == asset)
     {
         return Err(StdError::GenericErr {
             msg: String::from("Unrecognized asset"),
@@ -379,9 +378,9 @@ pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
             silk_bal,
             sscrt_bal,
         } => {
-            if config.shd_token_contract.address == asset {
+            if config.shd_token.address == asset {
                 amount = shd_bal;
-            } else if config.silk_token_contract.address == asset {
+            } else if config.silk_token.address == asset {
                 amount = silk_bal;
             } else {
                 amount = sscrt_bal;

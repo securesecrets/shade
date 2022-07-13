@@ -16,7 +16,15 @@ use shade_protocol::{
     },
     contract_interfaces::{
         dao::adapter,
-        sky::{self, Config, Cycle, Cycles, HandleAnswer, Offer, SelfAddr, ViewingKeys},
+        sky::{
+            self,
+            cycles::{Cycle, Offer},
+            Config,
+            Cycles,
+            HandleAnswer,
+            SelfAddr,
+            ViewingKeys,
+        },
     },
     math_compat::{Decimal, Uint128},
     secret_toolkit::{
@@ -30,9 +38,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     shade_admin: Option<Contract>,
-    shd_token_contract: Option<Contract>,
-    silk_token_contract: Option<Contract>,
-    sscrt_token_contract: Option<Contract>,
+    shd_token: Option<Contract>,
+    silk_token: Option<Contract>,
+    sscrt_token: Option<Contract>,
     treasury: Option<Contract>,
     payback_rate: Option<Decimal>,
 ) -> StdResult<HandleResponse> {
@@ -58,34 +66,34 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     if let Some(shade_admin) = shade_admin {
         config.shade_admin = shade_admin;
     }
-    if let Some(shd_token_contract) = shd_token_contract {
-        config.shd_token_contract = shd_token_contract;
+    if let Some(shd_token) = shd_token {
+        config.shd_token = shd_token;
         messages.push(set_viewing_key_msg(
             ViewingKeys::load(&deps.storage)?.0,
             None,
             1,
-            config.shd_token_contract.code_hash.clone(),
-            config.shd_token_contract.address.clone(),
+            config.shd_token.code_hash.clone(),
+            config.shd_token.address.clone(),
         )?);
     }
-    if let Some(silk_token_contract) = silk_token_contract {
-        config.silk_token_contract = silk_token_contract;
+    if let Some(silk_token) = silk_token {
+        config.silk_token = silk_token;
         messages.push(set_viewing_key_msg(
             ViewingKeys::load(&deps.storage)?.0,
             None,
             1,
-            config.silk_token_contract.code_hash.clone(),
-            config.silk_token_contract.address.clone(),
+            config.silk_token.code_hash.clone(),
+            config.silk_token.address.clone(),
         )?);
     }
-    if let Some(sscrt_token_contract) = sscrt_token_contract {
-        config.sscrt_token_contract = sscrt_token_contract;
+    if let Some(sscrt_token) = sscrt_token {
+        config.sscrt_token = sscrt_token;
         messages.push(set_viewing_key_msg(
             ViewingKeys::load(&deps.storage)?.0,
             None,
             1,
-            config.sscrt_token_contract.code_hash.clone(),
-            config.sscrt_token_contract.address.clone(),
+            config.sscrt_token.code_hash.clone(),
+            config.sscrt_token.address.clone(),
         )?);
     }
     if let Some(treasury) = treasury {
@@ -257,12 +265,12 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
         } => {
             return_swap_amounts = swap_amounts.clone();
             if direction.pair_addrs[0] // test to see which of the token attributes are the proposed starting addr
-                .token0_contract
+                .token0
                 == direction.start_addr.clone()
             {
-                cur_asset = direction.pair_addrs[0].token0_contract.clone();
+                cur_asset = direction.pair_addrs[0].token0.clone();
             } else {
-                cur_asset = direction.pair_addrs[0].token1_contract.clone();
+                cur_asset = direction.pair_addrs[0].token1.clone();
             }
             // if tx is unprofitable, err out
             if !is_profitable {
@@ -290,10 +298,10 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                     )?);
                 }
                 // reset cur asset to the other asset held in the struct
-                if cur_asset == arb_pair.token0_contract.clone() {
-                    cur_asset = arb_pair.token1_contract.clone();
+                if cur_asset == arb_pair.token0.clone() {
+                    cur_asset = arb_pair.token1.clone();
                 } else {
-                    cur_asset = arb_pair.token0_contract.clone();
+                    cur_asset = arb_pair.token0.clone();
                 }
             }
             // calculate payback amount
@@ -317,7 +325,12 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     }
 
     // the final cur_asset should be the same as the start_addr
-    assert!(cur_asset.clone() == Cycles::load(&deps.storage)?.0[index.u128() as usize].start_addr);
+    if !(cur_asset.clone() == Cycles::load(&deps.storage)?.0[index.u128() as usize].start_addr) {
+        return Err(StdError::generic_err(
+            "final asset not equal to start asset",
+        ));
+    }
+
     Ok(HandleResponse {
         messages,
         log: vec![],
@@ -390,9 +403,9 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
     // Error out if the treasury is asking for an asset sky doesn't account for
-    if !(config.shd_token_contract.address == asset
-        || config.silk_token_contract.address == asset
-        || config.sscrt_token_contract.address == asset)
+    if !(config.shd_token.address == asset
+        || config.silk_token.address == asset
+        || config.sscrt_token.address == asset)
     {
         return Err(StdError::GenericErr {
             msg: String::from("Unrecognized asset"),
@@ -401,12 +414,12 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     }
     // initialize this var to whichever token the treasury is asking for
     let contract;
-    if config.shd_token_contract.address == asset {
-        contract = config.shd_token_contract;
-    } else if config.silk_token_contract.address == asset {
-        contract = config.silk_token_contract;
+    if config.shd_token.address == asset {
+        contract = config.shd_token;
+    } else if config.silk_token.address == asset {
+        contract = config.silk_token;
     } else {
-        contract = config.sscrt_token_contract;
+        contract = config.sscrt_token;
     }
     // send the msg
     let messages = vec![send_msg(

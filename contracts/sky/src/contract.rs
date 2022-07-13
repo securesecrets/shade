@@ -28,9 +28,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let state = Config {
         shade_admin: msg.shade_admin,
-        shd_token_contract: msg.shd_token_contract.clone(),
-        silk_token_contract: msg.silk_token_contract.clone(),
-        sscrt_token_contract: msg.sscrt_token_contract.clone(),
+        shd_token: msg.shd_token.clone(),
+        silk_token: msg.silk_token.clone(),
+        sscrt_token: msg.sscrt_token.clone(),
         treasury: msg.treasury,
         payback_rate: msg.payback_rate,
     };
@@ -45,22 +45,22 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             msg.viewing_key.clone(),
             None,
             1,
-            msg.shd_token_contract.code_hash.clone(),
-            msg.shd_token_contract.address.clone(),
+            msg.shd_token.code_hash.clone(),
+            msg.shd_token.address.clone(),
         )?,
         set_viewing_key_msg(
             msg.viewing_key.clone(),
             None,
             1,
-            msg.silk_token_contract.code_hash.clone(),
-            msg.silk_token_contract.address.clone(),
+            msg.silk_token.code_hash.clone(),
+            msg.silk_token.address.clone(),
         )?,
         set_viewing_key_msg(
             msg.viewing_key.clone(),
             None,
             1,
-            msg.sscrt_token_contract.code_hash.clone(),
-            msg.sscrt_token_contract.address.clone(),
+            msg.sscrt_token.code_hash.clone(),
+            msg.sscrt_token.address.clone(),
         )?,
     ];
 
@@ -80,9 +80,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     match msg {
         HandleMsg::UpdateConfig {
             shade_admin,
-            shd_token_contract,
-            silk_token_contract,
-            sscrt_token_contract,
+            shd_token,
+            silk_token,
+            sscrt_token,
             treasury,
             payback_rate,
             ..
@@ -90,9 +90,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             deps,
             env,
             shade_admin,
-            shd_token_contract,
-            silk_token_contract,
-            sscrt_token_contract,
+            shd_token,
+            silk_token,
+            sscrt_token,
             treasury,
             payback_rate,
         ),

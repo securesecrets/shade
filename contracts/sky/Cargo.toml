@@ -22,21 +22,13 @@ default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["shade-protocol/backtraces"]
-debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "dex", "adapter", "mint", "math"] }
-schemars = "0.7"
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "sky-impl", "adapter", "math"] }
 #shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap", branch = "secret_toolkit_implementation" }
 shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0"}
 admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0" }
 
 [dev-dependencies]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["ensemble"] }
-schemars = "0.7"
-snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
-#shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap", features = ["amm_pair"] }
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "mint", "oracle", "mock_band", "snip20", "sky",] } #"mock_shdswp",] }
 sky = { version = "0.1.0", path = "../../contracts/sky" }
-oracle = { version = "0.1.0", path = "../../contracts/oracle" }
-mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }
