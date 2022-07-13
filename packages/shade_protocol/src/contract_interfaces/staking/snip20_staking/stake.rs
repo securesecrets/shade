@@ -2,7 +2,7 @@ use crate::utils::{
     asset::Contract,
     storage::default::{BucketStorage, SingletonStorage},
 };
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use crate::c_std::Addr;
 
 use crate::serde::{Deserialize, Serialize};
@@ -150,7 +150,7 @@ mod tests {
         QueueItem,
         VecQueue,
     };
-    use crate::math_compat::Uint128;
+    use crate::c_std::Uint128;
 
     #[test]
     fn is_funded() {

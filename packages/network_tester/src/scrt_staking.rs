@@ -13,7 +13,7 @@ use shade_protocol::contract_interfaces::{
     staking::scrt_staking,
 };
 use cosmwasm_std::{Addr, to_binary};
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use shade_protocol::asset::Contract;
 use std::fmt::Display;
 use serde::Serialize;

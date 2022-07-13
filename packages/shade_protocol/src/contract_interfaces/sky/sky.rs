@@ -3,11 +3,11 @@ use std::marker::PhantomData;
 use crate::contract_interfaces::dex::sienna::{PairInfoResponse, PairQuery, TokenType};
 use crate::{utils::asset::Contract, contract_interfaces::snip20::helpers::Snip20Asset};
 use crate::utils::generic_response::ResponseStatus;
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use crate::c_std::{Binary, Addr, StdResult, Env, Extern, Querier, Api, Storage};
 
 use secret_storage_plus::Item;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
+use crate::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

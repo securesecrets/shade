@@ -7,7 +7,7 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use crate::c_std::{Binary, Coin, Addr, StdResult, Storage};
 
 use crate::serde::{Deserialize, Serialize};

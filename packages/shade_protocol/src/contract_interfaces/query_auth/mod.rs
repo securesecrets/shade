@@ -4,7 +4,7 @@ pub mod auth;
 use crate::c_std::{Binary, Addr};
 
 use crate::query_authentication::permit::Permit;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
+use crate::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "query_auth_impl")]

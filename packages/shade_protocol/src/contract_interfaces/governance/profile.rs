@@ -1,5 +1,5 @@
 use crate::contract_interfaces::governance::stored_id::ID;
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use crate::c_std::{StdError, StdResult, Storage};
 
 use crate::serde::{Deserialize, Serialize};

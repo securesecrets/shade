@@ -1,4 +1,3 @@
-use shade_protocol::math_compat as compat;
 use shade_protocol::c_std::{
     coins,
     from_binary,
@@ -197,7 +196,7 @@ fn test_ensemble(
             mint.address.clone(),
             &shade_protocol::contract_interfaces::mint::mint::QueryMsg::Mint {
                 offer_asset: sscrt.address.clone(),
-                amount: compat::Uint128::new(offer_amount.u128()),
+                amount: Uint128::new(offer_amount.u128()),
             },
         )
         .unwrap()
@@ -210,7 +209,7 @@ fn test_ensemble(
                 address: Addr::unchecked("".into()),
                 code_hash: "".into(),
             },
-            compat::Uint128::new(0),
+            Uint128::new(0),
         ),
     };
 
@@ -219,7 +218,7 @@ fn test_ensemble(
         code_hash: shade.code_hash.clone(),
     });
 
-    assert_eq!(amount, compat::Uint128::new(expected_amount.u128()));
+    assert_eq!(amount, Uint128::new(expected_amount.u128()));
 }
 
 macro_rules! mint_int_tests {

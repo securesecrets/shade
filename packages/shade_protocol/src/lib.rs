@@ -15,7 +15,6 @@ pub mod storage {
 
 pub use serde;
 pub use snafu;
-pub use schemars;
 pub use cosmwasm_schema;
 
 #[cfg(feature = "query_auth_lib")]

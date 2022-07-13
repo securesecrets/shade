@@ -11,7 +11,7 @@ use crate::{
 };
 use crate::c_std::{Uint128, Addr, StdResult, StdError, Extern, Querier, Api, Storage};
 
-use secret_toolkit::utils::Query;
+use crate::utils::Query;
 use crate::serde::{Deserialize, Serialize};
 
 /*

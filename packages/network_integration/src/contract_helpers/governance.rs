@@ -1,5 +1,5 @@
 /*
-use cosmwasm_math_compat::Uint128;
+use cosmwasm_c_std::Uint128;
 use cosmwasm_std::Addr;
 use serde_json::Result;
 use shade_protocol::contract_interfaces::{governance, governance::GOVERNANCE_SELF};

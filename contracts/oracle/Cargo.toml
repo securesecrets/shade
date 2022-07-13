@@ -28,14 +28,14 @@ debug-print = ["shade-protocol/debug-print"]
 [dependencies]
 bincode = "1.3.1"
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "oracle",
+  "oracles",
   "dex",
 ] }
 schemars = "0.7"
 
 [dev-dependencies]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "oracle",
+  "oracles",
   "dex",
   "ensemble"
 ] }

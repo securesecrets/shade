@@ -1,7 +1,7 @@
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use crate::c_std::Addr;
 
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
+use crate::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 use crate::{

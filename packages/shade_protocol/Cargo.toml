@@ -45,7 +45,7 @@ implementation = ["storage_plus", "storage"]
 # TODO: Normalize usage, some features are using - while others use _
 
 # Templates
-dex        = ["interface", "math", "snip20", "mint", "band"]
+dex        = ["math", "snip20", "mint", "band", "oracles"]
 band       = ["interface"]
 secretswap = ["interface"]
 sienna     = ["interface", "math"]
@@ -56,7 +56,7 @@ bonds            = ["airdrop", "snip20"]
 governance       = ["query_auth", "flexible_msg"]
 mint             = ["snip20"]
 mint_router      = ["snip20"]
-oracle           = ["snip20", "dex"]
+oracles           = ["snip20", "dex"]
 scrt_staking     = ["adapter", "treasury"]
 treasury         = ["adapter", "snip20"]
 treasury_manager = ["adapter"]

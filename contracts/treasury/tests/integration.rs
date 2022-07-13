@@ -1,4 +1,3 @@
-use shade_protocol::math_compat as compat;
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
     Extern, Addr, StdError,

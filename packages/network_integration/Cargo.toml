@@ -33,7 +33,7 @@ shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = [
   "governance-impl",
   "mint",
   "mint_router",
-  "oracle",
+  "oracles",
   "scrt_staking",
   "snip20_staking",
   "treasury",

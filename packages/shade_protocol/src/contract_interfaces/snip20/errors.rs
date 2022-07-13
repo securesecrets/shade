@@ -5,7 +5,7 @@ use crate::{
 use crate::c_std::{Addr, StdError};
 
 use crate::serde::{Deserialize, Serialize};
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::Permission;
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]

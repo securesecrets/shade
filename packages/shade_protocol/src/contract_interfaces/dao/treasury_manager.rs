@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::c_std::{Binary, Addr, Uint128};
 
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
+use crate::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

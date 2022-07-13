@@ -1,4 +1,4 @@
-use cosmwasm_math_compat::Uint128;
+use cosmwasm_c_std::Uint128;
 use cosmwasm_std::{Binary, Addr};
 use network_integration::utils::{
     generate_label, print_contract, print_header, store_struct, AIRDROP_FILE, GAS, STORE_GAS,

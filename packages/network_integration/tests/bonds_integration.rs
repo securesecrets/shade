@@ -1,4 +1,4 @@
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use cosmwasm_std::{to_binary, Binary, Addr, Uint128 as prevUint128};
 use mock_band::contract::*;
 use network_integration::{

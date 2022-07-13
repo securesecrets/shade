@@ -2,7 +2,7 @@ use crate::serde::{Deserialize, Serialize};
 
 use crate::c_std::{Querier, StdError, StdResult};
 use secret_toolkit::snip20::{token_config_query, token_info_query, TokenConfig, TokenInfo};
-use secret_toolkit::utils::Query;
+use crate::utils::Query;
 use crate::contract_interfaces::snip20::{QueryAnswer, QueryMsg};
 use crate::utils::asset::Contract;
 

@@ -1,5 +1,4 @@
-use cosmwasm_std::{Binary, Addr, Uint128};
-use cosmwasm_math_compat as compat;
+use shade_protocol::c_std::{Binary, Addr, Uint128};
 use network_integration::utils::{
     generate_label, print_contract, print_header, SHD_STAKING_FILE, GAS, SNIP20_FILE, STORE_GAS,
 };
@@ -27,7 +26,7 @@ fn main() -> Result<()> {
         decimals: 8,
         initial_balances: Some(vec![InitialBalance {
             address: Addr::from("secret1xtl6rt2pwhseuzct00h8uw6trkzjj2l8lu38se".to_string()),
-            amount: compat::Uint128::new(1000000000000000),
+            amount: Uint128::new(1000000000000000),
         }]),
         prng_seed: Default::default(),
         config: Some(snip20::InitConfig {

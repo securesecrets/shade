@@ -14,7 +14,7 @@ use crate::c_std::{self, Api, Extern, Querier, StdError, StdResult, Storage};
 
 use crate::serde::{Deserialize, Serialize};
 
-use crate::math_compat::{Uint128, Uint512};
+use crate::c_std::{Uint128, Uint512};
 use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

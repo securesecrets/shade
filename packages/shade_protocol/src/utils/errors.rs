@@ -1,5 +1,5 @@
+use fadroma::schemars::_serde_json::to_string;
 use crate::c_std::StdError;
-use crate::schemars::{_serde_json::to_string};
 use crate::serde::{Deserialize, Serialize};
 
 #[macro_export]

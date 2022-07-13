@@ -1,8 +1,8 @@
 use crate::utils::asset::Contract;
 use crate::c_std::{Api, Extern, Querier, StdResult, Storage};
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 
-use secret_toolkit::utils::{InitCallback, Query};
+use crate::utils::{InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

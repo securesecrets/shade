@@ -3,7 +3,7 @@ use crate::{
     contract_helpers::governance::{create_and_trigger_proposal, get_contract, init_with_gov},
     utils::{print_contract, print_epoch_info, print_header, print_vec, GAS, MINT_FILE, VIEW_KEY},
 };
-use cosmwasm_math_compat::Uint128;
+use cosmwasm_c_std::Uint128;
 use cosmwasm_std::{to_binary, Addr};
 use secretcli::secretcli::Report;
 use secretcli::{

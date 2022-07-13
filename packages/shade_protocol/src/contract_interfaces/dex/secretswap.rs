@@ -6,9 +6,9 @@ use crate::{
     },
 };
 use crate::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage};
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 
-use secret_toolkit::utils::Query;
+use crate::utils::Query;
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

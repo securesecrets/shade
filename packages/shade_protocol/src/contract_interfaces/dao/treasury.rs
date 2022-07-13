@@ -3,7 +3,7 @@ use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStat
 use crate::contract_interfaces::dao::adapter;
 use crate::c_std::{Binary, Addr, StdResult, Uint128};
 
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
+use crate::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

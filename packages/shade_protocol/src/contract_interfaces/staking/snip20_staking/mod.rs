@@ -8,7 +8,7 @@ use crate::{
 };
 use crate::c_std::{Binary, Addr, Uint128};
 
-use secret_toolkit::utils::{HandleCallback, Query};
+use crate::utils::{HandleCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

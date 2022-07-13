@@ -1,5 +1,5 @@
 use colored::*;
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::c_std::Uint128;
 use cosmwasm_std::{to_binary, Addr};
 use rand::{distributions::Alphanumeric, Rng};
 use secretcli::{
