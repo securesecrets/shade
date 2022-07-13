@@ -2,7 +2,7 @@ use shade_protocol::c_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, Response, InitResponse, Querier,
     StdError, StdResult, Storage, self,
 };
-use shade_protocol::secret_toolkit::snip20::set_viewing_key_msg;
+use shade_protocol::snip20::helpers::set_viewing_key_msg;
 
 use crate::{
     handle, query,

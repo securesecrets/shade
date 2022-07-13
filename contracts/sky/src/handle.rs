@@ -15,7 +15,7 @@ use shade_protocol::{
     snip20::helpers::Snip20Asset,
 }};
 use shade_protocol::secret_toolkit::utils::Query;
-use shade_protocol::secret_toolkit::snip20::send_msg;
+use shade_protocol::snip20::helpers::send_msg;
 use crate::{query::trade_profitability};
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(

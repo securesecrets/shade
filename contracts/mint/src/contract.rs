@@ -11,7 +11,7 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::snip20::{token_info_query, token_config_query};
+use shade_protocol::snip20::helpers::{token_info, token_config_query};
 
 use shade_protocol::contract_interfaces::{
     mint::mint::{Config, HandleMsg, InitMsg, QueryMsg},

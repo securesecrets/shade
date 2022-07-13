@@ -32,7 +32,7 @@ use shade_protocol::c_std::{
 };
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
-use shade_protocol::secret_toolkit::snip20::send_msg;
+use shade_protocol::snip20::helpers::send_msg;
 use shade_protocol::{
     contract_interfaces::airdrop::{
         account::{Account, AccountKey, AddressProofMsg, AddressProofPermit},

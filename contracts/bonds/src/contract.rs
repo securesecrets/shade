@@ -3,14 +3,14 @@ use shade_protocol::c_std::{
     to_binary, Api, Binary, Env, Extern, Response, InitResponse, Querier, StdResult, Storage,
 };
 
-use shade_protocol::secret_toolkit::snip20::{set_viewing_key_msg, token_info_query};
+use shade_protocol::snip20::helpers::{set_viewing_key_msg, token_info_query};
 
 use shade_protocol::contract_interfaces::{
     bonds::{Config, HandleMsg, InitMsg, QueryMsg, SnipViewingKey},
     snip20::helpers::Snip20Asset,
 };
 
-use shade_protocol::secret_toolkit::snip20::token_config_query;
+use shade_protocol::snip20::helpers::token_config_query;
 use shade_protocol::secret_toolkit::utils::{pad_handle_result, pad_query_result};
 
 use crate::{

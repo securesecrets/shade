@@ -17,7 +17,7 @@ pub mod tests {
     mod mock_secret_toolkit {
 
         use shade_protocol::c_std::{Addr, Querier, StdResult, Uint128};
-        use shade_protocol::secret_toolkit::snip20::TokenInfo;
+        use shade_protocol::snip20::helpers::TokenInfo;
 
         pub fn mock_token_info_query<Q: Querier>(
             _querier: &Q,

@@ -20,7 +20,7 @@ use shade_protocol::c_std::{
     Validator,
 };
 
-use shade_protocol::secret_toolkit::snip20::{
+use shade_protocol::snip20::helpers::{
     batch::SendFromAction,
     batch_send_from_msg,
     deposit_msg,

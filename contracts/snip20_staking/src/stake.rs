@@ -38,7 +38,7 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::snip20::send_msg;
+use shade_protocol::snip20::helpers::send_msg;
 use shade_protocol::{
     contract_interfaces::staking::snip20_staking::{
         stake::{DailyUnbonding, StakeConfig, Unbonding, VecQueue},

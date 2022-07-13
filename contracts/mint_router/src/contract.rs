@@ -12,7 +12,7 @@ use shade_protocol::c_std::{
     Storage,
     Uint128,
 };
-use shade_protocol::secret_toolkit::snip20::{register_receive_msg, token_info_query, token_config_query};
+use shade_protocol::snip20::helpers::{register_receive_msg, token_info, token_config_query};
 
 use shade_protocol::contract_interfaces::{
     mint::mint_router::{Config, HandleMsg, InitMsg, QueryMsg},

@@ -5,7 +5,7 @@ use shade_protocol::c_std::{
     InitResponse, Uint128,
 };
 
-use shade_protocol::secret_toolkit::snip20;
+use shade_protocol::snip20::helpers;
 
 use shade_protocol::{
     contract_interfaces::{

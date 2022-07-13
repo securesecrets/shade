@@ -6,7 +6,6 @@ use crate::c_std::{
     StdResult,
     Uint128,
 };
-use secret_toolkit::snip20::{deposit_msg, redeem_msg, send_msg};
 
 pub fn wrap(
     amount: Uint128,

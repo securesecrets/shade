@@ -10,7 +10,7 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::snip20::register_receive_msg;
+use shade_protocol::snip20::helpers::register_receive_msg;
 use shade_protocol::{
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
     utils::{

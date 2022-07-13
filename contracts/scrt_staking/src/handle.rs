@@ -20,7 +20,7 @@ use shade_protocol::c_std::{
     Validator,
 };
 
-use shade_protocol::secret_toolkit::snip20::{deposit_msg, redeem_msg};
+use shade_protocol::snip20::helpers::{deposit_msg, redeem_msg};
 
 use shade_protocol::{
     contract_interfaces::dao::{

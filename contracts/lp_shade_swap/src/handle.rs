@@ -3,7 +3,7 @@ use shade_protocol::c_std::{
     Response, Addr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
 };
 
-use shade_protocol::secret_toolkit::snip20::{balance_query};
+use shade_protocol::snip20::helpers::{balance_query};
 
 use shade_protocol::{
     contract_interfaces::dao::{
