@@ -244,33 +244,38 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
-    // if the treasury is asking about an asset we don't know about, error out
-    if !(config.shd_token.address == asset
-        || config.silk_token.address == asset
-        || config.sscrt_token.address == asset)
-    {
-        return Err(StdError::generic_err("Unrecognized asset"));
+    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
+    let self_addr = SelfAddr::load(&deps.storage)?.0;
+
+    let contract;
+    if config.shd_token.address == asset {
+        contract = config.shd_token.clone();
+    } else if config.silk_token.address == asset {
+        contract = config.silk_token.clone();
+    } else if config.sscrt_token.address == asset {
+        contract = config.sscrt_token.clone();
+    } else {
+        return Ok(adapter::QueryAnswer::Unbondable {
+            amount: c_std::Uint128::zero(),
+        });
     }
-    // get the balances and save the one the treasury is asking for
-    let res = get_balances(deps)?;
-    let mut amount = Uint128::zero();
-    match res {
-        QueryAnswer::Balance {
-            shd_bal,
-            silk_bal,
-            sscrt_bal,
-        } => {
-            if config.shd_token.address == asset {
-                amount = shd_bal;
-            } else if config.silk_token.address == asset {
-                amount = silk_bal;
-            } else {
-                amount = sscrt_bal;
-            }
-        }
-        _ => {}
+
+    let res = snip20::QueryMsg::Balance {
+        address: self_addr.clone(),
+        key: viewing_key.clone(),
     }
-    Ok(adapter::QueryAnswer::Balance {
+    .query(
+        &deps.querier,
+        contract.code_hash.clone(),
+        contract.address.clone(),
+    )?;
+
+    let amount = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
+
+    Ok(adapter::QueryAnswer::Unbondable {
         amount: c_std::Uint128(amount.u128()),
     })
 }
@@ -290,30 +295,37 @@ pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
-    if !(config.shd_token.address == asset
-        || config.silk_token.address == asset
-        || config.sscrt_token.address == asset)
-    {
-        return Err(StdError::generic_err("Unrecognized asset"));
+    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
+    let self_addr = SelfAddr::load(&deps.storage)?.0;
+
+    let contract;
+    if config.shd_token.address == asset {
+        contract = config.shd_token.clone();
+    } else if config.silk_token.address == asset {
+        contract = config.silk_token.clone();
+    } else if config.sscrt_token.address == asset {
+        contract = config.sscrt_token.clone();
+    } else {
+        return Ok(adapter::QueryAnswer::Unbondable {
+            amount: c_std::Uint128::zero(),
+        });
     }
-    let res = get_balances(deps)?;
-    let mut amount = Uint128::zero();
-    match res {
-        QueryAnswer::Balance {
-            shd_bal,
-            silk_bal,
-            sscrt_bal,
-        } => {
-            if config.shd_token.address == asset {
-                amount = shd_bal;
-            } else if config.silk_token.address == asset {
-                amount = silk_bal;
-            } else {
-                amount = sscrt_bal;
-            }
-        }
-        _ => {}
+
+    let res = snip20::QueryMsg::Balance {
+        address: self_addr.clone(),
+        key: viewing_key.clone(),
     }
+    .query(
+        &deps.querier,
+        contract.code_hash.clone(),
+        contract.address.clone(),
+    )?;
+
+    let amount = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
+
     Ok(adapter::QueryAnswer::Unbondable {
         amount: c_std::Uint128(amount.u128()),
     })
@@ -334,31 +346,38 @@ pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
-    if !(config.shd_token.address == asset
-        || config.silk_token.address == asset
-        || config.sscrt_token.address == asset)
-    {
-        return Err(StdError::generic_err("Unrecognized asset"));
+    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
+    let self_addr = SelfAddr::load(&deps.storage)?.0;
+
+    let contract;
+    if config.shd_token.address == asset {
+        contract = config.shd_token.clone();
+    } else if config.silk_token.address == asset {
+        contract = config.silk_token.clone();
+    } else if config.sscrt_token.address == asset {
+        contract = config.sscrt_token.clone();
+    } else {
+        return Ok(adapter::QueryAnswer::Unbondable {
+            amount: c_std::Uint128::zero(),
+        });
     }
-    let res = get_balances(deps)?;
-    let mut amount = Uint128::zero();
-    match res {
-        QueryAnswer::Balance {
-            shd_bal,
-            silk_bal,
-            sscrt_bal,
-        } => {
-            if config.shd_token.address == asset {
-                amount = shd_bal;
-            } else if config.silk_token.address == asset {
-                amount = silk_bal;
-            } else {
-                amount = sscrt_bal;
-            }
-        }
-        _ => {}
+
+    let res = snip20::QueryMsg::Balance {
+        address: self_addr.clone(),
+        key: viewing_key.clone(),
     }
-    Ok(adapter::QueryAnswer::Reserves {
+    .query(
+        &deps.querier,
+        contract.code_hash.clone(),
+        contract.address.clone(),
+    )?;
+
+    let amount = match res {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    };
+
+    Ok(adapter::QueryAnswer::Unbondable {
         amount: c_std::Uint128(amount.u128()),
     })
 }
