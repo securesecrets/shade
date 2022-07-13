@@ -1,6 +1,6 @@
 use crate::{
-    c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage},
-    contract_interfaces::{dex::dex, mint::mint, oracles::band},
+    c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage},
+    contract_interfaces::{dex::dex, oracles::band},
     math_compat::Uint128,
     schemars::JsonSchema,
     serde::{Deserialize, Serialize},

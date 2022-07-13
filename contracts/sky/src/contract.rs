@@ -9,6 +9,7 @@ use shade_protocol::{
         HandleResponse,
         InitResponse,
         Querier,
+        StdError,
         StdResult,
         Storage,
     },
@@ -16,7 +17,7 @@ use shade_protocol::{
         dao::adapter,
         sky::{Config, Cycles, HandleMsg, InitMsg, QueryMsg, SelfAddr, ViewingKeys},
     },
-    math_compat::Uint128,
+    math_compat::{Decimal, Uint128},
     secret_toolkit::snip20::set_viewing_key_msg,
     utils::storage::plus::ItemStorage,
 };
@@ -34,6 +35,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         treasury: msg.treasury,
         payback_rate: msg.payback_rate,
     };
+
+    if msg.payback_rate == Decimal::zero() {
+        return Err(StdError::generic_err("payback rate cannot be zero"));
+    }
 
     state.save(&mut deps.storage)?;
     SelfAddr(env.contract.address).save(&mut deps.storage)?;

@@ -100,6 +100,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         config.treasury = treasury;
     }
     if let Some(payback_rate) = payback_rate {
+        if payback_rate == Decimal::zero() {
+            return Err(StdError::generic_err("payback_rate cannot be zero"));
+        }
         config.payback_rate = payback_rate;
     }
     config.save(&mut deps.storage)?;
@@ -220,6 +223,7 @@ pub fn try_update_cycle<S: Storage, A: Api, Q: Querier>(
         data: Some(to_binary(&HandleAnswer::UpdateCycle { status: true })?),
     })
 }
+
 pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -324,10 +328,8 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
                 }
             }
             // calculate payback amount
-            let payback_percent = Config::load(&deps.storage)?.payback_rate;
-            if payback_percent > Decimal::zero() {
-                payback_amount = profit * payback_percent;
-            }
+            payback_amount = profit * Config::load(&deps.storage)?.payback_rate;
+
             // add the payback msg
             messages.push(send_msg(
                 env.message.sender,

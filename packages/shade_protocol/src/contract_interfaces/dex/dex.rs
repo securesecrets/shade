@@ -5,6 +5,7 @@ use crate::{
         oracles::band,
         snip20::helpers::Snip20Asset,
     },
+    math_compat::{Uint128, Uint512},
     schemars::JsonSchema,
     serde::{Deserialize, Serialize},
     utils::{
@@ -12,8 +13,6 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-
-use crate::math_compat::{Uint128, Uint512};
 use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
