@@ -1,5 +1,5 @@
+use cosmwasm_std::Uint128;
 use crate::contract_interfaces::airdrop::errors::permit_rejected;
-use crate::math_compat::Uint128;
 use crate::c_std::{from_binary, Binary, Addr, StdError, StdResult, Api};
 use crate::query_authentication::{
     permit::{bech32_to_canonical, Permit},

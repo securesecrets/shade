@@ -1,6 +1,6 @@
 use crate::impl_into_u8;
 use crate::utils::errors::{build_string, CodeType, DetailedError};
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use crate::c_std::{Addr, StdError};
 
 use crate::serde::{Deserialize, Serialize};

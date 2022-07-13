@@ -3,7 +3,7 @@ use crate::query_authentication::viewing_keys::ViewingKey;
 
 use secret_toolkit::crypto::{Prng, sha_256};
 use crate::serde::{Deserialize, Serialize};
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{allowance_expired, contract_status_level_invalid, insufficient_allowance, no_funds, not_enough_funds};
 use crate::impl_into_u8;
 #[cfg(feature = "snip20-impl")]

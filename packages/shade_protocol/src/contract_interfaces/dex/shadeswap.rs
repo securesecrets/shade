@@ -9,7 +9,7 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{Uint128, Addr, StdResult, StdError, Extern, Querier, Api, Storage};
+use crate::c_std::{Uint128, Addr, StdResult, StdError, Deps, DepsMut};
 
 use secret_toolkit::utils::Query;
 use crate::serde::{Deserialize, Serialize};
@@ -100,8 +100,8 @@ pub struct PoolResponse {
 }
 */
 
-pub fn is_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn is_pair(
+    deps: &DepsMut,
     pair: Contract,
 ) -> StdResult<bool> {
     Ok(
@@ -117,8 +117,8 @@ pub fn is_pair<S: Storage, A: Api, Q: Querier>(
 }
 
 /*
-pub fn price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn price(
+    deps: &Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
     band: Contract,
@@ -136,8 +136,8 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     ))
 }
 
-pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn amount_per_scrt(
+    deps: &Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
 ) -> StdResult<Uint128> {
@@ -163,8 +163,8 @@ pub fn amount_per_scrt<S: Storage, A: Api, Q: Querier>(
     Ok(response.return_amount)
 }
 
-pub fn pool_cp<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn pool_cp(
+    deps: &Deps,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {
     let pool: PoolResponse = PairQuery::Pool {}.query(

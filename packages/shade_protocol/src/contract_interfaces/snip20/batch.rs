@@ -1,7 +1,7 @@
 use crate::c_std::{Binary, Addr};
 
 use crate::serde::{Deserialize, Serialize};
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]

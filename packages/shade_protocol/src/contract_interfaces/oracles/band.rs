@@ -1,6 +1,6 @@
 use crate::utils::asset::Contract;
-use crate::c_std::{Api, Extern, Querier, StdResult, Storage};
-use crate::math_compat::Uint128;
+use crate::c_std::{Deps, StdResult};
+use crate::c_std::Uint128;
 
 use secret_toolkit::utils::{InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
@@ -36,8 +36,8 @@ pub struct ReferenceData {
     pub last_updated_quote: u64,
 }
 
-pub fn reference_data<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn reference_data(
+    deps: &Deps,
     base_symbol: String,
     quote_symbol: String,
     band: Contract,
@@ -49,8 +49,8 @@ pub fn reference_data<S: Storage, A: Api, Q: Querier>(
     .query(&deps.querier, band.code_hash, band.address)
 }
 
-pub fn reference_data_bulk<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn reference_data_bulk(
+    deps: &Deps,
     base_symbols: Vec<String>,
     quote_symbols: Vec<String>,
     band: Contract,

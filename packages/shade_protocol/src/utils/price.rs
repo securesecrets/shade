@@ -1,4 +1,4 @@
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use std::convert::TryFrom;
 
 /* Translate price from symbol/sSCRT -> symbol/USD
@@ -22,7 +22,7 @@ pub fn normalize_price(amount: Uint128, decimals: u8) -> Uint128 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::math_compat::Uint128;
+    use crate::c_std::Uint128;
 
     macro_rules! normalize_price_tests {
     ($($name:ident: $value:expr,)*) => {

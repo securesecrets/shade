@@ -2,7 +2,7 @@ use crate::{
     contract_interfaces::governance::stored_id::ID,
     utils::{asset::Contract, storage::default::BucketStorage},
 };
-use crate::math_compat::Uint128;
+use crate::c_std::Uint128;
 use crate::c_std::{StdResult, Storage};
 
 use crate::serde::{Deserialize, Serialize};
