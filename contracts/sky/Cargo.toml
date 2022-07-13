@@ -28,7 +28,3 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 #shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap", branch = "secret_toolkit_implementation" }
 shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0"}
 admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0" }
-
-[dev-dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["ensemble"] }
-sky = { version = "0.1.0", path = "../../contracts/sky" }

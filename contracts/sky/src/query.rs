@@ -94,19 +94,20 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<QueryAnswer> {
     let mut cycles = Cycles::load(&deps.storage)?.0;
     let mut swap_amounts = vec![amount];
+    let i = index.u128() as usize;
 
-    if (index.u128() as usize) >= cycles.len() {
+    if (i) >= cycles.len() {
         return Err(StdError::generic_err("Index passed is out of bounds"));
     }
 
     // set up inital offer
     let mut current_offer = Offer {
-        asset: cycles[index.u128() as usize].start_addr.clone(),
+        asset: cycles[i].start_addr.clone(),
         amount,
     };
 
     //loop through the pairs in the cycle
-    for arb_pair in cycles[index.u128() as usize].pair_addrs.clone() {
+    for arb_pair in cycles[i].pair_addrs.clone() {
         // simulate swap will run a query with respect to which dex or minting that the pair says
         // it is
         let estimated_return = arb_pair
@@ -128,7 +129,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    if swap_amounts.len() > cycles[index.u128() as usize].pair_addrs.clone().len() {
+    if swap_amounts.len() > cycles[i].pair_addrs.clone().len() {
         return Err(StdError::generic_err("More swap amounts than arb pairs"));
     }
 
@@ -136,7 +137,7 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     if current_offer.amount.u128() > amount.u128() {
         return Ok(QueryAnswer::IsCycleProfitable {
             is_profitable: true,
-            direction: cycles[index.u128() as usize].clone(),
+            direction: cycles[i].clone(),
             swap_amounts,
             profit: current_offer.amount.checked_sub(amount)?,
         });
@@ -145,17 +146,12 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     // reset these variables in order to check the other way
     swap_amounts = vec![amount];
     current_offer = Offer {
-        asset: cycles[index.u128() as usize].start_addr.clone(),
+        asset: cycles[i].start_addr.clone(),
         amount,
     };
 
     // this is a fancy way of iterating through a vec in reverse
-    for arb_pair in cycles[index.u128() as usize]
-        .pair_addrs
-        .clone()
-        .iter()
-        .rev()
-    {
+    for arb_pair in cycles[i].pair_addrs.clone().iter().rev() {
         // get the estimated return from the simulate swap function
         let estimated_return = arb_pair
             .clone()
@@ -178,10 +174,10 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     // check to see if this direction was profitable
     if current_offer.amount > amount {
         // do an inplace reversal of the pair_addrs so that we know which way the opportunity goes
-        cycles[index.u128() as usize].pair_addrs.reverse();
+        cycles[i].pair_addrs.reverse();
         return Ok(QueryAnswer::IsCycleProfitable {
             is_profitable: true,
-            direction: cycles[index.u128() as usize].clone(),
+            direction: cycles[i].clone(),
             swap_amounts,
             profit: current_offer.amount.checked_sub(amount)?,
         });

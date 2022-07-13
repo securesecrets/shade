@@ -6,7 +6,7 @@ use crate::{
     utils::asset::Contract,
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Api, CosmosMsg, Extern, Querier, StdError, Storage};
+use cosmwasm_std::{to_binary, Api, CosmosMsg, Extern, Querier, StdError, StdResult, Storage};
 use schemars::JsonSchema;
 use secret_toolkit::{snip20::send_msg, utils::Query};
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ impl ArbPair {
         self,
         deps: &Extern<S, A, Q>,
         offer: Offer,
-    ) -> Result<Uint128, StdError> {
+    ) -> StdResult<Uint128> {
         let mut swap_result = Uint128::zero();
         match self.dex {
             Dex::SecretSwap => {
@@ -117,11 +117,7 @@ impl ArbPair {
 
     // Returns the snip20 send_msg that will execute a swap for each of the possible Dex enum
     // options
-    pub fn to_cosmos_msg(
-        &self,
-        offer: Offer,
-        expected_return: Uint128,
-    ) -> Result<CosmosMsg, StdError> {
+    pub fn to_cosmos_msg(&self, offer: Offer, expected_return: Uint128) -> StdResult<CosmosMsg> {
         match self.dex {
             Dex::SiennaSwap => send_msg(
                 self.pair_contract.clone().unwrap().address.clone(),
@@ -181,7 +177,7 @@ impl ArbPair {
     }
 
     // Returns either the silk mint or the shade mint contract depending on what the input asset is
-    pub fn get_mint_contract(&self, offer_contract: Contract) -> Result<Contract, StdError> {
+    pub fn get_mint_contract(&self, offer_contract: Contract) -> StdResult<Contract> {
         if offer_contract.clone() == self.mint_info.clone().unwrap().shd_token {
             Ok(self.mint_info.clone().unwrap().mint_contract_silk)
         } else if offer_contract == self.mint_info.clone().unwrap().silk_token {
@@ -194,7 +190,7 @@ impl ArbPair {
     }
 
     // Gatekeeper that validates the ArbPair for entry into contract storage
-    pub fn validate_pair(&self) -> Result<bool, StdError> {
+    pub fn validate_pair(&self) -> StdResult<bool> {
         match self.dex {
             Dex::Mint => {
                 self.clone()
@@ -220,7 +216,7 @@ pub struct Cycle {
 
 impl Cycle {
     // Gatekeeper that validates if the contract should accept the cycle into storage
-    pub fn validate_cycle(&self) -> Result<bool, StdError> {
+    pub fn validate_cycle(&self) -> StdResult<bool> {
         // check if start address is in both the first arb pair and the last arb pair
         let start_addr_in_first_pair = self.start_addr == self.pair_addrs[0].token0
             || self.start_addr == self.pair_addrs[0].token1;

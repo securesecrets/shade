@@ -128,6 +128,10 @@ pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
+    if cycles_to_set.clone().len() > 40 {
+        return Err(StdError::generic_err("Too many cycles"));
+    }
+
     // validate cycles
     for cycle in cycles_to_set.clone() {
         cycle.validate_cycle()?;
@@ -167,6 +171,10 @@ pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
 
     let mut cycles = Cycles::load(&deps.storage)?;
 
+    if cycles.0.clone().len() + cycles_to_add.clone().len() > 40 {
+        return Err(StdError::generic_err("Too many cycles"));
+    }
+
     cycles.0.append(&mut cycles_to_add.clone());
 
     cycles.save(&mut deps.storage)?;
@@ -184,6 +192,7 @@ pub fn try_update_cycle<S: Storage, A: Api, Q: Querier>(
     cycle: Cycle,
     index: Uint128,
 ) -> StdResult<HandleResponse> {
+    let i = index.u128() as usize;
     // Admin-only
     let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
     let admin_response: ValidateAdminPermissionResponse =
@@ -199,7 +208,10 @@ pub fn try_update_cycle<S: Storage, A: Api, Q: Querier>(
 
     cycle.validate_cycle()?;
     let mut cycles = Cycles::load(&deps.storage)?;
-    cycles.0[index.u128() as usize] = cycle;
+    if i > cycles.0.clone().len() - 1 {
+        return Err(StdError::generic_err("index out of bounds"));
+    }
+    cycles.0[i] = cycle;
     cycles.save(&mut deps.storage)?;
 
     Ok(HandleResponse {
@@ -213,6 +225,7 @@ pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     index: Uint128,
 ) -> StdResult<HandleResponse> {
+    let i = index.u128() as usize;
     //Admin-only
     let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
     let admin_response: ValidateAdminPermissionResponse =
@@ -228,7 +241,12 @@ pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
 
     // I'm pissed I couldn't do this in one line
     let mut cycles = Cycles::load(&deps.storage)?.0;
-    cycles.remove(index.u128() as usize);
+
+    if i > cycles.clone().len() - 1 {
+        return Err(StdError::generic_err("index out of bounds"));
+    }
+
+    cycles.remove(i);
     Cycles(cycles).save(&mut deps.storage)?;
 
     Ok(HandleResponse {
@@ -247,6 +265,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
     let mut return_swap_amounts = vec![];
     let mut payback_amount = Uint128::zero();
+    let i = index.u128() as usize;
     // cur_asset will keep track of the asset that we currently "have"
     let mut cur_asset = Contract {
         address: HumanAddr::default(),
@@ -325,7 +344,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     }
 
     // the final cur_asset should be the same as the start_addr
-    if !(cur_asset.clone() == Cycles::load(&deps.storage)?.0[index.u128() as usize].start_addr) {
+    if !(cur_asset.clone() == Cycles::load(&deps.storage)?.0[i].start_addr) {
         return Err(StdError::generic_err(
             "final asset not equal to start asset",
         ));
@@ -364,7 +383,7 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
                     messages.push(
                         sky::HandleMsg::ArbCycle {
                             amount,
-                            index: Uint128::from(i as u16),
+                            index: Uint128::from(i as u128),
                             padding: None,
                         }
                         .to_cosmos_msg(
