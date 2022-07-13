@@ -23,4 +23,4 @@ macro_rules! implement_harness {
     };
 }
 
-pub(crate) use implement_harness;
+pub use implement_harness;
