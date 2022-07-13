@@ -1,10 +1,18 @@
 use crate::tests::{admin_only_governance, get_profiles};
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::HumanAddr;
-use shade_protocol::fadroma::ensemble::MockEnv;
-use shade_protocol::contract_interfaces::{
-    governance,
-    governance::profile::{Count, Profile, UpdateFundProfile, UpdateProfile, UpdateVoteProfile},
+use shade_protocol::{
+    c_std::HumanAddr,
+    contract_interfaces::{
+        governance,
+        governance::profile::{
+            Count,
+            Profile,
+            UpdateFundProfile,
+            UpdateProfile,
+            UpdateVoteProfile,
+        },
+    },
+    fadroma::ensemble::MockEnv,
+    math_compat::Uint128,
 };
 
 #[test]
@@ -40,26 +48,28 @@ fn add_profile() {
 fn unauthorised_add_profile() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AddProfile {
-                profile: Profile {
-                    name: "Other Profile".to_string(),
-                    enabled: false,
-                    assembly: None,
-                    funding: None,
-                    token: None,
-                    cancel_deadline: 0,
+    assert!(
+        chain
+            .execute(
+                &governance::HandleMsg::AddProfile {
+                    profile: Profile {
+                        name: "Other Profile".to_string(),
+                        enabled: false,
+                        assembly: None,
+                        funding: None,
+                        token: None,
+                        cancel_deadline: 0,
+                    },
+                    padding: None,
                 },
-                padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                HumanAddr::from("random"),
-                gov.clone(),
-            ),
-        )
-        .is_err();
+                MockEnv::new(
+                    // Sender is self
+                    HumanAddr::from("random"),
+                    gov.clone(),
+                ),
+            )
+            .is_err()
+    );
 }
 
 #[test]
@@ -109,30 +119,32 @@ fn set_profile() {
 fn unauthorised_set_profile() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::SetProfile {
-                id: Uint128::new(1),
-                profile: UpdateProfile {
-                    name: Some("New Name".to_string()),
-                    enabled: None,
-                    disable_assembly: false,
-                    assembly: None,
-                    disable_funding: false,
-                    funding: None,
-                    disable_token: false,
-                    token: None,
-                    cancel_deadline: None,
+    assert!(
+        chain
+            .execute(
+                &governance::HandleMsg::SetProfile {
+                    id: Uint128::new(1),
+                    profile: UpdateProfile {
+                        name: Some("New Name".to_string()),
+                        enabled: None,
+                        disable_assembly: false,
+                        assembly: None,
+                        disable_funding: false,
+                        funding: None,
+                        disable_token: false,
+                        token: None,
+                        cancel_deadline: None,
+                    },
+                    padding: None,
                 },
-                padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                HumanAddr::from("random"),
-                gov.clone(),
-            ),
-        )
-        .is_err();
+                MockEnv::new(
+                    // Sender is self
+                    HumanAddr::from("random"),
+                    gov.clone(),
+                ),
+            )
+            .is_err()
+    );
 }
 
 #[test]
@@ -218,37 +230,39 @@ fn set_profile_disable_assembly() {
 fn set_profile_set_incomplete_assembly() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::SetProfile {
-                id: Uint128::new(1),
-                profile: UpdateProfile {
-                    name: None,
-                    enabled: None,
-                    disable_assembly: false,
-                    assembly: Some(UpdateVoteProfile {
-                        deadline: Some(0),
-                        threshold: None,
-                        yes_threshold: None,
-                        veto_threshold: Some(Count::LiteralCount {
-                            count: Uint128::zero(),
+    assert!(
+        chain
+            .execute(
+                &governance::HandleMsg::SetProfile {
+                    id: Uint128::new(1),
+                    profile: UpdateProfile {
+                        name: None,
+                        enabled: None,
+                        disable_assembly: false,
+                        assembly: Some(UpdateVoteProfile {
+                            deadline: Some(0),
+                            threshold: None,
+                            yes_threshold: None,
+                            veto_threshold: Some(Count::LiteralCount {
+                                count: Uint128::zero(),
+                            }),
                         }),
-                    }),
-                    disable_funding: false,
-                    funding: None,
-                    disable_token: false,
-                    token: None,
-                    cancel_deadline: None,
+                        disable_funding: false,
+                        funding: None,
+                        disable_token: false,
+                        token: None,
+                        cancel_deadline: None,
+                    },
+                    padding: None,
                 },
-                padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
-        )
-        .is_err();
+                MockEnv::new(
+                    // Sender is self
+                    gov.address.clone(),
+                    gov.clone(),
+                ),
+            )
+            .is_err()
+    );
 }
 
 #[test]
@@ -334,37 +348,39 @@ fn set_profile_disable_token() {
 fn set_profile_set_incomplete_token() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::SetProfile {
-                id: Uint128::new(1),
-                profile: UpdateProfile {
-                    name: None,
-                    enabled: None,
-                    disable_assembly: false,
-                    assembly: None,
-                    disable_funding: false,
-                    funding: None,
-                    disable_token: false,
-                    token: Some(UpdateVoteProfile {
-                        deadline: Some(0),
-                        threshold: None,
-                        yes_threshold: None,
-                        veto_threshold: Some(Count::LiteralCount {
-                            count: Uint128::zero(),
+    assert!(
+        chain
+            .execute(
+                &governance::HandleMsg::SetProfile {
+                    id: Uint128::new(1),
+                    profile: UpdateProfile {
+                        name: None,
+                        enabled: None,
+                        disable_assembly: false,
+                        assembly: None,
+                        disable_funding: false,
+                        funding: None,
+                        disable_token: false,
+                        token: Some(UpdateVoteProfile {
+                            deadline: Some(0),
+                            threshold: None,
+                            yes_threshold: None,
+                            veto_threshold: Some(Count::LiteralCount {
+                                count: Uint128::zero(),
+                            }),
                         }),
-                    }),
-                    cancel_deadline: None,
+                        cancel_deadline: None,
+                    },
+                    padding: None,
                 },
-                padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
-        )
-        .is_err();
+                MockEnv::new(
+                    // Sender is self
+                    gov.address.clone(),
+                    gov.clone(),
+                ),
+            )
+            .is_err()
+    );
 }
 
 #[test]
@@ -444,33 +460,35 @@ fn set_profile_disable_funding() {
 fn set_profile_set_incomplete_fuding() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::SetProfile {
-                id: Uint128::new(1),
-                profile: UpdateProfile {
-                    name: None,
-                    enabled: None,
-                    disable_assembly: false,
-                    assembly: None,
-                    disable_funding: false,
-                    funding: Some(UpdateFundProfile {
-                        deadline: Some(0),
-                        required: None,
-                        privacy: Some(true),
-                        veto_deposit_loss: None,
-                    }),
-                    disable_token: false,
-                    token: None,
-                    cancel_deadline: None,
+    assert!(
+        chain
+            .execute(
+                &governance::HandleMsg::SetProfile {
+                    id: Uint128::new(1),
+                    profile: UpdateProfile {
+                        name: None,
+                        enabled: None,
+                        disable_assembly: false,
+                        assembly: None,
+                        disable_funding: false,
+                        funding: Some(UpdateFundProfile {
+                            deadline: Some(0),
+                            required: None,
+                            privacy: Some(true),
+                            veto_deposit_loss: None,
+                        }),
+                        disable_token: false,
+                        token: None,
+                        cancel_deadline: None,
+                    },
+                    padding: None,
                 },
-                padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
-        )
-        .is_err();
+                MockEnv::new(
+                    // Sender is self
+                    gov.address.clone(),
+                    gov.clone(),
+                ),
+            )
+            .is_err()
+    );
 }

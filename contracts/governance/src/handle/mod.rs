@@ -1,18 +1,18 @@
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use shade_protocol::secret_toolkit::snip20::register_receive_msg;
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Api,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
+    secret_toolkit::snip20::register_receive_msg,
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
@@ -29,6 +29,7 @@ pub mod proposal;
 pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
+    query_auth: Option<Contract>,
     treasury: Option<HumanAddr>,
     vote_token: Option<Contract>,
     funding_token: Option<Contract>,
@@ -67,6 +68,10 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
         config.treasury = treasury;
     }
 
+    if let Some(query_auth) = query_auth {
+        config.query = query_auth;
+    }
+
     config.save(&mut deps.storage)?;
     Ok(HandleResponse {
         messages,
@@ -78,9 +83,9 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_runtime_state<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    state: RuntimeState,
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
+    _state: RuntimeState,
 ) -> StdResult<HandleResponse> {
     todo!();
     Ok(HandleResponse {

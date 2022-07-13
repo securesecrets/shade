@@ -7,7 +7,6 @@ use shade_protocol::c_std::{
     HandleResponse,
     HumanAddr,
     Querier,
-    StdError,
     StdResult,
     Storage,
 };

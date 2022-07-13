@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
+use shade_protocol::c_std::{Api, Binary, Env, Extern, HandleResponse, HumanAddr, Querier, StdResult, Storage, to_binary};
 use shade_protocol::math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::manager::{Allowance, CoinInfo};

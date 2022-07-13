@@ -1,33 +1,31 @@
-use shade_protocol::math_compat::Uint128;
-use shade_protocol::c_std::{
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    Coin,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Api,
+        Binary,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
-        profile::{Profile, VoteProfile},
+        profile::Profile,
         proposal::{Proposal, ProposalMsg, Status},
-        stored_id::ID,
+        stored_id::{UserID, ID},
         vote::Vote,
         HandleAnswer,
         MSG_VARIABLE,
     },
-    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+    math_compat::Uint128,
+    utils::generic_response::ResponseStatus,
 };
-use std::convert::TryInto;
 
 pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -70,6 +68,9 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
 
     Proposal::save_assembly_vote(&mut deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_assembly_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+
+    // Save data for user queries
+    UserID::add_assembly_vote(&mut deps.storage, sender.clone(), proposal.clone())?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -186,8 +187,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         funders: None,
     };
 
-    let prop_id = ID::add_proposal(&mut deps.storage)?;
-    prop.save(&mut deps.storage, &prop_id)?;
+    prop.save(&mut deps.storage)?;
 
     Ok(HandleResponse {
         messages: vec![],

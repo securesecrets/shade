@@ -26,18 +26,19 @@ debug-print = ["shade-protocol/debug-print"]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "governance-impl",
   "snip20_staking",
-  "query_auth_lib"
+  "query_auth"
 ] }
 schemars = "0.7"
 
 [dev-dependencies]
+shade_admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "governance-impl",
   "snip20_staking",
   "snip20",
-  "query_auth_lib",
+  "query_auth",
   "ensemble"
 ] }
 serde_json = { version = "1.0.67" }
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "governance", "snip20_staking", "snip20"  ] }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "governance", "snip20_staking", "snip20", "query_auth", "admin"  ] }
 spip_stkd_0 = { version = "0.1.0", path = "../snip20_staking" }
