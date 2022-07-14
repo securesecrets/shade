@@ -1,5 +1,5 @@
+use cosmwasm_std::Deps;
 use shade_protocol::c_std::{
-    debug_print,
     to_binary,
     Api,
     Binary,
@@ -10,7 +10,7 @@ use shade_protocol::c_std::{
     StdError,
     StdResult,
     Storage,
-    Uint128,
+    Uint128, MessageInfo,
 };
 
 use shade_protocol::contract_interfaces::dao::scrt_staking::{
@@ -56,23 +56,21 @@ pub fn init(
     viewing_key_w(deps.storage).save(&msg.viewing_key)?;
     unbonding_w(deps.storage).save(&Uint128::zero())?;
 
-    Ok(Response {
-        messages: vec![
+    let resp = Response::new()
+        .add_messages(vec![
             set_viewing_key_msg(
                 viewing_key_r(deps.storage).load()?,
                 None,
-                1,
-                config.sscrt.code_hash.clone(),
-                config.sscrt.address.clone(),
+                &config.sscrt,
             )?,
             register_receive(
                 env.contract.code_hash,
                 None,
                 &config.sscrt
             )?,
-        ],
-        log: vec![],
-    })
+        ]);
+        
+    Ok(resp)
 }
 
 pub fn handle(
@@ -102,6 +100,7 @@ pub fn handle(
 
 pub fn query(
     deps: Deps,
+    env: Env,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

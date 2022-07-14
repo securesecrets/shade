@@ -71,11 +71,11 @@ pub fn redeem_msg(
     padding: Option<String>,
     contract: &Contract
 ) -> StdResult<CosmosMsg> {
-    Ok(ExecuteMsg::Redeem {
+    ExecuteMsg::Redeem {
         amount,
         denom,
         padding,
-    }.to_cosmos_msg(contract, vec![])?)
+    }.to_cosmos_msg(contract, vec![])
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Deposit
@@ -92,13 +92,13 @@ pub fn deposit_msg(
     padding: Option<String>,
     contract: &Contract
 ) -> StdResult<CosmosMsg> {
-    Ok(ExecuteMsg::Deposit { padding }.to_cosmos_msg(
+    ExecuteMsg::Deposit { padding }.to_cosmos_msg(
         contract,
         vec![Coin {
             denom: "uscrt".to_string(),
             amount
         }],
-    )?)
+    )
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute RegisterReceive
@@ -115,11 +115,20 @@ pub fn register_receive(
     padding: Option<String>,
     contract: &Contract
 ) -> StdResult<CosmosMsg> {
-    Ok(ExecuteMsg::RegisterReceive {
+    ExecuteMsg::RegisterReceive {
         code_hash: register_hash,
         padding,
     }
-        .to_cosmos_msg(contract, vec![])?)
+        .to_cosmos_msg(contract, vec![])
+}
+
+pub fn set_viewing_key_msg(
+    viewing_key: String,
+    padding: Option<String>,
+    contract: &Contract,
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::SetViewingKey { key: viewing_key, padding }
+        .to_cosmos_msg(contract, vec![])
 }
 
 /// TokenInfo response

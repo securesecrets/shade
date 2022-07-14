@@ -1,14 +1,13 @@
+use cosmwasm_std::Deps;
 use shade_protocol::c_std::{
     Api,
     BalanceResponse,
     BankQuery,
     Delegation,
-    DistQuery,
     DepsMut,
     FullDelegation,
     Addr,
     Querier,
-    RewardsResponse,
     StdError,
     StdResult,
     Storage,
@@ -112,7 +111,7 @@ pub fn claimable(
 
     let scrt_balance: BalanceResponse = deps.querier.query(
         &BankQuery::Balance {
-            address: self_address_r(deps.storage).load()?,
+            address: self_address_r(deps.storage).load()?.to_string(),
             denom: "uscrt".to_string(),
         }
         .into(),
@@ -187,12 +186,10 @@ pub fn reserves(
     let scrt_balance = scrt_balance(deps, self_address_r(deps.storage).load()?)?;
 
     Ok(adapter::QueryAnswer::Reserves {
-        amount: scrt_balance + rewards(&deps)?,
+        amount: scrt_balance + rewards(deps)?,
     })
 }
 
-// This won't work until cosmwasm 0.16
-/*
 pub fn delegation(
     deps: Deps,
     validator: Addr,
@@ -200,4 +197,3 @@ pub fn delegation(
     let address = self_address_r(deps.storage).load()?;
     deps.querier.query_delegation(address, validator)
 }
-*/

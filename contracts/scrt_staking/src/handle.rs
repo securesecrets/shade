@@ -1,5 +1,5 @@
+use cosmwasm_std::MessageInfo;
 use shade_protocol::c_std::{
-    debug_print,
     to_binary,
     Api,
     BalanceResponse,
@@ -49,7 +49,7 @@ pub fn receive(
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
-    debug_print!("Received {}", amount);
+    deps.api.debug(format!("Received {}", amount).as_str());
 
     let config = config_r(deps.storage).load()?;
 
@@ -59,29 +59,29 @@ pub fn receive(
 
     let validator = choose_validator(&deps, env.block.time.seconds())?;
 
-    Ok(Response {
-        messages: vec![
-            redeem_msg(
+    let messages = vec![
+        redeem_msg(
+            amount,
+            None,
+            None,
+            &config.sscrt,
+        )?,
+        CosmosMsg::Staking(StakingMsg::Delegate {
+            validator: validator.address.clone(),
+            amount: Coin {
                 amount,
-                None,
-                None,
-                256,
-                config.sscrt.code_hash.clone(),
-                config.sscrt.address.clone(),
-            )?,
-            CosmosMsg::Staking(StakingMsg::Delegate {
-                validator: validator.address.clone(),
-                amount: Coin {
-                    amount,
-                    denom: "uscrt".to_string(),
-                },
-            }),
-        ],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Receive {
+                denom: "uscrt".to_string(),
+            },
+        }),
+    ];
+
+    let resp = Response::new()
+        .add_messages(messages)
+        .set_data(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,
             validator,
-        })?))
+        })?);
+    Ok(resp)
 }
 
 pub fn try_update_config(
@@ -93,7 +93,7 @@ pub fn try_update_config(
     let cur_config = config_r(deps.storage).load()?;
 
     if cur_config.admins.contains(&info.sender) {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     // Save new info
@@ -121,7 +121,7 @@ pub fn update(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    let scrt_balance = scrt_balance(deps, self_address_r(deps.storage).load()?)?;
+    let scrt_balance = scrt_balance(deps.as_ref(), self_address_r(deps.storage).load()?)?;
 
     // Claim Rewards
     let rewards = query::rewards(&deps)?;

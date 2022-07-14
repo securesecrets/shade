@@ -128,7 +128,7 @@ pub fn init(
         register_receive(
             env.contract.code_hash.clone(),
             None,
-            config.token_a
+            &config.token_a
         )?,
         set_viewing_key_msg(
             msg.viewing_key.clone(),
