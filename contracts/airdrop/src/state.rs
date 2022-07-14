@@ -186,7 +186,7 @@ pub fn validate_account_permit(
     }
 
     // Authenticate permit
-    let address = permit.validate(&deps.api, None)?.as_Addr(None)?;
+    let address = permit.validate(deps.api, None)?.as_addr(None)?;
 
     // Check that permit is not revoked
     if is_permit_revoked(
