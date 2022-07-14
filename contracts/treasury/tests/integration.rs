@@ -1,8 +1,9 @@
-use cosmwasm_math_compat as compat;
-use cosmwasm_std::{
-    to_binary,
-    HumanAddr, Uint128, Coin, Decimal,
-    Validator,
+use shade_protocol::math_compat as compat;
+use shade_protocol::c_std::{
+    coins, from_binary, to_binary,
+    Extern, HumanAddr, StdError,
+    Binary, StdResult, HandleResponse, Env,
+    InitResponse, Uint128,
 };
 
 use shade_protocol::{
@@ -31,7 +32,7 @@ use contract_harness::harness::{
     //snip20::Snip20,
 };
 
-use fadroma::{
+use shade_protocol::fadroma::{
     core::ContractLink,
     ensemble::{
        MockEnv,

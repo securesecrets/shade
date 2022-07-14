@@ -1,20 +1,24 @@
-use cosmwasm_std::{
-    Api,
-    Env,
-    BalanceResponse,
-    BankQuery,
-    Extern,
-    HumanAddr,
-    Querier,
-    StdResult,
-    Storage,
-    Uint128,
-    CosmosMsg,
+use crate::{
+    c_std::{
+        Api,
+        Env,
+        BalanceResponse,
+        BankQuery,
+        Extern,
+        HumanAddr,
+        Querier,
+        StdResult,
+        Storage,
+        Uint128,
+        CosmosMsg,
+    },
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 use secret_toolkit::snip20::{
-    allowance_query, increase_allowance_msg, decrease_allowance_msg
+    allowance_query,
+    increase_allowance_msg,
+    decrease_allowance_msg,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

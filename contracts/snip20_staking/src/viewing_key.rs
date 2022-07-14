@@ -1,9 +1,9 @@
 use std::fmt;
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use shade_protocol::schemars::JsonSchema;
+use shade_protocol::serde::{Deserialize, Serialize};
 
-use cosmwasm_std::Env;
+use shade_protocol::c_std::Env;
 
 use crate::{
     rand::{sha_256, Prng},

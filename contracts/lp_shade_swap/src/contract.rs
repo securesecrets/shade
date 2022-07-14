@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
     StdResult, StdError,
     Storage, Uint128,
@@ -23,7 +23,7 @@ use shadeswap_shared::{
     msg::amm_pair,
 };
 
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::{register_receive_msg, set_viewing_key_msg},
     utils::Query,
 };

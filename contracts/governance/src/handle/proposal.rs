@@ -1,36 +1,36 @@
 use crate::handle::assembly::try_assembly_proposal;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    Coin,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    WasmMsg,
-};
-use secret_toolkit::{snip20::send_msg, utils::Query};
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Api,
+        Binary,
+        Coin,
+        Env,
+        Extern,
+        HandleResponse,
+        HumanAddr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+        WasmMsg,
+    },
     contract_interfaces::{
         governance::{
             assembly::Assembly,
             contract::AllowedContract,
             profile::{Count, Profile, VoteProfile},
             proposal::{Funding, Proposal, ProposalMsg, Status},
+            stored_id::UserID,
             vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
             Config,
             HandleAnswer,
-            HandleMsg::Receive,
         },
         staking::snip20_staking,
     },
+    math_compat::Uint128,
+    secret_toolkit::{snip20::send_msg, utils::Query},
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
@@ -76,7 +76,7 @@ pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
 
 pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     proposal: Uint128,
 ) -> StdResult<HandleResponse> {
     let mut messages = vec![];
@@ -122,7 +122,7 @@ pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     // Check if passed, and check if current time > cancel time
     let status = Proposal::status(&deps.storage, &proposal)?;
-    if let Status::Passed { start, end } = status {
+    if let Status::Passed { end, .. } = status {
         if env.block.time < end {
             return Err(StdError::unauthorized());
         }
@@ -197,7 +197,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     match status.clone() {
-        Status::AssemblyVote { start, end } => {
+        Status::AssemblyVote { end, .. } => {
             if end > env.block.time {
                 return Err(StdError::unauthorized());
             }
@@ -245,7 +245,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 
             new_status = vote_conclusion;
         }
-        Status::Funding { amount, start, end } => {
+        Status::Funding { amount, end, .. } => {
             // This helps combat the possibility of the profile changing
             // before another proposal is finished
             if let Some(setting) = Profile::funding(&deps.storage, &profile)? {
@@ -277,7 +277,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                 }
             }
         }
-        Status::Voting { start, end } => {
+        Status::Voting { end, .. } => {
             if end > env.block.time {
                 return Err(StdError::unauthorized());
             }
@@ -294,8 +294,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 
             // Get total staking power
             let total_power = match query {
-                // TODO: fix when uint update is merged
-                snip20_staking::QueryAnswer::TotalStaked { shares, tokens } => tokens.into(),
+                snip20_staking::QueryAnswer::TotalStaked { tokens, .. } => tokens.into(),
                 _ => return Err(StdError::generic_err("Wrong query returned")),
             };
 
@@ -325,7 +324,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
                                 // Update slash amount
                                 messages.push(send_msg(
                                     config.treasury,
-                                    cosmwasm_std::Uint128(send_amount.u128()),
+                                    shade_protocol::c_std::Uint128(send_amount.u128()),
                                     None,
                                     None,
                                     None,
@@ -365,14 +364,14 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_receive<S: Storage, A: Api, Q: Querier>(
+pub fn try_receive_funding<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    sender: HumanAddr,
+    _sender: HumanAddr,
     from: HumanAddr,
     amount: Uint128,
     msg: Option<Binary>,
-    memo: Option<String>,
+    _memo: Option<String>,
 ) -> StdResult<HandleResponse> {
     // Check if sent token is the funding token
     let funding_token: Contract;
@@ -445,6 +444,9 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             amount: funder_amount,
             claimed: false,
         })?;
+
+        // Add funding info to cross search
+        UserID::add_funding(&mut deps.storage, from.clone(), proposal.clone())?;
     } else {
         return Err(StdError::generic_err("Not in funding status"));
     }
@@ -524,13 +526,13 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
+pub fn try_receive_vote<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     sender: HumanAddr,
     msg: Option<Binary>,
     balance: Uint128,
-    memo: Option<String>,
+    _memo: Option<String>,
 ) -> StdResult<HandleResponse> {
     if let Some(token) = Config::load(&deps.storage)?.vote_token {
         if env.message.sender != token.address {
@@ -580,6 +582,7 @@ pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
 
     Proposal::save_public_vote(&mut deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_public_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+    UserID::add_vote(&mut deps.storage, sender.clone(), proposal.clone())?;
 
     Ok(HandleResponse {
         messages: vec![],

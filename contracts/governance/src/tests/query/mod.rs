@@ -1,1 +1,2 @@
-pub mod public_queries;
+pub mod public;
+pub mod user;

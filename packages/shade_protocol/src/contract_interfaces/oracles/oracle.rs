@@ -1,11 +1,13 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::HumanAddr;
-use schemars::JsonSchema;
+use crate::math_compat::Uint128;
+use crate::c_std::HumanAddr;
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 use crate::{
-    contract_interfaces::dex::dex::TradingPair,
+    contract_interfaces::{
+        dex::dex::TradingPair,
+    },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 

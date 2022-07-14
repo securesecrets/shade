@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
@@ -9,8 +9,8 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use query_authentication::viewing_keys::ViewingKey;
-use secret_toolkit::utils::Query;
+use shade_protocol::query_authentication::viewing_keys::ViewingKey;
+use shade_protocol::secret_toolkit::utils::Query;
 use shade_admin::admin::AuthorizedUsersResponse;
 use shade_protocol::{
     contract_interfaces::query_auth::{

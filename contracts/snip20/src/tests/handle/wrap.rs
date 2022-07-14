@@ -1,6 +1,6 @@
-use cosmwasm_std::{Coin, HumanAddr};
-use fadroma::ensemble::MockEnv;
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::c_std::{Coin, HumanAddr};
+use shade_protocol::fadroma::ensemble::MockEnv;
+use shade_protocol::math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig};
 use shade_protocol::contract_interfaces::snip20::manager::{Balance, TotalSupply};
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
@@ -19,12 +19,12 @@ fn deposit() {
 
     let scrt_coin = Coin {
         denom: "uscrt".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        amount: shade_protocol::c_std::Uint128(1000)
     };
 
     let not_coin = Coin {
         denom: "token".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        amount: shade_protocol::c_std::Uint128(1000)
     };
 
     chain.add_funds(HumanAddr::from("Marco"), vec![
@@ -65,7 +65,7 @@ fn redeem() {
 
     let scrt_coin = Coin {
         denom: "uscrt".to_string(),
-        amount: cosmwasm_std::Uint128(1000)
+        amount: shade_protocol::c_std::Uint128(1000)
     };
 
     chain.add_funds(HumanAddr::from("Marco"), vec![
@@ -99,6 +99,6 @@ fn redeem() {
         assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(500)
         );
         let balance = chain.balances(HumanAddr::from("Marco")).unwrap().get("uscrt").unwrap();
-        assert_eq!(balance, &cosmwasm_std::Uint128(500));
+        assert_eq!(balance, &shade_protocol::c_std::Uint128(500));
     });
 }

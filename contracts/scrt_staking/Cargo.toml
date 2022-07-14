@@ -1,4 +1,4 @@
-[package]
+[package] 
 name = "scrt_staking"
 version = "0.1.0"
 authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
@@ -19,17 +19,10 @@ crate-type = ["cdylib", "rlib"]
 default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
-debug-print = ["cosmwasm-std/debug-print"]
+backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std", features = [
-  "staking",
-] }
-cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
-cosmwasm-schema = "0.10.1"
-secret-toolkit = { version = "0.2" }
-cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "scrt_staking",
   "treasury",
@@ -40,6 +33,5 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
 
 [dev-dependencies]
-#fadroma = { branch = "staking", git = "https://github.com/a-stgeorge/fadroma-staking.git", features = ["ensemble", "scrt"] }
 fadroma = { path = "../../../fadroma-staking/crates/fadroma", features = ["ensemble", "scrt"] }
 contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["scrt_staking", "snip20_reference_impl", "snip20" ] }

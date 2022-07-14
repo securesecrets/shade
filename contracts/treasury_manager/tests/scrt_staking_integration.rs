@@ -1,8 +1,3 @@
-use cosmwasm_std::{
-    to_binary, HumanAddr, Uint128,
-    Decimal, Validator,
-    Coin,
-};
 
 use cosmwasm_math_compat as compat;
 
@@ -26,6 +21,11 @@ use shade_protocol::{
     utils::{
         asset::Contract,
     },
+    c_std::{
+        to_binary, HumanAddr, Uint128,
+        Decimal, Validator,
+        Coin,
+    }
 };
 
 use contract_harness::harness::{
@@ -287,7 +287,7 @@ fn single_holder_scrt_staking_adapter(
         _ => assert!(false),
     };
 
-    // Unbondable
+    // manager unbondable
     match ensemble.query(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
@@ -313,7 +313,7 @@ fn single_holder_scrt_staking_adapter(
     ).unwrap() {
         manager::QueryAnswer::Reserves { amount } => {
             reserves = amount;
-            assert_eq!(amount, deposit, "Pre-unbond reserves");
+            assert_eq!(amount, expected_manager, "Pre-unbond reserves");
         }
         _ => assert!(false),
     };
@@ -334,17 +334,34 @@ fn single_holder_scrt_staking_adapter(
 
     // holder unbond from manager
     ensemble.execute(
-        &manager::HandleMsg::Manager(manager::SubHandleMsg::Unbond {
-            asset: token.address.clone(),
-            amount: unbond_amount,
-        }),
+        &manager::HandleMsg::Manager(
+            manager::SubHandleMsg::Unbond {
+                asset: token.address.clone(),
+                amount: unbond_amount,
+            }
+        ),
         MockEnv::new(
             "holder",
             manager.clone(),
         ),
     ).unwrap();
 
-    // Unbondable
+    // scrt staking Unbondable
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Unbondable {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Unbondable { amount } => {
+            assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond scrt staking unbondable");
+        }
+        _ => assert!(false),
+    };
+
+    // manager Unbondable
     match ensemble.query(
         manager.address.clone(),
         &manager::QueryMsg::Manager(
@@ -355,7 +372,7 @@ fn single_holder_scrt_staking_adapter(
         )
     ).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond unbondable");
+            assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond manager unbondable");
         }
         _ => assert!(false),
     };
@@ -371,7 +388,7 @@ fn single_holder_scrt_staking_adapter(
         )
     ).unwrap() {
         manager::QueryAnswer::Unbonding { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - reserves.u128()), "Post-unbond holder unbonding");
+            assert_eq!(amount, Uint128(unbond_amount.u128() - reserves.u128()), "Post-unbond manager unbonding");
         }
         _ => assert!(false),
     };
@@ -403,8 +420,8 @@ fn single_holder_scrt_staking_adapter(
             }
         )
     ).unwrap() {
-        manager::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - reserves.u128()), "Post-fastforward scrt staking claimable");
+        adapter::QueryAnswer::Claimable { amount } => {
+            assert_eq!(amount, Uint128(unbond_amount.u128() - reserves.u128()), "Post-fastforward scrt staking claimable");
         }
         _ => assert!(false),
     };
@@ -420,7 +437,7 @@ fn single_holder_scrt_staking_adapter(
         )
     ).unwrap() {
         manager::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - reserves.u128()), "Post-fastforward manager claimable");
+            assert_eq!(amount, Uint128(unbond_amount.u128() - reserves.u128()), "Post-fastforward manager claimable");
         }
         _ => assert!(false),
     };

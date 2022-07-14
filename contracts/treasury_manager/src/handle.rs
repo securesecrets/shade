@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     self,
     to_binary,
     Api,
@@ -13,7 +13,7 @@ use cosmwasm_std::{
     Storage,
     Uint128,
 };
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::{
         allowance_query,
         batch::{SendFromAction, SendAction},
@@ -463,7 +463,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
                     let mut desired_input = (desired_amount - adapter.balance)?;
 
                     // Check tolerance threshold
-                    if desired_input < threshold {
+                    if desired_input <= threshold {
                         continue;
                     }
 
@@ -497,36 +497,38 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
                         break;
                     }
 
-                    // Fully covered by allowance
-                    if desired_input <= allowance {
-                        send_from_actions.push(SendFromAction {
-                            owner: config.treasury.clone(),
-                            recipient: adapter.contract.address.clone(),
-                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                            amount: desired_input,
-                            msg: None,
-                            memo: None,
-                        });
+                    if !allowance.is_zero() {
+                        // Fully covered by allowance
+                        if desired_input <= allowance {
+                            send_from_actions.push(SendFromAction {
+                                owner: config.treasury.clone(),
+                                recipient: adapter.contract.address.clone(),
+                                recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                                amount: desired_input,
+                                msg: None,
+                                memo: None,
+                            });
 
-                        allowance = (allowance - desired_input)?;
-                        allowance_used += desired_input;
-                        desired_input = Uint128::zero();
-                    } 
-                    // Send all allowance
-                    else if !allowance.is_zero() {
-                        send_from_actions.push(SendFromAction {
-                            owner: config.treasury.clone(),
-                            recipient: adapter.contract.address.clone(),
-                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                            amount: allowance,
-                            msg: None,
-                            memo: None,
-                        });
+                            allowance = (allowance - desired_input)?;
+                            allowance_used += desired_input;
+                            desired_input = Uint128::zero();
+                        } 
+                        // Send all allowance
+                        else if !allowance.is_zero() {
+                            send_from_actions.push(SendFromAction {
+                                owner: config.treasury.clone(),
+                                recipient: adapter.contract.address.clone(),
+                                recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                                amount: allowance,
+                                msg: None,
+                                memo: None,
+                            });
 
-                        allowance = Uint128::zero();
-                        allowance_used += allowance;
-                        desired_input = (desired_input - allowance)?;
-                        break;
+                            allowance = Uint128::zero();
+                            allowance_used += allowance;
+                            desired_input = (desired_input - allowance)?;
+                            break;
+                        }
                     }
                 }
                 // Over funded
@@ -808,15 +810,18 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     //TODO: unbond back to desired amount
                 }
                 AllocationType::Portion => {
+                    /*
                     let _desired_amount = total.multiply_ratio(
                         allocations[i].amount, 10u128.pow(18)
                     );
+                    */
 
                     let unbondable = adapter::unbondable_query(&deps,
                                           &asset,
                                           allocations[i].contract.clone())?;
 
                     if unbond_amount > unbondable {
+                        //panic!("unbonding unbondable {} from adapter", unbondable);
                         messages.push(
                             adapter::unbond_msg(
                                 asset.clone(),
@@ -827,6 +832,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                         unbond_amount = (unbond_amount - unbondable)?;
                     }
                     else {
+                        //panic!("unbonding unbond_amount {} from adapter", unbond_amount);
                         messages.push(
                             adapter::unbond_msg(
                                 asset.clone(),

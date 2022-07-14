@@ -5,10 +5,10 @@ use crate::utils::{
 };
 
 use crate::contract_interfaces::dao::adapter;
-use cosmwasm_std::{Binary, HumanAddr, StdResult, Uint128};
-use schemars::JsonSchema;
+use crate::c_std::{Binary, HumanAddr, StdResult, Uint128};
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 pub mod storage {
     use secret_storage_plus::{Map, Item};

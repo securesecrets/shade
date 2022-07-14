@@ -19,7 +19,7 @@
             * [Config](#Config)
             * [BondOpportunities](#BondOpportunities)
             * [Account](#Account)
-            * [CollateralAddresses](#CollateralAddresses)
+            * [DepositAddresses](#DepositAddresses)
             * [BondInfo](#BondInfo)
             * [PriceCheck](#PriceCheck)
             * [CheckAllowance](#CheckAllowance)
@@ -39,7 +39,7 @@ Generic contract responsible for protocol and treasury bond opportunities
 | global_maximum_discount           | Uint128   | Maximum allowed discount for any bond opportunities                        | no       |
 | admin                             | HumanAddr | Bonds Assembly/Admin; SHOULD be a valid bech32 address                     | no       |
 | oracle                            | Contract  | Oracle contract                                                            | no       |
-| treasury                          | HumanAddr | Treasury address for allowance and collateral assets                       | no       |
+| treasury                          | HumanAddr | Treasury address for allowance and deposit assets                       | no       |
 | issued_asset                      | Contract  | Issued asset for this bonds contract                                       | no       |
 | activated                         | bool      | Turns entering opportunities contract-wide on/off                          | no       |
 | bond_issuance_limit               | Uint128   | Default issuance limit for new bond opportunities                          | no       |
@@ -87,14 +87,14 @@ Opens new bond opportunity for a unique asset
 ##### Request
 | Name                          | Type      | Description                                       | optional  |
 |-------------------------------|-----------|---------------------------------------------------|-----------|
-| collateral_asset              | Contract  | Contract for collateral asset                     | no        |
+| deposit_asset                 | Contract  | Contract for deposit asset                        | no        |
 | start_time                    | u64       | When the opportunity opens in UNIX time           | no        |
 | end_time                      | u64       | When the opportunity closes in UNIX time          | no        |
 | bond_issuance_limit           | Uint128   | Issuance limit for this opportunity               | yes       |
 | bonding_period                | u64       | Bonding period for this opportunity in UNIX time  | yes       |
 | discount                      | Uint128   | Discount % for this opportunity                   | yes       |
-| max_accepted_collateral_price | Uint128   | Maximum accepted price for collateral asset       | no        |
-| err_collateral_price          | Uint128   | Price for collateral asset that causes error      | no        |
+| max_accepted_deposit_price    | Uint128   | Maximum accepted price for deposit asset       | no        |
+| err_deposit_price             | Uint128   | Price for deposit asset that causes error      | no        |
 | minting_bond                  | bool      | True for minting from snip20, false for allowance | no        |
 ##### Response
 ```json
@@ -107,8 +107,8 @@ Opens new bond opportunity for a unique asset
     "bond_issuance_limit": "opportunity limit Uint128",
     "bonding_period": "u64 bonding period in UNIX time",
     "discount": "opportunity discount percentage Uint128",
-    "max_accepted_collateral_price": "maximum price accepted for collateral asset Uint128",
-    "err_collateral_price": "error-causing price limit for collateral asset Uint128",
+    "max_accepted_deposit_price": "maximum price accepted for deposit asset Uint128",
+    "err_deposit_price": "error-causing price limit for deposit asset Uint128",
     "minting_bond": "bool whether bond opp is a minting bond or not"
   }
 }
@@ -120,14 +120,14 @@ Closes bond opportunity for a given asset
 ##### Request
 | Name             | Type     | Description                   | optional  |
 |------------------|----------|-------------------------------|-----------|
-| collateral_asset | Contract | Contract for collateral asset | no        |
+| deposit_asset    | Contract | Contract for deposit asset    | no        |
 
 ##### Response
 ```json
 {
   "close_bond": {
     "status": "success",
-    "collateral_asset": "contract for asset who's opportunity was just closed"
+    "deposit_asset": "contract for asset who's opportunity was just closed"
   }
 }
 ```
@@ -237,14 +237,14 @@ Get the account's pending bonds using a viewing key
 }
 ```
 
-#### CollateralAddresses
-Get the list of addresses for currently recognized collateral addresses, correlated to the open Bond Opportunities
+#### DepositAddresses
+Get the list of addresses for currently recognized deposit addresses, correlated to the open Bond Opportunities
 
 ##### Response
 ```json
 {
-  "collateral_addresses": {
-    "collateral_addresses": "List of collateral addresses Vec<HumanAddr>",
+  "deposit_addresses": {
+    "deposit_addresses": "List of deposit addresses Vec<HumanAddr>",
   }
 }
 ```
@@ -321,7 +321,7 @@ NOTE: The parameters must be in order
 | deposit_denom   | Snip20Asset | Snip20 information for issued asset                                                     | no        |
 | end_time        | u64         | Time that bond will be matured and claimable in UNIX time                               | no        |                                 
 | deposit_amount  | Uint128     | Amount of issued asset when opportunity was purchased                                   | no        |
-| deposit_price   | Uint128     | Price of collateral asset when opportunity was purchased                                | no        |
+| deposit_price   | Uint128     | Price of deposit asset when opportunity was purchased                                | no        |
 | claim_amount    | Uint128     | Amount of issued asset set to be claimed                                                | no        |
 | claim_price     | Uint128     | Price of issued asset when opportunity was purchased                                    | no        |
 | discount        | Uint128     | Discount of issued asset when opportunity was purchased                                 | no        |
@@ -342,8 +342,8 @@ NOTE: The parameters must be in order
 | end_time                      | u64         | Time that bond opportunity will be closed in UNIX time                | no        |                                 
 | bonding_period                | u64         | Time that users that enter the opportunity must wait before claiming  | no        |
 | discount                      | Uint128     | Discount of issued asset when opportunity was purchased               | no        |
-| max_accepted_collateral_price | Uint128     | Maximum accepted price for collateral asset                           | no        |
-| err_collateral_price          | Uint128     | Error-causing limit price for collateral                              | no        |
+| max_accepted_deposit_price    | Uint128     | Maximum accepted price for deposit asset                              | no        |
+| err_deposit_price             | Uint128     | Error-causing limit price for deposit                                 | no        |
 | minting_bond                  | bool        | True for minting from snip20, false for allowance                     | no        |
 
 ## SlipMsg

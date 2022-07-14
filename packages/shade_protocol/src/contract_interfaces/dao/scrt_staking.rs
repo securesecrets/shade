@@ -1,10 +1,10 @@
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
+use crate::c_std::{Binary, Decimal, Delegation, HumanAddr, Uint128, Validator};
 
 use crate::contract_interfaces::dao::adapter;
-use schemars::JsonSchema;
+use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

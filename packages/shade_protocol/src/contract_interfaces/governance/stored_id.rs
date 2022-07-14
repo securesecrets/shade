@@ -1,7 +1,9 @@
 use crate::utils::storage::default::NaiveSingletonStorage;
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{StdResult, Storage};
-use serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
+use crate::c_std::{StdResult, Storage, HumanAddr};
+use crate::serde::{Deserialize, Serialize};
+use crate::utils::storage::plus::{NaiveMapStorage};
+use secret_storage_plus::Map;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -30,8 +32,7 @@ impl ID {
         let item = match ID::may_load(storage, PROP_KEY)? {
             None => ID(Uint128::zero()),
             Some(i) => {
-                let item = ID(i.0.checked_add(Uint128::new(1))?);
-                item
+                ID(i.0.checked_add(Uint128::new(1))?)
             }
         };
         item.save(storage, PROP_KEY)?;
@@ -101,5 +102,104 @@ impl ID {
         item.0 += Uint128::new(1);
         item.save(storage, CONTRACT_KEY)?;
         Ok(item.0)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+// Used for ease of querying
+// TODO: use u64 instead for faster storage
+pub struct UserID(Uint128);
+
+impl NaiveMapStorage<'static> for UserID {}
+
+// Using user ID cause its practically the same type
+const USER_PROP_ID: Map<'static, HumanAddr, UserID> = Map::new("user_proposal_id-");
+const USER_PROP: Map<'static, (HumanAddr, u128), UserID> = Map::new("user_proposal_list-");
+
+const USER_ASSEMBLY_VOTE_ID: Map<'static, HumanAddr, UserID> = Map::new("user_assembly_votes_id-");
+const USER_ASSEMBLY_VOTE: Map<'static, (HumanAddr, u128), UserID> = Map::new("user_assembly_votes_list-");
+
+const USER_FUNDING_ID: Map<'static, HumanAddr, UserID> = Map::new("user_funding_id-");
+const USER_FUNDING: Map<'static, (HumanAddr, u128), UserID> = Map::new("user_funding_list-");
+
+const USER_VOTES_ID: Map<'static, HumanAddr, UserID> = Map::new("user_votes_id-");
+const USER_VOTES: Map<'static, (HumanAddr, u128), UserID> = Map::new("user_votes_list-");
+
+impl UserID {
+    // Stores the proposal's id
+    pub fn total_proposals<S: Storage>(storage: & S, user: HumanAddr) -> StdResult<Uint128> {
+        Ok(UserID::may_load(storage, USER_PROP_ID, user)?.unwrap_or(UserID(Uint128::zero())).0)
+    }
+
+    pub fn proposal<S: Storage>(storage: & S, user: HumanAddr, id: Uint128) -> StdResult<Uint128> {
+        Ok(UserID::load(storage, USER_PROP, (user, id.u128()))?.0)
+    }
+
+    pub fn add_proposal<S: Storage>(storage: &mut S, user: HumanAddr, prop_id: Uint128) -> StdResult<Uint128> {
+        let item = match UserID::may_load(storage, USER_PROP_ID, user.clone())? {
+            None => Uint128::zero(),
+            Some(i) => i.0.checked_add(Uint128::new(1))?
+        };
+        UserID(item).save(storage, USER_PROP_ID, user.clone())?;
+        UserID(prop_id).save(storage, USER_PROP, (user, item.u128()))?;
+        Ok(item)
+    }
+
+    // Stores the proposal's ID so it can be cross searched
+    pub fn total_assembly_votes<S: Storage>(storage: & S, user: HumanAddr) -> StdResult<Uint128> {
+        Ok(UserID::may_load(storage, USER_ASSEMBLY_VOTE_ID, user)?.unwrap_or(UserID(Uint128::zero())).0)
+    }
+
+    pub fn assembly_vote<S: Storage>(storage: & S, user: HumanAddr, id: Uint128) -> StdResult<Uint128> {
+        Ok(UserID::load(storage, USER_ASSEMBLY_VOTE, (user, id.u128()))?.0)
+    }
+
+    pub fn add_assembly_vote<S: Storage>(storage: &mut S, user: HumanAddr, prop_id: Uint128) -> StdResult<Uint128> {
+        let item = match UserID::may_load(storage, USER_ASSEMBLY_VOTE_ID, user.clone())? {
+            None => Uint128::zero(),
+            Some(i) => i.0.checked_add(Uint128::new(1))?
+        };
+        UserID(item).save(storage, USER_ASSEMBLY_VOTE_ID, user.clone())?;
+        UserID(prop_id).save(storage, USER_ASSEMBLY_VOTE, (user, item.u128()))?;
+        Ok(item)
+    }
+
+    // Stores the proposal's ID so it can be cross searched
+    pub fn total_funding<S: Storage>(storage: & S, user: HumanAddr) -> StdResult<Uint128> {
+        Ok(UserID::may_load(storage, USER_FUNDING_ID, user)?.unwrap_or(UserID(Uint128::zero())).0)
+    }
+
+    pub fn funding<S: Storage>(storage: & S, user: HumanAddr, id: Uint128) -> StdResult<Uint128> {
+        Ok(UserID::load(storage, USER_FUNDING, (user, id.u128()))?.0)
+    }
+
+    pub fn add_funding<S: Storage>(storage: &mut S, user: HumanAddr, prop_id: Uint128) -> StdResult<Uint128> {
+        let item = match UserID::may_load(storage, USER_FUNDING_ID, user.clone())? {
+            None => Uint128::zero(),
+            Some(i) => i.0.checked_add(Uint128::new(1))?
+        };
+        UserID(item).save(storage, USER_FUNDING_ID, user.clone())?;
+        UserID(prop_id).save(storage, USER_FUNDING, (user, item.u128()))?;
+        Ok(item)
+    }
+
+    // Stores the proposal's ID so it can be cross searched
+    pub fn total_votes<S: Storage>(storage: & S, user: HumanAddr) -> StdResult<Uint128> {
+        Ok(UserID::may_load(storage, USER_VOTES_ID, user)?.unwrap_or(UserID(Uint128::zero())).0)
+    }
+
+    pub fn votes<S: Storage>(storage: & S, user: HumanAddr, id: Uint128) -> StdResult<Uint128> {
+        Ok(UserID::load(storage, USER_VOTES, (user, id.u128()))?.0)
+    }
+
+    pub fn add_vote<S: Storage>(storage: &mut S, user: HumanAddr, prop_id: Uint128) -> StdResult<Uint128> {
+        let item = match UserID::may_load(storage, USER_VOTES_ID, user.clone())? {
+            None => Uint128::zero(),
+            Some(i) => i.0.checked_add(Uint128::new(1))?
+        };
+        UserID(item).save(storage, USER_VOTES_ID, user.clone())?;
+        UserID(prop_id).save(storage, USER_VOTES, (user, item.u128()))?;
+        Ok(item)
     }
 }

@@ -1,5 +1,5 @@
-use cosmwasm_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdError, StdResult, Storage, to_binary};
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::c_std::{Api, Env, Extern, HandleResponse, HumanAddr, Querier, StdResult, Storage, to_binary};
+use shade_protocol::math_compat::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::errors::{minting_disabled, not_admin, not_minter};
 use shade_protocol::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, Minters, ReceiverHash, TotalSupply};
@@ -14,7 +14,7 @@ fn try_mint_impl<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &shade_protocol::c_std::BlockInfo,
 ) -> StdResult<()> {
     Balance::add(storage, amount, recipient)?;
     store_mint(storage, minter, recipient, amount, denom, memo, block)?;

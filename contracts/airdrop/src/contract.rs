@@ -12,8 +12,8 @@ use crate::{
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     to_binary,
     Api,
     Binary,
@@ -26,7 +26,7 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::secret_toolkit::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::contract_interfaces::airdrop::{
     claim_info::RequiredTask,
     errors::{invalid_dates, invalid_task_percentage},

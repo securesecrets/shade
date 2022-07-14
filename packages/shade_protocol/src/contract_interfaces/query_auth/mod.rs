@@ -1,11 +1,11 @@
 #[cfg(feature = "query_auth_impl")]
 pub mod auth;
 
-use cosmwasm_std::{Binary, HumanAddr};
-use schemars::JsonSchema;
-use query_authentication::permit::Permit;
+use crate::c_std::{Binary, HumanAddr};
+use crate::schemars::JsonSchema;
+use crate::query_authentication::permit::Permit;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
+use crate::serde::{Deserialize, Serialize};
 use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "query_auth_impl")]
 use crate::utils::storage::plus::ItemStorage;

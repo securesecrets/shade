@@ -1,8 +1,11 @@
-use cosmwasm_std::{
-    to_binary, HumanAddr, Uint128,
+use shade_protocol::c_std::{
+    coins, from_binary, to_binary,
+    Extern, HumanAddr, StdError,
+    Binary, StdResult, HandleResponse, Env,
+    InitResponse, Uint128,
 };
 
-use secret_toolkit::snip20;
+use shade_protocol::secret_toolkit::snip20;
 
 use shade_protocol::{
     contract_interfaces::{

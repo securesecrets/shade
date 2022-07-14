@@ -1,4 +1,4 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     debug_print,
     to_binary,
     Api,
@@ -20,7 +20,7 @@ use cosmwasm_std::{
     Validator,
 };
 
-use secret_toolkit::snip20::{deposit_msg, redeem_msg};
+use shade_protocol::secret_toolkit::snip20::{deposit_msg, redeem_msg};
 
 use shade_protocol::{
     contract_interfaces::dao::{

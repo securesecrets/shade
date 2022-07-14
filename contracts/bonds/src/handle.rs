@@ -1,28 +1,25 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HumanAddr, Querier, StdError, StdResult, Storage,
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
+    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
+    Querier, StdError, StdResult, Storage,
 };
 
-use secret_toolkit::{
-    snip20::{
-        allowance_query, mint_msg, register_receive_msg, send_msg,
-        transfer_from_msg,
-    },
+use shade_protocol::secret_toolkit::{
+    snip20::{allowance_query, mint_msg, register_receive_msg, send_msg, transfer_from_msg},
     utils::{HandleCallback, Query},
 };
 
-use shade_protocol::contract_interfaces::{
-    airdrop::HandleMsg::CompleteTask,
-    oracles::band::ReferenceData,
-    oracles::oracle::QueryMsg::Price,
-    snip20::helpers::{Snip20Asset, fetch_snip20},
+use shade_admin::admin::{QueryMsg, ValidateAdminPermissionResponse};
+
+use shade_oracles::{common::OraclePrice, router::QueryMsg::GetPrice};
+
+use shade_protocol::contract_interfaces::bonds::{
+    errors::*,
+    BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
 };
 use shade_protocol::contract_interfaces::{
-    bonds::{
-        errors::*,
-        BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
-    },
+    airdrop::HandleMsg::CompleteTask,
+    snip20::helpers::{fetch_snip20, Snip20Asset},
 };
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::utils::generic_response::ResponseStatus;
@@ -30,16 +27,17 @@ use shade_protocol::utils::generic_response::ResponseStatus;
 use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::state::{
-    account_r, account_w, allocated_allowance_r, allocated_allowance_w,
-    allowance_key_r, allowance_key_w, bond_opportunity_r, bond_opportunity_w, collateral_assets_r,
-    collateral_assets_w, config_r, config_w, global_total_claimed_w,
-    global_total_issued_r, global_total_issued_w, issued_asset_r,
+    account_r, account_w, allocated_allowance_r, allocated_allowance_w, allowance_key_r,
+    allowance_key_w, bond_opportunity_r, bond_opportunity_w, deposit_assets_r,
+    deposit_assets_w, config_r, config_w, global_total_claimed_w, global_total_issued_r,
+    global_total_issued_w, issued_asset_r,
 };
 
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     limit_admin: Option<HumanAddr>,
+    shade_admins: Option<Contract>,
     global_issuance_limit: Option<Uint128>,
     global_minimum_bonding_period: Option<u64>,
     global_maximum_discount: Option<Uint128>,
@@ -57,6 +55,9 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
     config.update(|mut state| {
         if let Some(limit_admin) = limit_admin {
             state.limit_admin = limit_admin;
+        }
+        if let Some(shade_admins) = shade_admins {
+            state.shade_admin = shade_admins;
         }
         if let Some(global_issuance_limit) = global_issuance_limit {
             state.global_issuance_limit = global_issuance_limit;
@@ -110,8 +111,18 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     let cur_config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if !cur_config.admin.contains(&env.message.sender) {
-        return Err(StdError::unauthorized());
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
+        contract_address: cur_config.contract.to_string(),
+        admin_address: env.message.sender.to_string(),
+    }
+    .query(
+        &deps.querier,
+        cur_config.shade_admin.code_hash,
+        cur_config.shade_admin.address,
+    )?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(not_admin());
     }
 
     if let Some(allowance_key) = allowance_key {
@@ -165,62 +176,6 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_remove_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    admin_to_remove: HumanAddr,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-
-    if env.message.sender != config.limit_admin {
-        return Err(not_limit_admin());
-    }
-
-    // Retain only admin addresses that don't match the one to remove
-    config_w(&mut deps.storage).update(|mut state|{
-        state.admin.retain(
-            |admin| admin != &admin_to_remove,
-        );
-        Ok(state)
-    })?;
-
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveAdmin { 
-            status: ResponseStatus::Success, 
-        })?),
-    })
-}
-
-pub fn try_add_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: &Env,
-    admin_to_add: HumanAddr,
-) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
-
-    if env.message.sender != config.limit_admin {
-        return Err(not_limit_admin());
-    }
-    // Add the new admin address
-    if !config.admin.contains(&admin_to_add){
-        config_w(&mut deps.storage).update(|mut state| {
-            state.admin.push(admin_to_add);
-            Ok(state)
-        })?;
-    }
-    
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveAdmin { 
-            status: ResponseStatus::Success, 
-        })?),
-    })
-}
-
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
@@ -241,7 +196,17 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check that sender isn't an admin
-    if config.admin.contains(&sender) {
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
+        contract_address: config.contract.to_string(),
+        admin_address: sender.to_string(),
+    }
+    .query(
+        &deps.querier,
+        config.shade_admin.code_hash,
+        config.shade_admin.address,
+    )?;
+
+    if admin_response.error_msg.is_none() {
         return Err(blacklisted(sender));
     }
 
@@ -271,7 +236,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     // Load mint asset information
     let issuance_asset = issued_asset_r(&deps.storage).load()?;
 
-    // Calculate conversion of collateral to SHD
+    // Calculate conversion of deposit to SHD
     let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(
         &deps,
         deposit_amount,
@@ -279,8 +244,8 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         bond_opportunity.deposit_denom.clone(),
         issuance_asset,
         bond_opportunity.discount,
-        bond_opportunity.max_accepted_collateral_price,
-        bond_opportunity.err_collateral_price,
+        bond_opportunity.max_accepted_deposit_price,
+        bond_opportunity.err_deposit_price,
         config.global_min_accepted_issued_price,
         config.global_err_issued_price,
     )?;
@@ -297,13 +262,14 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    let mut opp = bond_opportunity_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
+    let mut opp =
+        bond_opportunity_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
     opp.amount_issued += amount_to_issue;
     bond_opportunity_w(&mut deps.storage).save(env.message.sender.to_string().as_bytes(), &opp)?;
 
     let mut messages = vec![];
 
-    // Collateral to treasury
+    // Deposit to treasury
     messages.push(send_msg(
         config.treasury.clone(),
         deposit_amount.into(),
@@ -341,7 +307,6 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
                 };
                 messages.push(msg.to_cosmos_msg(airdrop.code_hash, airdrop.address, None)?);
             }
-            
 
             Account {
                 address: sender,
@@ -480,28 +445,38 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    collateral_asset: Contract,
+    deposit_asset: Contract,
     start_time: u64,
     end_time: u64,
     bond_issuance_limit: Option<Uint128>,
     bonding_period: Option<u64>,
     discount: Option<Uint128>,
-    max_accepted_collateral_price: Uint128,
-    err_collateral_price: Uint128,
+    max_accepted_deposit_price: Uint128,
+    err_deposit_price: Uint128,
     minting_bond: bool,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if !config.admin.contains(&env.message.sender) {
-        return Err(StdError::unauthorized());
-    };
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
+        contract_address: config.contract.to_string(),
+        admin_address: env.message.sender.to_string(),
+    }
+    .query(
+        &deps.querier,
+        config.shade_admin.code_hash,
+        config.shade_admin.address,
+    )?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(not_admin());
+    }
 
     let mut messages = vec![];
 
     // Check whether previous bond for this asset exists
     match bond_opportunity_r(&deps.storage)
-        .may_load(collateral_asset.address.as_str().as_bytes())?
+        .may_load(deposit_asset.address.as_str().as_bytes())?
     {
         Some(prev_opp) => {
             let unspent = prev_opp
@@ -518,22 +493,22 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             }
         }
         None => {
-            // Save to list of current collateral addresses
-            match collateral_assets_r(&deps.storage).may_load()? {
+            // Save to list of current deposit addresses
+            match deposit_assets_r(&deps.storage).may_load()? {
                 None => {
-                    let assets = vec![collateral_asset.address.clone()];
-                    collateral_assets_w(&mut deps.storage).save(&assets)?;
-                },
+                    let assets = vec![deposit_asset.address.clone()];
+                    deposit_assets_w(&mut deps.storage).save(&assets)?;
+                }
                 Some(_assets) => {
-                    collateral_assets_w(&mut deps.storage).update(|mut assets| {
-                        assets.push(collateral_asset.address.clone());
+                    deposit_assets_w(&mut deps.storage).update(|mut assets| {
+                        assets.push(deposit_asset.address.clone());
                         Ok(assets)
                     })?;
                 }
             };
 
             // Prepare register_receive message for new asset
-            messages.push(register_receive(&env, &collateral_asset)?);
+            messages.push(register_receive(&env, &deposit_asset)?);
         }
     };
 
@@ -570,10 +545,11 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         };
 
         // Increase stored allocated_allowance by the opportunity's issuance limit
-        allocated_allowance_w(&mut deps.storage).update(|allocated| Ok(allocated.checked_add(limit)?))?;
+        allocated_allowance_w(&mut deps.storage)
+            .update(|allocated| Ok(allocated.checked_add(limit)?))?;
     }
 
-    let deposit_denom = fetch_snip20(&collateral_asset.clone(), &deps.querier)?;
+    let deposit_denom = fetch_snip20(&deposit_asset.clone(), &deps.querier)?;
 
     // Generate bond opportunity
     let bond_opportunity = BondOpportunity {
@@ -584,20 +560,21 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         discount,
         bonding_period: period,
         amount_issued: Uint128::zero(),
-        max_accepted_collateral_price,
-        err_collateral_price,
+        max_accepted_deposit_price,
+        err_deposit_price,
         minting_bond,
     };
 
     // Save bond opportunity
     bond_opportunity_w(&mut deps.storage).save(
-        collateral_asset.address.as_str().as_bytes(),
+        deposit_asset.address.as_str().as_bytes(),
         &bond_opportunity,
     )?;
 
     // Increase global total issued by bond opportunity's issuance limit
-    global_total_issued_w(&mut deps.storage)
-        .update(|global_total_issued| Ok(global_total_issued.checked_add(bond_opportunity.issuance_limit)?))?;
+    global_total_issued_w(&mut deps.storage).update(|global_total_issued| {
+        Ok(global_total_issued.checked_add(bond_opportunity.issuance_limit)?)
+    })?;
 
     // Return Success response
     Ok(HandleResponse {
@@ -611,8 +588,8 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             bond_issuance_limit: bond_opportunity.issuance_limit,
             bonding_period: bond_opportunity.bonding_period,
             discount: bond_opportunity.discount,
-            max_accepted_collateral_price: bond_opportunity.max_accepted_collateral_price,
-            err_collateral_price: bond_opportunity.err_collateral_price,
+            max_accepted_deposit_price: bond_opportunity.max_accepted_deposit_price,
+            err_deposit_price: bond_opportunity.err_deposit_price,
             minting_bond: bond_opportunity.minting_bond,
         })?),
     })
@@ -621,27 +598,37 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
 pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    collateral_asset: Contract,
+    deposit_asset: Contract,
 ) -> StdResult<HandleResponse> {
     let config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if !config.admin.contains(&env.message.sender) {
-        return Err(StdError::unauthorized());
-    };
+    let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
+        contract_address: config.contract.to_string(),
+        admin_address: env.message.sender.to_string(),
+    }
+    .query(
+        &deps.querier,
+        config.shade_admin.code_hash,
+        config.shade_admin.address,
+    )?;
+
+    if admin_response.error_msg.is_some() {
+        return Err(not_admin());
+    }
 
     // Check whether previous bond for this asset exists
 
     match bond_opportunity_r(&deps.storage)
-        .may_load(collateral_asset.address.as_str().as_bytes())?
+        .may_load(deposit_asset.address.as_str().as_bytes())?
     {
         Some(prev_opp) => {
             bond_opportunity_w(&mut deps.storage)
-                .remove(collateral_asset.address.as_str().as_bytes());
+                .remove(deposit_asset.address.as_str().as_bytes());
 
             // Remove asset from address list
-            collateral_assets_w(&mut deps.storage).update(|mut assets| {
-                assets.retain(|address| *address != collateral_asset.address);
+            deposit_assets_w(&mut deps.storage).update(|mut assets| {
+                assets.retain(|address| *address != deposit_asset.address);
                 Ok(assets)
             })?;
 
@@ -660,7 +647,7 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
         }
         None => {
             // Error out, no bond found with that deposit asset
-            return Err(no_bond_found(collateral_asset.address.as_str()));
+            return Err(no_bond_found(deposit_asset.address.as_str()));
         }
     }
 
@@ -672,7 +659,7 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ClosedBond {
             status: ResponseStatus::Success,
-            collateral_asset,
+            deposit_asset,
         })?),
     })
 }
@@ -747,28 +734,28 @@ pub fn active(
 
 pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    collateral_amount: Uint128,
+    deposit_amount: Uint128,
     available: Uint128,
-    collateral_asset: Snip20Asset,
+    deposit_asset: Snip20Asset,
     issuance_asset: Snip20Asset,
     discount: Uint128,
-    max_accepted_collateral_price: Uint128,
-    err_collateral_price: Uint128,
+    max_accepted_deposit_price: Uint128,
+    err_deposit_price: Uint128,
     min_accepted_issued_price: Uint128,
     err_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
     let mut disc = discount;
-    let mut collateral_price = oracle(&deps, collateral_asset.token_info.symbol.clone())?; // Placeholder for Oracle lookup
-    if collateral_price > max_accepted_collateral_price {
-        if collateral_price > err_collateral_price {
-            return Err(collateral_price_exceeds_limit(
-                collateral_price.clone(),
-                err_collateral_price.clone(),
+    let mut deposit_price = oracle(&deps, deposit_asset.token_info.symbol.clone())?;
+    if deposit_price > max_accepted_deposit_price {
+        if deposit_price > err_deposit_price {
+            return Err(deposit_price_exceeds_limit(
+                deposit_price.clone(),
+                err_deposit_price.clone(),
             ));
         }
-        collateral_price = max_accepted_collateral_price;
+        deposit_price = max_accepted_deposit_price;
     }
-    let mut issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?; // Placeholder for minted asset price lookup
+    let mut issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?;
     if issued_price < err_issued_price {
         return Err(issued_price_below_minimum(
             issued_price.clone(),
@@ -780,9 +767,9 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
         issued_price = min_accepted_issued_price;
     }
     let (issued_amount, discount_price) = calculate_issuance(
-        collateral_price.clone(),
-        collateral_amount,
-        collateral_asset.token_info.decimals,
+        deposit_price.clone(),
+        deposit_amount,
+        deposit_asset.token_info.decimals,
         issued_price,
         issuance_asset.token_info.decimals,
         disc,
@@ -793,27 +780,27 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     }
     Ok((
         issued_amount,
-        collateral_price,
+        deposit_price,
         issued_price,
         discount_price,
     ))
 }
 
 pub fn calculate_issuance(
-    collateral_price: Uint128,
-    collateral_amount: Uint128,
-    collateral_decimals: u8,
+    deposit_price: Uint128,
+    deposit_amount: Uint128,
+    deposit_decimals: u8,
     issued_price: Uint128,
     issued_decimals: u8,
     discount: Uint128,
     min_accepted_issued_price: Uint128,
 ) -> (Uint128, Uint128) {
     // Math must be done in integers
-    // collateral_decimals  = x
+    // deposit_decimals  = x
     // issued_decimals = y
-    // collateral_price     = p1 * 10^18
+    // deposit_price     = p1 * 10^18
     // issued_price = p2 * 10^18
-    // collateral_amount    = a1 * 10^x
+    // deposit_amount    = a1 * 10^x
     // issued_amount       = a2 * 10^y
     // discount            = d1 * 10^18
 
@@ -827,11 +814,15 @@ pub fn calculate_issuance(
     if discount_price < min_accepted_issued_price {
         discount_price = min_accepted_issued_price
     }
-    let issued_amount = collateral_amount.multiply_ratio(collateral_price, discount_price);
-    let difference: i32 = i32::from(issued_decimals).checked_sub(i32::from(collateral_decimals)).unwrap();
+    let issued_amount = deposit_amount.multiply_ratio(deposit_price, discount_price);
+    let difference: i32 = i32::from(issued_decimals)
+        .checked_sub(i32::from(deposit_decimals))
+        .unwrap();
     match difference.cmp(&0) {
         Ordering::Greater => (
-            issued_amount.checked_mul(Uint128::new(10u128.pow(u32::try_from(difference).unwrap()))).unwrap(),
+            issued_amount
+                .checked_mul(Uint128::new(10u128.pow(u32::try_from(difference).unwrap())))
+                .unwrap(),
             discount_price,
         ),
         Ordering::Less => (
@@ -864,13 +855,15 @@ pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> 
 
 pub fn oracle<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    symbol: String,
+    key: String,
 ) -> StdResult<Uint128> {
     let config: Config = config_r(&deps.storage).load()?;
-    let answer: ReferenceData = Price { symbol }.query(
+    let answer: OraclePrice = GetPrice { key }.query(
         &deps.querier,
         config.oracle.code_hash,
         config.oracle.address,
     )?;
-    Ok(Uint128::from(answer.rate))
+
+    // From wasn't working, so here's a fix
+    Ok(Uint128::new(answer.data.rate.u128()))
 }
