@@ -233,6 +233,7 @@ pub trait MultiTestable {
     fn get_info(&self) -> &ContractInfo;
     fn contract(&self) -> Box<dyn MultiContract<Empty>>;
     fn new(info: ContractInfo) -> Self;
+    fn default() -> Self;
 }
 
 #[cfg(test)]
