@@ -28,7 +28,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     let state = Config {
-        shade_admin: msg.shade_admin,
+        admin: msg.admin,
         shd_token: msg.shd_token.clone(),
         silk_token: msg.silk_token.clone(),
         sscrt_token: msg.sscrt_token.clone(),
@@ -84,7 +84,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::UpdateConfig {
-            shade_admin,
+            admin,
             shd_token,
             silk_token,
             sscrt_token,
@@ -94,7 +94,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::try_update_config(
             deps,
             env,
-            shade_admin,
+            admin,
             shd_token,
             silk_token,
             sscrt_token,

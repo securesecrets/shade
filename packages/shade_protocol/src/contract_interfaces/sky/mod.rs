@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub shade_admin: Contract,
+    pub admin: HumanAddr,
     pub shd_token: Contract,
     pub silk_token: Contract,
     pub sscrt_token: Contract,
@@ -54,7 +54,7 @@ impl ItemStorage for Cycles {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    pub shade_admin: Contract,
+    pub admin: HumanAddr,
     pub shd_token: Contract,
     pub silk_token: Contract,
     pub sscrt_token: Contract,
@@ -71,7 +71,7 @@ impl InitCallback for InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     UpdateConfig {
-        shade_admin: Option<Contract>,
+        admin: Option<HumanAddr>,
         shd_token: Option<Contract>,
         silk_token: Option<Contract>,
         sscrt_token: Option<Contract>,

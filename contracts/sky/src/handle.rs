@@ -1,5 +1,4 @@
 use crate::query::{any_cycles_profitable, cycle_profitability};
-use shade_admin::admin::{self, ValidateAdminPermissionResponse};
 use shade_protocol::{
     c_std::{
         self,
@@ -22,14 +21,13 @@ use shade_protocol::{
             Config,
             Cycles,
             HandleAnswer,
-            SelfAddr,
             ViewingKeys,
         },
     },
     math_compat::{Decimal, Uint128},
     secret_toolkit::{
         snip20::{send_msg, set_viewing_key_msg},
-        utils::{HandleCallback, Query},
+        utils::HandleCallback,
     },
     utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
@@ -37,7 +35,7 @@ use shade_protocol::{
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    shade_admin: Option<Contract>,
+    admin: Option<HumanAddr>,
     shd_token: Option<Contract>,
     silk_token: Option<Contract>,
     sscrt_token: Option<Contract>,
@@ -46,25 +44,14 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     //Admin-only
     let mut config = Config::load(&mut deps.storage)?;
-    let admin_response: ValidateAdminPermissionResponse =
-        admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
-            admin_address: env.message.sender.to_string(),
-        }
-        .query(
-            &deps.querier,
-            config.shade_admin.code_hash.clone(),
-            config.shade_admin.address.clone(),
-        )?;
-
-    if admin_response.error_msg.is_some() {
+    if !(env.message.sender == config.admin) {
         return Err(StdError::unauthorized());
     }
 
     let mut messages = vec![];
 
-    if let Some(shade_admin) = shade_admin {
-        config.shade_admin = shade_admin;
+    if let Some(admin) = admin {
+        config.admin = admin;
     }
     if let Some(shd_token) = shd_token {
         config.shd_token = shd_token;
@@ -119,15 +106,8 @@ pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
     cycles_to_set: Vec<Cycle>,
 ) -> StdResult<HandleResponse> {
     //Admin-only
-    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
-    let admin_response: ValidateAdminPermissionResponse =
-        admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
-            admin_address: env.message.sender.to_string(),
-        }
-        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
-
-    if admin_response.error_msg.is_some() {
+    let admin = Config::load(&mut deps.storage)?.admin;
+    if !(env.message.sender == admin) {
         return Err(StdError::unauthorized());
     }
 
@@ -156,15 +136,8 @@ pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
     cycles_to_add: Vec<Cycle>,
 ) -> StdResult<HandleResponse> {
     //Admin-only
-    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
-    let admin_response: ValidateAdminPermissionResponse =
-        admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
-            admin_address: env.message.sender.to_string(),
-        }
-        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
-
-    if admin_response.error_msg.is_some() {
+    let admin = Config::load(&mut deps.storage)?.admin;
+    if !(env.message.sender == admin) {
         return Err(StdError::unauthorized());
     }
 
@@ -197,15 +170,8 @@ pub fn try_update_cycle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let i = index.u128() as usize;
     // Admin-only
-    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
-    let admin_response: ValidateAdminPermissionResponse =
-        admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
-            admin_address: env.message.sender.to_string(),
-        }
-        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
-
-    if admin_response.error_msg.is_some() {
+    let admin = Config::load(&mut deps.storage)?.admin;
+    if !(env.message.sender == admin) {
         return Err(StdError::unauthorized());
     }
 
@@ -231,15 +197,8 @@ pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let i = index.u128() as usize;
     //Admin-only
-    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
-    let admin_response: ValidateAdminPermissionResponse =
-        admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
-            admin_address: env.message.sender.to_string(),
-        }
-        .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
-
-    if admin_response.error_msg.is_some() {
+    let admin = Config::load(&mut deps.storage)?.admin;
+    if !(env.message.sender == admin) {
         return Err(StdError::unauthorized());
     }
 
