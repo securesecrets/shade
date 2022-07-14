@@ -22,55 +22,55 @@ pub static ASSET_PATH: &[u8] = b"asset_path";
 pub static FINAL_ASSET: &[u8] = b"final_asset";
 pub static USER: &[u8] = b"user";
 
-pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
+pub fn config_w(storage: &mut dyn Storage) -> Singleton<Config> {
     singleton(storage, CONFIG)
 }
 
-pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Config> {
+pub fn config_r(storage: &dyn Storage) -> ReadonlySingleton<Config> {
     singleton_read(storage, CONFIG)
 }
 
-pub fn registered_asset_w<S: Storage>(storage: &mut S) -> Bucket<S, Contract> {
-    bucket(REGISTERED_ASSETS, storage)
+pub fn registered_asset_w(storage: &mut dyn Storage) -> Bucket<Contract> {
+    bucket(storage, REGISTERED_ASSETS)
 }
 
-pub fn registered_asset_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Contract> {
-    bucket_read(REGISTERED_ASSETS, storage)
+pub fn registered_asset_r(storage: &dyn Storage) -> ReadonlyBucket<Contract> {
+    bucket_read(storage, REGISTERED_ASSETS)
 }
 
 /* Given a snip20 asset, gives the mint contract
  * furthest down the path
  */
-pub fn asset_path_w<S: Storage>(storage: &mut S) -> Bucket<S, Contract> {
-    bucket(ASSET_PATH, storage)
+pub fn asset_path_w(storage: &mut dyn Storage) -> Bucket<Contract> {
+    bucket(storage, ASSET_PATH)
 }
 
-pub fn asset_path_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Contract> {
-    bucket_read(ASSET_PATH, storage)
+pub fn asset_path_r(storage: &dyn Storage) -> ReadonlyBucket<Contract> {
+    bucket_read(storage, ASSET_PATH)
 }
 
-pub fn final_asset_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
+pub fn final_asset_w(storage: &mut dyn Storage) -> Singleton<Addr> {
     singleton(storage, FINAL_ASSET)
 }
 
-pub fn final_asset_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Addr> {
+pub fn final_asset_r(storage: &dyn Storage) -> ReadonlySingleton<Addr> {
     singleton_read(storage, FINAL_ASSET)
 }
 
-pub fn current_assets_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Contract>> {
+pub fn current_assets_w(storage: &mut dyn Storage) -> Singleton<Vec<Contract>> {
     singleton(storage, CURRENT_ASSETS)
 }
 
-pub fn current_assets_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<Contract>> {
+pub fn current_assets_r(storage: &dyn Storage) -> ReadonlySingleton<Vec<Contract>> {
     singleton_read(storage, CURRENT_ASSETS)
 }
 
 /* Needs to track the originating user across receive calls
  */
-pub fn user_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
+pub fn user_w(storage: &mut dyn Storage) -> Singleton<Addr> {
     singleton(storage, USER)
 }
 
-pub fn user_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Addr> {
+pub fn user_r(storage: &dyn Storage) -> ReadonlySingleton<Addr> {
     singleton_read(storage, USER)
 }

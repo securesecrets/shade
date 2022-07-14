@@ -19,12 +19,12 @@ use shade_protocol::storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
 
 pub static PRICE: &[u8] = b"prices";
 
-pub fn price_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Uint128> {
-    bucket_read(PRICE, storage)
+pub fn price_r(storage: &dyn Storage) -> ReadonlyBucket<Uint128> {
+    bucket_read(storage, PRICE)
 }
 
-pub fn price_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
-    bucket(PRICE, storage)
+pub fn price_w(storage: &mut dyn Storage) -> Bucket<Uint128> {
+    bucket(storage, PRICE)
 }
 
 pub fn init(
@@ -47,13 +47,8 @@ pub fn handle(
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     return match msg {
-<<<<<<< HEAD
-        ExecuteMsg::MockPrice { symbol, price } => {
-            price_w(&mut deps.storage).save(symbol.as_bytes(), &price)?;
-=======
         ExecuteMsg::MockPrice { symbol, price } => {
             price_w(deps.storage).save(symbol.as_bytes(), &price)?;
->>>>>>> 4cc0040ff51de7d93926d0bc36b661da9587f07b
             Ok(Response::default())
         }
     };

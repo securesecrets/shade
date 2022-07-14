@@ -111,7 +111,7 @@ struct StoredLegacyTransfer {
 }
 
 impl StoredLegacyTransfer {
-    pub fn into_humanized<A: Api>(self, api: &A) -> StdResult<Tx> {
+    pub fn into_humanized(self, api: &dyn Api) -> StdResult<Tx> {
         let tx = Tx {
             id: self.id,
             from: api.human_address(&self.from)?,
@@ -269,7 +269,7 @@ impl StoredTxAction {
         }
     }
 
-    fn into_humanized<A: Api>(self, api: &A) -> StdResult<TxAction> {
+    fn into_humanized(self, api: &dyn Api) -> StdResult<TxAction> {
         let transfer_addr_err = || {
             StdError::generic_err(
                 "Missing address in stored Transfer transaction. Storage is corrupt",
@@ -381,7 +381,7 @@ impl StoredRichTx {
         }
     }
 
-    fn into_humanized<A: Api>(self, api: &A) -> StdResult<RichTx> {
+    fn into_humanized(self, api: &dyn Api) -> StdResult<RichTx> {
         Ok(RichTx {
             id: self.id,
             action: self.action.into_humanized(api)?,
@@ -407,7 +407,7 @@ impl StoredRichTx {
 
 // Storage functions:
 
-fn increment_tx_count<S: Storage>(store: &mut S) -> StdResult<u64> {
+fn increment_tx_count(store: &mut S) -> StdResult<u64> {
     let mut config = Config::from_storage(store);
     let id = config.tx_count() + 1;
     config.set_tx_count(id)?;
@@ -415,7 +415,7 @@ fn increment_tx_count<S: Storage>(store: &mut S) -> StdResult<u64> {
 }
 
 #[allow(clippy::too_many_arguments)] // We just need them
-pub fn store_transfer<S: Storage>(
+pub fn store_transfer(
     store: &mut S,
     owner: &CanonicalAddr,
     sender: &CanonicalAddr,
@@ -462,7 +462,7 @@ pub fn store_transfer<S: Storage>(
     Ok(())
 }
 
-pub fn store_mint<S: Storage>(
+pub fn store_mint(
     store: &mut S,
     minter: &CanonicalAddr,
     recipient: &CanonicalAddr,
@@ -487,7 +487,7 @@ pub fn store_mint<S: Storage>(
     Ok(())
 }
 
-pub fn store_burn<S: Storage>(
+pub fn store_burn(
     store: &mut S,
     owner: &CanonicalAddr,
     burner: &CanonicalAddr,
@@ -512,7 +512,7 @@ pub fn store_burn<S: Storage>(
     Ok(())
 }
 
-pub fn store_stake<S: Storage>(
+pub fn store_stake(
     store: &mut S,
     staker: &CanonicalAddr,
     amount: Uint128,
@@ -533,7 +533,7 @@ pub fn store_stake<S: Storage>(
     Ok(())
 }
 
-pub fn store_add_reward<S: Storage>(
+pub fn store_add_reward(
     store: &mut S,
     staker: &CanonicalAddr,
     amount: Uint128,
@@ -554,7 +554,7 @@ pub fn store_add_reward<S: Storage>(
     Ok(())
 }
 
-pub fn store_fund_unbond<S: Storage>(
+pub fn store_fund_unbond(
     store: &mut S,
     staker: &CanonicalAddr,
     amount: Uint128,
@@ -575,7 +575,7 @@ pub fn store_fund_unbond<S: Storage>(
     Ok(())
 }
 
-pub fn store_unbond<S: Storage>(
+pub fn store_unbond(
     store: &mut S,
     staker: &CanonicalAddr,
     amount: Uint128,
@@ -596,7 +596,7 @@ pub fn store_unbond<S: Storage>(
     Ok(())
 }
 
-pub fn store_claim_unbond<S: Storage>(
+pub fn store_claim_unbond(
     store: &mut S,
     staker: &CanonicalAddr,
     amount: Uint128,
@@ -617,7 +617,7 @@ pub fn store_claim_unbond<S: Storage>(
     Ok(())
 }
 
-pub fn store_claim_reward<S: Storage>(
+pub fn store_claim_reward(
     store: &mut S,
     staker: &CanonicalAddr,
     amount: Uint128,
@@ -638,7 +638,7 @@ pub fn store_claim_reward<S: Storage>(
     Ok(())
 }
 
-fn append_tx<S: Storage>(
+fn append_tx(
     store: &mut S,
     tx: &StoredRichTx,
     for_address: &CanonicalAddr,
@@ -648,7 +648,7 @@ fn append_tx<S: Storage>(
     store.push(tx)
 }
 
-fn append_transfer<S: Storage>(
+fn append_transfer(
     store: &mut S,
     tx: &StoredLegacyTransfer,
     for_address: &CanonicalAddr,
@@ -659,7 +659,7 @@ fn append_transfer<S: Storage>(
 }
 
 pub fn get_txs<A: Api, S: ReadonlyStorage>(
-    api: &A,
+    api: &dyn Api,
     storage: &dyn Storage,
     for_address: &CanonicalAddr,
     page: u32,
@@ -692,7 +692,7 @@ pub fn get_txs<A: Api, S: ReadonlyStorage>(
 }
 
 pub fn get_transfers<A: Api, S: ReadonlyStorage>(
-    api: &A,
+    api: &dyn Api,
     storage: &dyn Storage,
     for_address: &CanonicalAddr,
     page: u32,

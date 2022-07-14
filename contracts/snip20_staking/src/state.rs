@@ -45,7 +45,7 @@ pub struct Constants {
     pub contract_address: Addr,
 }
 
-pub struct ReadonlyConfig<'a, S: ReadonlyStorage> {
+pub struct ReadonlyConfig<'a> {
     storage: ReadonlyPrefixedStorage<'a>,
 }
 
@@ -308,7 +308,7 @@ impl Allowance {
     }
 }
 
-pub fn read_allowance<S: Storage>(
+pub fn read_allowance(
     store: &dyn Storage,
     owner: &CanonicalAddr,
     spender: &CanonicalAddr,
@@ -320,7 +320,7 @@ pub fn read_allowance<S: Storage>(
     allowance.map(Option::unwrap_or_default)
 }
 
-pub fn write_allowance<S: Storage>(
+pub fn write_allowance(
     store: &mut S,
     owner: &CanonicalAddr,
     spender: &CanonicalAddr,
@@ -335,12 +335,12 @@ pub fn write_allowance<S: Storage>(
 
 // Viewing Keys
 
-pub fn write_viewing_key<S: Storage>(store: &mut S, owner: &CanonicalAddr, key: &ViewingKey) {
+pub fn write_viewing_key(store: &mut S, owner: &CanonicalAddr, key: &ViewingKey) {
     let mut balance_store = PrefixedStorage::new(PREFIX_VIEW_KEY, store);
     balance_store.set(owner.as_slice(), &key.to_hashed());
 }
 
-pub fn read_viewing_key<S: Storage>(store: &dyn Storage, owner: &CanonicalAddr) -> Option<Vec<u8>> {
+pub fn read_viewing_key(store: &dyn Storage, owner: &CanonicalAddr) -> Option<Vec<u8>> {
     let balance_store = ReadonlyPrefixedStorage::new(PREFIX_VIEW_KEY, store);
     balance_store.get(owner.as_slice())
 }
@@ -358,7 +358,7 @@ pub fn get_receiver_hash<S: ReadonlyStorage>(
     })
 }
 
-pub fn set_receiver_hash<S: Storage>(store: &mut S, account: &Addr, code_hash: String) {
+pub fn set_receiver_hash(store: &mut S, account: &Addr, code_hash: String) {
     let mut store = PrefixedStorage::new(PREFIX_RECEIVERS, store);
     store.set(account.as_str().as_bytes(), code_hash.as_bytes());
 }

@@ -17,42 +17,42 @@ pub static VIEWING_KEY: &[u8] = b"viewing_key";
 pub static ASSETS: &[u8] = b"assets";
 pub static ASSET: &[u8] = b"asset";
 
-pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, rewards_emission::Config> {
+pub fn config_w(storage: &mut dyn Storage) -> Singleton<rewards_emission::Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, rewards_emission::Config> {
+pub fn config_r(storage: &dyn Storage) -> ReadonlySingleton<rewards_emission::Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
+pub fn self_address_w(storage: &mut dyn Storage) -> Singleton<Addr> {
     singleton(storage, SELF_ADDRESS)
 }
 
-pub fn self_address_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Addr> {
+pub fn self_address_r(storage: &dyn Storage) -> ReadonlySingleton<Addr> {
     singleton_read(storage, SELF_ADDRESS)
 }
 
-pub fn viewing_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
+pub fn viewing_key_w(storage: &mut dyn Storage) -> Singleton<String> {
     singleton(storage, VIEWING_KEY)
 }
 
-pub fn viewing_key_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, String> {
+pub fn viewing_key_r(storage: &dyn Storage) -> ReadonlySingleton<String> {
     singleton_read(storage, VIEWING_KEY)
 }
 
-pub fn assets_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<Addr>> {
+pub fn assets_r(storage: &dyn Storage) -> ReadonlySingleton<Vec<Addr>> {
     singleton_read(storage, ASSETS)
 }
 
-pub fn assets_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Addr>> {
+pub fn assets_w(storage: &mut dyn Storage) -> Singleton<Vec<Addr>> {
     singleton(storage, ASSETS)
 }
 
-pub fn asset_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Snip20Asset> {
-    bucket_read(ASSET, storage)
+pub fn asset_r(storage: &dyn Storage) -> ReadonlyBucket<Snip20Asset> {
+    bucket_read(storage, ASSET)
 }
 
-pub fn asset_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
-    bucket(ASSET, storage)
+pub fn asset_w(storage: &mut dyn Storage) -> Bucket<Snip20Asset> {
+    bucket(storage, ASSET)
 }

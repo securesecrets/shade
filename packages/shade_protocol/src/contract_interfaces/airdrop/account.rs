@@ -61,7 +61,7 @@ pub struct EmptyMsg {}
 // Used to prove ownership over IBC addresses
 pub type AddressProofPermit = Permit<FillerMsg>;
 
-pub fn authenticate_ownership<A: Api>(api: &A, permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
+pub fn authenticate_ownership(api: &dyn Api, permit: &AddressProofPermit, permit_address: &str) -> StdResult<()> {
     let signer_address = permit
         .validate(api, Some("wasm/MsgExecuteContract".to_string()))?
         .as_canonical();

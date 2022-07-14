@@ -1,4 +1,4 @@
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{Deps, Uint128};
 use shade_protocol::c_std::{
     from_binary,
     Api,
@@ -42,98 +42,98 @@ pub static USER_TOTAL_CLAIMED_KEY: &[u8] = b"user_total_claimed";
 pub static ACCOUNT_PERMIT_KEY: &str = "account_permit_key";
 pub static ACCOUNT_VIEWING_KEY: &[u8] = b"account_viewing_key";
 
-pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
+pub fn config_w(storage: &mut dyn Storage) -> Singleton<Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Config> {
+pub fn config_r(storage: &dyn Storage) -> ReadonlySingleton<Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn decay_claimed_w<S: Storage>(storage: &mut S) -> Singleton<S, bool> {
+pub fn decay_claimed_w(storage: &mut dyn Storage) -> Singleton<bool> {
     singleton(storage, DECAY_CLAIMED_KEY)
 }
 
-pub fn decay_claimed_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, bool> {
+pub fn decay_claimed_r(storage: &dyn Storage) -> ReadonlySingleton<bool> {
     singleton_read(storage, DECAY_CLAIMED_KEY)
 }
 
 // Is address added to an account
-pub fn address_in_account_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, bool> {
-    bucket_read(REWARD_IN_ACCOUNT_KEY, storage)
+pub fn address_in_account_r(storage: &dyn Storage) -> ReadonlyBucket<bool> {
+    bucket_read(storage, REWARD_IN_ACCOUNT_KEY)
 }
 
-pub fn address_in_account_w<S: Storage>(storage: &mut S) -> Bucket<S, bool> {
-    bucket(REWARD_IN_ACCOUNT_KEY, storage)
+pub fn address_in_account_w(storage: &mut dyn Storage) -> Bucket<bool> {
+    bucket(storage, REWARD_IN_ACCOUNT_KEY)
 }
 
 // airdrop account
-pub fn account_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Account> {
-    bucket_read(ACCOUNTS_KEY, storage)
+pub fn account_r(storage: &dyn Storage) -> ReadonlyBucket<Account> {
+    bucket_read(storage, ACCOUNTS_KEY)
 }
 
-pub fn account_w<S: Storage>(storage: &mut S) -> Bucket<S, Account> {
-    bucket(ACCOUNTS_KEY, storage)
+pub fn account_w(storage: &mut dyn Storage) -> Bucket<Account> {
+    bucket(storage, ACCOUNTS_KEY)
 }
 
 // If not found then its unrewarded; if true then claimed
-pub fn claim_status_r<S: Storage>(storage: &dyn Storage, index: usize) -> ReadonlyBucket<S, bool> {
+pub fn claim_status_r(storage: &dyn Storage, index: usize) -> ReadonlyBucket<bool> {
     let mut key = CLAIM_STATUS_KEY.to_vec();
     key.push(index as u8);
-    bucket_read(&key, storage)
+    bucket_read(storage, &key)
 }
 
-pub fn claim_status_w<S: Storage>(storage: &mut S, index: usize) -> Bucket<S, bool> {
+pub fn claim_status_w(storage: &mut dyn Storage, index: usize) -> Bucket<bool> {
     let mut key = CLAIM_STATUS_KEY.to_vec();
     key.push(index as u8);
-    bucket(&key, storage)
+    bucket(storage, &key)
 }
 
 // Total claimed
-pub fn total_claimed_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Uint128> {
+pub fn total_claimed_r(storage: &dyn Storage) -> ReadonlySingleton<Uint128> {
     singleton_read(storage, TOTAL_CLAIMED_KEY)
 }
 
-pub fn total_claimed_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
+pub fn total_claimed_w(storage: &mut dyn Storage) -> Singleton<Uint128> {
     singleton(storage, TOTAL_CLAIMED_KEY)
 }
 
 // Total account claimed
-pub fn account_total_claimed_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Uint128> {
-    bucket_read(USER_TOTAL_CLAIMED_KEY, storage)
+pub fn account_total_claimed_r(storage: &dyn Storage) -> ReadonlyBucket<Uint128> {
+    bucket_read(storage, USER_TOTAL_CLAIMED_KEY)
 }
 
-pub fn account_total_claimed_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
-    bucket(USER_TOTAL_CLAIMED_KEY, storage)
+pub fn account_total_claimed_w(storage: &mut dyn Storage) -> Bucket<Uint128> {
+    bucket(storage, USER_TOTAL_CLAIMED_KEY)
 }
 
 // Account viewing key
-pub fn account_viewkey_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, [u8; 32]> {
-    bucket_read(ACCOUNT_VIEWING_KEY, storage)
+pub fn account_viewkey_r(storage: &dyn Storage) -> ReadonlyBucket<[u8; 32]> {
+    bucket_read(storage, ACCOUNT_VIEWING_KEY)
 }
 
-pub fn account_viewkey_w<S: Storage>(storage: &mut S) -> Bucket<S, [u8; 32]> {
-    bucket(ACCOUNT_VIEWING_KEY, storage)
+pub fn account_viewkey_w(storage: &mut dyn Storage) -> Bucket<[u8; 32]> {
+    bucket(storage, ACCOUNT_VIEWING_KEY)
 }
 
 // Account permit key
-pub fn account_permit_key_r<S: Storage>(storage: &dyn Storage, account: String) -> ReadonlyBucket<S, bool> {
+pub fn account_permit_key_r(storage: &dyn Storage, account: String) -> ReadonlyBucket<bool> {
     let key = ACCOUNT_PERMIT_KEY.to_string() + &account;
-    bucket_read(key.as_bytes(), storage)
+    bucket_read(storage, key.as_bytes())
 }
 
-pub fn account_permit_key_w<S: Storage>(storage: &mut S, account: String) -> Bucket<S, bool> {
+pub fn account_permit_key_w(storage: &mut dyn Storage, account: String) -> Bucket<bool> {
     let key = ACCOUNT_PERMIT_KEY.to_string() + &account;
-    bucket(key.as_bytes(), storage)
+    bucket(storage, key.as_bytes())
 }
 
-pub fn revoke_permit<S: Storage>(storage: &mut S, account: String, permit_key: String) {
+pub fn revoke_permit(storage: &mut dyn Storage, account: String, permit_key: String) {
     account_permit_key_w(storage, account)
         .save(permit_key.as_bytes(), &false)
         .unwrap();
 }
 
-pub fn is_permit_revoked<S: Storage>(
+pub fn is_permit_revoked(
     storage: &dyn Storage,
     account: String,
     permit_key: String,
@@ -150,7 +150,7 @@ pub fn is_permit_revoked<S: Storage>(
 
 pub fn validate_address_permit<S: Storage, A: Api>(
     storage: &dyn Storage,
-    api: &A,
+    api: &dyn Api,
     permit: &AddressProofPermit,
     params: &AddressProofMsg,
     contract: Addr,
