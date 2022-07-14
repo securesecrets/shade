@@ -31,8 +31,7 @@ pub fn try_update_config(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig{
             status: true,
-        })?),
-    })
+        })?))
 }
 
 /*pub fn try_arbitrage_event( //DEPRECIATED

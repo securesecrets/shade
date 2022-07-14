@@ -80,8 +80,7 @@ pub fn receive(
         data: Some(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,
             validator,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_update_config(
@@ -98,13 +97,9 @@ pub fn try_update_config(
     // Save new info
     config_w(deps.storage).save(&config)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 /* Claim rewards and restake, hold enough for pending unbondings
@@ -152,13 +147,9 @@ pub fn update(
         }));
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Update {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Update {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn unbond(
@@ -291,14 +282,10 @@ pub fn unbond(
 
     unbonding_w(deps.storage).save(&unbonding)?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: unbonding,
-        })?),
-    })
+        })?))
 }
 
 pub fn withdraw_rewards(
@@ -388,14 +375,10 @@ pub fn claim(
 
     unbonding_w(deps.storage).update(|u| Ok((u - claim_amount)?))?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,
             amount: claim_amount,
-        })?),
-    })
+        })?))
 }
 
 pub fn choose_validator(

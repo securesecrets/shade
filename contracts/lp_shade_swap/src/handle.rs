@@ -60,13 +60,9 @@ pub fn receive(
      * deposit into rewards pool
      */
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Receive {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 
@@ -84,13 +80,9 @@ pub fn try_update_config(
     // Save new info
     config_w(deps.storage).save(&config)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 /* Claim rewards and restake, hold enough for pending unbondings
@@ -118,13 +110,9 @@ pub fn update(
      *
      * Else send direct to treasury e.g. sSCRT/sETH w/ SHD rewards
      */
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Update {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Update {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn unbond(
@@ -165,14 +153,10 @@ pub fn unbond(
 
     unbonding_w(deps.storage).update(asset.as_str().as_bytes(), |u| Ok(u.unwrap_or_else(|| Uint128::zero()) + amount))?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: amount,
-        })?),
-    })
+        })?))
 }
 
 pub fn claim(
@@ -207,12 +191,8 @@ pub fn claim(
 
     unbonding_w(deps.storage).update(asset.as_str().as_bytes(), |u| Ok((u.unwrap() - claim_amount)?))?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,
             amount: claim_amount,
-        })?),
-    })
+        })?))
 }

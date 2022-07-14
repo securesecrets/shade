@@ -38,13 +38,9 @@ pub fn try_set_distributors_status(
 
     DistributorsEnabled(enabled).save(deps.storage)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetDistributorsStatus {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetDistributorsStatus {
             status: Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_add_distributors(
@@ -60,13 +56,9 @@ pub fn try_add_distributors(
     distributors.0.extend(new_distributors);
     distributors.save(deps.storage)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddDistributors {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddDistributors {
             status: Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_set_distributors(
@@ -80,13 +72,9 @@ pub fn try_set_distributors(
 
     Distributors(distributors).save(deps.storage)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetDistributors {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetDistributors {
             status: Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn distributors(deps: Deps) -> StdResult<Binary> {

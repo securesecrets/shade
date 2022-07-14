@@ -119,14 +119,10 @@ pub fn receive(
         input_asset.address.clone(),
     )?);
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Mint {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Mint {
             status: ResponseStatus::Success,
             amount,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_update_config(
@@ -149,13 +145,9 @@ pub fn try_update_config(
 
     config_w(deps.storage).save(&config)?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn build_path(

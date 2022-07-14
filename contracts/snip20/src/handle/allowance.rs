@@ -106,11 +106,7 @@ pub fn try_transfer_from(
         &env.block
     )?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::TransferFrom { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::TransferFrom { status: Success })?))
 }
 
 pub fn try_batch_transfer_from(
@@ -133,13 +129,9 @@ pub fn try_batch_transfer_from(
         )?;
     }
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BatchTransferFrom {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchTransferFrom {
             status: Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_send_from(
@@ -168,11 +160,7 @@ pub fn try_send_from(
         &env.block
     )?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SendFrom { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SendFrom { status: Success })?))
 }
 
 pub fn try_batch_send_from(

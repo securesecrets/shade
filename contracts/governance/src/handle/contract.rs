@@ -46,13 +46,9 @@ pub fn try_add_contract(
     }
     .save(deps.storage, &id)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddContract {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddContract {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_set_contract(
@@ -103,13 +99,9 @@ pub fn try_set_contract(
 
     allowed_contract.save(deps.storage, &id)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddContract {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddContract {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_add_contract_assemblies(
@@ -144,11 +136,7 @@ pub fn try_add_contract_assemblies(
 
     AllowedContract::save_data(deps.storage, &id, allowed_contract)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddContract {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddContract {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }

@@ -216,14 +216,10 @@ pub fn try_burn(
         mint_asset.contract.address,
     )?);
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Mint {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Mint {
             status: ResponseStatus::Success,
             amount: amount_to_mint,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_limit_refresh(
@@ -317,13 +313,9 @@ pub fn try_update_config(
 
     config_w(deps.storage).save(&config)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_register_asset(
@@ -393,13 +385,9 @@ pub fn try_register_asset(
     // Register contract in asset
     let messages = vec![register_receive(env, contract)?];
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterAsset {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RegisterAsset {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_remove_asset(
@@ -420,13 +408,9 @@ pub fn try_remove_asset(
 
     // We wont remove the total burned since we want to keep track of all the burned assets
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveAsset {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RemoveAsset {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> {

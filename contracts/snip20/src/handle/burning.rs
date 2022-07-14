@@ -50,11 +50,7 @@ pub fn try_burn(
         &env.block,
     )?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Burn { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Burn { status: Success })?))
 }
 
 pub fn try_burn_from(
@@ -87,11 +83,7 @@ pub fn try_burn_from(
         &env.block,
     )?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BurnFrom { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::BurnFrom { status: Success })?))
 }
 
 pub fn try_batch_burn_from(
@@ -136,9 +128,5 @@ pub fn try_batch_burn_from(
 
     supply.save(deps.storage)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BatchBurnFrom { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchBurnFrom { status: Success })?))
 }

@@ -71,13 +71,9 @@ pub fn try_assembly_vote(
     Proposal::save_assembly_vote(deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_assembly_votes(deps.storage, &proposal, &tally.checked_add(&vote)?)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AssemblyVote {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AssemblyVote {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_assembly_proposal(
@@ -189,13 +185,9 @@ pub fn try_assembly_proposal(
     let prop_id = ID::add_proposal(deps.storage)?;
     prop.save(deps.storage, &prop_id)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AssemblyProposal {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AssemblyProposal {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_add_assembly(
@@ -225,13 +217,9 @@ pub fn try_add_assembly(
     }
     .save(deps.storage, &id)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddAssembly {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddAssembly {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_set_assembly(
@@ -274,11 +262,7 @@ pub fn try_set_assembly(
 
     assembly.save(deps.storage, &id)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetAssembly {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetAssembly {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }

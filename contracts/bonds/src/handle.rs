@@ -80,13 +80,9 @@ pub fn try_update_limit_config(
         }
     }
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateLimitConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateLimitConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_update_config(
@@ -164,13 +160,9 @@ pub fn try_update_config(
         Ok(state)
     })?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_deposit(
@@ -348,16 +340,12 @@ pub fn try_deposit(
     }
 
     // Return Success response
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Deposit {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Deposit {
             status: ResponseStatus::Success,
             deposit_amount: new_bond.deposit_amount,
             pending_claim_amount: new_bond.claim_amount,
             end_date: new_bond.end_time,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_claim(
@@ -429,14 +417,10 @@ pub fn try_claim(
     )?);
 
     // Return Success response
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Claim {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Claim {
             status: ResponseStatus::Success,
             amount: total,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_open_bond(
@@ -574,10 +558,7 @@ pub fn try_open_bond(
     })?;
 
     // Return Success response
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::OpenBond {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::OpenBond {
             status: ResponseStatus::Success,
             deposit_contract: bond_opportunity.deposit_denom.contract,
             start_time: bond_opportunity.start_time,
@@ -588,8 +569,7 @@ pub fn try_open_bond(
             max_accepted_deposit_price: bond_opportunity.max_accepted_deposit_price,
             err_deposit_price: bond_opportunity.err_deposit_price,
             minting_bond: bond_opportunity.minting_bond,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_close_bond(
@@ -651,14 +631,10 @@ pub fn try_close_bond(
     let messages = vec![];
 
     // Return Success response
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ClosedBond {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::ClosedBond {
             status: ResponseStatus::Success,
             deposit_asset,
-        })?),
-    })
+        })?))
 }
 
 fn bond_active(env: &Env, bond_opp: &BondOpportunity) -> StdResult<()> {

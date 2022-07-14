@@ -92,13 +92,9 @@ pub fn try_update_stake_config(
 
     stake_config.save(deps.storage)?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateStakeConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateStakeConfig {
             status: Success,
-        })?),
-    })
+        })?))
 }
 
 const DAY: u64 = 86400; //60 * 60 * 24
@@ -508,11 +504,7 @@ pub fn try_receive(
         }
     };
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Receive { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive { status: Success })?))
 }
 
 pub fn remove_from_cooldown(
@@ -624,11 +616,7 @@ pub fn try_unbond(
         &env.block,
     )?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Unbond { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Unbond { status: Success })?))
 }
 
 pub fn try_claim_unbond(
@@ -701,11 +689,7 @@ pub fn try_claim_unbond(
         stake_config.staked_token.address,
     )?];
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ClaimUnbond { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::ClaimUnbond { status: Success })?))
 }
 
 pub fn try_claim_rewards(
@@ -746,11 +730,7 @@ pub fn try_claim_rewards(
         &env.block,
     )?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ClaimRewards { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::ClaimRewards { status: Success })?))
 }
 
 pub fn try_stake_rewards(
@@ -818,11 +798,7 @@ pub fn try_stake_rewards(
         stored_tokens.save(deps.storage)?;
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::StakeRewards { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::StakeRewards { status: Success })?))
 }
 
 #[cfg(test)]

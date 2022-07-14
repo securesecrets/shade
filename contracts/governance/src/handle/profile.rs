@@ -32,13 +32,9 @@ pub fn try_add_profile(
     let id = ID::add_profile(deps.storage)?;
     profile.save(deps.storage, &id)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddProfile {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddProfile {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_set_profile(
@@ -88,11 +84,7 @@ pub fn try_set_profile(
 
     profile.save(deps.storage, &id)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetProfile {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetProfile {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }

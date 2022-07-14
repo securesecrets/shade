@@ -65,13 +65,10 @@ pub fn try_proposal(
     }
 
     try_assembly_proposal(deps, env, Uint128::zero(), title, metadata, msgs)?;
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Proposal {
+
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Proposal {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_trigger(
@@ -106,13 +103,10 @@ pub fn try_trigger(
     } else {
         return Err(StdError::unauthorized());
     }
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Trigger {
+
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Trigger {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_cancel(
@@ -134,13 +128,9 @@ pub fn try_cancel(
         return Err(StdError::unauthorized());
     }
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Cancel {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Cancel {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> Status {
@@ -356,13 +346,9 @@ pub fn try_update(
     // Save new status
     Proposal::save_status(deps.storage, &proposal, new_status.clone())?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Update {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Update {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_receive(
@@ -463,13 +449,9 @@ pub fn try_receive(
         )?);
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Receive {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_claim_funding(
@@ -520,8 +502,7 @@ pub fn try_claim_funding(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::ClaimFunding {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_receive_balance(
@@ -581,11 +562,7 @@ pub fn try_receive_balance(
     Proposal::save_public_vote(deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_public_votes(deps.storage, &proposal, &tally.checked_add(&vote)?)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ReceiveBalance {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::ReceiveBalance {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }

@@ -59,13 +59,9 @@ pub fn receive(
 ) -> StdResult<Response> {
     //TODO: forward to distributor (quick fix mechanism)
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Receive {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_update_config(
@@ -81,13 +77,9 @@ pub fn try_update_config(
 
     config_w(deps.storage).save(&config)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn register_asset(
@@ -133,8 +125,7 @@ pub fn register_asset(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RegisterAsset {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn refill_rewards(
@@ -174,13 +165,9 @@ pub fn refill_rewards(
         )?);
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RefillRewards {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RefillRewards {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn update(
@@ -188,13 +175,9 @@ pub fn update(
     env: Env,
     asset: Addr,
 ) -> StdResult<Response> {
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Update {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Update {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn claim(

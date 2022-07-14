@@ -634,11 +634,7 @@ fn change_admin(
     consts.admin = address;
     config.set_constants(&consts)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?))
 }
 
 pub fn try_mint_impl<S: Storage>(
@@ -685,11 +681,7 @@ pub fn try_set_key(
     let message_sender = deps.api.canonical_address(&info.sender)?;
     write_viewing_key(deps.storage, &message_sender, &vk);
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetViewingKey { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetViewingKey { status: Success })?))
 }
 
 pub fn try_create_key(
@@ -705,11 +697,7 @@ pub fn try_create_key(
     let message_sender = deps.api.canonical_address(&info.sender)?;
     write_viewing_key(deps.storage, &message_sender, &key);
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::CreateViewingKey { key })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::CreateViewingKey { key })?))
 }
 
 fn set_contract_status(
@@ -723,13 +711,9 @@ fn set_contract_status(
 
     config.set_contract_status(status_level);
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetContractStatus {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetContractStatus {
             status: Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn query_allowance(
@@ -1532,11 +1516,7 @@ fn revoke_permit(
         &permit_name,
     );
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RevokePermit { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RevokePermit { status: Success })?))
 }
 
 fn is_admin<S: Storage>(config: &Config<S>, account: &Addr) -> StdResult<bool> {

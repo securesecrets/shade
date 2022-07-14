@@ -52,11 +52,7 @@ pub fn try_expose_balance(
             .to_cosmos_msg(receiver_hash, recipient)?,
     ];
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ExposeBalance { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::ExposeBalance { status: Success })?))
 }
 
 pub fn try_expose_balance_with_cooldown(
@@ -99,11 +95,7 @@ pub fn try_expose_balance_with_cooldown(
         .to_cosmos_msg_cooldown(receiver_hash, recipient)?,
     ];
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ExposeBalance { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::ExposeBalance { status: Success })?))
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

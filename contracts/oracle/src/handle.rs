@@ -274,13 +274,9 @@ pub fn register_index(
 
     index_w(deps.storage).save(symbol.as_bytes(), &basket)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterIndex {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RegisterIndex {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_update_config(
@@ -307,11 +303,7 @@ pub fn try_update_config(
         Ok(state)
     })?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }

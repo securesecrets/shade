@@ -64,13 +64,9 @@ pub fn try_set_config(
     }
 
     config.save(deps.storage)?;
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_set_runtime_state(
@@ -79,11 +75,7 @@ pub fn try_set_runtime_state(
     state: RuntimeState,
 ) -> StdResult<Response> {
     todo!();
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetRuntimeState {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetRuntimeState {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }

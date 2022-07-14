@@ -126,13 +126,9 @@ pub fn receive(
         })?;
     }
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Receive {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_update_config(
@@ -148,13 +144,9 @@ pub fn try_update_config(
 
     config_w(deps.storage).save(&config)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_register_asset(
@@ -200,8 +192,7 @@ pub fn try_register_asset(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RegisterAsset {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn allocate(
@@ -264,13 +255,9 @@ pub fn allocate(
 
     allocations_w(deps.storage).save(key, &apps)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Allocate {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Allocate {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn claim(
@@ -344,14 +331,10 @@ pub fn claim(
         )?
     );
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,
             amount: reserves + total_claimed,
-        })?),
-    })
+        })?))
 }
 
 pub fn update(
@@ -479,13 +462,9 @@ pub fn update(
         )?);
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Update {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Update {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn unbond(
@@ -723,14 +702,10 @@ pub fn unbond(
         }
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: unbond_amount,
-        })?),
-    })
+        })?))
 }
 
 pub fn add_holder(
@@ -759,13 +734,9 @@ pub fn add_holder(
         status: Status::Active,
     })?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddHolder {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddHolder {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn remove_holder(
@@ -786,11 +757,7 @@ pub fn remove_holder(
         return Err(StdError::generic_err("Not an authorized holder"));
     }
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveHolder {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RemoveHolder {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }

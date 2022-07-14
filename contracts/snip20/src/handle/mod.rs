@@ -86,8 +86,7 @@ pub fn try_redeem(
             amount: withdrawal_coins,
         })],
         log: vec![],
-        data: Some(to_binary(&HandleAnswer::Redeem { status: Success })?),
-    })
+        data: Some(to_binary(&HandleAnswer::Redeem { status: Success })?))
 }
 
 pub fn try_deposit(
@@ -124,11 +123,7 @@ pub fn try_deposit(
         &env.block,
     )?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Deposit { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Deposit { status: Success })?))
 }
 
 pub fn try_change_admin(
@@ -142,11 +137,7 @@ pub fn try_change_admin(
 
     Admin(address).save(deps.storage)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?))
 }
 
 pub fn try_set_contract_status(
@@ -160,13 +151,9 @@ pub fn try_set_contract_status(
 
     status_level.save(deps.storage)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetContractStatus {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetContractStatus {
             status: Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_register_receive(
@@ -175,13 +162,9 @@ pub fn try_register_receive(
     code_hash: String,
 ) -> StdResult<Response> {
     ReceiverHash(code_hash).save(deps.storage, info.sender)?;
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterReceive {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RegisterReceive {
             status: Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_create_viewing_key(
@@ -195,11 +178,7 @@ pub fn try_create_viewing_key(
 
     HashedKey(key.hash()).save(deps.storage, info.sender)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::CreateViewingKey { key: key.0 })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::CreateViewingKey { key: key.0 })?))
 }
 
 pub fn try_set_viewing_key(
@@ -211,11 +190,7 @@ pub fn try_set_viewing_key(
 
     HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetViewingKey { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetViewingKey { status: Success })?))
 }
 
 pub fn try_revoke_permit(
@@ -225,9 +200,5 @@ pub fn try_revoke_permit(
 ) -> StdResult<Response> {
     PermitKey::revoke(deps.storage, permit_name, info.sender)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RevokePermit { status: Success })?),
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RevokePermit { status: Success })?))
 }

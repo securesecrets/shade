@@ -75,13 +75,9 @@ pub fn receive(
 ) -> StdResult<Response> {
     let key = sender.as_str().as_bytes();
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Receive {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn try_update_config(
@@ -97,13 +93,9 @@ pub fn try_update_config(
 
     config_w(deps.storage).save(&config)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn allowance_last_refresh(
@@ -343,13 +335,9 @@ pub fn rebalance(
         }
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Rebalance {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Rebalance {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn set_allowance(
@@ -439,8 +427,7 @@ pub fn try_register_asset(
         log: vec![],
         data: Some(to_binary(&HandleAnswer::RegisterAsset {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn register_manager(
@@ -471,13 +458,9 @@ pub fn register_manager(
         Ok(adapters)
     })?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterAsset {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RegisterAsset {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 // extract contract address if any
@@ -609,13 +592,9 @@ pub fn allowance(
 
     allowances_w(deps.storage).save(key, &apps)?;
 
-    Ok(Response {
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Allowance {
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Allowance {
             status: ResponseStatus::Success,
-        })?),
-    })
+        })?))
 }
 
 pub fn claim(
@@ -650,14 +629,10 @@ pub fn claim(
         }
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,
             amount: claimed,
-        })?),
-    })
+        })?))
 }
 
 pub fn unbond(
@@ -726,12 +701,8 @@ pub fn unbond(
         )));
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,
             amount,
-        })?),
-    })
+        })?))
 }
