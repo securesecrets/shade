@@ -1,8 +1,10 @@
-use crate::serde::{de::DeserializeOwned, Serialize};
-
-use crate::c_std::{to_binary, Coin, CosmosMsg, Addr, Querier, QueryRequest, StdResult, Uint128, WasmMsg, WasmQuery, SubMsg, ReplyOn, QuerierWrapper};
 use crate::Contract;
-
+use crate::serde::{de::DeserializeOwned, Serialize};
+use crate::c_std::{to_binary, Coin, CosmosMsg, Addr, Querier, QueryRequest, StdResult, Uint128, WasmMsg, WasmQuery, SubMsg, ReplyOn, QuerierWrapper, ContractInfo, Empty};
+#[cfg(feature = "multi-test")]
+use crate::multi_test::{App, AppResponse, Contract as MultiContract, ContractWrapper, Executor};
+#[cfg(feature = "multi-test")]
+use anyhow::Result as AnyResult;
 use super::space_pad;
 
 /// A trait marking types that define the instantiation message of a contract
@@ -49,6 +51,21 @@ pub trait InitCallback: Serialize {
         };
         Ok(init.into())
     }
+
+    #[cfg(feature = "multi-test")]
+    fn test_init<T: Serialize, U: MultiTestable>(
+        testable: &impl MultiTestable,
+        router: &mut App,
+        sender: Addr,
+        label: &str,
+        send_funds: &[Coin],
+        msg: &T,
+    ) -> ContractInfo {
+        let stored_code = router.store_code(testable.contract());
+        router
+            .instantiate_contract(stored_code, sender, &msg, send_funds, label, None)
+            .unwrap()
+    }
 }
 
 /// A trait marking types that define the handle message(s) of a contract
@@ -91,6 +108,25 @@ pub trait HandleCallback: Serialize {
         };
         Ok(execute.into())
     }
+
+    #[cfg(feature = "multi-test")]
+    fn test_exec<T: Serialize + std::fmt::Debug>(
+        &self,
+        testable: &impl MultiTestable,
+        router: &mut App,
+        sender: Addr,
+        send_funds: &[Coin],
+    ) -> AnyResult<AppResponse> {
+        let mut msg = to_binary(self)?;
+        // can not have 0 block size
+        let padding = if Self::BLOCK_SIZE == 0 {
+            1
+        } else {
+            Self::BLOCK_SIZE
+        };
+        space_pad(&mut msg.0, padding);
+        router.execute_contract(sender, (*testable.get_info()).clone(), &msg, send_funds)
+    }
 }
 
 /// A trait marking types that define the query message(s) of a contract
@@ -129,6 +165,38 @@ pub trait Query: Serialize {
             code_hash: contract.code_hash.clone()
         }))
     }
+
+    #[cfg(feature = "multi-test")]
+    fn test_query<T: DeserializeOwned>(
+        &self, 
+        test_contract: &impl MultiTestable, 
+        router: &App
+    ) -> StdResult<T> {
+        let mut msg = to_binary(self)?;
+        // can not have 0 block size
+        let padding = if Self::BLOCK_SIZE == 0 {
+            1
+        } else {
+            Self::BLOCK_SIZE
+        };
+        space_pad(&mut msg.0, padding);
+        let info = test_contract.get_info();
+        router
+            .wrap()
+            .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: info.address.to_string(),
+                msg,
+                code_hash: info.code_hash.clone()
+            }))
+    }
+}
+
+#[cfg(feature = "multi-test")]
+/// Trait for making integration with multi-test easier.
+pub trait MultiTestable {
+    fn get_info(&self) -> &ContractInfo;
+    fn contract(&self) -> Box<dyn MultiContract<Empty>>;
+    fn new(info: ContractInfo) -> Self;
 }
 
 #[cfg(test)]

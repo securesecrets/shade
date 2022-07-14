@@ -29,10 +29,10 @@ pub fn try_burn(
     memo: Option<String>,
 ) -> StdResult<Response> {
     let sender = &info.sender;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     // Burn enabled
-    if !Config::burn_enabled(&deps.storage)? {
+    if !Config::burn_enabled(deps.storage)? {
         return Err(burning_disabled());
     }
 
@@ -65,10 +65,10 @@ pub fn try_burn_from(
     memo: Option<String>,
 ) -> StdResult<Response> {
     let sender = &info.sender;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     // Burn enabled
-    if !Config::burn_enabled(&deps.storage)? {
+    if !Config::burn_enabled(deps.storage)? {
         return Err(burning_disabled());
     }
 
@@ -100,14 +100,14 @@ pub fn try_batch_burn_from(
     actions: Vec<batch::BurnFromAction>,
 ) -> StdResult<Response> {
     let sender = &info.sender;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     // Burn enabled
-    if !Config::burn_enabled(&deps.storage)? {
+    if !Config::burn_enabled(deps.storage)? {
         return Err(burning_disabled());
     }
 
-    let mut supply = TotalSupply::load(&deps.storage)?;
+    let mut supply = TotalSupply::load(deps.storage)?;
 
     for action in actions {
         Allowance::spend(

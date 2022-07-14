@@ -42,10 +42,10 @@ fn burn() {
     // Check that tokens were spend
     chain.deps(snip.address, |deps| {
         assert_eq!(Balance::load(
-            &deps.storage,
+            deps.storage,
             Addr::from("Finger")).unwrap().0, Uint128::new(1000)
         );
-        assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(1000)
+        assert_eq!(TotalSupply::load(deps.storage).unwrap().0, Uint128::new(1000)
         );
     });
 

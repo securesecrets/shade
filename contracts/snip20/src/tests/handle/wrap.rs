@@ -44,10 +44,10 @@ fn deposit() {
     // Check that internal states were updated accordingly
     chain.deps(snip.address, |deps| {
         assert_eq!(Balance::load(
-            &deps.storage,
+            deps.storage,
             Addr::from("Marco")).unwrap().0, Uint128::new(1000)
         );
-        assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(1000)
+        assert_eq!(TotalSupply::load(deps.storage).unwrap().0, Uint128::new(1000)
         );
     });
 }
@@ -93,10 +93,10 @@ fn redeem() {
     // Check that internal states were updated accordingly
     chain.deps(snip.address, |deps| {
         assert_eq!(Balance::load(
-            &deps.storage,
+            deps.storage,
             Addr::from("Marco")).unwrap().0, Uint128::new(500)
         );
-        assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(500)
+        assert_eq!(TotalSupply::load(deps.storage).unwrap().0, Uint128::new(500)
         );
         let balance = chain.balances(Addr::from("Marco")).unwrap().get("uscrt").unwrap();
         assert_eq!(balance, &Uint128::new(500));

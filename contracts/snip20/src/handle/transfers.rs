@@ -52,7 +52,7 @@ pub fn try_transfer(
     amount: Uint128,
     memo: Option<String>
 ) -> StdResult<Response> {
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
     try_transfer_impl(deps.storage, &info.sender, None, &recipient, amount, memo, denom, &env.block)?;
     Ok(Response{
         messages: vec![],
@@ -68,7 +68,7 @@ pub fn try_batch_transfer(
 ) -> StdResult<Response> {
     let sender = info.sender;
     let block = env.block;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
     for action in actions {
         try_transfer_impl(deps.storage, &sender, None, &action.recipient, action.amount, action.memo, denom.clone(), &block)?;
     }
@@ -145,7 +145,7 @@ pub fn try_send(
     msg: Option<Binary>
 ) -> StdResult<Response> {
     let mut messages = vec![];
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     try_send_impl(
         deps.storage,
@@ -175,7 +175,7 @@ pub fn try_batch_send(
 ) -> StdResult<Response> {
     let mut messages = vec![];
     let sender = info.sender;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     for action in actions {
         try_send_impl(

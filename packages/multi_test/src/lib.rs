@@ -18,7 +18,11 @@ pub trait MultiTestable {
         let info = self.get_info();
         router
             .wrap()
-            .query_wasm_smart(info.code_hash.clone(), info.address.clone(), &msg)
+            .query(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: info.address.clone(),
+                msg,
+                code_hash: info.code_hash.clone()
+            }))
     }
     fn execute<T: Serialize + std::fmt::Debug>(
         &self,

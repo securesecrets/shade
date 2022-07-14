@@ -16,7 +16,7 @@ pub fn try_increase_allowance(
     let owner = info.sender;
 
     let mut allowance = Allowance::may_load(
-        &deps.storage,
+        deps.storage,
         (owner.clone(), spender.clone())
     )?.unwrap_or(Allowance::default());
 
@@ -57,7 +57,7 @@ pub fn try_decrease_allowance(
 ) -> StdResult<Response> {
     let owner = info.sender;
 
-    let mut allowance = Allowance::load(&deps.storage, (owner.clone(), spender.clone()))?;
+    let mut allowance = Allowance::load(deps.storage, (owner.clone(), spender.clone()))?;
 
     // Reset allowance if its expired
     if allowance.is_expired(&env.block) {
@@ -94,7 +94,7 @@ pub fn try_transfer_from(
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<Response> {
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
     try_transfer_impl(
         deps.storage,
         &info.sender,
@@ -118,7 +118,7 @@ pub fn try_batch_transfer_from(
     env: Env,
     actions: Vec<batch::TransferFromAction>,
 ) -> StdResult<Response> {
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
     let block = &env.block;
     for action in actions {
         try_transfer_impl(
@@ -153,7 +153,7 @@ pub fn try_send_from(
     memo: Option<String>,
 ) -> StdResult<Response> {
     let mut messages = vec![];
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
     try_send_impl(
         deps.storage,
         &mut messages,
@@ -182,7 +182,7 @@ pub fn try_batch_send_from(
 ) -> StdResult<Response> {
     let mut messages = vec![];
     let sender = info.sender;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     for action in actions {
         try_send_impl(

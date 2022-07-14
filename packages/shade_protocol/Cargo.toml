@@ -24,7 +24,7 @@ storage = []
 storage_plus = ["storage", "dep:secret-storage-plus"]
 query_auth_lib = ["dep:query-authentication"]
 ensemble = ["dep:fadroma"]
-multi_test = ["secret-multi-test"]
+multi-test = ["dep:secret-multi-test", "dep:anyhow"]
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
@@ -94,6 +94,7 @@ thiserror = "1.0"
 
 # Testing
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+anyhow = { version = "1", optional = true }
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble", "scrt"], optional = true }
 
 

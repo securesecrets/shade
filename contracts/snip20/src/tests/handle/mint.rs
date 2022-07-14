@@ -38,10 +38,10 @@ fn mint() {
 
     chain.deps(snip.address, |deps| {
         assert_eq!(Balance::load(
-            &deps.storage,
+            deps.storage,
             Addr::from("Jimmy")).unwrap().0, Uint128::new(1500)
         );
-        assert_eq!(TotalSupply::load(&deps.storage).unwrap().0, Uint128::new(1500)
+        assert_eq!(TotalSupply::load(deps.storage).unwrap().0, Uint128::new(1500)
         );
     });
 }
@@ -68,7 +68,7 @@ fn set_minters() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     chain.deps(snip.address.clone(), |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0, vec![Addr::from("admin")]);
+        assert_eq!(Minters::load(deps.storage).unwrap().0, vec![Addr::from("admin")]);
     });
 
     assert!(chain.execute(&ExecuteMsg::SetMinters {
@@ -77,7 +77,7 @@ fn set_minters() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     chain.deps(snip.address, |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0,
+        assert_eq!(Minters::load(deps.storage).unwrap().0,
                    vec![Addr::from("other_address"), Addr::from("some_other")]);
     });
 }
@@ -104,7 +104,7 @@ fn add_minters() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     chain.deps(snip.address.clone(), |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0, vec![Addr::from("admin")]);
+        assert_eq!(Minters::load(deps.storage).unwrap().0, vec![Addr::from("admin")]);
     });
 
     assert!(chain.execute(&ExecuteMsg::AddMinters {
@@ -113,7 +113,7 @@ fn add_minters() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     chain.deps(snip.address, |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0,
+        assert_eq!(Minters::load(deps.storage).unwrap().0,
                    vec![
                        Addr::from("admin"),
                        Addr::from("other_address"),
@@ -144,7 +144,7 @@ fn remove_minters() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     chain.deps(snip.address, |deps| {
-        assert_eq!(Minters::load(&deps.storage).unwrap().0,
+        assert_eq!(Minters::load(deps.storage).unwrap().0,
                    vec![
                        Addr::from("some_other")
                    ]);

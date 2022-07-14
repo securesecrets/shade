@@ -25,7 +25,7 @@ pub use query_authentication;
 #[cfg(feature = "ensemble")]
 pub use fadroma;
 
-#[cfg(feature = "multi_test")]
+#[cfg(feature = "multi-test")]
 pub use secret_multi_test as multi_test;
 
 // Expose contract in root since its so used

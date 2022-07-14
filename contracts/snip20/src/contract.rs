@@ -22,7 +22,7 @@ use crate::{
     },
     query,
 };
-use shade_protocol::c_std::{from_binary, to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo};
+use shade_protocol::c_std::{from_binary, to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Deps, entry_point};
 use shade_protocol::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
     contract_interfaces::snip20::{
@@ -43,7 +43,8 @@ use shade_protocol::contract_interfaces::snip20::errors::{action_disabled, inval
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
 
-pub fn init(
+#[entry_point]
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -53,13 +54,15 @@ pub fn init(
     Ok(Response::new())
 }
 
-pub fn handle(
+#[entry_point]
+pub fn execute(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     // Check if transfers are allowed
-    let status = ContractStatusLevel::load(&deps.storage)?;
+    let status = ContractStatusLevel::load(deps.storage)?;
     match status {
         // Ignore if normal run
         ContractStatusLevel::NormalRun => {}
@@ -75,7 +78,7 @@ pub fn handle(
         },
     }
 
-    pad_handle_result(
+    pad_handle_result::<ExecuteMsg>(
         match msg {
             ExecuteMsg::Redeem { amount, denom, .. } => try_redeem(deps, env, amount),
 
@@ -207,11 +210,11 @@ pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
 
             QueryMsg::WithPermit { permit, query } => {
                 // Validate permit and get account
-                let account = permit.validate(&deps.api, None)?.as_Addr(None)?;
+                let account = permit.validate(&deps.api, None)?.as_addr(None)?;
 
                 // Check that permit is not revoked
                 if PermitKey::may_load(
-                    &deps.storage,
+                    deps.storage,
                     (account.clone(), permit.params.permit_name.clone()),
                 )?
                 .is_some()
@@ -271,8 +274,8 @@ pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
                     spender,
                     key,
                 } => {
-                    if Key::verify(&deps.storage, owner.clone(), key.clone())?
-                        || Key::verify(&deps.storage, spender.clone(), key)?
+                    if Key::verify(deps.storage, owner.clone(), key.clone())?
+                        || Key::verify(deps.storage, spender.clone(), key)?
                     {
                         query::allowance(deps, owner, spender)?
                     } else {
@@ -280,7 +283,7 @@ pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
                     }
                 }
                 QueryMsg::Balance { address, key } => {
-                    if Key::verify(&deps.storage, address.clone(), key.clone())? {
+                    if Key::verify(deps.storage, address.clone(), key.clone())? {
                         query::balance(deps, address.clone())?
                     } else {
                         return Err(invalid_viewing_key());
@@ -292,7 +295,7 @@ pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
                     page,
                     page_size,
                 } => {
-                    if Key::verify(&deps.storage, address.clone(), key.clone())? {
+                    if Key::verify(deps.storage, address.clone(), key.clone())? {
                         query::transfer_history(
                             deps,
                             address.clone(),
@@ -309,7 +312,7 @@ pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
                     page,
                     page_size,
                 } => {
-                    if Key::verify(&deps.storage, address.clone(), key.clone())? {
+                    if Key::verify(deps.storage, address.clone(), key.clone())? {
                         query::transaction_history(
                             deps,
                             address.clone(),

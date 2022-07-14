@@ -42,8 +42,8 @@ impl Contract {
         }
     }
 
-    pub fn validate_new(deps: Deps, address: &String, code_hash: &String) -> StdResult<Self> {
-        let valid_addr = deps.api.addr_validate(address.as_str())?;
+    pub fn validate_new(deps: Deps, address: &str, code_hash: &String) -> StdResult<Self> {
+        let valid_addr = deps.api.addr_validate(address)?;
         Ok(Contract::new(&valid_addr, code_hash))
     }
 

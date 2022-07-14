@@ -54,7 +54,7 @@ pub fn try_redeem(
 ) -> StdResult<Response> {
     let sender = info.sender;
 
-    if !Config::redeem_enabled(&deps.storage)? {
+    if !Config::redeem_enabled(deps.storage)? {
         return Err(redeem_disabled());
     }
 
@@ -75,7 +75,7 @@ pub fn try_redeem(
         amount: amount.into(),
     }];
 
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
 
     store_redeem(deps.storage, &sender, amount, denom, &env.block)?;
 
@@ -109,7 +109,7 @@ pub fn try_deposit(
         return Err(no_tokens_received());
     }
 
-    if !Config::deposit_enabled(&deps.storage)? {
+    if !Config::deposit_enabled(deps.storage)? {
         return Err(deposit_disabled());
     }
 
@@ -136,7 +136,7 @@ pub fn try_change_admin(
     env: Env,
     address: Addr,
 ) -> StdResult<Response> {
-    if info.sender != Admin::load(&deps.storage)?.0 {
+    if info.sender != Admin::load(deps.storage)?.0 {
         return Err(not_admin());
     }
 
@@ -154,7 +154,7 @@ pub fn try_set_contract_status(
     env: Env,
     status_level: ContractStatusLevel,
 ) -> StdResult<Response> {
-    if info.sender != Admin::load(&deps.storage)?.0 {
+    if info.sender != Admin::load(deps.storage)?.0 {
         return Err(not_admin());
     }
 
@@ -189,7 +189,7 @@ pub fn try_create_viewing_key(
     env: Env,
     entropy: String,
 ) -> StdResult<Response> {
-    let seed = RandSeed::load(&deps.storage)?.0;
+    let seed = RandSeed::load(deps.storage)?.0;
 
     let key = Key::generate(&env, seed.as_slice(), (&entropy).as_ref());
 
@@ -207,7 +207,7 @@ pub fn try_set_viewing_key(
     env: Env,
     key: String,
 ) -> StdResult<Response> {
-    let seed = RandSeed::load(&deps.storage)?.0;
+    let seed = RandSeed::load(deps.storage)?.0;
 
     HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 

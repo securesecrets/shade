@@ -91,7 +91,7 @@ fn set_contract_status() {
     }, MockEnv::new("notAdmin", snip.clone())).is_err());
 
     chain.deps(snip.address.clone(), |deps| {
-        assert_eq!(ContractStatusLevel::load(&deps.storage).unwrap(), ContractStatusLevel::NormalRun);
+        assert_eq!(ContractStatusLevel::load(deps.storage).unwrap(), ContractStatusLevel::NormalRun);
     });
 
     assert!(chain.execute(&ExecuteMsg::SetContractStatus {
@@ -100,7 +100,7 @@ fn set_contract_status() {
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
     chain.deps(snip.address, |deps| {
-        assert_eq!(ContractStatusLevel::load(&deps.storage).unwrap(), ContractStatusLevel::StopAll);
+        assert_eq!(ContractStatusLevel::load(deps.storage).unwrap(), ContractStatusLevel::StopAll);
     });
 }
 

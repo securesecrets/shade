@@ -29,18 +29,18 @@ pub fn try_mint(
     memo: Option<String>,
 ) -> StdResult<Response> {
     // Mint enabled
-    if !Config::mint_enabled(&deps.storage)? {
+    if !Config::mint_enabled(deps.storage)? {
         return Err(minting_disabled())
     }
     // User is minter
-    if !Minters::load(&deps.storage)?.0.contains(&info.sender) {
+    if !Minters::load(deps.storage)?.0.contains(&info.sender) {
         return Err(not_minter(&info.sender))
     }
     // Inc total supply
     TotalSupply::add(deps.storage, amount)?;
     let sender = info.sender;
     let block = env.block;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
     try_mint_impl(deps.storage, &sender, &recipient, amount, denom, memo, &block)?;
 
     Ok(Response{
@@ -56,18 +56,18 @@ pub fn try_batch_mint(
     actions: Vec<batch::MintAction>,
 ) -> StdResult<Response> {
     // Mint enabled
-    if !Config::mint_enabled(&deps.storage)? {
+    if !Config::mint_enabled(deps.storage)? {
         return Err(minting_disabled())
     }
     // User is minter
-    if !Minters::load(&deps.storage)?.0.contains(&info.sender) {
+    if !Minters::load(deps.storage)?.0.contains(&info.sender) {
         return Err(not_minter(&info.sender))
     }
 
     let sender = info.sender;
     let block = env.block;
-    let denom = CoinInfo::load(&deps.storage)?.symbol;
-    let mut supply = TotalSupply::load(&deps.storage)?;
+    let denom = CoinInfo::load(deps.storage)?.symbol;
+    let mut supply = TotalSupply::load(deps.storage)?;
     for action in actions {
         supply.0.checked_add(action.amount)?;
         try_mint_impl(
@@ -95,14 +95,14 @@ pub fn try_add_minters(
     new_minters: Vec<Addr>
 ) -> StdResult<Response> {
     // Mint enabled
-    if !Config::mint_enabled(&deps.storage)? {
+    if !Config::mint_enabled(deps.storage)? {
         return Err(minting_disabled())
     }
-    if Admin::load(&deps.storage)?.0 != info.sender {
+    if Admin::load(deps.storage)?.0 != info.sender {
         return Err(not_admin())
     }
 
-    let mut minters = Minters::load(&deps.storage)?;
+    let mut minters = Minters::load(deps.storage)?;
     minters.0.extend(new_minters);
     minters.save(deps.storage)?;
 
@@ -119,14 +119,14 @@ pub fn try_remove_minters(
     minters_to_remove: Vec<Addr>
 ) -> StdResult<Response> {
     // Mint enabled
-    if !Config::mint_enabled(&deps.storage)? {
+    if !Config::mint_enabled(deps.storage)? {
         return Err(minting_disabled())
     }
-    if Admin::load(&deps.storage)?.0 != info.sender {
+    if Admin::load(deps.storage)?.0 != info.sender {
         return Err(not_admin())
     }
 
-    let mut minters = Minters::load(&deps.storage)?;
+    let mut minters = Minters::load(deps.storage)?;
     for minter in minters_to_remove {
         minters.0.retain(|x| x != &minter);
     }
@@ -145,10 +145,10 @@ pub fn try_set_minters(
     minters: Vec<Addr>
 ) -> StdResult<Response> {
     // Mint enabled
-    if !Config::mint_enabled(&deps.storage)? {
+    if !Config::mint_enabled(deps.storage)? {
         return Err(minting_disabled())
     }
-    if Admin::load(&deps.storage)?.0 != info.sender {
+    if Admin::load(deps.storage)?.0 != info.sender {
         return Err(not_admin())
     }
 
