@@ -24,14 +24,14 @@ use shade_protocol::contract_interfaces::airdrop::{
     QueryAnswer,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
 pub fn dates<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
@@ -44,7 +44,7 @@ pub fn dates<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn total_claimed<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let claimed: Uint128;
     let total_claimed = total_claimed_r(&deps.storage).load()?;
@@ -58,7 +58,7 @@ pub fn total_claimed<S: Storage, A: Api, Q: Querier>(
 }
 
 fn account_information<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account_address: Addr,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
@@ -112,7 +112,7 @@ fn account_information<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn account<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     permit: AccountPermit,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
@@ -125,7 +125,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn account_with_key<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account: Addr,
     key: String,
     current_date: Option<u64>,

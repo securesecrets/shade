@@ -41,7 +41,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         activated: true,
     };
 
-    config_w(&mut deps.storage).save(&state)?;
+    config_w(deps.storage).save(&state)?;
 
     let token_info = token_info_query(
         &deps.querier,
@@ -56,16 +56,16 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         Some(p) => p,
         None => token_info.symbol.clone(),
     };
-    asset_peg_w(&mut deps.storage).save(&peg)?;
+    asset_peg_w(deps.storage).save(&peg)?;
 
     debug_print!("Setting native asset");
-    native_asset_w(&mut deps.storage).save(&Snip20Asset {
+    native_asset_w(deps.storage).save(&Snip20Asset {
         contract: msg.native_asset.clone(),
         token_info,
         token_config: Option::from(token_config),
     })?;
 
-    asset_list_w(&mut deps.storage).save(&vec![])?;
+    asset_list_w(deps.storage).save(&vec![])?;
 
     debug_print!("Contract was initialized by {}", info.sender);
 
@@ -97,7 +97,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

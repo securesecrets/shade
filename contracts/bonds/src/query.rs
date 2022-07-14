@@ -8,9 +8,8 @@ use crate::{
 
 use shade_protocol::c_std::Uint128;
 
-use shade_protocol::secret_toolkit::{
-    snip20::{allowance_query, balance_query},
-    utils::Query,
+use shade_protocol::{
+    snip20::helpers::{allowance_query, balance_query},
 };
 
 use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdResult, Storage};
@@ -23,14 +22,14 @@ use shade_protocol::contract_interfaces::query_auth::{
     self, QueryMsg::ValidatePermit, QueryPermit,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
 pub fn account<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     permit: QueryPermit,
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
@@ -53,7 +52,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
 }
 
 fn account_information<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account_address: Addr,
 ) -> StdResult<QueryAnswer> {
     let account = account_r(&deps.storage).load(account_address.as_str().as_bytes())?;
@@ -66,7 +65,7 @@ fn account_information<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let deposit_assets = deposit_assets_r(&deps.storage).load()?;
     if deposit_assets.is_empty() {
@@ -84,7 +83,7 @@ pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn bond_info<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn bond_info<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
     let global_total_issued = global_total_issued_r(&deps.storage).load()?;
     let global_total_claimed = global_total_claimed_r(&deps.storage).load()?;
     let issued_asset = issued_asset_r(&deps.storage).load()?;
@@ -99,7 +98,7 @@ pub fn bond_info<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdR
 }
 
 pub fn list_deposit_addresses<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let deposit_addresses = deposit_assets_r(&deps.storage).load()?;
     Ok(QueryAnswer::DepositAddresses {
@@ -109,14 +108,14 @@ pub fn list_deposit_addresses<S: Storage, A: Api, Q: Querier>(
 
 pub fn price_check<S: Storage, A: Api, Q: Querier>(
     asset: String,
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let price = oracle(deps, asset)?;
     Ok(QueryAnswer::PriceCheck { price })
 }
 
 pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
 
@@ -137,7 +136,7 @@ pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn check_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
 

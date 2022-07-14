@@ -29,8 +29,8 @@ pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    let id = ID::add_profile(&mut deps.storage)?;
-    profile.save(&mut deps.storage, &id)?;
+    let id = ID::add_profile(deps.storage)?;
+    profile.save(deps.storage, &id)?;
 
     Ok(Response {
         messages: vec![],
@@ -51,7 +51,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    let mut profile = match Profile::may_load(&mut deps.storage, &id)? {
+    let mut profile = match Profile::may_load(deps.storage, &id)? {
         None => return Err(StdError::generic_err("Profile not found")),
         Some(p) => p,
     };
@@ -86,7 +86,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
         profile.cancel_deadline = cancel_deadline;
     }
 
-    profile.save(&mut deps.storage, &id)?;
+    profile.save(deps.storage, &id)?;
 
     Ok(Response {
         messages: vec![],

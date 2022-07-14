@@ -17,19 +17,19 @@ use crate::{
     state::{config_r, self_address_r, unbonding_r, viewing_key_r},
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
-pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Uint128> {
+pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<Uint128> {
     //TODO: query pending rewards from rewards contract
     Ok(Uint128::zero())
 }
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
@@ -54,7 +54,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
@@ -87,7 +87,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
@@ -103,7 +103,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbondable<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
@@ -137,7 +137,7 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn reserves<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 

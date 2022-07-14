@@ -35,7 +35,7 @@ pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
         allowance.expiration = expiration;
     }
 
-    allowance.save(&mut deps.storage, (owner.clone(), spender.clone()))?;
+    allowance.save(deps.storage, (owner.clone(), spender.clone()))?;
 
     Ok(Response{
         messages: vec![],
@@ -73,7 +73,7 @@ pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
         allowance.expiration = expiration;
     }
 
-    allowance.save(&mut deps.storage, (owner.clone(), spender.clone()))?;
+    allowance.save(deps.storage, (owner.clone(), spender.clone()))?;
 
     Ok(Response{
         messages: vec![],
@@ -96,7 +96,7 @@ pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     try_transfer_impl(
-        &mut deps.storage,
+        deps.storage,
         &info.sender,
         Some(&owner),
         &recipient,
@@ -122,7 +122,7 @@ pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
     let block = &env.block;
     for action in actions {
         try_transfer_impl(
-            &mut deps.storage,
+            deps.storage,
             &info.sender,
             Some(&action.owner),
             &action.recipient,
@@ -155,7 +155,7 @@ pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     try_send_impl(
-        &mut deps.storage,
+        deps.storage,
         &mut messages,
         &info.sender,
         Some(&owner),
@@ -186,7 +186,7 @@ pub fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
 
     for action in actions {
         try_send_impl(
-            &mut deps.storage,
+            deps.storage,
             &mut messages,
             &sender,
             Some(&action.owner),

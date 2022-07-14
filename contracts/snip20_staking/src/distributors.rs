@@ -19,7 +19,7 @@ use shade_protocol::c_std::{
 use shade_protocol::utils::storage::default::SingletonStorage;
 
 pub fn get_distributor<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<Option<Vec<Addr>>> {
     Ok(match DistributorsEnabled::load(&deps.storage)?.0 {
         true => Some(Distributors::load(&deps.storage)?.0),
@@ -32,11 +32,11 @@ pub fn try_set_distributors_status<S: Storage, A: Api, Q: Querier>(
     env: Env,
     enabled: bool,
 ) -> StdResult<Response> {
-    let config = Config::from_storage(&mut deps.storage);
+    let config = Config::from_storage(deps.storage);
 
     check_if_admin(&config, &info.sender)?;
 
-    DistributorsEnabled(enabled).save(&mut deps.storage)?;
+    DistributorsEnabled(enabled).save(deps.storage)?;
 
     Ok(Response {
         messages: vec![],
@@ -52,13 +52,13 @@ pub fn try_add_distributors<S: Storage, A: Api, Q: Querier>(
     env: Env,
     new_distributors: Vec<Addr>,
 ) -> StdResult<Response> {
-    let config = Config::from_storage(&mut deps.storage);
+    let config = Config::from_storage(deps.storage);
 
     check_if_admin(&config, &info.sender)?;
 
     let mut distributors = Distributors::load(&deps.storage)?;
     distributors.0.extend(new_distributors);
-    distributors.save(&mut deps.storage)?;
+    distributors.save(deps.storage)?;
 
     Ok(Response {
         messages: vec![],
@@ -74,11 +74,11 @@ pub fn try_set_distributors<S: Storage, A: Api, Q: Querier>(
     env: Env,
     distributors: Vec<Addr>,
 ) -> StdResult<Response> {
-    let config = Config::from_storage(&mut deps.storage);
+    let config = Config::from_storage(deps.storage);
 
     check_if_admin(&config, &info.sender)?;
 
-    Distributors(distributors).save(&mut deps.storage)?;
+    Distributors(distributors).save(deps.storage)?;
 
     Ok(Response {
         messages: vec![],
@@ -89,7 +89,7 @@ pub fn try_set_distributors<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn distributors<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
+pub fn distributors<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::Distributors {
         distributors: match DistributorsEnabled::load(&deps.storage)?.0 {
             true => Some(Distributors::load(&deps.storage)?.0),

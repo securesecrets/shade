@@ -19,20 +19,20 @@ use shade_protocol::{
     utils::storage::default::{BucketStorage, SingletonStorage},
 };
 
-pub fn stake_config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
+pub fn stake_config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::StakedConfig {
         config: StakeConfig::load(&deps.storage)?,
     })
 }
 
-pub fn total_staked<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
+pub fn total_staked<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::TotalStaked {
         tokens: TotalTokens::load(&deps.storage)?.0,
         shares: TotalShares::load(&deps.storage)?.0,
     })
 }
 
-pub fn stake_rate<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
+pub fn stake_rate<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::StakeRate {
         shares: shares_per_token(
             &StakeConfig::load(&deps.storage)?,
@@ -44,7 +44,7 @@ pub fn stake_rate<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> Std
 }
 
 pub fn unfunded<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     start: u64,
     total: u64,
 ) -> StdResult<Binary> {
@@ -68,14 +68,14 @@ pub fn unfunded<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn unbonding<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Binary> {
+pub fn unbonding<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::Unbonding {
         total: TotalUnbonding::load(&deps.storage)?.0,
     })
 }
 
 pub fn staked<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account: Addr,
     time: Option<u64>,
 ) -> StdResult<Binary> {

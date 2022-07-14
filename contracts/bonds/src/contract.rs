@@ -51,7 +51,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         query_auth: msg.query_auth,
     };
 
-    config_w(&mut deps.storage).save(&state)?;
+    config_w(deps.storage).save(&state)?;
 
     let mut messages = vec![];
 
@@ -64,7 +64,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         state.issued_asset.code_hash.clone(),
         state.issued_asset.address.clone(),
     )?);
-    allowance_key_w(&mut deps.storage).save(&allowance_key.0)?;
+    allowance_key_w(deps.storage).save(&allowance_key.0)?;
 
     let token_info = token_info_query(
         &deps.querier,
@@ -80,7 +80,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         state.issued_asset.address.clone(),
     )?;
 
-    issued_asset_w(&mut deps.storage).save(&Snip20Asset {
+    issued_asset_w(deps.storage).save(&Snip20Asset {
         contract: state.issued_asset.clone(),
         token_info,
         token_config: Option::from(token_config),
@@ -89,15 +89,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     messages.push(register_receive(&env, &state.issued_asset)?);
 
     // Write initial values to storage
-    global_total_issued_w(&mut deps.storage).save(&Uint128::zero())?;
-    global_total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
-    allocated_allowance_w(&mut deps.storage).save(&Uint128::zero())?;
-    deposit_assets_w(&mut deps.storage).save(&vec![])?;
+    global_total_issued_w(deps.storage).save(&Uint128::zero())?;
+    global_total_claimed_w(deps.storage).save(&Uint128::zero())?;
+    allocated_allowance_w(deps.storage).save(&Uint128::zero())?;
+    deposit_assets_w(deps.storage).save(&vec![])?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -198,7 +195,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     pad_query_result(

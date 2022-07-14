@@ -4,7 +4,7 @@ use shade_protocol::c_std::{
     Querier, StdError, StdResult, Storage,
 };
 
-use shade_protocol::secret_toolkit::snip20::{allowance_query, mint_msg, register_receive_msg, send_msg, transfer_from_msg};
+use shade_protocol::snip20::helpers::{allowance_query, mint_msg, register_receive, send_msg, transfer_from_msg};
 
 use shade_admin::admin::{QueryMsg, ValidateAdminPermissionResponse};
 
@@ -48,7 +48,7 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
         return Err(not_limit_admin());
     }
 
-    let mut config = config_w(&mut deps.storage);
+    let mut config = config_w(deps.storage);
     config.update(|mut state| {
         if let Some(limit_admin) = limit_admin {
             state.limit_admin = limit_admin;
@@ -70,13 +70,13 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
 
     if let Some(reset_total_issued) = reset_total_issued {
         if reset_total_issued {
-            global_total_issued_w(&mut deps.storage).save(&Uint128::zero())?;
+            global_total_issued_w(deps.storage).save(&Uint128::zero())?;
         }
     }
 
     if let Some(reset_total_claimed) = reset_total_claimed {
         if reset_total_claimed {
-            global_total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
+            global_total_claimed_w(deps.storage).save(&Uint128::zero())?;
         }
     }
 
@@ -123,10 +123,10 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     }
 
     if let Some(allowance_key) = allowance_key {
-        allowance_key_w(&mut deps.storage).save(&allowance_key)?;
+        allowance_key_w(deps.storage).save(&allowance_key)?;
     };
 
-    let mut config = config_w(&mut deps.storage);
+    let mut config = config_w(deps.storage);
     config.update(|mut state| {
         if let Some(oracle) = oracle {
             state.oracle = oracle;
@@ -262,7 +262,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     let mut opp =
         bond_opportunity_r(&deps.storage).load(info.sender.to_string().as_bytes())?;
     opp.amount_issued += amount_to_issue;
-    bond_opportunity_w(&mut deps.storage).save(info.sender.to_string().as_bytes(), &opp)?;
+    bond_opportunity_w(deps.storage).save(info.sender.to_string().as_bytes(), &opp)?;
 
     let mut messages = vec![];
 
@@ -317,11 +317,11 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     account.pending_bonds.push(new_bond.clone());
 
     // Save account
-    account_w(&mut deps.storage).save(account.address.as_str().as_bytes(), &account)?;
+    account_w(deps.storage).save(account.address.as_str().as_bytes(), &account)?;
 
     if !bond_opportunity.minting_bond {
         // Decrease AllocatedAllowance since user is claiming
-        allocated_allowance_w(&mut deps.storage)
+        allocated_allowance_w(deps.storage)
             .update(|allocated| Ok(allocated.checked_sub(amount_to_issue.clone())?))?;
 
         // Transfer funds using allowance to bonds
@@ -409,9 +409,9 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     );
 
     account.pending_bonds = pending_bonds;
-    account_w(&mut deps.storage).save(info.sender.as_str().as_bytes(), &account)?;
+    account_w(deps.storage).save(info.sender.as_str().as_bytes(), &account)?;
 
-    global_total_claimed_w(&mut deps.storage)
+    global_total_claimed_w(deps.storage)
         .update(|global_total_claimed| Ok(global_total_claimed.checked_add(total.clone())?))?;
 
     //Set up empty message vec
@@ -479,13 +479,13 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             let unspent = prev_opp
                 .issuance_limit
                 .checked_sub(prev_opp.amount_issued)?;
-            global_total_issued_w(&mut deps.storage)
+            global_total_issued_w(deps.storage)
                 .update(|issued| Ok(issued.checked_sub(unspent.clone())?))?;
 
             if !prev_opp.minting_bond {
                 // Unallocate allowance that wasn't issued
 
-                allocated_allowance_w(&mut deps.storage)
+                allocated_allowance_w(deps.storage)
                     .update(|allocated| Ok(allocated.checked_sub(unspent)?))?;
             }
         }
@@ -494,10 +494,10 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             match deposit_assets_r(&deps.storage).may_load()? {
                 None => {
                     let assets = vec![deposit_asset.address.clone()];
-                    deposit_assets_w(&mut deps.storage).save(&assets)?;
+                    deposit_assets_w(deps.storage).save(&assets)?;
                 }
                 Some(_assets) => {
-                    deposit_assets_w(&mut deps.storage).update(|mut assets| {
+                    deposit_assets_w(deps.storage).update(|mut assets| {
                         assets.push(deposit_asset.address.clone());
                         Ok(assets)
                     })?;
@@ -542,7 +542,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         };
 
         // Increase stored allocated_allowance by the opportunity's issuance limit
-        allocated_allowance_w(&mut deps.storage)
+        allocated_allowance_w(deps.storage)
             .update(|allocated| Ok(allocated.checked_add(limit)?))?;
     }
 
@@ -563,13 +563,13 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     };
 
     // Save bond opportunity
-    bond_opportunity_w(&mut deps.storage).save(
+    bond_opportunity_w(deps.storage).save(
         deposit_asset.address.as_str().as_bytes(),
         &bond_opportunity,
     )?;
 
     // Increase global total issued by bond opportunity's issuance limit
-    global_total_issued_w(&mut deps.storage).update(|global_total_issued| {
+    global_total_issued_w(deps.storage).update(|global_total_issued| {
         Ok(global_total_issued.checked_add(bond_opportunity.issuance_limit)?)
     })?;
 
@@ -620,11 +620,11 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
         .may_load(deposit_asset.address.as_str().as_bytes())?
     {
         Some(prev_opp) => {
-            bond_opportunity_w(&mut deps.storage)
+            bond_opportunity_w(deps.storage)
                 .remove(deposit_asset.address.as_str().as_bytes());
 
             // Remove asset from address list
-            deposit_assets_w(&mut deps.storage).update(|mut assets| {
+            deposit_assets_w(deps.storage).update(|mut assets| {
                 assets.retain(|address| *address != deposit_asset.address);
                 Ok(assets)
             })?;
@@ -632,13 +632,13 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
             let unspent = prev_opp
                 .issuance_limit
                 .checked_sub(prev_opp.amount_issued)?;
-            global_total_issued_w(&mut deps.storage)
+            global_total_issued_w(deps.storage)
                 .update(|issued| Ok(issued.checked_sub(unspent.clone())?))?;
 
             if !prev_opp.minting_bond {
                 // Unallocate allowance that wasn't issued
 
-                allocated_allowance_w(&mut deps.storage)
+                allocated_allowance_w(deps.storage)
                     .update(|allocated| Ok(allocated.checked_sub(unspent)?))?;
             }
         }
@@ -675,7 +675,7 @@ fn bond_active(env: &Env, bond_opp: &BondOpportunity) -> StdResult<()> {
 }
 
 fn check_against_limits<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     bond_limit: Uint128,
     bond_period: u64,
     bond_discount: Uint128,
@@ -730,7 +730,7 @@ pub fn active(
 }
 
 pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     deposit_amount: Uint128,
     available: Uint128,
     deposit_asset: Snip20Asset,
@@ -841,17 +841,15 @@ pub fn calculate_claim_date(env_time: u64, bonding_period: u64) -> u64 {
 }
 
 pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> {
-    register_receive_msg(
+    register_receive(
         env.contract_code_hash.clone(),
         None,
-        256,
-        contract.code_hash.clone(),
-        contract.address.clone(),
+        contract
     )
 }
 
 pub fn oracle<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     key: String,
 ) -> StdResult<Uint128> {
     let config: Config = config_r(&deps.storage).load()?;

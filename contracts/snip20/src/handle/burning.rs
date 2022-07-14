@@ -36,12 +36,12 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         return Err(burning_disabled());
     }
 
-    Balance::sub(&mut deps.storage, amount, sender)?;
+    Balance::sub(deps.storage, amount, sender)?;
     // Dec total supply
-    TotalSupply::sub(&mut deps.storage, amount)?;
+    TotalSupply::sub(deps.storage, amount)?;
 
     store_burn(
-        &mut deps.storage,
+        deps.storage,
         &sender,
         &sender,
         amount,
@@ -72,13 +72,13 @@ pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
         return Err(burning_disabled());
     }
 
-    Allowance::spend(&mut deps.storage, &owner, &sender, amount, &env.block)?;
-    Balance::sub(&mut deps.storage, amount, &owner)?;
+    Allowance::spend(deps.storage, &owner, &sender, amount, &env.block)?;
+    Balance::sub(deps.storage, amount, &owner)?;
     // Dec total supply
-    TotalSupply::sub(&mut deps.storage, amount)?;
+    TotalSupply::sub(deps.storage, amount)?;
 
     store_burn(
-        &mut deps.storage,
+        deps.storage,
         &owner,
         &sender,
         amount,
@@ -111,20 +111,20 @@ pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
 
     for action in actions {
         Allowance::spend(
-            &mut deps.storage,
+            deps.storage,
             &action.owner,
             &sender,
             action.amount,
             &env.block,
         )?;
 
-        Balance::sub(&mut deps.storage, action.amount, &action.owner)?;
+        Balance::sub(deps.storage, action.amount, &action.owner)?;
 
         // Dec total supply
         supply.0 = supply.0.checked_sub(action.amount)?;
 
         store_burn(
-            &mut deps.storage,
+            deps.storage,
             &action.owner,
             &sender,
             action.amount,
@@ -134,7 +134,7 @@ pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
         )?;
     }
 
-    supply.save(&mut deps.storage)?;
+    supply.save(deps.storage)?;
 
     Ok(Response {
         messages: vec![],

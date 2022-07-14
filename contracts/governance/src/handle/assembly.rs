@@ -68,8 +68,8 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
         tally = tally.checked_sub(&old_vote)?;
     }
 
-    Proposal::save_assembly_vote(&mut deps.storage, &proposal, &sender, &vote)?;
-    Proposal::save_assembly_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+    Proposal::save_assembly_vote(deps.storage, &proposal, &sender, &vote)?;
+    Proposal::save_assembly_votes(deps.storage, &proposal, &tally.checked_add(&vote)?)?;
 
     Ok(Response {
         messages: vec![],
@@ -186,8 +186,8 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
         funders: None,
     };
 
-    let prop_id = ID::add_proposal(&mut deps.storage)?;
-    prop.save(&mut deps.storage, &prop_id)?;
+    let prop_id = ID::add_proposal(deps.storage)?;
+    prop.save(deps.storage, &prop_id)?;
 
     Ok(Response {
         messages: vec![],
@@ -210,7 +210,7 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    let id = ID::add_assembly(&mut deps.storage)?;
+    let id = ID::add_assembly(deps.storage)?;
 
     // Check that profile exists
     if profile > ID::profile(&deps.storage)? {
@@ -223,7 +223,7 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
         members,
         profile,
     }
-    .save(&mut deps.storage, &id)?;
+    .save(deps.storage, &id)?;
 
     Ok(Response {
         messages: vec![],
@@ -247,7 +247,7 @@ pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    let mut assembly = match Assembly::may_load(&mut deps.storage, &id)? {
+    let mut assembly = match Assembly::may_load(deps.storage, &id)? {
         None => return Err(StdError::generic_err("Assembly not found")),
         Some(c) => c,
     };
@@ -272,7 +272,7 @@ pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
         assembly.profile = profile
     }
 
-    assembly.save(&mut deps.storage, &id)?;
+    assembly.save(deps.storage, &id)?;
 
     Ok(Response {
         messages: vec![],

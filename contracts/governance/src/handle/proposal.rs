@@ -16,7 +16,7 @@ use shade_protocol::c_std::{
     Storage,
     WasmMsg,
 };
-use shade_protocol::secret_toolkit::{snip20::send_msg, utils::Query};
+use shade_protocol::snip20::helpers::send_msg;
 use shade_protocol::{
     contract_interfaces::{
         governance::{
@@ -82,10 +82,10 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
     let status = Proposal::status(&deps.storage, &proposal)?;
     if let Status::Passed { .. } = status {
-        let mut history = Proposal::status_history(&mut deps.storage, &proposal)?;
+        let mut history = Proposal::status_history(deps.storage, &proposal)?;
         history.push(status);
-        Proposal::save_status_history(&mut deps.storage, &proposal, history)?;
-        Proposal::save_status(&mut deps.storage, &proposal, Status::Success)?;
+        Proposal::save_status_history(deps.storage, &proposal, history)?;
+        Proposal::save_status(deps.storage, &proposal, Status::Success)?;
 
         // Trigger the msg
         let proposal_msg = Proposal::msg(&deps.storage, &proposal)?;
@@ -126,10 +126,10 @@ pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
         if env.block.time < end {
             return Err(StdError::unauthorized());
         }
-        let mut history = Proposal::status_history(&mut deps.storage, &proposal)?;
+        let mut history = Proposal::status_history(deps.storage, &proposal)?;
         history.push(status);
-        Proposal::save_status_history(&mut deps.storage, &proposal, history)?;
-        Proposal::save_status(&mut deps.storage, &proposal, Status::Canceled)?;
+        Proposal::save_status_history(deps.storage, &proposal, history)?;
+        Proposal::save_status(deps.storage, &proposal, Status::Canceled)?;
     } else {
         return Err(StdError::unauthorized());
     }
@@ -352,9 +352,9 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 
     // Add old status to history
     history.push(status);
-    Proposal::save_status_history(&mut deps.storage, &proposal, history)?;
+    Proposal::save_status_history(deps.storage, &proposal, history)?;
     // Save new status
-    Proposal::save_status(&mut deps.storage, &proposal, new_status.clone())?;
+    Proposal::save_status(deps.storage, &proposal, new_status.clone())?;
 
     Ok(Response {
         messages,
@@ -426,7 +426,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
         }
 
         // Store the funder information and update the current funding data
-        Proposal::save_status(&mut deps.storage, &proposal, Status::Funding {
+        Proposal::save_status(deps.storage, &proposal, Status::Funding {
             amount: new_fund,
             start,
             end,
@@ -439,9 +439,9 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             funder_amount += Proposal::funding(&deps.storage, &proposal, &from)?.amount;
         } else {
             funders.push(from.clone());
-            Proposal::save_funders(&mut deps.storage, &proposal, funders)?;
+            Proposal::save_funders(deps.storage, &proposal, funders)?;
         }
-        Proposal::save_funding(&mut deps.storage, &proposal, &from, Funding {
+        Proposal::save_funding(deps.storage, &proposal, &from, Funding {
             amount: funder_amount,
             claimed: false,
         })?;
@@ -578,8 +578,8 @@ pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
         tally = tally.checked_sub(&old_vote)?;
     }
 
-    Proposal::save_public_vote(&mut deps.storage, &proposal, &sender, &vote)?;
-    Proposal::save_public_votes(&mut deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+    Proposal::save_public_vote(deps.storage, &proposal, &sender, &vote)?;
+    Proposal::save_public_votes(deps.storage, &proposal, &tally.checked_add(&vote)?)?;
 
     Ok(Response {
         messages: vec![],

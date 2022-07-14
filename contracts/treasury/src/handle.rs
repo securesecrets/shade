@@ -15,16 +15,15 @@ use shade_protocol::c_std::{
     Storage,
     Uint128,
 };
-use shade_protocol::secret_toolkit::{
-    snip20::{
+use shade_protocol::{
+    snip20::helpers::{
         allowance_query,
         balance_query,
         decrease_allowance_msg,
         increase_allowance_msg,
-        register_receive_msg,
+        register_receive,
         set_viewing_key_msg,
     },
-    utils::Query,
 };
 
 use shade_protocol::{
@@ -96,7 +95,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
     Ok(Response {
         messages: vec![],
@@ -108,7 +107,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     allowance: &Allowance,
 ) -> StdResult<Option<DateTime<Utc>>> {
@@ -212,7 +211,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 
     let mut portion_total = ((balance + out_balance) - amount_total)?;
 
-    managers_w(&mut deps.storage).save(&managers)?;
+    managers_w(deps.storage).save(&managers)?;
     let config = config_r(&deps.storage).load()?;
 
     // Perform rebalance
@@ -354,7 +353,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     env: &Env,
     spender: Addr,
     amount: Uint128,
@@ -408,27 +407,25 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    asset_list_w(&mut deps.storage).update(|mut list| {
+    asset_list_w(deps.storage).update(|mut list| {
         list.push(contract.address.clone());
         Ok(list)
     })?;
 
-    assets_w(&mut deps.storage).save(
+    assets_w(deps.storage).save(
         contract.address.to_string().as_bytes(),
         &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
     )?;
 
-    allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
+    allowances_w(deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
 
     Ok(Response {
         messages: vec![
             // Register contract in asset
-            register_receive_msg(
+            register_receive(
                 env.contract_code_hash.clone(),
                 None,
-                256,
-                contract.code_hash.clone(),
-                contract.address.clone(),
+                contract
             )?,
             // Set viewing key
             set_viewing_key_msg(
@@ -457,7 +454,7 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    managers_w(&mut deps.storage).update(|mut adapters| {
+    managers_w(deps.storage).update(|mut adapters| {
         if adapters
             .iter()
             .map(|m| m.contract.clone())
@@ -610,7 +607,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    allowances_w(&mut deps.storage).save(key, &apps)?;
+    allowances_w(deps.storage).save(key, &apps)?;
 
     Ok(Response {
         messages: vec![],

@@ -85,15 +85,12 @@ use shade_protocol::c_std::{
 };
 use shade_protocol::secret_toolkit::{
     permit::{validate, Permission, Permit, RevokedPermits},
-    snip20::{register_receive_msg, send_msg, token_info_query},
+    snip20::helpers::{register_receive, send_msg, token_info_query},
 };
-use shade_protocol::{
-    contract_interfaces::staking::snip20_staking::{
-        stake::{Cooldown, StakeConfig, VecQueue},
-        ReceiveType,
-    },
-    utils::storage::default::{BucketStorage, SingletonStorage},
-};
+use shade_protocol::{Contract, contract_interfaces::staking::snip20_staking::{
+    stake::{Cooldown, StakeConfig, VecQueue},
+    ReceiveType,
+}, utils::storage::default::{BucketStorage, SingletonStorage}};
 
 /// We make sure that responses from `handle` are padded to a multiple of this size.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -138,7 +135,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         .decimals;
     }
 
-    let mut config = Config::from_storage(&mut deps.storage);
+    let mut config = Config::from_storage(deps.storage);
     config.set_constants(&Constants {
         name: msg.name,
         symbol: "STKD-".to_string() + &msg.symbol,
@@ -152,8 +149,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     config.set_contract_status(ContractStatusLevel::NormalRun);
 
     // Set distributors
-    Distributors(msg.distributors.unwrap_or_default()).save(&mut deps.storage)?;
-    DistributorsEnabled(msg.limit_transfer).save(&mut deps.storage)?;
+    Distributors(msg.distributors.unwrap_or_default()).save(deps.storage)?;
+    DistributorsEnabled(msg.limit_transfer).save(deps.storage)?;
 
     if staked_token_decimals * 2 > msg.share_decimals {
         return Err(StdError::generic_err(
@@ -167,47 +164,43 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         decimal_difference: msg.share_decimals - staked_token_decimals,
         treasury: msg.treasury.clone(),
     }
-    .save(&mut deps.storage)?;
+    .save(deps.storage)?;
 
     // Set shares state to 0
-    TotalShares(Uint256::zero()).save(&mut deps.storage)?;
+    TotalShares(Uint256::zero()).save(deps.storage)?;
 
     // Initialize unbonding queue
-    DailyUnbondingQueue(VecQueue::new(vec![])).save(&mut deps.storage)?;
+    DailyUnbondingQueue(VecQueue::new(vec![])).save(deps.storage)?;
 
     // Set tokens
-    TotalTokens(Uint128::zero()).save(&mut deps.storage)?;
+    TotalTokens(Uint128::zero()).save(deps.storage)?;
 
-    TotalUnbonding(Uint128::zero()).save(&mut deps.storage)?;
+    TotalUnbonding(Uint128::zero()).save(deps.storage)?;
 
-    UnsentStakedTokens(Uint128::zero()).save(&mut deps.storage)?;
+    UnsentStakedTokens(Uint128::zero()).save(deps.storage)?;
 
     // Register receive if necessary
     let mut messages = vec![];
     if let Some(addr) = msg.treasury {
         if let Some(code_hash) = msg.treasury_code_hash {
-            messages.push(register_receive_msg(
+            messages.push(register_receive(
                 env.contract_code_hash.clone(),
                 None,
-                256,
-                code_hash,
-                addr,
+                &Contract {
+                    address: addr,
+                    code_hash
+                }
             )?);
         }
     }
 
-    messages.push(register_receive_msg(
+    messages.push(register_receive(
         env.contract_code_hash,
         None,
-        256,
-        msg.staked_token.code_hash,
-        msg.staked_token.address,
+        msg.staked_token
     )?);
 
-    Ok(Response {
-        messages,
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
 fn pad_response(response: StdResult<Response>) -> StdResult<Response> {
@@ -412,7 +405,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     pad_response(response)
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query<S: Storage, A: Api, Q: Querier>(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::StakeConfig {} => stake_queries::stake_config(deps),
         QueryMsg::TotalStaked {} => stake_queries::total_staked(deps),
@@ -429,7 +422,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
 }
 
 fn permit_queries<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     permit: Permit,
     query: QueryWithPermit,
 ) -> Result<Binary, StdError> {
@@ -505,7 +498,7 @@ fn permit_queries<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn viewing_keys_queries<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     let (addresses, key) = msg.get_validation_params();
@@ -585,7 +578,7 @@ fn query_contract_status<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
 }
 
 pub fn query_transfers<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account: &Addr,
     page: u32,
     page_size: u32,
@@ -601,7 +594,7 @@ pub fn query_transfers<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query_transactions<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account: &Addr,
     page: u32,
     page_size: u32,
@@ -617,7 +610,7 @@ pub fn query_transactions<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account: &Addr,
 ) -> StdResult<Binary> {
     let address = deps.api.canonical_address(account)?;
@@ -633,7 +626,7 @@ fn change_admin<S: Storage, A: Api, Q: Querier>(
     env: Env,
     address: Addr,
 ) -> StdResult<Response> {
-    let mut config = Config::from_storage(&mut deps.storage);
+    let mut config = Config::from_storage(deps.storage);
 
     check_if_admin(&config, &info.sender)?;
 
@@ -690,7 +683,7 @@ pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
     let vk = ViewingKey(key);
 
     let message_sender = deps.api.canonical_address(&info.sender)?;
-    write_viewing_key(&mut deps.storage, &message_sender, &vk);
+    write_viewing_key(deps.storage, &message_sender, &vk);
 
     Ok(Response {
         messages: vec![],
@@ -710,7 +703,7 @@ pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
     let key = ViewingKey::new(&env, &prng_seed, (&entropy).as_ref());
 
     let message_sender = deps.api.canonical_address(&info.sender)?;
-    write_viewing_key(&mut deps.storage, &message_sender, &key);
+    write_viewing_key(deps.storage, &message_sender, &key);
 
     Ok(Response {
         messages: vec![],
@@ -724,7 +717,7 @@ fn set_contract_status<S: Storage, A: Api, Q: Querier>(
     env: Env,
     status_level: ContractStatusLevel,
 ) -> StdResult<Response> {
-    let mut config = Config::from_storage(&mut deps.storage);
+    let mut config = Config::from_storage(deps.storage);
 
     check_if_admin(&config, &info.sender)?;
 
@@ -740,7 +733,7 @@ fn set_contract_status<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     owner: Addr,
     spender: Addr,
 ) -> StdResult<Binary> {
@@ -780,10 +773,10 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let symbol = Config::from_storage(&mut deps.storage).constants()?.symbol;
+    let symbol = Config::from_storage(deps.storage).constants()?.symbol;
 
     let stake_config = StakeConfig::load(&deps.storage)?;
-    let claim = claim_rewards(&mut deps.storage, &stake_config, sender, sender_canon)?;
+    let claim = claim_rewards(deps.storage, &stake_config, sender, sender_canon)?;
     if !claim.is_zero() {
         messages.push(send_msg(
             sender.clone(),
@@ -797,7 +790,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
         )?);
 
         store_claim_reward(
-            &mut deps.storage,
+            deps.storage,
             sender_canon,
             claim,
             symbol.clone(),
@@ -807,7 +800,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
     }
 
     perform_transfer(
-        &mut deps.storage,
+        deps.storage,
         sender,
         sender_canon,
         recipient,
@@ -817,7 +810,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
     )?;
 
     store_transfer(
-        &mut deps.storage,
+        deps.storage,
         sender_canon,
         sender_canon,
         recipient_canon,
@@ -1061,7 +1054,7 @@ fn try_register_receive<S: Storage, A: Api, Q: Querier>(
     env: Env,
     code_hash: String,
 ) -> StdResult<Response> {
-    set_receiver_hash(&mut deps.storage, &info.sender, code_hash);
+    set_receiver_hash(deps.storage, &info.sender, code_hash);
     let res = Response {
         messages: vec![],
         log: vec![log("register_status", "success")],
@@ -1131,7 +1124,7 @@ fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
     let raw_amount = amount.u128();
 
     use_allowance(
-        &mut deps.storage,
+        deps.storage,
         env,
         owner_canon,
         spender_canon,
@@ -1139,7 +1132,7 @@ fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
     )?;
 
     perform_transfer(
-        &mut deps.storage,
+        deps.storage,
         owner,
         owner_canon,
         recipient,
@@ -1148,10 +1141,10 @@ fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
         time,
     )?;
 
-    let symbol = Config::from_storage(&mut deps.storage).constants()?.symbol;
+    let symbol = Config::from_storage(deps.storage).constants()?.symbol;
 
     store_transfer(
-        &mut deps.storage,
+        deps.storage,
         owner_canon,
         spender_canon,
         recipient_canon,
@@ -1387,7 +1380,7 @@ fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
     }
     let new_amount = allowance.amount;
     write_allowance(
-        &mut deps.storage,
+        deps.storage,
         &owner_address,
         &spender_address,
         allowance,
@@ -1432,7 +1425,7 @@ fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
     }
     let new_amount = allowance.amount;
     write_allowance(
-        &mut deps.storage,
+        deps.storage,
         &owner_address,
         &spender_address,
         allowance,
@@ -1533,7 +1526,7 @@ fn revoke_permit<S: Storage, A: Api, Q: Querier>(
     permit_name: String,
 ) -> StdResult<Response> {
     RevokedPermits::revoke_permit(
-        &mut deps.storage,
+        deps.storage,
         PREFIX_REVOKED_PERMITS,
         &info.sender,
         &permit_name,

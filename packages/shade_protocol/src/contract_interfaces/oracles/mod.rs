@@ -1,4 +1,4 @@
 #[cfg(feature = "band")]
 pub mod band;
-#[cfg(feature = "oracle")]
+#[cfg(feature = "oracles")]
 pub mod oracle;

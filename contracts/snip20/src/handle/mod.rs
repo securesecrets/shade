@@ -58,8 +58,8 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
         return Err(redeem_disabled());
     }
 
-    Balance::sub(&mut deps.storage, amount, &sender)?;
-    TotalSupply::sub(&mut deps.storage, amount)?;
+    Balance::sub(deps.storage, amount, &sender)?;
+    TotalSupply::sub(deps.storage, amount)?;
 
     let token_reserve = Uint128::from(
         deps.querier
@@ -77,7 +77,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
 
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
-    store_redeem(&mut deps.storage, &sender, amount, denom, &env.block)?;
+    store_redeem(deps.storage, &sender, amount, denom, &env.block)?;
 
     Ok(Response {
         messages: vec![CosmosMsg::Bank(BankMsg::Send {
@@ -113,11 +113,11 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         return Err(deposit_disabled());
     }
 
-    TotalSupply::add(&mut deps.storage, amount)?;
-    Balance::add(&mut deps.storage, amount, &sender)?;
+    TotalSupply::add(deps.storage, amount)?;
+    Balance::add(deps.storage, amount, &sender)?;
 
     store_deposit(
-        &mut deps.storage,
+        deps.storage,
         &sender,
         amount,
         "uscrt".to_string(),
@@ -140,7 +140,7 @@ pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
         return Err(not_admin());
     }
 
-    Admin(address).save(&mut deps.storage)?;
+    Admin(address).save(deps.storage)?;
 
     Ok(Response {
         messages: vec![],
@@ -158,7 +158,7 @@ pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
         return Err(not_admin());
     }
 
-    status_level.save(&mut deps.storage)?;
+    status_level.save(deps.storage)?;
 
     Ok(Response {
         messages: vec![],
@@ -174,7 +174,7 @@ pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
     env: Env,
     code_hash: String,
 ) -> StdResult<Response> {
-    ReceiverHash(code_hash).save(&mut deps.storage, info.sender)?;
+    ReceiverHash(code_hash).save(deps.storage, info.sender)?;
     Ok(Response {
         messages: vec![],
         log: vec![],
@@ -193,7 +193,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
 
     let key = Key::generate(&env, seed.as_slice(), (&entropy).as_ref());
 
-    HashedKey(key.hash()).save(&mut deps.storage, info.sender)?;
+    HashedKey(key.hash()).save(deps.storage, info.sender)?;
 
     Ok(Response {
         messages: vec![],
@@ -209,7 +209,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let seed = RandSeed::load(&deps.storage)?.0;
 
-    HashedKey(Key(key).hash()).save(&mut deps.storage, info.sender)?;
+    HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
     Ok(Response {
         messages: vec![],
@@ -223,7 +223,7 @@ pub fn try_revoke_permit<S: Storage, A: Api, Q: Querier>(
     env: Env,
     permit_name: String,
 ) -> StdResult<Response> {
-    PermitKey::revoke(&mut deps.storage, permit_name, info.sender)?;
+    PermitKey::revoke(deps.storage, permit_name, info.sender)?;
 
     Ok(Response {
         messages: vec![],

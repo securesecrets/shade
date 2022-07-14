@@ -36,15 +36,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     info: MessageInfo,
     msg: InitMsg,
 ) -> StdResult<Response> {
-    config_w(&mut deps.storage).save(&Config {
+    config_w(deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(info.sender.clone()),
     })?;
 
-    viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
-    self_address_w(&mut deps.storage).save(&env.contract.address)?;
-    asset_list_w(&mut deps.storage).save(&Vec::new())?;
-    managers_w(&mut deps.storage).save(&Vec::new())?;
-    //account_list_w(&mut deps.storage).save(&Vec::new())?;
+    viewing_key_w(deps.storage).save(&msg.viewing_key)?;
+    self_address_w(deps.storage).save(&env.contract.address)?;
+    asset_list_w(deps.storage).save(&Vec::new())?;
+    managers_w(deps.storage).save(&Vec::new())?;
+    //account_list_w(deps.storage).save(&Vec::new())?;
 
     debug_print!("Contract was initialized by {}", info.sender);
 
@@ -85,7 +85,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

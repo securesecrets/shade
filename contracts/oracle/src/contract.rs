@@ -33,7 +33,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         sscrt: msg.sscrt,
     };
 
-    config_w(&mut deps.storage).save(&state)?;
+    config_w(deps.storage).save(&state)?;
 
     debug_print!("Contract was initialized by {}", info.sender);
 
@@ -60,7 +60,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

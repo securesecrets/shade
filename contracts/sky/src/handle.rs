@@ -25,7 +25,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     if info.sender != Config::load(&deps.storage)?.admin {
         return Err(StdError::unauthorized())
     }
-    config.save(&mut deps.storage)?;
+    config.save(deps.storage)?;
     Ok(Response{
         messages: vec![],
         log: vec![],

@@ -11,9 +11,8 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::{
-    snip20::{token_info_query, TokenInfo},
-    utils::Query,
+use shade_protocol::{
+    snip20::helpers::{token_info_query, TokenInfo},
 };
 use shade_protocol::{
     contract_interfaces::{
@@ -77,9 +76,9 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
             if let Some(mut pairs) = dex_pairs_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
                 //TODO: Check pair already registered
                 pairs.push(tp.clone());
-                dex_pairs_w(&mut deps.storage).save(td.1.symbol.as_bytes(), &pairs)?;
+                dex_pairs_w(deps.storage).save(td.1.symbol.as_bytes(), &pairs)?;
             } else {
-                dex_pairs_w(&mut deps.storage).save(td.1.symbol.as_bytes(), &vec![tp.clone()])?;
+                dex_pairs_w(deps.storage).save(td.1.symbol.as_bytes(), &vec![tp.clone()])?;
             }
 
             return Ok(Response {
@@ -116,7 +115,7 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
         {
             pair_list.remove(i);
 
-            dex_pairs_w(&mut deps.storage).save(symbol.as_bytes(), &pair_list)?;
+            dex_pairs_w(deps.storage).save(symbol.as_bytes(), &pair_list)?;
 
             return Ok(Response {
                 messages: vec![],
@@ -273,7 +272,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    index_w(&mut deps.storage).save(symbol.as_bytes(), &basket)?;
+    index_w(deps.storage).save(symbol.as_bytes(), &basket)?;
 
     Ok(Response {
         messages: vec![],
@@ -296,7 +295,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     }
 
     // Save new info
-    let mut config = config_w(&mut deps.storage);
+    let mut config = config_w(deps.storage);
     config.update(|mut state| {
         if let Some(admin) = admin {
             state.admin = admin;

@@ -18,7 +18,7 @@ use shade_protocol::{
 };
 
 pub fn token_info<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let info = CoinInfo::load(&deps.storage)?;
 
@@ -36,7 +36,7 @@ pub fn token_info<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn token_config<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::TokenConfig {
         // TODO: show the other addrd config items
@@ -50,7 +50,7 @@ pub fn token_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn contract_status<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::ContractStatus {
         status: ContractStatusLevel::load(&deps.storage)?,
@@ -58,7 +58,7 @@ pub fn contract_status<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn exchange_rate<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let decimals = CoinInfo::load(&deps.storage)?.decimals;
     if Config::deposit_enabled(&deps.storage)? || Config::redeem_enabled(&deps.storage)? {
@@ -81,14 +81,14 @@ pub fn exchange_rate<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn minters<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn minters<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Minters {
         minters: Minters::load(&deps.storage)?.0,
     })
 }
 
 pub fn allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     owner: Addr,
     spender: Addr,
 ) -> StdResult<QueryAnswer> {
@@ -106,7 +106,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account: Addr,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Balance {
@@ -115,7 +115,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn transfer_history<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account: Addr,
     page: u32,
     page_size: u32,
@@ -128,7 +128,7 @@ pub fn transfer_history<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn transaction_history<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     account: Addr,
     page: u32,
     page_size: u32,

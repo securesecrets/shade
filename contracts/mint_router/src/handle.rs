@@ -16,9 +16,8 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::{
-    snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query, TokenConfig, token_config_query},
-    utils::Query,
+use shade_protocol::{
+    snip20::helpers::{burn_msg, mint_msg, register_receive, send_msg, token_info_query, TokenConfig, token_config_query},
 };
 use shade_protocol::{
     contract_interfaces::{
@@ -148,7 +147,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         messages.append(&mut build_path(deps, env, config.path.clone())?);
     }
 
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
     Ok(Response {
         messages,
@@ -188,19 +187,17 @@ pub fn build_path<S: Storage, A: Api, Q: Querier>(
                 .may_load(&asset.address.to_string().as_bytes())?)
             .is_none()
             {
-                messages.push(register_receive_msg(
+                messages.push(register_receive(
                     env.contract_code_hash.clone(),
                     None,
-                    1,
-                    asset.code_hash.clone(),
-                    asset.address.clone(),
+                    asset
                 )?);
-                registered_asset_w(&mut deps.storage)
+                registered_asset_w(deps.storage)
                     .save(&asset.address.to_string().as_bytes(), &asset)?;
             }
 
             // Set this assets node to the current mint contract
-            asset_path_w(&mut deps.storage).save(&asset.address.to_string().as_bytes(), &mint)?;
+            asset_path_w(deps.storage).save(&asset.address.to_string().as_bytes(), &mint)?;
         }
     }
 
@@ -220,14 +217,12 @@ pub fn build_path<S: Storage, A: Api, Q: Querier>(
     if (registered_asset_r(&deps.storage).may_load(&final_asset.address.to_string().as_bytes())?)
         .is_none()
     {
-        messages.push(register_receive_msg(
+        messages.push(register_receive(
             env.contract_code_hash.clone(),
             None,
-            1,
-            final_asset.code_hash.clone(),
-            final_asset.address.clone(),
+            final_asset
         )?);
-        registered_asset_w(&mut deps.storage)
+        registered_asset_w(deps.storage)
             .save(&final_asset.address.to_string().as_bytes(), &final_asset)?;
     }
 
@@ -236,8 +231,8 @@ pub fn build_path<S: Storage, A: Api, Q: Querier>(
         all_assets.remove(index);
     }
 
-    final_asset_w(&mut deps.storage).save(&final_asset.address)?;
-    current_assets_w(&mut deps.storage).save(&all_assets)?;
+    final_asset_w(deps.storage).save(&final_asset.address)?;
+    current_assets_w(deps.storage).save(&all_assets)?;
 
     Ok(messages)
 }

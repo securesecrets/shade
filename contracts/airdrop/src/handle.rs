@@ -79,7 +79,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     }
 
     // Save new info
-    let mut config = config_w(&mut deps.storage);
+    let mut config = config_w(deps.storage);
     config.update(|mut state| {
         if let Some(admin) = admin {
             state.admin = admin;
@@ -190,7 +190,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
         return Err(not_admin(config.admin.as_str()));
     }
 
-    config_w(&mut deps.storage).update(|mut config| {
+    config_w(deps.storage).update(|mut config| {
         let mut task_list = tasks;
         config.task_claim.append(&mut task_list);
 
@@ -243,7 +243,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
 
             // Validate permits
             try_add_account_addresses(
-                &mut deps.storage,
+                deps.storage,
                 &deps.api,
                 &config,
                 &info.sender,
@@ -253,8 +253,8 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
             )?;
 
             // Add default claim at index 0
-            account_total_claimed_w(&mut deps.storage).save(sender.as_bytes(), &Uint128::zero())?;
-            claim_status_w(&mut deps.storage, 0).save(sender.as_bytes(), &false)?;
+            account_total_claimed_w(deps.storage).save(sender.as_bytes(), &Uint128::zero())?;
+            claim_status_w(deps.storage, 0).save(sender.as_bytes(), &false)?;
 
             account
         }
@@ -269,13 +269,13 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     let (completed_percentage, unclaimed_percentage) =
-        update_tasks(&mut deps.storage, &config, sender.clone())?;
+        update_tasks(deps.storage, &config, sender.clone())?;
 
     let mut redeem_amount = Uint128::zero();
 
     if unclaimed_percentage > Uint128::zero() {
         redeem_amount = claim_tokens(
-            &mut deps.storage,
+            deps.storage,
             env,
             &config,
             &account,
@@ -288,7 +288,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     if updating_account {
         // Validate permits
         try_add_account_addresses(
-            &mut deps.storage,
+            deps.storage,
             &deps.api,
             &config,
             &info.sender,
@@ -301,7 +301,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     if updating_account && completed_percentage > Uint128::zero() {
         // Calculate the total new address amount
         let added_address_total = account.total_claimable.checked_sub(old_claim_amount)?;
-        account_total_claimed_w(&mut deps.storage).update(sender.as_bytes(), |claimed| {
+        account_total_claimed_w(deps.storage).update(sender.as_bytes(), |claimed| {
             if let Some(claimed) = claimed {
                 let new_redeem: Uint128;
                 if completed_percentage == Uint128::new(100u128) {
@@ -321,7 +321,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     }
 
     if redeem_amount > Uint128::zero() {
-        total_claimed_w(&mut deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
+        total_claimed_w(deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
 
         messages.push(send_msg(
             info.sender.clone(),
@@ -336,7 +336,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     }
 
     // Save account
-    account_w(&mut deps.storage).save(sender.as_bytes(), &account)?;
+    account_w(deps.storage).save(sender.as_bytes(), &account)?;
 
     Ok(Response {
         messages,
@@ -357,7 +357,7 @@ pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     key: String,
 ) -> StdResult<Response> {
-    revoke_permit(&mut deps.storage, info.sender.to_string(), key);
+    revoke_permit(deps.storage, info.sender.to_string(), key);
 
     Ok(Response {
         messages: vec![],
@@ -373,7 +373,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     key: String,
 ) -> StdResult<Response> {
-    account_viewkey_w(&mut deps.storage).save(
+    account_viewkey_w(deps.storage).save(
         &info.sender.to_string().as_bytes(),
         &AccountKey(key).hash(),
     )?;
@@ -396,7 +396,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
 
     for (i, task) in config.task_claim.iter().enumerate() {
         if task.address == info.sender {
-            claim_status_w(&mut deps.storage, i).update(
+            claim_status_w(deps.storage, i).update(
                 account.to_string().as_bytes(),
                 |status| {
                     // If there was a state then ignore
@@ -434,14 +434,14 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 
     // Calculate airdrop
     let (completed_percentage, unclaimed_percentage) =
-        update_tasks(&mut deps.storage, &config, sender.to_string())?;
+        update_tasks(deps.storage, &config, sender.to_string())?;
 
     if unclaimed_percentage == Uint128::zero() {
         return Err(nothing_to_claim());
     }
 
     let redeem_amount = claim_tokens(
-        &mut deps.storage,
+        deps.storage,
         env,
         &config,
         &account,
@@ -449,7 +449,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         unclaimed_percentage,
     )?;
 
-    total_claimed_w(&mut deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
+    total_claimed_w(deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
 
     Ok(Response {
         messages: vec![send_msg(
@@ -483,7 +483,7 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
     if let Some(end_date) = config.end_date {
         if let Some(dump_address) = config.dump_address {
             if env.block.time > end_date {
-                decay_claimed_w(&mut deps.storage).update(|claimed| {
+                decay_claimed_w(deps.storage).update(|claimed| {
                     if claimed {
                         Err(decay_claimed())
                     } else {

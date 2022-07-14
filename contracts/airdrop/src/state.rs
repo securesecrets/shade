@@ -173,7 +173,7 @@ pub fn validate_address_permit<S: Storage, A: Api>(
 }
 
 pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     permit: &AccountPermit,
     contract: Addr,
 ) -> StdResult<Addr> {
