@@ -1,3 +1,4 @@
+/// Needs the implementing package to have shade_protocol as a dependency with features.
 #[macro_export]
 macro_rules! implement_multi {
     ($x:ident, $s:ident) => {
@@ -20,5 +21,3 @@ macro_rules! implement_multi {
          }
     };
 }
-
-pub use implement_multi;

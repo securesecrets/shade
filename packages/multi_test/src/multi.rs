@@ -1,11 +1,9 @@
 #[cfg(feature = "admin")]
 pub mod admin {
-    use crate::multi_macro;
     use admin;
-
     pub struct AdminAuth { info: ContractInfo }
 
-    multi_macro::implement_multi!(AdminAuth, admin);
+    multi_derive::implement_multi!(AdminAuth, admin);
 }
 
 // #[cfg(feature = "mint")]

@@ -5,6 +5,7 @@ members = [
   "packages/secretcli",
   "packages/contract_harness",
   "packages/multi_test",
+  "packages/multi_derive",
 
   # Network setups
   "contracts/airdrop",
