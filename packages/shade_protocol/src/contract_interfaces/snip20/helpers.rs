@@ -1,4 +1,4 @@
-use cosmwasm_std::Coin;
+use cosmwasm_std::{Coin, SubMsg};
 use cosmwasm_schema::{cw_serde};
 use crate::c_std::{StdError, StdResult, Addr, Uint128, Binary, CosmosMsg, QuerierWrapper};
 use crate::utils::{HandleCallback, Query};
@@ -41,8 +41,8 @@ pub fn send_msg(
     memo: Option<String>,
     padding: Option<String>,
     contract: &Contract,
-) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Send {
+) -> StdResult<SubMsg> {
+    Ok(SubMsg::new(ExecuteMsg::Send {
         recipient,
         recipient_code_hash: None,
         amount,
@@ -52,7 +52,7 @@ pub fn send_msg(
     }.to_cosmos_msg(
         contract,
         vec![]
-    )
+    )?))
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Redeem
@@ -70,12 +70,12 @@ pub fn redeem_msg(
     denom: Option<String>,
     padding: Option<String>,
     contract: &Contract
-) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Redeem {
+) -> StdResult<SubMsg> {
+    Ok(SubMsg::new(ExecuteMsg::Redeem {
         amount,
         denom,
         padding,
-    }.to_cosmos_msg(contract, vec![])
+    }.to_cosmos_msg(contract, vec![])?))
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Deposit
@@ -91,14 +91,14 @@ pub fn deposit_msg(
     amount: Uint128,
     padding: Option<String>,
     contract: &Contract
-) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Deposit { padding }.to_cosmos_msg(
+) -> StdResult<SubMsg> {
+    Ok(SubMsg::new(ExecuteMsg::Deposit { padding }.to_cosmos_msg(
         contract,
         vec![Coin {
             denom: "uscrt".to_string(),
             amount
         }],
-    )
+    )?))
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute RegisterReceive
@@ -114,12 +114,12 @@ pub fn register_receive(
     register_hash: String,
     padding: Option<String>,
     contract: &Contract
-) -> StdResult<CosmosMsg> {
-    ExecuteMsg::RegisterReceive {
+) -> StdResult<SubMsg> {
+    Ok(SubMsg::new(ExecuteMsg::RegisterReceive {
         code_hash: register_hash,
         padding,
     }
-        .to_cosmos_msg(contract, vec![])
+        .to_cosmos_msg(contract, vec![])?))
 }
 
 /// TokenInfo response

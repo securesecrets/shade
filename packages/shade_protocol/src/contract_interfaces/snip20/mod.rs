@@ -1,4 +1,4 @@
-pub mod manager;
+pub mod manager; //TODO: fragment this so it doesnt import useless stuff in interface
 pub mod batch;
 pub mod transaction_history;
 pub mod errors;

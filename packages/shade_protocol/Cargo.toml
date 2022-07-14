@@ -53,7 +53,7 @@ secretswap = ["interface"]
 sienna     = ["interface", "math"]
 
 # Protocol contracts NOTE: interfaces that have other interfaces as features already automatically have `interface` as a feature
-airdrop          = ["query_auth"]
+airdrop          = ["query_auth", "snip20"]
 bonds            = ["airdrop", "snip20"]
 governance       = ["query_auth", "flexible_msg"]
 mint             = ["snip20"]
@@ -65,7 +65,7 @@ treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 lp_shade_swap    = ["interface"]
 adapter          = ["interface"]
-snip20           = ["query_auth", "dep:base64"]
+snip20           = ["query_auth_impl", "dep:base64"]
 query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
 sky              = ["snip20", "dex"]

@@ -78,6 +78,7 @@ pub fn init(
 pub fn handle(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {

@@ -15,7 +15,7 @@ pub trait NaiveItemStorage: Serialize + DeserializeOwned {
         item.save(storage, self)
     }
 
-    fn update<A, E>(&self, storage: &mut dyn Storage, item: Item<Self>, action: A) -> Result<Self, E>
+    fn update<A, E, S: Storage>(&self, storage: &mut dyn Storage, item: Item<Self>, action: A) -> Result<Self, E>
         where
             A: FnOnce(Self) -> Result<Self, E>,
             E: From<StdError>,
@@ -39,7 +39,7 @@ pub trait ItemStorage: Serialize + DeserializeOwned {
         Self::ITEM.save(storage, self)
     }
 
-    fn update<A, E>(&self, storage: &mut dyn Storage, action: A) -> Result<Self, E>
+    fn update<A, E, S: Storage>(&self, storage: &mut dyn Storage, action: A) -> Result<Self, E>
     where
         A: FnOnce(Self) -> Result<Self, E>,
         E: From<StdError>,
@@ -61,7 +61,7 @@ pub trait NaiveMapStorage<'a>: Serialize + DeserializeOwned {
         map.save(storage, key, self)
     }
 
-    fn update<A, E, K: PrimaryKey<'a>>(&self, storage: &mut dyn Storage, map: Map<'a, K, Self>, key: K, action: A) -> Result<Self, E>
+    fn update<A, E, S: Storage, K: PrimaryKey<'a>>(&self, storage: &mut dyn Storage, map: Map<'a, K, Self>, key: K, action: A) -> Result<Self, E>
         where
             A: FnOnce(Option<Self>) -> Result<Self, E>,
             E: From<StdError>,
@@ -85,7 +85,7 @@ pub trait MapStorage<'a, K: PrimaryKey<'a>>: Serialize + DeserializeOwned {
         Self::MAP.save(storage, key, self)
     }
 
-    fn update<A, E>(&self, storage: &mut dyn Storage, key: K, action: A) -> Result<Self, E>
+    fn update<A, E, S: Storage>(&self, storage: &mut dyn Storage, key: K, action: A) -> Result<Self, E>
     where
         A: FnOnce(Option<Self>) -> Result<Self, E>,
         E: From<StdError>,

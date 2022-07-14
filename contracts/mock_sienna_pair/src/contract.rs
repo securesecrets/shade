@@ -41,11 +41,11 @@ impl InitCallback for InstantiateMsg {
 
 pub static PAIR_INFO: &[u8] = b"pair_info";
 
-pub fn pair_info_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, PairInfo> {
+pub fn pair_info_r(storage: &dyn Storage) -> ReadonlySingleton<PairInfo> {
     singleton_read(storage, PAIR_INFO)
 }
 
-pub fn pair_info_w<S: Storage>(storage: &mut S) -> Singleton<S, PairInfo> {
+pub fn pair_info_w(storage: &mut dyn Storage) -> Singleton<PairInfo> {
     singleton(storage, PAIR_INFO)
 }
 

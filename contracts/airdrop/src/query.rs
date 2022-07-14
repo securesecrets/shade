@@ -13,7 +13,7 @@ use crate::{
         validate_address_permit,
     },
 };
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{Deps, Uint128};
 use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdResult, Storage};
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use shade_protocol::contract_interfaces::airdrop::{
@@ -26,7 +26,7 @@ use shade_protocol::contract_interfaces::airdrop::{
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: config_r(deps.storage).load()?,
     })
 }
 
@@ -47,7 +47,7 @@ pub fn total_claimed(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let claimed: Uint128;
-    let total_claimed = total_claimed_r(&deps.storage).load()?;
+    let total_claimed = total_claimed_r(deps.storage).load()?;
     if decay_claimed_r(&deps.storage).load()? {
         claimed = total_claimed;
     } else {

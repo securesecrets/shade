@@ -38,19 +38,19 @@ use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Sing
 pub static PAIR_INFO: &[u8] = b"pair_info";
 pub static POOL: &[u8] = b"pool";
 
-pub fn pair_info_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, PairResponse> {
+pub fn pair_info_r(storage: &dyn Storage) -> ReadonlySingleton<PairResponse> {
     singleton_read(storage, PAIR_INFO)
 }
 
-pub fn pair_info_w<S: Storage>(storage: &mut S) -> Singleton<S, PairResponse> {
+pub fn pair_info_w(storage: &mut dyn Storage) -> Singleton<PairResponse> {
     singleton(storage, PAIR_INFO)
 }
 
-pub fn pool_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, PoolResponse> {
+pub fn pool_r(storage: &dyn Storage) -> ReadonlySingleton<PoolResponse> {
     singleton_read(storage, POOL)
 }
 
-pub fn pool_w<S: Storage>(storage: &mut S) -> Singleton<S, PoolResponse> {
+pub fn pool_w(storage: &mut dyn Storage) -> Singleton<PoolResponse> {
     singleton(storage, POOL)
 }
 

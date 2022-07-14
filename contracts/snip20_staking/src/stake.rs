@@ -113,8 +113,8 @@ fn round_date(date: u64) -> u64 {
 ///
 /// Updates total states to reflect balance changes
 ///
-fn add_balance<S: Storage>(
-    storage: &mut S,
+fn add_balance(
+    storage: &mut dyn Storage,
     stake_config: &StakeConfig,
     sender: &Addr,
     sender_canon: &CanonicalAddr,
@@ -171,8 +171,8 @@ fn add_balance<S: Storage>(
 ///
 /// Removed items from internal supply
 ///
-fn subtract_internal_supply<S: Storage>(
-    storage: &mut S,
+fn subtract_internal_supply(
+    storage: &mut dyn Storage,
     total_shares: &mut TotalShares,
     shares: Uint256,
     total_tokens: &mut TotalTokens,
@@ -206,8 +206,8 @@ fn subtract_internal_supply<S: Storage>(
 ///
 /// Updates total states to reflect balance changes
 ///
-fn remove_balance<S: Storage>(
-    storage: &mut S,
+fn remove_balance(
+    storage: &mut dyn Storage,
     stake_config: &StakeConfig,
     account: &Addr,
     account_cannon: &CanonicalAddr,
@@ -257,8 +257,8 @@ fn remove_balance<S: Storage>(
     Ok(())
 }
 
-pub fn claim_rewards<S: Storage>(
-    storage: &mut S,
+pub fn claim_rewards(
+    storage: &mut dyn Storage,
     stake_config: &StakeConfig,
     sender: &Addr,
     sender_canon: &CanonicalAddr,
@@ -515,7 +515,7 @@ pub fn try_receive(
     })
 }
 
-pub fn remove_from_cooldown<S: Storage>(
+pub fn remove_from_cooldown(
     store: &mut S,
     user: &Addr,
     user_tokens: Uint128,

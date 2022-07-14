@@ -12,7 +12,7 @@ use crate::{
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
 };
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{Deps, MessageInfo, Uint128};
 use shade_protocol::c_std::{
     to_binary,
     Api,
@@ -63,7 +63,7 @@ pub fn init(
     }
 
     let start_date = match msg.start_date {
-        None => env.block.time,
+        None => env.block.time.seconds(),
         Some(date) => date,
     };
 
@@ -134,6 +134,7 @@ pub fn init(
 pub fn handle(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     pad_handle_result(
@@ -149,6 +150,7 @@ pub fn handle(
             } => try_update_config(
                 deps,
                 env,
+                &info,
                 admin,
                 dump_address,
                 redeem_step_size,
@@ -156,17 +158,17 @@ pub fn handle(
                 end_date,
                 start_decay,
             ),
-            ExecuteMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, tasks),
-            ExecuteMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, address),
+            ExecuteMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, &info, tasks),
+            ExecuteMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, &info, address),
             ExecuteMsg::Account {
                 addresses,
                 partial_tree,
                 ..
-            } => try_account(deps, &env, addresses, partial_tree),
-            ExecuteMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
-            ExecuteMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, &env, key),
-            ExecuteMsg::Claim { .. } => try_claim(deps, &env),
-            ExecuteMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),
+            } => try_account(deps, &env, &info, addresses, partial_tree),
+            ExecuteMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, &info, key),
+            ExecuteMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, &env, &info, key),
+            ExecuteMsg::Claim { .. } => try_claim(deps, &env, &info),
+            ExecuteMsg::ClaimDecay { .. } => try_claim_decay(deps, &env, &info),
         },
         RESPONSE_BLOCK_SIZE,
     )

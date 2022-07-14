@@ -7,8 +7,8 @@ use shade_protocol::contract_interfaces::snip20::transaction_history::store_tran
 use shade_protocol::utils::generic_response::ResponseStatus::Success;
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 
-pub fn try_transfer_impl<S: Storage>(
-    storage: &mut S,
+pub fn try_transfer_impl(
+    storage: &mut dyn Storage,
     sender: &Addr, //spender when using from
     owner: Option<&Addr>,
     recipient: &Addr,
@@ -80,7 +80,7 @@ pub fn try_batch_transfer(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn try_add_receiver_api_callback<S: Storage>(
+fn try_add_receiver_api_callback(
     storage: &dyn Storage,
     messages: &mut Vec<CosmosMsg>,
     recipient: Addr,
@@ -105,8 +105,8 @@ fn try_add_receiver_api_callback<S: Storage>(
     Ok(())
 }
 
-pub fn try_send_impl<S: Storage>(
-    storage: &mut S,
+pub fn try_send_impl(
+    storage: &mut dyn Storage,
     messages: &mut Vec<CosmosMsg>,
     sender: &Addr,
     owner: Option<&Addr>,

@@ -21,88 +21,88 @@ pub static HOLDERS: &[u8] = b"holders";
 pub static HOLDER: &[u8] = b"holder";
 pub static UNBONDINGS: &[u8] = b"unbondings";
 
-pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury_manager::Config> {
+pub fn config_w(storage: &mut dyn Storage) -> Singleton<treasury_manager::Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, treasury_manager::Config> {
+pub fn config_r(storage: &dyn Storage) -> ReadonlySingleton<treasury_manager::Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn asset_list_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<Addr>> {
+pub fn asset_list_r(storage: &dyn Storage) -> ReadonlySingleton<Vec<Addr>> {
     singleton_read(storage, ASSET_LIST)
 }
 
-pub fn asset_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Addr>> {
+pub fn asset_list_w(storage: &mut dyn Storage) -> Singleton<Vec<Addr>> {
     singleton(storage, ASSET_LIST)
 }
 
-pub fn assets_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Snip20Asset> {
-    bucket_read(ASSETS, storage)
+pub fn assets_r(storage: &dyn Storage) -> ReadonlyBucket<Snip20Asset> {
+    bucket_read(storage, ASSETS)
 }
 
-pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
-    bucket(ASSETS, storage)
+pub fn assets_w(storage: &mut dyn Storage) -> Bucket<Snip20Asset> {
+    bucket(storage, ASSETS)
 }
 
-pub fn viewing_key_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, String> {
+pub fn viewing_key_r(storage: &dyn Storage) -> ReadonlySingleton<String> {
     singleton_read(storage, VIEWING_KEY)
 }
 
-pub fn viewing_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
+pub fn viewing_key_w(storage: &mut dyn Storage) -> Singleton<String> {
     singleton(storage, VIEWING_KEY)
 }
 
-pub fn self_address_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Addr> {
+pub fn self_address_r(storage: &dyn Storage) -> ReadonlySingleton<Addr> {
     singleton_read(storage, SELF_ADDRESS)
 }
 
-pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
+pub fn self_address_w(storage: &mut dyn Storage) -> Singleton<Addr> {
     singleton(storage, SELF_ADDRESS)
 }
 
-pub fn allocations_r<S: Storage>(
+pub fn allocations_r(
     storage: &dyn Storage,
-) -> ReadonlyBucket<S, Vec<treasury_manager::AllocationMeta>> {
-    bucket_read(ALLOCATIONS, storage)
+) -> ReadonlyBucket<Vec<treasury_manager::AllocationMeta>> {
+    bucket_read(storage, ALLOCATIONS)
 }
 
-pub fn allocations_w<S: Storage>(
-    storage: &mut S,
-) -> Bucket<S, Vec<treasury_manager::AllocationMeta>> {
-    bucket(ALLOCATIONS, storage)
+pub fn allocations_w(
+    storage: &mut dyn Storage,
+) -> Bucket<Vec<treasury_manager::AllocationMeta>> {
+    bucket(storage, ALLOCATIONS)
 }
 
-pub fn holders_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<Addr>> {
+pub fn holders_r(storage: &dyn Storage) -> ReadonlySingleton<Vec<Addr>> {
     singleton_read(storage, HOLDERS)
 }
 
-pub fn holders_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Addr>> {
+pub fn holders_w(storage: &mut dyn Storage) -> Singleton<Vec<Addr>> {
     singleton(storage, HOLDERS)
 }
 
-pub fn holder_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, treasury_manager::Holder> {
-    bucket_read(HOLDER, storage)
+pub fn holder_r(storage: &dyn Storage) -> ReadonlyBucket<treasury_manager::Holder> {
+    bucket_read(storage, HOLDER)
 }
 
-pub fn holder_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury_manager::Holder> {
-    bucket(HOLDER, storage)
+pub fn holder_w(storage: &mut dyn Storage) -> Bucket<treasury_manager::Holder> {
+    bucket(storage, HOLDER)
 }
 
-pub fn unbondings_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Vec<treasury_manager::Unbonding>> {
-    bucket_read(UNBONDINGS, storage)
+pub fn unbondings_r(storage: &dyn Storage) -> ReadonlyBucket<Vec<treasury_manager::Unbonding>> {
+    bucket_read(storage, UNBONDINGS)
 }
 
-pub fn unbondings_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury_manager::Unbonding>> {
-    bucket(HOLDER, storage)
+pub fn unbondings_w(storage: &mut dyn Storage) -> Bucket<Vec<treasury_manager::Unbonding>> {
+    bucket(storage, HOLDER)
 }
 
 /*
-pub fn unbonding_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Uint128> {
-    bucket_read(UNBONDING, storage)
+pub fn unbonding_r(storage: &dyn Storage) -> ReadonlyBucket<Uint128> {
+    bucket_read(storage, UNBONDING)
 }
 
-pub fn unbonding_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
-    bucket(UNBONDING, storage)
+pub fn unbonding_w(storage: &mut dyn Storage) -> Bucket<Uint128> {
+    bucket(storage, UNBONDING)
 }
 */

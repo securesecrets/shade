@@ -7,8 +7,8 @@ use shade_protocol::contract_interfaces::snip20::transaction_history::{store_bur
 use shade_protocol::utils::generic_response::ResponseStatus::Success;
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 
-fn try_mint_impl<S: Storage>(
-    storage: &mut S,
+fn try_mint_impl(
+    storage: &mut dyn Storage,
     minter: &Addr,
     recipient: &Addr,
     amount: Uint128,
