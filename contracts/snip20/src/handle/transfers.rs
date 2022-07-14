@@ -54,7 +54,7 @@ pub fn try_transfer<S: Storage, A: Api, Q: Querier>(
     memo: Option<String>
 ) -> StdResult<Response> {
     let denom = CoinInfo::load(&deps.storage)?.symbol;
-    try_transfer_impl(&mut deps.storage, &env.message.sender, None, &recipient, amount, memo, denom, &env.block)?;
+    try_transfer_impl(&mut deps.storage, &info.sender, None, &recipient, amount, memo, denom, &env.block)?;
     Ok(Response{
         messages: vec![],
         log: vec![],
@@ -67,7 +67,7 @@ pub fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
     env: Env,
     actions: Vec<batch::TransferAction>,
 ) -> StdResult<Response> {
-    let sender = env.message.sender;
+    let sender = info.sender;
     let block = env.block;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     for action in actions {
@@ -151,7 +151,7 @@ pub fn try_send<S: Storage, A: Api, Q: Querier>(
     try_send_impl(
         &mut deps.storage,
         &mut messages,
-        &env.message.sender,
+        &info.sender,
         None,
         &recipient,
         recipient_code_hash,
@@ -175,7 +175,7 @@ pub fn try_batch_send<S: Storage, A: Api, Q: Querier>(
     actions: Vec<batch::SendAction>
 ) -> StdResult<Response> {
     let mut messages = vec![];
-    let sender = env.message.sender;
+    let sender = info.sender;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
     for action in actions {

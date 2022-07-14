@@ -37,7 +37,7 @@ pub struct ReferenceData {
 }
 
 pub fn reference_data(
-    deps: Deps,
+    deps: &Deps,
     base_symbol: String,
     quote_symbol: String,
     band: Contract,
@@ -46,11 +46,11 @@ pub fn reference_data(
         base_symbol,
         quote_symbol,
     }
-    .query(&deps.querier, band.code_hash, band.address)
+    .query(&deps.querier, &band)
 }
 
 pub fn reference_data_bulk(
-    deps: Deps,
+    deps: &Deps,
     base_symbols: Vec<String>,
     quote_symbols: Vec<String>,
     band: Contract,
@@ -59,5 +59,5 @@ pub fn reference_data_bulk(
         base_symbols,
         quote_symbols,
     }
-    .query(&deps.querier, band.code_hash, band.address)
+    .query(&deps.querier, &band)
 }

@@ -32,7 +32,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let config = Config {
         admin: match msg.admin {
-            None => env.message.sender.clone(),
+            None => info.sender.clone(),
             Some(admin) => admin,
         },
         path: msg.path,

@@ -86,7 +86,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
      */
 
     let config = config_r(&deps.storage).load()?;
-    let asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
+    let asset = assets_r(&deps.storage).load(info.sender.to_string().as_bytes())?;
 
     // Is Valid Holder
     if holders_r(&deps.storage).load()?.contains(&from) {
@@ -143,7 +143,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != cur_config.admin {
+    if info.sender != cur_config.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -165,7 +165,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -218,7 +218,7 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     /* ADMIN ONLY */
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -288,7 +288,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     let full_asset = assets_r(&deps.storage).load(asset.to_string().as_bytes())?;
 
     let config = config_r(&deps.storage).load()?;
-    let mut claimer = env.message.sender.clone();
+    let mut claimer = info.sender.clone();
 
     if claimer == config.admin {
         claimer = config.treasury;
@@ -500,7 +500,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    let mut unbonder = env.message.sender.clone();
+    let mut unbonder = info.sender.clone();
 
     // admin unbonds on behalf of treasury
     if unbonder == config.admin {
@@ -742,7 +742,7 @@ pub fn add_holder<S: Storage, A: Api, Q: Querier>(
     holder: Addr,
 ) -> StdResult<Response> {
 
-    if env.message.sender != config_r(&deps.storage).load()?.admin {
+    if info.sender != config_r(&deps.storage).load()?.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -776,7 +776,7 @@ pub fn remove_holder<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     holder: Addr,
 ) -> StdResult<Response> {
-    if env.message.sender != config_r(&deps.storage).load()?.admin {
+    if info.sender != config_r(&deps.storage).load()?.admin {
         return Err(StdError::unauthorized());
     }
 

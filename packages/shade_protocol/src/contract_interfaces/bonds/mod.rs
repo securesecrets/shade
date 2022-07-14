@@ -2,6 +2,7 @@ pub mod errors;
 pub mod rand;
 pub mod utils;
 
+use cosmwasm_std::MessageInfo;
 use crate::c_std::Env;
 
 use crate::contract_interfaces::bonds::rand::{sha_256, Prng};
@@ -221,13 +222,13 @@ impl SnipViewingKey {
         ct_slice_compare(&mine_hashed, hashed_pw)
     }
 
-    pub fn new(env: &Env, seed: &[u8], entropy: &[u8]) -> Self {
+    pub fn new(info: &MessageInfo, env: &Env, seed: &[u8], entropy: &[u8]) -> Self {
         // 16 here represents the lengths in bytes of the block height and time.
-        let entropy_len = 16 + env.message.sender.len() + entropy.len();
+        let entropy_len = 16 + info.sender.as_str().len() + entropy.len();
         let mut rng_entropy = Vec::with_capacity(entropy_len);
         rng_entropy.extend_from_slice(&env.block.height.to_be_bytes());
-        rng_entropy.extend_from_slice(&env.block.time.to_be_bytes());
-        rng_entropy.extend_from_slice(&env.message.sender.0.as_bytes());
+        rng_entropy.extend_from_slice(&env.block.time.seconds().to_be_bytes());
+        rng_entropy.extend_from_slice(&info.sender.as_str().as_bytes());
         rng_entropy.extend_from_slice(entropy);
 
         let mut rng = Prng::new(seed, &rng_entropy);

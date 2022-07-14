@@ -52,7 +52,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.sscrt.address {
+    if info.sender != config.sscrt.address {
         return Err(StdError::generic_err("Only accepts sSCRT"));
     }
 
@@ -91,7 +91,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
-    if cur_config.admins.contains(&env.message.sender) {
+    if cur_config.admins.contains(&info.sender) {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -176,11 +176,11 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     //TODO: needs treasury & manager as admin, maybe just manager?
     /*
-    if env.message.sender != config.admin && env.message.sender != config.treasury {
+    if info.sender != config.admin && info.sender != config.treasury {
         return Err(StdError::Unauthorized { backtrace: None });
     }
     */
-    if !config.admins.contains(&env.message.sender) || config.owner != env.message.sender {
+    if !config.admins.contains(&info.sender) || config.owner != info.sender {
         return Err(StdError::unauthorized());
     }
 
@@ -351,7 +351,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    if !config.admins.contains(&env.message.sender) || !(config.owner == env.message.sender) {
+    if !config.admins.contains(&info.sender) || !(config.owner == info.sender) {
         return Err(StdError::unauthorized());
     }
 

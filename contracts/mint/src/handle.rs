@@ -65,7 +65,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     let mint_asset = native_asset_r(&deps.storage).load()?;
 
     // Prevent sender to be native asset
-    if mint_asset.contract.address == env.message.sender {
+    if mint_asset.contract.address == info.sender {
         return Err(StdError::generic_err(
             "Sender cannot be the same as the native asset.",
         ));
@@ -73,18 +73,18 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     // Check that sender is a supported snip20 asset
     let burn_asset =
-        match assets_r(&deps.storage).may_load(env.message.sender.to_string().as_bytes())? {
+        match assets_r(&deps.storage).may_load(info.sender.to_string().as_bytes())? {
             Some(supported_asset) => {
                 debug_print!(
                     "Found Burn Asset: {} {}",
                     &supported_asset.asset.token_info.symbol,
-                    env.message.sender.to_string()
+                    info.sender.to_string()
                 );
                 supported_asset
             }
             None => {
                 return Err(StdError::NotFound {
-                    kind: env.message.sender.to_string(),
+                    kind: info.sender.to_string(),
                     backtrace: None,
                 });
             }
@@ -312,7 +312,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     let cur_config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if env.message.sender != cur_config.admin {
+    if info.sender != cur_config.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -337,7 +337,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
     // Check if contract enabled

@@ -20,7 +20,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let state = Config {
         admin: match msg.admin{
-            None => env.message.sender.clone(),
+            None => info.sender.clone(),
             Some(admin) => admin,
         },
         mint_addr: msg.mint_addr,
@@ -34,7 +34,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     state.save(&mut deps.storage)?;
     SelfAddr(env.contract.address).save(&mut deps.storage)?;
 
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    debug_print!("Contract was initialized by {}", info.sender);
 
     let mut messages = vec![
         set_viewing_key_msg(

@@ -1,6 +1,6 @@
-
+use cosmwasm_std::Coin;
 use crate::serde::{Deserialize, Serialize};
-use crate::c_std::{Querier, StdError, StdResult, Addr, Uint128, Binary, CosmosMsg, QuerierWrapper};
+use crate::c_std::{StdError, StdResult, Addr, Uint128, Binary, CosmosMsg, QuerierWrapper};
 use crate::utils::{HandleCallback, Query};
 use super::{QueryAnswer, QueryMsg, HandleMsg};
 use crate::utils::asset::Contract;
@@ -13,15 +13,11 @@ pub struct Snip20Asset {
     pub token_config: Option<TokenConfig>,
 }
 
-pub fn fetch_snip20<Q: Querier>(contract: &Contract, querier: &Q) -> StdResult<Snip20Asset> {
+pub fn fetch_snip20(contract: &Contract, querier: &QuerierWrapper) -> StdResult<Snip20Asset> {
     Ok(Snip20Asset {
         contract: contract.clone(),
-        token_info: token_info(
-            querier,
-            1,
-            contract.clone(),
-        )?,
-        token_config: Some(token_config_query(querier, 256, contract.code_hash.clone(), contract.address.clone())?),
+        token_info: token_info(querier, contract)?,
+        token_config: Some(token_config(querier, contract)?),
     })
 }
 
@@ -45,8 +41,7 @@ pub fn send_msg(
     msg: Option<Binary>,
     memo: Option<String>,
     padding: Option<String>,
-    block_size: usize,
-    contract: Contract,
+    contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     HandleMsg::Send {
         recipient,
@@ -56,12 +51,56 @@ pub fn send_msg(
         memo,
         padding
     }.to_cosmos_msg(
-        contract.address.into(),
-        contract.code_hash,
+        contract,
         vec![]
     )
 }
 
+/// Returns a StdResult<CosmosMsg> used to execute Redeem
+///
+/// # Arguments
+///
+/// * `amount` - Uint128 amount of token to redeem for SCRT
+/// * `denom` - Optional String to hold the denomination of tokens to redeem
+/// * `padding` - Optional String used as padding if you don't want to use block padding
+/// * `block_size` - pad the message to blocks of this size
+/// * `callback_code_hash` - String holding the code hash of the contract being called
+/// * `contract_addr` - address of the contract being called
+pub fn redeem_msg(
+    amount: Uint128,
+    denom: Option<String>,
+    padding: Option<String>,
+    contract: &Contract
+) -> StdResult<CosmosMsg> {
+    HandleMsg::Redeem {
+        amount,
+        denom,
+        padding,
+    }.to_cosmos_msg(contract, vec![])
+}
+
+/// Returns a StdResult<CosmosMsg> used to execute Deposit
+///
+/// # Arguments
+///
+/// * `amount` - Uint128 amount of uSCRT to convert to the SNIP20 token
+/// * `padding` - Optional String used as padding if you don't want to use block padding
+/// * `block_size` - pad the message to blocks of this size
+/// * `callback_code_hash` - String holding the code hash of the contract being called
+/// * `contract_addr` - address of the contract being called
+pub fn deposit_msg(
+    amount: Uint128,
+    padding: Option<String>,
+    contract: &Contract
+) -> StdResult<CosmosMsg> {
+    HandleMsg::Deposit { padding }.to_cosmos_msg(
+        contract,
+        vec![Coin {
+            denom: "uscrt".to_string(),
+            amount
+        }],
+    )
+}
 
 /// TokenInfo response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -82,11 +121,10 @@ pub struct TokenInfo {
 /// * `contract_addr` - address of the contract being queried
 pub fn token_info(
     querier: &QuerierWrapper,
-    block_size: usize,
-    contract: Contract,
+    contract: &Contract,
 ) -> StdResult<TokenInfo> {
     let answer: QueryAnswer =
-        QueryMsg::TokenInfo {}.query(querier, contract.address.into(), contract.code_hash, block_size)?;
+        QueryMsg::TokenInfo {}.query(querier, contract)?;
 
     match answer {
         QueryAnswer::TokenInfo { name, symbol, decimals, total_supply } => Ok(TokenInfo {
@@ -94,6 +132,46 @@ pub fn token_info(
             symbol,
             decimals,
             total_supply
+        }),
+        _ => Err(StdError::generic_err("Wrong answer")) //TODO: better error
+    }
+}
+
+/// TokenConfig response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct TokenConfig {
+    pub public_total_supply: bool,
+    pub deposit_enabled: bool,
+    pub redeem_enabled: bool,
+    pub mint_enabled: bool,
+    pub burn_enabled: bool,
+    // Optionals only relevant to some snip20a
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transfer_enabled: Option<bool>
+}
+/// Returns a StdResult<TokenConfig> from performing TokenConfig query
+///
+/// # Arguments
+///
+/// * `querier` - a reference to the Querier dependency of the querying contract
+/// * `block_size` - pad the message to blocks of this size
+/// * `callback_code_hash` - String holding the code hash of the contract being queried
+/// * `contract_addr` - address of the contract being queried
+pub fn token_config(
+    querier: &QuerierWrapper,
+    contract: &Contract,
+) -> StdResult<TokenConfig> {
+    let answer: QueryAnswer =
+        QueryMsg::TokenConfig {}.query(querier, contract)?;
+
+    match answer {
+        QueryAnswer::TokenConfig { public_total_supply, deposit_enabled, redeem_enabled, mint_enabled, burn_enabled, .. } => Ok(TokenConfig {
+            public_total_supply,
+            deposit_enabled,
+            redeem_enabled,
+            mint_enabled,
+            burn_enabled,
+            transfer_enabled: None
         }),
         _ => Err(StdError::generic_err("Wrong answer")) //TODO: better error
     }

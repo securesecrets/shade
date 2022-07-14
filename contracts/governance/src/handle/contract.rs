@@ -23,7 +23,7 @@ pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
     contract: Contract,
     assemblies: Option<Vec<Uint128>>,
 ) -> StdResult<Response> {
-    if env.message.sender != env.contract.address {
+    if info.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
 
@@ -65,7 +65,7 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
     disable_assemblies: bool,
     assemblies: Option<Vec<Uint128>>,
 ) -> StdResult<Response> {
-    if env.message.sender != env.contract.address {
+    if info.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
 
@@ -118,7 +118,7 @@ pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
     id: Uint128,
     assemblies: Vec<Uint128>,
 ) -> StdResult<Response> {
-    if env.message.sender != env.contract.address {
+    if info.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
 

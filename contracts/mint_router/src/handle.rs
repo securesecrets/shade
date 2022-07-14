@@ -60,7 +60,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     let asset_paths = asset_path_r(&deps.storage);
 
     let mut input_asset =
-        registered_asset_r(&deps.storage).load(&env.message.sender.to_string().as_bytes())?;
+        registered_asset_r(&deps.storage).load(&info.sender.to_string().as_bytes())?;
     let mut input_amount = amount;
 
     let final_asset = final_asset_r(&deps.storage).load()?;
@@ -138,7 +138,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     let cur_config = config_r(&deps.storage).load()?;
 
     // Admin-only
-    if env.message.sender != cur_config.admin {
+    if info.sender != cur_config.admin {
         return Err(StdError::unauthorized());
     }
 

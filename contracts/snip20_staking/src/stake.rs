@@ -59,7 +59,7 @@ pub fn try_update_stake_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let config = Config::from_storage(&mut deps.storage);
 
-    check_if_admin(&config, &env.message.sender)?;
+    check_if_admin(&config, &info.sender)?;
 
     let mut stake_config = StakeConfig::load(&deps.storage)?;
 
@@ -386,7 +386,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
     let stake_config = StakeConfig::load(&deps.storage)?;
 
-    if env.message.sender != stake_config.staked_token.address {
+    if info.sender != stake_config.staked_token.address {
         return Err(StdError::generic_err("Not the stake token"));
     }
 
@@ -544,7 +544,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
     env: Env,
     amount: Uint128,
 ) -> StdResult<Response> {
-    let sender = env.message.sender;
+    let sender = info.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
 
     let stake_config = StakeConfig::load(&deps.storage)?;
@@ -635,7 +635,7 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
 ) -> StdResult<Response> {
-    let sender = &env.message.sender;
+    let sender = &info.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
 
     let stake_config = StakeConfig::load(&deps.storage)?;
@@ -714,7 +714,7 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let stake_config = StakeConfig::load(&deps.storage)?;
 
-    let sender = &env.message.sender;
+    let sender = &info.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
 
     let claim = claim_rewards(&mut deps.storage, &stake_config, sender, sender_canon)?;
@@ -763,7 +763,7 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
         .symbol;
     let stake_config = StakeConfig::load(&deps.storage)?;
 
-    let sender = &env.message.sender;
+    let sender = &info.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
 
     let claim = claim_rewards(&mut deps.storage, &stake_config, sender, sender_canon)?;

@@ -6,6 +6,7 @@ use crate::c_std::{
     StdResult,
     Uint128,
 };
+use crate::snip20::helpers::{deposit_msg, redeem_msg, send_msg};
 
 pub fn wrap(
     amount: Uint128,
@@ -15,9 +16,7 @@ pub fn wrap(
     Ok(deposit_msg(
         amount,
         None,
-        256,
-        token.code_hash,
-        token.address,
+        &token
     )?)
 }
 
@@ -36,9 +35,7 @@ pub fn wrap_and_send(
             msg,
             None,
             None,
-            256,
-            token.code_hash.clone(),
-            token.address.clone(),
+            &token
         )?,
     ])
 }
@@ -52,8 +49,6 @@ pub fn unwrap(
         amount,
         None,
         None,
-        256,
-        token.code_hash.clone(),
-        token.address.clone(),
+        &token
     )?)
 }

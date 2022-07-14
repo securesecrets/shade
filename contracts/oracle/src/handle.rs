@@ -30,7 +30,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
     pair: Contract,
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -105,7 +105,7 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
     pair: Contract,
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -261,7 +261,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
     basket: Vec<IndexElement>,
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -291,7 +291,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     band: Option<Contract>,
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 

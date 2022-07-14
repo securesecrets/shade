@@ -1,8 +1,8 @@
-
+use cosmwasm_std::Timestamp;
 use crate::serde::{Deserialize, Serialize};
 
 use crate::c_std::{
-    Api, CanonicalAddr, Coin, Addr, StdError, StdResult, Storage,
+    Api, CanonicalAddr, Coin, Addr, StdError, StdResult, Storage, BlockInfo
 };
 use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{legacy_cannot_convert_from_tx, tx_code_invalid_conversion};
@@ -27,7 +27,7 @@ pub struct Tx {
     pub memo: Option<String>,
     // The block time and block height are optional so that the JSON schema
     // reflects that some SNIP-20 contracts may not include this info.
-    pub block_time: Option<u64>,
+    pub block_time: Option<Timestamp>,
     pub block_height: Option<u64>,
 }
 
@@ -98,7 +98,7 @@ pub struct RichTx {
     pub coins: Coin,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
-    pub block_time: u64,
+    pub block_time: Timestamp,
     pub block_height: u64,
 }
 
@@ -261,7 +261,7 @@ struct StoredRichTx {
     action: StoredTxAction,
     coins: Coin,
     memo: Option<String>,
-    block_time: u64,
+    block_time: Timestamp,
     block_height: u64,
 }
 
@@ -271,7 +271,7 @@ impl StoredRichTx {
         action: StoredTxAction,
         coins: Coin,
         memo: Option<String>,
-        block: &crate::c_std::BlockInfo,
+        block: &BlockInfo,
     ) -> Self {
         Self {
             id,
@@ -368,7 +368,7 @@ pub fn store_transfer<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &crate::c_std::BlockInfo,
+    block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
@@ -377,8 +377,8 @@ pub fn store_transfer<S: Storage>(
         action: StoredTxAction::transfer(owner.clone(), sender.clone(), receiver.clone()),
         coins,
         memo,
-        block_time: 0,
-        block_height: 0
+        block_time: block.time,
+        block_height: block.height
     };
 
     // Write to the owners history if it's different from the other two addresses
@@ -406,7 +406,7 @@ pub fn store_mint<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &crate::c_std::BlockInfo,
+    block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
@@ -430,7 +430,7 @@ pub fn store_burn<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &crate::c_std::BlockInfo,
+    block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
@@ -451,7 +451,7 @@ pub fn store_deposit<S: Storage>(
     recipient: &Addr,
     amount: Uint128,
     denom: String,
-    block: &crate::c_std::BlockInfo,
+    block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
@@ -469,7 +469,7 @@ pub fn store_redeem<S: Storage>(
     redeemer: &Addr,
     amount: Uint128,
     denom: String,
-    block: &crate::c_std::BlockInfo,
+    block: &BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };

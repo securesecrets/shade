@@ -90,7 +90,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     let config = Config {
         admin: match msg.admin {
-            None => env.message.sender.clone(),
+            None => info.sender.clone(),
             Some(admin) => admin,
         },
         treasury: msg.treasury,

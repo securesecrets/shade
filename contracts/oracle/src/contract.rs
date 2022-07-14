@@ -26,7 +26,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let state = OracleConfig {
         admin: match msg.admin {
-            None => env.message.sender.clone(),
+            None => info.sender.clone(),
             Some(admin) => admin,
         },
         band: msg.band,
@@ -35,7 +35,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     config_w(&mut deps.storage).save(&state)?;
 
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    debug_print!("Contract was initialized by {}", info.sender);
 
     Ok(InitResponse::default())
 }

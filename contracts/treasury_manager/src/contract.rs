@@ -40,7 +40,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
 
     config_w(&mut deps.storage).save(&Config {
-        admin: msg.admin.unwrap_or(env.message.sender.clone()),
+        admin: msg.admin.unwrap_or(info.sender.clone()),
         treasury: msg.treasury.clone(),
     })?;
 

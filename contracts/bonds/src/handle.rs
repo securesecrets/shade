@@ -47,7 +47,7 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
     let cur_config = config_r(&deps.storage).load()?;
 
     // Limit admin only
-    if env.message.sender != cur_config.limit_admin {
+    if info.sender != cur_config.limit_admin {
         return Err(not_limit_admin());
     }
 
@@ -113,7 +113,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     // Admin-only
     let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
         contract_address: cur_config.contract.to_string(),
-        admin_address: env.message.sender.to_string(),
+        admin_address: info.sender.to_string(),
     }
     .query(
         &deps.querier,
@@ -211,20 +211,20 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     }
 
     // Check that sender isn't the minted asset
-    if config.issued_asset.address == env.message.sender {
+    if config.issued_asset.address == info.sender {
         return Err(issued_asset_deposit());
     }
 
     // Check that sender asset has an active bond opportunity
     let bond_opportunity = match bond_opportunity_r(&deps.storage)
-        .may_load(env.message.sender.to_string().as_bytes())?
+        .may_load(info.sender.to_string().as_bytes())?
     {
         Some(prev_opp) => {
             bond_active(&env, &prev_opp)?;
             prev_opp
         }
         None => {
-            return Err(no_bond_found(env.message.sender.as_str()));
+            return Err(no_bond_found(info.sender.as_str()));
         }
     };
 
@@ -263,9 +263,9 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     };
 
     let mut opp =
-        bond_opportunity_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
+        bond_opportunity_r(&deps.storage).load(info.sender.to_string().as_bytes())?;
     opp.amount_issued += amount_to_issue;
-    bond_opportunity_w(&mut deps.storage).save(env.message.sender.to_string().as_bytes(), &opp)?;
+    bond_opportunity_w(&mut deps.storage).save(info.sender.to_string().as_bytes(), &opp)?;
 
     let mut messages = vec![];
 
@@ -373,10 +373,10 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 
     // Find user account, error out if DNE
     let mut account =
-        match account_r(&deps.storage).may_load(env.message.sender.as_str().as_bytes())? {
+        match account_r(&deps.storage).may_load(info.sender.as_str().as_bytes())? {
             None => {
                 return Err(StdError::NotFound {
-                    kind: env.message.sender.to_string(),
+                    kind: info.sender.to_string(),
                     backtrace: None,
                 });
             }
@@ -412,7 +412,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     );
 
     account.pending_bonds = pending_bonds;
-    account_w(&mut deps.storage).save(env.message.sender.as_str().as_bytes(), &account)?;
+    account_w(&mut deps.storage).save(info.sender.as_str().as_bytes(), &account)?;
 
     global_total_claimed_w(&mut deps.storage)
         .update(|global_total_claimed| Ok(global_total_claimed.checked_add(total.clone())?))?;
@@ -421,7 +421,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     let mut messages = vec![];
 
     messages.push(send_msg(
-        env.message.sender,
+        info.sender,
         total.into(),
         None,
         None,
@@ -460,7 +460,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     // Admin-only
     let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
         contract_address: config.contract.to_string(),
-        admin_address: env.message.sender.to_string(),
+        admin_address: info.sender.to_string(),
     }
     .query(
         &deps.querier,
@@ -605,7 +605,7 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
     // Admin-only
     let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
         contract_address: config.contract.to_string(),
-        admin_address: env.message.sender.to_string(),
+        admin_address: info.sender.to_string(),
     }
     .query(
         &deps.querier,

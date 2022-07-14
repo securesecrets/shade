@@ -28,7 +28,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<Response> {
-    let sender = &env.message.sender;
+    let sender = &info.sender;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
     // Burn enabled
@@ -64,7 +64,7 @@ pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<Response> {
-    let sender = &env.message.sender;
+    let sender = &info.sender;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
     // Burn enabled
@@ -99,7 +99,7 @@ pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
     env: Env,
     actions: Vec<batch::BurnFromAction>,
 ) -> StdResult<Response> {
-    let sender = &env.message.sender;
+    let sender = &info.sender;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
     // Burn enabled

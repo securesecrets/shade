@@ -52,7 +52,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     env: Env,
     amount: Uint128,
 ) -> StdResult<Response> {
-    let sender = env.message.sender;
+    let sender = info.sender;
 
     if !Config::redeem_enabled(&deps.storage)? {
         return Err(redeem_disabled());
@@ -94,7 +94,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
 ) -> StdResult<Response> {
-    let sender = env.message.sender;
+    let sender = info.sender;
     let mut amount = Uint128::zero();
     for coin in &env.message.sent_funds {
         // TODO: implement IBC coins
@@ -136,7 +136,7 @@ pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
     env: Env,
     address: Addr,
 ) -> StdResult<Response> {
-    if env.message.sender != Admin::load(&deps.storage)?.0 {
+    if info.sender != Admin::load(&deps.storage)?.0 {
         return Err(not_admin());
     }
 
@@ -154,7 +154,7 @@ pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
     env: Env,
     status_level: ContractStatusLevel,
 ) -> StdResult<Response> {
-    if env.message.sender != Admin::load(&deps.storage)?.0 {
+    if info.sender != Admin::load(&deps.storage)?.0 {
         return Err(not_admin());
     }
 
@@ -174,7 +174,7 @@ pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
     env: Env,
     code_hash: String,
 ) -> StdResult<Response> {
-    ReceiverHash(code_hash).save(&mut deps.storage, env.message.sender)?;
+    ReceiverHash(code_hash).save(&mut deps.storage, info.sender)?;
     Ok(Response {
         messages: vec![],
         log: vec![],
@@ -193,7 +193,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
 
     let key = Key::generate(&env, seed.as_slice(), (&entropy).as_ref());
 
-    HashedKey(key.hash()).save(&mut deps.storage, env.message.sender)?;
+    HashedKey(key.hash()).save(&mut deps.storage, info.sender)?;
 
     Ok(Response {
         messages: vec![],
@@ -209,7 +209,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let seed = RandSeed::load(&deps.storage)?.0;
 
-    HashedKey(Key(key).hash()).save(&mut deps.storage, env.message.sender)?;
+    HashedKey(Key(key).hash()).save(&mut deps.storage, info.sender)?;
 
     Ok(Response {
         messages: vec![],
@@ -223,7 +223,7 @@ pub fn try_revoke_permit<S: Storage, A: Api, Q: Querier>(
     env: Env,
     permit_name: String,
 ) -> StdResult<Response> {
-    PermitKey::revoke(&mut deps.storage, permit_name, env.message.sender)?;
+    PermitKey::revoke(&mut deps.storage, permit_name, info.sender)?;
 
     Ok(Response {
         messages: vec![],

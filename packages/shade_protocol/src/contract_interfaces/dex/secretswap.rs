@@ -82,10 +82,9 @@ pub fn is_pair(
     pair: Contract,
 ) -> StdResult<bool> {
     Ok(
-        match (PairQuery::Pair {}).query::<Q, PairResponse>(
+        match (PairQuery::Pair {}).query::<PairResponse>(
             &deps.querier,
-            pair.code_hash,
-            pair.address.clone(),
+            &pair
         ) {
             Ok(_) => true,
             Err(_) => false,
@@ -94,7 +93,7 @@ pub fn is_pair(
 }
 
 pub fn price(
-    deps: Deps,
+    deps: &Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
     band: Contract,
@@ -105,14 +104,14 @@ pub fn price(
     Ok(translate_price(
         scrt_result.rate,
         normalize_price(
-            amount_per_scrt(deps, pair.clone(), sscrt)?,
+            amount_per_scrt(&deps, pair.clone(), sscrt)?,
             pair.asset.token_info.decimals,
         ),
     ))
 }
 
 pub fn amount_per_scrt(
-    deps: Deps,
+    deps: &Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
 ) -> StdResult<Uint128> {
@@ -130,21 +129,19 @@ pub fn amount_per_scrt(
     }
     .query(
         &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
+        &pair.contract
     )?;
 
     Ok(response.return_amount)
 }
 
 pub fn pool_cp(
-    deps: Deps,
+    deps: &Deps,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {
     let pool: PoolResponse = PairQuery::Pool {}.query(
         &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
+        &pair.contract
     )?;
 
     // Constant Product

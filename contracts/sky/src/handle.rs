@@ -23,7 +23,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
-    if env.message.sender != Config::load(&deps.storage)?.admin {
+    if info.sender != Config::load(&deps.storage)?.admin {
         return Err(StdError::unauthorized())
     }
     config.save(&mut deps.storage)?;

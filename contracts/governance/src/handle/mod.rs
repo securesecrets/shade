@@ -33,7 +33,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
     vote_token: Option<Contract>,
     funding_token: Option<Contract>,
 ) -> StdResult<Response> {
-    if env.message.sender != env.contract.address {
+    if info.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
 

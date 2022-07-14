@@ -37,8 +37,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let mut config = msg.config;
 
-    if !config.admins.contains(&env.message.sender) {
-        config.admins.push(env.message.sender);
+    if !config.admins.contains(&info.sender) {
+        config.admins.push(info.sender);
     }
 
     config_w(&mut deps.storage).save(&config)?;

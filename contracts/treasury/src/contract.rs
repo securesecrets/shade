@@ -37,7 +37,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
     config_w(&mut deps.storage).save(&Config {
-        admin: msg.admin.unwrap_or(env.message.sender.clone()),
+        admin: msg.admin.unwrap_or(info.sender.clone()),
     })?;
 
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
@@ -46,7 +46,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     managers_w(&mut deps.storage).save(&Vec::new())?;
     //account_list_w(&mut deps.storage).save(&Vec::new())?;
 
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    debug_print!("Contract was initialized by {}", info.sender);
 
     Ok(InitResponse {
         messages: vec![],

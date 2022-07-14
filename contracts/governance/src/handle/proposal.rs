@@ -378,7 +378,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
     let funding_token: Contract;
     if let Some(token) = Config::load(&deps.storage)?.funding_token {
         funding_token = token.clone();
-        if env.message.sender != token.address {
+        if info.sender != token.address {
             return Err(StdError::generic_err("Must be the set funding token"));
         }
     } else {
@@ -485,7 +485,7 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
         _ => Uint128::zero(),
     };
 
-    let funding = Proposal::funding(&deps.storage, &id, &env.message.sender)?;
+    let funding = Proposal::funding(&deps.storage, &id, &info.sender)?;
 
     if funding.claimed {
         return Err(StdError::generic_err("Funding already claimed"));
@@ -508,7 +508,7 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
 
     Ok(Response {
         messages: vec![send_msg(
-            env.message.sender,
+            info.sender,
             return_amount.into(),
             None,
             None,
@@ -533,7 +533,7 @@ pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
     memo: Option<String>,
 ) -> StdResult<Response> {
     if let Some(token) = Config::load(&deps.storage)?.vote_token {
-        if env.message.sender != token.address {
+        if info.sender != token.address {
             return Err(StdError::generic_err("Must be the set voting token"));
         }
     } else {

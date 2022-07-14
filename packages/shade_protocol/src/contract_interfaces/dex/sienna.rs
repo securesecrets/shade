@@ -1,6 +1,7 @@
 use crate::{
     contract_interfaces::{dex::dex, oracles::band},
     utils::{
+        Query,
         asset::Contract,
         price::{normalize_price, translate_price},
     },
@@ -8,7 +9,7 @@ use crate::{
 use crate::c_std::{Addr, StdError, StdResult, Deps, DepsMut, Uint128};
 
 
-use secret_toolkit::{utils::Query, serialization::Base64};
+use secret_toolkit::{serialization::Base64};
 use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -124,8 +125,7 @@ pub fn is_pair(
     Ok(
         match (PairQuery::PairInfo).query::<PairInfoResponse>(
             &deps.querier,
-            pair.code_hash,
-            pair.address.clone(),
+            &pair
         ) {
             Ok(_) => true,
             Err(_) => false,
@@ -134,7 +134,7 @@ pub fn is_pair(
 }
 
 pub fn price(
-    deps: Deps,
+    deps: &Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
     band: Contract,
@@ -153,7 +153,7 @@ pub fn price(
 }
 
 pub fn amount_per_scrt(
-    deps: Deps,
+    deps: &Deps,
     pair: dex::TradingPair,
     sscrt: Contract,
 ) -> StdResult<Uint128> {
@@ -168,21 +168,19 @@ pub fn amount_per_scrt(
     }
     .query(
         &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
+        &pair.contract,
     )?;
 
     Ok(response.return_amount)
 }
 
 pub fn pool_cp(
-    deps: Deps,
+    deps: &Deps,
     pair: dex::TradingPair,
 ) -> StdResult<Uint128> {
     let pair_info: PairInfoResponse = PairQuery::PairInfo.query(
         &deps.querier,
-        pair.contract.code_hash,
-        pair.contract.address,
+        &pair.contract
     )?;
 
     // Constant Product

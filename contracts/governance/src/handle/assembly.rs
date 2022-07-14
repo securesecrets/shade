@@ -35,7 +35,7 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     proposal: Uint128,
     vote: Vote,
 ) -> StdResult<Response> {
-    let sender = env.message.sender;
+    let sender = info.sender;
 
     // Check if proposal in assembly voting
     if let Status::AssemblyVote { end, .. } = Proposal::status(&deps.storage, &proposal)? {
@@ -93,7 +93,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
 
     // Check if public; everyone is allowed
     if assembly_data.profile != Uint128::zero() {
-        if !assembly_data.members.contains(&env.message.sender) {
+        if !assembly_data.members.contains(&info.sender) {
             return Err(StdError::unauthorized());
         }
     }
@@ -174,7 +174,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     }
 
     let prop = Proposal {
-        proposer: env.message.sender,
+        proposer: info.sender,
         title,
         metadata,
         msgs: processed_msgs,
@@ -206,7 +206,7 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
     members: Vec<Addr>,
     profile: Uint128,
 ) -> StdResult<Response> {
-    if env.message.sender != env.contract.address {
+    if info.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
 
@@ -243,7 +243,7 @@ pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
     members: Option<Vec<Addr>>,
     profile: Option<Uint128>,
 ) -> StdResult<Response> {
-    if env.message.sender != env.contract.address {
+    if info.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
 

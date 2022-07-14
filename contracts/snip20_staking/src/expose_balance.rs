@@ -37,7 +37,7 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     // Get balance to expose
     let balance = Balances::from_storage(&mut deps.storage)
-        .balance(&deps.api.canonical_address(&env.message.sender)?);
+        .balance(&deps.api.canonical_address(&info.sender)?);
 
     let receiver_hash: String;
     if let Some(code_hash) = code_hash {
@@ -49,7 +49,7 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
     }
 
     let messages = vec![
-        Snip20BalanceReceiverMsg::new(env.message.sender, Uint128::new(balance), memo, msg)
+        Snip20BalanceReceiverMsg::new(info.sender, Uint128::new(balance), memo, msg)
             .to_cosmos_msg(receiver_hash, recipient)?,
     ];
 
@@ -70,7 +70,7 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     // Get balance to expose
     let balance = Balances::from_storage(&mut deps.storage)
-        .balance(&deps.api.canonical_address(&env.message.sender)?);
+        .balance(&deps.api.canonical_address(&info.sender)?);
 
     let receiver_hash: String;
     if let Some(code_hash) = code_hash {
@@ -82,17 +82,17 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
     }
 
     let mut cooldown =
-        UserCooldown::may_load(&deps.storage, env.message.sender.to_string().as_bytes())?
+        UserCooldown::may_load(&deps.storage, info.sender.to_string().as_bytes())?
             .unwrap_or(UserCooldown {
                 total: Uint128::zero(),
                 queue: VecQueue(vec![]),
             });
     cooldown.update(env.block.time);
-    cooldown.save(&mut deps.storage, env.message.sender.to_string().as_bytes())?;
+    cooldown.save(&mut deps.storage, info.sender.to_string().as_bytes())?;
 
     let messages = vec![
         Snip20BalanceReceiverMsg::new(
-            env.message.sender,
+            info.sender,
             Uint128::new(balance).checked_sub(cooldown.total)?,
             memo,
             msg,

@@ -4,6 +4,7 @@ pub mod transaction_history;
 pub mod errors;
 pub mod helpers;
 
+use cosmwasm_std::MessageInfo;
 use crate::c_std::{Binary, Env, Addr, StdError, StdResult, Storage};
 use crate::query_authentication::permit::Permit;
 
@@ -55,7 +56,7 @@ fn is_valid_symbol(symbol: &str) -> bool {
 
 #[cfg(feature = "snip20-impl")]
 impl InitMsg {
-    pub fn save<S: Storage>(&self, storage: &mut S, env: Env) -> StdResult<()> {
+    pub fn save<S: Storage>(&self, storage: &mut S, env: Env, info: MessageInfo) -> StdResult<()> {
         if !is_valid_name(&self.name) {
             return Err(invalid_name_format(&self.name));
         }
@@ -77,7 +78,7 @@ impl InitMsg {
             decimals: self.decimals
         }.save(storage)?;
 
-        let admin = self.admin.clone().unwrap_or(env.message.sender);
+        let admin = self.admin.clone().unwrap_or(info.sender);
         Admin(admin.clone()).save(storage)?;
         RandSeed(sha_256(&self.prng_seed.0).to_vec()).save(storage)?;
 

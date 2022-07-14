@@ -37,10 +37,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let config = Config {
         admins: match msg.admins {
-            None => vec![env.message.sender.clone()],
+            None => vec![info.sender.clone()],
             Some(mut admins) => {
-                if !admins.contains(&env.message.sender) {
-                    admins.push(env.message.sender);
+                if !admins.contains(&info.sender) {
+                    admins.push(info.sender);
                 }
                 admins
             }

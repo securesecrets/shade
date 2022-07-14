@@ -45,7 +45,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
     let config = config_r(&deps.storage).load()?;
 
-    if is_supported_asset(&config, &env.message.sender) {
+    if is_supported_asset(&config, &info.sender) {
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
@@ -77,7 +77,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != cur_config.admin {
+    if info.sender != cur_config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -138,7 +138,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 
     //TODO: needs treasury & manager as admin, maybe just manager?
     /*
-    if env.message.sender != config.admin && env.message.sender != config.treasury {
+    if info.sender != config.admin && info.sender != config.treasury {
         return Err(StdError::Unauthorized { backtrace: None });
     }
     */

@@ -31,7 +31,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<InitResponse> {
     let state = Config {
         admin: match msg.admin {
-            None => env.message.sender.clone(),
+            None => info.sender.clone(),
             Some(admin) => admin,
         },
         oracle: msg.oracle,
@@ -67,7 +67,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     asset_list_w(&mut deps.storage).save(&vec![])?;
 
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    debug_print!("Contract was initialized by {}", info.sender);
 
     Ok(InitResponse {
         messages: vec![],

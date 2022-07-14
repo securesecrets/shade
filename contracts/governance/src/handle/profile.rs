@@ -25,7 +25,7 @@ pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
     env: Env,
     profile: Profile,
 ) -> StdResult<Response> {
-    if env.message.sender != env.contract.address {
+    if info.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
 
@@ -47,7 +47,7 @@ pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
     id: Uint128,
     new_profile: UpdateProfile,
 ) -> StdResult<Response> {
-    if env.message.sender != env.contract.address {
+    if info.sender != env.contract.address {
         return Err(StdError::unauthorized());
     }
 

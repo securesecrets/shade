@@ -92,7 +92,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != cur_config.admin {
+    if info.sender != cur_config.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -404,7 +404,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -453,7 +453,7 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -518,7 +518,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     /* ADMIN ONLY */
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
@@ -670,7 +670,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
 ) -> StdResult<Response> {
     /*
-    if env.message.sender != config_r(&deps.storage).load()?.admin {
+    if info.sender != config_r(&deps.storage).load()?.admin {
         return Err(StdError::unauthorized());
     }
     */

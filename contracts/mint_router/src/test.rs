@@ -41,7 +41,7 @@ pub mod tests {
     fn create_contract(address: &str, code_hash: &str) -> Contract {
         let env = mock_env(address.to_string(), &[]);
         return Contract {
-            address: env.message.sender,
+            address: info.sender,
             code_hash: code_hash.to_string(),
         };
     }

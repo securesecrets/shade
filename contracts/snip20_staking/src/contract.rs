@@ -118,7 +118,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }
 
     let init_config = msg.config();
-    let admin = msg.admin.unwrap_or(env.message.sender);
+    let admin = msg.admin.unwrap_or(info.sender);
 
     let total_supply: u128 = 0;
 
@@ -635,7 +635,7 @@ fn change_admin<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let mut config = Config::from_storage(&mut deps.storage);
 
-    check_if_admin(&config, &env.message.sender)?;
+    check_if_admin(&config, &info.sender)?;
 
     let mut consts = config.constants()?;
     consts.admin = address;
@@ -689,7 +689,7 @@ pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let vk = ViewingKey(key);
 
-    let message_sender = deps.api.canonical_address(&env.message.sender)?;
+    let message_sender = deps.api.canonical_address(&info.sender)?;
     write_viewing_key(&mut deps.storage, &message_sender, &vk);
 
     Ok(Response {
@@ -709,7 +709,7 @@ pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
 
     let key = ViewingKey::new(&env, &prng_seed, (&entropy).as_ref());
 
-    let message_sender = deps.api.canonical_address(&env.message.sender)?;
+    let message_sender = deps.api.canonical_address(&info.sender)?;
     write_viewing_key(&mut deps.storage, &message_sender, &key);
 
     Ok(Response {
@@ -726,7 +726,7 @@ fn set_contract_status<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let mut config = Config::from_storage(&mut deps.storage);
 
-    check_if_admin(&config, &env.message.sender)?;
+    check_if_admin(&config, &info.sender)?;
 
     config.set_contract_status(status_level);
 
@@ -837,7 +837,7 @@ fn try_transfer<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<Response> {
-    let sender = env.message.sender;
+    let sender = info.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
     let recipient_canon = deps.api.canonical_address(&recipient)?;
 
@@ -872,7 +872,7 @@ fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
     env: Env,
     actions: Vec<batch::TransferAction>,
 ) -> StdResult<Response> {
-    let sender = env.message.sender;
+    let sender = info.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
 
     let distributor = get_distributor(deps)?;
@@ -992,7 +992,7 @@ fn try_send<S: Storage, A: Api, Q: Querier>(
     msg: Option<Binary>,
 ) -> StdResult<Response> {
     let mut messages = vec![];
-    let sender = env.message.sender;
+    let sender = info.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
 
     let distributor = get_distributor(deps)?;
@@ -1026,7 +1026,7 @@ fn try_batch_send<S: Storage, A: Api, Q: Querier>(
     actions: Vec<batch::SendAction>,
 ) -> StdResult<Response> {
     let mut messages = vec![];
-    let sender = env.message.sender;
+    let sender = info.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
 
     let distributor = get_distributor(deps)?;
@@ -1061,7 +1061,7 @@ fn try_register_receive<S: Storage, A: Api, Q: Querier>(
     env: Env,
     code_hash: String,
 ) -> StdResult<Response> {
-    set_receiver_hash(&mut deps.storage, &env.message.sender, code_hash);
+    set_receiver_hash(&mut deps.storage, &info.sender, code_hash);
     let res = Response {
         messages: vec![],
         log: vec![log("register_status", "success")],
@@ -1172,7 +1172,7 @@ fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<Response> {
-    let spender = &env.message.sender;
+    let spender = &info.sender;
     let spender_canon = deps.api.canonical_address(spender)?;
     let owner_canon = deps.api.canonical_address(owner)?;
     let recipient_canon = deps.api.canonical_address(recipient)?;
@@ -1204,7 +1204,7 @@ fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     actions: Vec<batch::TransferFromAction>,
 ) -> StdResult<Response> {
-    let spender = &env.message.sender;
+    let spender = &info.sender;
     let spender_canon = deps.api.canonical_address(spender)?;
 
     let distributor = get_distributor(deps)?;
@@ -1277,7 +1277,7 @@ fn try_send_from_impl<S: Storage, A: Api, Q: Querier>(
         recipient,
         recipient_code_hash,
         msg,
-        env.message.sender,
+        info.sender,
         owner,
         amount,
         memo,
@@ -1297,7 +1297,7 @@ fn try_send_from<S: Storage, A: Api, Q: Querier>(
     memo: Option<String>,
     msg: Option<Binary>,
 ) -> StdResult<Response> {
-    let spender = &env.message.sender.clone();
+    let spender = &info.sender.clone();
     let spender_canon = deps.api.canonical_address(spender)?;
 
     let mut messages = vec![];
@@ -1329,7 +1329,7 @@ fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
     env: Env,
     actions: Vec<batch::SendFromAction>,
 ) -> StdResult<Response> {
-    let spender = &env.message.sender;
+    let spender = &info.sender;
     let spender_canon = deps.api.canonical_address(spender)?;
     let mut messages = vec![];
 
@@ -1367,7 +1367,7 @@ fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     expiration: Option<u64>,
 ) -> StdResult<Response> {
-    let owner_address = deps.api.canonical_address(&env.message.sender)?;
+    let owner_address = deps.api.canonical_address(&info.sender)?;
     let spender_address = deps.api.canonical_address(&spender)?;
 
     let mut allowance = read_allowance(&deps.storage, &owner_address, &spender_address)?;
@@ -1397,7 +1397,7 @@ fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::IncreaseAllowance {
-            owner: env.message.sender,
+            owner: info.sender,
             spender,
             allowance: Uint128::new(new_amount),
         })?),
@@ -1412,7 +1412,7 @@ fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     expiration: Option<u64>,
 ) -> StdResult<Response> {
-    let owner_address = deps.api.canonical_address(&env.message.sender)?;
+    let owner_address = deps.api.canonical_address(&info.sender)?;
     let spender_address = deps.api.canonical_address(&spender)?;
 
     let mut allowance = read_allowance(&deps.storage, &owner_address, &spender_address)?;
@@ -1442,7 +1442,7 @@ fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::DecreaseAllowance {
-            owner: env.message.sender,
+            owner: info.sender,
             spender,
             allowance: Uint128::new(new_amount),
         })?),
@@ -1535,7 +1535,7 @@ fn revoke_permit<S: Storage, A: Api, Q: Querier>(
     RevokedPermits::revoke_permit(
         &mut deps.storage,
         PREFIX_REVOKED_PERMITS,
-        &env.message.sender,
+        &info.sender,
         &permit_name,
     );
 

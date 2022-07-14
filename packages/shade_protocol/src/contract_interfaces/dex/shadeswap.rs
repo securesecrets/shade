@@ -105,10 +105,9 @@ pub fn is_pair(
     pair: Contract,
 ) -> StdResult<bool> {
     Ok(
-        match (PairQuery::PairInfo).query::<Q, PairInfoResponse>(
+        match (PairQuery::PairInfo).query::<PairInfoResponse>(
             &deps.querier,
-            pair.code_hash,
-            pair.address.clone(),
+            &pair
         ) {
             Ok(_) => true,
             Err(_) => false,

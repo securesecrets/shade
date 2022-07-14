@@ -23,7 +23,7 @@ pub fn scrt_balance(
 ) -> StdResult<Uint128> {
     let resp: BalanceResponse = deps.querier.query(
         &BankQuery::Balance {
-            address,
+            address: address.into(),
             denom: "uscrt".to_string(),
         }
         .into(),

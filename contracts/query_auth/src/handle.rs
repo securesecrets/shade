@@ -34,7 +34,7 @@ fn user_authorized<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, env: 
         contract_address: env.contract.address.to_string()
     }.query(&deps.querier, contract.code_hash, contract.address)?;
 
-    Ok(authorized_users.authorized_users.contains(&env.message.sender.to_string()))
+    Ok(authorized_users.authorized_users.contains(&info.sender.to_string()))
 }
 
 pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
@@ -82,7 +82,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
 
     let key = Key::generate(&env, seed.as_slice(), &entropy.as_ref());
 
-    HashedKey(key.hash()).save(&mut deps.storage, env.message.sender)?;
+    HashedKey(key.hash()).save(&mut deps.storage, info.sender)?;
 
     Ok(Response {
         messages: vec![],
@@ -96,7 +96,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     env: Env,
     key: String,
 ) -> StdResult<Response> {
-    HashedKey(Key(key).hash()).save(&mut deps.storage, env.message.sender)?;
+    HashedKey(Key(key).hash()).save(&mut deps.storage, info.sender)?;
 
     Ok(Response {
         messages: vec![],
@@ -110,7 +110,7 @@ pub fn try_block_permit_key<S: Storage, A: Api, Q: Querier>(
     env: Env,
     key: String,
 ) -> StdResult<Response> {
-    PermitKey::revoke(&mut deps.storage, key, env.message.sender)?;
+    PermitKey::revoke(&mut deps.storage, key, info.sender)?;
     Ok(Response {
         messages: vec![],
         log: vec![],

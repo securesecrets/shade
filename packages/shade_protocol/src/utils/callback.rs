@@ -1,6 +1,7 @@
 use crate::serde::{de::DeserializeOwned, Serialize};
 
 use crate::c_std::{to_binary, Coin, CosmosMsg, Addr, Querier, QueryRequest, StdResult, Uint128, WasmMsg, WasmQuery, SubMsg, ReplyOn, QuerierWrapper};
+use crate::Contract;
 
 use super::space_pad;
 
@@ -71,8 +72,7 @@ pub trait HandleCallback: Serialize {
     /// * `send_amount` - Optional Uint128 amount of native coin to send with the handle message
     fn to_cosmos_msg(
         &self,
-        contract_addr: String,
-        code_hash: String,
+        contract: &Contract,
         funds: Vec<Coin>,
     ) -> StdResult<CosmosMsg> {
         let mut msg = to_binary(self)?;
@@ -85,8 +85,8 @@ pub trait HandleCallback: Serialize {
         space_pad(&mut msg.0, padding);
         let execute = WasmMsg::Execute {
             msg,
-            contract_addr,
-            code_hash,
+            contract_addr: contract.address.to_string(),
+            code_hash: contract.code_hash.clone(),
             funds
         };
         Ok(execute.into())
@@ -113,8 +113,7 @@ pub trait Query: Serialize {
     fn query<T: DeserializeOwned>(
         &self,
         querier: &QuerierWrapper,
-        contract_addr: String,
-        code_hash: String,
+        contract: &Contract
     ) -> StdResult<T> {
         let mut msg = to_binary(self)?;
         // can not have 0 block size
@@ -125,9 +124,9 @@ pub trait Query: Serialize {
         };
         space_pad(&mut msg.0, padding);
         querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr,
+            contract_addr: contract.address.to_string(),
             msg,
-            code_hash
+            code_hash: contract.code_hash.clone()
         }))
     }
 }

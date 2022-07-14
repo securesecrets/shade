@@ -106,7 +106,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }
 
     let config = Config {
-        admin: msg.admin.unwrap_or(env.message.sender),
+        admin: msg.admin.unwrap_or(info.sender),
         contract: env.contract.address,
         dump_address: msg.dump_address,
         airdrop_snip20: msg.airdrop_token.clone(),

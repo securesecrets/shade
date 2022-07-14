@@ -33,12 +33,12 @@ pub fn try_mint<S: Storage, A: Api, Q: Querier>(
         return Err(minting_disabled())
     }
     // User is minter
-    if !Minters::load(&deps.storage)?.0.contains(&env.message.sender) {
-        return Err(not_minter(&env.message.sender))
+    if !Minters::load(&deps.storage)?.0.contains(&info.sender) {
+        return Err(not_minter(&info.sender))
     }
     // Inc total supply
     TotalSupply::add(&mut deps.storage, amount)?;
-    let sender = env.message.sender;
+    let sender = info.sender;
     let block = env.block;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     try_mint_impl(&mut deps.storage, &sender, &recipient, amount, denom, memo, &block)?;
@@ -60,11 +60,11 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
         return Err(minting_disabled())
     }
     // User is minter
-    if !Minters::load(&deps.storage)?.0.contains(&env.message.sender) {
-        return Err(not_minter(&env.message.sender))
+    if !Minters::load(&deps.storage)?.0.contains(&info.sender) {
+        return Err(not_minter(&info.sender))
     }
 
-    let sender = env.message.sender;
+    let sender = info.sender;
     let block = env.block;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     let mut supply = TotalSupply::load(&deps.storage)?;
@@ -98,7 +98,7 @@ pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
     if !Config::mint_enabled(&deps.storage)? {
         return Err(minting_disabled())
     }
-    if Admin::load(&deps.storage)?.0 != env.message.sender {
+    if Admin::load(&deps.storage)?.0 != info.sender {
         return Err(not_admin())
     }
 
@@ -122,7 +122,7 @@ pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
     if !Config::mint_enabled(&deps.storage)? {
         return Err(minting_disabled())
     }
-    if Admin::load(&deps.storage)?.0 != env.message.sender {
+    if Admin::load(&deps.storage)?.0 != info.sender {
         return Err(not_admin())
     }
 
@@ -148,7 +148,7 @@ pub fn try_set_minters<S: Storage, A: Api, Q: Querier>(
     if !Config::mint_enabled(&deps.storage)? {
         return Err(minting_disabled())
     }
-    if Admin::load(&deps.storage)?.0 != env.message.sender {
+    if Admin::load(&deps.storage)?.0 != info.sender {
         return Err(not_admin())
     }
 

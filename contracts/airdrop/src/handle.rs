@@ -74,7 +74,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(not_admin(config.admin.as_str()));
     }
 
@@ -186,7 +186,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
     // Check if admin
-    if env.message.sender != config.admin {
+    if info.sender != config.admin {
         return Err(not_admin(config.admin.as_str()));
     }
 
@@ -229,7 +229,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     available(&config, env)?;
 
     // Setup account
-    let sender = env.message.sender.to_string();
+    let sender = info.sender.to_string();
 
     // These variables are setup to facilitate updating
     let updating_account: bool;
@@ -246,7 +246,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
                 &mut deps.storage,
                 &deps.api,
                 &config,
-                &env.message.sender,
+                &info.sender,
                 &mut account,
                 addresses.clone(),
                 partial_tree.clone(),
@@ -291,7 +291,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
             &mut deps.storage,
             &deps.api,
             &config,
-            &env.message.sender,
+            &info.sender,
             &mut account,
             addresses.clone(),
             partial_tree.clone(),
@@ -324,7 +324,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
         total_claimed_w(&mut deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
 
         messages.push(send_msg(
-            env.message.sender.clone(),
+            info.sender.clone(),
             redeem_amount.into(),
             None,
             None,
@@ -357,7 +357,7 @@ pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     key: String,
 ) -> StdResult<Response> {
-    revoke_permit(&mut deps.storage, env.message.sender.to_string(), key);
+    revoke_permit(&mut deps.storage, info.sender.to_string(), key);
 
     Ok(Response {
         messages: vec![],
@@ -374,7 +374,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     key: String,
 ) -> StdResult<Response> {
     account_viewkey_w(&mut deps.storage).save(
-        &env.message.sender.to_string().as_bytes(),
+        &info.sender.to_string().as_bytes(),
         &AccountKey(key).hash(),
     )?;
 
@@ -395,7 +395,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
 
     for (i, task) in config.task_claim.iter().enumerate() {
-        if task.address == env.message.sender {
+        if task.address == info.sender {
             claim_status_w(&mut deps.storage, i).update(
                 account.to_string().as_bytes(),
                 |status| {
@@ -429,7 +429,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     available(&config, env)?;
 
     // Get account
-    let sender = env.message.sender.clone();
+    let sender = info.sender.clone();
     let account = account_r(&deps.storage).load(sender.to_string().as_bytes())?;
 
     // Calculate airdrop
@@ -574,7 +574,7 @@ pub fn claim_tokens<S: Storage>(
     unclaimed_percentage: Uint128,
 ) -> StdResult<Uint128> {
     // send_amount
-    let sender = env.message.sender.to_string();
+    let sender = info.sender.to_string();
 
     // Amount to be redeemed
     let mut redeem_amount = Uint128::zero();

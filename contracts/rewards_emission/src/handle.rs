@@ -75,7 +75,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let cur_config = config_r(&deps.storage).load()?;
 
-    if !cur_config.admins.contains(&env.message.sender) {
+    if !cur_config.admins.contains(&info.sender) {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
@@ -97,7 +97,7 @@ pub fn register_asset<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
-    if !config.admins.contains(&env.message.sender) {
+    if !config.admins.contains(&info.sender) {
         return Err(StdError::unauthorized());
     }
 
@@ -146,7 +146,7 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
 
-    if env.message.sender != config.distributor {
+    if info.sender != config.distributor {
         return Err(StdError::unauthorized());
     }
 

@@ -13,7 +13,7 @@ pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     expiration: Option<u64>,
 ) -> StdResult<Response> {
-    let owner = env.message.sender;
+    let owner = info.sender;
 
     let mut allowance = Allowance::may_load(
         &deps.storage,
@@ -55,7 +55,7 @@ pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
     amount: Uint128,
     expiration: Option<u64>,
 ) -> StdResult<Response> {
-    let owner = env.message.sender;
+    let owner = info.sender;
 
     let mut allowance = Allowance::load(&deps.storage, (owner.clone(), spender.clone()))?;
 
@@ -97,7 +97,7 @@ pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     try_transfer_impl(
         &mut deps.storage,
-        &env.message.sender,
+        &info.sender,
         Some(&owner),
         &recipient,
         amount,
@@ -123,7 +123,7 @@ pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
     for action in actions {
         try_transfer_impl(
             &mut deps.storage,
-            &env.message.sender,
+            &info.sender,
             Some(&action.owner),
             &action.recipient,
             action.amount,
@@ -157,7 +157,7 @@ pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
     try_send_impl(
         &mut deps.storage,
         &mut messages,
-        &env.message.sender,
+        &info.sender,
         Some(&owner),
         &recipient,
         recipient_code_hash,
@@ -181,7 +181,7 @@ pub fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
     actions: Vec<batch::SendFromAction>
 ) -> StdResult<Response> {
     let mut messages = vec![];
-    let sender = env.message.sender;
+    let sender = info.sender;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
     for action in actions {

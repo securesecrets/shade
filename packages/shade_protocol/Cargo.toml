@@ -64,7 +64,7 @@ treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 lp_shade_swap    = ["interface"]
 adapter          = ["interface"]
-snip20           = ["interface", "dep:base64", "query_auth_lib"]
+snip20           = ["query_auth", "dep:base64"]
 query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
 sky              = ["snip20", "dex"]
@@ -72,7 +72,7 @@ sky              = ["snip20", "dex"]
 # Protocol Implementation Contracts
 # Used in internal smart contracts
 governance-impl = ["implementation", "governance"]
-snip20-impl     = ["implementation", "snip20"]
+snip20-impl     = ["snip20", "query_auth_impl"]
 query_auth_impl = ["implementation", "query_auth", "dep:base64"]
 sky-impl        = ["implementation", "sky"]
 
@@ -99,7 +99,9 @@ fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/
 chrono = "0.4.19"
 base64 = { version = "0.12.3", optional = true }
 # Needed for transactions
-query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.3.0", optional = true }
+secret-toolkit = { version = "0.2", features = ["crypto"] }
+#query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.3.0", optional = true }
+query-authentication = {git = "https://github.com/securesecrets/query-authentication", branch = "cosmwasm_v1_upgrade", optional = true }
 remain = { version = "0.2.2", optional = true }
 subtle = { version = "2.2.3", default-features = false }
 sha2 = { version = "0.9.1", default-features = false }
