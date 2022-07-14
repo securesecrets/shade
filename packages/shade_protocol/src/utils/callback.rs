@@ -72,17 +72,9 @@ pub trait InstantianteCallback: Serialize {
         label: &str,
         send_funds: &[Coin],
     ) -> StdResult<ContractInfo> {
-        let mut msg = to_binary(self)?;
-        // can not have 0 block size
-        let padding = if Self::BLOCK_SIZE == 0 {
-            1
-        } else {
-            Self::BLOCK_SIZE
-        };
-        space_pad(&mut msg.0, padding);
         let stored_code = router.store_code(testable.contract());
         Ok(router
-            .instantiate_contract(stored_code, sender, &msg, send_funds, label, None).unwrap())
+            .instantiate_contract(stored_code, sender, &self, send_funds, label, None).unwrap())
     }
 }
 
@@ -138,22 +130,14 @@ pub trait ExecuteCallback: Serialize {
     /// * `sender` - the user executing this message in the test env
     /// * `send_funds` - any funds transferred with this exec
     #[cfg(feature = "multi-test")]
-    fn test_exec<T: Serialize + std::fmt::Debug>(
+    fn test_exec(
         &self,
         contract: &ContractInfo,
         router: &mut App,
         sender: Addr,
         send_funds: &[Coin],
-    ) -> AnyResult<AppResponse> {
-        let mut msg = to_binary(self)?;
-        // can not have 0 block size
-        let padding = if Self::BLOCK_SIZE == 0 {
-            1
-        } else {
-            Self::BLOCK_SIZE
-        };
-        space_pad(&mut msg.0, padding);
-        router.execute_contract(sender, contract, &msg, send_funds)
+    ) -> AnyResult<AppResponse> where Self: Serialize + std::fmt::Debug  {
+        router.execute_contract(sender, contract, &self, send_funds)
     }
 }
 
