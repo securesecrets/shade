@@ -45,7 +45,7 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let deps = mock_dependencies(20, &[]);
+        let deps = mock_dependencies();
         let addr = permit
             .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
@@ -84,7 +84,7 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let deps = mock_dependencies(20, &[]);
+        let deps = mock_dependencies();
         let addr = permit
             .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
@@ -118,7 +118,7 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let deps = mock_dependencies(20, &[]);
+        let deps = mock_dependencies();
         let addr = permit
             .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
@@ -152,7 +152,7 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let deps = mock_dependencies(20, &[]);
+        let deps = mock_dependencies();
         let addr = permit
             .validate(&deps.api , Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
@@ -186,7 +186,7 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let deps = mock_dependencies(20, &[]);
+        let deps = mock_dependencies();
         let addr = permit
             .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
@@ -220,7 +220,7 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let deps = mock_dependencies(20, &[]);
+        let deps = mock_dependencies();
         let addr = permit
             .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
@@ -254,7 +254,7 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let deps = mock_dependencies(20, &[]);
+        let deps = mock_dependencies();
         let addr = permit
             .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");
@@ -288,7 +288,7 @@ pub mod tests {
             memo: Some("eyJhbW91bnQiOiIxMDAwMDAwMCIsImluZGV4IjoxMCwia2V5IjoiYWNjb3VudC1jcmVhdGlvbi1wZXJtaXQifQ==".to_string())
         };
 
-        let deps = mock_dependencies(20, &[]);
+        let deps = mock_dependencies();
         let addr = permit
             .validate(&deps.api, Some(MSGTYPE.to_string()))
             .expect("Signature validation failed");

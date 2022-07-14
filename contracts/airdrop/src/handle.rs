@@ -313,9 +313,7 @@ pub fn try_account(
     }
 
     if redeem_amount > Uint128::zero() {
-        // TODO: understand this error
-        //total_claimed_w(deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
-        total_claimed_w(deps.storage).save(&(redeem_amount + total_claimed_r(deps.storage).load()?))?;
+        total_claimed_w(deps.storage).update(|claimed| -> StdResult<Uint128> { Ok(claimed + redeem_amount) })?;
 
         messages.push(send_msg(
             info.sender.clone(),
@@ -375,24 +373,17 @@ pub fn try_complete_task(
 
     for (i, task) in config.task_claim.iter().enumerate() {
         if task.address == info.sender {
-            // claim_status_w(deps.storage, i).update(
-            //     account.to_string().as_bytes(),
-            //     |status| {
-            //         // If there was a state then ignore
-            //         if let Some(status) = status {
-            //             Ok(status)
-            //         } else {
-            //             Ok(false)
-            //         }
-            //     },
-            // )?;
-            let status = claim_status_r(deps.storage, i).may_load(account.to_string().as_bytes())?;
-            claim_status_w(deps.storage, i)
-                .save(account.to_string().as_bytes(),
-                       &match status {
-                                None => false,
-                                Some(_) => true
-                            })?;
+            claim_status_w(deps.storage, i).update(
+                account.to_string().as_bytes(),
+                |status| -> StdResult<bool> {
+                    // If there was a state then ignore
+                    if let Some(status) = status {
+                        Ok(status)
+                    } else {
+                        Ok(false)
+                    }
+                },
+            )?;
         }
     }
 
@@ -431,7 +422,7 @@ pub fn try_claim(
         unclaimed_percentage,
     )?;
 
-    total_claimed_w(deps.storage).update(|claimed| Ok(claimed + redeem_amount))?;
+    total_claimed_w(deps.storage).update(|claimed| -> StdResult<Uint128> {Ok(claimed + redeem_amount)})?;
 
     Ok(Response::new()
         .set_data(to_binary(&HandleAnswer::Claim {
@@ -610,7 +601,7 @@ pub fn try_add_account_addresses(
             // Update address if its not in an account
             address_in_account_w(storage).update(
                 params.address.to_string().as_bytes(),
-                |state| {
+                |state| -> StdResult<bool> {
                     if state.is_some() {
                         return Err(address_already_in_account(params.address.as_str()));
                     }
