@@ -28,9 +28,8 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
-    InitResponse,
     Querier,
     StdError,
     StdResult,
@@ -62,10 +61,11 @@ use shade_protocol::{
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     // Setup config
     Config {
         treasury: msg.treasury.clone(),
@@ -173,14 +173,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     }
     .save(&mut deps.storage, &Uint128::zero())?;
 
-    Ok(InitResponse {
+    Ok(Response {
         messages,
         log: vec![],
     })
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

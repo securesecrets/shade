@@ -1,5 +1,4 @@
-use shade_protocol::c_std::{Api, Binary, CosmosMsg, Env, Extern, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
-use shade_protocol::secret_toolkit::utils::HandleCallback;
+use shade_protocol::c_std::{Api, Binary, CosmosMsg, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer, ReceiverHandleMsg};
 use shade_protocol::contract_interfaces::snip20::errors::transfer_disabled;
@@ -47,7 +46,7 @@ pub fn try_transfer_impl<S: Storage>(
 }
 
 pub fn try_transfer<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     recipient: Addr,
     amount: Uint128,
@@ -63,7 +62,7 @@ pub fn try_transfer<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     actions: Vec<batch::TransferAction>,
 ) -> StdResult<Response> {
@@ -137,7 +136,7 @@ pub fn try_send_impl<S: Storage>(
 }
 
 pub fn try_send<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     recipient: Addr,
     recipient_code_hash: Option<String>,
@@ -170,7 +169,7 @@ pub fn try_send<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_send<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     actions: Vec<batch::SendAction>
 ) -> StdResult<Response> {

@@ -4,9 +4,8 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
-    InitResponse,
     Querier,
     StdResult,
     Storage,
@@ -25,10 +24,11 @@ use crate::{
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     let state = Config {
         admin: match msg.admin {
             None => info.sender.clone(),
@@ -69,14 +69,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     debug_print!("Contract was initialized by {}", info.sender);
 
-    Ok(InitResponse {
-        messages: vec![],
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

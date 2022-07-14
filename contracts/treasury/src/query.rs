@@ -1,8 +1,5 @@
-use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::secret_toolkit::{
-    snip20::{allowance_query, balance_query},
-    utils::Query,
-};
+use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage, Uint128};
+use shade_protocol::secret_toolkit::snip20::{allowance_query, balance_query};
 use shade_protocol::contract_interfaces::{
     dao::{adapter, treasury},
     snip20,

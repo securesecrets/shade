@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, Response, InitResponse, Querier,
+    debug_print, to_binary, Api, Binary, Env, DepsMut, Response, Querier,
     StdResult, StdError,
     Storage, Uint128,
 };
@@ -33,10 +33,11 @@ use crate::{
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
 
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
@@ -184,14 +185,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    Ok(InitResponse {
+    Ok(Response {
         messages,
         log: vec![],
     })
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

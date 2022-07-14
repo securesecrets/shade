@@ -3,10 +3,10 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
-    InitResponse,
+    Response,
     Querier,
     StdError,
     StdResult,
@@ -15,7 +15,6 @@ use shade_protocol::c_std::{
 use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use shade_protocol::c_std::Uint128;
 use schemars::JsonSchema;
-use shade_protocol::secret_toolkit::utils::{InitCallback, Query};
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
     contract_interfaces::dex::{
@@ -51,11 +50,11 @@ pub fn pair_info_w<S: Storage>(storage: &mut S) -> Singleton<S, PairInfo> {
 }
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    _deps: DepsMut,
     _env: Env,
     _msg: InitMsg,
-) -> StdResult<InitResponse> {
-    Ok(InitResponse::default())
+) -> StdResult<Response> {
+    Ok(Response::default())
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -70,7 +69,7 @@ pub enum HandleMsg {
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     _env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

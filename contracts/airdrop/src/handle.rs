@@ -22,7 +22,7 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -63,7 +63,7 @@ use shade_protocol::{
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     admin: Option<Addr>,
     dump_address: Option<Addr>,
@@ -180,7 +180,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     tasks: Vec<RequiredTask>,
 ) -> StdResult<Response> {
@@ -217,7 +217,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_account<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     addresses: Vec<AddressProofPermit>,
     partial_tree: Vec<Binary>,
@@ -353,7 +353,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     key: String,
 ) -> StdResult<Response> {
@@ -369,7 +369,7 @@ pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     key: String,
 ) -> StdResult<Response> {
@@ -388,7 +388,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     account: Addr,
 ) -> StdResult<Response> {
@@ -420,7 +420,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;
@@ -474,7 +474,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
 ) -> StdResult<Response> {
     let config = config_r(&deps.storage).load()?;

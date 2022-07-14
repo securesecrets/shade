@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128};
+use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage, Uint128};
 use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, balance_query},
     utils::Query,

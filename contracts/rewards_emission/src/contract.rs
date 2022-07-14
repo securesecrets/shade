@@ -4,9 +4,8 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
-    InitResponse,
     Querier,
     StdError,
     StdResult,
@@ -31,10 +30,11 @@ use crate::{
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     let mut config = msg.config;
 
     if !config.admins.contains(&info.sender) {
@@ -46,14 +46,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
 
-    Ok(InitResponse {
-        messages: vec![],
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

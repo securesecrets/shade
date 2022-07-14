@@ -14,7 +14,7 @@ use crate::{
 };
 use chrono::prelude::*;
 use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage};
+use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage};
 use shade_protocol::contract_interfaces::mint::mint::QueryAnswer;
 
 pub fn native_asset<S: Storage, A: Api, Q: Querier>(

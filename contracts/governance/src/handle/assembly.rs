@@ -6,7 +6,7 @@ use shade_protocol::c_std::{
     Binary,
     Coin,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -30,7 +30,7 @@ use shade_protocol::{
 use std::convert::TryInto;
 
 pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     proposal: Uint128,
     vote: Vote,
@@ -81,7 +81,7 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     assembly_id: Uint128,
     title: String,
@@ -199,7 +199,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     name: String,
     metadata: String,
@@ -235,7 +235,7 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     id: Uint128,
     name: Option<String>,

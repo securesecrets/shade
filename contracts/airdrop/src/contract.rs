@@ -18,15 +18,14 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
-    InitResponse,
     Querier,
     StdError,
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::contract_interfaces::airdrop::{
     claim_info::RequiredTask,
     errors::{invalid_dates, invalid_task_percentage},
@@ -40,10 +39,11 @@ use shade_protocol::contract_interfaces::airdrop::{
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     // Setup task claim
     let mut task_claim = vec![RequiredTask {
         address: env.contract.address.clone(),
@@ -128,14 +128,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     decay_claimed_w(&mut deps.storage).save(&false)?;
 
-    Ok(InitResponse {
-        messages: vec![],
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

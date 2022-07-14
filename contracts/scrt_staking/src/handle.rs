@@ -8,7 +8,7 @@ use shade_protocol::c_std::{
     Coin,
     CosmosMsg,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -41,7 +41,7 @@ use crate::{
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     _sender: Addr,
     _from: Addr,
@@ -85,7 +85,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
@@ -111,7 +111,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
  * Send reserves unbonded funds to treasury
  */
 pub fn update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     asset: Addr,
 ) -> StdResult<Response> {
@@ -162,7 +162,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     asset: Addr,
     amount: Uint128,
@@ -302,7 +302,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn withdraw_rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = vec![];
     let address = self_address_r(&deps.storage).load()?;
@@ -318,7 +318,7 @@ pub fn withdraw_rewards<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    _deps: DepsMut,
     amount: Uint128,
     validator: Validator,
     token: Contract,
@@ -341,7 +341,7 @@ pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
  * and returns them to treasury
  */
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     asset: Addr,
 ) -> StdResult<Response> {

@@ -2,7 +2,7 @@ use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Querier,
     StdError,
@@ -10,7 +10,6 @@ use shade_protocol::c_std::{
     Storage,
 };
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
-use shade_protocol::secret_toolkit::utils::Query;
 use shade_admin::admin::AuthorizedUsersResponse;
 use shade_protocol::{
     contract_interfaces::query_auth::{
@@ -38,7 +37,7 @@ fn user_authorized<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, env: 
 }
 
 pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     admin: Contract,
 ) -> StdResult<Response> {
@@ -56,7 +55,7 @@ pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     state: ContractStatus,
 ) -> StdResult<Response> {
@@ -74,7 +73,7 @@ pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     entropy: String,
 ) -> StdResult<Response> {
@@ -92,7 +91,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     key: String,
 ) -> StdResult<Response> {
@@ -106,7 +105,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_block_permit_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     key: String,
 ) -> StdResult<Response> {

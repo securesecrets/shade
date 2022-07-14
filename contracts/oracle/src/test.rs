@@ -4,10 +4,10 @@ use shade_protocol::c_std::{
     from_binary,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
-    InitResponse,
+    Response,
     StdError,
     StdResult,
 };
@@ -19,7 +19,7 @@ pub struct Oracle;
 
 impl ContractHarness for Oracle {
     // Use the method from the default implementation
-    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {
+    fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<Response> {
         init(
             deps,
             env,

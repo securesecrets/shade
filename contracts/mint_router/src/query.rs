@@ -1,7 +1,7 @@
 use crate::state::{asset_path_r, config_r, current_assets_r, final_asset_r, registered_asset_r};
 use chrono::prelude::*;
 use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage};
+use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage};
 use shade_protocol::secret_toolkit::{snip20::token_info_query, utils::Query};
 use shade_protocol::contract_interfaces::mint::{
     mint,

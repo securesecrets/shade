@@ -1,9 +1,9 @@
 /*
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
-    Extern, Addr, StdError,
+    DepsMut, Addr, StdError,
     Binary, StdResult, Response, Env,
-    InitResponse, Uint128,
+    Response, Uint128,
 };
 
 #[test]

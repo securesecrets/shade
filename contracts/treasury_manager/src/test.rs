@@ -5,7 +5,7 @@ pub mod tests {
         testing::{
             mock_dependencies, mock_env, MockStorage, MockApi, MockQuerier
         },
-        Addr, coins, Extern,
+        Addr, coins, DepsMut,
     };
     use shade_protocol::{
         treasury::InitMsg,

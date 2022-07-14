@@ -3,7 +3,7 @@ use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -25,7 +25,7 @@ use shade_protocol::{
 };
 
 pub fn register_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     pair: Contract,
 ) -> StdResult<Response> {
@@ -99,7 +99,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     symbol: String,
     pair: Contract,
@@ -136,7 +136,7 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
 /// Pair argument must represent Secret Swap contract for {symbol}/sSCRT or sSCRT/{symbol}.
 ///
 fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     sscrt_addr: Addr,
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
@@ -178,7 +178,7 @@ fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
 }
 
 fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     sscrt_addr: Addr,
     pair: &Contract,
 ) -> StdResult<(Contract, TokenInfo)> {
@@ -255,7 +255,7 @@ fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn register_index<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     symbol: String,
     basket: Vec<IndexElement>,
@@ -285,7 +285,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     admin: Option<Addr>,
     band: Option<Contract>,

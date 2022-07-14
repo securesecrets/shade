@@ -3,9 +3,8 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
-    InitResponse,
     Querier,
     StdError,
     StdResult,
@@ -29,11 +28,11 @@ pub fn price_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
 }
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+    _deps: DepsMut,
     _env: Env,
     _msg: InitMsg,
-) -> StdResult<InitResponse> {
-    Ok(InitResponse::default())
+) -> StdResult<Response> {
+    Ok(Response::default())
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -43,7 +42,7 @@ pub enum HandleMsg {
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     _env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

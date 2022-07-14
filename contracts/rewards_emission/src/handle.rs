@@ -8,7 +8,7 @@ use shade_protocol::c_std::{
     Coin,
     CosmosMsg,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -50,7 +50,7 @@ use crate::{
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     _sender: Addr,
     _from: Addr,
@@ -69,7 +69,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
@@ -91,7 +91,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn register_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     contract: &Contract,
 ) -> StdResult<Response> {
@@ -140,7 +140,7 @@ pub fn register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     rewards: Vec<Reward>,
 ) -> StdResult<Response> {
@@ -186,7 +186,7 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     asset: Addr,
 ) -> StdResult<Response> {
@@ -200,7 +200,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     _env: Env,
     asset: Addr,
 ) -> StdResult<Response> {

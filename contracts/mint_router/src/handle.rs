@@ -8,7 +8,7 @@ use shade_protocol::c_std::{
     Binary,
     CosmosMsg,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -49,7 +49,7 @@ use crate::state::{
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     sender: Addr,
     from: Addr,
@@ -131,7 +131,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
@@ -160,7 +160,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn build_path<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     path: Vec<Contract>,
 ) -> StdResult<Vec<CosmosMsg>> {

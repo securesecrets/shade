@@ -4,7 +4,7 @@ pub mod tests {
     use shade_protocol::c_std::{
         coins, from_binary,
         testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-        Extern, StdError, Uint128,
+        DepsMut, StdError, Uint128,
     };
     use mockall_double::double;
     use shade_protocol::mint_router::{HandleMsg, InitMsg, QueryAnswer, QueryMsg};

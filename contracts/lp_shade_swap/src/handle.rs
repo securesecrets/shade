@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, Extern,
+    debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, DepsMut,
     Response, Addr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
 };
 
@@ -35,7 +35,7 @@ use crate::{
 };
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     _sender: Addr,
     _from: Addr,
@@ -71,7 +71,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
@@ -97,7 +97,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
  * Send available unbonded funds to treasury
  */
 pub fn update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     asset: Addr,
 ) -> StdResult<Response> {
@@ -128,7 +128,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     asset: Addr,
     amount: Uint128,
@@ -176,7 +176,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     asset: Addr,
 ) -> StdResult<Response> {

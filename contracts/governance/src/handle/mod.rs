@@ -2,7 +2,7 @@ use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -27,7 +27,7 @@ pub mod profile;
 pub mod proposal;
 
 pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     treasury: Option<Addr>,
     vote_token: Option<Contract>,
@@ -78,7 +78,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_runtime_state<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     state: RuntimeState,
 ) -> StdResult<Response> {

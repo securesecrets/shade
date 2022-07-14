@@ -1,6 +1,6 @@
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
-    to_binary, Api, Binary, Env, Extern, Response, InitResponse, Querier, StdResult, Storage,
+    to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdResult, Storage,
 };
 
 use shade_protocol::snip20::helpers::{set_viewing_key_msg, token_info_query};
@@ -11,7 +11,7 @@ use shade_protocol::contract_interfaces::{
 };
 
 use shade_protocol::snip20::helpers::token_config_query;
-use shade_protocol::secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::utils::{pad_handle_result, pad_query_result};
 
 use crate::{
     handle::{self, register_receive},
@@ -26,10 +26,11 @@ use crate::{
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     let state = Config {
         limit_admin: msg.limit_admin,
         shade_admin: msg.shade_admin,
@@ -93,14 +94,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     allocated_allowance_w(&mut deps.storage).save(&Uint128::zero())?;
     deposit_assets_w(&mut deps.storage).save(&vec![])?;
 
-    Ok(InitResponse {
+    Ok(Response {
         messages,
         log: vec![],
     })
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

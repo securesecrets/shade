@@ -4,9 +4,8 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
-    InitResponse,
     Querier,
     StdError,
     StdResult,
@@ -31,10 +30,11 @@ use crate::{
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     let config = Config {
         admins: match msg.admins {
             None => vec![info.sender.clone()],
@@ -56,7 +56,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
     unbonding_w(&mut deps.storage).save(&Uint128::zero())?;
 
-    Ok(InitResponse {
+    Ok(Response {
         messages: vec![
             set_viewing_key_msg(
                 viewing_key_r(&deps.storage).load()?,
@@ -78,7 +78,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

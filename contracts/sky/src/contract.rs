@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, Response, InitResponse, Querier,
+    debug_print, to_binary, Api, Binary, Env, DepsMut, Response, Querier,
     StdError, StdResult, Storage, self,
 };
 use shade_protocol::snip20::helpers::set_viewing_key_msg;
@@ -14,10 +14,11 @@ use shade_protocol::{
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     let state = Config {
         admin: match msg.admin{
             None => info.sender.clone(),
@@ -55,14 +56,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     ViewingKeys(msg.viewing_key).save(&mut deps.storage)?;
 
-    Ok(InitResponse{
+    Ok(Response{
         messages,
         log: vec![],
     })
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

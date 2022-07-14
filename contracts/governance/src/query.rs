@@ -1,5 +1,5 @@
 use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::{Api, Extern, Querier, StdError, StdResult, Storage};
+use shade_protocol::c_std::{Api, DepsMut, Querier, StdError, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},

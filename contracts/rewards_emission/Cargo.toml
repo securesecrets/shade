@@ -24,5 +24,5 @@ debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std", features = ["staking"] }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["rewards_emission", "snip20"] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["rewards_emission", "snip20", "dao"] }
 schemars = "0.7"

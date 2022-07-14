@@ -7,7 +7,7 @@ use shade_protocol::c_std::{
     Binary,
     Coin,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -40,7 +40,7 @@ use shade_protocol::{
 
 // Initializes a proposal on the public assembly with the blank command
 pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     title: String,
     metadata: String,
@@ -75,7 +75,7 @@ pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     proposal: Uint128,
 ) -> StdResult<Response> {
@@ -116,7 +116,7 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     proposal: Uint128,
 ) -> StdResult<Response> {
@@ -183,7 +183,7 @@ fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> S
 }
 
 pub fn try_update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     proposal: Uint128,
 ) -> StdResult<Response> {
@@ -366,7 +366,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     sender: Addr,
     from: Addr,
@@ -473,7 +473,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     id: Uint128,
 ) -> StdResult<Response> {
@@ -525,7 +525,7 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     sender: Addr,
     msg: Option<Binary>,

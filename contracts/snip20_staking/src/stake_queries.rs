@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::{to_binary, Api, Binary, Extern, Addr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{to_binary, Api, Binary, DepsMut, Addr, Querier, StdResult, Storage};
 use shade_protocol::{
     contract_interfaces::staking::snip20_staking::stake::{StakeConfig, VecQueue},
     utils::storage::default::{BucketStorage, SingletonStorage},

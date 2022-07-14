@@ -1,8 +1,8 @@
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
-    Extern, Addr, StdError,
-    Binary, StdResult, Response, Env,
-    InitResponse, Uint128,
+    DepsMut, Addr, StdError,
+    Binary, StdResult, Env,
+    Response, Uint128,
 };
 
 use shade_protocol::snip20::helpers;

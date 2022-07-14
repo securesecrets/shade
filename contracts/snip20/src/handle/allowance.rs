@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Binary, Env, Extern, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
+use shade_protocol::c_std::{Api, Binary, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::manager::{Allowance, CoinInfo};
@@ -7,7 +7,7 @@ use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 use crate::handle::transfers::{try_send_impl, try_transfer_impl};
 
 pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     spender: Addr,
     amount: Uint128,
@@ -49,7 +49,7 @@ pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     spender: Addr,
     amount: Uint128,
@@ -87,7 +87,7 @@ pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     owner: Addr,
     recipient: Addr,
@@ -114,7 +114,7 @@ pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     actions: Vec<batch::TransferFromAction>,
 ) -> StdResult<Response> {
@@ -143,7 +143,7 @@ pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     owner: Addr,
     recipient: Addr,
@@ -176,7 +176,7 @@ pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     actions: Vec<batch::SendFromAction>
 ) -> StdResult<Response> {

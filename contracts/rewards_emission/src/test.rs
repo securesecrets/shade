@@ -7,7 +7,7 @@ pub mod tests {
         },
         Addr,
         coins, from_binary, StdError, Uint128,
-        Extern,
+        DepsMut,
     };
     use shade_protocol::{
         treasury::{

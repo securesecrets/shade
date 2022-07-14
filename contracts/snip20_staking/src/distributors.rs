@@ -9,7 +9,7 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -28,7 +28,7 @@ pub fn get_distributor<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_distributors_status<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     enabled: bool,
 ) -> StdResult<Response> {
@@ -48,7 +48,7 @@ pub fn try_set_distributors_status<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_add_distributors<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     new_distributors: Vec<Addr>,
 ) -> StdResult<Response> {
@@ -70,7 +70,7 @@ pub fn try_add_distributors<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_distributors<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     distributors: Vec<Addr>,
 ) -> StdResult<Response> {

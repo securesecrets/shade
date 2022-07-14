@@ -3,7 +3,7 @@ use shade_protocol::c_std::{
     from_binary,
     Api,
     Binary,
-    Extern,
+    DepsMut,
     Addr,
     Querier,
     StdError,

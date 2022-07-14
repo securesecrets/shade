@@ -5,9 +5,8 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
-    InitResponse,
     Querier,
     StdResult,
     Storage,
@@ -20,10 +19,11 @@ use shade_protocol::contract_interfaces::oracles::oracle::{
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     let state = OracleConfig {
         admin: match msg.admin {
             None => info.sender.clone(),
@@ -37,11 +37,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     debug_print!("Contract was initialized by {}", info.sender);
 
-    Ok(InitResponse::default())
+    Ok(Response::default())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

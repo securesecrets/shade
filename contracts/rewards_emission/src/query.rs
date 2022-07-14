@@ -4,7 +4,7 @@ use shade_protocol::c_std::{
     BankQuery,
     Delegation,
     DistQuery,
-    Extern,
+    DepsMut,
     FullDelegation,
     Addr,
     Querier,

@@ -30,7 +30,7 @@ use shade_protocol::c_std::{
     CanonicalAddr,
     Decimal,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -51,7 +51,7 @@ use std::convert::TryInto;
 //TODO: set errors
 
 pub fn try_update_stake_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     unbond_time: Option<u64>,
     disable_treasury: bool,
@@ -374,7 +374,7 @@ pub fn calculate_rewards(
 }
 
 pub fn try_receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     sender: Addr,
     from: Addr,
@@ -540,7 +540,7 @@ pub fn remove_from_cooldown<S: Storage>(
 }
 
 pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     amount: Uint128,
 ) -> StdResult<Response> {
@@ -632,7 +632,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
 ) -> StdResult<Response> {
     let sender = &info.sender;
@@ -709,7 +709,7 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
 ) -> StdResult<Response> {
     let stake_config = StakeConfig::load(&deps.storage)?;
@@ -754,7 +754,7 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
 ) -> StdResult<Response> {
     // Clam rewards

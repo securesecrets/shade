@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Env, Extern, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
+use shade_protocol::c_std::{Api, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::errors::{minting_disabled, not_admin, not_minter};
@@ -22,7 +22,7 @@ fn try_mint_impl<S: Storage>(
 }
 
 pub fn try_mint<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     recipient: Addr,
     amount: Uint128,
@@ -51,7 +51,7 @@ pub fn try_mint<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     actions: Vec<batch::MintAction>,
 ) -> StdResult<Response> {
@@ -90,7 +90,7 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     new_minters: Vec<Addr>
 ) -> StdResult<Response> {
@@ -114,7 +114,7 @@ pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     minters_to_remove: Vec<Addr>
 ) -> StdResult<Response> {
@@ -140,7 +140,7 @@ pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_minters<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     minters: Vec<Addr>
 ) -> StdResult<Response> {

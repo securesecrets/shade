@@ -13,7 +13,7 @@ use shade_protocol::c_std::{
     Binary,
     CosmosMsg,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -21,14 +21,13 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::utils::HandleCallback;
 use shade_protocol::{
     contract_interfaces::staking::snip20_staking::stake::VecQueue,
     utils::storage::default::BucketStorage,
 };
 
 pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     recipient: Addr,
     code_hash: Option<String>,
@@ -61,7 +60,7 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     recipient: Addr,
     code_hash: Option<String>,

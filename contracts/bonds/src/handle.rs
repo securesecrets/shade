@@ -1,13 +1,10 @@
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
-    from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, Response, Addr,
+    from_binary, to_binary, Api, Binary, CosmosMsg, Env, DepsMut, Response, Addr,
     Querier, StdError, StdResult, Storage,
 };
 
-use shade_protocol::secret_toolkit::{
-    snip20::{allowance_query, mint_msg, register_receive_msg, send_msg, transfer_from_msg},
-    utils::{HandleCallback, Query},
-};
+use shade_protocol::secret_toolkit::snip20::{allowance_query, mint_msg, register_receive_msg, send_msg, transfer_from_msg};
 
 use shade_admin::admin::{QueryMsg, ValidateAdminPermissionResponse};
 
@@ -34,7 +31,7 @@ use crate::state::{
 };
 
 pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     limit_admin: Option<Addr>,
     shade_admins: Option<Contract>,
@@ -93,7 +90,7 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     oracle: Option<Contract>,
     treasury: Option<Addr>,
@@ -177,7 +174,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     sender: Addr,
     _from: Addr,
@@ -364,7 +361,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
 ) -> StdResult<Response> {
     // Check if bonding period has elapsed and allow user to claim
@@ -443,7 +440,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     deposit_asset: Contract,
     start_time: u64,
@@ -596,7 +593,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     deposit_asset: Contract,
 ) -> StdResult<Response> {

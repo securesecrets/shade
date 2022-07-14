@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    Storage, Api, Querier, Extern, Env, StdResult, Response, to_binary,
+    Storage, Api, Querier, DepsMut, Env, StdResult, Response, to_binary,
     StdError, Addr, CosmosMsg, Binary, WasmMsg
 };
 use shade_protocol::fadroma::scrt::to_cosmos_msg;
@@ -14,12 +14,11 @@ use shade_protocol::{
     mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
     snip20::helpers::Snip20Asset,
 }};
-use shade_protocol::secret_toolkit::utils::Query;
 use shade_protocol::snip20::helpers::send_msg;
 use crate::{query::trade_profitability};
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
@@ -37,7 +36,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 /*pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>( //DEPRECIATED
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     amount: Uint128,
 ) -> StdResult<Response> {
@@ -153,7 +152,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }*/
 
 pub fn try_execute<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     amount: Uint128,
 ) -> StdResult<Response> {

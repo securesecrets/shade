@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    Api, BalanceResponse, BankQuery, Delegation, DistQuery, Extern, FullDelegation, Addr,
+    Api, BalanceResponse, BankQuery, Delegation, DistQuery, DepsMut, FullDelegation, Addr,
     Querier, RewardsResponse, StdError, StdResult, Storage, Uint128,
 };
 

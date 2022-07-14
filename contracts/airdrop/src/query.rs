@@ -14,7 +14,7 @@ use crate::{
     },
 };
 use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdResult, Storage};
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use shade_protocol::contract_interfaces::airdrop::{
     account::{AccountKey, AccountPermit, AddressProofPermit},

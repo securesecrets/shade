@@ -3,7 +3,7 @@ use shade_protocol::c_std::{
     to_binary,
     Api,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -26,7 +26,7 @@ use shade_protocol::{
 };
 
 pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     name: String,
     msg: String,
@@ -62,7 +62,7 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     id: Uint128,
     name: Option<String>,
@@ -102,7 +102,7 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_add_assembly_msg_assemblies<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     id: Uint128,
     assemblies: Vec<Uint128>,

@@ -11,7 +11,7 @@ use shade_protocol::c_std::{
     Env,
     Response,
     Addr,
-    InitResponse,
+    Response,
     StdError,
     StdResult,
 };

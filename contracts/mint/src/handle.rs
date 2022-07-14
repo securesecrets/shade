@@ -8,7 +8,7 @@ use shade_protocol::c_std::{
     Binary,
     CosmosMsg,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -49,7 +49,7 @@ use crate::state::{
 };
 
 pub fn try_burn<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     _sender: Addr,
     from: Addr,
@@ -228,7 +228,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     limit: Limit,
 ) -> StdResult<Uint128> {
@@ -305,7 +305,7 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
@@ -328,7 +328,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     contract: &Contract,
     capture: Option<Uint128>,
@@ -404,7 +404,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     _env: &Env,
     address: Addr,
 ) -> StdResult<Response> {

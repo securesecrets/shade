@@ -11,7 +11,7 @@ use shade_protocol::c_std::{
     Coin,
     CosmosMsg,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -48,7 +48,7 @@ use shade_protocol::{
 use shade_protocol::contract_interfaces::snip20::errors::{deposit_disabled, no_tokens_received, not_admin, not_enough_tokens, redeem_disabled, unsupported_token};
 
 pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     amount: Uint128,
 ) -> StdResult<Response> {
@@ -91,7 +91,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
 ) -> StdResult<Response> {
     let sender = info.sender;
@@ -132,7 +132,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     address: Addr,
 ) -> StdResult<Response> {
@@ -150,7 +150,7 @@ pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     status_level: ContractStatusLevel,
 ) -> StdResult<Response> {
@@ -170,7 +170,7 @@ pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     code_hash: String,
 ) -> StdResult<Response> {
@@ -185,7 +185,7 @@ pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     entropy: String,
 ) -> StdResult<Response> {
@@ -203,7 +203,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     key: String,
 ) -> StdResult<Response> {
@@ -219,7 +219,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_revoke_permit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     permit_name: String,
 ) -> StdResult<Response> {

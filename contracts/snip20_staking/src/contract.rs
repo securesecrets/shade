@@ -73,10 +73,9 @@ use shade_protocol::c_std::{
     CanonicalAddr,
     CosmosMsg,
     Env,
-    Extern,
-    Response,
+    DepsMut,
     Addr,
-    InitResponse,
+    Response,
     Querier,
 
     ReadonlyStorage,
@@ -101,10 +100,11 @@ pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     // Check name, symbol, decimals
     if !is_valid_name(&msg.name) {
         return Err(StdError::generic_err(
@@ -204,7 +204,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         msg.staked_token.address,
     )?);
 
-    Ok(InitResponse {
+    Ok(Response {
         messages,
         log: vec![],
     })
@@ -221,7 +221,7 @@ fn pad_response(response: StdResult<Response>) -> StdResult<Response> {
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {
@@ -629,7 +629,7 @@ pub fn query_balance<S: Storage, A: Api, Q: Querier>(
 }
 
 fn change_admin<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     address: Addr,
 ) -> StdResult<Response> {
@@ -683,7 +683,7 @@ pub fn try_mint_impl<S: Storage>(
 }
 
 pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     key: String,
 ) -> StdResult<Response> {
@@ -700,7 +700,7 @@ pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     entropy: String,
 ) -> StdResult<Response> {
@@ -720,7 +720,7 @@ pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
 }
 
 fn set_contract_status<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     status_level: ContractStatusLevel,
 ) -> StdResult<Response> {
@@ -760,7 +760,7 @@ pub fn query_allowance<S: Storage, A: Api, Q: Querier>(
 
 #[allow(clippy::too_many_arguments)]
 fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     messages: &mut Vec<CosmosMsg>,
     sender: &Addr,
     sender_canon: &CanonicalAddr,
@@ -831,7 +831,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_transfer<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     recipient: Addr,
     amount: Uint128,
@@ -868,7 +868,7 @@ fn try_transfer<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     actions: Vec<batch::TransferAction>,
 ) -> StdResult<Response> {
@@ -938,7 +938,7 @@ fn try_add_receiver_api_callback<S: ReadonlyStorage>(
 
 #[allow(clippy::too_many_arguments)]
 fn try_send_impl<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     messages: &mut Vec<CosmosMsg>,
     sender: Addr,
     sender_canon: &CanonicalAddr, // redundant but more efficient
@@ -983,7 +983,7 @@ fn try_send_impl<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_send<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     recipient: Addr,
     recipient_code_hash: Option<String>,
@@ -1021,7 +1021,7 @@ fn try_send<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_batch_send<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     actions: Vec<batch::SendAction>,
 ) -> StdResult<Response> {
@@ -1057,7 +1057,7 @@ fn try_batch_send<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_register_receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     code_hash: String,
 ) -> StdResult<Response> {
@@ -1104,7 +1104,7 @@ fn use_allowance<S: Storage>(
 
 #[allow(clippy::too_many_arguments)]
 fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     spender: &Addr,
     spender_canon: &CanonicalAddr,
@@ -1165,7 +1165,7 @@ fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     owner: &Addr,
     recipient: &Addr,
@@ -1200,7 +1200,7 @@ fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     actions: Vec<batch::TransferFromAction>,
 ) -> StdResult<Response> {
@@ -1240,7 +1240,7 @@ fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
 
 #[allow(clippy::too_many_arguments)]
 fn try_send_from_impl<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     messages: &mut Vec<CosmosMsg>,
     spender: &Addr,
@@ -1288,7 +1288,7 @@ fn try_send_from_impl<S: Storage, A: Api, Q: Querier>(
 
 #[allow(clippy::too_many_arguments)]
 fn try_send_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     owner: Addr,
     recipient: Addr,
@@ -1325,7 +1325,7 @@ fn try_send_from<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     actions: Vec<batch::SendFromAction>,
 ) -> StdResult<Response> {
@@ -1361,7 +1361,7 @@ fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     spender: Addr,
     amount: Uint128,
@@ -1406,7 +1406,7 @@ fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     spender: Addr,
     amount: Uint128,
@@ -1528,7 +1528,7 @@ fn perform_transfer<T: Storage>(
 }
 
 fn revoke_permit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     permit_name: String,
 ) -> StdResult<Response> {
@@ -1578,7 +1578,7 @@ fn is_valid_symbol(symbol: &str) -> bool {
 }
 
 // pub fn migrate<S: Storage, A: Api, Q: Querier>(
-//     _deps: &mut Extern<S, A, Q>,
+//     _deps: DepsMut,
 //     _env: Env,
 //     _msg: MigrateMsg,
 // ) -> StdResult<MigrateResponse> {
@@ -1606,7 +1606,7 @@ mod staking_tests {
     use std::any::Any;
 
     fn init_helper_staking() -> (
-        StdResult<InitResponse>,
+        StdResult<Response>,
         Extern<MockStorage, MockApi, MockQuerier>,
     ) {
         let mut deps = mock_dependencies(20, &[]);
@@ -3093,7 +3093,7 @@ mod snip20_tests {
     fn init_helper(
         initial_balances: Vec<InitBalance>,
     ) -> (
-        StdResult<InitResponse>,
+        StdResult<Response>,
         Extern<MockStorage, MockApi, MockQuerier>,
     ) {
         let mut deps = mock_dependencies(20, &[]);
@@ -3135,7 +3135,7 @@ mod snip20_tests {
         enable_burn: bool,
         contract_bal: u128,
     ) -> (
-        StdResult<InitResponse>,
+        StdResult<Response>,
         Extern<MockStorage, MockApi, MockQuerier>,
     ) {
         let mut deps = mock_dependencies(20, &[Coin {

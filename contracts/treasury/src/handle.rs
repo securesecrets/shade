@@ -6,7 +6,7 @@ use shade_protocol::c_std::{
     Binary,
     CosmosMsg,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -67,7 +67,7 @@ use chrono::prelude::*;
 use shade_protocol::contract_interfaces::dao::adapter;
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     sender: Addr,
     _from: Addr,
@@ -86,7 +86,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
@@ -124,7 +124,7 @@ pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn rebalance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     asset: Addr,
 ) -> StdResult<Response> {
@@ -397,7 +397,7 @@ pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     contract: &Contract,
     reserves: Option<Uint128>,
@@ -447,7 +447,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn register_manager<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     contract: &mut Contract,
 ) -> StdResult<Response> {
@@ -508,7 +508,7 @@ fn allowance_amount(allowance: &Allowance) -> Uint128 {
 }
 
 pub fn allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     asset: Addr,
     allowance: Allowance,
@@ -622,7 +622,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     asset: Addr,
 ) -> StdResult<Response> {
@@ -664,7 +664,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     asset: Addr,
     amount: Uint128,

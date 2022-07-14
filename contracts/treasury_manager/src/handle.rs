@@ -6,7 +6,7 @@ use shade_protocol::c_std::{
     Binary,
     CosmosMsg,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
     Querier,
@@ -72,7 +72,7 @@ use shade_protocol::contract_interfaces::dao::adapter;
 use std::convert::TryFrom;
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     _sender: Addr,
     from: Addr,
@@ -137,7 +137,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
@@ -159,7 +159,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     contract: &Contract,
 ) -> StdResult<Response> {
@@ -208,7 +208,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn allocate<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     asset: Addr,
     allocation: Allocation,
@@ -277,7 +277,7 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     asset: Addr,
 ) -> StdResult<Response> {
@@ -358,7 +358,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn update<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     asset: Addr,
 ) -> StdResult<Response> {
@@ -492,7 +492,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbond<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     asset: Addr,
     amount: Uint128,
@@ -737,7 +737,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn add_holder<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     holder: Addr,
 ) -> StdResult<Response> {
@@ -772,7 +772,7 @@ pub fn add_holder<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn remove_holder<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
     holder: Addr,
 ) -> StdResult<Response> {

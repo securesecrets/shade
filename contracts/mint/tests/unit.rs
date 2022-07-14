@@ -6,10 +6,10 @@ use shade_protocol::c_std::{
     to_binary,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
     Addr,
-    InitResponse,
+    Response,
     StdError,
     StdResult,
 };

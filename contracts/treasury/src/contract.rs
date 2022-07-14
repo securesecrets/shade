@@ -4,9 +4,8 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
-    InitResponse,
     Querier,
     StdError,
     StdResult,
@@ -32,10 +31,11 @@ use chrono::prelude::*;
 use shade_protocol::contract_interfaces::dao::adapter;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: InitMsg,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
     config_w(&mut deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(info.sender.clone()),
     })?;
@@ -48,14 +48,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     debug_print!("Contract was initialized by {}", info.sender);
 
-    Ok(InitResponse {
-        messages: vec![],
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

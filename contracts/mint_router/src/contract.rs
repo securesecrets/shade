@@ -4,9 +4,8 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     Env,
-    Extern,
+    DepsMut,
     Response,
-    InitResponse,
     Querier,
     StdResult,
     Storage,
@@ -26,10 +25,10 @@ use crate::{
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
-    msg: InitMsg,
-) -> StdResult<InitResponse> {
+    info: MessageInfo,
+) -> StdResult<Response> {
     let config = Config {
         admin: match msg.admin {
             None => info.sender.clone(),
@@ -48,14 +47,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         messages.append(&mut handle::build_path(deps, env, config.path.clone())?);
     }
 
-    Ok(InitResponse {
+    Ok(Response {
         messages,
         log: vec![],
     })
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<Response> {

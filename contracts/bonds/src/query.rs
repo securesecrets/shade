@@ -13,7 +13,7 @@ use shade_protocol::secret_toolkit::{
     utils::Query,
 };
 
-use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdResult, Storage};
 use shade_protocol::contract_interfaces::bonds::{
     errors::{permit_revoked, query_auth_bad_response},
     BondOpportunity, QueryAnswer,
