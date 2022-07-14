@@ -1,3 +1,5 @@
+use cosmwasm_std::SubMsg;
+
 use crate::utils::{asset::Contract};
 use crate::c_std::{
     Binary,
@@ -12,7 +14,7 @@ pub fn wrap(
     amount: Uint128,
     token: Contract,
     //denom: Option<String>,
-) -> StdResult<CosmosMsg> {
+) -> StdResult<SubMsg> {
     Ok(deposit_msg(
         amount,
         None,
@@ -26,7 +28,7 @@ pub fn wrap_and_send(
     token: Contract,
     //denom: Option<String>,
     msg: Option<Binary>,
-) -> StdResult<Vec<CosmosMsg>> {
+) -> StdResult<Vec<SubMsg>> {
     Ok(vec![
         wrap(amount, token.clone())?,
         send_msg(
@@ -44,7 +46,7 @@ pub fn unwrap(
     amount: Uint128,
     token: Contract,
     //denom: Option<String>,
-) -> StdResult<CosmosMsg> {
+) -> StdResult<SubMsg> {
     Ok(redeem_msg(
         amount,
         None,

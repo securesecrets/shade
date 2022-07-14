@@ -24,7 +24,7 @@ impl ContractStatusLevel {
     pub fn save(self, storage: &mut dyn Storage) -> StdResult<()> {
         ContractStatus(self.into()).save(storage)
     }
-    pub fn load(storage: & S) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
         let i = ContractStatus::load(storage)?.0;
         let item = match i {
             0 => ContractStatusLevel::NormalRun,
