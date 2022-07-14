@@ -19,7 +19,7 @@ use crate::{
 use crate::c_std::Uint128;
 use crate::c_std::{Binary, Coin, Addr};
 
-use crate::utils::{HandleCallback, InitCallback, Query};
+use crate::utils::{ExecuteCallback, InstantianteCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 #[cfg(feature = "governance-impl")]
@@ -56,7 +56,7 @@ pub struct InstantiateMsg {
     pub vote_token: Option<Contract>,
 }
 
-impl InitCallback for InstantiateMsg {
+impl InstantianteCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
@@ -237,7 +237,7 @@ pub enum ExecuteMsg {
     },
 }
 
-impl HandleCallback for ExecuteMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

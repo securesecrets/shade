@@ -4,7 +4,7 @@ pub mod auth;
 use crate::c_std::{Binary, Addr};
 
 use crate::query_authentication::permit::Permit;
-use crate::utils::{HandleCallback, InitCallback, Query};
+use crate::utils::{ExecuteCallback, InstantianteCallback, Query};
 use cosmwasm_schema::{cw_serde};
 use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "query_auth_impl")]
@@ -45,7 +45,7 @@ pub struct InstantiateMsg {
     pub prng_seed: Binary
 }
 
-impl InitCallback for InstantiateMsg {
+impl InstantianteCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
@@ -88,7 +88,7 @@ pub enum ExecuteMsg {
     }
 }
 
-impl HandleCallback for ExecuteMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

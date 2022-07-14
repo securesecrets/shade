@@ -35,7 +35,7 @@ use shade_protocol::{
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct InstantiateMsg {}
 
-impl InitCallback for InstantiateMsg {
+impl InstantianteCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

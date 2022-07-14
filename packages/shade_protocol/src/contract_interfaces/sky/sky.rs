@@ -6,7 +6,7 @@ use crate::utils::generic_response::ResponseStatus;
 use crate::c_std::{Uint128, Binary, Addr, StdResult, Env, Deps, DepsMut};
 
 use secret_storage_plus::Item;
-use crate::utils::{HandleCallback, InitCallback, Query};
+use crate::utils::{ExecuteCallback, InstantianteCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 #[cw_serde]

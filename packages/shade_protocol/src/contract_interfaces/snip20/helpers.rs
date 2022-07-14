@@ -1,7 +1,7 @@
 use cosmwasm_std::{Coin, SubMsg};
 use cosmwasm_schema::{cw_serde};
 use crate::c_std::{StdError, StdResult, Addr, Uint128, Binary, CosmosMsg, QuerierWrapper};
-use crate::utils::{HandleCallback, Query};
+use crate::utils::{ExecuteCallback, Query};
 use super::{QueryAnswer, QueryMsg, ExecuteMsg};
 use crate::utils::asset::Contract;
 

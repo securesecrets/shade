@@ -3,7 +3,7 @@ use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStat
 use crate::contract_interfaces::dao::adapter;
 use crate::c_std::{Binary, Addr, StdResult, Uint128};
 
-use crate::utils::{HandleCallback, InitCallback, Query};
+use crate::utils::{ExecuteCallback, InstantianteCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 #[cw_serde]
@@ -85,7 +85,7 @@ pub struct InstantiateMsg {
     pub viewing_key: String,
 }
 
-impl InitCallback for InstantiateMsg {
+impl InstantianteCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
@@ -120,7 +120,7 @@ pub enum ExecuteMsg {
     Adapter(adapter::SubHandleMsg),
 }
 
-impl HandleCallback for ExecuteMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

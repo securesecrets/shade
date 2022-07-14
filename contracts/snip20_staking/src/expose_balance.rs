@@ -151,6 +151,6 @@ pub enum BalanceReceiverHandleMsg {
     ReceiveBalanceWithCooldown(Snip20BalanceReceiverMsg),
 }
 
-impl HandleCallback for BalanceReceiverHandleMsg {
+impl ExecuteCallback for BalanceReceiverHandleMsg {
     const BLOCK_SIZE: usize = 256;
 }

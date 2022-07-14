@@ -2,13 +2,13 @@ use crate::utils::asset::Contract;
 use crate::c_std::{Deps, StdResult};
 use crate::c_std::Uint128;
 
-use crate::utils::{InitCallback, Query};
+use crate::utils::{InstantianteCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
 
-impl InitCallback for InstantiateMsg {
+impl InstantianteCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

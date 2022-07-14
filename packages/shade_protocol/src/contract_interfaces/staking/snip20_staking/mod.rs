@@ -8,7 +8,7 @@ use crate::{
 };
 use crate::c_std::{Binary, Addr, Uint128};
 
-use crate::utils::{HandleCallback, Query};
+use crate::utils::{ExecuteCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 #[cw_serde]
@@ -125,7 +125,7 @@ pub enum ExecuteMsg {
     // }
 }
 
-impl HandleCallback for ExecuteMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

@@ -16,7 +16,7 @@ use crate::utils::generic_response::ResponseStatus;
 use crate::c_std::Uint128;
 use crate::c_std::{Binary, Addr};
 
-use crate::utils::HandleCallback;
+use crate::utils::ExecuteCallback;
 use cosmwasm_schema::{cw_serde};
 
 #[cw_serde]
@@ -116,7 +116,7 @@ pub enum ExecuteMsg {
     },
 }
 
-impl HandleCallback for ExecuteMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
