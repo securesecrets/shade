@@ -2,26 +2,26 @@ use crate::state::{asset_path_r, config_r, current_assets_r, final_asset_r, regi
 use chrono::prelude::*;
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage};
-use shade_protocol::secret_toolkit::{snip20::token_info_query, utils::Query};
+use shade_protocol::{snip20::helpers::token_info_query, utils::Query};
 use shade_protocol::contract_interfaces::mint::{
     mint,
     mint_router::{PathNode, QueryAnswer},
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
-pub fn assets<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn assets<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Assets {
         assets: current_assets_r(&deps.storage).load()?,
     })
 }
 
 pub fn route<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {

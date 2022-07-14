@@ -101,6 +101,27 @@ pub fn deposit_msg(
     )
 }
 
+/// Returns a StdResult<CosmosMsg> used to execute RegisterReceive
+///
+/// # Arguments
+///
+/// * `your_contracts_code_hash` - String holding the code hash of your contract
+/// * `padding` - Optional String used as padding if you don't want to use block padding
+/// * `block_size` - pad the message to blocks of this size
+/// * `callback_code_hash` - String holding the code hash of the contract being called
+/// * `contract_addr` - address of the contract being called
+pub fn register_receive(
+    register_hash: String,
+    padding: Option<String>,
+    contract: &Contract
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::RegisterReceive {
+        code_hash: register_hash,
+        padding,
+    }
+        .to_cosmos_msg(contract, vec![])
+}
+
 /// TokenInfo response
 #[cw_serde]
 pub struct TokenInfo {

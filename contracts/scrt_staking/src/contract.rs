@@ -20,7 +20,7 @@ use shade_protocol::contract_interfaces::dao::scrt_staking::{
     QueryMsg,
 };
 
-use shade_protocol::snip20::helpers::{register_receive_msg, set_viewing_key_msg};
+use shade_protocol::snip20::helpers::{register_receive, set_viewing_key_msg};
 use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{
@@ -50,11 +50,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         validator_bounds: msg.validator_bounds,
     };
 
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
-    self_address_w(&mut deps.storage).save(&env.contract.address)?;
-    viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
-    unbonding_w(&mut deps.storage).save(&Uint128::zero())?;
+    self_address_w(deps.storage).save(&env.contract.address)?;
+    viewing_key_w(deps.storage).save(&msg.viewing_key)?;
+    unbonding_w(deps.storage).save(&Uint128::zero())?;
 
     Ok(Response {
         messages: vec![
@@ -65,12 +65,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 config.sscrt.code_hash.clone(),
                 config.sscrt.address.clone(),
             )?,
-            register_receive_msg(
+            register_receive(
                 env.contract_code_hash,
                 None,
-                256,
-                config.sscrt.code_hash,
-                config.sscrt.address,
+                &config.sscrt
             )?,
         ],
         log: vec![],
@@ -102,7 +100,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

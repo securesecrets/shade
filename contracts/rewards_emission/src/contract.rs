@@ -20,7 +20,7 @@ use shade_protocol::contract_interfaces::dao::rewards_emission::{
     QueryMsg,
 };
 
-use shade_protocol::snip20::helpers::{register_receive_msg, set_viewing_key_msg};
+use shade_protocol::snip20::helpers::{register_receive, set_viewing_key_msg};
 use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{
@@ -41,10 +41,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         config.admins.push(info.sender);
     }
 
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
-    self_address_w(&mut deps.storage).save(&env.contract.address)?;
-    viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
+    self_address_w(deps.storage).save(&env.contract.address)?;
+    viewing_key_w(deps.storage).save(&msg.viewing_key)?;
 
     Ok(Response::new())
 }
@@ -79,7 +79,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

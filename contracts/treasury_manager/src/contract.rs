@@ -39,16 +39,16 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
 
-    config_w(&mut deps.storage).save(&Config {
+    config_w(deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(info.sender.clone()),
         treasury: msg.treasury.clone(),
     })?;
 
-    viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
-    self_address_w(&mut deps.storage).save(&env.contract.address)?;
-    asset_list_w(&mut deps.storage).save(&Vec::new())?;
-    holders_w(&mut deps.storage).save(&vec![msg.treasury.clone()])?;
-    holder_w(&mut deps.storage).save(
+    viewing_key_w(deps.storage).save(&msg.viewing_key)?;
+    self_address_w(deps.storage).save(&env.contract.address)?;
+    asset_list_w(deps.storage).save(&Vec::new())?;
+    holders_w(deps.storage).save(&vec![msg.treasury.clone()])?;
+    holder_w(deps.storage).save(
         msg.treasury.as_str().as_bytes(),
         &Holder {
             balances: vec![],
@@ -91,7 +91,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

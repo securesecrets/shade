@@ -26,7 +26,7 @@ use shade_protocol::{
 };
 use shade_protocol::utils::asset::Contract;
 
-fn user_authorized<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, env: Env) -> StdResult<bool> {
+fn user_authorized<S: Storage, A: Api, Q: Querier>(deps: Deps, env: Env) -> StdResult<bool> {
     let contract = Admin::load(&deps.storage)?.0;
 
     let authorized_users: AuthorizedUsersResponse = shade_admin::admin::QueryMsg::GetAuthorizedUsers {
@@ -45,7 +45,7 @@ pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    Admin(admin).save(&mut deps.storage)?;
+    Admin(admin).save(deps.storage)?;
 
     Ok(Response {
         messages: vec![],
@@ -63,7 +63,7 @@ pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    state.save(&mut deps.storage)?;
+    state.save(deps.storage)?;
 
     Ok(Response {
         messages: vec![],
@@ -81,7 +81,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
 
     let key = Key::generate(&env, seed.as_slice(), &entropy.as_ref());
 
-    HashedKey(key.hash()).save(&mut deps.storage, info.sender)?;
+    HashedKey(key.hash()).save(deps.storage, info.sender)?;
 
     Ok(Response {
         messages: vec![],
@@ -95,7 +95,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     env: Env,
     key: String,
 ) -> StdResult<Response> {
-    HashedKey(Key(key).hash()).save(&mut deps.storage, info.sender)?;
+    HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
     Ok(Response {
         messages: vec![],
@@ -109,7 +109,7 @@ pub fn try_block_permit_key<S: Storage, A: Api, Q: Querier>(
     env: Env,
     key: String,
 ) -> StdResult<Response> {
-    PermitKey::revoke(&mut deps.storage, key, info.sender)?;
+    PermitKey::revoke(deps.storage, key, info.sender)?;
     Ok(Response {
         messages: vec![],
         log: vec![],

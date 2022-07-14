@@ -18,9 +18,8 @@ use shade_protocol::{
     utils::asset::Contract,
 };
 
-use shade_protocol::secret_toolkit::{
-    snip20::{register_receive_msg, set_viewing_key_msg},
-    utils::Query,
+use shade_protocol::{
+    snip20::helpers::{register_receive, set_viewing_key_msg},
 };
 
 use crate::{
@@ -39,8 +38,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
 
-    self_address_w(&mut deps.storage).save(&env.contract.address)?;
-    viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
+    self_address_w(deps.storage).save(&env.contract.address)?;
+    viewing_key_w(deps.storage).save(&msg.viewing_key)?;
 
     let pair_info: shadeswap::PairInfoResponse = match shadeswap::PairQuery::PairInfo.query(
         &deps.querier,
@@ -110,13 +109,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             token_b.clone(),
             pair_info.liquidity_token.clone(),
         ] {
-        unbonding_w(&mut deps.storage).save(
+        unbonding_w(deps.storage).save(
             asset.address.as_str().as_bytes(),
             &Uint128::zero(),
         )?;
     }
 
-    config_w(&mut deps.storage).save(&config.clone())?;
+    config_w(deps.storage).save(&config.clone())?;
 
     let mut messages = vec![
         set_viewing_key_msg(
@@ -126,12 +125,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             config.token_a.code_hash.clone(),
             config.token_a.address.clone(),
         )?,
-        register_receive_msg(
+        register_receive(
             env.contract_code_hash.clone(),
             None,
-            256,
-            config.token_a.code_hash.clone(),
-            config.token_a.address.clone(),
+            config.token_a
         )?,
         set_viewing_key_msg(
             msg.viewing_key.clone(),
@@ -140,12 +137,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             config.token_b.code_hash.clone(),
             config.token_b.address.clone(),
         )?,
-        register_receive_msg(
+        register_receive(
             env.contract_code_hash.clone(),
             None,
-            256,
-            config.token_b.code_hash.clone(),
-            config.token_b.address.clone(),
+            config.token_b
         )?,
         set_viewing_key_msg(
             msg.viewing_key.clone(),
@@ -154,12 +149,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             pair_info.liquidity_token.code_hash.clone(),
             pair_info.liquidity_token.address.clone(),
         )?,
-        register_receive_msg(
+        register_receive(
             env.contract_code_hash.clone(),
             None,
-            256,
-            pair_info.liquidity_token.code_hash.clone(),
-            pair_info.liquidity_token.address.clone(),
+            pair_info.liquidity_token
         )?,
     ];
 
@@ -174,21 +167,16 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                     reward_token.code_hash.clone(),
                     reward_token.address.clone(),
                 )?,
-                register_receive_msg(
+                register_receive(
                     env.contract_code_hash.clone(),
                     None,
-                    256,
-                    reward_token.code_hash.clone(),
-                    reward_token.address.clone(),
+                    reward_token
                 )?,
             ]);
         }
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -214,7 +202,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

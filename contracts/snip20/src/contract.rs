@@ -49,7 +49,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    msg.save(&mut deps.storage, env)?;
+    msg.save(deps.storage, env, info)?;
     Ok(Response::new())
 }
 
@@ -196,7 +196,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     )
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query<S: Storage, A: Api, Q: Querier>(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         to_binary(&match msg {
             QueryMsg::TokenInfo {} => query::token_info(deps)?,

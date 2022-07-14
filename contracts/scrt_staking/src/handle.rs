@@ -96,7 +96,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     }
 
     // Save new info
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
     Ok(Response {
         messages: vec![],
@@ -289,7 +289,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    unbonding_w(&mut deps.storage).save(&unbonding)?;
+    unbonding_w(deps.storage).save(&unbonding)?;
 
     Ok(Response {
         messages,
@@ -386,7 +386,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         None,
     )?);
 
-    unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
+    unbonding_w(deps.storage).update(|u| Ok((u - claim_amount)?))?;
 
     Ok(Response {
         messages,
@@ -399,7 +399,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     seed: u64,
 ) -> StdResult<Validator> {
     let mut validators = deps.querier.query_validators()?;

@@ -16,6 +16,7 @@ default = ["utils"]
 
 # Utils
 utils = []
+dao-utils = ["snip20"]
 errors = []
 flexible_msg = []
 math = []
@@ -59,7 +60,7 @@ mint             = ["snip20"]
 mint_router      = ["snip20"]
 oracles           = ["snip20", "dex"]
 scrt_staking     = ["adapter", "treasury"]
-treasury         = ["adapter", "snip20"]
+treasury         = ["adapter", "dao-utils"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 lp_shade_swap    = ["interface"]
@@ -87,7 +88,7 @@ cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret"
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
-schemars = "0.8.1"
+schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0"
 

@@ -10,14 +10,14 @@ use shade_protocol::contract_interfaces::{
 };
 use std::convert::TryFrom;
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
 pub fn price<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     symbol: String,
 ) -> StdResult<band::ReferenceData> {
     let config = config_r(&deps.storage).load()?;
@@ -49,7 +49,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn prices<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     symbols: Vec<String>,
 ) -> StdResult<Vec<Uint128>> {
     let mut band_symbols = vec![];
@@ -106,7 +106,7 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn eval_index<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     index: Vec<IndexElement>,
 ) -> StdResult<Uint128> {
     let mut weight_sum = Uint512::zero();

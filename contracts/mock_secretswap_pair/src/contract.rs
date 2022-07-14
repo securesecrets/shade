@@ -101,7 +101,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     },
                 },
             ];
-            pool_w(&mut deps.storage).save(&PoolResponse {
+            pool_w(deps.storage).save(&PoolResponse {
                 assets: vec![
                     Asset {
                         amount: amount_a,
@@ -115,7 +115,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 total_share: Uint128::zero(),
             })?;
 
-            pair_info_w(&mut deps.storage).save(&PairResponse {
+            pair_info_w(deps.storage).save(&PairResponse {
                 asset_infos,
                 contract_addr: Addr::unchecked("".to_string()),
                 liquidity_token: Addr::unchecked("".to_string()),
@@ -133,7 +133,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: PairQuery,
 ) -> StdResult<Binary> {
     match msg {

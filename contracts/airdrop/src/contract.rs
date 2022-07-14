@@ -121,12 +121,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         query_rounding: msg.query_rounding,
     };
 
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
     // Initialize claim amount
-    total_claimed_w(&mut deps.storage).save(&Uint128::zero())?;
+    total_claimed_w(deps.storage).save(&Uint128::zero())?;
 
-    decay_claimed_w(&mut deps.storage).save(&false)?;
+    decay_claimed_w(deps.storage).save(&false)?;
 
     Ok(Response::new())
 }
@@ -173,7 +173,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     pad_query_result(

@@ -32,8 +32,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         limit: msg.limit,
     };
 
-    state.save(&mut deps.storage)?;
-    SelfAddr(env.contract.address).save(&mut deps.storage)?;
+    state.save(deps.storage)?;
+    SelfAddr(env.contract.address).save(deps.storage)?;
 
     debug_print!("Contract was initialized by {}", info.sender);
 
@@ -54,7 +54,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         )?
     ];
 
-    ViewingKeys(msg.viewing_key).save(&mut deps.storage)?;
+    ViewingKeys(msg.viewing_key).save(deps.storage)?;
 
     Ok(Response{
         messages,
@@ -74,7 +74,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

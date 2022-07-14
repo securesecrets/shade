@@ -4,7 +4,6 @@ pub mod dex;
 #[cfg(feature = "dao")]
 pub mod dao;
 
-#[cfg(feature = "oracles")]
 pub mod oracles;
 
 #[cfg(feature = "mint")]

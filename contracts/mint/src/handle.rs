@@ -16,10 +16,9 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::{
-    snip20::{burn_msg, mint_msg, register_receive_msg, send_msg, token_info_query,
+use shade_protocol::{
+    snip20::helpers::{self, burn_msg, mint_msg, send_msg, token_info_query,
              token_config_query, TokenConfig},
-    utils::Query,
 };
 use shade_protocol::{
     contract_interfaces::{
@@ -125,7 +124,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
                 return Err(StdError::generic_err("Limit Exceeded"));
             }
 
-            minted_w(&mut deps.storage).save(&(amount_to_mint + minted))?;
+            minted_w(deps.storage).save(&(amount_to_mint + minted))?;
         }
     }
 
@@ -188,7 +187,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    total_burned_w(&mut deps.storage).update(
+    total_burned_w(deps.storage).update(
         burn_asset.asset.contract.address.to_string().as_bytes(),
         |burned| match burned {
             Some(burned) => Ok(burned + burn_amount),
@@ -290,12 +289,12 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
             if fresh_amount > Uint128::zero() {
                 let minted = minted_r(&deps.storage).load()?;
 
-                limit_w(&mut deps.storage).update(|state| {
+                limit_w(deps.storage).update(|state| {
                     // Stack with previous unminted limit
                     Ok(state.checked_sub(minted)? + fresh_amount)
                 })?;
-                limit_refresh_w(&mut deps.storage).save(&now.to_rfc3339())?;
-                minted_w(&mut deps.storage).save(&Uint128::zero())?;
+                limit_refresh_w(deps.storage).save(&now.to_rfc3339())?;
+                minted_w(deps.storage).save(&Uint128::zero())?;
             }
 
             Ok(fresh_amount)
@@ -316,7 +315,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
     Ok(Response {
         messages: vec![],
@@ -362,7 +361,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         };
 
     debug_print!("Registering {}", asset_info.symbol);
-    assets_w(&mut deps.storage).save(contract_str.as_bytes(), &SupportedAsset {
+    assets_w(deps.storage).save(contract_str.as_bytes(), &SupportedAsset {
         asset: Snip20Asset {
             contract: contract.clone(),
             token_info: asset_info,
@@ -383,10 +382,10 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
         },
     })?;
 
-    total_burned_w(&mut deps.storage).save(contract_str.as_bytes(), &Uint128::zero())?;
+    total_burned_w(deps.storage).save(contract_str.as_bytes(), &Uint128::zero())?;
 
     // Add the asset to list
-    asset_list_w(&mut deps.storage).update(|mut state| {
+    asset_list_w(deps.storage).update(|mut state| {
         state.push(contract.clone());
         Ok(state)
     })?;
@@ -411,13 +410,13 @@ pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
     let address_str = address.to_string();
 
     // Remove asset from the array
-    asset_list_w(&mut deps.storage).update(|mut state| {
+    asset_list_w(deps.storage).update(|mut state| {
         state.retain(|value| value.address != address);
         Ok(state)
     })?;
 
     // Remove supported asset
-    assets_w(&mut deps.storage).remove(address_str.as_bytes());
+    assets_w(deps.storage).remove(address_str.as_bytes());
 
     // We wont remove the total burned since we want to keep track of all the burned assets
 
@@ -431,17 +430,15 @@ pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> {
-    register_receive_msg(
+    helpers::register_receive(
         env.contract_code_hash.clone(),
         None,
-        256,
-        contract.code_hash.clone(),
-        contract.address.clone(),
+        contract
     )
 }
 
 pub fn mint_amount<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     burn_amount: Uint128,
     burn_asset: &SupportedAsset,
     mint_asset: &Snip20Asset,
@@ -538,7 +535,7 @@ pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
 }
 
 fn oracle<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     symbol: String,
 ) -> StdResult<Uint128> {
     let config: Config = config_r(&deps.storage).load()?;

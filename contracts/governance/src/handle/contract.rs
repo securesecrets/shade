@@ -27,7 +27,7 @@ pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    let id = ID::add_contract(&mut deps.storage)?;
+    let id = ID::add_contract(deps.storage)?;
 
     if let Some(ref assemblies) = assemblies {
         let assembly_id = ID::assembly(&deps.storage)?;
@@ -44,7 +44,7 @@ pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
         contract,
         assemblies,
     }
-    .save(&mut deps.storage, &id)?;
+    .save(deps.storage, &id)?;
 
     Ok(Response {
         messages: vec![],
@@ -73,7 +73,7 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("AllowedContract not found"));
     }
 
-    let mut allowed_contract = AllowedContract::load(&mut deps.storage, &id)?;
+    let mut allowed_contract = AllowedContract::load(deps.storage, &id)?;
 
     if let Some(name) = name {
         allowed_contract.name = name;
@@ -101,7 +101,7 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    allowed_contract.save(&mut deps.storage, &id)?;
+    allowed_contract.save(deps.storage, &id)?;
 
     Ok(Response {
         messages: vec![],
@@ -126,7 +126,7 @@ pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("AllowedContract not found"));
     }
 
-    let mut allowed_contract = AllowedContract::data(&mut deps.storage, &id)?;
+    let mut allowed_contract = AllowedContract::data(deps.storage, &id)?;
 
     if let Some(mut old_assemblies) = allowed_contract.assemblies {
         let assembly_id = ID::assembly(&deps.storage)?;
@@ -142,7 +142,7 @@ pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
         ));
     }
 
-    AllowedContract::save_data(&mut deps.storage, &id, allowed_contract)?;
+    AllowedContract::save_data(deps.storage, &id, allowed_contract)?;
 
     Ok(Response {
         messages: vec![],

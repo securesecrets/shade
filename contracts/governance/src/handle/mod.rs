@@ -10,7 +10,7 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::snip20::helpers::register_receive_msg;
+use shade_protocol::snip20::helpers::register_receive;
 use shade_protocol::{
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
     utils::{
@@ -43,23 +43,19 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
     // Vote and funding tokens cannot be set to none after being set
     if let Some(vote_token) = vote_token {
         config.vote_token = Some(vote_token.clone());
-        messages.push(register_receive_msg(
+        messages.push(register_receive(
             env.contract_code_hash.clone(),
             None,
-            255,
-            vote_token.code_hash,
-            vote_token.address,
+            vote_token
         )?);
     }
 
     if let Some(funding_token) = funding_token {
         config.funding_token = Some(funding_token.clone());
-        messages.push(register_receive_msg(
+        messages.push(register_receive(
             env.contract_code_hash.clone(),
             None,
-            255,
-            funding_token.code_hash,
-            funding_token.address,
+            funding_token
         )?);
     }
 
@@ -67,7 +63,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
         config.treasury = treasury;
     }
 
-    config.save(&mut deps.storage)?;
+    config.save(deps.storage)?;
     Ok(Response {
         messages,
         log: vec![],

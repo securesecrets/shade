@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::secret_toolkit::snip20::{allowance_query, balance_query};
+use shade_protocol::snip20::helpers::{allowance_query, balance_query};
 use shade_protocol::contract_interfaces::{
     dao::{adapter, treasury},
     snip20,
@@ -16,7 +16,7 @@ use crate::state::{
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
@@ -24,7 +24,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     //TODO: restrict to admin?
@@ -66,7 +66,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn reserves<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     //TODO: restrict to admin?
@@ -109,7 +109,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let managers = managers_r(&deps.storage).load()?;
@@ -133,7 +133,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let managers = managers_r(&deps.storage).load()?;
@@ -157,7 +157,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: &Addr,
     spender: &Addr,
 ) -> StdResult<treasury::QueryAnswer> {
@@ -184,7 +184,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn assets<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Assets {
         assets: asset_list_r(&deps.storage).load()?,
@@ -192,7 +192,7 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn allowances<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     asset: Addr,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Allowances {

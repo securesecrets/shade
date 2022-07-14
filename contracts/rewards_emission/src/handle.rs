@@ -25,7 +25,7 @@ use shade_protocol::snip20::helpers::{
     batch_send_from_msg,
     deposit_msg,
     redeem_msg,
-    register_receive_msg,
+    register_receive,
     send_from_msg,
     set_viewing_key_msg,
 };
@@ -79,7 +79,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
     Ok(Response {
         messages: vec![],
@@ -101,14 +101,14 @@ pub fn register_asset<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    assets_w(&mut deps.storage).update(|mut list| {
+    assets_w(deps.storage).update(|mut list| {
         if !list.contains(&contract.address) {
             list.push(contract.address.clone());
         }
         Ok(list)
     })?;
 
-    asset_w(&mut deps.storage).save(
+    asset_w(deps.storage).save(
         contract.address.to_string().as_bytes(),
         &fetch_snip20(contract, &deps.querier)?,
     )?;
@@ -116,12 +116,10 @@ pub fn register_asset<S: Storage, A: Api, Q: Querier>(
     Ok(Response {
         messages: vec![
             // Register contract in asset
-            register_receive_msg(
+            register_receive(
                 env.contract_code_hash.clone(),
                 None,
-                256,
-                contract.code_hash.clone(),
-                contract.address.clone(),
+                contract
             )?,
             // Set viewing key
             set_viewing_key_msg(

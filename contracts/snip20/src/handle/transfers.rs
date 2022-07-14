@@ -53,7 +53,7 @@ pub fn try_transfer<S: Storage, A: Api, Q: Querier>(
     memo: Option<String>
 ) -> StdResult<Response> {
     let denom = CoinInfo::load(&deps.storage)?.symbol;
-    try_transfer_impl(&mut deps.storage, &info.sender, None, &recipient, amount, memo, denom, &env.block)?;
+    try_transfer_impl(deps.storage, &info.sender, None, &recipient, amount, memo, denom, &env.block)?;
     Ok(Response{
         messages: vec![],
         log: vec![],
@@ -70,7 +70,7 @@ pub fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
     let block = env.block;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
     for action in actions {
-        try_transfer_impl(&mut deps.storage, &sender, None, &action.recipient, action.amount, action.memo, denom.clone(), &block)?;
+        try_transfer_impl(deps.storage, &sender, None, &action.recipient, action.amount, action.memo, denom.clone(), &block)?;
     }
     Ok(Response{
         messages: vec![],
@@ -148,7 +148,7 @@ pub fn try_send<S: Storage, A: Api, Q: Querier>(
     let denom = CoinInfo::load(&deps.storage)?.symbol;
 
     try_send_impl(
-        &mut deps.storage,
+        deps.storage,
         &mut messages,
         &info.sender,
         None,
@@ -179,7 +179,7 @@ pub fn try_batch_send<S: Storage, A: Api, Q: Querier>(
 
     for action in actions {
         try_send_impl(
-            &mut deps.storage,
+            deps.storage,
             &mut messages,
             &sender,
             None,

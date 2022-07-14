@@ -37,11 +37,11 @@ pub fn try_mint<S: Storage, A: Api, Q: Querier>(
         return Err(not_minter(&info.sender))
     }
     // Inc total supply
-    TotalSupply::add(&mut deps.storage, amount)?;
+    TotalSupply::add(deps.storage, amount)?;
     let sender = info.sender;
     let block = env.block;
     let denom = CoinInfo::load(&deps.storage)?.symbol;
-    try_mint_impl(&mut deps.storage, &sender, &recipient, amount, denom, memo, &block)?;
+    try_mint_impl(deps.storage, &sender, &recipient, amount, denom, memo, &block)?;
 
     Ok(Response{
         messages: vec![],
@@ -71,7 +71,7 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
     for action in actions {
         supply.0.checked_add(action.amount)?;
         try_mint_impl(
-            &mut deps.storage,
+            deps.storage,
             &sender,
             &action.recipient,
             action.amount,
@@ -80,7 +80,7 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
             &block
         )?;
     }
-    supply.save(&mut deps.storage)?;
+    supply.save(deps.storage)?;
 
     Ok(Response{
         messages: vec![],
@@ -104,7 +104,7 @@ pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
 
     let mut minters = Minters::load(&deps.storage)?;
     minters.0.extend(new_minters);
-    minters.save(&mut deps.storage)?;
+    minters.save(deps.storage)?;
 
     Ok(Response{
         messages: vec![],
@@ -130,7 +130,7 @@ pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
     for minter in minters_to_remove {
         minters.0.retain(|x| x != &minter);
     }
-    minters.save(&mut deps.storage)?;
+    minters.save(deps.storage)?;
 
     Ok(Response{
         messages: vec![],
@@ -152,7 +152,7 @@ pub fn try_set_minters<S: Storage, A: Api, Q: Querier>(
         return Err(not_admin())
     }
 
-    Minters(minters).save(&mut deps.storage)?;
+    Minters(minters).save(deps.storage)?;
 
     Ok(Response{
         messages: vec![],

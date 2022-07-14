@@ -35,7 +35,7 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
     memo: Option<String>,
 ) -> StdResult<Response> {
     // Get balance to expose
-    let balance = Balances::from_storage(&mut deps.storage)
+    let balance = Balances::from_storage(deps.storage)
         .balance(&deps.api.canonical_address(&info.sender)?);
 
     let receiver_hash: String;
@@ -68,7 +68,7 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
     memo: Option<String>,
 ) -> StdResult<Response> {
     // Get balance to expose
-    let balance = Balances::from_storage(&mut deps.storage)
+    let balance = Balances::from_storage(deps.storage)
         .balance(&deps.api.canonical_address(&info.sender)?);
 
     let receiver_hash: String;
@@ -87,7 +87,7 @@ pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
                 queue: VecQueue(vec![]),
             });
     cooldown.update(env.block.time);
-    cooldown.save(&mut deps.storage, info.sender.to_string().as_bytes())?;
+    cooldown.save(deps.storage, info.sender.to_string().as_bytes())?;
 
     let messages = vec![
         Snip20BalanceReceiverMsg::new(

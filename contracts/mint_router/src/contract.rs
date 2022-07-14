@@ -11,7 +11,7 @@ use shade_protocol::c_std::{
     Storage,
     Uint128,
 };
-use shade_protocol::snip20::helpers::{register_receive_msg, token_info, token_config_query};
+use shade_protocol::snip20::helpers::{register_receive, token_info, token_config_query};
 
 use shade_protocol::contract_interfaces::{
     mint::mint_router::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -37,8 +37,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         path: msg.path,
     };
 
-    config_w(&mut deps.storage).save(&config)?;
-    //current_assets_w(&mut deps.storage).save(&vec![])?;
+    config_w(deps.storage).save(&config)?;
+    //current_assets_w(deps.storage).save(&vec![])?;
 
     let mut messages = vec![];
 
@@ -47,10 +47,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         messages.append(&mut handle::build_path(deps, env, config.path.clone())?);
     }
 
-    Ok(Response {
-        messages,
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -71,7 +68,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

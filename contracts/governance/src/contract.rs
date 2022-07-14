@@ -35,9 +35,8 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::{
-    snip20::register_receive_msg,
-    utils::{pad_handle_result, pad_query_result},
+use shade_protocol::{
+    snip20::helpers::register_receive,
 };
 use shade_protocol::{
     contract_interfaces::governance::{
@@ -72,37 +71,33 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         vote_token: msg.vote_token.clone(),
         funding_token: msg.funding_token.clone(),
     }
-    .save(&mut deps.storage)?;
+    .save(deps.storage)?;
 
     let mut messages = vec![];
     if let Some(vote_token) = msg.vote_token.clone() {
-        messages.push(register_receive_msg(
+        messages.push(register_receive(
             env.contract_code_hash.clone(),
             None,
-            255,
-            vote_token.code_hash,
-            vote_token.address,
+            vote_token
         )?);
     }
     if let Some(funding_token) = msg.funding_token.clone() {
-        messages.push(register_receive_msg(
+        messages.push(register_receive(
             env.contract_code_hash.clone(),
             None,
-            255,
-            funding_token.code_hash,
-            funding_token.address,
+            funding_token
         )?);
     }
 
     // Setups IDs
-    ID::set_assembly(&mut deps.storage, Uint128::new(1))?;
-    ID::set_profile(&mut deps.storage, Uint128::new(1))?;
-    ID::set_assembly_msg(&mut deps.storage, Uint128::zero())?;
-    ID::set_contract(&mut deps.storage, Uint128::zero())?;
+    ID::set_assembly(deps.storage, Uint128::new(1))?;
+    ID::set_profile(deps.storage, Uint128::new(1))?;
+    ID::set_assembly_msg(deps.storage, Uint128::zero())?;
+    ID::set_contract(deps.storage, Uint128::zero())?;
 
     // Setup public profile
     msg.public_profile
-        .save(&mut deps.storage, &Uint128::zero())?;
+        .save(deps.storage, &Uint128::zero())?;
 
     if msg.public_profile.funding.is_some() {
         if msg.funding_token.is_none() {
@@ -123,11 +118,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         members: vec![],
         profile: Uint128::zero(),
     }
-    .save(&mut deps.storage, &Uint128::zero())?;
+    .save(deps.storage, &Uint128::zero())?;
 
     // Setup admin profile
     msg.admin_profile
-        .save(&mut deps.storage, &Uint128::new(1))?;
+        .save(deps.storage, &Uint128::new(1))?;
 
     if msg.admin_profile.funding.is_some() {
         if msg.funding_token.is_none() {
@@ -148,7 +143,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         members: msg.admin_members,
         profile: Uint128::new(1),
     }
-    .save(&mut deps.storage, &Uint128::new(1))?;
+    .save(deps.storage, &Uint128::new(1))?;
 
     // Setup generic command
     AssemblyMsg {
@@ -159,7 +154,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             arguments: 1,
         },
     }
-    .save(&mut deps.storage, &Uint128::zero())?;
+    .save(deps.storage, &Uint128::zero())?;
 
     // Setup self contract
     AllowedContract {
@@ -171,12 +166,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             code_hash: env.contract_code_hash,
         },
     }
-    .save(&mut deps.storage, &Uint128::zero())?;
+    .save(deps.storage, &Uint128::zero())?;
 
-    Ok(Response {
-        messages,
-        log: vec![],
-    })
+    Ok(Response::new())
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -319,7 +311,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     pad_query_result(

@@ -57,7 +57,7 @@ pub fn try_update_stake_config<S: Storage, A: Api, Q: Querier>(
     disable_treasury: bool,
     treasury: Option<Addr>,
 ) -> StdResult<Response> {
-    let config = Config::from_storage(&mut deps.storage);
+    let config = Config::from_storage(deps.storage);
 
     check_if_admin(&config, &info.sender)?;
 
@@ -86,11 +86,11 @@ pub fn try_update_stake_config<S: Storage, A: Api, Q: Querier>(
                 stake_config.staked_token.code_hash.clone(),
                 stake_config.staked_token.address.clone(),
             )?);
-            UnsentStakedTokens(Uint128::zero()).save(&mut deps.storage)?;
+            UnsentStakedTokens(Uint128::zero()).save(deps.storage)?;
         }
     }
 
-    stake_config.save(&mut deps.storage)?;
+    stake_config.save(deps.storage)?;
 
     Ok(Response {
         messages,
@@ -414,7 +414,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
             // Update user stake
             add_balance(
-                &mut deps.storage,
+                deps.storage,
                 &stake_config,
                 &target,
                 &target_canon,
@@ -423,7 +423,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
 
             // Store data
             store_stake(
-                &mut deps.storage,
+                deps.storage,
                 &target_canon,
                 amount,
                 symbol,
@@ -446,18 +446,18 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             } else {
                 let mut stored_tokens = UnsentStakedTokens::load(&deps.storage)?;
                 stored_tokens.0 += amount;
-                stored_tokens.save(&mut deps.storage)?;
+                stored_tokens.save(deps.storage)?;
             }
         }
 
         ReceiveType::Reward => {
             let mut total_tokens = TotalTokens::load(&deps.storage)?;
             total_tokens.0 += amount;
-            total_tokens.save(&mut deps.storage)?;
+            total_tokens.save(deps.storage)?;
 
             // Store data
             store_add_reward(
-                &mut deps.storage,
+                deps.storage,
                 &sender_canon,
                 amount,
                 symbol,
@@ -481,7 +481,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
                 }
             }
 
-            daily_unbond_queue.save(&mut deps.storage)?;
+            daily_unbond_queue.save(deps.storage)?;
 
             // Send back if overfunded
             if remaining_amount > Uint128::zero() {
@@ -498,7 +498,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
             }
 
             store_fund_unbond(
-                &mut deps.storage,
+                deps.storage,
                 &sender_canon,
                 amount.checked_sub(remaining_amount)?,
                 symbol,
@@ -550,11 +550,11 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
     let stake_config = StakeConfig::load(&deps.storage)?;
 
     // Try to claim before unbonding
-    let claim = claim_rewards(&mut deps.storage, &stake_config, &sender, &sender_canon)?;
+    let claim = claim_rewards(deps.storage, &stake_config, &sender, &sender_canon)?;
 
     // Subtract tokens from user balance
     remove_balance(
-        &mut deps.storage,
+        deps.storage,
         &stake_config,
         &sender,
         &sender_canon,
@@ -564,7 +564,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
 
     let mut total_unbonding = TotalUnbonding::load(&deps.storage)?;
     total_unbonding.0 += amount;
-    total_unbonding.save(&mut deps.storage)?;
+    total_unbonding.save(deps.storage)?;
 
     // Round to that day's public unbonding queue, initialize one if empty
     let mut daily_unbond_queue = DailyUnbondingQueue::load(&deps.storage)?;
@@ -575,7 +575,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         release: round_date(env.block.time + stake_config.unbond_time),
     });
 
-    daily_unbond_queue.save(&mut deps.storage)?;
+    daily_unbond_queue.save(deps.storage)?;
 
     // Check if user has an existing queue, if not, init one
     let mut unbond_queue = UnbondingQueue::may_load(&deps.storage, sender.as_str().as_bytes())?
@@ -587,7 +587,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         release: env.block.time + stake_config.unbond_time,
     });
 
-    unbond_queue.save(&mut deps.storage, sender.as_str().as_bytes())?;
+    unbond_queue.save(deps.storage, sender.as_str().as_bytes())?;
 
     // Store the tx
     let symbol = ReadonlyConfig::from_storage(&deps.storage)
@@ -607,7 +607,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         )?);
 
         store_claim_reward(
-            &mut deps.storage,
+            deps.storage,
             &sender_canon,
             claim,
             symbol.clone(),
@@ -616,7 +616,7 @@ pub fn try_unbond<S: Storage, A: Api, Q: Querier>(
         )?;
     }
     store_unbond(
-        &mut deps.storage,
+        deps.storage,
         &deps.api.canonical_address(&sender)?,
         amount,
         symbol,
@@ -674,15 +674,15 @@ pub fn try_claim_unbond<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Nothing to claim"));
     }
 
-    unbond_queue.save(&mut deps.storage, sender.as_str().as_bytes())?;
+    unbond_queue.save(deps.storage, sender.as_str().as_bytes())?;
     total_unbonding.0 = total_unbonding.0.checked_sub(total)?;
-    total_unbonding.save(&mut deps.storage)?;
+    total_unbonding.save(deps.storage)?;
 
     let symbol = ReadonlyConfig::from_storage(&deps.storage)
         .constants()?
         .symbol;
     store_claim_unbond(
-        &mut deps.storage,
+        deps.storage,
         sender_canon,
         total,
         symbol,
@@ -717,7 +717,7 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
     let sender = &info.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
 
-    let claim = claim_rewards(&mut deps.storage, &stake_config, sender, sender_canon)?;
+    let claim = claim_rewards(deps.storage, &stake_config, sender, sender_canon)?;
 
     if claim.is_zero() {
         return Err(StdError::generic_err("Nothing to claim"));
@@ -738,7 +738,7 @@ pub fn try_claim_rewards<S: Storage, A: Api, Q: Querier>(
         .constants()?
         .symbol;
     store_claim_reward(
-        &mut deps.storage,
+        deps.storage,
         sender_canon,
         claim,
         symbol,
@@ -766,10 +766,10 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
     let sender = &info.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
 
-    let claim = claim_rewards(&mut deps.storage, &stake_config, sender, sender_canon)?;
+    let claim = claim_rewards(deps.storage, &stake_config, sender, sender_canon)?;
 
     store_claim_reward(
-        &mut deps.storage,
+        deps.storage,
         sender_canon,
         claim,
         symbol.clone(),
@@ -780,7 +780,7 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
     // Stake rewards
     // Update user stake
     add_balance(
-        &mut deps.storage,
+        deps.storage,
         &stake_config,
         sender,
         sender_canon,
@@ -790,7 +790,7 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
     // Store data
     // Store data
     store_stake(
-        &mut deps.storage,
+        deps.storage,
         sender_canon,
         claim,
         symbol,
@@ -815,7 +815,7 @@ pub fn try_stake_rewards<S: Storage, A: Api, Q: Querier>(
     } else {
         let mut stored_tokens = UnsentStakedTokens::load(&deps.storage)?;
         stored_tokens.0 += claim;
-        stored_tokens.save(&mut deps.storage)?;
+        stored_tokens.save(deps.storage)?;
     }
 
     Ok(Response {

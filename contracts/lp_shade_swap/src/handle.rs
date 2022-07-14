@@ -82,7 +82,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     }
 
     // Save new info
-    config_w(&mut deps.storage).save(&config)?;
+    config_w(deps.storage).save(&config)?;
 
     Ok(Response {
         messages: vec![],
@@ -163,7 +163,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    unbonding_w(&mut deps.storage).update(asset.as_str().as_bytes(), |u| Ok(u.unwrap_or_else(|| Uint128::zero()) + amount))?;
+    unbonding_w(deps.storage).update(asset.as_str().as_bytes(), |u| Ok(u.unwrap_or_else(|| Uint128::zero()) + amount))?;
 
     Ok(Response {
         messages,
@@ -205,7 +205,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         claim_amount = balance;
     }
 
-    unbonding_w(&mut deps.storage).update(asset.as_str().as_bytes(), |u| Ok((u.unwrap() - claim_amount)?))?;
+    unbonding_w(deps.storage).update(asset.as_str().as_bytes(), |u| Ok((u.unwrap() - claim_amount)?))?;
 
     Ok(Response {
         messages,

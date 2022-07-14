@@ -105,7 +105,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 contract_version: 0,
             };
 
-            pair_info_w(&mut deps.storage).save(&pair_info)?;
+            pair_info_w(deps.storage).save(&pair_info)?;
 
             Ok(Response::default())
         }
@@ -115,7 +115,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: PairQuery,
 ) -> StdResult<Binary> {
     match msg {

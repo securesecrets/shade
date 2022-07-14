@@ -1,4 +1,5 @@
 use serde::Serialize;
+use schemars::_serde_json::to_string;
 use crate::c_std::StdError;
 use cosmwasm_schema::{cw_serde};
 

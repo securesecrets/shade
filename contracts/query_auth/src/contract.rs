@@ -33,11 +33,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     Admin(msg.admin_auth)
-    .save(&mut deps.storage)?;
+    .save(deps.storage)?;
 
-    RngSeed::new(msg.prng_seed).save(&mut deps.storage)?;
+    RngSeed::new(msg.prng_seed).save(deps.storage)?;
 
-    ContractStatus::Default.save(&mut deps.storage)?;
+    ContractStatus::Default.save(deps.storage)?;
 
     Ok(Response::new())
 }
@@ -87,7 +87,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     )
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query<S: Storage, A: Api, Q: Querier>(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     let status = ContractStatus::load(&deps.storage)?;
     match status {
         // Do nothing

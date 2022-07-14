@@ -13,14 +13,14 @@ use shade_protocol::{
     utils::storage::default::SingletonStorage,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
+pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: Config::load(&deps.storage)?,
     })
 }
 
 pub fn total_proposals<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::proposal(&deps.storage)?.checked_add(Uint128::new(1))?,
@@ -28,7 +28,7 @@ pub fn total_proposals<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn proposals<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<QueryAnswer> {
@@ -52,7 +52,7 @@ pub fn proposals<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn total_profiles<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::profile(&deps.storage)?.checked_add(Uint128::new(1))?,
@@ -60,7 +60,7 @@ pub fn total_profiles<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn profiles<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<QueryAnswer> {
@@ -84,7 +84,7 @@ pub fn profiles<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn total_assemblies<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::assembly(&deps.storage)?.checked_add(Uint128::new(1))?,
@@ -92,7 +92,7 @@ pub fn total_assemblies<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn assemblies<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<QueryAnswer> {
@@ -116,7 +116,7 @@ pub fn assemblies<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn total_assembly_msgs<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::assembly_msg(&deps.storage)?.checked_add(Uint128::new(1))?,
@@ -124,7 +124,7 @@ pub fn total_assembly_msgs<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn assembly_msgs<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<QueryAnswer> {
@@ -148,7 +148,7 @@ pub fn assembly_msgs<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn total_contracts<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::contract(&deps.storage)?.checked_add(Uint128::new(1))?,
@@ -156,7 +156,7 @@ pub fn total_contracts<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn contracts<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<QueryAnswer> {

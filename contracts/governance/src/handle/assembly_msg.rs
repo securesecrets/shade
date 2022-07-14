@@ -36,7 +36,7 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    let id = ID::add_assembly_msg(&mut deps.storage)?;
+    let id = ID::add_assembly_msg(deps.storage)?;
 
     // Check that assemblys exist
     for assembly in assemblies.iter() {
@@ -50,7 +50,7 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
         assemblies,
         msg: FlexibleMsg::new(msg, MSG_VARIABLE),
     }
-    .save(&mut deps.storage, &id)?;
+    .save(deps.storage, &id)?;
 
     Ok(Response {
         messages: vec![],
@@ -73,7 +73,7 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    let mut assembly_msg = match AssemblyMsg::may_load(&mut deps.storage, &id)? {
+    let mut assembly_msg = match AssemblyMsg::may_load(deps.storage, &id)? {
         None => return Err(StdError::generic_err("AssemblyMsg not found")),
         Some(c) => c,
     };
@@ -90,7 +90,7 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
         assembly_msg.assemblies = assemblies;
     }
 
-    assembly_msg.save(&mut deps.storage, &id)?;
+    assembly_msg.save(deps.storage, &id)?;
 
     Ok(Response {
         messages: vec![],
@@ -111,7 +111,7 @@ pub fn try_add_assembly_msg_assemblies<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::unauthorized());
     }
 
-    let mut assembly_msg = AssemblyMsg::data(&mut deps.storage, &id)?;
+    let mut assembly_msg = AssemblyMsg::data(deps.storage, &id)?;
 
     let assembly_id = ID::assembly(&deps.storage)?;
     for assembly in assemblies.iter() {
@@ -120,7 +120,7 @@ pub fn try_add_assembly_msg_assemblies<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    AssemblyMsg::save_data(&mut deps.storage, &id, assembly_msg)?;
+    AssemblyMsg::save_data(deps.storage, &id, assembly_msg)?;
 
     Ok(Response {
         messages: vec![],

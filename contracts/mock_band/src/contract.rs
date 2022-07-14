@@ -47,8 +47,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     return match msg {
+<<<<<<< HEAD
         ExecuteMsg::MockPrice { symbol, price } => {
             price_w(&mut deps.storage).save(symbol.as_bytes(), &price)?;
+=======
+        ExecuteMsg::MockPrice { symbol, price } => {
+            price_w(deps.storage).save(symbol.as_bytes(), &price)?;
+>>>>>>> 4cc0040ff51de7d93926d0bc36b661da9587f07b
             Ok(Response::default())
         }
     };
@@ -67,7 +72,7 @@ pub enum QueryMsg {
     },
 }
 pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

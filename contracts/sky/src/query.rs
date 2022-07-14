@@ -13,7 +13,7 @@ use shade_protocol::{
 };
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>
+    deps: Deps
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: Config::load(&deps.storage)?,
@@ -21,7 +21,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn market_rate<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>
+    deps: Deps
 ) -> StdResult<QueryAnswer> {
     let config: Config = Config::load(&deps.storage)?;
 
@@ -61,7 +61,7 @@ pub fn market_rate<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+    deps: Deps,
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {
     let config: Config = Config::load(&deps.storage)?;
@@ -152,7 +152,7 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn get_balances<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>
+    deps: Deps
 ) -> StdResult<QueryAnswer> {
 
     let viewing_key = ViewingKeys::load(&deps.storage)?.0;
