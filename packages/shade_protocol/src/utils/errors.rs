@@ -1,4 +1,4 @@
-use fadroma::schemars::_serde_json::to_string;
+use schemars::_serde_json::to_string;
 use crate::c_std::StdError;
 use crate::serde::{Deserialize, Serialize};
 

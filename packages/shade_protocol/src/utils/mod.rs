@@ -22,9 +22,9 @@ pub mod generic_response;
 
 pub mod storage;
 
-#[cfg(feature = "utils")]
+#[cfg(feature = "dao-utils")]
 pub mod cycle;
-#[cfg(feature = "utils")]
+#[cfg(feature = "dao-utils")]
 pub mod wrap;
 
 #[cfg(feature = "math")]
