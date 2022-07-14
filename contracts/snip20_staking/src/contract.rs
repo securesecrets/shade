@@ -218,7 +218,7 @@ pub fn handle(
     env: Env,
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
-    let contract_status = ReadonlyConfig::from_storage(&deps.storage).contract_status();
+    let contract_status = ReadonlyConfig::from_storage(deps.storage).contract_status();
 
     match contract_status {
         ContractStatusLevel::NormalRun => {} // If it's a normal run just continue
@@ -413,9 +413,9 @@ pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Unbonding {} => stake_queries::unbonding(deps),
         QueryMsg::Unfunded { start, total } => stake_queries::unfunded(deps, start, total),
         QueryMsg::Distributors {} => distributors::distributors(deps),
-        QueryMsg::TokenInfo {} => query_token_info(&deps.storage),
-        QueryMsg::TokenConfig {} => query_token_config(&deps.storage),
-        QueryMsg::ContractStatus {} => query_contract_status(&deps.storage),
+        QueryMsg::TokenInfo {} => query_token_info(deps.storage),
+        QueryMsg::TokenConfig {} => query_token_config(deps.storage),
+        QueryMsg::ContractStatus {} => query_contract_status(deps.storage),
         QueryMsg::WithPermit { permit, query } => permit_queries(deps, permit, query),
         _ => viewing_keys_queries(deps, msg),
     }
@@ -427,7 +427,7 @@ fn permit_queries(
     query: QueryWithPermit,
 ) -> Result<Binary, StdError> {
     // Validate permit content
-    let token_address = ReadonlyConfig::from_storage(&deps.storage)
+    let token_address = ReadonlyConfig::from_storage(deps.storage)
         .constants()?
         .contract_address;
 
@@ -506,7 +506,7 @@ pub fn viewing_keys_queries(
     for address in addresses {
         let canonical_addr = deps.api.canonical_address(address)?;
 
-        let expected_key = read_viewing_key(&deps.storage, &canonical_addr);
+        let expected_key = read_viewing_key(deps.storage, &canonical_addr);
 
         if expected_key.is_none() {
             // Checking the key will take significant time. We don't want to exit immediately if it isn't set
@@ -584,7 +584,7 @@ pub fn query_transfers(
     page_size: u32,
 ) -> StdResult<Binary> {
     let address = deps.api.canonical_address(account)?;
-    let (txs, total) = get_transfers(&deps.api, &deps.storage, &address, page, page_size)?;
+    let (txs, total) = get_transfers(&deps.api, deps.storage, &address, page, page_size)?;
 
     let result = QueryAnswer::TransferHistory {
         txs,
@@ -600,7 +600,7 @@ pub fn query_transactions(
     page_size: u32,
 ) -> StdResult<Binary> {
     let address = deps.api.canonical_address(account)?;
-    let (txs, total) = get_txs(&deps.api, &deps.storage, &address, page, page_size)?;
+    let (txs, total) = get_txs(&deps.api, deps.storage, &address, page, page_size)?;
 
     let result = QueryAnswer::TransactionHistory {
         txs,
@@ -616,7 +616,7 @@ pub fn query_balance(
     let address = deps.api.canonical_address(account)?;
 
     let amount =
-        Uint128::new(ReadonlyBalances::from_storage(&deps.storage).account_amount(&address));
+        Uint128::new(ReadonlyBalances::from_storage(deps.storage).account_amount(&address));
     let response = QueryAnswer::Balance { amount };
     to_binary(&response)
 }
@@ -697,7 +697,7 @@ pub fn try_create_key(
     env: Env,
     entropy: String,
 ) -> StdResult<Response> {
-    let constants = ReadonlyConfig::from_storage(&deps.storage).constants()?;
+    let constants = ReadonlyConfig::from_storage(deps.storage).constants()?;
     let prng_seed = constants.prng_seed;
 
     let key = ViewingKey::new(&env, &prng_seed, (&entropy).as_ref());
@@ -740,7 +740,7 @@ pub fn query_allowance(
     let owner_address = deps.api.canonical_address(&owner)?;
     let spender_address = deps.api.canonical_address(&spender)?;
 
-    let allowance = read_allowance(&deps.storage, &owner_address, &spender_address)?;
+    let allowance = read_allowance(deps.storage, &owner_address, &spender_address)?;
 
     let response = QueryAnswer::Allowance {
         owner,
@@ -775,7 +775,7 @@ fn try_transfer_impl(
 
     let symbol = Config::from_storage(deps.storage).constants()?.symbol;
 
-    let stake_config = StakeConfig::load(&deps.storage)?;
+    let stake_config = StakeConfig::load(deps.storage)?;
     let claim = claim_rewards(deps.storage, &stake_config, sender, sender_canon)?;
     if !claim.is_zero() {
         messages.push(send_msg(
@@ -961,7 +961,7 @@ fn try_send_impl(
     )?;
 
     try_add_receiver_api_callback(
-        &deps.storage,
+        deps.storage,
         messages,
         recipient,
         recipient_code_hash,
@@ -1265,7 +1265,7 @@ fn try_send_from_impl(
     )?;
 
     try_add_receiver_api_callback(
-        &deps.storage,
+        deps.storage,
         messages,
         recipient,
         recipient_code_hash,
@@ -1363,7 +1363,7 @@ fn try_increase_allowance(
     let owner_address = deps.api.canonical_address(&info.sender)?;
     let spender_address = deps.api.canonical_address(&spender)?;
 
-    let mut allowance = read_allowance(&deps.storage, &owner_address, &spender_address)?;
+    let mut allowance = read_allowance(deps.storage, &owner_address, &spender_address)?;
 
     // If the previous allowance has expired, reset the allowance.
     // Without this users can take advantage of an expired allowance given to
@@ -1408,7 +1408,7 @@ fn try_decrease_allowance(
     let owner_address = deps.api.canonical_address(&info.sender)?;
     let spender_address = deps.api.canonical_address(&spender)?;
 
-    let mut allowance = read_allowance(&deps.storage, &owner_address, &spender_address)?;
+    let mut allowance = read_allowance(deps.storage, &owner_address, &spender_address)?;
 
     // If the previous allowance has expired, reset the allowance.
     // Without this users can take advantage of an expired allowance given to
@@ -3260,7 +3260,7 @@ mod snip20_tests {
             stake: Uint128::new(5000),
         }]);
 
-        let config = ReadonlyConfig::from_storage(&deps.storage);
+        let config = ReadonlyConfig::from_storage(deps.storage);
         let constants = config.constants().unwrap();
         assert_eq!(config.total_supply(), 5000);
         assert_eq!(config.contract_status(), ContractStatusLevel::NormalRun);
@@ -3290,7 +3290,7 @@ mod snip20_tests {
             0,
         );
 
-        let config = ReadonlyConfig::from_storage(&deps.storage);
+        let config = ReadonlyConfig::from_storage(deps.storage);
         let constants = config.constants().unwrap();
         assert_eq!(config.total_supply(), 5000);
         assert_eq!(config.contract_status(), ContractStatusLevel::NormalRun);
@@ -3402,7 +3402,7 @@ mod snip20_tests {
             .api
             .canonical_address(&Addr::unchecked("alice".to_string()))
             .unwrap();
-        let balances = ReadonlyBalances::from_storage(&deps.storage);
+        let balances = ReadonlyBalances::from_storage(deps.storage);
         assert_eq!(5000 - 1000, balances.account_amount(&bob_canonical));
         assert_eq!(1000, balances.account_amount(&alice_canonical));
 
@@ -3524,7 +3524,7 @@ mod snip20_tests {
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
-        let hash = get_receiver_hash(&deps.storage, &Addr::unchecked("contract".to_string()))
+        let hash = get_receiver_hash(deps.storage, &Addr::unchecked("contract".to_string()))
             .unwrap()
             .unwrap();
         assert_eq!(hash, "this_is_a_hash_of_a_code".to_string());
@@ -3563,7 +3563,7 @@ mod snip20_tests {
             .api
             .canonical_address(&Addr::unchecked("bob".to_string()))
             .unwrap();
-        let saved_vk = read_viewing_key(&deps.storage, &bob_canonical).unwrap();
+        let saved_vk = read_viewing_key(deps.storage, &bob_canonical).unwrap();
         assert!(key.check_viewing_key(saved_vk.as_slice()));
     }
 
@@ -3613,7 +3613,7 @@ mod snip20_tests {
             .api
             .canonical_address(&Addr::unchecked("bob".to_string()))
             .unwrap();
-        let saved_vk = read_viewing_key(&deps.storage, &bob_canonical).unwrap();
+        let saved_vk = read_viewing_key(deps.storage, &bob_canonical).unwrap();
         assert!(actual_vk.check_viewing_key(&saved_vk));
     }
 
@@ -3719,13 +3719,13 @@ mod snip20_tests {
             .api
             .canonical_address(&Addr::unchecked("alice".to_string()))
             .unwrap();
-        let bob_balance = crate::state::ReadonlyBalances::from_storage(&deps.storage)
+        let bob_balance = crate::state::ReadonlyBalances::from_storage(deps.storage)
             .account_amount(&bob_canonical);
-        let alice_balance = crate::state::ReadonlyBalances::from_storage(&deps.storage)
+        let alice_balance = crate::state::ReadonlyBalances::from_storage(deps.storage)
             .account_amount(&alice_canonical);
         assert_eq!(bob_balance, 5000 - 2000);
         assert_eq!(alice_balance, 2000);
-        let total_supply = ReadonlyConfig::from_storage(&deps.storage).total_supply();
+        let total_supply = ReadonlyConfig::from_storage(deps.storage).total_supply();
         assert_eq!(total_supply, 5000);
 
         // Second send more than allowance
@@ -3843,13 +3843,13 @@ mod snip20_tests {
             .api
             .canonical_address(&Addr::unchecked("contract".to_string()))
             .unwrap();
-        let bob_balance = crate::state::ReadonlyBalances::from_storage(&deps.storage)
+        let bob_balance = crate::state::ReadonlyBalances::from_storage(deps.storage)
             .account_amount(&bob_canonical);
-        let contract_balance = crate::state::ReadonlyBalances::from_storage(&deps.storage)
+        let contract_balance = crate::state::ReadonlyBalances::from_storage(deps.storage)
             .account_amount(&contract_canonical);
         assert_eq!(bob_balance, 5000 - 2000);
         assert_eq!(contract_balance, 2000);
-        let total_supply = ReadonlyConfig::from_storage(&deps.storage).total_supply();
+        let total_supply = ReadonlyConfig::from_storage(deps.storage).total_supply();
         assert_eq!(total_supply, 5000);
 
         // Second send more than allowance
@@ -3902,7 +3902,7 @@ mod snip20_tests {
             .canonical_address(&Addr::unchecked("alice".to_string()))
             .unwrap();
 
-        let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
+        let allowance = read_allowance(deps.storage, &bob_canonical, &alice_canonical).unwrap();
         assert_eq!(allowance, crate::state::Allowance {
             amount: 0,
             expiration: None
@@ -3934,7 +3934,7 @@ mod snip20_tests {
             handle_result.err().unwrap()
         );
 
-        let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
+        let allowance = read_allowance(deps.storage, &bob_canonical, &alice_canonical).unwrap();
         assert_eq!(allowance, crate::state::Allowance {
             amount: 1950,
             expiration: None
@@ -3976,7 +3976,7 @@ mod snip20_tests {
             .canonical_address(&Addr::unchecked("alice".to_string()))
             .unwrap();
 
-        let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
+        let allowance = read_allowance(deps.storage, &bob_canonical, &alice_canonical).unwrap();
         assert_eq!(allowance, crate::state::Allowance {
             amount: 2000,
             expiration: None
@@ -3995,7 +3995,7 @@ mod snip20_tests {
             handle_result.err().unwrap()
         );
 
-        let allowance = read_allowance(&deps.storage, &bob_canonical, &alice_canonical).unwrap();
+        let allowance = read_allowance(deps.storage, &bob_canonical, &alice_canonical).unwrap();
         assert_eq!(allowance, crate::state::Allowance {
             amount: 4000,
             expiration: None
@@ -4026,7 +4026,7 @@ mod snip20_tests {
             handle_result.err().unwrap()
         );
 
-        let admin = ReadonlyConfig::from_storage(&deps.storage)
+        let admin = ReadonlyConfig::from_storage(deps.storage)
             .constants()
             .unwrap()
             .admin;
@@ -4057,7 +4057,7 @@ mod snip20_tests {
             handle_result.err().unwrap()
         );
 
-        let contract_status = ReadonlyConfig::from_storage(&deps.storage).contract_status();
+        let contract_status = ReadonlyConfig::from_storage(deps.storage).contract_status();
         assert!(matches!(
             contract_status,
             ContractStatusLevel::StopAll { .. }

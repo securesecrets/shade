@@ -24,7 +24,7 @@ use shade_protocol::contract_interfaces::query_auth::{
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: config_r(deps.storage).load()?,
     })
 }
 
@@ -32,7 +32,7 @@ pub fn account(
     deps: Deps,
     permit: QueryPermit,
 ) -> StdResult<QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     // Validate address
     let authorized: query_auth::QueryAnswer = ValidatePermit { permit }.query(
         &deps.querier,
@@ -55,7 +55,7 @@ fn account_information(
     deps: Deps,
     account_address: Addr,
 ) -> StdResult<QueryAnswer> {
-    let account = account_r(&deps.storage).load(account_address.as_str().as_bytes())?;
+    let account = account_r(deps.storage).load(account_address.as_str().as_bytes())?;
 
     // Return pending bonds
 
@@ -67,7 +67,7 @@ fn account_information(
 pub fn bond_opportunities(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
-    let deposit_assets = deposit_assets_r(&deps.storage).load()?;
+    let deposit_assets = deposit_assets_r(deps.storage).load()?;
     if deposit_assets.is_empty() {
         return Ok(QueryAnswer::BondOpportunities {
             bond_opportunities: vec![],
@@ -77,17 +77,17 @@ pub fn bond_opportunities(
         let mut bond_opportunities: Vec<BondOpportunity> = vec![];
         for asset in iter {
             bond_opportunities
-                .push(bond_opportunity_r(&deps.storage).load(asset.as_str().as_bytes())?);
+                .push(bond_opportunity_r(deps.storage).load(asset.as_str().as_bytes())?);
         }
         return Ok(QueryAnswer::BondOpportunities { bond_opportunities });
     }
 }
 
 pub fn bond_info(deps: Deps) -> StdResult<QueryAnswer> {
-    let global_total_issued = global_total_issued_r(&deps.storage).load()?;
-    let global_total_claimed = global_total_claimed_r(&deps.storage).load()?;
-    let issued_asset = issued_asset_r(&deps.storage).load()?;
-    let config = config_r(&deps.storage).load()?;
+    let global_total_issued = global_total_issued_r(deps.storage).load()?;
+    let global_total_claimed = global_total_claimed_r(deps.storage).load()?;
+    let issued_asset = issued_asset_r(deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     Ok(QueryAnswer::BondInfo {
         global_total_issued,
         global_total_claimed,
@@ -100,7 +100,7 @@ pub fn bond_info(deps: Deps) -> StdResult<QueryAnswer> {
 pub fn list_deposit_addresses(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
-    let deposit_addresses = deposit_assets_r(&deps.storage).load()?;
+    let deposit_addresses = deposit_assets_r(deps.storage).load()?;
     Ok(QueryAnswer::DepositAddresses {
         deposit_addresses,
     })
@@ -117,14 +117,14 @@ pub fn price_check(
 pub fn check_allowance(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     // Check bond issuance amount against snip20 allowance and allocated_allowance
     let snip20_allowance = allowance_query(
         &deps.querier,
         config.treasury,
         config.contract,
-        allowance_key_r(&deps.storage).load()?.to_string(),
+        allowance_key_r(deps.storage).load()?.to_string(),
         1,
         config.issued_asset.code_hash,
         config.issued_asset.address,
@@ -138,12 +138,12 @@ pub fn check_allowance(
 pub fn check_balance(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     let balance = balance_query(
         &deps.querier,
         config.contract,
-        allowance_key_r(&deps.storage).load()?,
+        allowance_key_r(deps.storage).load()?,
         256,
         config.issued_asset.code_hash,
         config.issued_asset.address,

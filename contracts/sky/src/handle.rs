@@ -22,7 +22,7 @@ pub fn try_update_config(
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
-    if info.sender != Config::load(&deps.storage)?.admin {
+    if info.sender != Config::load(deps.storage)?.admin {
         return Err(StdError::unauthorized())
     }
     config.save(deps.storage)?;
@@ -40,7 +40,7 @@ pub fn try_update_config(
     env: Env,
     amount: Uint128,
 ) -> StdResult<Response> {
-    let config: Config = Config::load(&deps.storage)?;
+    let config: Config = Config::load(deps.storage)?;
     let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
         &deps.querier,
         env.contract_code_hash.clone(),//TODO
@@ -157,7 +157,7 @@ pub fn try_execute(
     amount: Uint128,
 ) -> StdResult<Response> {
 
-    let config: Config = Config::load(&deps.storage)?;
+    let config: Config = Config::load(deps.storage)?;
 
     //if amount.gt(env.)
     

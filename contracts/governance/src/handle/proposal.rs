@@ -80,7 +80,7 @@ pub fn try_trigger(
     proposal: Uint128,
 ) -> StdResult<Response> {
     let mut messages = vec![];
-    let status = Proposal::status(&deps.storage, &proposal)?;
+    let status = Proposal::status(deps.storage, &proposal)?;
     if let Status::Passed { .. } = status {
         let mut history = Proposal::status_history(deps.storage, &proposal)?;
         history.push(status);
@@ -88,10 +88,10 @@ pub fn try_trigger(
         Proposal::save_status(deps.storage, &proposal, Status::Success)?;
 
         // Trigger the msg
-        let proposal_msg = Proposal::msg(&deps.storage, &proposal)?;
+        let proposal_msg = Proposal::msg(deps.storage, &proposal)?;
         if let Some(prop_msgs) = proposal_msg {
             for prop_msg in prop_msgs.iter() {
-                let contract = AllowedContract::data(&deps.storage, &prop_msg.target)?.contract;
+                let contract = AllowedContract::data(deps.storage, &prop_msg.target)?.contract;
                 messages.push(
                     WasmMsg::Execute {
                         contract_addr: contract.address,
@@ -121,7 +121,7 @@ pub fn try_cancel(
     proposal: Uint128,
 ) -> StdResult<Response> {
     // Check if passed, and check if current time > cancel time
-    let status = Proposal::status(&deps.storage, &proposal)?;
+    let status = Proposal::status(deps.storage, &proposal)?;
     if let Status::Passed { start, end } = status {
         if env.block.time < end {
             return Err(StdError::unauthorized());
@@ -187,12 +187,12 @@ pub fn try_update(
     env: Env,
     proposal: Uint128,
 ) -> StdResult<Response> {
-    let mut history = Proposal::status_history(&deps.storage, &proposal)?;
-    let status = Proposal::status(&deps.storage, &proposal)?;
+    let mut history = Proposal::status_history(deps.storage, &proposal)?;
+    let status = Proposal::status(deps.storage, &proposal)?;
     let mut new_status: Status;
 
-    let assembly = Proposal::assembly(&deps.storage, &proposal)?;
-    let profile = Assembly::data(&deps.storage, &assembly)?.profile;
+    let assembly = Proposal::assembly(deps.storage, &proposal)?;
+    let profile = Assembly::data(deps.storage, &assembly)?.profile;
 
     let mut messages = vec![];
 
@@ -202,15 +202,15 @@ pub fn try_update(
                 return Err(StdError::unauthorized());
             }
 
-            let votes = Proposal::assembly_votes(&deps.storage, &proposal)?;
+            let votes = Proposal::assembly_votes(deps.storage, &proposal)?;
 
             // Total power is equal to the total amount of assembly members
             let total_power =
-                Uint128::new(Assembly::data(&deps.storage, &assembly)?.members.len() as u128);
+                Uint128::new(Assembly::data(deps.storage, &assembly)?.members.len() as u128);
 
             // Try to load, if not then assume it was updated after proposal creation but before section end
             let mut vote_conclusion: Status;
-            if let Some(settings) = Profile::assembly_voting(&deps.storage, &profile)? {
+            if let Some(settings) = Profile::assembly_voting(deps.storage, &profile)? {
                 vote_conclusion = validate_votes(votes, total_power, settings);
             } else {
                 vote_conclusion = Status::Success
@@ -223,13 +223,13 @@ pub fn try_update(
 
             // Try to load the next steps, if all are none then pass
             if let Status::Success = vote_conclusion {
-                if let Some(setting) = Profile::funding(&deps.storage, &profile)? {
+                if let Some(setting) = Profile::funding(deps.storage, &profile)? {
                     vote_conclusion = Status::Funding {
                         amount: Uint128::zero(),
                         start: env.block.time,
                         end: env.block.time + setting.deadline,
                     }
-                } else if let Some(setting) = Profile::public_voting(&deps.storage, &profile)? {
+                } else if let Some(setting) = Profile::public_voting(deps.storage, &profile)? {
                     vote_conclusion = Status::Voting {
                         start: env.block.time,
                         end: env.block.time + setting.deadline,
@@ -238,7 +238,7 @@ pub fn try_update(
                     vote_conclusion = Status::Passed {
                         start: env.block.time,
                         end: env.block.time
-                            + Profile::data(&deps.storage, &profile)?.cancel_deadline,
+                            + Profile::data(deps.storage, &profile)?.cancel_deadline,
                     }
                 }
             }
@@ -248,13 +248,13 @@ pub fn try_update(
         Status::Funding { amount, start, end } => {
             // This helps combat the possibility of the profile changing
             // before another proposal is finished
-            if let Some(setting) = Profile::funding(&deps.storage, &profile)? {
+            if let Some(setting) = Profile::funding(deps.storage, &profile)? {
                 // Check if deadline or funding limit reached
                 if amount >= setting.required {
                     new_status = Status::Passed {
                         start: env.block.time,
                         end: env.block.time
-                            + Profile::data(&deps.storage, &profile)?.cancel_deadline,
+                            + Profile::data(deps.storage, &profile)?.cancel_deadline,
                     }
                 } else if end > env.block.time {
                     return Err(StdError::unauthorized());
@@ -264,12 +264,12 @@ pub fn try_update(
             } else {
                 new_status = Status::Passed {
                     start: env.block.time,
-                    end: env.block.time + Profile::data(&deps.storage, &profile)?.cancel_deadline,
+                    end: env.block.time + Profile::data(deps.storage, &profile)?.cancel_deadline,
                 }
             }
 
             if let Status::Passed { .. } = new_status {
-                if let Some(setting) = Profile::public_voting(&deps.storage, &profile)? {
+                if let Some(setting) = Profile::public_voting(deps.storage, &profile)? {
                     new_status = Status::Voting {
                         start: env.block.time,
                         end: env.block.time + setting.deadline,
@@ -282,8 +282,8 @@ pub fn try_update(
                 return Err(StdError::unauthorized());
             }
 
-            let config = Config::load(&deps.storage)?;
-            let votes = Proposal::public_votes(&deps.storage, &proposal)?;
+            let config = Config::load(deps.storage)?;
+            let votes = Proposal::public_votes(deps.storage, &proposal)?;
 
             let query: snip20_staking::QueryAnswer = snip20_staking::QueryMsg::TotalStaked {}
                 .query(
@@ -301,7 +301,7 @@ pub fn try_update(
 
             let mut vote_conclusion: Status;
 
-            if let Some(settings) = Profile::public_voting(&deps.storage, &profile)? {
+            if let Some(settings) = Profile::public_voting(deps.storage, &profile)? {
                 vote_conclusion = validate_votes(votes, total_power, settings);
             } else {
                 vote_conclusion = Status::Success
@@ -309,7 +309,7 @@ pub fn try_update(
 
             if let Status::Vetoed { .. } = vote_conclusion {
                 // Send the funding amount to the treasury
-                if let Some(profile) = Profile::funding(&deps.storage, &profile)? {
+                if let Some(profile) = Profile::funding(deps.storage, &profile)? {
                     // Look for the history and find funding
                     for s in history.iter() {
                         // Check if it has funding history
@@ -321,7 +321,7 @@ pub fn try_update(
 
                             let send_amount = amount.multiply_ratio(100000u128, loss);
                             if send_amount != Uint128::zero() {
-                                let config = Config::load(&deps.storage)?;
+                                let config = Config::load(deps.storage)?;
                                 // Update slash amount
                                 messages.push(send_msg(
                                     config.treasury,
@@ -341,7 +341,7 @@ pub fn try_update(
             } else if let Status::Success = vote_conclusion {
                 vote_conclusion = Status::Passed {
                     start: env.block.time,
-                    end: env.block.time + Profile::data(&deps.storage, &profile)?.cancel_deadline,
+                    end: env.block.time + Profile::data(deps.storage, &profile)?.cancel_deadline,
                 }
             }
 
@@ -376,7 +376,7 @@ pub fn try_receive(
 ) -> StdResult<Response> {
     // Check if sent token is the funding token
     let funding_token: Contract;
-    if let Some(token) = Config::load(&deps.storage)?.funding_token {
+    if let Some(token) = Config::load(deps.storage)?.funding_token {
         funding_token = token.clone();
         if info.sender != token.address {
             return Err(StdError::generic_err("Must be the set funding token"));
@@ -396,7 +396,7 @@ pub fn try_receive(
     // Check if proposal is in funding stage
     let mut return_amount = Uint128::zero();
 
-    let status = Proposal::status(&deps.storage, &proposal)?;
+    let status = Proposal::status(deps.storage, &proposal)?;
     if let Status::Funding {
         amount: funded,
         start,
@@ -410,9 +410,9 @@ pub fn try_receive(
 
         let mut new_fund = amount + funded;
 
-        let assembly = &Proposal::assembly(&deps.storage, &proposal)?;
-        let profile = &Assembly::data(&deps.storage, assembly)?.profile;
-        if let Some(funding_profile) = Profile::funding(&deps.storage, &profile)? {
+        let assembly = &Proposal::assembly(deps.storage, &proposal)?;
+        let profile = &Assembly::data(deps.storage, assembly)?.profile;
+        if let Some(funding_profile) = Profile::funding(deps.storage, &profile)? {
             if funding_profile.required == funded {
                 return Err(StdError::generic_err("Already funded"));
             }
@@ -434,9 +434,9 @@ pub fn try_receive(
 
         // Either add or update funder
         let mut funder_amount = amount.checked_sub(return_amount)?;
-        let mut funders = Proposal::funders(&deps.storage, &proposal)?;
+        let mut funders = Proposal::funders(deps.storage, &proposal)?;
         if funders.contains(&from) {
-            funder_amount += Proposal::funding(&deps.storage, &proposal, &from)?.amount;
+            funder_amount += Proposal::funding(deps.storage, &proposal, &from)?.amount;
         } else {
             funders.push(from.clone());
             Proposal::save_funders(deps.storage, &proposal, funders)?;
@@ -477,7 +477,7 @@ pub fn try_claim_funding(
     env: Env,
     id: Uint128,
 ) -> StdResult<Response> {
-    let reduction = match Proposal::status(&deps.storage, &id)? {
+    let reduction = match Proposal::status(deps.storage, &id)? {
         Status::AssemblyVote { .. } | Status::Funding { .. } | Status::Voting { .. } => {
             return Err(StdError::generic_err("Cannot claim funding"));
         }
@@ -485,7 +485,7 @@ pub fn try_claim_funding(
         _ => Uint128::zero(),
     };
 
-    let funding = Proposal::funding(&deps.storage, &id, &info.sender)?;
+    let funding = Proposal::funding(deps.storage, &id, &info.sender)?;
 
     if funding.claimed {
         return Err(StdError::generic_err("Funding already claimed"));
@@ -501,7 +501,7 @@ pub fn try_claim_funding(
         return Err(StdError::generic_err("Nothing to claim"));
     }
 
-    let funding_token = match Config::load(&deps.storage)?.funding_token {
+    let funding_token = match Config::load(deps.storage)?.funding_token {
         None => return Err(StdError::generic_err("No funding token set")),
         Some(token) => token,
     };
@@ -532,7 +532,7 @@ pub fn try_receive_balance(
     balance: Uint128,
     memo: Option<String>,
 ) -> StdResult<Response> {
-    if let Some(token) = Config::load(&deps.storage)?.vote_token {
+    if let Some(token) = Config::load(deps.storage)?.vote_token {
         if info.sender != token.address {
             return Err(StdError::generic_err("Must be the set voting token"));
         }
@@ -563,7 +563,7 @@ pub fn try_receive_balance(
     }
 
     // Check if proposal in assembly voting
-    if let Status::Voting { end, .. } = Proposal::status(&deps.storage, &proposal)? {
+    if let Status::Voting { end, .. } = Proposal::status(deps.storage, &proposal)? {
         if end <= env.block.time {
             return Err(StdError::generic_err("Voting time has been reached"));
         }
@@ -571,10 +571,10 @@ pub fn try_receive_balance(
         return Err(StdError::generic_err("Not in public vote phase"));
     }
 
-    let mut tally = Proposal::public_votes(&deps.storage, &proposal)?;
+    let mut tally = Proposal::public_votes(deps.storage, &proposal)?;
 
     // Check if user voted
-    if let Some(old_vote) = Proposal::public_vote(&deps.storage, &proposal, &sender)? {
+    if let Some(old_vote) = Proposal::public_vote(deps.storage, &proposal, &sender)? {
         tally = tally.checked_sub(&old_vote)?;
     }
 

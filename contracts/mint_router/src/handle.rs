@@ -56,13 +56,13 @@ pub fn receive(
     msg: Option<Binary>,
 ) -> StdResult<Response> {
     let mut messages = vec![];
-    let asset_paths = asset_path_r(&deps.storage);
+    let asset_paths = asset_path_r(deps.storage);
 
     let mut input_asset =
-        registered_asset_r(&deps.storage).load(&info.sender.to_string().as_bytes())?;
+        registered_asset_r(deps.storage).load(&info.sender.to_string().as_bytes())?;
     let mut input_amount = amount;
 
-    let final_asset = final_asset_r(&deps.storage).load()?;
+    let final_asset = final_asset_r(deps.storage).load()?;
 
     while input_asset.address != final_asset {
         let mint = asset_paths.load(input_asset.address.to_string().as_bytes())?;
@@ -134,7 +134,7 @@ pub fn try_update_config(
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = config_r(deps.storage).load()?;
 
     // Admin-only
     if info.sender != cur_config.admin {
@@ -183,7 +183,7 @@ pub fn build_path(
         // Make sure all new assets are registered
         for asset in entry_assets.clone() {
             // Register receive if it hasn't been before
-            if (registered_asset_r(&deps.storage)
+            if (registered_asset_r(deps.storage)
                 .may_load(&asset.address.to_string().as_bytes())?)
             .is_none()
             {
@@ -214,7 +214,7 @@ pub fn build_path(
     };
 
     // Ensure final asset is registered
-    if (registered_asset_r(&deps.storage).may_load(&final_asset.address.to_string().as_bytes())?)
+    if (registered_asset_r(deps.storage).may_load(&final_asset.address.to_string().as_bytes())?)
         .is_none()
     {
         messages.push(register_receive(

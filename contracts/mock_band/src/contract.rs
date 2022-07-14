@@ -75,7 +75,7 @@ pub fn query(
             base_symbol,
             quote_symbol: _,
         } => {
-            if let Some(price) = price_r(&deps.storage).may_load(base_symbol.as_bytes())? {
+            if let Some(price) = price_r(deps.storage).may_load(base_symbol.as_bytes())? {
                 return to_binary(&ReferenceData {
                     rate: price,
                     last_updated_base: 0,
@@ -91,7 +91,7 @@ pub fn query(
             let mut results = Vec::new();
 
             for sym in base_symbols {
-                if let Some(price) = price_r(&deps.storage).may_load(sym.as_bytes())? {
+                if let Some(price) = price_r(deps.storage).may_load(sym.as_bytes())? {
                     results.push(ReferenceData {
                         rate: price,
                         last_updated_base: 0,

@@ -21,24 +21,24 @@ use shade_protocol::{
 
 pub fn stake_config(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::StakedConfig {
-        config: StakeConfig::load(&deps.storage)?,
+        config: StakeConfig::load(deps.storage)?,
     })
 }
 
 pub fn total_staked(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::TotalStaked {
-        tokens: TotalTokens::load(&deps.storage)?.0,
-        shares: TotalShares::load(&deps.storage)?.0,
+        tokens: TotalTokens::load(deps.storage)?.0,
+        shares: TotalShares::load(deps.storage)?.0,
     })
 }
 
 pub fn stake_rate(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::StakeRate {
         shares: shares_per_token(
-            &StakeConfig::load(&deps.storage)?,
+            &StakeConfig::load(deps.storage)?,
             &Uint128::new(1),
-            &TotalTokens::load(&deps.storage)?.0,
-            &TotalShares::load(&deps.storage)?.0,
+            &TotalTokens::load(deps.storage)?.0,
+            &TotalShares::load(deps.storage)?.0,
         )?,
     })
 }
@@ -50,7 +50,7 @@ pub fn unfunded(
 ) -> StdResult<Binary> {
     let mut total_bonded = Uint128::zero();
 
-    let queue = DailyUnbondingQueue::load(&deps.storage)?.0;
+    let queue = DailyUnbondingQueue::load(deps.storage)?.0;
 
     let mut count = 0;
     for item in queue.0.iter() {
@@ -70,7 +70,7 @@ pub fn unfunded(
 
 pub fn unbonding(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::Unbonding {
-        total: TotalUnbonding::load(&deps.storage)?.0,
+        total: TotalUnbonding::load(deps.storage)?.0,
     })
 }
 
@@ -79,20 +79,20 @@ pub fn staked(
     account: Addr,
     time: Option<u64>,
 ) -> StdResult<Binary> {
-    let tokens = ReadonlyBalances::from_storage(&deps.storage)
+    let tokens = ReadonlyBalances::from_storage(deps.storage)
         .account_amount(&deps.api.canonical_address(&account)?);
 
-    let shares = UserShares::load(&deps.storage, account.as_str().as_bytes())?.0;
+    let shares = UserShares::load(deps.storage, account.as_str().as_bytes())?.0;
 
     let (rewards, _) = calculate_rewards(
-        &StakeConfig::load(&deps.storage)?,
+        &StakeConfig::load(deps.storage)?,
         Uint128::new(tokens),
         shares,
-        TotalTokens::load(&deps.storage)?.0,
-        TotalShares::load(&deps.storage)?.0,
+        TotalTokens::load(deps.storage)?.0,
+        TotalShares::load(deps.storage)?.0,
     )?;
 
-    let queue = UnbondingQueue::may_load(&deps.storage, account.as_str().as_bytes())?
+    let queue = UnbondingQueue::may_load(deps.storage, account.as_str().as_bytes())?
         .unwrap_or_else(|| UnbondingQueue(VecQueue::new(vec![])));
 
     let mut unbonding = Uint128::zero();
@@ -116,7 +116,7 @@ pub fn staked(
         pending_rewards: rewards,
         unbonding,
         unbonded: time.map(|_| unbonded),
-        cooldown: UserCooldown::may_load(&deps.storage, account.as_str().as_bytes())?
+        cooldown: UserCooldown::may_load(deps.storage, account.as_str().as_bytes())?
             .unwrap_or(UserCooldown {
                 total: Default::default(),
                 queue: VecQueue(vec![]),

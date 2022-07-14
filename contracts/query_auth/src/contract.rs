@@ -49,7 +49,7 @@ pub fn handle(
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     // Check what msgs are allowed
-    let status = ContractStatus::load(&deps.storage)?;
+    let status = ContractStatus::load(deps.storage)?;
     match status {
         // Do nothing
         ContractStatus::Default => {}
@@ -89,7 +89,7 @@ pub fn handle(
 }
 
 pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
-    let status = ContractStatus::load(&deps.storage)?;
+    let status = ContractStatus::load(deps.storage)?;
     match status {
         // Do nothing
         ContractStatus::Default => {}

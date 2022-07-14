@@ -28,7 +28,7 @@ pub fn register_pair(
     env: Env,
     pair: Contract,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     if info.sender != config.admin {
         return Err(StdError::unauthorized());
     }
@@ -67,13 +67,13 @@ pub fn register_pair(
     if let Some(tp) = trading_pair {
         if let Some(td) = token_data {
             // If symbol would override an index
-            if let Some(_) = index_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
+            if let Some(_) = index_r(deps.storage).may_load(td.1.symbol.as_bytes())? {
                 return Err(StdError::generic_err(
                     "Symbol already registered as an index",
                 ));
             }
 
-            if let Some(mut pairs) = dex_pairs_r(&deps.storage).may_load(td.1.symbol.as_bytes())? {
+            if let Some(mut pairs) = dex_pairs_r(deps.storage).may_load(td.1.symbol.as_bytes())? {
                 //TODO: Check pair already registered
                 pairs.push(tp.clone());
                 dex_pairs_w(deps.storage).save(td.1.symbol.as_bytes(), &pairs)?;
@@ -103,12 +103,12 @@ pub fn unregister_pair(
     symbol: String,
     pair: Contract,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     if info.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    if let Some(mut pair_list) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+    if let Some(mut pair_list) = dex_pairs_r(deps.storage).may_load(symbol.as_bytes())? {
         if let Some(i) = pair_list
             .iter()
             .position(|p| p.contract.address == pair.address)
@@ -259,12 +259,12 @@ pub fn register_index(
     symbol: String,
     basket: Vec<IndexElement>,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     if info.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    if let Some(pairs) = dex_pairs_r(&deps.storage).may_load(symbol.as_bytes())? {
+    if let Some(pairs) = dex_pairs_r(deps.storage).may_load(symbol.as_bytes())? {
         if pairs.len() > 0 {
             return Err(StdError::generic_err(
                 "Symbol collides with an existing Dex pair",
@@ -289,7 +289,7 @@ pub fn try_update_config(
     admin: Option<Addr>,
     band: Option<Contract>,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     if info.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
     }

@@ -43,7 +43,7 @@ pub fn receive(
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if is_supported_asset(&config, &info.sender) {
         return Err(StdError::generic_err("Unrecognized Asset"));
@@ -75,7 +75,7 @@ pub fn try_update_config(
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = config_r(deps.storage).load()?;
 
     if info.sender != cur_config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -104,7 +104,7 @@ pub fn update(
 
     let mut messages = vec![];
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if !is_supported_asset(&config, &asset) {
         return Err(StdError::generic_err("Unrecognized Asset"));
@@ -134,7 +134,7 @@ pub fn unbond(
     amount: Uint128,
 ) -> StdResult<Response> {
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     //TODO: needs treasury & manager as admin, maybe just manager?
     /*
@@ -180,7 +180,7 @@ pub fn claim(
     env: Env,
     asset: Addr,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if !is_supported_asset(&config, &asset) {
         return Err(StdError::generic_err("Unrecognized Asset"));
@@ -193,13 +193,13 @@ pub fn claim(
     let balance = balance_query(
         &deps.querier,
         env.contract.address,
-        viewing_key_r(&deps.storage).load()?,
+        viewing_key_r(deps.storage).load()?,
         1,
         asset_contract.code_hash.clone(),
         asset_contract.address.clone(),
     )?.amount;
 
-    let mut claim_amount = unbonding_r(&deps.storage).load(asset.as_str().as_bytes())?;
+    let mut claim_amount = unbonding_r(deps.storage).load(asset.as_str().as_bytes())?;
 
     if balance < claim_amount {
         claim_amount = balance;

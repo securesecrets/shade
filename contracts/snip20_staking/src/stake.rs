@@ -61,7 +61,7 @@ pub fn try_update_stake_config(
 
     check_if_admin(&config, &info.sender)?;
 
-    let mut stake_config = StakeConfig::load(&deps.storage)?;
+    let mut stake_config = StakeConfig::load(deps.storage)?;
 
     if let Some(unbond_time) = unbond_time {
         stake_config.unbond_time = unbond_time;
@@ -74,7 +74,7 @@ pub fn try_update_stake_config(
     } else if let Some(treasury) = treasury {
         stake_config.treasury = Some(treasury.clone());
 
-        let unsent_tokens = UnsentStakedTokens::load(&deps.storage)?.0;
+        let unsent_tokens = UnsentStakedTokens::load(deps.storage)?.0;
         if unsent_tokens != Uint128::zero() {
             messages.push(send_msg(
                 treasury,
@@ -384,7 +384,7 @@ pub fn try_receive(
 ) -> StdResult<Response> {
     let sender_canon = deps.api.canonical_address(&sender)?;
 
-    let stake_config = StakeConfig::load(&deps.storage)?;
+    let stake_config = StakeConfig::load(deps.storage)?;
 
     if info.sender != stake_config.staked_token.address {
         return Err(StdError::generic_err("Not the stake token"));
@@ -397,7 +397,7 @@ pub fn try_receive(
         return Err(StdError::generic_err("No receive type supplied in message"));
     }
 
-    let symbol = ReadonlyConfig::from_storage(&deps.storage)
+    let symbol = ReadonlyConfig::from_storage(deps.storage)
         .constants()?
         .symbol;
     let mut messages = vec![];
@@ -444,14 +444,14 @@ pub fn try_receive(
                     stake_config.staked_token.address,
                 )?);
             } else {
-                let mut stored_tokens = UnsentStakedTokens::load(&deps.storage)?;
+                let mut stored_tokens = UnsentStakedTokens::load(deps.storage)?;
                 stored_tokens.0 += amount;
                 stored_tokens.save(deps.storage)?;
             }
         }
 
         ReceiveType::Reward => {
-            let mut total_tokens = TotalTokens::load(&deps.storage)?;
+            let mut total_tokens = TotalTokens::load(deps.storage)?;
             total_tokens.0 += amount;
             total_tokens.save(deps.storage)?;
 
@@ -469,7 +469,7 @@ pub fn try_receive(
         ReceiveType::Unbond => {
             let mut remaining_amount = amount;
 
-            let mut daily_unbond_queue = DailyUnbondingQueue::load(&deps.storage)?;
+            let mut daily_unbond_queue = DailyUnbondingQueue::load(deps.storage)?;
 
             while !daily_unbond_queue.0.0.is_empty() {
                 remaining_amount = daily_unbond_queue.0.0[0].fund(remaining_amount);
@@ -547,7 +547,7 @@ pub fn try_unbond(
     let sender = info.sender;
     let sender_canon = deps.api.canonical_address(&sender)?;
 
-    let stake_config = StakeConfig::load(&deps.storage)?;
+    let stake_config = StakeConfig::load(deps.storage)?;
 
     // Try to claim before unbonding
     let claim = claim_rewards(deps.storage, &stake_config, &sender, &sender_canon)?;
@@ -562,12 +562,12 @@ pub fn try_unbond(
         env.block.time,
     )?;
 
-    let mut total_unbonding = TotalUnbonding::load(&deps.storage)?;
+    let mut total_unbonding = TotalUnbonding::load(deps.storage)?;
     total_unbonding.0 += amount;
     total_unbonding.save(deps.storage)?;
 
     // Round to that day's public unbonding queue, initialize one if empty
-    let mut daily_unbond_queue = DailyUnbondingQueue::load(&deps.storage)?;
+    let mut daily_unbond_queue = DailyUnbondingQueue::load(deps.storage)?;
     // Will add or merge a new unbonding date
     daily_unbond_queue.0.push(&DailyUnbonding {
         unbonding: amount,
@@ -578,7 +578,7 @@ pub fn try_unbond(
     daily_unbond_queue.save(deps.storage)?;
 
     // Check if user has an existing queue, if not, init one
-    let mut unbond_queue = UnbondingQueue::may_load(&deps.storage, sender.as_str().as_bytes())?
+    let mut unbond_queue = UnbondingQueue::may_load(deps.storage, sender.as_str().as_bytes())?
         .unwrap_or(UnbondingQueue(VecQueue::new(vec![])));
 
     // Add unbonding to user queue
@@ -590,7 +590,7 @@ pub fn try_unbond(
     unbond_queue.save(deps.storage, sender.as_str().as_bytes())?;
 
     // Store the tx
-    let symbol = ReadonlyConfig::from_storage(&deps.storage)
+    let symbol = ReadonlyConfig::from_storage(deps.storage)
         .constants()?
         .symbol;
     let mut messages = vec![];
@@ -638,15 +638,15 @@ pub fn try_claim_unbond(
     let sender = &info.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
 
-    let stake_config = StakeConfig::load(&deps.storage)?;
+    let stake_config = StakeConfig::load(deps.storage)?;
 
-    let mut total_unbonding = TotalUnbonding::load(&deps.storage)?;
+    let mut total_unbonding = TotalUnbonding::load(deps.storage)?;
 
     // Instead of iterating over it we just look at its smallest value (first in queue)
-    let daily_unbond_queue = DailyUnbondingQueue::load(&deps.storage)?.0;
+    let daily_unbond_queue = DailyUnbondingQueue::load(deps.storage)?.0;
 
     // Check if user has an existing queue, if not, init one
-    let mut unbond_queue = UnbondingQueue::may_load(&deps.storage, sender.as_str().as_bytes())?
+    let mut unbond_queue = UnbondingQueue::may_load(deps.storage, sender.as_str().as_bytes())?
         .expect("No unbonding queue found");
 
     let mut total = Uint128::zero();
@@ -678,7 +678,7 @@ pub fn try_claim_unbond(
     total_unbonding.0 = total_unbonding.0.checked_sub(total)?;
     total_unbonding.save(deps.storage)?;
 
-    let symbol = ReadonlyConfig::from_storage(&deps.storage)
+    let symbol = ReadonlyConfig::from_storage(deps.storage)
         .constants()?
         .symbol;
     store_claim_unbond(
@@ -712,7 +712,7 @@ pub fn try_claim_rewards(
     deps: DepsMut,
     env: Env,
 ) -> StdResult<Response> {
-    let stake_config = StakeConfig::load(&deps.storage)?;
+    let stake_config = StakeConfig::load(deps.storage)?;
 
     let sender = &info.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
@@ -734,7 +734,7 @@ pub fn try_claim_rewards(
         stake_config.staked_token.address,
     )?];
 
-    let symbol = ReadonlyConfig::from_storage(&deps.storage)
+    let symbol = ReadonlyConfig::from_storage(deps.storage)
         .constants()?
         .symbol;
     store_claim_reward(
@@ -758,10 +758,10 @@ pub fn try_stake_rewards(
     env: Env,
 ) -> StdResult<Response> {
     // Clam rewards
-    let symbol = ReadonlyConfig::from_storage(&deps.storage)
+    let symbol = ReadonlyConfig::from_storage(deps.storage)
         .constants()?
         .symbol;
-    let stake_config = StakeConfig::load(&deps.storage)?;
+    let stake_config = StakeConfig::load(deps.storage)?;
 
     let sender = &info.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
@@ -813,7 +813,7 @@ pub fn try_stake_rewards(
             stake_config.staked_token.address,
         )?);
     } else {
-        let mut stored_tokens = UnsentStakedTokens::load(&deps.storage)?;
+        let mut stored_tokens = UnsentStakedTokens::load(deps.storage)?;
         stored_tokens.0 += claim;
         stored_tokens.save(deps.storage)?;
     }

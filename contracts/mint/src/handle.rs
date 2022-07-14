@@ -55,13 +55,13 @@ pub fn try_burn(
     amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     // Check if contract enabled
     if !config.activated {
         return Err(StdError::Unauthorized { backtrace: None });
     }
 
-    let mint_asset = native_asset_r(&deps.storage).load()?;
+    let mint_asset = native_asset_r(deps.storage).load()?;
 
     // Prevent sender to be native asset
     if mint_asset.contract.address == info.sender {
@@ -72,7 +72,7 @@ pub fn try_burn(
 
     // Check that sender is a supported snip20 asset
     let burn_asset =
-        match assets_r(&deps.storage).may_load(info.sender.to_string().as_bytes())? {
+        match assets_r(deps.storage).may_load(info.sender.to_string().as_bytes())? {
             Some(supported_asset) => {
                 debug_print!(
                     "Found Burn Asset: {} {}",
@@ -119,8 +119,8 @@ pub fn try_burn(
 
         // Check & adjust limit if a limited asset
         if !burn_asset.unlimited {
-            let minted = minted_r(&deps.storage).load()?;
-            if (amount_to_mint + minted) > limit_r(&deps.storage).load()? {
+            let minted = minted_r(deps.storage).load()?;
+            if (amount_to_mint + minted) > limit_r(deps.storage).load()? {
                 return Err(StdError::generic_err("Limit Exceeded"));
             }
 
@@ -231,7 +231,7 @@ pub fn try_limit_refresh(
     env: Env,
     limit: Limit,
 ) -> StdResult<Uint128> {
-    match DateTime::parse_from_rfc3339(&limit_refresh_r(&deps.storage).load()?) {
+    match DateTime::parse_from_rfc3339(&limit_refresh_r(deps.storage).load()?) {
         Ok(parsed) => {
             let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
             let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
@@ -239,7 +239,7 @@ pub fn try_limit_refresh(
 
             let mut fresh_amount = Uint128::zero();
 
-            let native_asset = native_asset_r(&deps.storage).load()?;
+            let native_asset = native_asset_r(deps.storage).load()?;
 
             let token_info = token_info_query(
                 &deps.querier,
@@ -287,7 +287,7 @@ pub fn try_limit_refresh(
             }
 
             if fresh_amount > Uint128::zero() {
-                let minted = minted_r(&deps.storage).load()?;
+                let minted = minted_r(deps.storage).load()?;
 
                 limit_w(deps.storage).update(|state| {
                     // Stack with previous unminted limit
@@ -308,7 +308,7 @@ pub fn try_update_config(
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = config_r(deps.storage).load()?;
 
     // Admin-only
     if info.sender != cur_config.admin {
@@ -334,7 +334,7 @@ pub fn try_register_asset(
     fee: Option<Uint128>,
     unlimited: Option<bool>,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     // Check if admin
     if info.sender != config.admin {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -453,7 +453,7 @@ pub fn mint_amount(
     let burn_price = oracle(deps, burn_asset.asset.token_info.symbol.clone())?;
     debug_print!("Burn Price: {}", burn_price);
 
-    let mint_price = oracle(deps, asset_peg_r(&deps.storage).load()?)?;
+    let mint_price = oracle(deps, asset_peg_r(deps.storage).load()?)?;
     debug_print!("Mint Price: {}", mint_price);
 
     Ok(calculate_mint(
@@ -538,7 +538,7 @@ fn oracle(
     deps: Deps,
     symbol: String,
 ) -> StdResult<Uint128> {
-    let config: Config = config_r(&deps.storage).load()?;
+    let config: Config = config_r(deps.storage).load()?;
     let answer: ReferenceData = Price { symbol }.query(
         &deps.querier,
         config.oracle.code_hash,

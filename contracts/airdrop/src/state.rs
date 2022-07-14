@@ -148,7 +148,7 @@ pub fn is_permit_revoked(
     }
 }
 
-pub fn validate_address_permit<S: Storage, A: Api>(
+pub fn validate_address_permit(
     storage: &dyn Storage,
     api: &dyn Api,
     permit: &AddressProofPermit,
@@ -190,7 +190,7 @@ pub fn validate_account_permit(
 
     // Check that permit is not revoked
     if is_permit_revoked(
-        &deps.storage,
+        deps.storage,
         address.to_string(),
         permit.params.key.clone(),
     )? {
