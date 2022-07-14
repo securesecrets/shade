@@ -64,7 +64,7 @@ pub trait InstantianteCallback: Serialize {
     /// * `label` - label used to reference this contract
     /// * `send_funds` - any funds sent with this init
     #[cfg(feature = "multi-test")]
-    fn test_init<T: Serialize, U: MultiTestable>(
+    fn test_init<T: Serialize>(
         &self,
         testable: impl MultiTestable,
         router: &mut App,
