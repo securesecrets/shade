@@ -16,6 +16,7 @@ pub mod storage {
 pub use serde;
 pub use thiserror;
 pub use cosmwasm_schema;
+#[cfg(feature = "storage_plus")]
 pub use secret_storage_plus;
 
 #[cfg(feature = "query_auth_lib")]
@@ -25,7 +26,7 @@ pub use query_authentication;
 pub use fadroma;
 
 #[cfg(feature = "multi_test")]
-pub use secret_multi_test;
+pub use secret_multi_test as multi_test;
 
 // Expose contract in root since its so used
 #[cfg(feature = "utils")]

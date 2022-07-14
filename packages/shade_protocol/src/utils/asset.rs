@@ -8,6 +8,7 @@ use crate::c_std::{
 };
 
 use cosmwasm_schema::{cw_serde};
+#[cfg(feature = "ensemble")]
 use fadroma::prelude::ContractLink;
 
 /// Should be accepted as user input because we shouldn't assume addresses are verified Addrs.
@@ -46,6 +47,7 @@ impl Contract {
         Ok(Contract::new(&valid_addr, code_hash))
     }
 
+    #[cfg(feature = "ensemble")]
     pub fn new_link(link: ContractLink<Addr>) -> Self {
         Contract {
             address: link.address,
