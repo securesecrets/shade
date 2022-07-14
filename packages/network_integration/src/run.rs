@@ -39,7 +39,7 @@ fn main() -> Result<()> {
 
     // Initialize sSCRT
     print_header("Initializing sSCRT");
-    let sSCRT = snip20::InitMsg {
+    let sSCRT = snip20::InstantiateMsg {
         name: "sSCRT".to_string(),
         admin: None,
         symbol: "SSCRT".to_string(),
@@ -64,7 +64,7 @@ fn main() -> Result<()> {
     )?;
     print_contract(&sSCRT);
 
-    snip20::HandleMsg::SetViewingKey {
+    snip20::ExecuteMsg::SetViewingKey {
         key: String::from(VIEW_KEY),
         padding: None,
     }
@@ -72,7 +72,7 @@ fn main() -> Result<()> {
 
     println!("Depositing 1000000000uscrt");
 
-    snip20::HandleMsg::Deposit { padding: None }.t_handle(
+    snip20::ExecuteMsg::Deposit { padding: None }.t_handle(
         &sSCRT,
         ACCOUNT_KEY,
         Some(GAS),
@@ -98,7 +98,7 @@ fn main() -> Result<()> {
         code_hash: sSCRT.code_hash.clone(),
     };
 
-    let initializer = initializer::InitMsg {
+    let initializer = initializer::InstantiateMsg {
         snip20_id: sSCRT.id.parse::<u64>().unwrap(),
         snip20_code_hash: sSCRT.code_hash.clone(),
         shade: Snip20ContractInfo {
@@ -146,7 +146,7 @@ fn main() -> Result<()> {
     }
 
     // Set View keys
-    snip20::HandleMsg::SetViewingKey {
+    snip20::ExecuteMsg::SetViewingKey {
         key: String::from(VIEW_KEY),
         padding: None,
     }
@@ -154,7 +154,7 @@ fn main() -> Result<()> {
 
     println!("Total shade: {}", get_balance(&shade, account.clone()));
 
-    snip20::HandleMsg::SetViewingKey {
+    snip20::ExecuteMsg::SetViewingKey {
         key: String::from(VIEW_KEY),
         padding: None,
     }
@@ -164,7 +164,7 @@ fn main() -> Result<()> {
 
     print_header("Initializing Band Mock");
 
-    let band = band::InitMsg {}.inst_init(
+    let band = band::InstantiateMsg {}.inst_init(
         "../../compiled/mock_band.wasm.gz",
         &*generate_label(8),
         ACCOUNT_KEY,
@@ -176,7 +176,7 @@ fn main() -> Result<()> {
     print_contract(&band);
 
     print_header("Initializing Oracle");
-    let oracle = oracle::InitMsg {
+    let oracle = oracle::InstantiateMsg {
         admin: None,
         band: Contract {
             address: Addr::from(band.address),
@@ -199,7 +199,7 @@ fn main() -> Result<()> {
     print_contract(&oracle);
 
     print_header("Initializing Mint-Shade");
-    let mint_shade = mint::InitMsg {
+    let mint_shade = mint::InstantiateMsg {
         admin: None,
         native_asset: Contract {
             address: Addr::from(shade.address.clone()),
@@ -228,7 +228,7 @@ fn main() -> Result<()> {
     print_epoch_info(&mint_shade);
 
     print_header("Initializing Mint-Silk");
-    let mint_silk = mint::InitMsg {
+    let mint_silk = mint::InstantiateMsg {
         admin: None,
         native_asset: Contract {
             address: Addr::from(silk.address.clone()),
@@ -257,7 +257,7 @@ fn main() -> Result<()> {
     print_epoch_info(&mint_silk);
 
     print_header("Registering allowed tokens");
-    mint::HandleMsg::RegisterAsset {
+    mint::ExecuteMsg::RegisterAsset {
         contract: Contract {
             address: Addr::from(sSCRT.address.clone()),
             code_hash: sSCRT.code_hash.clone(),
@@ -265,7 +265,7 @@ fn main() -> Result<()> {
         commission: Some(Uint128::new(1000)),
     }
     .t_handle(&mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
-    mint::HandleMsg::RegisterAsset {
+    mint::ExecuteMsg::RegisterAsset {
         contract: Contract {
             address: Addr::from(silk.address.clone()),
             code_hash: silk.code_hash.clone(),
@@ -273,7 +273,7 @@ fn main() -> Result<()> {
         commission: Some(Uint128::new(1000)),
     }
     .t_handle(&mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
-    mint::HandleMsg::RegisterAsset {
+    mint::ExecuteMsg::RegisterAsset {
         contract: Contract {
             address: Addr::from(shade.address.clone()),
             code_hash: shade.code_hash.clone(),
@@ -299,7 +299,7 @@ fn main() -> Result<()> {
 
     print_header("Setting minters in snip20s");
 
-    snip20::HandleMsg::SetMinters {
+    snip20::ExecuteMsg::SetMinters {
         minters: vec![Addr::from(mint_shade.address.clone())],
         padding: None,
     }
@@ -312,7 +312,7 @@ fn main() -> Result<()> {
         }
     }
 
-    snip20::HandleMsg::SetMinters {
+    snip20::ExecuteMsg::SetMinters {
         minters: vec![Addr::from(mint_silk.address.clone())],
         padding: None,
     }
@@ -448,7 +448,7 @@ fn mint(
     minimum_expected: Uint128,
     backend: &str,
 ) {
-    snip20::HandleMsg::Send {
+    snip20::ExecuteMsg::Send {
         recipient: Addr::from(minter),
         amount,
         msg: Some(

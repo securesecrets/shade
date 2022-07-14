@@ -114,7 +114,7 @@ pub fn test_bonds() {
         None,
     );
 
-    let msg = query_auth::HandleMsg::CreateViewingKey {
+    let msg = query_auth::ExecuteMsg::CreateViewingKey {
         entropy: "random".to_string(),
         padding: None,
     };
@@ -294,7 +294,7 @@ pub fn test_bonds() {
 }
 
 fn claim(chain: &mut ContractEnsemble, bonds: &ContractLink<Addr>) -> () {
-    let msg = bonds::HandleMsg::Claim { padding: None };
+    let msg = bonds::ExecuteMsg::Claim { padding: None };
 
     chain
         .execute(
@@ -313,7 +313,7 @@ fn buy_opp(
     depo: &ContractLink<Addr>,
     amount: Uint128,
 ) -> () {
-    let msg = snip20::HandleMsg::Send {
+    let msg = snip20::ExecuteMsg::Send {
         recipient: bonds.address.clone(),
         recipient_code_hash: Some(bonds.code_hash.clone()),
         amount,
@@ -338,7 +338,7 @@ fn buy_opp_fail(
     bonds: &ContractLink<Addr>,
     depo: &ContractLink<Addr>,
 ) -> () {
-    let msg = snip20::HandleMsg::Send {
+    let msg = snip20::ExecuteMsg::Send {
         recipient: bonds.address.clone(),
         recipient_code_hash: Some(bonds.code_hash.clone()),
         amount: Uint128::new(2_000_000_000), //20
@@ -377,7 +377,7 @@ fn open_opp(
         add = time_till_opp_end.unwrap();
     }
 
-    let msg = bonds::HandleMsg::OpenBond {
+    let msg = bonds::ExecuteMsg::OpenBond {
         deposit_asset: Contract {
             address: depo.address.clone(),
             code_hash: depo.code_hash.clone(),
@@ -416,7 +416,7 @@ fn open_opp_fail(
         add = time_till_opp_end.unwrap();
     }
 
-    let msg = bonds::HandleMsg::OpenBond {
+    let msg = bonds::ExecuteMsg::OpenBond {
         deposit_asset: Contract {
             address: depo.address.clone(),
             code_hash: depo.code_hash.clone(),
@@ -448,7 +448,7 @@ fn close_opp(
     depo: &ContractLink<Addr>,
     sender: &str,
 ) -> () {
-    let msg = bonds::HandleMsg::CloseBond {
+    let msg = bonds::ExecuteMsg::CloseBond {
         deposit_asset: Contract {
             address: depo.address.clone(),
             code_hash: depo.code_hash.clone(),
@@ -478,7 +478,7 @@ fn update_config(
     airdrop: Option<Contract>,
     query_auth: Option<Contract>,
 ) -> () {
-    let msg = bonds::HandleMsg::UpdateConfig {
+    let msg = bonds::ExecuteMsg::UpdateConfig {
         oracle,
         treasury,
         issued_asset,

@@ -67,7 +67,7 @@ pub fn add_contract(
 ) -> Result<()> {
     print_warning(&format!("{}{}", "Adding ", name));
 
-    let msg = governance::HandleMsg::AddSupportedContract {
+    let msg = governance::ExecuteMsg::AddSupportedContract {
         name: name.clone(),
         contract: Contract {
             address: Addr::from(target.address.clone()),
@@ -135,7 +135,7 @@ pub fn create_proposal<Handle: serde::Serialize>(
     desc: Option<&str>,
     report: &mut Vec<Report>,
 ) -> Result<()> {
-    let proposal_msg = governance::HandleMsg::CreateProposal {
+    let proposal_msg = governance::ExecuteMsg::CreateProposal {
         target_contract: target,
         proposal: serde_json::to_string(&msg)?,
         description: match desc {
@@ -168,7 +168,7 @@ pub fn trigger_latest_proposal(
 ) -> Result<Uint128> {
     let proposals = get_latest_proposal(governance)?;
 
-    let handle_msg = governance::HandleMsg::TriggerProposal {
+    let handle_msg = governance::ExecuteMsg::TriggerProposal {
         proposal_id: proposals,
     };
 

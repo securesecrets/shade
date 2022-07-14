@@ -1,5 +1,5 @@
 use cosmwasm_std::Timestamp;
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 use crate::c_std::{
     Api, CanonicalAddr, Coin, Addr, StdError, StdResult, Storage, BlockInfo
@@ -16,7 +16,7 @@ use secret_storage_plus::{Item, Map};
 // Since it's 64 bits long, even at 50 tx/s it would take
 // over 11 billion years for it to rollback. I'm pretty sure
 // we'll have bigger issues by then.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cw_serde]
 pub struct Tx {
     pub id: u64,
     pub from: Addr,
@@ -66,8 +66,7 @@ impl Tx {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum TxAction {
     Transfer {
         from: Addr,
@@ -90,8 +89,7 @@ pub enum TxAction {
 // Since it's 64 bits long, even at 50 tx/s it would take
 // over 11 billion years for it to rollback. I'm pretty sure
 // we'll have bigger issues by then.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct RichTx {
     pub id: u64,
     pub action: TxAction,
@@ -160,8 +158,7 @@ impl TxCode {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 struct StoredTxAction {
     tx_type: u8,
     address1: Option<Addr>,
@@ -254,8 +251,7 @@ impl StoredTxAction {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 struct StoredRichTx {
     id: u64,
     action: StoredTxAction,
@@ -319,7 +315,7 @@ impl MapStorage<'static, (Addr, u64)> for StoredRichTx {
 }
 
 // Storage functions:
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[cw_serde]
 struct TXCount(pub u64);
 
 #[cfg(feature = "snip20-impl")]
@@ -335,7 +331,7 @@ fn increment_tx_count<S: Storage>(storage: &mut S) -> StdResult<u64> {
 }
 
 // User tx index
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[cw_serde]
 struct UserTXTotal(pub u64);
 
 #[cfg(feature = "snip20-impl")]

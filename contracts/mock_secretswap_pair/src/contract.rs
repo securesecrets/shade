@@ -27,7 +27,7 @@ use shade_protocol::{
                 Token,
             },
         },
-        oracles::band::{InitMsg, ReferenceData},
+        oracles::band::{InstantiateMsg, ReferenceData},
     },
     utils::asset::Contract,
 };
@@ -57,14 +57,14 @@ pub fn pool_w<S: Storage>(storage: &mut S) -> Singleton<S, PoolResponse> {
 pub fn init<S: Storage, A: Api, Q: Querier>(
     _deps: DepsMut,
     _env: Env,
-    _msg: InitMsg,
+    _msg: InstantiateMsg,
 ) -> StdResult<Response> {
     Ok(Response::default())
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     MockPool {
         token_a: Contract,
         amount_a: Uint128,
@@ -76,10 +76,10 @@ pub enum HandleMsg {
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     _env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     return match msg {
-        HandleMsg::MockPool {
+        ExecuteMsg::MockPool {
             token_a,
             amount_a,
             token_b,

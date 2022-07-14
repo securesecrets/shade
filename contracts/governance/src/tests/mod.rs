@@ -30,7 +30,7 @@ use shade_protocol::contract_interfaces::{
 };
 
 pub fn init_governance(
-    msg: governance::InitMsg,
+    msg: governance::InstantiateMsg,
 ) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     let mut chain = ContractEnsemble::new(50);
 
@@ -49,7 +49,7 @@ pub fn init_governance(
 }
 
 pub fn admin_only_governance() -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
-    init_governance(governance::InitMsg {
+    init_governance(governance::InstantiateMsg {
         treasury: Addr::unchecked("treasury".to_string()),
         admin_members: vec![Addr::unchecked("admin".to_string())],
         admin_profile: Profile {
@@ -77,7 +77,7 @@ pub fn gov_generic_proposal(
     chain: &mut ContractEnsemble,
     gov: &ContractLink<Addr>,
     sender: &str,
-    msg: governance::HandleMsg,
+    msg: governance::ExecuteMsg,
 ) -> StdResult<()> {
     gov_msg_proposal(chain, gov, sender, vec![ProposalMsg {
         target: Uint128::zero(),
@@ -94,7 +94,7 @@ pub fn gov_msg_proposal(
     msgs: Vec<ProposalMsg>,
 ) -> StdResult<()> {
     chain.execute(
-        &governance::HandleMsg::AssemblyProposal {
+        &governance::ExecuteMsg::AssemblyProposal {
             assembly: Uint128::new(1),
             title: "Title".to_string(),
             metadata: "Proposal metadata".to_string(),

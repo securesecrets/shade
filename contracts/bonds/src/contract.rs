@@ -6,7 +6,7 @@ use shade_protocol::c_std::{
 use shade_protocol::snip20::helpers::{set_viewing_key_msg, token_info_query};
 
 use shade_protocol::contract_interfaces::{
-    bonds::{Config, HandleMsg, InitMsg, QueryMsg, SnipViewingKey},
+    bonds::{Config, ExecuteMsg, InstantiateMsg, QueryMsg, SnipViewingKey},
     snip20::helpers::Snip20Asset,
 };
 
@@ -29,7 +29,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let state = Config {
         limit_admin: msg.limit_admin,
@@ -103,11 +103,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     pad_handle_result(
         match msg {
-            HandleMsg::UpdateLimitConfig {
+            ExecuteMsg::UpdateLimitConfig {
                 limit_admin,
                 shade_admin,
                 global_issuance_limit,
@@ -127,7 +127,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 reset_total_issued,
                 reset_total_claimed,
             ),
-            HandleMsg::UpdateConfig {
+            ExecuteMsg::UpdateConfig {
                 oracle,
                 treasury,
                 issued_asset,
@@ -157,7 +157,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 airdrop,
                 query_auth,
             ),
-            HandleMsg::OpenBond {
+            ExecuteMsg::OpenBond {
                 deposit_asset,
                 start_time,
                 end_time,
@@ -181,17 +181,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 err_deposit_price,
                 minting_bond,
             ),
-            HandleMsg::CloseBond {
+            ExecuteMsg::CloseBond {
                 deposit_asset, ..
             } => handle::try_close_bond(deps, env, deposit_asset),
-            HandleMsg::Receive {
+            ExecuteMsg::Receive {
                 sender,
                 from,
                 amount,
                 msg,
                 ..
             } => handle::try_deposit(deps, &env, sender, from, amount, msg),
-            HandleMsg::Claim { .. } => handle::try_claim(deps, env),
+            ExecuteMsg::Claim { .. } => handle::try_claim(deps, env),
         },
         RESPONSE_BLOCK_SIZE,
     )

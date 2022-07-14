@@ -12,39 +12,34 @@ use crate::{
 use crate::c_std::{Uint128, Addr, StdResult, StdError, Deps, DepsMut};
 
 use crate::utils::Query;
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 /*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Token {
     pub contract_addr: Addr,
     pub token_code_hash: String,
     pub viewing_key: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AssetInfo {
     pub token: Token,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Asset {
     pub amount: Uint128,
     pub info: AssetInfo,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Simulation {
     pub offer_asset: Asset,
 }
 */
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum PairQuery {
     PairInfo,
 }
@@ -53,8 +48,7 @@ impl Query for PairQuery {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum TokenType {
     CustomToken {
         contract_addr: Addr,
@@ -65,13 +59,11 @@ pub enum TokenType {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct TokenPair(pub TokenType, pub TokenType);
 
 /*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SimulationResponse {
     pub return_amount: Uint128,
     pub spread_amount: Uint128,
@@ -79,8 +71,7 @@ pub struct SimulationResponse {
 }
 */
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PairInfoResponse {
     pub liquidity_token: Contract,
     pub factory: Contract,
@@ -92,8 +83,7 @@ pub struct PairInfoResponse {
 }
 
 /*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PoolResponse {
     pub assets: Vec<Asset>,
     pub total_share: Uint128,

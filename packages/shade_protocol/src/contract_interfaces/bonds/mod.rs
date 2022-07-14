@@ -17,9 +17,9 @@ use crate::c_std::Uint128;
 use crate::c_std::{Binary, Addr};
 
 use crate::utils::HandleCallback;
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct Config {
     pub limit_admin: Addr,
     pub shade_admin: Contract,
@@ -40,8 +40,8 @@ pub struct Config {
     pub query_auth: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub limit_admin: Addr,
     pub global_issuance_limit: Uint128,
     pub global_minimum_bonding_period: u64,
@@ -61,9 +61,8 @@ pub struct InitMsg {
     pub query_auth: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     UpdateLimitConfig {
         limit_admin: Option<Addr>,
         shade_admin: Option<Contract>,
@@ -117,12 +116,11 @@ pub enum HandleMsg {
     },
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     UpdateLimitConfig {
         status: ResponseStatus,
@@ -158,8 +156,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     BondOpportunities {},
@@ -171,8 +168,7 @@ pub enum QueryMsg {
     CheckBalance {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config {
         config: Config,
@@ -204,15 +200,13 @@ pub enum QueryAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Account {
     pub address: Addr,
     pub pending_bonds: Vec<PendingBond>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SnipViewingKey(pub String);
 
 impl SnipViewingKey {
@@ -249,8 +243,7 @@ impl SnipViewingKey {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PendingBond {
     pub deposit_denom: Snip20Asset,
     pub end_time: u64, // Will be turned into a time via block time calculations
@@ -263,8 +256,7 @@ pub struct PendingBond {
 }
 
 // When users deposit and try to use the bond, a Bond Opportunity is selected via deposit denom
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct BondOpportunity {
     pub issuance_limit: Uint128,
     pub amount_issued: Uint128,
@@ -278,8 +270,7 @@ pub struct BondOpportunity {
     pub minting_bond: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SlipMsg {
     pub minimum_expected_amount: Uint128,
 }

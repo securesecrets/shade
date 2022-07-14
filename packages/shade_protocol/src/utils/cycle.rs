@@ -1,11 +1,10 @@
 use chrono::prelude::*;
 use crate::c_std::{Env, StdError, StdResult, Uint128};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 use std::convert::TryInto;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Cycle {
     Once,
     Constant,

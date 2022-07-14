@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     // Initialize snip20
     print_header("Initializing Snip20");
 
-    let snip_init_msg = snip20::InitMsg {
+    let snip_init_msg = snip20::InstantiateMsg {
         name: "Shade".to_string(),
         admin: None,
         symbol: "SHD".to_string(),
@@ -54,7 +54,7 @@ fn main() -> Result<()> {
 
     // Initialize staker
     print_header("Initializing Staking");
-    let init_msg = snip20_staking::InitMsg {
+    let init_msg = snip20_staking::InstantiateMsg {
         name: "StakedShade".to_string(),
         admin: None,
         symbol: "STKSHD".to_string(),

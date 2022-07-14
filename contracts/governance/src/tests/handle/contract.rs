@@ -10,7 +10,7 @@ fn add_contract() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddContract {
+            &governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -38,7 +38,7 @@ fn unauthorised_add_contract() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddContract {
+            &governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -62,7 +62,7 @@ fn set_contract() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddContract {
+            &governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -85,7 +85,7 @@ fn set_contract() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetContract {
+            &governance::ExecuteMsg::SetContract {
                 id: Uint128::new(1),
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
@@ -123,7 +123,7 @@ fn disable_contract_assemblies() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddContract {
+            &governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -146,7 +146,7 @@ fn disable_contract_assemblies() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetContract {
+            &governance::ExecuteMsg::SetContract {
                 id: Uint128::new(1),
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
@@ -185,7 +185,7 @@ fn enable_contract_assemblies() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddContract {
+            &governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -208,7 +208,7 @@ fn enable_contract_assemblies() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetContract {
+            &governance::ExecuteMsg::SetContract {
                 id: Uint128::new(1),
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
@@ -247,7 +247,7 @@ fn unauthorised_set_contract() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetContract {
+            &governance::ExecuteMsg::SetContract {
                 id: Uint128::new(1),
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
@@ -273,7 +273,7 @@ fn add_contract_assemblies() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddContract {
+            &governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -296,7 +296,7 @@ fn add_contract_assemblies() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddContractAssemblies {
+            &governance::ExecuteMsg::AddContractAssemblies {
                 id: Uint128::new(1),
                 assemblies: vec![Uint128::new(1)],
             },

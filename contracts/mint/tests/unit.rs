@@ -16,7 +16,7 @@ use shade_protocol::c_std::{
 
 use shade_protocol::{
     contract_interfaces::{
-        mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+        mint::mint::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg},
         oracles::band::{BandQuery, ReferenceData},
     },
     utils::{

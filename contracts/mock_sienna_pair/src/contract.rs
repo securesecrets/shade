@@ -33,9 +33,9 @@ use shade_protocol::{
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitMsg {}
+pub struct InstantiateMsg {}
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
@@ -52,14 +52,14 @@ pub fn pair_info_w<S: Storage>(storage: &mut S) -> Singleton<S, PairInfo> {
 pub fn init<S: Storage, A: Api, Q: Querier>(
     _deps: DepsMut,
     _env: Env,
-    _msg: InitMsg,
+    _msg: InstantiateMsg,
 ) -> StdResult<Response> {
     Ok(Response::default())
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     MockPool {
         token_a: Contract,
         amount_a: Uint128,
@@ -71,10 +71,10 @@ pub enum HandleMsg {
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     _env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::MockPool {
+        ExecuteMsg::MockPool {
             token_a,
             amount_a,
             token_b,

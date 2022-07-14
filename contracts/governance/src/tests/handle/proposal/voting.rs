@@ -16,7 +16,7 @@ use shade_protocol::{
             profile::{Count, Profile, VoteProfile},
             proposal::Status,
             vote::Vote,
-            InitMsg,
+            InstantiateMsg,
         },
         staking::snip20_staking,
     },
@@ -34,7 +34,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
     let snip20 = chain.register(Box::new(Snip20));
     let snip20 = chain.instantiate(
         snip20.id,
-        &snip20::InitMsg {
+        &snip20::InstantiateMsg {
             name: "token".to_string(),
             admin: None,
             symbol: "TKN".to_string(),
@@ -65,7 +65,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
     let stkd_tkn = chain.register(Box::new(Snip20Staking));
     let stkd_tkn = chain.instantiate(
         stkd_tkn.id,
-        &spip_stkd_0::msg::InitMsg {
+        &spip_stkd_0::msg::InstantiateMsg {
             name: "Staked TKN".to_string(),
             admin: None,
             symbol: "TKN".to_string(),
@@ -91,7 +91,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
 
     // Stake tokens
     chain.execute(
-        &snip20::HandleMsg::Send {
+        &snip20::ExecuteMsg::Send {
             recipient: stkd_tkn.address.clone(),
             recipient_code_hash: None,
             amount: Uint128::new(20_000_000),
@@ -105,7 +105,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
         }),
     )?;
     chain.execute(
-        &snip20::HandleMsg::Send {
+        &snip20::ExecuteMsg::Send {
             recipient: stkd_tkn.address.clone(),
             recipient_code_hash: None,
             amount: Uint128::new(20_000_000),
@@ -119,7 +119,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
         }),
     )?;
     chain.execute(
-        &snip20::HandleMsg::Send {
+        &snip20::ExecuteMsg::Send {
             recipient: stkd_tkn.address.clone(),
             recipient_code_hash: None,
             amount: Uint128::new(20_000_000),
@@ -137,7 +137,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
     let gov = chain.register(Box::new(Governance));
     let gov = chain.instantiate(
         gov.id,
-        &InitMsg {
+        &InstantiateMsg {
             treasury: Addr::from("treasury"),
             admin_members: vec![
                 Addr::from("alpha"),
@@ -184,7 +184,7 @@ fn init_voting_governance_with_proposal() -> StdResult<(
     )?.instance;
 
     chain.execute(
-        &governance::HandleMsg::AssemblyProposal {
+        &governance::ExecuteMsg::AssemblyProposal {
             assembly: Uint128::new(1),
             title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
@@ -220,7 +220,7 @@ fn update_before_deadline() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::Update {
+                &governance::ExecuteMsg::Update {
                     proposal: Uint128::new(0),
                     padding: None
                 },
@@ -242,7 +242,7 @@ fn update_after_deadline() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::Update {
+                &governance::ExecuteMsg::Update {
                     proposal: Uint128::new(0),
                     padding: None
                 },
@@ -262,7 +262,7 @@ fn invalid_vote() {
     assert!(
         chain
             .execute(
-                &snip20_staking::HandleMsg::ExposeBalance {
+                &snip20_staking::ExecuteMsg::ExposeBalance {
                     recipient: gov.address,
                     code_hash: None,
                     msg: Some(
@@ -298,7 +298,7 @@ fn vote_after_deadline() {
     assert!(
         chain
             .execute(
-                &snip20_staking::HandleMsg::ExposeBalance {
+                &snip20_staking::ExecuteMsg::ExposeBalance {
                     recipient: gov.address,
                     code_hash: None,
                     msg: Some(
@@ -331,7 +331,7 @@ fn vote_yes() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -381,7 +381,7 @@ fn vote_abstain() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -431,7 +431,7 @@ fn vote_no() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -481,7 +481,7 @@ fn vote_veto() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -531,7 +531,7 @@ fn vote_passed() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -557,7 +557,7 @@ fn vote_passed() {
         .unwrap();
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -586,7 +586,7 @@ fn vote_passed() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -612,7 +612,7 @@ fn vote_abstained() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -638,7 +638,7 @@ fn vote_abstained() {
         .unwrap();
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -667,7 +667,7 @@ fn vote_abstained() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -693,7 +693,7 @@ fn vote_rejected() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -719,7 +719,7 @@ fn vote_rejected() {
         .unwrap();
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -748,7 +748,7 @@ fn vote_rejected() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -774,7 +774,7 @@ fn vote_vetoed() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -800,7 +800,7 @@ fn vote_vetoed() {
         .unwrap();
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -829,7 +829,7 @@ fn vote_vetoed() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -855,7 +855,7 @@ fn vote_no_quorum() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -881,7 +881,7 @@ fn vote_no_quorum() {
         .unwrap();
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -910,7 +910,7 @@ fn vote_no_quorum() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -936,7 +936,7 @@ fn vote_total() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -963,7 +963,7 @@ fn vote_total() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -990,7 +990,7 @@ fn vote_total() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1040,7 +1040,7 @@ fn update_vote() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1080,7 +1080,7 @@ fn update_vote() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1125,7 +1125,7 @@ fn vote_count() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1151,7 +1151,7 @@ fn vote_count() {
         .unwrap();
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1180,7 +1180,7 @@ fn vote_count() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -1211,7 +1211,7 @@ fn vote_count_percentage() {
     let snip20 = chain
         .instantiate(
             snip20.id,
-            &snip20::InitMsg {
+            &snip20::InstantiateMsg {
                 name: "token".to_string(),
                 admin: None,
                 symbol: "TKN".to_string(),
@@ -1244,7 +1244,7 @@ fn vote_count_percentage() {
     let stkd_tkn = chain
         .instantiate(
             stkd_tkn.id,
-            &spip_stkd_0::msg::InitMsg {
+            &spip_stkd_0::msg::InstantiateMsg {
                 name: "Staked TKN".to_string(),
                 admin: None,
                 symbol: "TKN".to_string(),
@@ -1272,7 +1272,7 @@ fn vote_count_percentage() {
     // Stake tokens
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: stkd_tkn.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(20_000_000),
@@ -1290,7 +1290,7 @@ fn vote_count_percentage() {
         .unwrap();
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: stkd_tkn.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(20_000_000),
@@ -1308,7 +1308,7 @@ fn vote_count_percentage() {
         .unwrap();
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: stkd_tkn.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(20_000_000),
@@ -1330,7 +1330,7 @@ fn vote_count_percentage() {
     let gov = chain
         .instantiate(
             gov.id,
-            &InitMsg {
+            &InstantiateMsg {
                 treasury: Addr::from("treasury"),
                 admin_members: vec![
                     Addr::from("alpha"),
@@ -1373,7 +1373,7 @@ fn vote_count_percentage() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyProposal {
+            &governance::ExecuteMsg::AssemblyProposal {
                 assembly: Uint128::new(1),
                 title: "Title".to_string(),
                 metadata: "Text only proposal".to_string(),
@@ -1391,7 +1391,7 @@ fn vote_count_percentage() {
 
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1417,7 +1417,7 @@ fn vote_count_percentage() {
         .unwrap();
     chain
         .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+            &snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1446,7 +1446,7 @@ fn vote_count_percentage() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },

@@ -12,7 +12,7 @@ use shade_protocol::contract_interfaces::{
 
 //TODO: test rng
 
-pub fn init_snip20(msg: snip20::InitMsg) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
+pub fn init_snip20(msg: snip20::InstantiateMsg) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     let mut chain = ContractEnsemble::new(50);
 
     // Register governance
@@ -33,7 +33,7 @@ pub fn init_snip20_with_config(
     initial_balances: Option<Vec<InitialBalance>>,
     config: Option<InitConfig>,
 ) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
-    let (mut chain, snip) = init_snip20(snip20::InitMsg {
+    let (mut chain, snip) = init_snip20(snip20::InstantiateMsg {
         name: "Token".to_string(),
         admin: None,
         symbol: "TKN".to_string(),
@@ -59,7 +59,7 @@ pub fn create_vk(
     key: Option<String>,
 ) -> StdResult<()> {
     chain.execute(
-        &snip20::HandleMsg::SetViewingKey {
+        &snip20::ExecuteMsg::SetViewingKey {
             key: key.unwrap_or("password".to_string()),
             padding: None,
         },

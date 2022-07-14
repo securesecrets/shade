@@ -45,8 +45,8 @@ use shade_protocol::{
         contract::AllowedContract,
         stored_id::ID,
         Config,
-        HandleMsg,
-        InitMsg,
+        ExecuteMsg,
+        InstantiateMsg,
         QueryMsg,
         MSG_VARIABLE,
     },
@@ -64,7 +64,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     // Setup config
     Config {
@@ -182,12 +182,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     pad_handle_result(
         match msg {
             // State setups
-            HandleMsg::SetConfig {
+            ExecuteMsg::SetConfig {
                 treasury,
                 vote_token,
                 funding_token,
@@ -195,10 +195,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             } => try_set_config(deps, env, treasury, vote_token, funding_token),
 
             // TODO: set this, must be discussed with team
-            HandleMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, state),
+            ExecuteMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, state),
 
             // Proposals
-            HandleMsg::Proposal {
+            ExecuteMsg::Proposal {
                 title,
                 metadata,
                 contract,
@@ -207,10 +207,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 ..
             } => try_proposal(deps, env, title, metadata, contract, msg, coins),
 
-            HandleMsg::Trigger { proposal, .. } => try_trigger(deps, env, proposal),
-            HandleMsg::Cancel { proposal, .. } => try_cancel(deps, env, proposal),
-            HandleMsg::Update { proposal, .. } => try_update(deps, env, proposal),
-            HandleMsg::Receive {
+            ExecuteMsg::Trigger { proposal, .. } => try_trigger(deps, env, proposal),
+            ExecuteMsg::Cancel { proposal, .. } => try_cancel(deps, env, proposal),
+            ExecuteMsg::Update { proposal, .. } => try_update(deps, env, proposal),
+            ExecuteMsg::Receive {
                 sender,
                 from,
                 amount,
@@ -218,9 +218,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 memo,
                 ..
             } => try_receive(deps, env, sender, from, amount, msg, memo),
-            HandleMsg::ClaimFunding { id } => try_claim_funding(deps, env, id),
+            ExecuteMsg::ClaimFunding { id } => try_claim_funding(deps, env, id),
 
-            HandleMsg::ReceiveBalance {
+            ExecuteMsg::ReceiveBalance {
                 sender,
                 msg,
                 balance,
@@ -228,11 +228,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             } => try_receive_balance(deps, env, sender, msg, balance, memo),
 
             // Assemblies
-            HandleMsg::AssemblyVote { proposal, vote, .. } => {
+            ExecuteMsg::AssemblyVote { proposal, vote, .. } => {
                 try_assembly_vote(deps, env, proposal, vote)
             }
 
-            HandleMsg::AssemblyProposal {
+            ExecuteMsg::AssemblyProposal {
                 assembly,
                 title,
                 metadata,
@@ -240,7 +240,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 ..
             } => try_assembly_proposal(deps, env, assembly, title, metadata, msgs),
 
-            HandleMsg::AddAssembly {
+            ExecuteMsg::AddAssembly {
                 name,
                 metadata,
                 members,
@@ -248,7 +248,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 ..
             } => try_add_assembly(deps, env, name, metadata, members, profile),
 
-            HandleMsg::SetAssembly {
+            ExecuteMsg::SetAssembly {
                 id,
                 name,
                 metadata,
@@ -258,14 +258,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             } => try_set_assembly(deps, env, id, name, metadata, members, profile),
 
             // Assembly Msgs
-            HandleMsg::AddAssemblyMsg {
+            ExecuteMsg::AddAssemblyMsg {
                 name,
                 msg,
                 assemblies,
                 ..
             } => try_add_assembly_msg(deps, env, name, msg, assemblies),
 
-            HandleMsg::SetAssemblyMsg {
+            ExecuteMsg::SetAssemblyMsg {
                 id,
                 name,
                 msg,
@@ -273,17 +273,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 ..
             } => try_set_assembly_msg(deps, env, id, name, msg, assemblies),
 
-            HandleMsg::AddAssemblyMsgAssemblies { id, assemblies } => {
+            ExecuteMsg::AddAssemblyMsgAssemblies { id, assemblies } => {
                 try_add_assembly_msg_assemblies(deps, env, id, assemblies)
             }
 
             // Profiles
-            HandleMsg::AddProfile { profile, .. } => try_add_profile(deps, env, profile),
+            ExecuteMsg::AddProfile { profile, .. } => try_add_profile(deps, env, profile),
 
-            HandleMsg::SetProfile { id, profile, .. } => try_set_profile(deps, env, id, profile),
+            ExecuteMsg::SetProfile { id, profile, .. } => try_set_profile(deps, env, id, profile),
 
             // Contracts
-            HandleMsg::AddContract {
+            ExecuteMsg::AddContract {
                 name,
                 metadata,
                 contract,
@@ -291,7 +291,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 ..
             } => try_add_contract(deps, env, name, metadata, contract, assemblies),
 
-            HandleMsg::SetContract {
+            ExecuteMsg::SetContract {
                 id,
                 name,
                 metadata,
@@ -310,7 +310,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 assemblies,
             ),
 
-            HandleMsg::AddContractAssemblies { id, assemblies } => {
+            ExecuteMsg::AddContractAssemblies { id, assemblies } => {
                 try_add_contract_assemblies(deps, env, id, assemblies)
             }
         },

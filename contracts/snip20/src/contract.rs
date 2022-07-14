@@ -28,8 +28,8 @@ use shade_protocol::{
     contract_interfaces::snip20::{
         manager::{ContractStatusLevel, Key, PermitKey},
         HandleAnswer,
-        HandleMsg,
-        InitMsg,
+        ExecuteMsg,
+        InstantiateMsg,
         Permission,
         QueryAnswer,
         QueryMsg,
@@ -47,7 +47,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     msg.save(&mut deps.storage, env)?;
     Ok(Response::new())
@@ -56,7 +56,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     // Check if transfers are allowed
     let status = ContractStatusLevel::load(&deps.storage)?;
@@ -65,30 +65,30 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         ContractStatusLevel::NormalRun => {}
         // Allow only status level updates or redeeming
         ContractStatusLevel::StopAllButRedeems | ContractStatusLevel::StopAll => match msg {
-            HandleMsg::Redeem { .. } => {
+            ExecuteMsg::Redeem { .. } => {
                 if status != ContractStatusLevel::StopAllButRedeems {
                     return Err(action_disabled());
                 }
             }
-            HandleMsg::SetContractStatus { .. } => {}
+            ExecuteMsg::SetContractStatus { .. } => {}
             _ => return Err(action_disabled()),
         },
     }
 
     pad_handle_result(
         match msg {
-            HandleMsg::Redeem { amount, denom, .. } => try_redeem(deps, env, amount),
+            ExecuteMsg::Redeem { amount, denom, .. } => try_redeem(deps, env, amount),
 
-            HandleMsg::Deposit { .. } => try_deposit(deps, env),
+            ExecuteMsg::Deposit { .. } => try_deposit(deps, env),
 
-            HandleMsg::Transfer {
+            ExecuteMsg::Transfer {
                 recipient,
                 amount,
                 memo,
                 ..
             } => try_transfer(deps, env, recipient, amount, memo),
 
-            HandleMsg::Send {
+            ExecuteMsg::Send {
                 recipient,
                 recipient_code_hash,
                 amount,
@@ -97,37 +97,37 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 ..
             } => try_send(deps, env, recipient, recipient_code_hash, amount, memo, msg),
 
-            HandleMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, actions),
+            ExecuteMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, actions),
 
-            HandleMsg::BatchSend { actions, .. } => try_batch_send(deps, env, actions),
+            ExecuteMsg::BatchSend { actions, .. } => try_batch_send(deps, env, actions),
 
-            HandleMsg::Burn { amount, memo, .. } => try_burn(deps, env, amount, memo),
+            ExecuteMsg::Burn { amount, memo, .. } => try_burn(deps, env, amount, memo),
 
-            HandleMsg::RegisterReceive { code_hash, .. } => {
+            ExecuteMsg::RegisterReceive { code_hash, .. } => {
                 try_register_receive(deps, env, code_hash)
             }
 
-            HandleMsg::CreateViewingKey { entropy, .. } => {
+            ExecuteMsg::CreateViewingKey { entropy, .. } => {
                 try_create_viewing_key(deps, env, entropy)
             }
 
-            HandleMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, env, key),
+            ExecuteMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, env, key),
 
-            HandleMsg::IncreaseAllowance {
+            ExecuteMsg::IncreaseAllowance {
                 spender,
                 amount,
                 expiration,
                 ..
             } => try_increase_allowance(deps, env, spender, amount, expiration),
 
-            HandleMsg::DecreaseAllowance {
+            ExecuteMsg::DecreaseAllowance {
                 spender,
                 amount,
                 expiration,
                 ..
             } => try_decrease_allowance(deps, env, spender, amount, expiration),
 
-            HandleMsg::TransferFrom {
+            ExecuteMsg::TransferFrom {
                 owner,
                 recipient,
                 amount,
@@ -135,7 +135,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 ..
             } => try_transfer_from(deps, env, owner, recipient, amount, memo),
 
-            HandleMsg::SendFrom {
+            ExecuteMsg::SendFrom {
                 owner,
                 recipient,
                 recipient_code_hash,
@@ -154,41 +154,41 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 memo,
             ),
 
-            HandleMsg::BatchTransferFrom { actions, .. } => {
+            ExecuteMsg::BatchTransferFrom { actions, .. } => {
                 try_batch_transfer_from(deps, env, actions)
             }
 
-            HandleMsg::BatchSendFrom { actions, .. } => try_batch_send_from(deps, env, actions),
+            ExecuteMsg::BatchSendFrom { actions, .. } => try_batch_send_from(deps, env, actions),
 
-            HandleMsg::BurnFrom {
+            ExecuteMsg::BurnFrom {
                 owner,
                 amount,
                 memo,
                 ..
             } => try_burn_from(deps, env, owner, amount, memo),
 
-            HandleMsg::BatchBurnFrom { actions, .. } => try_batch_burn_from(deps, env, actions),
+            ExecuteMsg::BatchBurnFrom { actions, .. } => try_batch_burn_from(deps, env, actions),
 
-            HandleMsg::Mint {
+            ExecuteMsg::Mint {
                 recipient,
                 amount,
                 memo,
                 ..
             } => try_mint(deps, env, recipient, amount, memo),
 
-            HandleMsg::BatchMint { actions, .. } => try_batch_mint(deps, env, actions),
+            ExecuteMsg::BatchMint { actions, .. } => try_batch_mint(deps, env, actions),
 
-            HandleMsg::AddMinters { minters, .. } => try_add_minters(deps, env, minters),
+            ExecuteMsg::AddMinters { minters, .. } => try_add_minters(deps, env, minters),
 
-            HandleMsg::RemoveMinters { minters, .. } => try_remove_minters(deps, env, minters),
+            ExecuteMsg::RemoveMinters { minters, .. } => try_remove_minters(deps, env, minters),
 
-            HandleMsg::SetMinters { minters, .. } => try_set_minters(deps, env, minters),
+            ExecuteMsg::SetMinters { minters, .. } => try_set_minters(deps, env, minters),
 
-            HandleMsg::ChangeAdmin { address, .. } => try_change_admin(deps, env, address),
+            ExecuteMsg::ChangeAdmin { address, .. } => try_change_admin(deps, env, address),
 
-            HandleMsg::SetContractStatus { level, .. } => try_set_contract_status(deps, env, level),
+            ExecuteMsg::SetContractStatus { level, .. } => try_set_contract_status(deps, env, level),
 
-            HandleMsg::RevokePermit { permit_name, .. } => {
+            ExecuteMsg::RevokePermit { permit_name, .. } => {
                 try_revoke_permit(deps, env, permit_name)
             }
         },

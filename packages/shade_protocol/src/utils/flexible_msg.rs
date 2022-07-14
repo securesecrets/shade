@@ -1,9 +1,8 @@
 use crate::c_std::{StdError, StdResult};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct FlexibleMsg {
     pub msg: String,
     pub arguments: u16,

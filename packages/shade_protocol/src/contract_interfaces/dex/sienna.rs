@@ -7,13 +7,10 @@ use crate::{
     },
 };
 use crate::c_std::{Addr, StdError, StdResult, Deps, DepsMut, Uint128};
+use cosmwasm_schema::{cw_serde};
+use cosmwasm_std::Binary;
 
-
-use secret_toolkit::{serialization::Base64};
-use crate::serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum TokenType {
     CustomToken {
         contract_addr: Addr,
@@ -24,62 +21,53 @@ pub enum TokenType {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Pair {
     pub token_0: TokenType,
     pub token_1: TokenType,
 }
 
 /*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AssetInfo {
     pub token: Token,
 }
 */
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct TokenTypeAmount {
     pub amount: Uint128,
     pub token: TokenType,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Swap {
     pub send: SwapOffer,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SwapOffer {
     pub recipient: Addr,
     pub amount: Uint128,
-    pub msg: Base64,
+    pub msg: Binary,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct CallbackMsg {
     pub swap: CallbackSwap,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct CallbackSwap {
     pub expected_return: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SwapSimulation {
     pub offer: TokenTypeAmount,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum PairQuery {
     /*
     Pool {},
@@ -92,16 +80,14 @@ impl Query for PairQuery {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SimulationResponse {
     pub return_amount: Uint128,
     pub spread_amount: Uint128,
     pub commission_amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PairInfo {
     pub liquidity_token: Contract,
     pub factory: Contract,
@@ -112,8 +98,7 @@ pub struct PairInfo {
     pub contract_version: u32,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PairInfoResponse {
     pub pair_info: PairInfo,
 }

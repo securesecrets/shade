@@ -1,7 +1,7 @@
 use shade_protocol::c_std::{Coin, Addr};
 use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::c_std::Uint128;
-use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitialBalance, QueryAnswer, QueryMsg};
+use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitialBalance, QueryAnswer, QueryMsg};
 use shade_protocol::contract_interfaces::snip20::transaction_history::{RichTx, TxAction};
 use crate::tests::{create_vk, init_snip20_with_config};
 
@@ -11,7 +11,7 @@ fn allowance_vk() {
 
     create_vk(&mut chain, &snip, "Saul", None).unwrap();
 
-    chain.execute(&HandleMsg::IncreaseAllowance {
+    chain.execute(&ExecuteMsg::IncreaseAllowance {
         spender: Addr::from("Goodman"),
         amount: Uint128::new(100),
         expiration: None,
@@ -70,14 +70,14 @@ fn transaction_history() {
         amount: Uint128::new(1500)
     }]), None).unwrap();
 
-    chain.execute(&HandleMsg::Transfer {
+    chain.execute(&ExecuteMsg::Transfer {
         recipient: Addr::from("Stratos"),
         amount: Uint128::new(200),
         memo: None,
         padding: None
     }, MockEnv::new("Setsuna", snip.clone())).unwrap();
 
-    chain.execute(&HandleMsg::Send {
+    chain.execute(&ExecuteMsg::Send {
         recipient: Addr::from("Smirnoff"),
         recipient_code_hash: None,
         amount: Uint128::new(140),
@@ -86,14 +86,14 @@ fn transaction_history() {
         padding: None
     }, MockEnv::new("Setsuna", snip.clone())).unwrap();
 
-    chain.execute(&HandleMsg::Transfer {
+    chain.execute(&ExecuteMsg::Transfer {
         recipient: Addr::from("Felt"),
         amount: Uint128::new(300),
         memo: None,
         padding: None
     }, MockEnv::new("Setsuna", snip.clone())).unwrap();
 
-    chain.execute(&HandleMsg::Transfer {
+    chain.execute(&ExecuteMsg::Transfer {
         recipient: Addr::from("Tieria"),
         amount: Uint128::new(540),
         memo: None,

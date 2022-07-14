@@ -7,16 +7,15 @@ use crate::c_std::{Uint128, Binary, Addr, StdResult, Env, Deps, DepsMut};
 
 use secret_storage_plus::Item;
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct TokenContract{
     pub contract: Contract,
     pub decimals: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct Config {
     pub admin: Addr,
     pub mint_addr: Contract,
@@ -26,12 +25,10 @@ pub struct Config {
     pub treasury: Addr,
     pub limit: Option<String>,
 }
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ViewingKeys(pub String);
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SelfAddr(pub Addr);
 
 #[cfg(feature = "sky-impl")]
@@ -48,8 +45,8 @@ impl ItemStorage for SelfAddr{
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitMsg{
+#[cw_serde]
+pub struct InstantiateMsg{
     pub admin: Option<Addr>,
     pub mint_addr: Contract,
     pub market_swap_addr: Contract,
@@ -60,9 +57,8 @@ pub struct InitMsg{
     pub limit: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     UpdateConfig {
         config: Config,
     },
@@ -71,8 +67,7 @@ pub enum HandleMsg {
     },
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     GetConfig {},
     GetMarketRate {},
@@ -82,8 +77,7 @@ pub enum QueryMsg {
     Balance{},
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config {
         config: Config,
@@ -107,8 +101,7 @@ pub enum QueryAnswer {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     Init {
         status: bool,
@@ -121,8 +114,7 @@ pub enum HandleAnswer {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ArbPair {
     pair_address: Addr,
     dex_id: String, //sienna, scrtswap, shdswap

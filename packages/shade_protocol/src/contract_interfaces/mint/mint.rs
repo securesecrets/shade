@@ -6,10 +6,10 @@ use crate::c_std::Uint128;
 use crate::c_std::{Binary, Addr};
 
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 use std::convert::TryFrom;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct Config {
     pub admin: Addr,
     pub oracle: Contract,
@@ -21,7 +21,7 @@ pub struct Config {
 }
 
 /// Used to store the assets allowed to be burned
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct SupportedAsset {
     pub asset: Snip20Asset,
     // Capture a percentage of burned assets
@@ -31,7 +31,7 @@ pub struct SupportedAsset {
     pub unlimited: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub enum Limit {
     Daily {
         supply_portion: Uint128,
@@ -43,8 +43,8 @@ pub enum Limit {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub admin: Option<Addr>,
     pub oracle: Contract,
 
@@ -63,13 +63,12 @@ pub struct InitMsg {
     pub limit: Option<Limit>,
 }
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     UpdateConfig {
         config: Config,
     },
@@ -92,25 +91,22 @@ pub enum HandleMsg {
     },
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SnipMsgHook {
     pub minimum_expected_amount: Uint128,
     pub to_mint: Addr,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct MintMsgHook {
     pub minimum_expected_amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
@@ -131,8 +127,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     NativeAsset {},
     SupportedAssets {},
@@ -151,8 +146,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     NativeAsset {
         asset: Snip20Asset,

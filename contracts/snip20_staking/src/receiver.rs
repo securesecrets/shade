@@ -8,7 +8,7 @@ use shade_protocol::c_std::{to_binary, Binary, CosmosMsg, Addr, StdResult, WasmM
 
 use crate::{contract::RESPONSE_BLOCK_SIZE, msg::space_pad};
 
-/// Snip20ReceiveMsg should be de/serialized under `Receive()` variant in a HandleMsg
+/// Snip20ReceiveMsg should be de/serialized under `Receive()` variant in a ExecuteMsg
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct Snip20ReceiveMsg {

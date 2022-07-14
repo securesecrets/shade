@@ -1,20 +1,18 @@
 use crate::c_std::Uint128;
 use crate::c_std::{StdResult, Storage};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::NaiveBucketStorage;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ReceiveBalanceMsg {
     pub vote: Vote,
     pub proposal: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Vote {
     pub yes: Uint128,
     pub no: Uint128,

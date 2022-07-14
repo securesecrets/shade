@@ -132,7 +132,7 @@ fn setup_contracts(
 ) -> Result<(NetContract, NetContract)> {
     let account_a = account_address(ACCOUNT_KEY)?;
 
-    let snip_init_msg = snip20::InitMsg {
+    let snip_init_msg = snip20::InstantiateMsg {
         name: "test".to_string(),
         admin: None,
         symbol: "TEST".to_string(),
@@ -162,7 +162,7 @@ fn setup_contracts(
         reports,
     )?;
 
-    let airdrop_init_msg = airdrop::InitMsg {
+    let airdrop_init_msg = airdrop::InstantiateMsg {
         admin: None,
         dump_address,
         airdrop_token: Contract {
@@ -193,7 +193,7 @@ fn setup_contracts(
     )?;
 
     {
-        let msg = snip20::HandleMsg::SetViewingKey {
+        let msg = snip20::ExecuteMsg::SetViewingKey {
             key: String::from(VIEW_KEY),
             padding: None,
         };
@@ -212,7 +212,7 @@ fn setup_contracts(
 
     /// Assert that we start with nothing
     handle(
-        &snip20::HandleMsg::Send {
+        &snip20::ExecuteMsg::Send {
             recipient: Addr::from(airdrop.address.clone()),
             amount: airdrop_total,
             msg: None,
@@ -239,7 +239,7 @@ fn create_account(
 ) -> Result<()> {
     print_warning("Creating an account");
 
-    let msg = airdrop::HandleMsg::Account {
+    let msg = airdrop::ExecuteMsg::Account {
         addresses: permits,
         partial_tree,
         padding: None,
@@ -269,7 +269,7 @@ fn update_account(
     airdrop: &NetContract,
 ) -> Result<()> {
     print_warning("Updating account");
-    let msg = airdrop::HandleMsg::Account {
+    let msg = airdrop::ExecuteMsg::Account {
         addresses: permits,
         partial_tree,
         padding: None,
@@ -430,7 +430,7 @@ fn run_airdrop() -> Result<()> {
     print_warning("Enabling the other half of the airdrop");
 
     handle(
-        &airdrop::HandleMsg::CompleteTask {
+        &airdrop::ExecuteMsg::CompleteTask {
             address: Addr::from(account_a.clone()),
             padding: None,
         },
@@ -527,7 +527,7 @@ fn run_airdrop() -> Result<()> {
 
     print_warning("Disabling permit");
     handle(
-        &airdrop::HandleMsg::DisablePermitKey {
+        &airdrop::ExecuteMsg::DisablePermitKey {
             key: "key".to_string(),
             padding: None,
         },
@@ -598,7 +598,7 @@ fn run_airdrop() -> Result<()> {
     }
 
     handle(
-        &airdrop::HandleMsg::SetViewingKey {
+        &airdrop::ExecuteMsg::SetViewingKey {
             key: "key".to_string(),
             padding: None,
         },
@@ -689,7 +689,7 @@ fn run_airdrop() -> Result<()> {
     }
 
     handle(
-        &airdrop::HandleMsg::ClaimDecay { padding: None },
+        &airdrop::ExecuteMsg::ClaimDecay { padding: None },
         &airdrop,
         ACCOUNT_KEY,
         Some(GAS),

@@ -12,9 +12,9 @@ use crate::{
 use crate::c_std::{Uint128, Binary, Addr};
 
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct Config {
     pub admin: Addr,
     // Used for permit validation when querying
@@ -44,8 +44,8 @@ pub struct Config {
     pub query_rounding: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub admin: Option<Addr>,
     // Where the decayed tokens will be dumped, if none then nothing happens
     pub dump_address: Option<Addr>,
@@ -72,13 +72,12 @@ pub struct InitMsg {
     pub query_rounding: Uint128,
 }
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     UpdateConfig {
         admin: Option<Addr>,
         dump_address: Option<Addr>,
@@ -117,12 +116,11 @@ pub enum HandleMsg {
     },
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     UpdateConfig {
         status: ResponseStatus,
@@ -164,8 +162,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     Dates {
@@ -187,8 +184,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config {
         config: Config,
@@ -215,8 +211,7 @@ pub enum QueryAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AccountVerification {
     pub account: Addr,
     pub claimed: bool,

@@ -21,7 +21,7 @@ pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     let admin = chain.register(Box::new(Admin));
     let admin = chain.instantiate(
         admin.id,
-        &shade_admin::admin::InitMsg{},
+        &shade_admin::admin::InstantiateMsg{},
         MockEnv::new("admin", ContractLink {
             address: "admin_contract".into(),
             code_hash: admin.code_hash,
@@ -32,7 +32,7 @@ pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     let auth = chain
         .instantiate(
             auth.id,
-            &query_auth::InitMsg {
+            &query_auth::InstantiateMsg {
                 admin_auth: Contract {
                     address: admin.address.clone(),
                     code_hash: admin.code_hash.clone()
@@ -46,11 +46,11 @@ pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
         )?
         .instance;
 
-    chain.execute(&shade_admin::admin::HandleMsg::AddContract {
+    chain.execute(&shade_admin::admin::ExecuteMsg::AddContract {
         contract_address: auth.address.to_string()
     }, MockEnv::new("admin", admin.clone()))?;
 
-    chain.execute(&shade_admin::admin::HandleMsg::AddAuthorization {
+    chain.execute(&shade_admin::admin::ExecuteMsg::AddAuthorization {
         contract_address: auth.address.to_string(),
         admin_address: "admin".to_string()
     }, MockEnv::new("admin", admin.clone()))?;

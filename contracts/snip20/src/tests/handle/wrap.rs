@@ -1,7 +1,7 @@
 use shade_protocol::c_std::{Coin, Addr};
 use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::c_std::Uint128;
-use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig};
+use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitConfig};
 use shade_protocol::contract_interfaces::snip20::manager::{Balance, TotalSupply};
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 use crate::tests::init_snip20_with_config;
@@ -32,12 +32,12 @@ fn deposit() {
 
     // Deposit
     let mut env = MockEnv::new("Marco", snip.clone()).sent_funds(vec![not_coin]);
-    assert!(chain.execute(&HandleMsg::Deposit {
+    assert!(chain.execute(&ExecuteMsg::Deposit {
         padding: None
     }, env).is_err());
 
     let mut env = MockEnv::new("Marco", snip.clone()).sent_funds(vec![scrt_coin]);
-    assert!(chain.execute(&HandleMsg::Deposit {
+    assert!(chain.execute(&ExecuteMsg::Deposit {
         padding: None
     }, env).is_ok());
 
@@ -73,18 +73,18 @@ fn redeem() {
 
     // Deposit
     let mut env = MockEnv::new("Marco", snip.clone()).sent_funds(vec![scrt_coin]);
-    assert!(chain.execute(&HandleMsg::Deposit {
+    assert!(chain.execute(&ExecuteMsg::Deposit {
         padding: None
     }, env).is_ok());
 
     // Redeem
-    assert!(chain.execute(&HandleMsg::Redeem {
+    assert!(chain.execute(&ExecuteMsg::Redeem {
         amount: Uint128::new(10000),
         denom: None,
         padding: None
     }, MockEnv::new("Marco", snip.clone())).is_err());
 
-    assert!(chain.execute(&HandleMsg::Redeem {
+    assert!(chain.execute(&ExecuteMsg::Redeem {
         amount: Uint128::new(500),
         denom: None,
         padding: None

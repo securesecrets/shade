@@ -1,12 +1,11 @@
 use cosmwasm_std::Coin;
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 use crate::c_std::{StdError, StdResult, Addr, Uint128, Binary, CosmosMsg, QuerierWrapper};
 use crate::utils::{HandleCallback, Query};
-use super::{QueryAnswer, QueryMsg, HandleMsg};
+use super::{QueryAnswer, QueryMsg, ExecuteMsg};
 use crate::utils::asset::Contract;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Snip20Asset {
     pub contract: Contract,
     pub token_info: TokenInfo,
@@ -43,7 +42,7 @@ pub fn send_msg(
     padding: Option<String>,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    HandleMsg::Send {
+    ExecuteMsg::Send {
         recipient,
         recipient_code_hash: None,
         amount,
@@ -72,7 +71,7 @@ pub fn redeem_msg(
     padding: Option<String>,
     contract: &Contract
 ) -> StdResult<CosmosMsg> {
-    HandleMsg::Redeem {
+    ExecuteMsg::Redeem {
         amount,
         denom,
         padding,
@@ -93,7 +92,7 @@ pub fn deposit_msg(
     padding: Option<String>,
     contract: &Contract
 ) -> StdResult<CosmosMsg> {
-    HandleMsg::Deposit { padding }.to_cosmos_msg(
+    ExecuteMsg::Deposit { padding }.to_cosmos_msg(
         contract,
         vec![Coin {
             denom: "uscrt".to_string(),
@@ -103,7 +102,7 @@ pub fn deposit_msg(
 }
 
 /// TokenInfo response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct TokenInfo {
     pub name: String,
     pub symbol: String,
@@ -138,7 +137,7 @@ pub fn token_info(
 }
 
 /// TokenConfig response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct TokenConfig {
     pub public_total_supply: bool,
     pub deposit_enabled: bool,

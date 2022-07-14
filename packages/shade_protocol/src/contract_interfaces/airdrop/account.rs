@@ -7,10 +7,9 @@ use crate::query_authentication::{
     viewing_keys::ViewingKey,
 };
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Account {
     pub addresses: Vec<Addr>,
     pub total_claimable: Uint128,
@@ -29,16 +28,14 @@ impl Default for Account {
 pub type AccountPermit = Permit<AccountPermitMsg>;
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AccountPermitMsg {
     pub contract: Addr,
     pub key: String,
 }
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct FillerMsg {
     pub coins: Vec<String>,
     pub contract: String,
@@ -58,8 +55,7 @@ impl Default for FillerMsg {
 }
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct EmptyMsg {}
 
 // Used to prove ownership over IBC addresses
@@ -78,8 +74,7 @@ pub fn authenticate_ownership<A: Api>(api: &A, permit: &AddressProofPermit, perm
 }
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AddressProofMsg {
     // Address is necessary since we have other network permits present
     pub address: Addr,
@@ -93,8 +88,7 @@ pub struct AddressProofMsg {
     pub key: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AccountKey(pub String);
 
 impl ToString for AccountKey {

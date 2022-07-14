@@ -14,8 +14,8 @@ use shade_protocol::c_std::{
 
 use shade_protocol::contract_interfaces::dao::treasury_manager::{
     Config,
-    HandleMsg,
-    InitMsg,
+    ExecuteMsg,
+    InstantiateMsg,
     QueryMsg,
     Holder,
     Status,
@@ -36,7 +36,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
 
     config_w(&mut deps.storage).save(&Config {
@@ -63,24 +63,24 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::Receive {
+        ExecuteMsg::Receive {
             sender,
             from,
             amount,
             msg,
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
-        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { contract } => handle::try_register_asset(deps, &env, &contract),
-        HandleMsg::Allocate { asset, allocation } => {
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        ExecuteMsg::RegisterAsset { contract } => handle::try_register_asset(deps, &env, &contract),
+        ExecuteMsg::Allocate { asset, allocation } => {
             handle::allocate(deps, &env, asset, allocation)
         },
-        HandleMsg::AddHolder { holder } => handle::add_holder(deps, &env, holder),
-        HandleMsg::RemoveHolder { holder } => handle::remove_holder(deps, &env, holder),
-        HandleMsg::Adapter(a) => match a {
+        ExecuteMsg::AddHolder { holder } => handle::add_holder(deps, &env, holder),
+        ExecuteMsg::RemoveHolder { holder } => handle::remove_holder(deps, &env, holder),
+        ExecuteMsg::Adapter(a) => match a {
             adapter::SubHandleMsg::Unbond { asset, amount } => {
                 handle::unbond(deps, &env, asset, amount)
             }

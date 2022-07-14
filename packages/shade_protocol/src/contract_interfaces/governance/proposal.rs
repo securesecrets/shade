@@ -10,14 +10,13 @@ use crate::{
 use crate::c_std::Uint128;
 use crate::c_std::{Binary, Coin, Addr, StdResult, Storage};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::BucketStorage;
 use crate::utils::storage::default::NaiveBucketStorage;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Proposal {
     // Description
     // Address of the proposal proposer
@@ -307,8 +306,7 @@ impl Proposal {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ProposalDescription {
     pub proposer: Addr,
     pub title: String,
@@ -320,8 +318,7 @@ impl BucketStorage for ProposalDescription {
     const NAMESPACE: &'static [u8] = b"proposal_description-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ProposalMsg {
     pub target: Uint128,
     pub assembly_msg: Uint128,
@@ -330,26 +327,21 @@ pub struct ProposalMsg {
     pub send: Vec<Coin>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-struct ProposalMsgs(pub Vec<ProposalMsg>);
+#[cw_serde]struct ProposalMsgs(pub Vec<ProposalMsg>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for ProposalMsgs {
     const NAMESPACE: &'static [u8] = b"proposal_msgs-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-struct ProposalAssembly(pub Uint128);
+#[cw_serde]struct ProposalAssembly(pub Uint128);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for ProposalAssembly {
     const NAMESPACE: &'static [u8] = b"proposal_assembly-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Status {
     // Assembly voting period
     AssemblyVote {
@@ -394,9 +386,7 @@ impl BucketStorage for Status {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-struct StatusHistory(pub Vec<Status>);
+#[cw_serde]struct StatusHistory(pub Vec<Status>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for StatusHistory {
@@ -404,9 +394,7 @@ impl BucketStorage for StatusHistory {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-struct Funders(pub Vec<Addr>);
+#[cw_serde]struct Funders(pub Vec<Addr>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for Funders {
@@ -414,8 +402,7 @@ impl BucketStorage for Funders {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Funding {
     pub amount: Uint128,
     pub claimed: bool,

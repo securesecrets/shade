@@ -9,7 +9,7 @@ fn add_assembly_msg() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddAssemblyMsg {
+            &governance::ExecuteMsg::AddAssemblyMsg {
                 name: "Some Assembly name".to_string(),
                 msg: "{}".to_string(),
                 assemblies: vec![Uint128::zero()],
@@ -34,7 +34,7 @@ fn unauthorised_add_assembly_msg() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddAssemblyMsg {
+            &governance::ExecuteMsg::AddAssemblyMsg {
                 name: "Some Assembly name".to_string(),
                 msg: "{}".to_string(),
                 assemblies: vec![Uint128::zero()],
@@ -58,7 +58,7 @@ fn set_assembly_msg() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetAssemblyMsg {
+            &governance::ExecuteMsg::SetAssemblyMsg {
                 id: Uint128::zero(),
                 name: Some("New name".to_string()),
                 msg: None,
@@ -88,7 +88,7 @@ fn unauthorised_set_assembly_msg() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetAssemblyMsg {
+            &governance::ExecuteMsg::SetAssemblyMsg {
                 id: Uint128::zero(),
                 name: Some("New name".to_string()),
                 msg: None,

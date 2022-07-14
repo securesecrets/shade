@@ -1,8 +1,7 @@
 use crate::c_std::{Uint128, Addr};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct RequiredTask {
     pub address: Addr,
     pub percent: Uint128,

@@ -27,7 +27,7 @@ pub fn initialize_minter(
         governance,
         contract_name,
         MINT_FILE,
-        mint::InitMsg {
+        mint::InstantiateMsg {
             admin: Some(Addr::from(governance.address.clone())),
             native_asset: native_asset.clone(),
             oracle: get_contract(governance, "oracle".to_string())?,
@@ -62,7 +62,7 @@ pub fn setup_minters(
     create_and_trigger_proposal(
         governance,
         "shade_minter".to_string(),
-        mint::HandleMsg::RegisterAsset {
+        mint::ExecuteMsg::RegisterAsset {
             contract: Contract {
                 address: Addr::from(sscrt.address.clone()),
                 code_hash: sscrt.code_hash.clone(),
@@ -77,7 +77,7 @@ pub fn setup_minters(
     create_and_trigger_proposal(
         governance,
         "shade_minter".to_string(),
-        mint::HandleMsg::RegisterAsset {
+        mint::ExecuteMsg::RegisterAsset {
             contract: silk.clone(),
             capture: Some(Uint128::new(1000u128)),
             fee: Some(Uint128::zero()),
@@ -89,7 +89,7 @@ pub fn setup_minters(
     create_and_trigger_proposal(
         governance,
         "silk_minter".to_string(),
-        mint::HandleMsg::RegisterAsset {
+        mint::ExecuteMsg::RegisterAsset {
             contract: shade.clone(),
             capture: Some(Uint128::new(1000u128)),
             fee: Some(Uint128::zero()),
@@ -104,7 +104,7 @@ pub fn setup_minters(
     create_and_trigger_proposal(
         governance,
         "shade".to_string(),
-        snip20::HandleMsg::SetMinters {
+        snip20::ExecuteMsg::SetMinters {
             minters: vec![Addr::from(mint_shade.address.clone())],
             padding: None,
         },
@@ -134,7 +134,7 @@ pub fn setup_minters(
     create_and_trigger_proposal(
         governance,
         "silk".to_string(),
-        snip20::HandleMsg::SetMinters {
+        snip20::ExecuteMsg::SetMinters {
             minters: vec![Addr::from(mint_silk.address.clone())],
             padding: None,
         },
@@ -187,7 +187,7 @@ pub fn mint(
     backend: &str,
     report: &mut Vec<Report>,
 ) {
-    let msg = snip20::HandleMsg::Send {
+    let msg = snip20::ExecuteMsg::Send {
         recipient: Addr::from(minter),
         recipient_code_hash: None,
         amount,

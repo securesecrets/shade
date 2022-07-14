@@ -19,8 +19,8 @@ use serde::Serialize;
 use serde_json::Result;
 use shade_protocol::contract_interfaces::bonds::{self, AccountPermitMsg, FillerMsg};
 use shade_protocol::contract_interfaces::oracles::band::{self};
-use shade_protocol::contract_interfaces::oracles::oracle::{self, InitMsg as OracleInitMsg};
-use shade_protocol::contract_interfaces::snip20::{self, InitConfig, InitMsg, InitialBalance};
+use shade_protocol::contract_interfaces::oracles::oracle::{self, InstantiateMsg as OracleInitMsg};
+use shade_protocol::contract_interfaces::snip20::{self, InitConfig, InstantiateMsg, InitialBalance};
 use shade_protocol::utils::asset::Contract;
 use std::{
     borrow::Borrow,
@@ -58,7 +58,7 @@ fn setup_contracts(
 
     print_header("Set up account_addresses");
     print_header("Initializing snip20s");
-    let issu_snip_init_msg = snip20::InitMsg {
+    let issu_snip_init_msg = snip20::InstantiateMsg {
         name: "test_issu".to_string(),
         admin: None,
         symbol: "ISSU".to_string(),
@@ -88,7 +88,7 @@ fn setup_contracts(
 
     print_header("Issued snip initiated");
 
-    let deposit_snip_init_msg = snip20::InitMsg {
+    let deposit_snip_init_msg = snip20::InstantiateMsg {
         name: "test_deposit".to_string(),
         admin: None,
         symbol: "DEPO".to_string(),
@@ -122,7 +122,7 @@ fn setup_contracts(
     print_header("Deposit snip initiated");
     print_header("Initiating mockband and oracle");
 
-    let mockband_init_msg = band::InitMsg {};
+    let mockband_init_msg = band::InstantiateMsg {};
 
     let mockband = init(
         &mockband_init_msg,
@@ -137,7 +137,7 @@ fn setup_contracts(
 
     print_header("Mockband initiated");
 
-    let oracle_init_msg = oracle::InitMsg {
+    let oracle_init_msg = oracle::InstantiateMsg {
         admin: Some(Addr::from(account_limit_admin.clone())),
         band: Contract {
             address: Addr::from(mockband.address.clone()),
@@ -162,7 +162,7 @@ fn setup_contracts(
 
     print_header("Oracle Initiated");
 
-    let bonds_init_msg = bonds::InitMsg {
+    let bonds_init_msg = bonds::InstantiateMsg {
         limit_admin: Addr::from(account_admin.clone()),
         global_issuance_limit,
         global_minimum_bonding_period,
@@ -200,7 +200,7 @@ fn setup_contracts(
         reports,
     )?;
 
-    let msg = snip20::HandleMsg::SetViewingKey {
+    let msg = snip20::ExecuteMsg::SetViewingKey {
         key: String::from(VIEW_KEY),
         padding: None,
     };
@@ -257,7 +257,7 @@ fn setup_contracts_allowance(
 
     print_header("Set up account_addresses");
     print_header("Initializing snip20s");
-    let issued_snip_init_msg = snip20::InitMsg {
+    let issued_snip_init_msg = snip20::InstantiateMsg {
         name: "test_issue".to_string(),
         admin: None,
         symbol: "ISSU".to_string(),
@@ -290,7 +290,7 @@ fn setup_contracts_allowance(
 
     print_header("Issued snip initiated");
 
-    let deposit_snip_init_msg = snip20::InitMsg {
+    let deposit_snip_init_msg = snip20::InstantiateMsg {
         name: "test_deposit".to_string(),
         admin: None,
         symbol: "DEPO".to_string(),
@@ -324,7 +324,7 @@ fn setup_contracts_allowance(
     print_header("Deposit snip initiated");
     print_header("Initiating mockband and oracle");
 
-    let mockband_init_msg = band::InitMsg {};
+    let mockband_init_msg = band::InstantiateMsg {};
 
     let mockband = init(
         &mockband_init_msg,
@@ -339,7 +339,7 @@ fn setup_contracts_allowance(
 
     print_header("Mockband initiated");
 
-    let oracle_init_msg = oracle::InitMsg {
+    let oracle_init_msg = oracle::InstantiateMsg {
         admin: Some(Addr::from(account_limit_admin.clone())),
         band: Contract {
             address: Addr::from(mockband.address.clone()),
@@ -364,7 +364,7 @@ fn setup_contracts_allowance(
 
     print_header("Oracle Initiated");
 
-    let bonds_init_msg = bonds::InitMsg {
+    let bonds_init_msg = bonds::InstantiateMsg {
         limit_admin: Addr::from(account_limit_admin.clone()),
         global_issuance_limit,
         global_minimum_bonding_period,
@@ -402,7 +402,7 @@ fn setup_contracts_allowance(
         reports,
     )?;
 
-    let msg = snip20::HandleMsg::SetViewingKey {
+    let msg = snip20::ExecuteMsg::SetViewingKey {
         key: String::from(VIEW_KEY),
         padding: None,
     };
@@ -438,7 +438,7 @@ fn setup_additional_snip20_with_vk(
     reports: &mut Vec<Report>,
 ) -> Result<NetContract> {
     let account_a = account_address(ACCOUNT_KEY)?;
-    let snip_init_msg = snip20::InitMsg {
+    let snip_init_msg = snip20::InstantiateMsg {
         name,
         admin: None,
         symbol,
@@ -469,7 +469,7 @@ fn setup_additional_snip20_with_vk(
         reports,
     )?;
 
-    let snip_msg = snip20::HandleMsg::SetViewingKey {
+    let snip_msg = snip20::ExecuteMsg::SetViewingKey {
         key: VIEW_KEY.to_string(),
         padding: None,
     };
@@ -503,7 +503,7 @@ fn open_bond(
     bonds: &NetContract,
     minting_bond: bool,
 ) -> Result<()> {
-    let msg = bonds::HandleMsg::OpenBond {
+    let msg = bonds::ExecuteMsg::OpenBond {
         deposit_asset: Contract {
             address: Addr::from(deposit_snip.address.clone()),
             code_hash: deposit_snip.code_hash.clone(),
@@ -552,7 +552,7 @@ fn update_bonds_config(
     bonds: &NetContract,
     reports: &mut Vec<Report>,
 ) -> Result<()> {
-    let msg = bonds::HandleMsg::UpdateConfig {
+    let msg = bonds::ExecuteMsg::UpdateConfig {
         oracle,
         treasury,
         issued_asset,
@@ -594,7 +594,7 @@ fn update_bonds_limit_config(
     bonds: &NetContract,
     reports: &mut Vec<Report>,
 ) -> Result<()> {
-    let msg = bonds::HandleMsg::UpdateLimitConfig {
+    let msg = bonds::ExecuteMsg::UpdateLimitConfig {
         limit_admin,
         global_issuance_limit,
         global_minimum_bonding_period,
@@ -626,7 +626,7 @@ fn close_bond(
     bonds: &NetContract,
     reports: &mut Vec<Report>,
 ) -> Result<()> {
-    let msg = bonds::HandleMsg::CloseBond {
+    let msg = bonds::ExecuteMsg::CloseBond {
         deposit_asset: Contract {
             address: Addr::from(deposit_snip.address.clone()),
             code_hash: deposit_snip.code_hash.clone(),
@@ -657,7 +657,7 @@ fn buy_bond(
     reports: &mut Vec<Report>,
     bonds: &NetContract,
 ) -> Result<()> {
-    let msg = snip20::HandleMsg::Send {
+    let msg = snip20::ExecuteMsg::Send {
         recipient: Addr::from(bonds.address.clone()),
         amount,
         msg: None,
@@ -683,7 +683,7 @@ fn buy_bond(
 }
 
 fn claim_bond(bonds: &NetContract, reports: &mut Vec<Report>) -> Result<()> {
-    let msg = bonds::HandleMsg::Claim { padding: None };
+    let msg = bonds::ExecuteMsg::Claim { padding: None };
 
     let tx_info = handle(
         &msg,
@@ -770,7 +770,7 @@ fn set_viewing_keys(
     deposit_snip20: &NetContract,
 ) -> Result<()> {
 
-    let issued_snip_msg = snip20::HandleMsg::SetViewingKey {
+    let issued_snip_msg = snip20::ExecuteMsg::SetViewingKey {
         key: key.clone(),
         padding: None,
     };
@@ -789,7 +789,7 @@ fn set_viewing_keys(
 
     println!("Gas used: {}", issued_snip_tx_info.gas_used);
 
-    let deposit_snip_msg = snip20::HandleMsg::SetViewingKey { key, padding: None };
+    let deposit_snip_msg = snip20::ExecuteMsg::SetViewingKey { key, padding: None };
 
     let deposit_snip_tx_info = handle(
         &deposit_snip_msg,
@@ -816,7 +816,7 @@ fn set_band_prices(
     reports: &mut Vec<Report>,
     band: &NetContract,
 ) -> Result<()> {
-    let depo_msg = mock_band::contract::HandleMsg::MockPrice {
+    let depo_msg = mock_band::contract::ExecuteMsg::MockPrice {
         symbol: "DEPO".to_string(),
         price: prevUint128::from(depo_price),
     };
@@ -835,7 +835,7 @@ fn set_band_prices(
 
     println!("Gas used: {}", depo_tx_info.gas_used);
 
-    let issued_msg = mock_band::contract::HandleMsg::MockPrice {
+    let issued_msg = mock_band::contract::ExecuteMsg::MockPrice {
         symbol: "ISSU".to_string(),
         price: prevUint128::from(issued_price),
     };
@@ -864,7 +864,7 @@ fn set_additional_band_price(
     band: &NetContract,
     reports: &mut Vec<Report>,
 ) -> Result<()> {
-    let msg = mock_band::contract::HandleMsg::MockPrice {
+    let msg = mock_band::contract::ExecuteMsg::MockPrice {
         symbol: new_symbol,
         price: prevUint128::from(new_price),
     };
@@ -891,7 +891,7 @@ fn set_minting_privileges(
     bonds: &NetContract,
     reports: &mut Vec<Report>,
 ) -> Result<()> {
-    let msg = snip20::HandleMsg::SetMinters {
+    let msg = snip20::ExecuteMsg::SetMinters {
         minters: vec![Addr::from(bonds.address.clone())],
         padding: None,
     };
@@ -921,7 +921,7 @@ fn increase_allowance(
     reports: &mut Vec<Report>,
 ) -> Result<()> {
     let account_admin = account_address(ADMIN_KEY)?;
-    let allowance_snip_msg = snip20::HandleMsg::IncreaseAllowance {
+    let allowance_snip_msg = snip20::ExecuteMsg::IncreaseAllowance {
         owner: Addr::from(account_admin.clone()),
         spender: Addr::from(bonds.address.clone()),
         amount,
@@ -988,7 +988,7 @@ fn add_admin(
 ) -> Result<()> {
     let new_admin = account_address(recipient)?;
 
-    let msg = bonds::HandleMsg::AddAdmin { 
+    let msg = bonds::ExecuteMsg::AddAdmin { 
         admin_to_add: Addr::from(new_admin),
         padding: None 
     };
@@ -1020,7 +1020,7 @@ fn remove_admin(
 ) -> Result<()> {
     let removed_admin = account_address(recipient)?;
 
-    let msg = bonds::HandleMsg::RemoveAdmin { 
+    let msg = bonds::ExecuteMsg::RemoveAdmin { 
         admin_to_remove: Addr::from(removed_admin),
         padding: None, 
     };
@@ -1108,7 +1108,7 @@ fn run_bonds_singular() -> Result<()> {
 
     // print_config(&bonds)?;
 
-    let msg = bonds::HandleMsg::AddAdmin { admin_to_add: Addr::from(account_a.clone()), padding: None };
+    let msg = bonds::ExecuteMsg::AddAdmin { admin_to_add: Addr::from(account_a.clone()), padding: None };
     let tx = handle(
         &msg,
         &bonds,
@@ -1309,7 +1309,7 @@ fn run_bonds_singular() -> Result<()> {
         assert_eq!(bond_opportunities.is_empty(), true);
     }
 
-    let new_msg = bonds::HandleMsg::DisablePermit { permit: account_permit.params.key, padding: None };
+    let new_msg = bonds::ExecuteMsg::DisablePermit { permit: account_permit.params.key, padding: None };
     handle(
         &new_msg,
         &bonds,

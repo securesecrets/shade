@@ -19,7 +19,7 @@ use shade_protocol::{
             profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
             proposal::{ProposalMsg, Status},
             vote::Vote,
-            InitMsg,
+            InstantiateMsg,
         },
     },
     utils::asset::Contract,
@@ -36,7 +36,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     let snip20 = chain.register(Box::new(Snip20));
     let snip20 = chain.instantiate(
         snip20.id,
-        &snip20::InitMsg {
+        &snip20::InstantiateMsg {
             name: "funding_token".to_string(),
             admin: None,
             symbol: "FND".to_string(),
@@ -68,7 +68,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     let gov = chain.register(Box::new(Governance));
     let gov = chain.instantiate(
         gov.id,
-        &InitMsg {
+        &InstantiateMsg {
             treasury: Addr::from("treasury"),
             admin_members: vec![
                 Addr::from("alpha"),
@@ -109,7 +109,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     )?.instance;
 
     chain.execute(
-        &governance::HandleMsg::AssemblyProposal {
+        &governance::ExecuteMsg::AssemblyProposal {
             assembly: Uint128::new(1),
             title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
@@ -123,7 +123,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     )?;
 
     chain.execute(
-        &snip20::HandleMsg::SetViewingKey {
+        &snip20::ExecuteMsg::SetViewingKey {
             key: "password".to_string(),
             padding: None,
         },
@@ -134,7 +134,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     )?;
 
     chain.execute(
-        &snip20::HandleMsg::SetViewingKey {
+        &snip20::ExecuteMsg::SetViewingKey {
             key: "password".to_string(),
             padding: None,
         },
@@ -145,7 +145,7 @@ fn init_funding_governance_with_proposal() -> StdResult<(
     )?;
 
     chain.execute(
-        &snip20::HandleMsg::SetViewingKey {
+        &snip20::ExecuteMsg::SetViewingKey {
             key: "password".to_string(),
             padding: None,
         },
@@ -163,7 +163,7 @@ fn assembly_to_funding_transition() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
@@ -199,7 +199,7 @@ fn assembly_to_funding_transition() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyProposal {
+            &governance::ExecuteMsg::AssemblyProposal {
                 assembly: Uint128::new(1),
                 title: "Title".to_string(),
                 metadata: "Text only proposal".to_string(),
@@ -215,7 +215,7 @@ fn assembly_to_funding_transition() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(1),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -234,7 +234,7 @@ fn assembly_to_funding_transition() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(1),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -255,7 +255,7 @@ fn assembly_to_funding_transition() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::new(1),
                 padding: None,
             },
@@ -282,7 +282,7 @@ fn fake_funding_token() {
     let other = chain
         .instantiate(
             other.id,
-            &snip20::InitMsg {
+            &snip20::InstantiateMsg {
                 name: "funding_token".to_string(),
                 admin: None,
                 symbol: "FND".to_string(),
@@ -313,7 +313,7 @@ fn fake_funding_token() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetConfig {
+            &governance::ExecuteMsg::SetConfig {
                 treasury: None,
                 funding_token: Some(Contract {
                     address: other.address.clone(),
@@ -333,7 +333,7 @@ fn fake_funding_token() {
     assert!(
         chain
             .execute(
-                &snip20::HandleMsg::Send {
+                &snip20::ExecuteMsg::Send {
                     recipient: gov.address,
                     recipient_code_hash: None,
                     amount: Uint128::new(100),
@@ -357,7 +357,7 @@ fn funding_proposal_without_msg() {
     assert!(
         chain
             .execute(
-                &snip20::HandleMsg::Send {
+                &snip20::ExecuteMsg::Send {
                     recipient: gov.address,
                     recipient_code_hash: None,
                     amount: Uint128::new(100),
@@ -380,7 +380,7 @@ fn funding_proposal() {
 
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(100),
@@ -398,7 +398,7 @@ fn funding_proposal() {
 
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(100),
@@ -431,7 +431,7 @@ fn funding_proposal_after_deadline() {
     assert!(
         chain
             .execute(
-                &snip20::HandleMsg::Send {
+                &snip20::ExecuteMsg::Send {
                     recipient: gov.address.clone(),
                     recipient_code_hash: None,
                     amount: Uint128::new(100),
@@ -455,7 +455,7 @@ fn update_while_funding() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::Update {
+                &governance::ExecuteMsg::Update {
                     proposal: Uint128::zero(),
                     padding: None
                 },
@@ -473,7 +473,7 @@ fn update_when_fully_funded() {
 
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(1000),
@@ -491,7 +491,7 @@ fn update_when_fully_funded() {
 
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(1000),
@@ -508,7 +508,7 @@ fn update_when_fully_funded() {
         .unwrap();
 
     chain.execute(
-        &governance::HandleMsg::Update {
+        &governance::ExecuteMsg::Update {
             proposal: Uint128::zero(),
             padding: None,
         },
@@ -532,7 +532,7 @@ fn update_after_failed_funding() {
 
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(1000),
@@ -551,7 +551,7 @@ fn update_after_failed_funding() {
     chain.block_mut().time += 10000;
 
     chain.execute(
-        &governance::HandleMsg::Update {
+        &governance::ExecuteMsg::Update {
             proposal: Uint128::zero(),
             padding: None,
         },
@@ -575,7 +575,7 @@ fn claim_when_not_finished() {
 
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(1000),
@@ -594,7 +594,7 @@ fn claim_when_not_finished() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::ClaimFunding {
+                &governance::ExecuteMsg::ClaimFunding {
                     id: Uint128::new(0)
                 },
                 MockEnv::new(
@@ -612,7 +612,7 @@ fn claim_after_failing() {
 
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(1000),
@@ -631,7 +631,7 @@ fn claim_after_failing() {
     chain.block_mut().time += 10000;
 
     chain.execute(
-        &governance::HandleMsg::Update {
+        &governance::ExecuteMsg::Update {
             proposal: Uint128::zero(),
             padding: None,
         },
@@ -643,7 +643,7 @@ fn claim_after_failing() {
 
     chain
         .execute(
-            &governance::HandleMsg::ClaimFunding {
+            &governance::ExecuteMsg::ClaimFunding {
                 id: Uint128::new(0),
             },
             MockEnv::new(
@@ -677,7 +677,7 @@ fn claim_after_passing() {
 
     chain
         .execute(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(2000),
@@ -694,7 +694,7 @@ fn claim_after_passing() {
         .unwrap();
 
     chain.execute(
-        &governance::HandleMsg::Update {
+        &governance::ExecuteMsg::Update {
             proposal: Uint128::zero(),
             padding: None,
         },
@@ -706,7 +706,7 @@ fn claim_after_passing() {
 
     chain
         .execute(
-            &governance::HandleMsg::ClaimFunding {
+            &governance::ExecuteMsg::ClaimFunding {
                 id: Uint128::new(0),
             },
             MockEnv::new(

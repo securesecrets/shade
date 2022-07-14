@@ -9,10 +9,10 @@ use crate::{
 use crate::c_std::{Binary, Addr, Uint128};
 
 use crate::utils::{HandleCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize)]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub name: String,
     pub admin: Option<Addr>,
     pub symbol: String,
@@ -33,8 +33,7 @@ pub struct InitMsg {
     pub distributors: Option<Vec<Addr>>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ReceiveType {
     // User staking, users can pick between using the sender or fund allower
     Bond { use_from: Option<bool> },
@@ -44,8 +43,7 @@ pub enum ReceiveType {
     Unbond,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ContractStatusLevel {
     NormalRun,
     StopBonding,
@@ -53,9 +51,8 @@ pub enum ContractStatusLevel {
     StopAll,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     // Staking
     UpdateStakeConfig {
         unbond_time: Option<u64>,
@@ -128,12 +125,11 @@ pub enum HandleMsg {
     // }
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     UpdateStakeConfig { status: ResponseStatus },
     Receive { status: ResponseStatus },
@@ -147,8 +143,7 @@ pub enum HandleAnswer {
     SetDistributors { status: ResponseStatus },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     // Staking
     StakeConfig {},
@@ -178,14 +173,12 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryWithPermit {
     Staked { time: Option<u64> },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     // Stake
     StakedConfig {

@@ -12,8 +12,8 @@ use shade_protocol::c_std::{
     Storage,
 };
 use shade_protocol::contract_interfaces::oracles::oracle::{
-    HandleMsg,
-    InitMsg,
+    ExecuteMsg,
+    InstantiateMsg,
     OracleConfig,
     QueryMsg,
 };
@@ -22,7 +22,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let state = OracleConfig {
         admin: match msg.admin {
@@ -43,17 +43,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::UpdateConfig { admin, band } => {
+        ExecuteMsg::UpdateConfig { admin, band } => {
             handle::try_update_config(deps, env, admin, band)
         }
-        HandleMsg::RegisterPair { pair } => handle::register_pair(deps, env, pair),
-        HandleMsg::UnregisterPair { symbol, pair } => {
+        ExecuteMsg::RegisterPair { pair } => handle::register_pair(deps, env, pair),
+        ExecuteMsg::UnregisterPair { symbol, pair } => {
             handle::unregister_pair(deps, env, symbol, pair)
         }
-        HandleMsg::RegisterIndex { symbol, basket } => {
+        ExecuteMsg::RegisterIndex { symbol, basket } => {
             handle::register_index(deps, env, symbol, basket)
         }
     }

@@ -20,7 +20,7 @@ use crate::c_std::Uint128;
 use crate::c_std::{Binary, Coin, Addr};
 
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::SingletonStorage;
@@ -28,8 +28,7 @@ use crate::utils::storage::default::SingletonStorage;
 // Admin command variable spot
 pub const MSG_VARIABLE: &str = "{~}";
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Config {
     pub treasury: Addr,
     // When public voting is enabled, a voting token is expected
@@ -43,9 +42,8 @@ impl SingletonStorage for Config {
     const NAMESPACE: &'static [u8] = b"config-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub treasury: Addr,
 
     // Admin rules
@@ -58,12 +56,11 @@ pub struct InitMsg {
     pub vote_token: Option<Contract>,
 }
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum RuntimeState {
     // Run like normal
     Normal,
@@ -80,9 +77,8 @@ impl SingletonStorage for RuntimeState {
     const NAMESPACE: &'static [u8] = b"runtime_state-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     // Internal config
     SetConfig {
         treasury: Option<Addr>,
@@ -241,12 +237,11 @@ pub enum HandleMsg {
     },
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     SetConfig { status: ResponseStatus },
     SetRuntimeState { status: ResponseStatus },
@@ -269,8 +264,7 @@ pub enum HandleAnswer {
     SetContract { status: ResponseStatus },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     // TODO: Query individual user vote with VK and permit
     Config {},
@@ -300,8 +294,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
 

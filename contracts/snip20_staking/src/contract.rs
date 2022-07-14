@@ -13,8 +13,8 @@ use crate::{
         status_level_to_u8,
         ContractStatusLevel,
         HandleAnswer,
-        HandleMsg,
-        InitMsg,
+        ExecuteMsg,
+        InstantiateMsg,
         QueryAnswer,
         QueryMsg,
         QueryWithPermit,
@@ -103,7 +103,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     // Check name, symbol, decimals
     if !is_valid_name(&msg.name) {
@@ -223,7 +223,7 @@ fn pad_response(response: StdResult<Response>) -> StdResult<Response> {
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     let contract_status = ReadonlyConfig::from_storage(&deps.storage).contract_status();
 
@@ -235,11 +235,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             match msg.clone() {
                 // This is always allowed
-                HandleMsg::SetContractStatus { .. } => {}
-                HandleMsg::UpdateStakeConfig { .. } => {}
+                ExecuteMsg::SetContractStatus { .. } => {}
+                ExecuteMsg::UpdateStakeConfig { .. } => {}
 
                 // If receive check that msg is not bonding or reward
-                HandleMsg::Receive { msg, .. } => {
+                ExecuteMsg::Receive { msg, .. } => {
                     let receive_type: ReceiveType;
                     if let Some(msg) = msg {
                         receive_type = from_binary(&msg)?;
@@ -253,24 +253,24 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     }
                 }
                 // Relates to bonding
-                HandleMsg::StakeRewards { .. } => {
+                ExecuteMsg::StakeRewards { .. } => {
                     if status_code > 0 {
                         not_authorized = true;
                     }
                 }
 
-                HandleMsg::ClaimRewards { .. } => {
+                ExecuteMsg::ClaimRewards { .. } => {
                     if status_code > 1 {
                         not_authorized = true;
                     }
                 }
                 // If unbonding check that msg is not stop all
-                HandleMsg::Unbond { .. } => {
+                ExecuteMsg::Unbond { .. } => {
                     if status_code > 2 {
                         not_authorized = true;
                     }
                 }
-                HandleMsg::ClaimUnbond { .. } => {
+                ExecuteMsg::ClaimUnbond { .. } => {
                     if status_code > 2 {
                         not_authorized = true;
                     }
@@ -293,13 +293,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
     let response = match msg {
         // Staking
-        HandleMsg::UpdateStakeConfig {
+        ExecuteMsg::UpdateStakeConfig {
             unbond_time,
             disable_treasury,
             treasury,
             ..
         } => try_update_stake_config(deps, env, unbond_time, disable_treasury, treasury),
-        HandleMsg::Receive {
+        ExecuteMsg::Receive {
             sender,
             from,
             amount,
@@ -307,20 +307,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             memo,
             ..
         } => try_receive(deps, env, sender, from, amount, msg, memo),
-        HandleMsg::Unbond { amount, .. } => try_unbond(deps, env, amount),
-        HandleMsg::ClaimUnbond { .. } => try_claim_unbond(deps, env),
-        HandleMsg::ClaimRewards { .. } => try_claim_rewards(deps, env),
-        HandleMsg::StakeRewards { .. } => try_stake_rewards(deps, env),
+        ExecuteMsg::Unbond { amount, .. } => try_unbond(deps, env, amount),
+        ExecuteMsg::ClaimUnbond { .. } => try_claim_unbond(deps, env),
+        ExecuteMsg::ClaimRewards { .. } => try_claim_rewards(deps, env),
+        ExecuteMsg::StakeRewards { .. } => try_stake_rewards(deps, env),
 
         // Balance
-        HandleMsg::ExposeBalance {
+        ExecuteMsg::ExposeBalance {
             recipient,
             code_hash,
             msg,
             memo,
             ..
         } => try_expose_balance(deps, env, recipient, code_hash, msg, memo),
-        HandleMsg::ExposeBalanceWithCooldown {
+        ExecuteMsg::ExposeBalanceWithCooldown {
             recipient,
             code_hash,
             msg,
@@ -329,24 +329,24 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => try_expose_balance_with_cooldown(deps, env, recipient, code_hash, msg, memo),
 
         // Distributors
-        HandleMsg::SetDistributorsStatus { enabled, .. } => {
+        ExecuteMsg::SetDistributorsStatus { enabled, .. } => {
             try_set_distributors_status(deps, env, enabled)
         }
-        HandleMsg::AddDistributors { distributors, .. } => {
+        ExecuteMsg::AddDistributors { distributors, .. } => {
             try_add_distributors(deps, env, distributors)
         }
-        HandleMsg::SetDistributors { distributors, .. } => {
+        ExecuteMsg::SetDistributors { distributors, .. } => {
             try_set_distributors(deps, env, distributors)
         }
 
         // Base
-        HandleMsg::Transfer {
+        ExecuteMsg::Transfer {
             recipient,
             amount,
             memo,
             ..
         } => try_transfer(deps, env, recipient, amount, memo),
-        HandleMsg::Send {
+        ExecuteMsg::Send {
             recipient,
             recipient_code_hash,
             amount,
@@ -354,33 +354,33 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             memo,
             ..
         } => try_send(deps, env, recipient, recipient_code_hash, amount, memo, msg),
-        HandleMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, actions),
-        HandleMsg::BatchSend { actions, .. } => try_batch_send(deps, env, actions),
-        HandleMsg::RegisterReceive { code_hash, .. } => try_register_receive(deps, env, code_hash),
-        HandleMsg::CreateViewingKey { entropy, .. } => try_create_key(deps, env, entropy),
-        HandleMsg::SetViewingKey { key, .. } => try_set_key(deps, env, key),
+        ExecuteMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, actions),
+        ExecuteMsg::BatchSend { actions, .. } => try_batch_send(deps, env, actions),
+        ExecuteMsg::RegisterReceive { code_hash, .. } => try_register_receive(deps, env, code_hash),
+        ExecuteMsg::CreateViewingKey { entropy, .. } => try_create_key(deps, env, entropy),
+        ExecuteMsg::SetViewingKey { key, .. } => try_set_key(deps, env, key),
 
         // Allowance
-        HandleMsg::IncreaseAllowance {
+        ExecuteMsg::IncreaseAllowance {
             spender,
             amount,
             expiration,
             ..
         } => try_increase_allowance(deps, env, spender, amount, expiration),
-        HandleMsg::DecreaseAllowance {
+        ExecuteMsg::DecreaseAllowance {
             spender,
             amount,
             expiration,
             ..
         } => try_decrease_allowance(deps, env, spender, amount, expiration),
-        HandleMsg::TransferFrom {
+        ExecuteMsg::TransferFrom {
             owner,
             recipient,
             amount,
             memo,
             ..
         } => try_transfer_from(deps, &env, &owner, &recipient, amount, memo),
-        HandleMsg::SendFrom {
+        ExecuteMsg::SendFrom {
             owner,
             recipient,
             recipient_code_hash,
@@ -398,15 +398,15 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             memo,
             msg,
         ),
-        HandleMsg::BatchTransferFrom { actions, .. } => {
+        ExecuteMsg::BatchTransferFrom { actions, .. } => {
             try_batch_transfer_from(deps, &env, actions)
         }
-        HandleMsg::BatchSendFrom { actions, .. } => try_batch_send_from(deps, env, actions),
+        ExecuteMsg::BatchSendFrom { actions, .. } => try_batch_send_from(deps, env, actions),
 
         // Other
-        HandleMsg::ChangeAdmin { address, .. } => change_admin(deps, env, address),
-        HandleMsg::SetContractStatus { level, .. } => set_contract_status(deps, env, level),
-        HandleMsg::RevokePermit { permit_name, .. } => revoke_permit(deps, env, permit_name),
+        ExecuteMsg::ChangeAdmin { address, .. } => change_admin(deps, env, address),
+        ExecuteMsg::SetContractStatus { level, .. } => set_contract_status(deps, env, level),
+        ExecuteMsg::RevokePermit { permit_name, .. } => revoke_permit(deps, env, permit_name),
     };
 
     pad_response(response)
@@ -1611,7 +1611,7 @@ mod staking_tests {
     ) {
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("instantiator", &[]);
-        let init_msg = InitMsg {
+        let init_msg = InstantiateMsg {
             name: "sec-sec".to_string(),
             admin: Some(Addr::unchecked("admin".to_string())),
             symbol: "SECSEC".to_string(),
@@ -1638,7 +1638,7 @@ mod staking_tests {
     fn test_handle_update_stake_config() {
         let (init_result, mut deps) = init_helper_staking();
 
-        let handle_msg = HandleMsg::UpdateStakeConfig {
+        let handle_msg = ExecuteMsg::UpdateStakeConfig {
             unbond_time: Some(100),
             disable_treasury: true,
             treasury: None,
@@ -1669,7 +1669,7 @@ mod staking_tests {
         pwd: &str,
         stake: Uint128,
     ) {
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr(acc.to_string()),
             from: Default::default(),
             amount: stake,
@@ -1680,7 +1680,7 @@ mod staking_tests {
         // Bond tokens
         let handle_result = handle(deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: pwd.to_string(),
             padding: None,
         };
@@ -1708,7 +1708,7 @@ mod staking_tests {
     fn test_handle_receive_bonding() {
         let (init_result, mut deps) = init_helper_staking();
 
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
@@ -1722,7 +1722,7 @@ mod staking_tests {
         // Bond tokens
         let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: "key".to_string(),
             padding: None,
         };
@@ -1786,7 +1786,7 @@ mod staking_tests {
         };
 
         // Unbond more than allowed
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(1000 * 10u128.pow(8)),
             padding: None,
         };
@@ -1794,7 +1794,7 @@ mod staking_tests {
         assert!(handle_result.is_err());
 
         // Unbond
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(50 * 10u128.pow(8)),
             padding: None,
         };
@@ -1866,7 +1866,7 @@ mod staking_tests {
 
         // Bond some amount
         // Unbond
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(50 * 10u128.pow(8)),
             padding: None,
         };
@@ -1888,7 +1888,7 @@ mod staking_tests {
         };
 
         // Fund half the unbond
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(25 * 10u128.pow(8)),
@@ -1911,7 +1911,7 @@ mod staking_tests {
         };
 
         // Unbond in the middle of funding
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(25 * 10u128.pow(8)),
             padding: None,
         };
@@ -1933,7 +1933,7 @@ mod staking_tests {
         };
 
         // Overflow unbond
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(500 * 10u128.pow(8)),
@@ -1964,7 +1964,7 @@ mod staking_tests {
 
         // Bond some amount
         // Unbond
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(25 * 10u128.pow(8)),
             padding: None,
         };
@@ -1975,7 +1975,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         // Fund the unbond
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(25 * 10u128.pow(8)),
@@ -2013,7 +2013,7 @@ mod staking_tests {
         };
 
         // Try to claim when its funded but the date hasn't been reached
-        let handle_msg = HandleMsg::ClaimUnbond { padding: None };
+        let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
         env.block.time = 0;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
@@ -2046,7 +2046,7 @@ mod staking_tests {
         };
 
         // Claim
-        let handle_msg = HandleMsg::ClaimUnbond { padding: None };
+        let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
         env.block.time = 11;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
@@ -2079,7 +2079,7 @@ mod staking_tests {
         };
 
         // Try to claim when its not funded and the date has been reached
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(25 * 10u128.pow(8)),
             padding: None,
         };
@@ -2090,7 +2090,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         // Claim
-        let handle_msg = HandleMsg::ClaimUnbond { padding: None };
+        let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
         env.block.time = 11;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
@@ -2106,13 +2106,13 @@ mod staking_tests {
         new_staked_account(&mut deps, "bar", "key", Uint128::new(50 * 10u128.pow(8)));
 
         // Claim rewards
-        let handle_msg = HandleMsg::ClaimRewards { padding: None };
+        let handle_msg = ExecuteMsg::ClaimRewards { padding: None };
 
         let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
         // Add rewards; foo should get 50 tkn and bar 25
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(75 * 10u128.pow(8)),
@@ -2183,7 +2183,7 @@ mod staking_tests {
         );
 
         // Claim rewards
-        let handle_msg = HandleMsg::ClaimRewards { padding: None };
+        let handle_msg = ExecuteMsg::ClaimRewards { padding: None };
 
         let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
@@ -2221,7 +2221,7 @@ mod staking_tests {
         new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
         // Add rewards
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(50 * 10u128.pow(8)),
@@ -2258,7 +2258,7 @@ mod staking_tests {
             _ => panic!("Unexpected result from query"),
         };
 
-        let handle_msg = HandleMsg::StakeRewards { padding: None };
+        let handle_msg = ExecuteMsg::StakeRewards { padding: None };
         let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
@@ -2297,7 +2297,7 @@ mod staking_tests {
         new_staked_account(&mut deps, "bar", "key", Uint128::new(50 * 10u128.pow(8)));
 
         // Add rewards; foo should get 50 tkn and bar 25
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(75 * 10u128.pow(8)),
@@ -2368,7 +2368,7 @@ mod staking_tests {
         );
 
         // Unbond more than allowed
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(50 * 10u128.pow(8)),
             padding: None,
         };
@@ -2406,7 +2406,7 @@ mod staking_tests {
         let (init_result, mut deps) = init_helper_staking();
         new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
-        let handle_msg = HandleMsg::SetDistributorsStatus {
+        let handle_msg = ExecuteMsg::SetDistributorsStatus {
             enabled: false,
             padding: None,
         };
@@ -2432,7 +2432,7 @@ mod staking_tests {
             _ => panic!("Unexpected result from query"),
         };
 
-        let handle_msg = HandleMsg::AddDistributors {
+        let handle_msg = ExecuteMsg::AddDistributors {
             distributors: vec![Addr::unchecked("new_distrib".to_string())],
             padding: None,
         };
@@ -2459,7 +2459,7 @@ mod staking_tests {
     fn test_handle_set_distributors() {
         let (init_result, mut deps) = init_helper_staking();
 
-        let handle_msg = HandleMsg::SetDistributors {
+        let handle_msg = ExecuteMsg::SetDistributors {
             distributors: vec![Addr::unchecked("new_distrib".to_string())],
             padding: None,
         };
@@ -2504,7 +2504,7 @@ mod staking_tests {
             Uint128::new(100 * 10u128.pow(8)),
         );
 
-        let handle_msg = HandleMsg::SetDistributors {
+        let handle_msg = ExecuteMsg::SetDistributors {
             distributors: vec![Addr::unchecked("distrib".to_string())],
             padding: None,
         };
@@ -2513,7 +2513,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         // Distrib is sender
-        let handle_msg = HandleMsg::Send {
+        let handle_msg = ExecuteMsg::Send {
             recipient: Addr::unchecked("someone".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
@@ -2529,7 +2529,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         // Send to distrib
-        let handle_msg = HandleMsg::Send {
+        let handle_msg = ExecuteMsg::Send {
             recipient: Addr::unchecked("distrib".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
@@ -2541,7 +2541,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("sender", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
-        let handle_msg = HandleMsg::Send {
+        let handle_msg = ExecuteMsg::Send {
             recipient: Addr::unchecked("not_distrib".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
@@ -2559,7 +2559,7 @@ mod staking_tests {
         let (init_result, mut deps) = init_helper_staking();
         new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
-        let handle_msg = HandleMsg::SetDistributorsStatus {
+        let handle_msg = ExecuteMsg::SetDistributorsStatus {
             enabled: false,
             padding: None,
         };
@@ -2568,7 +2568,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         // Add rewards
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("treasury".to_string()),
             from: Default::default(),
             amount: Uint128::new(50 * 10u128.pow(8)),
@@ -2606,7 +2606,7 @@ mod staking_tests {
         };
 
         // Send msg
-        let handle_msg = HandleMsg::Send {
+        let handle_msg = ExecuteMsg::Send {
             recipient: Addr::unchecked("other".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
@@ -2650,7 +2650,7 @@ mod staking_tests {
         new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
         new_staked_account(&mut deps, "bar", "key", Uint128::new(100 * 10u128.pow(8)));
 
-        let handle_msg = HandleMsg::SetDistributorsStatus {
+        let handle_msg = ExecuteMsg::SetDistributorsStatus {
             enabled: false,
             padding: None,
         };
@@ -2659,7 +2659,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         // Send msg
-        let handle_msg = HandleMsg::Send {
+        let handle_msg = ExecuteMsg::Send {
             recipient: Addr::unchecked("bar".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
@@ -2700,7 +2700,7 @@ mod staking_tests {
         };
 
         // Send msg
-        let handle_msg = HandleMsg::Send {
+        let handle_msg = ExecuteMsg::Send {
             recipient: Addr::unchecked("foo".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(100 * 10u128.pow(8)),
@@ -2741,7 +2741,7 @@ mod staking_tests {
         };
 
         // Send msg
-        let handle_msg = HandleMsg::Send {
+        let handle_msg = ExecuteMsg::Send {
             recipient: Addr::unchecked("foo".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
@@ -2787,7 +2787,7 @@ mod staking_tests {
         new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
         new_staked_account(&mut deps, "bar", "key", Uint128::new(100 * 10u128.pow(8)));
 
-        let handle_msg = HandleMsg::SetDistributorsStatus {
+        let handle_msg = ExecuteMsg::SetDistributorsStatus {
             enabled: false,
             padding: None,
         };
@@ -2796,7 +2796,7 @@ mod staking_tests {
         assert!(handle_result.is_ok());
 
         // Send msg
-        let handle_msg = HandleMsg::Send {
+        let handle_msg = ExecuteMsg::Send {
             recipient: Addr::unchecked("bar".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(10 * 10u128.pow(8)),
@@ -2837,7 +2837,7 @@ mod staking_tests {
         };
 
         // Unbond
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(100 * 10u128.pow(8)),
             padding: None,
         };
@@ -2874,7 +2874,7 @@ mod staking_tests {
         };
 
         // Unbond
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(10 * 10u128.pow(8)),
             padding: None,
         };
@@ -2915,7 +2915,7 @@ mod staking_tests {
         let (init_result, mut deps) = init_helper_staking();
         new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
-        let handle_msg = HandleMsg::SetDistributorsStatus {
+        let handle_msg = ExecuteMsg::SetDistributorsStatus {
             enabled: false,
             padding: None,
         };
@@ -2923,7 +2923,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
-        let pause_msg = HandleMsg::SetContractStatus {
+        let pause_msg = ExecuteMsg::SetContractStatus {
             level: ContractStatusLevel::StopBonding,
             padding: None,
         };
@@ -2931,7 +2931,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("admin", &[]), pause_msg);
         assert!(handle_result.is_ok());
 
-        let send_msg = HandleMsg::Transfer {
+        let send_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("account".to_string()),
             amount: Uint128::new(123),
             memo: None,
@@ -2940,7 +2940,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("foo", &[]), send_msg);
         assert!(handle_result.is_ok());
 
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
@@ -2952,7 +2952,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
@@ -2964,7 +2964,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(10 * 10u128.pow(8)),
             padding: None,
         };
@@ -2978,7 +2978,7 @@ mod staking_tests {
         let (init_result, mut deps) = init_helper_staking();
         new_staked_account(&mut deps, "foo", "key", Uint128::new(100 * 10u128.pow(8)));
 
-        let handle_msg = HandleMsg::SetDistributorsStatus {
+        let handle_msg = ExecuteMsg::SetDistributorsStatus {
             enabled: false,
             padding: None,
         };
@@ -2986,7 +2986,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
-        let pause_msg = HandleMsg::SetContractStatus {
+        let pause_msg = ExecuteMsg::SetContractStatus {
             level: ContractStatusLevel::StopAllButUnbond,
             padding: None,
         };
@@ -2994,7 +2994,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("admin", &[]), pause_msg);
         assert!(handle_result.is_ok());
 
-        let send_msg = HandleMsg::Transfer {
+        let send_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("account".to_string()),
             amount: Uint128::new(123),
             memo: None,
@@ -3003,7 +3003,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("foo", &[]), send_msg);
         assert!(handle_result.is_err());
 
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
@@ -3015,7 +3015,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("foo".to_string()),
             from: Default::default(),
             amount: Uint128::new(100 * 10u128.pow(8)),
@@ -3027,7 +3027,7 @@ mod staking_tests {
         let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
-        let handle_msg = HandleMsg::Unbond {
+        let handle_msg = ExecuteMsg::Unbond {
             amount: Uint128::new(10 * 10u128.pow(8)),
             padding: None,
         };
@@ -3071,7 +3071,7 @@ mod snip20_tests {
         pwd: &str,
         stake: Uint128,
     ) {
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr(acc.to_string()),
             from: Default::default(),
             amount: stake,
@@ -3082,7 +3082,7 @@ mod snip20_tests {
         // Bond tokens
         let handle_result = handle(deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: pwd.to_string(),
             padding: None,
         };
@@ -3099,7 +3099,7 @@ mod snip20_tests {
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("instantiator", &[]);
 
-        let init_msg = InitMsg {
+        let init_msg = InstantiateMsg {
             name: "sec-sec".to_string(),
             admin: Some(Addr::unchecked("admin".to_string())),
             symbol: "SECSEC".to_string(),
@@ -3156,7 +3156,7 @@ mod snip20_tests {
             .as_bytes(),
         ))
         .unwrap();
-        let init_msg = InitMsg {
+        let init_msg = InstantiateMsg {
             name: "sec-sec".to_string(),
             admin: Some(Addr::unchecked("admin".to_string())),
             symbol: "SECSEC".to_string(),
@@ -3196,7 +3196,7 @@ mod snip20_tests {
         );
 
         let account = initial_balances[0].acc;
-        let create_vk_msg = HandleMsg::CreateViewingKey {
+        let create_vk_msg = ExecuteMsg::CreateViewingKey {
             entropy: "42".to_string(),
             padding: None,
         };
@@ -3330,7 +3330,7 @@ mod snip20_tests {
             pwd: "pwd",
             stake: Uint128::new(u128::MAX),
         }]);
-        let handle_msg = HandleMsg::Receive {
+        let handle_msg = ExecuteMsg::Receive {
             sender: Addr::unchecked("giannis".to_string()),
             from: Default::default(),
             amount: Uint128::new(1),
@@ -3392,7 +3392,7 @@ mod snip20_tests {
             _ => panic!("Unexpected result from query"),
         };
 
-        let handle_msg = HandleMsg::Transfer {
+        let handle_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(1000),
             memo: None,
@@ -3413,7 +3413,7 @@ mod snip20_tests {
         assert_eq!(5000 - 1000, balances.account_amount(&bob_canonical));
         assert_eq!(1000, balances.account_amount(&alice_canonical));
 
-        let handle_msg = HandleMsg::Transfer {
+        let handle_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(10000),
             memo: None,
@@ -3473,7 +3473,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::RegisterReceive {
+        let handle_msg = ExecuteMsg::RegisterReceive {
             code_hash: "this_is_a_hash_of_a_code".to_string(),
             padding: None,
         };
@@ -3481,7 +3481,7 @@ mod snip20_tests {
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
-        let handle_msg = HandleMsg::Send {
+        let handle_msg = ExecuteMsg::Send {
             recipient: Addr::unchecked("contract".to_string()),
             recipient_code_hash: None,
             amount: Uint128::new(100),
@@ -3523,7 +3523,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::RegisterReceive {
+        let handle_msg = ExecuteMsg::RegisterReceive {
             code_hash: "this_is_a_hash_of_a_code".to_string(),
             padding: None,
         };
@@ -3550,7 +3550,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::CreateViewingKey {
+        let handle_msg = ExecuteMsg::CreateViewingKey {
             entropy: "".to_string(),
             padding: None,
         };
@@ -3588,7 +3588,7 @@ mod snip20_tests {
         );
 
         // Set VK
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: "hi lol".to_string(),
             padding: None,
         };
@@ -3605,7 +3605,7 @@ mod snip20_tests {
 
         // Set valid VK
         let actual_vk = ViewingKey("x".to_string().repeat(VIEWING_KEY_SIZE));
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: actual_vk.0.clone(),
             padding: None,
         };
@@ -3638,7 +3638,7 @@ mod snip20_tests {
         );
 
         // Transfer before allowance
-        let handle_msg = HandleMsg::TransferFrom {
+        let handle_msg = ExecuteMsg::TransferFrom {
             owner: Addr::unchecked("bob".to_string()),
             recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2500),
@@ -3650,7 +3650,7 @@ mod snip20_tests {
         assert!(error.contains("insufficient allowance"));
 
         // Transfer more than allowance
-        let handle_msg = HandleMsg::IncreaseAllowance {
+        let handle_msg = ExecuteMsg::IncreaseAllowance {
             spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
@@ -3662,7 +3662,7 @@ mod snip20_tests {
             "handle() failed: {}",
             handle_result.err().unwrap()
         );
-        let handle_msg = HandleMsg::TransferFrom {
+        let handle_msg = ExecuteMsg::TransferFrom {
             owner: Addr::unchecked("bob".to_string()),
             recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2500),
@@ -3674,7 +3674,7 @@ mod snip20_tests {
         assert!(error.contains("insufficient allowance"));
 
         // Transfer after allowance expired
-        let handle_msg = HandleMsg::TransferFrom {
+        let handle_msg = ExecuteMsg::TransferFrom {
             owner: Addr::unchecked("bob".to_string()),
             recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
@@ -3705,7 +3705,7 @@ mod snip20_tests {
         assert!(error.contains("insufficient allowance"));
 
         // Sanity check
-        let handle_msg = HandleMsg::TransferFrom {
+        let handle_msg = ExecuteMsg::TransferFrom {
             owner: Addr::unchecked("bob".to_string()),
             recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
@@ -3736,7 +3736,7 @@ mod snip20_tests {
         assert_eq!(total_supply, 5000);
 
         // Second send more than allowance
-        let handle_msg = HandleMsg::TransferFrom {
+        let handle_msg = ExecuteMsg::TransferFrom {
             owner: Addr::unchecked("bob".to_string()),
             recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(1),
@@ -3762,7 +3762,7 @@ mod snip20_tests {
         );
 
         // Send before allowance
-        let handle_msg = HandleMsg::SendFrom {
+        let handle_msg = ExecuteMsg::SendFrom {
             owner: Addr::unchecked("bob".to_string()),
             recipient: Addr::unchecked("alice".to_string()),
             recipient_code_hash: None,
@@ -3776,7 +3776,7 @@ mod snip20_tests {
         assert!(error.contains("insufficient allowance"));
 
         // Send more than allowance
-        let handle_msg = HandleMsg::IncreaseAllowance {
+        let handle_msg = ExecuteMsg::IncreaseAllowance {
             spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
@@ -3788,7 +3788,7 @@ mod snip20_tests {
             "handle() failed: {}",
             handle_result.err().unwrap()
         );
-        let handle_msg = HandleMsg::SendFrom {
+        let handle_msg = ExecuteMsg::SendFrom {
             owner: Addr::unchecked("bob".to_string()),
             recipient: Addr::unchecked("alice".to_string()),
             recipient_code_hash: None,
@@ -3802,7 +3802,7 @@ mod snip20_tests {
         assert!(error.contains("insufficient allowance"));
 
         // Sanity check
-        let handle_msg = HandleMsg::RegisterReceive {
+        let handle_msg = ExecuteMsg::RegisterReceive {
             code_hash: "lolz".to_string(),
             padding: None,
         };
@@ -3820,7 +3820,7 @@ mod snip20_tests {
             Some("my memo".to_string()),
             Some(send_msg.clone()),
         );
-        let handle_msg = HandleMsg::SendFrom {
+        let handle_msg = ExecuteMsg::SendFrom {
             owner: Addr::unchecked("bob".to_string()),
             recipient: Addr::unchecked("contract".to_string()),
             recipient_code_hash: None,
@@ -3860,7 +3860,7 @@ mod snip20_tests {
         assert_eq!(total_supply, 5000);
 
         // Second send more than allowance
-        let handle_msg = HandleMsg::SendFrom {
+        let handle_msg = ExecuteMsg::SendFrom {
             owner: Addr::unchecked("bob".to_string()),
             recipient: Addr::unchecked("alice".to_string()),
             recipient_code_hash: None,
@@ -3887,7 +3887,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::DecreaseAllowance {
+        let handle_msg = ExecuteMsg::DecreaseAllowance {
             spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
@@ -3915,7 +3915,7 @@ mod snip20_tests {
             expiration: None
         });
 
-        let handle_msg = HandleMsg::IncreaseAllowance {
+        let handle_msg = ExecuteMsg::IncreaseAllowance {
             spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
@@ -3928,7 +3928,7 @@ mod snip20_tests {
             handle_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::DecreaseAllowance {
+        let handle_msg = ExecuteMsg::DecreaseAllowance {
             spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(50),
             padding: None,
@@ -3961,7 +3961,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::IncreaseAllowance {
+        let handle_msg = ExecuteMsg::IncreaseAllowance {
             spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
@@ -3989,7 +3989,7 @@ mod snip20_tests {
             expiration: None
         });
 
-        let handle_msg = HandleMsg::IncreaseAllowance {
+        let handle_msg = ExecuteMsg::IncreaseAllowance {
             spender: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(2000),
             padding: None,
@@ -4022,7 +4022,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::ChangeAdmin {
+        let handle_msg = ExecuteMsg::ChangeAdmin {
             address: Addr::unchecked("bob".to_string()),
             padding: None,
         };
@@ -4053,7 +4053,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::SetContractStatus {
+        let handle_msg = ExecuteMsg::SetContractStatus {
             level: ContractStatusLevel::StopAll,
             padding: None,
         };
@@ -4092,7 +4092,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let pause_msg = HandleMsg::SetContractStatus {
+        let pause_msg = ExecuteMsg::SetContractStatus {
             level: ContractStatusLevel::StopAll,
             padding: None,
         };
@@ -4100,7 +4100,7 @@ mod snip20_tests {
         let error = extract_error_msg(handle_result);
         assert!(error.contains(&admin_err.clone()));
 
-        let change_admin_msg = HandleMsg::ChangeAdmin {
+        let change_admin_msg = ExecuteMsg::ChangeAdmin {
             address: Addr::unchecked("not_admin".to_string()),
             padding: None,
         };
@@ -4122,7 +4122,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let pause_msg = HandleMsg::SetContractStatus {
+        let pause_msg = ExecuteMsg::SetContractStatus {
             level: ContractStatusLevel::StopAll,
             padding: None,
         };
@@ -4134,7 +4134,7 @@ mod snip20_tests {
             handle_result.err().unwrap()
         );
 
-        let send_msg = HandleMsg::Transfer {
+        let send_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("account".to_string()),
             amount: Uint128::new(123),
             memo: None,
@@ -4174,7 +4174,7 @@ mod snip20_tests {
             "Wrong viewing key for this address or viewing key not set".to_string()
         );
 
-        let create_vk_msg = HandleMsg::CreateViewingKey {
+        let create_vk_msg = ExecuteMsg::CreateViewingKey {
             entropy: "34".to_string(),
             padding: None,
         };
@@ -4222,7 +4222,7 @@ mod snip20_tests {
 
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("instantiator", &[]);
-        let init_msg = InitMsg {
+        let init_msg = InstantiateMsg {
             name: init_name.clone(),
             admin: Some(init_admin.clone()),
             symbol: init_symbol.clone(),
@@ -4294,7 +4294,7 @@ mod snip20_tests {
 
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("instantiator", &[]);
-        let init_msg = InitMsg {
+        let init_msg = InstantiateMsg {
             name: init_name.clone(),
             admin: Some(init_admin.clone()),
             symbol: init_symbol.clone(),
@@ -4352,7 +4352,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::IncreaseAllowance {
+        let handle_msg = ExecuteMsg::IncreaseAllowance {
             spender: Addr::unchecked("lebron".to_string()),
             amount: Uint128::new(2000),
             padding: None,
@@ -4382,7 +4382,7 @@ mod snip20_tests {
         let error = extract_error_msg(query_result);
         assert!(error.contains("Wrong viewing key"));
 
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: vk1.0.clone(),
             padding: None,
         };
@@ -4397,7 +4397,7 @@ mod snip20_tests {
             .unwrap(),
         );
 
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: vk2.0.clone(),
             padding: None,
         };
@@ -4462,7 +4462,7 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: "key".to_string(),
             padding: None,
         };
@@ -4510,14 +4510,14 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: "key".to_string(),
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(ensure_success(handle_result.unwrap()));
 
-        let handle_msg = HandleMsg::Transfer {
+        let handle_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(1000),
             memo: None,
@@ -4526,7 +4526,7 @@ mod snip20_tests {
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
-        let handle_msg = HandleMsg::Transfer {
+        let handle_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("banana".to_string()),
             amount: Uint128::new(500),
             memo: None,
@@ -4535,7 +4535,7 @@ mod snip20_tests {
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
-        let handle_msg = HandleMsg::Transfer {
+        let handle_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("mango".to_string()),
             amount: Uint128::new(2500),
             memo: None,
@@ -4620,14 +4620,14 @@ mod snip20_tests {
             init_result.err().unwrap()
         );
 
-        let handle_msg = HandleMsg::SetViewingKey {
+        let handle_msg = ExecuteMsg::SetViewingKey {
             key: "key".to_string(),
             padding: None,
         };
         let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(ensure_success(handle_result.unwrap()));
 
-        let handle_msg = HandleMsg::Transfer {
+        let handle_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("alice".to_string()),
             amount: Uint128::new(1000),
             memo: Some("my transfer message #1".to_string()),
@@ -4637,7 +4637,7 @@ mod snip20_tests {
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
-        let handle_msg = HandleMsg::Transfer {
+        let handle_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("banana".to_string()),
             amount: Uint128::new(500),
             memo: Some("my transfer message #2".to_string()),
@@ -4647,7 +4647,7 @@ mod snip20_tests {
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
-        let handle_msg = HandleMsg::Transfer {
+        let handle_msg = ExecuteMsg::Transfer {
             recipient: Addr::unchecked("mango".to_string()),
             amount: Uint128::new(2500),
             memo: Some("my transfer message #3".to_string()),

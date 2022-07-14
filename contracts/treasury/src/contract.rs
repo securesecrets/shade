@@ -13,7 +13,7 @@ use shade_protocol::c_std::{
     Uint128,
 };
 
-use shade_protocol::contract_interfaces::dao::treasury::{Config, HandleMsg, InitMsg, QueryMsg};
+use shade_protocol::contract_interfaces::dao::treasury::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
 
 use crate::{
     handle,
@@ -34,7 +34,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     config_w(&mut deps.storage).save(&Config {
         admin: msg.admin.unwrap_or(info.sender.clone()),
@@ -54,27 +54,27 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::Receive {
+        ExecuteMsg::Receive {
             sender,
             from,
             amount,
             msg,
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
-        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { contract, reserves } => {
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        ExecuteMsg::RegisterAsset { contract, reserves } => {
             handle::try_register_asset(deps, &env, &contract, reserves)
         }
-        HandleMsg::RegisterManager { mut contract } => {
+        ExecuteMsg::RegisterManager { mut contract } => {
             handle::register_manager(deps, &env, &mut contract)
         }
-        HandleMsg::Allowance { asset, allowance } => {
+        ExecuteMsg::Allowance { asset, allowance } => {
             handle::allowance(deps, &env, asset, allowance)
         }
-        HandleMsg::Adapter(adapter) => match adapter {
+        ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Update { asset } => handle::rebalance(deps, &env, asset),
             adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),
             adapter::SubHandleMsg::Unbond { asset, amount } => {

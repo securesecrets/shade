@@ -2,13 +2,12 @@ use crate::{contract_interfaces::governance::stored_id::ID, utils::flexible_msg:
 use crate::c_std::Uint128;
 use crate::c_std::{Addr, StdResult, Storage};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::BucketStorage;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Assembly {
     // Readable name
     pub name: String,
@@ -83,8 +82,7 @@ impl Assembly {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AssemblyData {
     pub members: Vec<Addr>,
     pub profile: Uint128,
@@ -96,8 +94,7 @@ impl BucketStorage for AssemblyData {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AssemblyDescription {
     pub name: String,
     pub metadata: String,
@@ -108,14 +105,12 @@ impl BucketStorage for AssemblyDescription {
     const NAMESPACE: &'static [u8] = b"assembly_description-";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-// A generic msg is created at init, its a black msg where the variable is the start
+#[cw_serde]// A generic msg is created at init, its a black msg where the variable is the start
 pub struct AssemblyMsg {
     pub name: String,
     // Assemblies allowed to call this msg
     pub assemblies: Vec<Uint128>,
-    // HandleMsg template
+    // ExecuteMsg template
     pub msg: FlexibleMsg,
 }
 
@@ -177,8 +172,7 @@ impl AssemblyMsg {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AssemblyMsgData {
     pub assemblies: Vec<Uint128>,
     pub msg: FlexibleMsg,
@@ -190,9 +184,7 @@ impl BucketStorage for AssemblyMsgData {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-struct AssemblyMsgDescription(pub String);
+#[cw_serde]struct AssemblyMsgDescription(pub String);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for AssemblyMsgDescription {

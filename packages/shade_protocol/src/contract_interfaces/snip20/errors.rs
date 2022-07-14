@@ -4,13 +4,11 @@ use crate::{
 };
 use crate::c_std::{Addr, StdError};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::Permission;
 
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
-#[repr(u8)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]#[repr(u8)]
 pub enum Error {
     // Init Errors
     InvalidNameFormat,

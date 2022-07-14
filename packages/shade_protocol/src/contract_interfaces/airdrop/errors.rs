@@ -4,11 +4,10 @@ use crate::{
 };
 use crate::c_std::StdError;
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+#[cw_serde]
 #[repr(u8)]
-#[serde(rename_all = "snake_case")]
 pub enum Error {
     InvalidTaskPercentage,
     InvalidDates,

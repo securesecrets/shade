@@ -5,12 +5,12 @@ use crate::utils::{
 use crate::c_std::Uint128;
 use crate::c_std::Addr;
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
+use serde::Serialize;
 use std::{cmp::Ordering, collections::BinaryHeap};
 
 // Configuration file for staking
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct StakeConfig {
     pub unbond_time: u64,
     pub staked_token: Contract,
@@ -23,8 +23,7 @@ impl SingletonStorage for StakeConfig {
 }
 
 // Unbonding information for the total accross users
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]#[derive(Eq)]
 pub struct DailyUnbonding {
     pub unbonding: Uint128,
     pub funded: Uint128,
@@ -82,8 +81,8 @@ impl VecQueueMerge for DailyUnbonding {
 }
 
 // Queue item
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[derive(Eq)]
+#[cw_serde]
 pub struct QueueItem {
     pub amount: Uint128,
     pub release: u64,
@@ -112,8 +111,7 @@ pub use QueueItem as Unbonding;
 pub use QueueItem as Cooldown;
 
 // A flexible queue system
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct VecQueue<T: Ord + Serialize + Clone + VecQueueMerge>(pub Vec<T>);
 
 impl<T: Ord + Serialize + Clone + VecQueueMerge> VecQueue<T> {

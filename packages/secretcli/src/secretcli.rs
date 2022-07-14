@@ -437,7 +437,7 @@ fn execute_contract<Handle: serde::Serialize>(
 ///
 /// # Arguments
 ///
-/// * `msg` - HandleMsg
+/// * `msg` - ExecuteMsg
 /// * 'contract' - The contract to interact with
 /// * 'sender' - Msg sender
 /// * 'gas' - Gas price to use, defaults to 8000000

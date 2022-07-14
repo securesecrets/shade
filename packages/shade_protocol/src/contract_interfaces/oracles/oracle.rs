@@ -2,7 +2,7 @@ use crate::c_std::Uint128;
 use crate::c_std::Addr;
 
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 use crate::{
     contract_interfaces::{
@@ -11,33 +11,32 @@ use crate::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct IndexElement {
     pub symbol: String,
     pub weight: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct OracleConfig {
     pub admin: Addr,
     pub band: Contract,
     pub sscrt: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub admin: Option<Addr>,
     pub band: Contract,
     pub sscrt: Contract,
 }
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     UpdateConfig {
         admin: Option<Addr>,
         band: Option<Contract>,
@@ -58,12 +57,11 @@ pub enum HandleMsg {
     },
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     UpdateConfig {
         status: ResponseStatus,
@@ -82,8 +80,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     Price { symbol: String },
@@ -94,8 +91,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: OracleConfig },
 }

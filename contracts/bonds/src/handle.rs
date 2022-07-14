@@ -15,7 +15,7 @@ use shade_protocol::contract_interfaces::bonds::{
     BondOpportunity, SlipMsg, {Account, Config, HandleAnswer, PendingBond},
 };
 use shade_protocol::contract_interfaces::{
-    airdrop::HandleMsg::CompleteTask,
+    airdrop::ExecuteMsg::CompleteTask,
     snip20::helpers::{fetch_snip20, Snip20Asset},
 };
 use shade_protocol::utils::asset::Contract;

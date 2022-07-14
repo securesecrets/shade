@@ -15,8 +15,8 @@ use shade_protocol::c_std::{
 
 use shade_protocol::contract_interfaces::dao::scrt_staking::{
     Config,
-    HandleMsg,
-    InitMsg,
+    ExecuteMsg,
+    InstantiateMsg,
     QueryMsg,
 };
 
@@ -33,7 +33,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
         admins: match msg.admins {
@@ -80,18 +80,18 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::Receive {
+        ExecuteMsg::Receive {
             sender,
             from,
             amount,
             msg,
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
-        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::Adapter(adapter) => match adapter {
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {
                 handle::unbond(deps, env, asset, amount)
             }

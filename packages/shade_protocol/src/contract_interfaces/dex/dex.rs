@@ -12,20 +12,19 @@ use crate::{
 };
 use crate::c_std::{self, Api, Deps, Querier, StdError, StdResult, Storage};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 use crate::c_std::{Uint128, Uint512};
 use std::convert::TryFrom;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub enum Dex {
     SecretSwap,
     SiennaSwap,
     //ShadeSwap,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct TradingPair {
     pub dex: Dex,
     pub contract: Contract,

@@ -3,17 +3,16 @@ use crate::c_std::{Deps, StdResult};
 use crate::c_std::Uint128;
 
 use crate::utils::{InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitMsg {}
+#[cw_serde]
+pub struct InstantiateMsg {}
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum BandQuery {
     GetReferenceData {
         base_symbol: String,
@@ -29,7 +28,7 @@ impl Query for BandQuery {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[cw_serde]
 pub struct ReferenceData {
     pub rate: Uint128,
     pub last_updated_base: u64,

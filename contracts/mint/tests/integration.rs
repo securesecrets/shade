@@ -16,7 +16,7 @@ use shade_protocol::c_std::Uint128;
 use shade_protocol::{
     contract_interfaces::{
         snip20,
-        mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+        mint::mint::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg},
         oracles::band::{BandQuery, ReferenceData},
     },
     utils::{
@@ -62,7 +62,7 @@ fn test_ensemble(
     let sscrt = ensemble
         .instantiate(
             reg_snip20.id,
-            &snip20::InitMsg {
+            &snip20::InstantiateMsg {
                 name: "secretSCRT".into(),
                 admin: Some("admin".into()),
                 symbol: "SSCRT".into(),
@@ -81,7 +81,7 @@ fn test_ensemble(
     let shade = ensemble
         .instantiate(
             reg_snip20.id,
-            &snip20::InitMsg {
+            &snip20::InstantiateMsg {
                 name: "Shade".into(),
                 admin: Some("admin".into()),
                 symbol: "SHD".into(),
@@ -100,7 +100,7 @@ fn test_ensemble(
     let band = ensemble
         .instantiate(
             reg_band.id,
-            &shade_protocol::contract_interfaces::oracles::band::InitMsg {},
+            &shade_protocol::contract_interfaces::oracles::band::InstantiateMsg {},
             MockEnv::new("admin", ContractLink {
                 address: Addr::unchecked("band".into()),
                 code_hash: reg_band.code_hash.clone(),
@@ -111,7 +111,7 @@ fn test_ensemble(
     let oracle = ensemble
         .instantiate(
             reg_oracle.id,
-            &shade_protocol::contract_interfaces::oracles::oracle::InitMsg {
+            &shade_protocol::contract_interfaces::oracles::oracle::InstantiateMsg {
                 admin: Some(Addr::unchecked("admin".into())),
                 band: Contract {
                     address: band.address.clone(),
@@ -132,7 +132,7 @@ fn test_ensemble(
     let mint = ensemble
         .instantiate(
             reg_mint.id,
-            &shade_protocol::contract_interfaces::mint::mint::InitMsg {
+            &shade_protocol::contract_interfaces::mint::mint::InstantiateMsg {
                 admin: Some(Addr::unchecked("admin".into())),
                 oracle: Contract {
                     address: oracle.address.clone(),
@@ -157,7 +157,7 @@ fn test_ensemble(
     // Setup price feeds
     ensemble
         .execute(
-            &mock_band::contract::HandleMsg::MockPrice {
+            &mock_band::contract::ExecuteMsg::MockPrice {
                 symbol: "SCRT".into(),
                 price: offer_price,
             },
@@ -166,7 +166,7 @@ fn test_ensemble(
         .unwrap();
     ensemble
         .execute(
-            &mock_band::contract::HandleMsg::MockPrice {
+            &mock_band::contract::ExecuteMsg::MockPrice {
                 symbol: "SHD".into(),
                 price: mint_price,
             },
@@ -177,7 +177,7 @@ fn test_ensemble(
     // Register sSCRT burn
     ensemble
         .execute(
-            &shade_protocol::contract_interfaces::mint::mint::HandleMsg::RegisterAsset {
+            &shade_protocol::contract_interfaces::mint::mint::ExecuteMsg::RegisterAsset {
                 contract: Contract {
                     address: sscrt.address.clone(),
                     code_hash: sscrt.code_hash.clone(),

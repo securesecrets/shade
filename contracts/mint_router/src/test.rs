@@ -7,7 +7,7 @@ pub mod tests {
         DepsMut, StdError, Uint128,
     };
     use mockall_double::double;
-    use shade_protocol::mint_router::{HandleMsg, InitMsg, QueryAnswer, QueryMsg};
+    use shade_protocol::mint_router::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg};
 
     use crate::{
         contract::{handle, init, query},
@@ -55,7 +55,7 @@ pub mod tests {
         capture: Option<Uint128>,
     ) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
-        let msg = InitMsg {
+        let msg = InstantiateMsg {
             admin: None,
             native_asset,
             oracle,
@@ -79,7 +79,7 @@ pub mod tests {
     /*
     fn proper_initialization() {
         let mut deps = mock_dependencies(20, &[]);
-        let msg = InitMsg {
+        let msg = InstantiateMsg {
             admin: None,
             native_asset: create_contract("", ""),
             oracle: create_contract("", ""),
@@ -118,7 +118,7 @@ pub mod tests {
         let new_capture = Option::from(Uint128::new(200));
 
         // Update config
-        let update_msg = HandleMsg::UpdateConfig {
+        let update_msg = ExecuteMsg::UpdateConfig {
             owner: None,
             oracle: new_oracle.clone(),
             treasury: new_treasury.clone(),
@@ -151,7 +151,7 @@ pub mod tests {
         // User should not be allowed to add an item
         let user_env = mock_env("user", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
+        let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
         let res = handle(&mut deps, user_env, msg);
@@ -181,7 +181,7 @@ pub mod tests {
         // Admin should be allowed to add an item
         let env = mock_env("admin", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
+        let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
         let _res = handle(&mut deps, env, msg).unwrap();
@@ -206,7 +206,7 @@ pub mod tests {
 
         let env = mock_env("admin", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
+        let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
         let _res = handle(&mut deps, env, msg).unwrap();
@@ -214,7 +214,7 @@ pub mod tests {
         // Should not be allowed to add an existing asset
         let env = mock_env("admin", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "other_hash");
-        let msg = HandleMsg::RegisterAsset {
+        let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
         let res = handle(&mut deps, env, msg);
@@ -234,7 +234,7 @@ pub mod tests {
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
+        let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
         let _res = handle(&mut deps, env, msg).unwrap();
@@ -243,7 +243,7 @@ pub mod tests {
         let user_env = mock_env("user", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
         let new_dummy_contract = create_contract("some_other_contract", "some_hash");
-        let msg = HandleMsg::UpdateAsset {
+        let msg = ExecuteMsg::UpdateAsset {
             asset: dummy_contract.address,
             contract: new_dummy_contract,
         };
@@ -265,7 +265,7 @@ pub mod tests {
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
+        let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
         let _res = handle(&mut deps, env, msg).unwrap();
@@ -274,7 +274,7 @@ pub mod tests {
         let env = mock_env("admin", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
         let new_dummy_contract = create_contract("some_other_contract", "some_hash");
-        let msg = HandleMsg::UpdateAsset {
+        let msg = ExecuteMsg::UpdateAsset {
             asset: dummy_contract.address,
             contract: new_dummy_contract,
         };
@@ -300,7 +300,7 @@ pub mod tests {
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
+        let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
         let _res = handle(&mut deps, env, msg).unwrap();
@@ -309,7 +309,7 @@ pub mod tests {
         let env = mock_env("some_contract", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_owner", "some_hash");
 
-        let msg = HandleMsg::Receive {
+        let msg = ExecuteMsg::Receive {
             sender: dummy_contract.address,
             from: Default::default(),
             amount: Uint128::new(100),
@@ -343,7 +343,7 @@ pub mod tests {
         // Add a supported asset
         let env = mock_env("admin", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_contract", "some_hash");
-        let msg = HandleMsg::RegisterAsset {
+        let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
         let _res = handle(&mut deps, env, msg).unwrap();
@@ -351,7 +351,7 @@ pub mod tests {
         // Contract tries to send funds
         let env = mock_env("some_other_contract", &coins(1000, "earth"));
         let dummy_contract = create_contract("some_owner", "some_hash");
-        let msg = HandleMsg::Receive {
+        let msg = ExecuteMsg::Receive {
             sender: dummy_contract.address,
             from: Default::default(),
             amount: Uint128::new(100),

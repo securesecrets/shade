@@ -8,7 +8,7 @@ pub mod tests {
         Addr, coins, DepsMut,
     };
     use shade_protocol::{
-        treasury::InitMsg,
+        treasury::InstantiateMsg,
     };
 
     use crate::{
@@ -25,7 +25,7 @@ pub mod tests {
 
     fn dummy_init(admin: String, viewing_key: String) -> Extern<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies(20, &[]);
-        let msg = InitMsg {
+        let msg = InstantiateMsg {
             admin: Option::from(Addr(admin.clone())),
             viewing_key,
         };

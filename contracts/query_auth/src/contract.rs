@@ -16,8 +16,8 @@ use shade_protocol::{
     contract_interfaces::query_auth::{
         Admin,
         ContractStatus,
-        HandleMsg,
-        InitMsg,
+        ExecuteMsg,
+        InstantiateMsg,
         QueryMsg,
         RngSeed,
     },
@@ -30,7 +30,7 @@ pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     _env: Env,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     Admin(msg.admin_auth)
     .save(&mut deps.storage)?;
@@ -45,7 +45,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     // Check what msgs are allowed
     let status = ContractStatus::load(&deps.storage)?;
@@ -54,34 +54,34 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         ContractStatus::Default => {}
         // No permit interactions
         ContractStatus::DisablePermit => match msg {
-            HandleMsg::BlockPermitKey { .. } => return Err(StdError::unauthorized()),
+            ExecuteMsg::BlockPermitKey { .. } => return Err(StdError::unauthorized()),
             _ => {}
         },
         // No VK interactions
         ContractStatus::DisableVK => match msg {
-            HandleMsg::CreateViewingKey { .. } | HandleMsg::SetViewingKey { .. } => {
+            ExecuteMsg::CreateViewingKey { .. } | ExecuteMsg::SetViewingKey { .. } => {
                 return Err(StdError::unauthorized());
             }
             _ => {}
         },
         // Nothing
         ContractStatus::DisableAll => match msg {
-            HandleMsg::CreateViewingKey { .. }
-            | HandleMsg::SetViewingKey { .. }
-            | HandleMsg::BlockPermitKey { .. } => return Err(StdError::unauthorized()),
+            ExecuteMsg::CreateViewingKey { .. }
+            | ExecuteMsg::SetViewingKey { .. }
+            | ExecuteMsg::BlockPermitKey { .. } => return Err(StdError::unauthorized()),
             _ => {}
         },
     }
 
     pad_handle_result(
         match msg {
-            HandleMsg::SetAdminAuth { admin, .. } => handle::try_set_admin(deps, env, admin),
-            HandleMsg::SetRunState { state, .. } => handle::try_set_run_state(deps, env, state),
-            HandleMsg::SetViewingKey { key, .. } => handle::try_set_viewing_key(deps, env, key),
-            HandleMsg::CreateViewingKey { entropy, .. } => {
+            ExecuteMsg::SetAdminAuth { admin, .. } => handle::try_set_admin(deps, env, admin),
+            ExecuteMsg::SetRunState { state, .. } => handle::try_set_run_state(deps, env, state),
+            ExecuteMsg::SetViewingKey { key, .. } => handle::try_set_viewing_key(deps, env, key),
+            ExecuteMsg::CreateViewingKey { entropy, .. } => {
                 handle::try_create_viewing_key(deps, env, entropy)
             }
-            HandleMsg::BlockPermitKey { key, .. } => handle::try_block_permit_key(deps, env, key),
+            ExecuteMsg::BlockPermitKey { key, .. } => handle::try_block_permit_key(deps, env, key),
         },
         RESPONSE_BLOCK_SIZE,
     )

@@ -15,8 +15,8 @@ use shade_protocol::c_std::{
 
 use shade_protocol::contract_interfaces::dao::rewards_emission::{
     Config,
-    HandleMsg,
-    InitMsg,
+    ExecuteMsg,
+    InstantiateMsg,
     QueryMsg,
 };
 
@@ -33,7 +33,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let mut config = msg.config;
 
@@ -52,21 +52,21 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::Receive {
+        ExecuteMsg::Receive {
             sender,
             from,
             amount,
             msg,
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
-        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::RegisterAsset { asset } => handle::register_asset(deps, env, &asset),
-        HandleMsg::RefillRewards { rewards } => handle::refill_rewards(deps, env, rewards),
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        ExecuteMsg::RegisterAsset { asset } => handle::register_asset(deps, env, &asset),
+        ExecuteMsg::RefillRewards { rewards } => handle::refill_rewards(deps, env, rewards),
 
-        HandleMsg::Adapter(adapter) => match adapter {
+        ExecuteMsg::Adapter(adapter) => match adapter {
             // Maybe should return an Ok still?
             adapter::SubHandleMsg::Unbond { asset, amount } => {
                 Err(StdError::generic_err("Cannot unbond from rewards"))

@@ -12,7 +12,7 @@ use shade_protocol::{
             treasury_manager,
             scrt_staking,
         },
-        mint::mint::{HandleMsg, InitMsg, QueryAnswer, QueryMsg},
+        mint::mint::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg},
         oracles::band::{ ReferenceData, BandQuery },
     },
     utils::{
@@ -59,7 +59,7 @@ fn single_asset_portion_full_dao_integration(
 
     let token = ensemble.instantiate(
         reg_snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
+        &snip20_reference_impl::msg::InstantiateMsg {
             name: "secretSCRT".into(),
             admin: Some("admin".into()),
             symbol: "SSCRT".into(),
@@ -79,7 +79,7 @@ fn single_asset_portion_full_dao_integration(
 
     let treasury = ensemble.instantiate(
         reg_treasury.id,
-        &treasury::InitMsg {
+        &treasury::InstantiateMsg {
             admin: Some(Addr::unchecked("admin".into())),
             viewing_key: "viewing_key".to_string(),
         },
@@ -94,7 +94,7 @@ fn single_asset_portion_full_dao_integration(
 
     let manager = ensemble.instantiate(
         reg_manager.id,
-        &treasury_manager::InitMsg {
+        &treasury_manager::InstantiateMsg {
             admin: Some(Addr::unchecked("admin".into())),
             treasury: Addr::unchecked("treasury".into()),
             viewing_key: "viewing_key".to_string(),
@@ -110,7 +110,7 @@ fn single_asset_portion_full_dao_integration(
 
     let scrt_staking = ensemble.instantiate(
         reg_scrt_staking.id,
-        &scrt_staking::InitMsg {
+        &scrt_staking::InstantiateMsg {
             admins: Some(vec![Addr::unchecked("admin".into())]),
             owner: Addr::unchecked("manager".into()),
             sscrt: Contract {
@@ -131,7 +131,7 @@ fn single_asset_portion_full_dao_integration(
 
     // Register treasury assets
     ensemble.execute(
-        &treasury::HandleMsg::RegisterAsset {
+        &treasury::ExecuteMsg::RegisterAsset {
             contract: Contract {
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
@@ -147,7 +147,7 @@ fn single_asset_portion_full_dao_integration(
     
     // Register manager assets
     ensemble.execute(
-        &treasury_manager::HandleMsg::RegisterAsset {
+        &treasury_manager::ExecuteMsg::RegisterAsset {
             contract: Contract {
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
@@ -161,7 +161,7 @@ fn single_asset_portion_full_dao_integration(
 
     // Register manager -> treasury
     ensemble.execute(
-        &treasury::HandleMsg::RegisterManager {
+        &treasury::ExecuteMsg::RegisterManager {
             contract: Contract {
                 address: manager.address.clone(),
                 code_hash: manager.code_hash.clone(),
@@ -175,7 +175,7 @@ fn single_asset_portion_full_dao_integration(
 
     // Allocate scrt_staking -> manager
     ensemble.execute(
-        &treasury_manager::HandleMsg::Allocate {
+        &treasury_manager::ExecuteMsg::Allocate {
             asset: token.address.clone(),
             allocation: treasury_manager::Allocation {
                 nick: Some("sSCRT Staking".to_string()),
@@ -196,7 +196,7 @@ fn single_asset_portion_full_dao_integration(
 
     // treasury allowance to manager
     ensemble.execute(
-        &treasury::HandleMsg::Allowance {
+        &treasury::ExecuteMsg::Allowance {
             asset: token.address.clone(),
             allowance: treasury::Allowance::Portion {
                 //nick: "Mid-Stakes-Manager".to_string(),

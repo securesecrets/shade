@@ -1,13 +1,13 @@
 use cosmwasm_std::MessageInfo;
 use crate::c_std::{Env, Addr, StdResult, Storage};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 use crate::query_authentication::viewing_keys::ViewingKey;
 use secret_storage_plus::Map;
 use secret_toolkit::crypto::{Prng, sha_256};
 use crate::utils::storage::plus::MapStorage;
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default)]
+#[cw_serde]
 pub struct Key(pub String);
 
 impl Key {
@@ -49,7 +49,7 @@ impl ToString for Key {
 const KEY_SIZE: usize = 32;
 impl ViewingKey<KEY_SIZE> for Key{}
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct HashedKey(pub [u8; KEY_SIZE]);
 
 impl MapStorage<'static, Addr> for HashedKey {
@@ -57,7 +57,7 @@ impl MapStorage<'static, Addr> for HashedKey {
 }
 
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cw_serde]
 pub struct PermitKey(pub bool);
 
 impl MapStorage<'static, (Addr, String)> for PermitKey {

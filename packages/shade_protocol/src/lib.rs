@@ -14,7 +14,7 @@ pub mod storage {
 }
 
 pub use serde;
-pub use snafu;
+pub use thiserror;
 pub use cosmwasm_schema;
 pub use secret_storage_plus;
 

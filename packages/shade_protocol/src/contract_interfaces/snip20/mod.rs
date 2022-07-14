@@ -10,7 +10,7 @@ use crate::query_authentication::permit::Permit;
 
 use secret_toolkit::crypto::sha_256;
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{invalid_decimals, invalid_name_format, invalid_symbol_format};
 use crate::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, ContractStatusLevel, Minters, RandSeed, TotalSupply};
@@ -25,14 +25,14 @@ use secret_storage_plus::Item;
 
 pub const VERSION: &str = "SNIP24";
 
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[cw_serde]
 pub struct InitialBalance {
     pub address: Addr,
     pub amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub name: String,
     pub admin: Option<Addr>,
     pub symbol: String,
@@ -55,7 +55,7 @@ fn is_valid_symbol(symbol: &str) -> bool {
 }
 
 #[cfg(feature = "snip20-impl")]
-impl InitMsg {
+impl InstantiateMsg {
     pub fn save<S: Storage>(&self, storage: &mut S, env: Env, info: MessageInfo) -> StdResult<()> {
         if !is_valid_name(&self.name) {
             return Err(invalid_name_format(&self.name));
@@ -111,8 +111,7 @@ impl InitMsg {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct InitConfig {
     /// Indicates whether the total supply is public or should be kept secret.
     /// default: False
@@ -180,13 +179,12 @@ impl InitConfig {
     }
 }
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     // Native coin interactions
     Redeem {
         amount: Uint128,
@@ -327,12 +325,11 @@ pub enum HandleMsg {
     },
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Snip20ReceiveMsg {
     pub sender: Addr,
     pub from: Addr,
@@ -342,8 +339,7 @@ pub struct Snip20ReceiveMsg {
     pub msg: Option<Binary>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ReceiverHandleMsg {
     Receive(Snip20ReceiveMsg),
 }
@@ -370,8 +366,7 @@ impl HandleCallback for ReceiverHandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     // Native
     Deposit {
@@ -470,8 +465,7 @@ pub enum HandleAnswer {
 
 pub type QueryPermit = Permit<PermitParams>;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PermitParams {
     pub allowed_tokens: Vec<Addr>,
     pub permit_name: String,
@@ -484,8 +478,7 @@ impl PermitParams {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Permission {
     /// Allowance for SNIP-20 - Permission to query allowance of the owner & spender
     Allowance,
@@ -503,8 +496,7 @@ pub enum Permission {
     Owner,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     TokenInfo {},
     TokenConfig {},
@@ -542,8 +534,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryWithPermit {
     Allowance {
         owner: Addr,
@@ -560,8 +551,7 @@ pub enum QueryWithPermit {
     },
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     TokenInfo {
         name: String,

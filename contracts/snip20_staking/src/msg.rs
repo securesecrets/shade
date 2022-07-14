@@ -17,7 +17,7 @@ use shade_protocol::{
 };
 
 #[derive(Serialize, Deserialize)]
-pub struct InitMsg {
+pub struct InstantiateMsg {
     pub name: String,
     pub admin: Option<Addr>,
     pub symbol: String,
@@ -38,7 +38,7 @@ pub struct InitMsg {
     pub distributors: Option<Vec<Addr>>,
 }
 
-impl InitMsg {
+impl InstantiateMsg {
     pub fn config(&self) -> InitConfig {
         self.config.clone().unwrap_or_default()
     }
@@ -63,7 +63,7 @@ impl InitConfig {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     // Staking
     UpdateStakeConfig {
         unbond_time: Option<u64>,

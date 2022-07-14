@@ -2,7 +2,7 @@ use crate::contract_interfaces::governance::stored_id::ID;
 use crate::c_std::Uint128;
 use crate::c_std::{StdError, StdResult, Storage};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::BucketStorage;
@@ -12,8 +12,7 @@ use crate::utils::storage::default::NaiveBucketStorage;
 /// Allow better control over the safety and privacy features that proposals will need if
 /// Assemblys are implemented. If a profile is disabled then its assembly will also be disabled.
 /// All percentages are taken as follows 100000 = 100%
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Profile {
     pub name: String,
     // State of the current profile and its subsequent assemblies
@@ -127,8 +126,7 @@ impl Profile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ProfileData {
     pub name: String,
     pub enabled: bool,
@@ -141,9 +139,7 @@ impl BucketStorage for ProfileData {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-// NOTE: 100% = Uint128::new(10000)
+#[cw_serde]// NOTE: 100% = Uint128::new(10000)
 pub struct VoteProfile {
     // Deadline for voting
     pub deadline: u64,
@@ -156,16 +152,13 @@ pub struct VoteProfile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-struct VoteProfileType(pub Option<VoteProfile>);
+#[cw_serde]struct VoteProfileType(pub Option<VoteProfile>);
 
 #[cfg(feature = "governance-impl")]
 impl NaiveBucketStorage for VoteProfileType {}
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct FundProfile {
     // Deadline for funding
     pub deadline: u64,
@@ -178,9 +171,7 @@ pub struct FundProfile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-struct FundProfileType(pub Option<FundProfile>);
+#[cw_serde]struct FundProfileType(pub Option<FundProfile>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for FundProfileType {
@@ -188,15 +179,13 @@ impl BucketStorage for FundProfileType {
 }
 
 /// Helps simplify the given limits
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Count {
     Percentage { percent: u16 },
     LiteralCount { count: Uint128 },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct UpdateProfile {
     pub name: Option<String>,
     // State of the current profile and its subsequent assemblies
@@ -218,8 +207,7 @@ pub struct UpdateProfile {
     pub cancel_deadline: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct UpdateVoteProfile {
     // Deadline for voting
     pub deadline: Option<u64>,
@@ -273,8 +261,7 @@ impl UpdateVoteProfile {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct UpdateFundProfile {
     // Deadline for funding
     pub deadline: Option<u64>,

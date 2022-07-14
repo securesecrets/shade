@@ -14,7 +14,7 @@ use shade_protocol::c_std::{
 use shade_protocol::snip20::helpers::{register_receive_msg, token_info, token_config_query};
 
 use shade_protocol::contract_interfaces::{
-    mint::mint_router::{Config, HandleMsg, InitMsg, QueryMsg},
+    mint::mint_router::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},
     snip20::helpers::Snip20Asset,
 };
 
@@ -56,11 +56,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::Receive {
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        ExecuteMsg::Receive {
             sender,
             from,
             amount,

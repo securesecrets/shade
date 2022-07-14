@@ -17,7 +17,7 @@ use shade_protocol::utils::asset::Contract;
 use shade_protocol::c_std::Uint128;
 use shade_admin::admin;
 use shade_oracles::{
-    band::{self, proxy::InitMsg, HandleMsg::UpdateSymbolPrice},
+    band::{self, proxy::InstantiateMsg, ExecuteMsg::UpdateSymbolPrice},
     router,
 };
 
@@ -39,7 +39,7 @@ pub fn init_contracts() -> StdResult<(
     let shade_admin = chain
         .instantiate(
             shade_admin.id,
-            &admin::InitMsg {},
+            &admin::InstantiateMsg {},
             MockEnv::new(
                 "admin",
                 ContractLink {
@@ -55,7 +55,7 @@ pub fn init_contracts() -> StdResult<(
     let issu = chain
         .instantiate(
             issu.id,
-            &snip20::InitMsg {
+            &snip20::InstantiateMsg {
                 name: "Issued".into(),
                 admin: Some(Addr::from("admin")),
                 symbol: "ISSU".into(),
@@ -77,7 +77,7 @@ pub fn init_contracts() -> StdResult<(
         )?
         .instance;
 
-    let msg = snip20::HandleMsg::SetViewingKey {
+    let msg = snip20::ExecuteMsg::SetViewingKey {
         key: "key".to_string(),
         padding: None,
     };
@@ -95,7 +95,7 @@ pub fn init_contracts() -> StdResult<(
     let depo = chain
         .instantiate(
             depo.id,
-            &snip20::InitMsg {
+            &snip20::InstantiateMsg {
                 name: "Deposit".into(),
                 admin: Some(Addr::from("admin")),
                 symbol: "DEPO".into(),
@@ -117,7 +117,7 @@ pub fn init_contracts() -> StdResult<(
         )?
         .instance;
 
-    let msg = snip20::HandleMsg::SetViewingKey {
+    let msg = snip20::ExecuteMsg::SetViewingKey {
         key: "key".to_string(),
         padding: None,
     };
@@ -129,7 +129,7 @@ pub fn init_contracts() -> StdResult<(
     let atom = chain
         .instantiate(
             atom.id,
-            &snip20::InitMsg {
+            &snip20::InstantiateMsg {
                 name: "Atom".into(),
                 admin: Some(Addr::from("admin")),
                 symbol: "ATOM".into(),
@@ -151,7 +151,7 @@ pub fn init_contracts() -> StdResult<(
         )?
         .instance;
 
-    let msg = snip20::HandleMsg::SetViewingKey {
+    let msg = snip20::ExecuteMsg::SetViewingKey {
         key: "key".to_string(),
         padding: None,
     };
@@ -164,7 +164,7 @@ pub fn init_contracts() -> StdResult<(
     let band = chain
         .instantiate(
             band.id,
-            &band::InitMsg {},
+            &band::InstantiateMsg {},
             MockEnv::new(
                 "admin",
                 ContractLink {
@@ -180,7 +180,7 @@ pub fn init_contracts() -> StdResult<(
     let issu_oracle = chain
         .instantiate(
             issu_oracle.id,
-            &InitMsg {
+            &InstantiateMsg {
                 admin_auth: shade_oracles::common::Contract {
                     address: shade_admin.address.clone(),
                     code_hash: shade_admin.code_hash.clone(),
@@ -206,7 +206,7 @@ pub fn init_contracts() -> StdResult<(
     let depo_oracle = chain
         .instantiate(
             depo_oracle.id,
-            &InitMsg {
+            &InstantiateMsg {
                 admin_auth: shade_oracles::common::Contract {
                     address: shade_admin.address.clone(),
                     code_hash: shade_admin.code_hash.clone(),
@@ -232,7 +232,7 @@ pub fn init_contracts() -> StdResult<(
     let atom_oracle = chain
         .instantiate(
             atom_oracle.id,
-            &InitMsg {
+            &InstantiateMsg {
                 admin_auth: shade_oracles::common::Contract {
                     address: shade_admin.address.clone(),
                     code_hash: shade_admin.code_hash.clone(),
@@ -258,7 +258,7 @@ pub fn init_contracts() -> StdResult<(
     let router = chain
         .instantiate(
             router.id,
-            &router::InitMsg {
+            &router::InstantiateMsg {
                 admin_auth: shade_oracles::common::Contract {
                     address: shade_admin.address.clone(),
                     code_hash: shade_admin.code_hash.clone(),
@@ -283,7 +283,7 @@ pub fn init_contracts() -> StdResult<(
         )?
         .instance;
 
-    let msg = router::HandleMsg::UpdateRegistry {
+    let msg = router::ExecuteMsg::UpdateRegistry {
         operation: router::RegistryOperation::Add {
             oracle: shade_oracles::common::Contract {
                 address: issu_oracle.address.clone(),
@@ -297,7 +297,7 @@ pub fn init_contracts() -> StdResult<(
         .execute(&msg, MockEnv::new("admin", router.clone()))
         .is_ok());
 
-    let msg = router::HandleMsg::UpdateRegistry {
+    let msg = router::ExecuteMsg::UpdateRegistry {
         operation: router::RegistryOperation::Add {
             oracle: shade_oracles::common::Contract {
                 address: atom_oracle.address.clone(),
@@ -316,7 +316,7 @@ pub fn init_contracts() -> StdResult<(
     let query_auth = chain
         .instantiate(
             query_auth.id,
-            &query_auth::InitMsg {
+            &query_auth::InstantiateMsg {
                 admin_auth: Contract {
                     address: shade_admin.address.clone(),
                     code_hash: shade_admin.code_hash.clone(),
@@ -338,7 +338,7 @@ pub fn init_contracts() -> StdResult<(
     let bonds = chain
         .instantiate(
             bonds.id,
-            &bonds::InitMsg {
+            &bonds::InstantiateMsg {
                 limit_admin: Addr::from("limit_admin"),
                 global_issuance_limit: Uint128::new(100_000_000_000_000_000),
                 global_minimum_bonding_period: 0,
@@ -475,7 +475,7 @@ pub fn setup_admin(
     shade_admins: &ContractLink<Addr>,
     bonds: &ContractLink<Addr>,
 ) -> () {
-    let msg = admin::HandleMsg::AddContract {
+    let msg = admin::ExecuteMsg::AddContract {
         contract_address: bonds.address.clone().to_string(),
     };
 
@@ -489,7 +489,7 @@ pub fn increase_allowance(
     bonds: &ContractLink<Addr>,
     issu: &ContractLink<Addr>,
 ) -> () {
-    let msg = snip20::HandleMsg::IncreaseAllowance {
+    let msg = snip20::ExecuteMsg::IncreaseAllowance {
         spender: bonds.address.clone(),
         amount: Uint128::new(9_999_999_999_999_999),
         expiration: None,

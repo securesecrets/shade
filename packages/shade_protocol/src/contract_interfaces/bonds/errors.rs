@@ -3,11 +3,10 @@ use crate::utils::errors::{build_string, CodeType, DetailedError};
 use crate::c_std::Uint128;
 use crate::c_std::{Addr, StdError};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+#[cw_serde]
 #[repr(u8)]
-#[serde(rename_all = "snake_case")]
 pub enum Error {
     BondEnded,
     BondNotStarted,

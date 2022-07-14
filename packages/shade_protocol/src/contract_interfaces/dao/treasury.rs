@@ -4,10 +4,9 @@ use crate::contract_interfaces::dao::adapter;
 use crate::c_std::{Binary, Addr, StdResult, Uint128};
 
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Config {
     pub admin: Addr,
 }
@@ -20,8 +19,7 @@ pub struct Config {
  *
  * Once-Portion -> Disallowed
  */
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Allowance {
     // Monthly refresh, not counted in rebalance
     Amount {
@@ -43,8 +41,7 @@ pub enum Allowance {
 }
 
 //TODO rename to Adapter
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Manager {
     pub contract: Contract,
     pub balance: Uint128,
@@ -52,15 +49,13 @@ pub struct Manager {
 }
 
 /*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Balance {
     pub token: Addr,
     pub amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Status {
     Active,
     Disabled,
@@ -69,8 +64,7 @@ pub enum Status {
 }
 
 //TODO: move accounts to treasury manager
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Account {
     pub balances: Vec<Balance>,
     pub unbondings: Vec<Balance>,
@@ -80,25 +74,23 @@ pub struct Account {
 */
 
 // Flag to be sent with funds
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Flag {
     pub flag: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub admin: Option<Addr>,
     pub viewing_key: String,
 }
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     Receive {
         sender: Addr,
         from: Addr,
@@ -128,12 +120,11 @@ pub enum HandleMsg {
     Adapter(adapter::SubHandleMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
@@ -159,8 +150,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     Assets {},
@@ -186,8 +176,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
     Assets { assets: Vec<Addr> },

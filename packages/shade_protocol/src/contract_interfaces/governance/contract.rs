@@ -5,10 +5,9 @@ use crate::{
 use crate::c_std::Uint128;
 use crate::c_std::{StdResult, Storage};
 
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AllowedContract {
     pub name: String,
     pub metadata: String,
@@ -84,8 +83,7 @@ impl AllowedContract {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AllowedContractData {
     pub contract: Contract,
     pub assemblies: Option<Vec<Uint128>>,
@@ -97,8 +95,7 @@ impl BucketStorage for AllowedContractData {
 }
 
 #[cfg(feature = "governance-impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct AllowedContractDescription {
     pub name: String,
     pub metadata: String,

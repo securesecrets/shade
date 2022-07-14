@@ -10,7 +10,7 @@ fn add_assembly() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddAssembly {
+            &governance::ExecuteMsg::AddAssembly {
                 name: "Other assembly".to_string(),
                 metadata: "some data".to_string(),
                 members: vec![],
@@ -36,7 +36,7 @@ fn unauthorised_add_assembly() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddAssembly {
+            &governance::ExecuteMsg::AddAssembly {
                 name: "Other assembly".to_string(),
                 metadata: "some data".to_string(),
                 members: vec![],
@@ -61,7 +61,7 @@ fn set_assembly() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetAssembly {
+            &governance::ExecuteMsg::SetAssembly {
                 id: Uint128::new(1),
                 name: Some("Random name".to_string()),
                 metadata: Some("data".to_string()),
@@ -92,7 +92,7 @@ fn unauthorised_set_assembly() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetAssembly {
+            &governance::ExecuteMsg::SetAssembly {
                 id: Uint128::new(1),
                 name: Some("Random name".to_string()),
                 metadata: Some("data".to_string()),

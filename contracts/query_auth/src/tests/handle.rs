@@ -10,7 +10,7 @@ use shade_protocol::utils::asset::Contract;
 fn set_admin() {
     let (mut chain, auth) = init_contract().unwrap();
 
-    let msg = query_auth::HandleMsg::SetAdminAuth {
+    let msg = query_auth::ExecuteMsg::SetAdminAuth {
         admin: Contract {
             address: Addr::from("some_addr"),
             code_hash: "some_hash".to_string()
@@ -46,7 +46,7 @@ fn set_admin() {
 fn set_runstate() {
     let (mut chain, auth) = init_contract().unwrap();
 
-    let msg = query_auth::HandleMsg::SetRunState {
+    let msg = query_auth::ExecuteMsg::SetRunState {
         state: ContractStatus::DisableAll,
         padding: None,
     };
@@ -81,7 +81,7 @@ fn runstate_block_permits() {
 
     // Validate permits
 
-    let msg = query_auth::HandleMsg::SetRunState {
+    let msg = query_auth::ExecuteMsg::SetRunState {
         state: ContractStatus::DisablePermit,
         padding: None,
     };
@@ -92,7 +92,7 @@ fn runstate_block_permits() {
             .is_ok()
     );
 
-    let msg = query_auth::HandleMsg::BlockPermitKey {
+    let msg = query_auth::ExecuteMsg::BlockPermitKey {
         key: "key".to_string(),
         padding: None,
     };
@@ -103,7 +103,7 @@ fn runstate_block_permits() {
             .is_err()
     );
 
-    let msg = query_auth::HandleMsg::SetViewingKey {
+    let msg = query_auth::ExecuteMsg::SetViewingKey {
         key: "key".to_string(),
         padding: None,
     };
@@ -114,7 +114,7 @@ fn runstate_block_permits() {
             .is_ok()
     );
 
-    let msg = query_auth::HandleMsg::CreateViewingKey {
+    let msg = query_auth::ExecuteMsg::CreateViewingKey {
         entropy: "random".to_string(),
         padding: None,
     };
@@ -151,7 +151,7 @@ fn runstate_block_vks() {
 
     // Validate permits
 
-    let msg = query_auth::HandleMsg::SetRunState {
+    let msg = query_auth::ExecuteMsg::SetRunState {
         state: ContractStatus::DisableVK,
         padding: None,
     };
@@ -162,7 +162,7 @@ fn runstate_block_vks() {
             .is_ok()
     );
 
-    let msg = query_auth::HandleMsg::BlockPermitKey {
+    let msg = query_auth::ExecuteMsg::BlockPermitKey {
         key: "key".to_string(),
         padding: None,
     };
@@ -173,7 +173,7 @@ fn runstate_block_vks() {
             .is_ok()
     );
 
-    let msg = query_auth::HandleMsg::SetViewingKey {
+    let msg = query_auth::ExecuteMsg::SetViewingKey {
         key: "key".to_string(),
         padding: None,
     };
@@ -184,7 +184,7 @@ fn runstate_block_vks() {
             .is_err()
     );
 
-    let msg = query_auth::HandleMsg::CreateViewingKey {
+    let msg = query_auth::ExecuteMsg::CreateViewingKey {
         entropy: "random".to_string(),
         padding: None,
     };
@@ -221,7 +221,7 @@ fn runstate_block_all() {
 
     // Validate permits
 
-    let msg = query_auth::HandleMsg::SetRunState {
+    let msg = query_auth::ExecuteMsg::SetRunState {
         state: ContractStatus::DisableAll,
         padding: None,
     };
@@ -232,7 +232,7 @@ fn runstate_block_all() {
             .is_ok()
     );
 
-    let msg = query_auth::HandleMsg::BlockPermitKey {
+    let msg = query_auth::ExecuteMsg::BlockPermitKey {
         key: "key".to_string(),
         padding: None,
     };
@@ -243,7 +243,7 @@ fn runstate_block_all() {
             .is_err()
     );
 
-    let msg = query_auth::HandleMsg::SetViewingKey {
+    let msg = query_auth::ExecuteMsg::SetViewingKey {
         key: "key".to_string(),
         padding: None,
     };
@@ -254,7 +254,7 @@ fn runstate_block_all() {
             .is_err()
     );
 
-    let msg = query_auth::HandleMsg::CreateViewingKey {
+    let msg = query_auth::ExecuteMsg::CreateViewingKey {
         entropy: "random".to_string(),
         padding: None,
     };
@@ -292,7 +292,7 @@ fn set_vk() {
     assert!(
         chain
             .execute(
-                &query_auth::HandleMsg::SetViewingKey {
+                &query_auth::ExecuteMsg::SetViewingKey {
                     key: "password".to_string(),
                     padding: None
                 },
@@ -308,7 +308,7 @@ fn create_vk() {
 
     let data = chain
         .execute(
-            &query_auth::HandleMsg::CreateViewingKey {
+            &query_auth::ExecuteMsg::CreateViewingKey {
                 entropy: "randomness".to_string(),
                 padding: None,
             },
@@ -351,7 +351,7 @@ fn create_vk() {
 fn block_permit_key() {
     let (mut chain, auth) = init_contract().unwrap();
 
-    let msg = query_auth::HandleMsg::BlockPermitKey {
+    let msg = query_auth::ExecuteMsg::BlockPermitKey {
         key: "key".to_string(),
         padding: None,
     };

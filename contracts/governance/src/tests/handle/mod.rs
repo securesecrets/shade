@@ -26,7 +26,7 @@ fn set_config_msg() {
     let snip20 = chain
         .instantiate(
             snip20.id,
-            &snip20::InitMsg {
+            &snip20::InstantiateMsg {
                 name: "funding_token".to_string(),
                 admin: None,
                 symbol: "FND".to_string(),
@@ -44,7 +44,7 @@ fn set_config_msg() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetConfig {
+            &governance::ExecuteMsg::SetConfig {
                 treasury: Some(Addr::from("random")),
                 funding_token: Some(Contract {
                     address: snip20.address.clone(),
@@ -77,7 +77,7 @@ fn unauthorised_set_config_msg() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetConfig {
+            &governance::ExecuteMsg::SetConfig {
                 treasury: None,
                 funding_token: None,
                 vote_token: None,
@@ -100,7 +100,7 @@ fn reject_disable_config_tokens() {
     let snip20 = chain
         .instantiate(
             snip20.id,
-            &snip20::InitMsg {
+            &snip20::InstantiateMsg {
                 name: "funding_token".to_string(),
                 admin: None,
                 symbol: "FND".to_string(),
@@ -118,7 +118,7 @@ fn reject_disable_config_tokens() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetConfig {
+            &governance::ExecuteMsg::SetConfig {
                 treasury: Some(Addr::from("random")),
                 funding_token: Some(Contract {
                     address: snip20.address.clone(),
@@ -142,7 +142,7 @@ fn reject_disable_config_tokens() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetConfig {
+            &governance::ExecuteMsg::SetConfig {
                 treasury: None,
                 funding_token: None,
                 vote_token: None,

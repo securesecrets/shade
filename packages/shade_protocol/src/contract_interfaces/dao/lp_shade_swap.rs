@@ -9,10 +9,9 @@ use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
 
 
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Config {
     pub admin: Addr,
     pub treasury: Addr,
@@ -24,9 +23,8 @@ pub struct Config {
     pub rewards_contract: Option<Contract>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub admin: Option<Addr>,
     pub treasury: Addr,
     pub viewing_key: String,
@@ -36,13 +34,12 @@ pub struct InitMsg {
     pub rewards_contract: Option<Contract>,
 }
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     /* token_a || token_b
      * - check and provide as much as you can based on balances
      * 
@@ -62,12 +59,11 @@ pub enum HandleMsg {
     Adapter(adapter::SubHandleMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
@@ -81,8 +77,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     //Ratio {},
@@ -93,8 +88,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
     // Should add to %100

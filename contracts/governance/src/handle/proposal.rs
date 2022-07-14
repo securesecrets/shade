@@ -27,7 +27,7 @@ use shade_protocol::{
             vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
             Config,
             HandleAnswer,
-            HandleMsg::Receive,
+            ExecuteMsg::Receive,
         },
         staking::snip20_staking,
     },

@@ -9,7 +9,7 @@ use crate::{
 };
 
 use shade_protocol::{
-    contract_interfaces::sky::sky::{Config, InitMsg, HandleMsg, QueryMsg, ViewingKeys, SelfAddr},
+    contract_interfaces::sky::sky::{Config, InstantiateMsg, ExecuteMsg, QueryMsg, ViewingKeys, SelfAddr},
     utils::storage::plus::ItemStorage,
 };
 
@@ -17,7 +17,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let state = Config {
         admin: match msg.admin{
@@ -65,11 +65,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::UpdateConfig{ config } => handle::try_update_config(deps, env, config),
-        HandleMsg::ArbPeg{ amount } => handle::try_execute(deps, env, amount),
+        ExecuteMsg::UpdateConfig{ config } => handle::try_update_config(deps, env, config),
+        ExecuteMsg::ArbPeg{ amount } => handle::try_execute(deps, env, amount),
     }
 }
 

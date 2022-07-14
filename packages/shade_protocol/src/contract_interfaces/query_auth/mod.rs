@@ -5,7 +5,7 @@ use crate::c_std::{Binary, Addr};
 
 use crate::query_authentication::permit::Permit;
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "query_auth_impl")]
 use crate::utils::storage::plus::ItemStorage;
@@ -15,8 +15,7 @@ use secret_toolkit::crypto::sha_256;
 use crate::utils::asset::Contract;
 
 #[cfg(feature = "query_auth_impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Admin(pub Contract);
 
 #[cfg(feature = "query_auth_impl")]
@@ -25,8 +24,7 @@ impl ItemStorage for Admin {
 }
 
 #[cfg(feature = "query_auth_impl")]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct RngSeed(pub Vec<u8>);
 
 #[cfg(feature = "query_auth_impl")]
@@ -41,19 +39,17 @@ impl RngSeed {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub admin_auth: Contract,
     pub prng_seed: Binary
 }
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ContractStatus {
     Default,
     DisablePermit,
@@ -66,9 +62,8 @@ impl ItemStorage for ContractStatus {
     const ITEM: Item<'static, Self> = Item::new("contract-status-");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     SetAdminAuth {
         admin: Contract,
         padding: Option<String>,
@@ -93,12 +88,11 @@ pub enum HandleMsg {
     }
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     SetAdminAuth {
         status: ResponseStatus
@@ -120,15 +114,13 @@ pub enum HandleAnswer {
 pub type QueryPermit = Permit<PermitData>;
 
 #[remain::sorted]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct PermitData {
     pub data: Binary,
     pub key: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
 
@@ -145,8 +137,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config {
         admin: Contract,

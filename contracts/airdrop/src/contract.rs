@@ -30,8 +30,8 @@ use shade_protocol::contract_interfaces::airdrop::{
     claim_info::RequiredTask,
     errors::{invalid_dates, invalid_task_percentage},
     Config,
-    HandleMsg,
-    InitMsg,
+    ExecuteMsg,
+    InstantiateMsg,
     QueryMsg,
 };
 
@@ -42,7 +42,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     // Setup task claim
     let mut task_claim = vec![RequiredTask {
@@ -134,11 +134,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     pad_handle_result(
         match msg {
-            HandleMsg::UpdateConfig {
+            ExecuteMsg::UpdateConfig {
                 admin,
                 dump_address,
                 query_rounding: redeem_step_size,
@@ -156,17 +156,17 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 end_date,
                 start_decay,
             ),
-            HandleMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, tasks),
-            HandleMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, address),
-            HandleMsg::Account {
+            ExecuteMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, tasks),
+            ExecuteMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, address),
+            ExecuteMsg::Account {
                 addresses,
                 partial_tree,
                 ..
             } => try_account(deps, &env, addresses, partial_tree),
-            HandleMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
-            HandleMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, &env, key),
-            HandleMsg::Claim { .. } => try_claim(deps, &env),
-            HandleMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),
+            ExecuteMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, key),
+            ExecuteMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, &env, key),
+            ExecuteMsg::Claim { .. } => try_claim(deps, &env),
+            ExecuteMsg::ClaimDecay { .. } => try_claim_decay(deps, &env),
         },
         RESPONSE_BLOCK_SIZE,
     )

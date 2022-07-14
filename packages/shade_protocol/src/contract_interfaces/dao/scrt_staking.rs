@@ -4,10 +4,9 @@ use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
 use crate::contract_interfaces::dao::adapter;
 
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Config {
     pub admins: Vec<Addr>,
     //pub treasury: Addr,
@@ -17,8 +16,7 @@ pub struct Config {
     pub validator_bounds: Option<ValidatorBounds>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ValidatorBounds {
     pub min_commission: Decimal,
     pub max_commission: Decimal,
@@ -26,8 +24,8 @@ pub struct ValidatorBounds {
     pub bottom_position: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct InitMsg {
+#[cw_serde]
+pub struct InstantiateMsg {
     pub admins: Option<Vec<Addr>>,
     pub owner: Addr,
     pub sscrt: Contract,
@@ -35,13 +33,12 @@ pub struct InitMsg {
     pub viewing_key: String,
 }
 
-impl InitCallback for InitMsg {
+impl InitCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     Receive {
         sender: Addr,
         from: Addr,
@@ -55,12 +52,11 @@ pub enum HandleMsg {
     Adapter(adapter::SubHandleMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
@@ -84,8 +80,7 @@ pub enum HandleAnswer {
     */
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config {},
     Delegations {},
@@ -96,8 +91,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
     //Balance { amount: Uint128 },

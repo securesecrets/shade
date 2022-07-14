@@ -21,7 +21,7 @@ use shade_protocol::{
             profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
             proposal::{ProposalMsg, Status},
             vote::Vote,
-            InitMsg,
+            InstantiateMsg,
         },
     },
     utils::asset::Contract,
@@ -33,7 +33,7 @@ fn trigger_admin_command() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyProposal {
+            &governance::ExecuteMsg::AssemblyProposal {
                 assembly: Uint128::new(1),
                 title: "Title".to_string(),
                 metadata: "Proposal metadata".to_string(),
@@ -55,7 +55,7 @@ fn unauthorized_trigger_admin_command() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::AssemblyProposal {
+                &governance::ExecuteMsg::AssemblyProposal {
                     assembly: Uint128::new(1),
                     title: "Title".to_string(),
                     metadata: "Proposal metadata".to_string(),
@@ -74,7 +74,7 @@ fn text_only_proposal() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyProposal {
+            &governance::ExecuteMsg::AssemblyProposal {
                 assembly: Uint128::new(1),
                 title: "Title".to_string(),
                 metadata: "Text only proposal".to_string(),
@@ -107,7 +107,7 @@ fn text_only_proposal() {
 
     chain
         .execute(
-            &governance::HandleMsg::Trigger {
+            &governance::ExecuteMsg::Trigger {
                 proposal: Uint128::new(0),
                 padding: None,
             },
@@ -133,7 +133,7 @@ fn msg_proposal() {
         &mut chain,
         &gov,
         "admin",
-        governance::HandleMsg::SetAssembly {
+        governance::ExecuteMsg::SetAssembly {
             id: Uint128::new(1),
             name: Some("Random name".to_string()),
             metadata: None,
@@ -157,7 +157,7 @@ fn msg_proposal() {
 
     chain
         .execute(
-            &governance::HandleMsg::Trigger {
+            &governance::ExecuteMsg::Trigger {
                 proposal: Uint128::new(0),
                 padding: None,
             },
@@ -188,7 +188,7 @@ fn multi_msg_proposal() {
             target: Uint128::zero(),
             assembly_msg: Uint128::zero(),
             msg: to_binary(&vec![
-                serde_json::to_string(&governance::HandleMsg::SetAssembly {
+                serde_json::to_string(&governance::ExecuteMsg::SetAssembly {
                     id: Uint128::new(1),
                     name: Some("Random name".to_string()),
                     metadata: None,
@@ -205,7 +205,7 @@ fn multi_msg_proposal() {
             target: Uint128::zero(),
             assembly_msg: Uint128::zero(),
             msg: to_binary(&vec![
-                serde_json::to_string(&governance::HandleMsg::SetAssembly {
+                serde_json::to_string(&governance::ExecuteMsg::SetAssembly {
                     id: Uint128::new(1),
                     name: None,
                     metadata: Some("Random name".to_string()),
@@ -233,7 +233,7 @@ fn multi_msg_proposal() {
 
     chain
         .execute(
-            &governance::HandleMsg::Trigger {
+            &governance::ExecuteMsg::Trigger {
                 proposal: Uint128::new(0),
                 padding: None,
             },
@@ -264,7 +264,7 @@ fn msg_proposal_invalid_msg() {
         &mut chain,
         &gov,
         "admin",
-        governance::HandleMsg::SetAssembly {
+        governance::ExecuteMsg::SetAssembly {
             id: Uint128::new(3),
             name: Some("Random name".to_string()),
             metadata: None,
@@ -278,7 +278,7 @@ fn msg_proposal_invalid_msg() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::Trigger {
+                &governance::ExecuteMsg::Trigger {
                     proposal: Uint128::new(0),
                     padding: None
                 },
@@ -294,7 +294,7 @@ fn msg_proposal_invalid_msg() {
 
     chain
         .execute(
-            &governance::HandleMsg::Cancel {
+            &governance::ExecuteMsg::Cancel {
                 proposal: Uint128::new(0),
                 padding: None,
             },

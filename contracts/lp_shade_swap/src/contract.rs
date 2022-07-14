@@ -9,7 +9,7 @@ use shade_protocol::{
         dao::{
             adapter,
             lp_shade_swap::{
-                Config, HandleMsg, InitMsg, QueryMsg,
+                Config, ExecuteMsg, InstantiateMsg, QueryMsg,
                 is_supported_asset,
             },
         },
@@ -36,7 +36,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
 
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
@@ -194,18 +194,18 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        HandleMsg::Receive {
+        ExecuteMsg::Receive {
             sender,
             from,
             amount,
             msg,
             ..
         } => handle::receive(deps, env, sender, from, amount, msg),
-        HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        HandleMsg::Adapter(adapter) => match adapter {
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => handle::unbond(deps, env, asset, amount),
             adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
             adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, asset),

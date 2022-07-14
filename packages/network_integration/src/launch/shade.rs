@@ -31,7 +31,7 @@ fn main() -> serde_json::Result<()> {
     // Initialize snip20
     print_header("Initializing Snip20");
 
-    let snip_init_msg = snip20::InitMsg {
+    let snip_init_msg = snip20::InstantiateMsg {
         name: NAME.to_string(),
         admin: args.admin,
         symbol: SYMBOL.to_string(),

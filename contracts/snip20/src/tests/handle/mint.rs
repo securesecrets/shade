@@ -1,7 +1,7 @@
 use shade_protocol::c_std::Addr;
 use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::c_std::Uint128;
-use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitConfig};
+use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitConfig};
 use shade_protocol::contract_interfaces::snip20::manager::{Balance, Minters, TotalSupply};
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 use crate::tests::init_snip20_with_config;
@@ -17,19 +17,19 @@ fn mint() {
         enable_transfer: None
     })).unwrap();
 
-    assert!(chain.execute(&HandleMsg::Mint {
+    assert!(chain.execute(&ExecuteMsg::Mint {
         recipient: Addr::from("Jimmy"),
         amount: Uint128::new(1000),
         memo: None,
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_err());
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
+    assert!(chain.execute(&ExecuteMsg::AddMinters {
         minters: vec![Addr::from("admin")],
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
-    assert!(chain.execute(&HandleMsg::Mint {
+    assert!(chain.execute(&ExecuteMsg::Mint {
         recipient: Addr::from("Jimmy"),
         amount: Uint128::new(1500),
         memo: None,
@@ -57,12 +57,12 @@ fn set_minters() {
         enable_transfer: None
     })).unwrap();
 
-    assert!(chain.execute(&HandleMsg::SetMinters {
+    assert!(chain.execute(&ExecuteMsg::SetMinters {
         minters: vec![Addr::from("admin")],
         padding: None
     }, MockEnv::new("notAdmin", snip.clone())).is_err());
 
-    assert!(chain.execute(&HandleMsg::SetMinters {
+    assert!(chain.execute(&ExecuteMsg::SetMinters {
         minters: vec![Addr::from("admin")],
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_ok());
@@ -71,7 +71,7 @@ fn set_minters() {
         assert_eq!(Minters::load(&deps.storage).unwrap().0, vec![Addr::from("admin")]);
     });
 
-    assert!(chain.execute(&HandleMsg::SetMinters {
+    assert!(chain.execute(&ExecuteMsg::SetMinters {
         minters: vec![Addr::from("other_address"), Addr::from("some_other")],
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_ok());
@@ -93,12 +93,12 @@ fn add_minters() {
         enable_transfer: None
     })).unwrap();
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
+    assert!(chain.execute(&ExecuteMsg::AddMinters {
         minters: vec![Addr::from("admin")],
         padding: None
     }, MockEnv::new("notAdmin", snip.clone())).is_err());
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
+    assert!(chain.execute(&ExecuteMsg::AddMinters {
         minters: vec![Addr::from("admin")],
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_ok());
@@ -107,7 +107,7 @@ fn add_minters() {
         assert_eq!(Minters::load(&deps.storage).unwrap().0, vec![Addr::from("admin")]);
     });
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
+    assert!(chain.execute(&ExecuteMsg::AddMinters {
         minters: vec![Addr::from("other_address"), Addr::from("some_other")],
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_ok());
@@ -133,12 +133,12 @@ fn remove_minters() {
         enable_transfer: None
     })).unwrap();
 
-    assert!(chain.execute(&HandleMsg::AddMinters {
+    assert!(chain.execute(&ExecuteMsg::AddMinters {
         minters: vec![Addr::from("other_address"), Addr::from("some_other")],
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
-    assert!(chain.execute(&HandleMsg::RemoveMinters {
+    assert!(chain.execute(&ExecuteMsg::RemoveMinters {
         minters: vec![Addr::from("other_address")],
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_ok());

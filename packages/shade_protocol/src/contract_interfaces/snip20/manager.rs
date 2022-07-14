@@ -3,7 +3,7 @@ use crate::c_std::{Binary, Env, Addr, StdError, StdResult, Storage, BlockInfo};
 use crate::query_authentication::viewing_keys::ViewingKey;
 
 use secret_toolkit::crypto::{Prng, sha_256};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{allowance_expired, contract_status_level_invalid, insufficient_allowance, no_funds, not_enough_funds};
 use crate::impl_into_u8;
@@ -12,9 +12,7 @@ use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveItemStorage};
 #[cfg(feature = "snip20-impl")]
 use secret_storage_plus::{Item, Map};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[repr(u8)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]#[repr(u8)]
 pub enum ContractStatusLevel {
     NormalRun,
     StopAllButRedeems,
@@ -39,7 +37,7 @@ impl ContractStatusLevel {
 }
 impl_into_u8!(ContractStatusLevel);
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cw_serde]
 pub struct ContractStatus(pub u8);
 
 #[cfg(feature = "snip20-impl")]
@@ -47,8 +45,7 @@ impl ItemStorage for ContractStatus {
     const ITEM: Item<'static, Self> = Item::new("contract-status-level-");
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct CoinInfo {
     pub name: String,
     pub symbol: String,
@@ -60,7 +57,7 @@ impl ItemStorage for CoinInfo {
     const ITEM: Item<'static, Self> = Item::new("coin-info-");
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cw_serde]
 pub struct Admin(pub Addr);
 
 #[cfg(feature = "snip20-impl")]
@@ -68,7 +65,7 @@ impl ItemStorage for Admin {
     const ITEM: Item<'static, Self> = Item::new("admin-");
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cw_serde]
 pub struct RandSeed(pub Vec<u8>);
 
 #[cfg(feature = "snip20-impl")]
@@ -76,7 +73,7 @@ impl ItemStorage for RandSeed {
     const ITEM: Item<'static, Self> = Item::new("rand-seed-");
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cw_serde]
 pub struct Setting(pub bool);
 
 #[cfg(feature = "snip20-impl")]
@@ -95,8 +92,7 @@ const ENABLE_BURN: Item<'static, Setting> = Item::new("enable-burn-");
 #[cfg(feature = "snip20-impl")]
 const ENABLE_TRANSFER: Item<'static, Setting> = Item::new("enable-transfer-");
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Config {
     pub public_total_supply: bool,
     pub enable_deposit: bool,
@@ -173,7 +169,7 @@ impl Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cw_serde]
 pub struct TotalSupply(pub Uint128);
 
 #[cfg(feature = "snip20-impl")]
@@ -198,7 +194,7 @@ impl TotalSupply {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cw_serde]
 pub struct Balance(pub Uint128);
 
 #[cfg(feature = "snip20-impl")]
@@ -243,7 +239,7 @@ impl Balance {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[cw_serde]
 pub struct Minters(pub Vec<Addr>);
 
 #[cfg(feature = "snip20-impl")]
@@ -251,7 +247,7 @@ impl ItemStorage for Minters {
     const ITEM: Item<'static, Self> = Item::new("minters-");
 }
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq)]
+#[cw_serde]
 pub struct Allowance {
     pub amount: Uint128,
     pub expiration: Option<u64>,
@@ -304,7 +300,7 @@ impl MapStorage<'static, (Addr, Addr)> for Allowance {
     const MAP: Map<'static, (Addr, Addr), Self> = Map::new("allowance-");
 }
 
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Default)]
+#[cw_serde]
 pub struct ReceiverHash(pub String);
 
 #[cfg(feature = "snip20-impl")]

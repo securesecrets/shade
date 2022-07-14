@@ -11,7 +11,7 @@ use shade_protocol::{
         Config, HandleAnswer, self
     },
     dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
-    mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, HandleMsg::Receive, self},  
+    mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, ExecuteMsg::Receive, self},  
     snip20::helpers::Snip20Asset,
 }};
 use shade_protocol::snip20::helpers::send_msg;
@@ -189,14 +189,14 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
     }
     
     let mut messages = vec![];
-    let mut mint_msg: mint::HandleMsg;
+    let mut mint_msg: mint::ExecuteMsg;
     let mut sienna_msg: Swap;
 
     if is_mint_first {
         messages.push(to_cosmos_msg(
             config.mint_addr.address.clone(),
             config.mint_addr.code_hash.clone(),
-            &mint::HandleMsg::Receive{
+            &mint::ExecuteMsg::Receive{
                 sender: env.contract.address.clone(),
                 from: config.shd_token.contract.address.clone(),
                 amount: amount.clone(),
@@ -237,7 +237,7 @@ pub fn try_execute<S: Storage, A: Api, Q: Querier>(
         messages.push(to_cosmos_msg(
             config.mint_addr.address.clone(),
             config.mint_addr.code_hash.clone(),
-            &mint::HandleMsg::Receive{
+            &mint::ExecuteMsg::Receive{
                 sender: env.contract.address.clone(),
                 from: config.silk_token.contract.address.clone(),
                 amount: first_swap_min_expected,

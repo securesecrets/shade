@@ -1,11 +1,9 @@
 use crate::utils::storage::default::NaiveSingletonStorage;
 use crate::c_std::Uint128;
 use crate::c_std::{StdResult, Storage};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-// Used to get total IDs
+#[cw_serde]// Used to get total IDs
 pub struct ID(Uint128);
 
 impl NaiveSingletonStorage for ID {}

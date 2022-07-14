@@ -17,10 +17,9 @@ use crate::c_std::{
 };
 
 use crate::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum SubHandleMsg {
     // Begin unbonding amount
     Unbond { asset: Addr, amount: Uint128 },
@@ -33,18 +32,16 @@ impl HandleCallback for SubHandleMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     Adapter(SubHandleMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl HandleCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
@@ -63,8 +60,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum SubQueryMsg {
     Balance { asset: Addr },
     Unbonding { asset: Addr },
@@ -73,8 +69,7 @@ pub enum SubQueryMsg {
     Reserves { asset: Addr },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Adapter(SubQueryMsg),
 }
@@ -83,8 +78,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
     Unbonding { amount: Uint128 },
@@ -183,7 +177,7 @@ pub fn balance_query(
 
 pub fn claim_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
     Ok(
-        HandleMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
+        ExecuteMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
             &adapter,
             vec![]
         )?,
@@ -192,7 +186,7 @@ pub fn claim_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
 
 pub fn unbond_msg(asset: Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
     Ok(
-        HandleMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
+        ExecuteMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
             &adapter,
             vec![],
         )?,
@@ -201,7 +195,7 @@ pub fn unbond_msg(asset: Addr, amount: Uint128, adapter: Contract) -> StdResult<
 
 pub fn update_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
     Ok(
-        HandleMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
+        ExecuteMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
             &adapter,
             vec![],
         )?,

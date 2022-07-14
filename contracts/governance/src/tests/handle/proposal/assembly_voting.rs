@@ -18,7 +18,7 @@ use shade_protocol::{
             profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
             proposal::{ProposalMsg, Status},
             vote::Vote,
-            InitMsg,
+            InstantiateMsg,
         },
     },
     utils::asset::Contract,
@@ -26,7 +26,7 @@ use shade_protocol::{
 
 fn init_assembly_governance_with_proposal() -> StdResult<(ContractEnsemble, ContractLink<Addr>)>
 {
-    let (mut chain, gov) = init_governance(InitMsg {
+    let (mut chain, gov) = init_governance(InstantiateMsg {
         treasury: Addr::from("treasury"),
         admin_members: vec![
             Addr::from("alpha"),
@@ -65,7 +65,7 @@ fn init_assembly_governance_with_proposal() -> StdResult<(ContractEnsemble, Cont
     })?;
 
     chain.execute(
-        &governance::HandleMsg::AssemblyProposal {
+        &governance::ExecuteMsg::AssemblyProposal {
             assembly: Uint128::new(1),
             title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
@@ -101,7 +101,7 @@ fn update_before_deadline() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::Update {
+                &governance::ExecuteMsg::Update {
                     proposal: Uint128::new(0),
                     padding: None
                 },
@@ -123,7 +123,7 @@ fn update_after_deadline() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::Update {
+                &governance::ExecuteMsg::Update {
                     proposal: Uint128::new(0),
                     padding: None
                 },
@@ -143,7 +143,7 @@ fn invalid_vote() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::AssemblyVote {
+                &governance::ExecuteMsg::AssemblyVote {
                     proposal: Uint128::new(0),
                     vote: Vote {
                         yes: Uint128::new(1),
@@ -169,7 +169,7 @@ fn unauthorised_vote() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::AssemblyVote {
+                &governance::ExecuteMsg::AssemblyVote {
                     proposal: Uint128::new(0),
                     vote: Vote {
                         yes: Uint128::zero(),
@@ -197,7 +197,7 @@ fn vote_after_deadline() {
     assert!(
         chain
             .execute(
-                &governance::HandleMsg::AssemblyVote {
+                &governance::ExecuteMsg::AssemblyVote {
                     proposal: Uint128::new(0),
                     vote: Vote {
                         yes: Uint128::zero(),
@@ -222,7 +222,7 @@ fn vote_yes() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -264,7 +264,7 @@ fn vote_abstain() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -306,7 +306,7 @@ fn vote_no() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -348,7 +348,7 @@ fn vote_veto() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -390,7 +390,7 @@ fn vote_passed() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -409,7 +409,7 @@ fn vote_passed() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -430,7 +430,7 @@ fn vote_passed() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -456,7 +456,7 @@ fn vote_abstained() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -475,7 +475,7 @@ fn vote_abstained() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -496,7 +496,7 @@ fn vote_abstained() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -522,7 +522,7 @@ fn vote_rejected() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -541,7 +541,7 @@ fn vote_rejected() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -562,7 +562,7 @@ fn vote_rejected() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -588,7 +588,7 @@ fn vote_vetoed() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -607,7 +607,7 @@ fn vote_vetoed() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -628,7 +628,7 @@ fn vote_vetoed() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -655,7 +655,7 @@ fn vote_no_quorum() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -676,7 +676,7 @@ fn vote_no_quorum() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::new(0),
                 padding: None,
             },
@@ -699,7 +699,7 @@ fn vote_total() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -718,7 +718,7 @@ fn vote_total() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -737,7 +737,7 @@ fn vote_total() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -779,7 +779,7 @@ fn update_vote() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::zero(),
@@ -811,7 +811,7 @@ fn update_vote() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -848,7 +848,7 @@ fn vote_count() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -867,7 +867,7 @@ fn vote_count() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -888,7 +888,7 @@ fn vote_count() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },
@@ -910,7 +910,7 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let (mut chain, gov) = init_governance(InitMsg {
+    let (mut chain, gov) = init_governance(InstantiateMsg {
         treasury: Addr::from("treasury"),
         admin_members: vec![
             Addr::from("alpha"),
@@ -945,7 +945,7 @@ fn vote_count_percentage() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyProposal {
+            &governance::ExecuteMsg::AssemblyProposal {
                 assembly: Uint128::new(1),
                 title: "Title".to_string(),
                 metadata: "Text only proposal".to_string(),
@@ -961,7 +961,7 @@ fn vote_count_percentage() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -980,7 +980,7 @@ fn vote_count_percentage() {
 
     chain
         .execute(
-            &governance::HandleMsg::AssemblyVote {
+            &governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -1001,7 +1001,7 @@ fn vote_count_percentage() {
 
     chain
         .execute(
-            &governance::HandleMsg::Update {
+            &governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
             },

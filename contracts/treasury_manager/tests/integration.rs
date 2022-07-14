@@ -56,7 +56,7 @@ fn single_asset_holder_no_adapters(
 
     let token = ensemble.instantiate(
         reg_snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
+        &snip20_reference_impl::msg::InstantiateMsg {
             name: "token".into(),
             admin: Some("admin".into()),
             symbol: "TKN".into(),
@@ -81,7 +81,7 @@ fn single_asset_holder_no_adapters(
 
     let manager = ensemble.instantiate(
         reg_manager.id,
-        &treasury_manager::InitMsg {
+        &treasury_manager::InstantiateMsg {
             admin: Some(Addr::unchecked("admin".into())),
             treasury: Addr::unchecked("treasury".into()),
             viewing_key: viewing_key.clone(),
@@ -97,7 +97,7 @@ fn single_asset_holder_no_adapters(
 
     // set holder viewing key
     ensemble.execute(
-        &snip20::HandleMsg::SetViewingKey{
+        &snip20::ExecuteMsg::SetViewingKey{
             key: viewing_key.clone(),
             padding: None,
         },
@@ -109,7 +109,7 @@ fn single_asset_holder_no_adapters(
 
     // Register manager assets
     ensemble.execute(
-        &treasury_manager::HandleMsg::RegisterAsset {
+        &treasury_manager::ExecuteMsg::RegisterAsset {
             contract: Contract {
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
@@ -123,7 +123,7 @@ fn single_asset_holder_no_adapters(
 
     // Add 'holder' as holder
     ensemble.execute(
-        &treasury_manager::HandleMsg::AddHolder {
+        &treasury_manager::ExecuteMsg::AddHolder {
             holder: Addr::unchecked("holder".into())
         },
         MockEnv::new(
@@ -134,7 +134,7 @@ fn single_asset_holder_no_adapters(
 
     // Deposit funds into manager
     ensemble.execute(
-        &snip20::HandleMsg::Send {
+        &snip20::ExecuteMsg::Send {
             recipient: manager.address.clone(),
             recipient_code_hash: None,
             amount: deposit,
@@ -237,7 +237,7 @@ fn single_asset_holder_no_adapters(
 
     // unbond from manager
     ensemble.execute(
-        &adapter::HandleMsg::Adapter(adapter::SubHandleMsg::Unbond {
+        &adapter::ExecuteMsg::Adapter(adapter::SubHandleMsg::Unbond {
             asset: token.address.clone(),
             amount: unbond_amount,
         }),
@@ -391,7 +391,7 @@ fn single_asset_holder_1_adapter(
 
     let token = ensemble.instantiate(
         reg_snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
+        &snip20_reference_impl::msg::InstantiateMsg {
             name: "token".into(),
             admin: Some("admin".into()),
             symbol: "TKN".into(),
@@ -416,7 +416,7 @@ fn single_asset_holder_1_adapter(
 
     let manager = ensemble.instantiate(
         reg_manager.id,
-        &treasury_manager::InitMsg {
+        &treasury_manager::InstantiateMsg {
             admin: Some(Addr::unchecked("admin".into())),
             treasury: Addr::unchecked("treasury".into()),
             viewing_key: viewing_key.clone(),
@@ -432,7 +432,7 @@ fn single_asset_holder_1_adapter(
 
     // set holder viewing key
     ensemble.execute(
-        &snip20::HandleMsg::SetViewingKey{
+        &snip20::ExecuteMsg::SetViewingKey{
             key: viewing_key.clone(),
             padding: None,
         },
@@ -444,7 +444,7 @@ fn single_asset_holder_1_adapter(
 
     // Register manager assets
     ensemble.execute(
-        &treasury_manager::HandleMsg::RegisterAsset {
+        &treasury_manager::ExecuteMsg::RegisterAsset {
             contract: Contract {
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
@@ -458,7 +458,7 @@ fn single_asset_holder_1_adapter(
 
     // Add 'holder' as holder
     ensemble.execute(
-        &treasury_manager::HandleMsg::AddHolder {
+        &treasury_manager::ExecuteMsg::AddHolder {
             holder: Addr::unchecked("holder".into())
         },
         MockEnv::new(
@@ -469,7 +469,7 @@ fn single_asset_holder_1_adapter(
 
     // Deposit funds into manager
     ensemble.execute(
-        &snip20::HandleMsg::Send {
+        &snip20::ExecuteMsg::Send {
             recipient: manager.address.clone(),
             recipient_code_hash: None,
             amount: deposit,
@@ -572,7 +572,7 @@ fn single_asset_holder_1_adapter(
 
     // unbond from manager
     ensemble.execute(
-        &adapter::HandleMsg::Adapter(adapter::SubHandleMsg::Unbond {
+        &adapter::ExecuteMsg::Adapter(adapter::SubHandleMsg::Unbond {
             asset: token.address.clone(),
             amount: unbond_amount,
         }),

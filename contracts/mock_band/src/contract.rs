@@ -12,7 +12,7 @@ use shade_protocol::c_std::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use shade_protocol::contract_interfaces::oracles::band::{InitMsg, ReferenceData};
+use shade_protocol::contract_interfaces::oracles::band::{InstantiateMsg, ReferenceData};
 use shade_protocol::c_std::Uint128;
 
 use shade_protocol::storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
@@ -30,24 +30,24 @@ pub fn price_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
 pub fn init<S: Storage, A: Api, Q: Querier>(
     _deps: DepsMut,
     _env: Env,
-    _msg: InitMsg,
+    _msg: InstantiateMsg,
 ) -> StdResult<Response> {
     Ok(Response::default())
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     MockPrice { symbol: String, price: Uint128 },
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: DepsMut,
     _env: Env,
-    msg: HandleMsg,
+    msg: ExecuteMsg,
 ) -> StdResult<Response> {
     return match msg {
-        HandleMsg::MockPrice { symbol, price } => {
+        ExecuteMsg::MockPrice { symbol, price } => {
             price_w(&mut deps.storage).save(symbol.as_bytes(), &price)?;
             Ok(Response::default())
         }

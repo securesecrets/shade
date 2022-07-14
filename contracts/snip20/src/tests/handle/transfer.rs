@@ -1,7 +1,7 @@
 use shade_protocol::c_std::Addr;
 use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::c_std::Uint128;
-use shade_protocol::contract_interfaces::snip20::{HandleMsg, InitialBalance, QueryMsg, QueryAnswer};
+use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitialBalance, QueryMsg, QueryAnswer};
 use shade_protocol::contract_interfaces::snip20::manager::Balance;
 use crate::tests::init_snip20_with_config;
 
@@ -43,7 +43,7 @@ fn transfer() {
         },
     ]), None).unwrap();
 
-    assert!(chain.execute(&HandleMsg::Transfer {
+    assert!(chain.execute(&ExecuteMsg::Transfer {
         recipient: Addr::from("Dylan"),
         amount: Uint128::new(100),
         memo: None,
@@ -78,7 +78,7 @@ fn transfer() {
         }
     }
 
-    assert!(chain.execute(&HandleMsg::Transfer {
+    assert!(chain.execute(&ExecuteMsg::Transfer {
         recipient: Addr::from("Dylan"),
         amount: Uint128::new(1000),
         memo: None,
@@ -99,7 +99,7 @@ fn send() {
         },
     ]), None).unwrap();
 
-    assert!(chain.execute(&HandleMsg::Send {
+    assert!(chain.execute(&ExecuteMsg::Send {
         recipient: Addr::from("Dylan"),
         amount: Uint128::new(100),
         recipient_code_hash: None,
@@ -136,7 +136,7 @@ fn send() {
         }
     }
 
-    assert!(chain.execute(&HandleMsg::Send {
+    assert!(chain.execute(&ExecuteMsg::Send {
         recipient: Addr::from("Dylan"),
         amount: Uint128::new(1000),
         recipient_code_hash: None,

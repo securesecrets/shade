@@ -55,7 +55,7 @@ fn run_testnet() -> Result<()> {
     /// Initialize sSCRT
     print_header("Initializing sSCRT");
 
-    let sscrt_init_msg = snip20::InitMsg {
+    let sscrt_init_msg = snip20::InstantiateMsg {
         name: "sSCRT".to_string(),
         admin: None,
         symbol: "SSCRT".to_string(),
@@ -84,7 +84,7 @@ fn run_testnet() -> Result<()> {
     print_contract(&s_sCRT);
 
     {
-        let msg = snip20::HandleMsg::SetViewingKey {
+        let msg = snip20::ExecuteMsg::SetViewingKey {
             key: String::from(VIEW_KEY),
             padding: None,
         };
@@ -104,7 +104,7 @@ fn run_testnet() -> Result<()> {
     println!("\n\tDepositing 1000000000uscrt");
 
     {
-        let msg = snip20::HandleMsg::Deposit { padding: None };
+        let msg = snip20::ExecuteMsg::Deposit { padding: None };
 
         handle(
             &msg,
@@ -125,7 +125,7 @@ fn run_testnet() -> Result<()> {
     // Initialize Governance
     print_header("Initializing Governance");
 
-    let governance_init_msg = governance::InitMsg {
+    let governance_init_msg = governance::InstantiateMsg {
         admin: None,
         // The next governance votes will not require voting
         staker: None,
@@ -165,7 +165,7 @@ fn run_testnet() -> Result<()> {
 
     // Change contract admin
     {
-        let msg = snip20::HandleMsg::ChangeAdmin {
+        let msg = snip20::ExecuteMsg::ChangeAdmin {
             address: Addr::from(governance.address.clone()),
             padding: None,
         };
@@ -214,7 +214,7 @@ fn run_testnet() -> Result<()> {
         &governance,
         "band_mock".to_string(),
         MOCK_BAND_FILE,
-        band::InitMsg {},
+        band::InstantiateMsg {},
         &mut reports,
     )?;
 
@@ -223,7 +223,7 @@ fn run_testnet() -> Result<()> {
         &governance,
         "oracle".to_string(),
         ORACLE_FILE,
-        oracle::InitMsg {
+        oracle::InstantiateMsg {
             admin: None,
             band: Contract {
                 address: Addr::from(band.address),
@@ -273,7 +273,7 @@ fn run_testnet() -> Result<()> {
     create_and_trigger_proposal(
         &governance,
         governance::GOVERNANCE_SELF.to_string(),
-        governance::HandleMsg::UpdateConfig {
+        governance::ExecuteMsg::UpdateConfig {
             admin: None,
             staker: Some(Contract {
                 address: Addr::from(staker.address.clone()),
@@ -296,7 +296,7 @@ fn run_testnet() -> Result<()> {
     create_proposal(
         &governance,
         governance::GOVERNANCE_SELF.to_string(),
-        governance::HandleMsg::AddAdminCommand {
+        governance::ExecuteMsg::AddAdminCommand {
             name: "stake_unbond_time".to_string(),
             proposal: admin_command.to_string(),
         },
@@ -327,7 +327,7 @@ fn run_testnet() -> Result<()> {
         let balance = get_balance(&shade, account.clone());
 
         handle(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: Addr::from(governance.address.clone()),
                 amount: Uint128::new(1000000),
                 msg: Some(to_binary(&proposal).unwrap()),
@@ -369,7 +369,7 @@ fn run_testnet() -> Result<()> {
 
         // Vote on proposal
         handle(
-            &staking::HandleMsg::Vote {
+            &staking::ExecuteMsg::Vote {
                 proposal_id: proposal,
                 votes: vec![UserVote {
                     vote: Vote::Yes,
@@ -446,7 +446,7 @@ fn run_testnet() -> Result<()> {
     create_proposal(
         &governance,
         governance::GOVERNANCE_SELF.to_string(),
-        governance::HandleMsg::AddAdminCommand {
+        governance::ExecuteMsg::AddAdminCommand {
             name: "stake_unbond_time".to_string(),
             proposal: admin_command.to_string(),
         },
@@ -460,7 +460,7 @@ fn run_testnet() -> Result<()> {
 
         print_warning("Funding proposal");
         handle(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: Addr::from(governance.address.clone()),
                 amount: Uint128::new(1000000),
                 msg: Some(to_binary(&proposal).unwrap()),
@@ -479,7 +479,7 @@ fn run_testnet() -> Result<()> {
         // Vote on proposal
         print_warning("Voting on proposal");
         handle(
-            &staking::HandleMsg::Vote {
+            &staking::ExecuteMsg::Vote {
                 proposal_id: proposal,
                 votes: vec![
                     UserVote {
@@ -530,7 +530,7 @@ fn run_testnet() -> Result<()> {
     // Trigger the admin command
     print_warning("Triggering admin command");
     handle(
-        &governance::HandleMsg::TriggerAdminCommand {
+        &governance::ExecuteMsg::TriggerAdminCommand {
             target: "staking".to_string(),
             command: "stake_unbond_time".to_string(),
             variables: vec!["240".to_string()],
@@ -563,7 +563,7 @@ fn run_testnet() -> Result<()> {
     create_proposal(
         &governance,
         governance::GOVERNANCE_SELF.to_string(),
-        governance::HandleMsg::AddAdminCommand {
+        governance::ExecuteMsg::AddAdminCommand {
             name: "stake_unbond_time".to_string(),
             proposal: admin_command.to_string(),
         },
@@ -580,7 +580,7 @@ fn run_testnet() -> Result<()> {
         let balance_before = get_balance(&shade, account.clone());
 
         handle(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: Addr::from(governance.address.clone()),
                 amount: lost_amount,
                 msg: Some(to_binary(&proposal).unwrap()),
@@ -606,7 +606,7 @@ fn run_testnet() -> Result<()> {
 
         // Trigger funding
         handle(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: Addr::from(governance.address.clone()),
                 amount: lost_amount,
                 msg: Some(to_binary(&proposal).unwrap()),

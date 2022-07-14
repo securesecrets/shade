@@ -49,7 +49,7 @@ fn validate_vk() {
     assert!(
         chain
             .execute(
-                &query_auth::HandleMsg::SetViewingKey {
+                &query_auth::ExecuteMsg::SetViewingKey {
                     key: "password".to_string(),
                     padding: None
                 },

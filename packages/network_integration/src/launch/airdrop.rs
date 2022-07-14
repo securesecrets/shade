@@ -100,7 +100,7 @@ fn main() -> serde_json::Result<()> {
     // Initialize airdrop
     print_header("Initializing airdrop");
 
-    let airdrop_init_msg = airdrop::InitMsg {
+    let airdrop_init_msg = airdrop::InstantiateMsg {
         admin: args.admin,
         dump_address: match args.dump_address {
             Some(addr) => Some(Addr(addr)),
@@ -141,7 +141,7 @@ fn main() -> serde_json::Result<()> {
             code_hash: args.shade.code_hash.to_string(),
         };
         handle(
-            &snip20::HandleMsg::Send {
+            &snip20::ExecuteMsg::Send {
                 recipient: Addr(airdrop.address),
                 recipient_code_hash: None,
                 amount: airdrop_amount,

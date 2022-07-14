@@ -1,6 +1,6 @@
-use fadroma::schemars::_serde_json::to_string;
+use serde::Serialize;
 use crate::c_std::StdError;
-use crate::serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
 
 #[macro_export]
 macro_rules! impl_into_u8 {
@@ -13,8 +13,7 @@ macro_rules! impl_into_u8 {
     };
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct DetailedError<T: CodeType> {
     pub target: String,
     pub code: u8,
@@ -64,11 +63,9 @@ pub mod tests {
     use crate::utils::errors::{build_string, CodeType, DetailedError};
     use crate::c_std::StdError;
 
-    use crate::serde::{Deserialize, Serialize};
+    use cosmwasm_schema::{cw_serde};
 
-    #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
-    #[repr(u8)]
-    #[serde(rename_all = "snake_case")]
+    #[cw_serde]    #[repr(u8)]
     enum TestCode {
         Error1,
         Error2,

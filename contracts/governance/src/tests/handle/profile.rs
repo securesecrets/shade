@@ -13,7 +13,7 @@ fn add_profile() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddProfile {
+            &governance::ExecuteMsg::AddProfile {
                 profile: Profile {
                     name: "Other Profile".to_string(),
                     enabled: false,
@@ -42,7 +42,7 @@ fn unauthorised_add_profile() {
 
     chain
         .execute(
-            &governance::HandleMsg::AddProfile {
+            &governance::ExecuteMsg::AddProfile {
                 profile: Profile {
                     name: "Other Profile".to_string(),
                     enabled: false,
@@ -71,7 +71,7 @@ fn set_profile() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: Some("New Name".to_string()),
@@ -111,7 +111,7 @@ fn unauthorised_set_profile() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: Some("New Name".to_string()),
@@ -141,7 +141,7 @@ fn set_profile_disable_assembly() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
@@ -180,7 +180,7 @@ fn set_profile_disable_assembly() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
@@ -220,7 +220,7 @@ fn set_profile_set_incomplete_assembly() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
@@ -257,7 +257,7 @@ fn set_profile_disable_token() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
@@ -296,7 +296,7 @@ fn set_profile_disable_token() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
@@ -336,7 +336,7 @@ fn set_profile_set_incomplete_token() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
@@ -373,7 +373,7 @@ fn set_profile_disable_funding() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
@@ -406,7 +406,7 @@ fn set_profile_disable_funding() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
@@ -446,7 +446,7 @@ fn set_profile_set_incomplete_fuding() {
 
     chain
         .execute(
-            &governance::HandleMsg::SetProfile {
+            &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
                 profile: UpdateProfile {
                     name: None,
