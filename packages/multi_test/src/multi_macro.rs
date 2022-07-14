@@ -22,7 +22,7 @@ macro_rules! implement_multi {
                 let info = ContractInfo {
                     address: Addr::unchecked(""),
                     code_hash: String::default(),
-                }
+                };
                 $x { info }
             }
          }
