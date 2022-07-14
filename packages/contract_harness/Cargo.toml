@@ -28,6 +28,7 @@ treasury_manager = ["dep:treasury_manager"]
 shade-oracles = ["dep:shade-oracles"]
 shade-oracles-ensemble = ["dep:shade-oracles-ensemble"]
 sky = ["dep:sky"]
+mock_secretswap_pair = ["dep:mock_secretswap_pair"]
 
 [dependencies]
 cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std" }
@@ -36,6 +37,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 ] }
 
 sky = { version = "0.1.0", path = "../../contracts/sky", optional = true }
+mock_secretswap_pair = { version = "0.1.0", path = "../../contracts/mock_secretswap_pair", optional = true }
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
 oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }

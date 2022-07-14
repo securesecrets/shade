@@ -117,13 +117,21 @@ pub mod treasury {
 
 #[cfg(feature = "sky")]
 pub mod sky {
-    use crate::harness_macro;
+    use crate::implement_harness;
     use sky;
 
     pub struct Sky;
-    harness_macro::implement_harness!(Sky, sky);
+    implement_harness!(Sky, sky);
 }
 
+#[cfg(feature = "mock_secretswap_pair")]
+pub mod mock_secretswap_pair {
+    use crate::implement_harness;
+    use mock_secretswap_pair;
+
+    pub struct MockSecretswapPair;
+    implement_harness!(MockSecretswapPair, mock_secretswap_pair);
+}
 #[cfg(feature = "shadeswap_exchange")]
 pub mod shadeswap_exchange {
     use crate::harness_macro;
