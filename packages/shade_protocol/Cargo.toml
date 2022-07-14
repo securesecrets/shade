@@ -24,7 +24,7 @@ storage = []
 storage_plus = ["storage", "dep:secret-storage-plus"]
 query_auth_lib = ["dep:query-authentication"]
 ensemble = ["dep:fadroma"]
-multi-test = ["dep:secret-multi-test", "dep:anyhow"]
+multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation

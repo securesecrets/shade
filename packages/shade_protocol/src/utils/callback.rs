@@ -52,19 +52,37 @@ pub trait InstantianteCallback: Serialize {
         Ok(init.into())
     }
 
+    /// Returns ContractInfo
+    ///
+    /// Tries to instantiate a contract into the multi test app.
+    ///
+    /// # Arguments
+    ///
+    /// * `testable` - a struct implementing the MultiTestable trait
+    /// * `router` - mutable reference to multi test app
+    /// * `sender` - user performing init
+    /// * `label` - label used to reference this contract
+    /// * `send_funds` - any funds sent with this init
     #[cfg(feature = "multi-test")]
     fn test_init<T: Serialize, U: MultiTestable>(
+        &self,
         testable: &impl MultiTestable,
         router: &mut App,
         sender: Addr,
         label: &str,
         send_funds: &[Coin],
-        msg: &T,
-    ) -> ContractInfo {
+    ) -> StdResult<ContractInfo> {
+        let mut msg = to_binary(self)?;
+        // can not have 0 block size
+        let padding = if Self::BLOCK_SIZE == 0 {
+            1
+        } else {
+            Self::BLOCK_SIZE
+        };
+        space_pad(&mut msg.0, padding);
         let stored_code = router.store_code(testable.contract());
-        router
-            .instantiate_contract(stored_code, sender, &msg, send_funds, label, None)
-            .unwrap()
+        Ok(router
+            .instantiate_contract(stored_code, sender, &msg, send_funds, label, None).unwrap())
     }
 }
 
@@ -109,6 +127,16 @@ pub trait ExecuteCallback: Serialize {
         Ok(execute.into())
     }
 
+    /// Returns AnyResult<AppResponse>
+    ///
+    /// Tries to execute a message on a contract in the multi-test App.
+    ///
+    /// # Arguments
+    ///
+    /// * `testable` - some struct implementing the MultiTestable trait
+    /// * `router` - a mutable reference to the multi-test App 
+    /// * `sender` - the user executing this message in the test env
+    /// * `send_funds` - any funds transferred with this exec
     #[cfg(feature = "multi-test")]
     fn test_exec<T: Serialize + std::fmt::Debug>(
         &self,
@@ -166,6 +194,14 @@ pub trait Query: Serialize {
         }))
     }
 
+    /// Returns StdResult<T>, where T is the type defining the query response
+    ///
+    /// Tries to query a contract in the multi-test App.
+    ///
+    /// # Arguments
+    ///
+    /// * `test_contract` - some struct implementing the MultiTestable trait
+    /// * `router` - a reference to the multi-test App   
     #[cfg(feature = "multi-test")]
     fn test_query<T: DeserializeOwned>(
         &self, 
