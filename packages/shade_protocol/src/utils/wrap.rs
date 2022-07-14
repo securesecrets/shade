@@ -14,7 +14,7 @@ pub fn wrap(
     amount: Uint128,
     token: Contract,
     //denom: Option<String>,
-) -> StdResult<SubMsg> {
+) -> StdResult<CosmosMsg> {
     Ok(deposit_msg(
         amount,
         None,
@@ -28,7 +28,7 @@ pub fn wrap_and_send(
     token: Contract,
     //denom: Option<String>,
     msg: Option<Binary>,
-) -> StdResult<Vec<SubMsg>> {
+) -> StdResult<Vec<CosmosMsg>> {
     Ok(vec![
         wrap(amount, token.clone())?,
         send_msg(
@@ -46,7 +46,7 @@ pub fn unwrap(
     amount: Uint128,
     token: Contract,
     //denom: Option<String>,
-) -> StdResult<SubMsg> {
+) -> StdResult<CosmosMsg> {
     Ok(redeem_msg(
         amount,
         None,
