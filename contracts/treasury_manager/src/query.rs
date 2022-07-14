@@ -144,9 +144,13 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::generic_err("Not an asset"));
         }
     };
+    let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        Some(a) => a,
+        None => { return Err(StdError::generic_err("Not an asset")); }
+    };
     //TODO claiming needs ordered unbondings so other holders don't get bumped
 
-    let reserves = balance_query(
+    let mut claimable = balance_query(
         &deps.querier,
         self_address_r(&deps.storage).load()?,
         viewing_key_r(&deps.storage).load()?,
@@ -160,6 +164,11 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     let _other_unbondings = Uint128::zero();
     */
 
+    for alloc in allocations {
+        claimable += adapter::claimable_query(&deps,
+                              &asset, alloc.contract.clone())?;
+    }
+
     //TODO other unbondings
     match holding_r(&deps.storage).may_load(&holder.as_str().as_bytes())? {
         Some(holder) => {
@@ -167,14 +176,15 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
                 Some(u) => u.amount,
                 None => Uint128::zero(),
             };
-            if reserves > unbonding {
+
+            if claimable > unbonding {
                 Ok(manager::QueryAnswer::Claimable {
                     amount: unbonding,
                 })
             }
             else {
                 Ok(manager::QueryAnswer::Claimable {
-                    amount: reserves,
+                    amount: claimable,
                 })
             }
         }
@@ -266,16 +276,15 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
             };
             */
 
-            let mut balance = Uint128::zero();
             let holding = holding_r(&deps.storage).load(&holder.as_str().as_bytes())?;
 
-            if let Some(b) = holding.balances.iter().find(|u| u.token == asset.contract.address) {
-                balance += b.amount;
-            }
-
             Ok(manager::QueryAnswer::Balance {
-                amount: balance,
+                amount: match holding.balances.iter().find(|u| u.token == asset.contract.address) {
+                    Some(b) => b.amount,
+                    None => Uint128::zero(),
+                }
             })
+
         },
         None => Err(StdError::generic_err("Not a registered asset"))
     }

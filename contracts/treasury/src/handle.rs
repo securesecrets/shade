@@ -649,7 +649,6 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
     let mut claimed = Uint128::zero();
 
-
     for manager in managers {
         let claimable =
             manager::claimable_query(
@@ -660,7 +659,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
             )?;
 
         if claimable > Uint128::zero() {
-            //assert!(false, "claiming {} from manager", claimable);
+            //panic!("claiming {} from manager", claimable);
             messages.push(
                 manager::claim_msg(
                     asset.clone(),

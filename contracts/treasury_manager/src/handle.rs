@@ -280,8 +280,8 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     }
     let mut holding = holding_r(&deps.storage).load(&claimer.as_str().as_bytes())?;
 
-    let unbonding = match holding.unbondings.iter().find(|u| u.token == asset) {
-        Some(u) => u,
+    let unbonding_i = match holding.unbondings.iter_mut().position(|u| u.token == asset) {
+        Some(i) => i,
         None => {
             return Err(StdError::generic_err(
                     format!("{} has no completed unbondings for {}",
@@ -289,6 +289,8 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
             ));
         }
     };
+
+    //panic!("manager claim from unbonding amount {}", holding.unbondings[unbonding_i].amount);
 
     let reserves = balance_query(
         &deps.querier,
@@ -303,9 +305,9 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     let mut total_claimed = Uint128::zero();
 
     // Claim if more funds are needed
-    if unbonding.amount > reserves {
+    if holding.unbondings[unbonding_i].amount > reserves {
         //assert!(false, "reduce claim_amount {} - {}", unbonding.amount, reserves);
-        let mut claim_amount = (unbonding.amount - reserves)?;
+        let mut claim_amount = (holding.unbondings[unbonding_i].amount - reserves)?;
 
         for alloc in allocations_r(&deps.storage).load(asset.to_string().as_bytes())? {
             if claim_amount == Uint128::zero() {
@@ -316,7 +318,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
 
             if claim > Uint128::zero() {
                 messages.push(adapter::claim_msg(asset.clone(), alloc.contract)?);
-                assert!(false, "claim_amount - claim: {} - {}", claim_amount, claim);
+                //assert!(false, "claim_amount - claim: {} - {}", claim_amount, claim);
                 if claim > claim_amount {
                     claim_amount = Uint128::zero();
                 }
@@ -326,33 +328,24 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
                 total_claimed += claim;
             }
         }
-        // Adjust unbonding amounts
-        match holding.unbondings.iter_mut().find(|u| u.token == asset) {
-            Some(mut u) => {
-                //assert!(false, "reduce unbonding {} - {}", u.amount, claim_amount);
-                u.amount = (u.amount - claim_amount)?
-            }
-            None => {
-                return Err(StdError::generic_err(
-                        format!("{} has no completed unbondings for {}",
-                                 claimer, asset)
-                ));
-            }
-        };
     }
 
-    holding_w(&mut deps.storage).save(&claimer.as_str().as_bytes(), &holding)?;
-
-    panic!("Manager sends {} -> treasury", reserves + total_claimed);
+    //panic!("Manager sends {} -> treasury", reserves + total_claimed);
 
     let mut send_amount = Uint128::zero();
 
-    if unbonding.amount > reserves + total_claimed {
+    if holding.unbondings[unbonding_i].amount > reserves + total_claimed {
         send_amount = reserves + total_claimed;
     }
     else {
-        send_amount = unbonding.amount;
+        send_amount = holding.unbondings[unbonding_i].amount;
     }
+    // Adjust unbonding amount
+    holding.unbondings[unbonding_i].amount = (holding.unbondings[unbonding_i].amount - send_amount)?;
+    holding_w(&mut deps.storage).save(&claimer.as_str().as_bytes(), &holding)?;
+
+
+    //panic!("manager claim sending {}", send_amount);
 
     // Send claimed funds
     messages.push(
@@ -631,39 +624,37 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::generic_err("Inactive Holding"));
         }
 
-        if let Some(b) = holding.balances.iter().position(|h| h.token == asset) {
+        let balance_i = match holding.balances.iter().position(|h| h.token == asset) {
+            Some(i) => i,
+            None => {
+                return Err(StdError::generic_err(
+                        format!("Cannot unbond, holder has no holdings of {}", asset)
+                ));
+            }
+        };
 
-            // Check balance exceeds unbond amount
-            if holding.balances[b].amount < amount {
-                return Err(StdError::generic_err("Not enough funds to unbond"));
-            }
-            // Reduce balance TODO: Should be done in claim unless funds are sent
-            else {
-                /*
-                assert!(false, "Reduce Balance {} by {}", 
-                        holding.balances[b].amount,
-                        amount);
-                */
-                //holding.balances[b].amount = (holding.balances[b].amount - amount)?;
-            }
 
-            // Add unbonding
-            if let Some(u) = holding.unbondings.iter().position(|h| h.token == asset) {
-                holding.unbondings[u].amount += amount;
-            }
-            else {
-                holding.unbondings.push(
-                    Balance {
-                        token: asset.clone(),
-                        amount,
-                    }
-                );
-            }
+        // Check balance exceeds unbond amount
+        if holding.balances[balance_i].amount < amount {
+            return Err(StdError::generic_err("Not enough funds to unbond"));
+        }
+
+        else {
+            //panic!("reducing balance {} by unbonding {}", holding.balances[balance_i].amount, amount);
+            holding.balances[balance_i].amount = (holding.balances[balance_i].amount - amount)?;
+        }
+
+        // Add unbonding
+        if let Some(u) = holding.unbondings.iter().position(|h| h.token == asset) {
+            holding.unbondings[u].amount += amount;
         }
         else {
-            return Err(StdError::generic_err(
-                    format!("Cannot unbond, holder has no holdings of {}", asset)
-            ));
+            holding.unbondings.push(
+                Balance {
+                    token: asset.clone(),
+                    amount,
+                }
+            );
         }
 
         holding_w(&mut deps.storage).save(&unbonder.as_str().as_bytes(), &holding)?;
@@ -681,8 +672,8 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         if h == unbonder {
             continue;
         }
-        let holder = holding_r(&deps.storage).load(&h.as_str().as_bytes())?;
-        if let Some(u) = holder.unbondings.iter().find(|u| u.token == asset.clone()) {
+        let other_holding = holding_r(&deps.storage).load(&h.as_str().as_bytes())?;
+        if let Some(u) = other_holding.unbondings.iter().find(|u| u.token == asset.clone()) {
             other_unbondings += u.amount;
         }
     }

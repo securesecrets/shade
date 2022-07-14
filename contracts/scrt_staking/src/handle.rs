@@ -387,7 +387,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
             None,
         )?);
 
-        assert!(false, "u - claim_amount: {} - {}", unbond_amount, claim_amount);
+        //assert!(false, "u - claim_amount: {} - {}", unbond_amount, claim_amount);
         unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
     }
 

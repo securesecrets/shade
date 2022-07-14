@@ -138,8 +138,12 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
         )));
     }
 
+    let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
+
+    let rewards = rewards(&deps)?;
+
     Ok(adapter::QueryAnswer::Unbonding {
-        amount: unbonding_r(&deps.storage).load()?,
+        amount: (unbonding_r(&deps.storage).load()? - (scrt_balance + rewards))?,
     })
 }
 
@@ -163,11 +167,13 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
         }
     };
 
+    let unbonding = unbonding_r(&deps.storage).load()?;
+
     /*TODO: Query current unbondings
      * u >= 7 = 0
      * u <  7 = unbondable
      */
-    Ok(adapter::QueryAnswer::Unbondable { amount: unbondable })
+    Ok(adapter::QueryAnswer::Unbondable { amount: (unbondable - unbonding)? })
 }
 
 pub fn reserves<S: Storage, A: Api, Q: Querier>(
