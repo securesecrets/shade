@@ -56,8 +56,10 @@
 pub mod snip20 {
     use crate::multi_macro;
     use snip20;
+    pub struct Snip20 {
+        pub info: ContractInfo,
+    }
 
-    pub struct Snip20;
     multi_macro::implement_multi!(Snip20, snip20);
 }
 

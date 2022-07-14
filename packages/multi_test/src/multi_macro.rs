@@ -2,7 +2,8 @@
 macro_rules! implement_multi {
     ($x:ident, $s:ident) => {
         use shade_protocol::c_std::{from_binary, ContractInfo, Empty, Coin, Addr, Binary, Env, Response, StdResult};
-        use shade_protocol::multi_test::{Contract, ContractWrapper};
+        use shade_protocol::multi_test::{Executor, Contract, ContractWrapper, App};
+        use shade_protocol::serde::Serialize;
         use shade_multi_test::MultiTestable;
         impl MultiTestable for $x {
             fn get_info(&self) -> &ContractInfo {
