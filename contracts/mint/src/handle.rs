@@ -47,7 +47,7 @@ use crate::state::{
     total_burned_w,
 };
 
-pub fn try_burn<S: Storage, A: Api, Q: Querier>(
+pub fn try_burn(
     deps: DepsMut,
     env: Env,
     _sender: Addr,
@@ -226,7 +226,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
+pub fn try_limit_refresh(
     deps: DepsMut,
     env: Env,
     limit: Limit,
@@ -303,7 +303,7 @@ pub fn try_limit_refresh<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     config: Config,
@@ -326,7 +326,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
+pub fn try_register_asset(
     deps: DepsMut,
     env: &Env,
     contract: &Contract,
@@ -402,7 +402,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_remove_asset<S: Storage, A: Api, Q: Querier>(
+pub fn try_remove_asset(
     deps: DepsMut,
     _env: &Env,
     address: Addr,
@@ -437,7 +437,7 @@ pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> 
     )
 }
 
-pub fn mint_amount<S: Storage, A: Api, Q: Querier>(
+pub fn mint_amount(
     deps: Deps,
     burn_amount: Uint128,
     burn_asset: &SupportedAsset,
@@ -534,7 +534,7 @@ pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
     amount.multiply_ratio(portion, 10u128.pow(18))
 }
 
-fn oracle<S: Storage, A: Api, Q: Querier>(
+fn oracle(
     deps: Deps,
     symbol: String,
 ) -> StdResult<Uint128> {

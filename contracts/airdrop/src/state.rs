@@ -46,7 +46,7 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
+pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
@@ -54,12 +54,12 @@ pub fn decay_claimed_w<S: Storage>(storage: &mut S) -> Singleton<S, bool> {
     singleton(storage, DECAY_CLAIMED_KEY)
 }
 
-pub fn decay_claimed_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, bool> {
+pub fn decay_claimed_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, bool> {
     singleton_read(storage, DECAY_CLAIMED_KEY)
 }
 
 // Is address added to an account
-pub fn address_in_account_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, bool> {
+pub fn address_in_account_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, bool> {
     bucket_read(REWARD_IN_ACCOUNT_KEY, storage)
 }
 
@@ -68,7 +68,7 @@ pub fn address_in_account_w<S: Storage>(storage: &mut S) -> Bucket<S, bool> {
 }
 
 // airdrop account
-pub fn account_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Account> {
+pub fn account_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Account> {
     bucket_read(ACCOUNTS_KEY, storage)
 }
 
@@ -77,7 +77,7 @@ pub fn account_w<S: Storage>(storage: &mut S) -> Bucket<S, Account> {
 }
 
 // If not found then its unrewarded; if true then claimed
-pub fn claim_status_r<S: Storage>(storage: &S, index: usize) -> ReadonlyBucket<S, bool> {
+pub fn claim_status_r<S: Storage>(storage: &dyn Storage, index: usize) -> ReadonlyBucket<S, bool> {
     let mut key = CLAIM_STATUS_KEY.to_vec();
     key.push(index as u8);
     bucket_read(&key, storage)
@@ -90,7 +90,7 @@ pub fn claim_status_w<S: Storage>(storage: &mut S, index: usize) -> Bucket<S, bo
 }
 
 // Total claimed
-pub fn total_claimed_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
+pub fn total_claimed_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Uint128> {
     singleton_read(storage, TOTAL_CLAIMED_KEY)
 }
 
@@ -99,7 +99,7 @@ pub fn total_claimed_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint128> {
 }
 
 // Total account claimed
-pub fn account_total_claimed_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
+pub fn account_total_claimed_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Uint128> {
     bucket_read(USER_TOTAL_CLAIMED_KEY, storage)
 }
 
@@ -108,7 +108,7 @@ pub fn account_total_claimed_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128
 }
 
 // Account viewing key
-pub fn account_viewkey_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, [u8; 32]> {
+pub fn account_viewkey_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, [u8; 32]> {
     bucket_read(ACCOUNT_VIEWING_KEY, storage)
 }
 
@@ -117,7 +117,7 @@ pub fn account_viewkey_w<S: Storage>(storage: &mut S) -> Bucket<S, [u8; 32]> {
 }
 
 // Account permit key
-pub fn account_permit_key_r<S: Storage>(storage: &S, account: String) -> ReadonlyBucket<S, bool> {
+pub fn account_permit_key_r<S: Storage>(storage: &dyn Storage, account: String) -> ReadonlyBucket<S, bool> {
     let key = ACCOUNT_PERMIT_KEY.to_string() + &account;
     bucket_read(key.as_bytes(), storage)
 }
@@ -134,7 +134,7 @@ pub fn revoke_permit<S: Storage>(storage: &mut S, account: String, permit_key: S
 }
 
 pub fn is_permit_revoked<S: Storage>(
-    storage: &S,
+    storage: &dyn Storage,
     account: String,
     permit_key: String,
 ) -> StdResult<bool> {
@@ -149,7 +149,7 @@ pub fn is_permit_revoked<S: Storage>(
 }
 
 pub fn validate_address_permit<S: Storage, A: Api>(
-    storage: &S,
+    storage: &dyn Storage,
     api: &A,
     permit: &AddressProofPermit,
     params: &AddressProofMsg,
@@ -172,7 +172,7 @@ pub fn validate_address_permit<S: Storage, A: Api>(
     authenticate_ownership(api, permit, params.address.as_str())
 }
 
-pub fn validate_account_permit<S: Storage, A: Api, Q: Querier>(
+pub fn validate_account_permit(
     deps: Deps,
     permit: &AccountPermit,
     contract: Addr,

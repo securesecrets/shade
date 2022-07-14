@@ -40,7 +40,7 @@ use crate::{
     state::{config_r, config_w, self_address_r, unbonding_r, unbonding_w},
 };
 
-pub fn receive<S: Storage, A: Api, Q: Querier>(
+pub fn receive(
     deps: DepsMut,
     env: Env,
     _sender: Addr,
@@ -84,7 +84,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     config: Config,
@@ -110,7 +110,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 /* Claim rewards and restake, hold enough for pending unbondings
  * Send reserves unbonded funds to treasury
  */
-pub fn update<S: Storage, A: Api, Q: Querier>(
+pub fn update(
     deps: DepsMut,
     env: Env,
     asset: Addr,
@@ -161,7 +161,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn unbond<S: Storage, A: Api, Q: Querier>(
+pub fn unbond(
     deps: DepsMut,
     env: Env,
     asset: Addr,
@@ -301,7 +301,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn withdraw_rewards<S: Storage, A: Api, Q: Querier>(
+pub fn withdraw_rewards(
     deps: DepsMut,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = vec![];
@@ -317,7 +317,7 @@ pub fn withdraw_rewards<S: Storage, A: Api, Q: Querier>(
     Ok(messages)
 }
 
-pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
+pub fn unwrap_and_stake(
     _deps: DepsMut,
     amount: Uint128,
     validator: Validator,
@@ -340,7 +340,7 @@ pub fn unwrap_and_stake<S: Storage, A: Api, Q: Querier>(
 /* Claims completed unbondings, wraps them,
  * and returns them to treasury
  */
-pub fn claim<S: Storage, A: Api, Q: Querier>(
+pub fn claim(
     deps: DepsMut,
     env: Env,
     asset: Addr,
@@ -398,7 +398,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn choose_validator<S: Storage, A: Api, Q: Querier>(
+pub fn choose_validator(
     deps: Deps,
     seed: u64,
 ) -> StdResult<Validator> {

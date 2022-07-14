@@ -49,7 +49,7 @@ use crate::{
     state::{asset_r, asset_w, assets_w, config_r, config_w, self_address_r, viewing_key_r},
 };
 
-pub fn receive<S: Storage, A: Api, Q: Querier>(
+pub fn receive(
     deps: DepsMut,
     env: Env,
     _sender: Addr,
@@ -68,7 +68,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     config: Config,
@@ -90,7 +90,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn register_asset<S: Storage, A: Api, Q: Querier>(
+pub fn register_asset(
     deps: DepsMut,
     env: Env,
     contract: &Contract,
@@ -137,7 +137,7 @@ pub fn register_asset<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
+pub fn refill_rewards(
     deps: DepsMut,
     env: Env,
     rewards: Vec<Reward>,
@@ -183,7 +183,7 @@ pub fn refill_rewards<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn update<S: Storage, A: Api, Q: Querier>(
+pub fn update(
     deps: DepsMut,
     env: Env,
     asset: Addr,
@@ -197,7 +197,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn claim<S: Storage, A: Api, Q: Querier>(
+pub fn claim(
     deps: DepsMut,
     _env: Env,
     asset: Addr,

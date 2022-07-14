@@ -29,7 +29,7 @@ use shade_protocol::{
 };
 use std::convert::TryInto;
 
-pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
+pub fn try_assembly_vote(
     deps: DepsMut,
     env: Env,
     proposal: Uint128,
@@ -80,7 +80,7 @@ pub fn try_assembly_vote<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
+pub fn try_assembly_proposal(
     deps: DepsMut,
     env: Env,
     assembly_id: Uint128,
@@ -198,7 +198,7 @@ pub fn try_assembly_proposal<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
+pub fn try_add_assembly(
     deps: DepsMut,
     env: Env,
     name: String,
@@ -234,7 +234,7 @@ pub fn try_add_assembly<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_assembly<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_assembly(
     deps: DepsMut,
     env: Env,
     id: Uint128,

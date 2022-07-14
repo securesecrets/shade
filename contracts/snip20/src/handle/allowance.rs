@@ -6,7 +6,7 @@ use shade_protocol::utils::generic_response::ResponseStatus::Success;
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 use crate::handle::transfers::{try_send_impl, try_transfer_impl};
 
-pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
+pub fn try_increase_allowance(
     deps: DepsMut,
     env: Env,
     spender: Addr,
@@ -48,7 +48,7 @@ pub fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
+pub fn try_decrease_allowance(
     deps: DepsMut,
     env: Env,
     spender: Addr,
@@ -86,7 +86,7 @@ pub fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
+pub fn try_transfer_from(
     deps: DepsMut,
     env: Env,
     owner: Addr,
@@ -113,7 +113,7 @@ pub fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
+pub fn try_batch_transfer_from(
     deps: DepsMut,
     env: Env,
     actions: Vec<batch::TransferFromAction>,
@@ -142,7 +142,7 @@ pub fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
+pub fn try_send_from(
     deps: DepsMut,
     env: Env,
     owner: Addr,
@@ -175,7 +175,7 @@ pub fn try_send_from<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
+pub fn try_batch_send_from(
     deps: DepsMut,
     env: Env,
     actions: Vec<batch::SendFromAction>

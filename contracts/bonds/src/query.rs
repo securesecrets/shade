@@ -22,13 +22,13 @@ use shade_protocol::contract_interfaces::query_auth::{
     self, QueryMsg::ValidatePermit, QueryPermit,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
-pub fn account<S: Storage, A: Api, Q: Querier>(
+pub fn account(
     deps: Deps,
     permit: QueryPermit,
 ) -> StdResult<QueryAnswer> {
@@ -51,7 +51,7 @@ pub fn account<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-fn account_information<S: Storage, A: Api, Q: Querier>(
+fn account_information(
     deps: Deps,
     account_address: Addr,
 ) -> StdResult<QueryAnswer> {
@@ -64,7 +64,7 @@ fn account_information<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
+pub fn bond_opportunities(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let deposit_assets = deposit_assets_r(&deps.storage).load()?;
@@ -83,7 +83,7 @@ pub fn bond_opportunities<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn bond_info<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn bond_info(deps: Deps) -> StdResult<QueryAnswer> {
     let global_total_issued = global_total_issued_r(&deps.storage).load()?;
     let global_total_claimed = global_total_claimed_r(&deps.storage).load()?;
     let issued_asset = issued_asset_r(&deps.storage).load()?;
@@ -97,7 +97,7 @@ pub fn bond_info<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryA
     })
 }
 
-pub fn list_deposit_addresses<S: Storage, A: Api, Q: Querier>(
+pub fn list_deposit_addresses(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let deposit_addresses = deposit_assets_r(&deps.storage).load()?;
@@ -106,7 +106,7 @@ pub fn list_deposit_addresses<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn price_check<S: Storage, A: Api, Q: Querier>(
+pub fn price_check(
     asset: String,
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
@@ -114,7 +114,7 @@ pub fn price_check<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::PriceCheck { price })
 }
 
-pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
+pub fn check_allowance(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;
@@ -135,7 +135,7 @@ pub fn check_allowance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn check_balance<S: Storage, A: Api, Q: Querier>(
+pub fn check_balance(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let config = config_r(&deps.storage).load()?;

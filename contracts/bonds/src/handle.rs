@@ -30,7 +30,7 @@ use crate::state::{
     global_total_issued_w, issued_asset_r,
 };
 
-pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_limit_config(
     deps: DepsMut,
     env: Env,
     limit_admin: Option<Addr>,
@@ -89,7 +89,7 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     oracle: Option<Contract>,
@@ -173,7 +173,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
+pub fn try_deposit(
     deps: DepsMut,
     env: &Env,
     sender: Addr,
@@ -360,7 +360,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_claim<S: Storage, A: Api, Q: Querier>(
+pub fn try_claim(
     deps: DepsMut,
     env: Env,
 ) -> StdResult<Response> {
@@ -439,7 +439,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
+pub fn try_open_bond(
     deps: DepsMut,
     env: Env,
     deposit_asset: Contract,
@@ -592,7 +592,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
+pub fn try_close_bond(
     deps: DepsMut,
     env: Env,
     deposit_asset: Contract,
@@ -674,7 +674,7 @@ fn bond_active(env: &Env, bond_opp: &BondOpportunity) -> StdResult<()> {
     Ok(())
 }
 
-fn check_against_limits<S: Storage, A: Api, Q: Querier>(
+fn check_against_limits(
     deps: Deps,
     bond_limit: Uint128,
     bond_period: u64,
@@ -729,7 +729,7 @@ pub fn active(
     Ok(())
 }
 
-pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
+pub fn amount_to_issue(
     deps: Deps,
     deposit_amount: Uint128,
     available: Uint128,
@@ -848,7 +848,7 @@ pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> 
     )
 }
 
-pub fn oracle<S: Storage, A: Api, Q: Querier>(
+pub fn oracle(
     deps: Deps,
     key: String,
 ) -> StdResult<Uint128> {

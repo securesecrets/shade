@@ -28,11 +28,11 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury::Config> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, treasury::Config> {
+pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, treasury::Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn asset_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Addr>> {
+pub fn asset_list_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<Addr>> {
     singleton_read(storage, ASSET_LIST)
 }
 
@@ -40,7 +40,7 @@ pub fn asset_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Addr>> {
     singleton(storage, ASSET_LIST)
 }
 
-pub fn assets_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Snip20Asset> {
+pub fn assets_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Snip20Asset> {
     bucket_read(ASSETS, storage)
 }
 
@@ -48,7 +48,7 @@ pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
     bucket(ASSETS, storage)
 }
 
-pub fn viewing_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
+pub fn viewing_key_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, String> {
     singleton_read(storage, VIEWING_KEY)
 }
 
@@ -56,7 +56,7 @@ pub fn viewing_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
     singleton(storage, VIEWING_KEY)
 }
 
-pub fn self_address_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Addr> {
+pub fn self_address_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Addr> {
     singleton_read(storage, SELF_ADDRESS)
 }
 
@@ -64,7 +64,7 @@ pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
     singleton(storage, SELF_ADDRESS)
 }
 
-pub fn allowances_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<treasury::Allowance>> {
+pub fn allowances_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Vec<treasury::Allowance>> {
     bucket_read(ALLOWANCES, storage)
 }
 
@@ -73,7 +73,7 @@ pub fn allowances_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury::Allo
 }
 
 /*
-pub fn current_allowances_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Addr> {
+pub fn current_allowances_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Addr> {
     bucket_read(CUR_ALLOWANCES, storage)
 }
 
@@ -82,7 +82,7 @@ pub fn current_allowances_w<S: Storage>(storage: &mut S) -> Bucket<S, Addr> {
 }
 */
 
-pub fn managers_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<treasury::Manager>> {
+pub fn managers_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<treasury::Manager>> {
     singleton_read(storage, MANAGERS)
 }
 
@@ -93,7 +93,7 @@ pub fn managers_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<treasury::Man
 
 // Total unbonding per asset, to be used in rebalance
 /*
-pub fn total_unbonding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
+pub fn total_unbonding_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Uint128> {
     bucket_read(UNBONDING, storage)
 }
 
@@ -102,7 +102,7 @@ pub fn total_unbonding_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
 }
 
 // Actually stored in accounts?
-pub fn unbondings_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
+pub fn unbondings_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Uint128> {
     bucket_read(UNBONDING, storage)
 }
 

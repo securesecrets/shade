@@ -59,7 +59,7 @@ const PUBLIC_VOTES: &'static [u8] = b"total-public-votes-";
 
 #[cfg(feature = "governance-impl")]
 impl Proposal {
-    pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage, id: &Uint128) -> StdResult<()> {
         if let Some(msgs) = self.msgs.clone() {
             Self::save_msg(storage, &id, msgs)?;
         }
@@ -91,14 +91,14 @@ impl Proposal {
         Ok(())
     }
 
-    pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
+    pub fn may_load(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<Self>> {
         if id > &ID::proposal(storage)? {
             return Ok(None);
         }
         Ok(Some(Self::load(storage, id)?))
     }
 
-    pub fn load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage, id: &Uint128) -> StdResult<Self> {
         let msgs = Self::msg(storage, id)?;
         let description = Self::description(storage, &id)?;
         let assembly = Self::assembly(storage, &id)?;
@@ -143,66 +143,66 @@ impl Proposal {
         })
     }
 
-    pub fn msg<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Vec<ProposalMsg>>> {
+    pub fn msg(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<Vec<ProposalMsg>>> {
         match ProposalMsgs::may_load(storage, &id.to_be_bytes())? {
             None => Ok(None),
             Some(i) => Ok(Some(i.0)),
         }
     }
 
-    pub fn save_msg<S: Storage>(
-        storage: &mut S,
+    pub fn save_msg(
+        storage: &mut dyn Storage,
         id: &Uint128,
         data: Vec<ProposalMsg>,
     ) -> StdResult<()> {
         ProposalMsgs(data).save(storage, &id.to_be_bytes())
     }
 
-    pub fn description<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProposalDescription> {
+    pub fn description(storage: &dyn Storage, id: &Uint128) -> StdResult<ProposalDescription> {
         ProposalDescription::load(storage, &id.to_be_bytes())
     }
 
-    pub fn save_description<S: Storage>(
-        storage: &mut S,
+    pub fn save_description(
+        storage: &mut dyn Storage,
         id: &Uint128,
         data: ProposalDescription,
     ) -> StdResult<()> {
         data.save(storage, &id.to_be_bytes())
     }
 
-    pub fn assembly<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Uint128> {
+    pub fn assembly(storage: &dyn Storage, id: &Uint128) -> StdResult<Uint128> {
         Ok(ProposalAssembly::load(storage, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_assembly<S: Storage>(
-        storage: &mut S,
+    pub fn save_assembly(
+        storage: &mut dyn Storage,
         id: &Uint128,
         data: Uint128,
     ) -> StdResult<()> {
         ProposalAssembly(data).save(storage, &id.to_be_bytes())
     }
 
-    pub fn status<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Status> {
+    pub fn status(storage: &dyn Storage, id: &Uint128) -> StdResult<Status> {
         Status::load(storage, &id.to_be_bytes())
     }
 
-    pub fn save_status<S: Storage>(storage: &mut S, id: &Uint128, data: Status) -> StdResult<()> {
+    pub fn save_status(storage: &mut dyn Storage, id: &Uint128, data: Status) -> StdResult<()> {
         data.save(storage, &id.to_be_bytes())
     }
 
-    pub fn status_history<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vec<Status>> {
+    pub fn status_history(storage: &dyn Storage, id: &Uint128) -> StdResult<Vec<Status>> {
         Ok(StatusHistory::load(storage, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_status_history<S: Storage>(
-        storage: &mut S,
+    pub fn save_status_history(
+        storage: &mut dyn Storage,
         id: &Uint128,
         data: Vec<Status>,
     ) -> StdResult<()> {
         StatusHistory(data).save(storage, &id.to_be_bytes())
     }
 
-    pub fn funders<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vec<Addr>> {
+    pub fn funders(storage: &dyn Storage, id: &Uint128) -> StdResult<Vec<Addr>> {
         let funders = match Funders::may_load(storage, &id.to_be_bytes())? {
             None => vec![],
             Some(item) => item.0,
@@ -210,21 +210,21 @@ impl Proposal {
         Ok(funders)
     }
 
-    pub fn save_funders<S: Storage>(
-        storage: &mut S,
+    pub fn save_funders(
+        storage: &mut dyn Storage,
         id: &Uint128,
         data: Vec<Addr>,
     ) -> StdResult<()> {
         Funders(data).save(storage, &id.to_be_bytes())
     }
 
-    pub fn funding<S: Storage>(storage: &S, id: &Uint128, user: &Addr) -> StdResult<Funding> {
+    pub fn funding(storage: &dyn Storage, id: &Uint128, user: &Addr) -> StdResult<Funding> {
         let key = id.to_string() + "-" + user.as_str();
         Funding::load(storage, key.as_bytes())
     }
 
-    pub fn save_funding<S: Storage>(
-        storage: &mut S,
+    pub fn save_funding(
+        storage: &mut dyn Storage,
         id: &Uint128,
         user: &Addr,
         data: Funding,
@@ -234,8 +234,8 @@ impl Proposal {
     }
 
     // User assembly votes
-    pub fn assembly_vote<S: Storage>(
-        storage: &S,
+    pub fn assembly_vote(
+        storage: &dyn Storage,
         id: &Uint128,
         user: &Addr,
     ) -> StdResult<Option<Vote>> {
@@ -243,8 +243,8 @@ impl Proposal {
         Ok(Vote::may_load(storage, ASSEMBLY_VOTE, key.as_bytes())?)
     }
 
-    pub fn save_assembly_vote<S: Storage>(
-        storage: &mut S,
+    pub fn save_assembly_vote(
+        storage: &mut dyn Storage,
         id: &Uint128,
         user: &Addr,
         data: &Vote,
@@ -254,15 +254,15 @@ impl Proposal {
     }
 
     // Total assembly votes
-    pub fn assembly_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
+    pub fn assembly_votes(storage: &dyn Storage, id: &Uint128) -> StdResult<Vote> {
         match Vote::may_load(storage, ASSEMBLY_VOTES, &id.to_be_bytes())? {
             None => Ok(Vote::default()),
             Some(vote) => Ok(vote),
         }
     }
 
-    pub fn save_assembly_votes<S: Storage>(
-        storage: &mut S,
+    pub fn save_assembly_votes(
+        storage: &mut dyn Storage,
         id: &Uint128,
         data: &Vote,
     ) -> StdResult<()> {
@@ -270,8 +270,8 @@ impl Proposal {
     }
 
     // User public votes
-    pub fn public_vote<S: Storage>(
-        storage: &S,
+    pub fn public_vote(
+        storage: &dyn Storage,
         id: &Uint128,
         user: &Addr,
     ) -> StdResult<Option<Vote>> {
@@ -279,8 +279,8 @@ impl Proposal {
         Ok(Vote::may_load(storage, PUBLIC_VOTE, key.as_bytes())?)
     }
 
-    pub fn save_public_vote<S: Storage>(
-        storage: &mut S,
+    pub fn save_public_vote(
+        storage: &mut dyn Storage,
         id: &Uint128,
         user: &Addr,
         data: &Vote,
@@ -290,15 +290,15 @@ impl Proposal {
     }
 
     // Total public votes
-    pub fn public_votes<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Vote> {
+    pub fn public_votes(storage: &dyn Storage, id: &Uint128) -> StdResult<Vote> {
         match Vote::may_load(storage, PUBLIC_VOTES, &id.to_be_bytes())? {
             None => Ok(Vote::default()),
             Some(vote) => Ok(vote),
         }
     }
 
-    pub fn save_public_votes<S: Storage>(
-        storage: &mut S,
+    pub fn save_public_votes(
+        storage: &mut dyn Storage,
         id: &Uint128,
         data: &Vote,
     ) -> StdResult<()> {

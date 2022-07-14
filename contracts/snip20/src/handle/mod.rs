@@ -47,7 +47,7 @@ use shade_protocol::{
 };
 use shade_protocol::contract_interfaces::snip20::errors::{deposit_disabled, no_tokens_received, not_admin, not_enough_tokens, redeem_disabled, unsupported_token};
 
-pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
+pub fn try_redeem(
     deps: DepsMut,
     env: Env,
     amount: Uint128,
@@ -90,7 +90,7 @@ pub fn try_redeem<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
+pub fn try_deposit(
     deps: DepsMut,
     env: Env,
 ) -> StdResult<Response> {
@@ -131,7 +131,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
+pub fn try_change_admin(
     deps: DepsMut,
     env: Env,
     address: Addr,
@@ -149,7 +149,7 @@ pub fn try_change_admin<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_contract_status(
     deps: DepsMut,
     env: Env,
     status_level: ContractStatusLevel,
@@ -169,7 +169,7 @@ pub fn try_set_contract_status<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
+pub fn try_register_receive(
     deps: DepsMut,
     env: Env,
     code_hash: String,
@@ -184,7 +184,7 @@ pub fn try_register_receive<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
+pub fn try_create_viewing_key(
     deps: DepsMut,
     env: Env,
     entropy: String,
@@ -202,7 +202,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_viewing_key(
     deps: DepsMut,
     env: Env,
     key: String,
@@ -218,7 +218,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_revoke_permit<S: Storage, A: Api, Q: Querier>(
+pub fn try_revoke_permit(
     deps: DepsMut,
     env: Env,
     permit_name: String,

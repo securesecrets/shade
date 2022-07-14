@@ -29,7 +29,7 @@ use crate::state::{
     holders_r,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(
+pub fn config(
     deps: Deps,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Config {
@@ -37,7 +37,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
+pub fn pending_allowance(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
@@ -64,7 +64,7 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn reserves<S: Storage, A: Api, Q: Querier>(
+pub fn reserves(
     deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -86,7 +86,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
     Err(StdError::generic_err("Not a registered asset"))
 }
 
-pub fn assets<S: Storage, A: Api, Q: Querier>(
+pub fn assets(
     deps: Deps,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Assets {
@@ -94,7 +94,7 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn allocations<S: Storage, A: Api, Q: Querier>(
+pub fn allocations(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
@@ -107,7 +107,7 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
 }
 
 /*
-pub fn claimable<S: Storage, A: Api, Q: Querier>(
+pub fn claimable(
     deps: Deps,
     asset: Addr,
     holder: Option<Addr>,
@@ -162,7 +162,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
 }
 */
 
-pub fn unbonding<S: Storage, A: Api, Q: Querier>(
+pub fn unbonding(
     deps: Deps,
     asset: Addr,
     holder: Option<Addr>,
@@ -209,7 +209,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn claimable<S: Storage, A: Api, Q: Querier>(
+pub fn claimable(
     deps: Deps,
     asset: Addr,
     holder: Option<Addr>,
@@ -291,7 +291,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
  * but only partial balance available for unbond resulting
  * in stalled treasury trying to unbond more than is available
  */
-pub fn unbondable<S: Storage, A: Api, Q: Querier>(
+pub fn unbondable(
     deps: Deps,
     asset: Addr,
     holder: Option<Addr>,
@@ -352,7 +352,7 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     Err(StdError::generic_err("Not a registered asset"))
 }
 
-pub fn balance<S: Storage, A: Api, Q: Querier>(
+pub fn balance(
     deps: Deps,
     asset: Addr,
     holder: Option<Addr>,
@@ -402,7 +402,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn holders<S: Storage, A: Api, Q: Querier>(
+pub fn holders(
     deps: Deps,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Holders {
@@ -410,7 +410,7 @@ pub fn holders<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn holder<S: Storage, A: Api, Q: Querier>(
+pub fn holder(
     deps: Deps,
     holder: Addr,
 ) -> StdResult<treasury_manager::QueryAnswer> {

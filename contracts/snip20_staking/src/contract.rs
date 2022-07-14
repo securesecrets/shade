@@ -96,7 +96,7 @@ use shade_protocol::{Contract, contract_interfaces::staking::snip20_staking::{
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
+pub fn init(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -213,7 +213,7 @@ fn pad_response(response: StdResult<Response>) -> StdResult<Response> {
     })
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
+pub fn handle(
     deps: DepsMut,
     env: Env,
     msg: ExecuteMsg,
@@ -405,7 +405,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     pad_response(response)
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::StakeConfig {} => stake_queries::stake_config(deps),
         QueryMsg::TotalStaked {} => stake_queries::total_staked(deps),
@@ -421,7 +421,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: Deps, msg: QueryMsg) -> StdRe
     }
 }
 
-fn permit_queries<S: Storage, A: Api, Q: Querier>(
+fn permit_queries(
     deps: Deps,
     permit: Permit,
     query: QueryWithPermit,
@@ -497,7 +497,7 @@ fn permit_queries<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn viewing_keys_queries<S: Storage, A: Api, Q: Querier>(
+pub fn viewing_keys_queries(
     deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
@@ -542,7 +542,7 @@ pub fn viewing_keys_queries<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-fn query_token_info<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
+fn query_token_info<S: ReadonlyStorage>(storage: &dyn Storage) -> StdResult<Binary> {
     let config = ReadonlyConfig::from_storage(storage);
     let constants = config.constants()?;
 
@@ -560,7 +560,7 @@ fn query_token_info<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
     })
 }
 
-fn query_token_config<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
+fn query_token_config<S: ReadonlyStorage>(storage: &dyn Storage) -> StdResult<Binary> {
     let config = ReadonlyConfig::from_storage(storage);
     let constants = config.constants()?;
 
@@ -569,7 +569,7 @@ fn query_token_config<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
     })
 }
 
-fn query_contract_status<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
+fn query_contract_status<S: ReadonlyStorage>(storage: &dyn Storage) -> StdResult<Binary> {
     let config = ReadonlyConfig::from_storage(storage);
 
     to_binary(&QueryAnswer::ContractStatus {
@@ -577,7 +577,7 @@ fn query_contract_status<S: ReadonlyStorage>(storage: &S) -> StdResult<Binary> {
     })
 }
 
-pub fn query_transfers<S: Storage, A: Api, Q: Querier>(
+pub fn query_transfers(
     deps: Deps,
     account: &Addr,
     page: u32,
@@ -593,7 +593,7 @@ pub fn query_transfers<S: Storage, A: Api, Q: Querier>(
     to_binary(&result)
 }
 
-pub fn query_transactions<S: Storage, A: Api, Q: Querier>(
+pub fn query_transactions(
     deps: Deps,
     account: &Addr,
     page: u32,
@@ -609,7 +609,7 @@ pub fn query_transactions<S: Storage, A: Api, Q: Querier>(
     to_binary(&result)
 }
 
-pub fn query_balance<S: Storage, A: Api, Q: Querier>(
+pub fn query_balance(
     deps: Deps,
     account: &Addr,
 ) -> StdResult<Binary> {
@@ -621,7 +621,7 @@ pub fn query_balance<S: Storage, A: Api, Q: Querier>(
     to_binary(&response)
 }
 
-fn change_admin<S: Storage, A: Api, Q: Querier>(
+fn change_admin(
     deps: DepsMut,
     env: Env,
     address: Addr,
@@ -675,7 +675,7 @@ pub fn try_mint_impl<S: Storage>(
     Ok(())
 }
 
-pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_key(
     deps: DepsMut,
     env: Env,
     key: String,
@@ -692,7 +692,7 @@ pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
+pub fn try_create_key(
     deps: DepsMut,
     env: Env,
     entropy: String,
@@ -712,7 +712,7 @@ pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-fn set_contract_status<S: Storage, A: Api, Q: Querier>(
+fn set_contract_status(
     deps: DepsMut,
     env: Env,
     status_level: ContractStatusLevel,
@@ -732,7 +732,7 @@ fn set_contract_status<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn query_allowance<S: Storage, A: Api, Q: Querier>(
+pub fn query_allowance(
     deps: Deps,
     owner: Addr,
     spender: Addr,
@@ -752,7 +752,7 @@ pub fn query_allowance<S: Storage, A: Api, Q: Querier>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
+fn try_transfer_impl(
     deps: DepsMut,
     messages: &mut Vec<CosmosMsg>,
     sender: &Addr,
@@ -823,7 +823,7 @@ fn try_transfer_impl<S: Storage, A: Api, Q: Querier>(
     Ok(())
 }
 
-fn try_transfer<S: Storage, A: Api, Q: Querier>(
+fn try_transfer(
     deps: DepsMut,
     env: Env,
     recipient: Addr,
@@ -860,7 +860,7 @@ fn try_transfer<S: Storage, A: Api, Q: Querier>(
     Ok(res)
 }
 
-fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
+fn try_batch_transfer(
     deps: DepsMut,
     env: Env,
     actions: Vec<batch::TransferAction>,
@@ -900,7 +900,7 @@ fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
 
 #[allow(clippy::too_many_arguments)]
 fn try_add_receiver_api_callback<S: ReadonlyStorage>(
-    storage: &S,
+    storage: &dyn Storage,
     messages: &mut Vec<CosmosMsg>,
     recipient: Addr,
     recipient_code_hash: Option<String>,
@@ -930,7 +930,7 @@ fn try_add_receiver_api_callback<S: ReadonlyStorage>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn try_send_impl<S: Storage, A: Api, Q: Querier>(
+fn try_send_impl(
     deps: DepsMut,
     messages: &mut Vec<CosmosMsg>,
     sender: Addr,
@@ -975,7 +975,7 @@ fn try_send_impl<S: Storage, A: Api, Q: Querier>(
     Ok(())
 }
 
-fn try_send<S: Storage, A: Api, Q: Querier>(
+fn try_send(
     deps: DepsMut,
     env: Env,
     recipient: Addr,
@@ -1013,7 +1013,7 @@ fn try_send<S: Storage, A: Api, Q: Querier>(
     Ok(res)
 }
 
-fn try_batch_send<S: Storage, A: Api, Q: Querier>(
+fn try_batch_send(
     deps: DepsMut,
     env: Env,
     actions: Vec<batch::SendAction>,
@@ -1049,7 +1049,7 @@ fn try_batch_send<S: Storage, A: Api, Q: Querier>(
     Ok(res)
 }
 
-fn try_register_receive<S: Storage, A: Api, Q: Querier>(
+fn try_register_receive(
     deps: DepsMut,
     env: Env,
     code_hash: String,
@@ -1096,7 +1096,7 @@ fn use_allowance<S: Storage>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
+fn try_transfer_from_impl(
     deps: DepsMut,
     env: &Env,
     spender: &Addr,
@@ -1157,7 +1157,7 @@ fn try_transfer_from_impl<S: Storage, A: Api, Q: Querier>(
     Ok(())
 }
 
-fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
+fn try_transfer_from(
     deps: DepsMut,
     env: &Env,
     owner: &Addr,
@@ -1192,7 +1192,7 @@ fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
     Ok(res)
 }
 
-fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
+fn try_batch_transfer_from(
     deps: DepsMut,
     env: &Env,
     actions: Vec<batch::TransferFromAction>,
@@ -1232,7 +1232,7 @@ fn try_batch_transfer_from<S: Storage, A: Api, Q: Querier>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn try_send_from_impl<S: Storage, A: Api, Q: Querier>(
+fn try_send_from_impl(
     deps: DepsMut,
     env: Env,
     messages: &mut Vec<CosmosMsg>,
@@ -1280,7 +1280,7 @@ fn try_send_from_impl<S: Storage, A: Api, Q: Querier>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn try_send_from<S: Storage, A: Api, Q: Querier>(
+fn try_send_from(
     deps: DepsMut,
     env: Env,
     owner: Addr,
@@ -1317,7 +1317,7 @@ fn try_send_from<S: Storage, A: Api, Q: Querier>(
     Ok(res)
 }
 
-fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
+fn try_batch_send_from(
     deps: DepsMut,
     env: Env,
     actions: Vec<batch::SendFromAction>,
@@ -1353,7 +1353,7 @@ fn try_batch_send_from<S: Storage, A: Api, Q: Querier>(
     Ok(res)
 }
 
-fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
+fn try_increase_allowance(
     deps: DepsMut,
     env: Env,
     spender: Addr,
@@ -1398,7 +1398,7 @@ fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
     Ok(res)
 }
 
-fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
+fn try_decrease_allowance(
     deps: DepsMut,
     env: Env,
     spender: Addr,
@@ -1520,7 +1520,7 @@ fn perform_transfer<T: Storage>(
     Ok(())
 }
 
-fn revoke_permit<S: Storage, A: Api, Q: Querier>(
+fn revoke_permit(
     deps: DepsMut,
     env: Env,
     permit_name: String,
@@ -1570,7 +1570,7 @@ fn is_valid_symbol(symbol: &str) -> bool {
     len_is_valid && symbol.bytes().all(|byte| (b'A'..=b'Z').contains(&byte))
 }
 
-// pub fn migrate<S: Storage, A: Api, Q: Querier>(
+// pub fn migrate(
 //     _deps: DepsMut,
 //     _env: Env,
 //     _msg: MigrateMsg,

@@ -26,7 +26,7 @@ use shade_protocol::{
 };
 use shade_protocol::utils::asset::Contract;
 
-fn user_authorized<S: Storage, A: Api, Q: Querier>(deps: Deps, env: Env) -> StdResult<bool> {
+fn user_authorized(deps: Deps, env: Env) -> StdResult<bool> {
     let contract = Admin::load(&deps.storage)?.0;
 
     let authorized_users: AuthorizedUsersResponse = shade_admin::admin::QueryMsg::GetAuthorizedUsers {
@@ -36,7 +36,7 @@ fn user_authorized<S: Storage, A: Api, Q: Querier>(deps: Deps, env: Env) -> StdR
     Ok(authorized_users.authorized_users.contains(&info.sender.to_string()))
 }
 
-pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_admin(
     deps: DepsMut,
     env: Env,
     admin: Contract,
@@ -54,7 +54,7 @@ pub fn try_set_admin<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_run_state(
     deps: DepsMut,
     env: Env,
     state: ContractStatus,
@@ -72,7 +72,7 @@ pub fn try_set_run_state<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
+pub fn try_create_viewing_key(
     deps: DepsMut,
     env: Env,
     entropy: String,
@@ -90,7 +90,7 @@ pub fn try_create_viewing_key<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_viewing_key(
     deps: DepsMut,
     env: Env,
     key: String,
@@ -104,7 +104,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_block_permit_key<S: Storage, A: Api, Q: Querier>(
+pub fn try_block_permit_key(
     deps: DepsMut,
     env: Env,
     key: String,

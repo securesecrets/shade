@@ -45,7 +45,7 @@ pub fn try_transfer_impl<S: Storage>(
     Ok(())
 }
 
-pub fn try_transfer<S: Storage, A: Api, Q: Querier>(
+pub fn try_transfer(
     deps: DepsMut,
     env: Env,
     recipient: Addr,
@@ -61,7 +61,7 @@ pub fn try_transfer<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
+pub fn try_batch_transfer(
     deps: DepsMut,
     env: Env,
     actions: Vec<batch::TransferAction>,
@@ -81,7 +81,7 @@ pub fn try_batch_transfer<S: Storage, A: Api, Q: Querier>(
 
 #[allow(clippy::too_many_arguments)]
 fn try_add_receiver_api_callback<S: Storage>(
-    storage: &S,
+    storage: &dyn Storage,
     messages: &mut Vec<CosmosMsg>,
     recipient: Addr,
     recipient_code_hash: Option<String>,
@@ -135,7 +135,7 @@ pub fn try_send_impl<S: Storage>(
     Ok(())
 }
 
-pub fn try_send<S: Storage, A: Api, Q: Querier>(
+pub fn try_send(
     deps: DepsMut,
     env: Env,
     recipient: Addr,
@@ -168,7 +168,7 @@ pub fn try_send<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_batch_send<S: Storage, A: Api, Q: Querier>(
+pub fn try_batch_send(
     deps: DepsMut,
     env: Env,
     actions: Vec<batch::SendAction>

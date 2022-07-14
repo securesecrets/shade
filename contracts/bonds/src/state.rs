@@ -23,7 +23,7 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
+pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG)
 }
 
@@ -32,7 +32,7 @@ pub fn global_total_issued_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint12
     singleton(storage, GLOBAL_TOTAL_ISSUED)
 }
 
-pub fn global_total_issued_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
+pub fn global_total_issued_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Uint128> {
     singleton_read(storage, GLOBAL_TOTAL_ISSUED)
 }
 
@@ -41,7 +41,7 @@ pub fn global_total_claimed_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint1
     singleton(storage, GLOBAL_TOTAL_CLAIMED)
 }
 
-pub fn global_total_claimed_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
+pub fn global_total_claimed_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Uint128> {
     singleton_read(storage, GLOBAL_TOTAL_CLAIMED)
 }
 
@@ -50,7 +50,7 @@ pub fn deposit_assets_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Addr>> 
     singleton(storage, DEPOSIT_ASSETS)
 }
 
-pub fn deposit_assets_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Addr>> {
+pub fn deposit_assets_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<Addr>> {
     singleton_read(storage, DEPOSIT_ASSETS)
 }
 
@@ -59,12 +59,12 @@ pub fn issued_asset_w<S: Storage>(storage: &mut S) -> Singleton<S, Snip20Asset> 
     singleton(storage, ISSUED_ASSET)
 }
 
-pub fn issued_asset_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Snip20Asset> {
+pub fn issued_asset_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Snip20Asset> {
     singleton_read(storage, ISSUED_ASSET)
 }
 
 // Bond account
-pub fn account_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Account> {
+pub fn account_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Account> {
     bucket_read(ACCOUNTS_KEY, storage)
 }
 
@@ -72,7 +72,7 @@ pub fn account_w<S: Storage>(storage: &mut S) -> Bucket<S, Account> {
     bucket(ACCOUNTS_KEY, storage)
 }
 
-pub fn bond_opportunity_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, BondOpportunity> {
+pub fn bond_opportunity_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, BondOpportunity> {
     bucket_read(BOND_OPPORTUNITIES, storage)
 }
 
@@ -85,7 +85,7 @@ pub fn allocated_allowance_w<S: Storage>(storage: &mut S) -> Singleton<S, Uint12
     singleton(storage, ALLOCATED_ALLOWANCE)
 }
 
-pub fn allocated_allowance_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Uint128> {
+pub fn allocated_allowance_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Uint128> {
     singleton_read(storage, ALLOCATED_ALLOWANCE)
 }
 
@@ -94,6 +94,6 @@ pub fn allowance_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
     singleton(storage, ALLOWANCE_VIEWING_KEY)
 }
 
-pub fn allowance_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
+pub fn allowance_key_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, String> {
     singleton_read(storage, ALLOWANCE_VIEWING_KEY)
 }

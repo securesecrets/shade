@@ -13,13 +13,13 @@ use shade_protocol::{
     utils::storage::default::SingletonStorage,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: Config::load(&deps.storage)?,
     })
 }
 
-pub fn total_proposals<S: Storage, A: Api, Q: Querier>(
+pub fn total_proposals(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
@@ -27,7 +27,7 @@ pub fn total_proposals<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn proposals<S: Storage, A: Api, Q: Querier>(
+pub fn proposals(
     deps: Deps,
     start: Uint128,
     end: Uint128,
@@ -51,7 +51,7 @@ pub fn proposals<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::Proposals { props: items })
 }
 
-pub fn total_profiles<S: Storage, A: Api, Q: Querier>(
+pub fn total_profiles(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
@@ -59,7 +59,7 @@ pub fn total_profiles<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn profiles<S: Storage, A: Api, Q: Querier>(
+pub fn profiles(
     deps: Deps,
     start: Uint128,
     end: Uint128,
@@ -83,7 +83,7 @@ pub fn profiles<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::Profiles { profiles: items })
 }
 
-pub fn total_assemblies<S: Storage, A: Api, Q: Querier>(
+pub fn total_assemblies(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
@@ -91,7 +91,7 @@ pub fn total_assemblies<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn assemblies<S: Storage, A: Api, Q: Querier>(
+pub fn assemblies(
     deps: Deps,
     start: Uint128,
     end: Uint128,
@@ -115,7 +115,7 @@ pub fn assemblies<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::Assemblies { assemblies: items })
 }
 
-pub fn total_assembly_msgs<S: Storage, A: Api, Q: Querier>(
+pub fn total_assembly_msgs(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
@@ -123,7 +123,7 @@ pub fn total_assembly_msgs<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn assembly_msgs<S: Storage, A: Api, Q: Querier>(
+pub fn assembly_msgs(
     deps: Deps,
     start: Uint128,
     end: Uint128,
@@ -147,7 +147,7 @@ pub fn assembly_msgs<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::AssemblyMsgs { msgs: items })
 }
 
-pub fn total_contracts<S: Storage, A: Api, Q: Querier>(
+pub fn total_contracts(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
@@ -155,7 +155,7 @@ pub fn total_contracts<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn contracts<S: Storage, A: Api, Q: Querier>(
+pub fn contracts(
     deps: Deps,
     start: Uint128,
     end: Uint128,

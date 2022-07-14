@@ -22,20 +22,20 @@ use shade_protocol::{
 
 use crate::state::{config_r, self_address_r, unbonding_r};
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
-pub fn delegations<S: Storage, A: Api, Q: Querier>(
+pub fn delegations(
     deps: Deps,
 ) -> StdResult<Vec<Delegation>> {
     deps.querier
         .query_all_delegations(self_address_r(&deps.storage).load()?)
 }
 
-pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<Uint128> {
+pub fn rewards(deps: Deps) -> StdResult<Uint128> {
     let query_rewards: RewardsResponse = deps
         .querier
         .query(
@@ -70,7 +70,7 @@ pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<Uint128>
         })
 }
 
-pub fn balance<S: Storage, A: Api, Q: Querier>(
+pub fn balance(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -97,7 +97,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn claimable<S: Storage, A: Api, Q: Querier>(
+pub fn claimable(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -128,7 +128,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     Ok(adapter::QueryAnswer::Claimable { amount })
 }
 
-pub fn unbonding<S: Storage, A: Api, Q: Querier>(
+pub fn unbonding(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -146,7 +146,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn unbondable<S: Storage, A: Api, Q: Querier>(
+pub fn unbondable(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -173,7 +173,7 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     Ok(adapter::QueryAnswer::Unbondable { amount: unbondable })
 }
 
-pub fn reserves<S: Storage, A: Api, Q: Querier>(
+pub fn reserves(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -193,7 +193,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
 
 // This won't work until cosmwasm 0.16
 /*
-pub fn delegation<S: Storage, A: Api, Q: Querier>(
+pub fn delegation(
     deps: Deps,
     validator: Addr,
 ) -> StdResult<Option<FullDelegation>> {

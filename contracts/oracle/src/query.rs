@@ -10,13 +10,13 @@ use shade_protocol::contract_interfaces::{
 };
 use std::convert::TryFrom;
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
-pub fn price<S: Storage, A: Api, Q: Querier>(
+pub fn price(
     deps: Deps,
     symbol: String,
 ) -> StdResult<band::ReferenceData> {
@@ -48,7 +48,7 @@ pub fn price<S: Storage, A: Api, Q: Querier>(
     band::reference_data(deps, symbol, "USD".to_string(), config.band)
 }
 
-pub fn prices<S: Storage, A: Api, Q: Querier>(
+pub fn prices(
     deps: Deps,
     symbols: Vec<String>,
 ) -> StdResult<Vec<Uint128>> {
@@ -105,7 +105,7 @@ pub fn prices<S: Storage, A: Api, Q: Querier>(
         .collect())
 }
 
-pub fn eval_index<S: Storage, A: Api, Q: Querier>(
+pub fn eval_index(
     deps: Deps,
     index: Vec<IndexElement>,
 ) -> StdResult<Uint128> {

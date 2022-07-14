@@ -8,19 +8,19 @@ use shade_protocol::contract_interfaces::mint::{
     mint_router::{PathNode, QueryAnswer},
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
-pub fn assets<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn assets(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Assets {
         assets: current_assets_r(&deps.storage).load()?,
     })
 }
 
-pub fn route<S: Storage, A: Api, Q: Querier>(
+pub fn route(
     deps: Deps,
     asset: Addr,
     amount: Uint128,

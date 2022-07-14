@@ -17,7 +17,7 @@ use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage};
 use shade_protocol::contract_interfaces::mint::mint::QueryAnswer;
 
-pub fn native_asset<S: Storage, A: Api, Q: Querier>(
+pub fn native_asset(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::NativeAsset {
@@ -26,7 +26,7 @@ pub fn native_asset<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn supported_assets<S: Storage, A: Api, Q: Querier>(
+pub fn supported_assets(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::SupportedAssets {
@@ -34,7 +34,7 @@ pub fn supported_assets<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn asset<S: Storage, A: Api, Q: Querier>(
+pub fn asset(
     deps: Deps,
     contract: String,
 ) -> StdResult<QueryAnswer> {
@@ -52,13 +52,13 @@ pub fn asset<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
-pub fn limit<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn limit(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Limit {
         minted: minted_r(&deps.storage).load()?,
         limit: limit_r(&deps.storage).load()?,
@@ -66,7 +66,7 @@ pub fn limit<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswe
     })
 }
 
-pub fn mint<S: Storage, A: Api, Q: Querier>(
+pub fn mint(
     deps: Deps,
     offer_asset: Addr,
     amount: Uint128,

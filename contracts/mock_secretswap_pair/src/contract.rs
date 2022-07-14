@@ -38,7 +38,7 @@ use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Sing
 pub static PAIR_INFO: &[u8] = b"pair_info";
 pub static POOL: &[u8] = b"pool";
 
-pub fn pair_info_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, PairResponse> {
+pub fn pair_info_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, PairResponse> {
     singleton_read(storage, PAIR_INFO)
 }
 
@@ -46,7 +46,7 @@ pub fn pair_info_w<S: Storage>(storage: &mut S) -> Singleton<S, PairResponse> {
     singleton(storage, PAIR_INFO)
 }
 
-pub fn pool_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, PoolResponse> {
+pub fn pool_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, PoolResponse> {
     singleton_read(storage, POOL)
 }
 
@@ -54,7 +54,7 @@ pub fn pool_w<S: Storage>(storage: &mut S) -> Singleton<S, PoolResponse> {
     singleton(storage, POOL)
 }
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
+pub fn init(
     _deps: DepsMut,
     _env: Env,
     _msg: InstantiateMsg,
@@ -73,7 +73,7 @@ pub enum ExecuteMsg {
     },
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
+pub fn handle(
     deps: DepsMut,
     _env: Env,
     msg: ExecuteMsg,
@@ -132,7 +132,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     };
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(
+pub fn query(
     deps: Deps,
     msg: PairQuery,
 ) -> StdResult<Binary> {

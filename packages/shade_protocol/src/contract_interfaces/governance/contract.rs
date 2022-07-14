@@ -19,7 +19,7 @@ pub struct AllowedContract {
 
 #[cfg(feature = "governance-impl")]
 impl AllowedContract {
-    pub fn load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage, id: &Uint128) -> StdResult<Self> {
         let desc = Self::description(storage, id)?;
         let data = Self::data(storage, id)?;
 
@@ -31,14 +31,14 @@ impl AllowedContract {
         })
     }
 
-    pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
+    pub fn may_load(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<Self>> {
         if id > &ID::contract(storage)? {
             return Ok(None);
         }
         Ok(Some(Self::load(storage, id)?))
     }
 
-    pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage, id: &Uint128) -> StdResult<()> {
         AllowedContractData {
             contract: self.contract.clone(),
             assemblies: self.assemblies.clone(),
@@ -54,27 +54,27 @@ impl AllowedContract {
         Ok(())
     }
 
-    pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<AllowedContractData> {
+    pub fn data(storage: &dyn Storage, id: &Uint128) -> StdResult<AllowedContractData> {
         AllowedContractData::load(storage, &id.to_be_bytes())
     }
 
-    pub fn save_data<S: Storage>(
-        storage: &mut S,
+    pub fn save_data(
+        storage: &mut dyn Storage,
         id: &Uint128,
         data: AllowedContractData,
     ) -> StdResult<()> {
         data.save(storage, &id.to_be_bytes())
     }
 
-    pub fn description<S: Storage>(
-        storage: &S,
+    pub fn description(
+        storage: &dyn Storage,
         id: &Uint128,
     ) -> StdResult<AllowedContractDescription> {
         AllowedContractDescription::load(storage, &id.to_be_bytes())
     }
 
-    pub fn save_description<S: Storage>(
-        storage: &mut S,
+    pub fn save_description(
+        storage: &mut dyn Storage,
         id: &Uint128,
         desc: AllowedContractDescription,
     ) -> StdResult<()> {

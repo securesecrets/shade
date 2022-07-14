@@ -34,8 +34,8 @@ pub struct Tx {
 #[cfg(feature = "snip20-impl")]
 impl Tx {
     // Inefficient but compliant, not recommended to use deprecated features
-    pub fn get<S: Storage>(
-        storage: &S,
+    pub fn get(
+        storage: &dyn Storage,
         for_address: &Addr,
         page: u32,
         page_size: u32,
@@ -102,8 +102,8 @@ pub struct RichTx {
 
 #[cfg(feature = "snip20-impl")]
 impl RichTx {
-    pub fn get<S: Storage>(
-        storage: &S,
+    pub fn get(
+        storage: &dyn Storage,
         for_address: &Addr,
         page: u32,
         page_size: u32,
@@ -324,7 +324,7 @@ impl ItemStorage for TXCount {
 }
 
 #[cfg(feature = "snip20-impl")]
-fn increment_tx_count<S: Storage>(storage: &mut S) -> StdResult<u64> {
+fn increment_tx_count(storage: &mut dyn Storage) -> StdResult<u64> {
     let id = TXCount::may_load(storage)?.unwrap_or(TXCount(0)).0 + 1;
     TXCount(id).save(storage)?;
     Ok(id)
@@ -336,8 +336,8 @@ struct UserTXTotal(pub u64);
 
 #[cfg(feature = "snip20-impl")]
 impl UserTXTotal {
-    pub fn append<S: Storage>(
-        storage: &mut S,
+    pub fn append(
+        storage: &mut dyn Storage,
         for_address: &Addr,
         tx: &StoredRichTx,
     ) -> StdResult<()> {
@@ -356,8 +356,8 @@ impl MapStorage<'static, Addr> for UserTXTotal {
 
 #[cfg(feature = "snip20-impl")]
 #[allow(clippy::too_many_arguments)] // We just need them
-pub fn store_transfer<S: Storage>(
-    storage: &mut S,
+pub fn store_transfer(
+    storage: &mut dyn Storage,
     owner: &Addr,
     sender: &Addr,
     receiver: &Addr,
@@ -395,8 +395,8 @@ pub fn store_transfer<S: Storage>(
 }
 
 #[cfg(feature = "snip20-impl")]
-pub fn store_mint<S: Storage>(
-    storage: &mut S,
+pub fn store_mint(
+    storage: &mut dyn Storage,
     minter: &Addr,
     recipient: &Addr,
     amount: Uint128,
@@ -419,8 +419,8 @@ pub fn store_mint<S: Storage>(
 }
 
 #[cfg(feature = "snip20-impl")]
-pub fn store_burn<S: Storage>(
-    storage: &mut S,
+pub fn store_burn(
+    storage: &mut dyn Storage,
     owner: &Addr,
     burner: &Addr,
     amount: Uint128,
@@ -442,8 +442,8 @@ pub fn store_burn<S: Storage>(
 }
 
 #[cfg(feature = "snip20-impl")]
-pub fn store_deposit<S: Storage>(
-    storage: &mut S,
+pub fn store_deposit(
+    storage: &mut dyn Storage,
     recipient: &Addr,
     amount: Uint128,
     denom: String,
@@ -460,8 +460,8 @@ pub fn store_deposit<S: Storage>(
 }
 
 #[cfg(feature = "snip20-impl")]
-pub fn store_redeem<S: Storage>(
-    storage: &mut S,
+pub fn store_redeem(
+    storage: &mut dyn Storage,
     redeemer: &Addr,
     amount: Uint128,
     denom: String,

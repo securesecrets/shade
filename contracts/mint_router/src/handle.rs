@@ -47,7 +47,7 @@ use crate::state::{
     user_w,
 };
 
-pub fn receive<S: Storage, A: Api, Q: Querier>(
+pub fn receive(
     deps: DepsMut,
     env: Env,
     sender: Addr,
@@ -129,7 +129,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     config: Config,
@@ -158,7 +158,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn build_path<S: Storage, A: Api, Q: Querier>(
+pub fn build_path(
     deps: DepsMut,
     env: Env,
     path: Vec<Contract>,

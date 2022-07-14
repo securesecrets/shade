@@ -26,7 +26,7 @@ use shade_protocol::{
     utils::storage::default::BucketStorage,
 };
 
-pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
+pub fn try_expose_balance(
     deps: DepsMut,
     env: Env,
     recipient: Addr,
@@ -59,7 +59,7 @@ pub fn try_expose_balance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_expose_balance_with_cooldown<S: Storage, A: Api, Q: Querier>(
+pub fn try_expose_balance_with_cooldown(
     deps: DepsMut,
     env: Env,
     recipient: Addr,

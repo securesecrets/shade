@@ -12,7 +12,7 @@ use shade_protocol::{
     utils::storage::plus::ItemStorage,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(
+pub fn config(
     deps: Deps
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -20,7 +20,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn market_rate<S: Storage, A: Api, Q: Querier>(
+pub fn market_rate(
     deps: Deps
 ) -> StdResult<QueryAnswer> {
     let config: Config = Config::load(&deps.storage)?;
@@ -60,7 +60,7 @@ pub fn market_rate<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
+pub fn trade_profitability(
     deps: Deps,
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {
@@ -151,7 +151,7 @@ pub fn trade_profitability<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn get_balances<S: Storage, A: Api, Q: Querier>(
+pub fn get_balances(
     deps: Deps
 ) -> StdResult<QueryAnswer> {
 

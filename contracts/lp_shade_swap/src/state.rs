@@ -11,7 +11,7 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, lp_shade_swap::Conf
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, lp_shade_swap::Config> {
+pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, lp_shade_swap::Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
@@ -19,7 +19,7 @@ pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
     singleton(storage, SELF_ADDRESS)
 }
 
-pub fn self_address_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Addr> {
+pub fn self_address_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Addr> {
     singleton_read(storage, SELF_ADDRESS)
 }
 
@@ -27,7 +27,7 @@ pub fn viewing_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
     singleton(storage, VIEWING_KEY)
 }
 
-pub fn viewing_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
+pub fn viewing_key_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, String> {
     singleton_read(storage, VIEWING_KEY)
 }
 
@@ -35,6 +35,6 @@ pub fn unbonding_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
     bucket(UNBONDING, storage)
 }
 
-pub fn unbonding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
+pub fn unbonding_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Uint128> {
     bucket_read(UNBONDING, storage)
 }

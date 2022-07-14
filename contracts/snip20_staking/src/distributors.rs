@@ -18,7 +18,7 @@ use shade_protocol::c_std::{
 };
 use shade_protocol::utils::storage::default::SingletonStorage;
 
-pub fn get_distributor<S: Storage, A: Api, Q: Querier>(
+pub fn get_distributor(
     deps: Deps,
 ) -> StdResult<Option<Vec<Addr>>> {
     Ok(match DistributorsEnabled::load(&deps.storage)?.0 {
@@ -27,7 +27,7 @@ pub fn get_distributor<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_distributors_status<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_distributors_status(
     deps: DepsMut,
     env: Env,
     enabled: bool,
@@ -47,7 +47,7 @@ pub fn try_set_distributors_status<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_add_distributors<S: Storage, A: Api, Q: Querier>(
+pub fn try_add_distributors(
     deps: DepsMut,
     env: Env,
     new_distributors: Vec<Addr>,
@@ -69,7 +69,7 @@ pub fn try_add_distributors<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_distributors<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_distributors(
     deps: DepsMut,
     env: Env,
     distributors: Vec<Addr>,
@@ -89,7 +89,7 @@ pub fn try_set_distributors<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn distributors<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<Binary> {
+pub fn distributors(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::Distributors {
         distributors: match DistributorsEnabled::load(&deps.storage)?.0 {
             true => Some(Distributors::load(&deps.storage)?.0),

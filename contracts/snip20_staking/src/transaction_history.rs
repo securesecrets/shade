@@ -660,7 +660,7 @@ fn append_transfer<S: Storage>(
 
 pub fn get_txs<A: Api, S: ReadonlyStorage>(
     api: &A,
-    storage: &S,
+    storage: &dyn Storage,
     for_address: &CanonicalAddr,
     page: u32,
     page_size: u32,
@@ -693,7 +693,7 @@ pub fn get_txs<A: Api, S: ReadonlyStorage>(
 
 pub fn get_transfers<A: Api, S: ReadonlyStorage>(
     api: &A,
-    storage: &S,
+    storage: &dyn Storage,
     for_address: &CanonicalAddr,
     page: u32,
     page_size: u32,

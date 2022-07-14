@@ -21,7 +21,7 @@ fn try_mint_impl<S: Storage>(
     Ok(())
 }
 
-pub fn try_mint<S: Storage, A: Api, Q: Querier>(
+pub fn try_mint(
     deps: DepsMut,
     env: Env,
     recipient: Addr,
@@ -50,7 +50,7 @@ pub fn try_mint<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
+pub fn try_batch_mint(
     deps: DepsMut,
     env: Env,
     actions: Vec<batch::MintAction>,
@@ -89,7 +89,7 @@ pub fn try_batch_mint<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
+pub fn try_add_minters(
     deps: DepsMut,
     env: Env,
     new_minters: Vec<Addr>
@@ -113,7 +113,7 @@ pub fn try_add_minters<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
+pub fn try_remove_minters(
     deps: DepsMut,
     env: Env,
     minters_to_remove: Vec<Addr>
@@ -139,7 +139,7 @@ pub fn try_remove_minters<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_minters<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_minters(
     deps: DepsMut,
     env: Env,
     minters: Vec<Addr>

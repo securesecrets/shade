@@ -25,13 +25,13 @@ use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::state::{asset_r, assets_r, config_r, self_address_r, viewing_key_r};
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         config: config_r(&deps.storage).load()?,
     })
 }
 
-pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
+pub fn pending_allowance(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<QueryAnswer> {
@@ -61,7 +61,7 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::PendingAllowance { amount: allowance })
 }
 
-pub fn balance<S: Storage, A: Api, Q: Querier>(
+pub fn balance(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {

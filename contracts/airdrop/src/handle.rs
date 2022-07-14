@@ -62,7 +62,7 @@ use shade_protocol::{
 };
 
 #[allow(clippy::too_many_arguments)]
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     admin: Option<Addr>,
@@ -179,7 +179,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
+pub fn try_add_tasks(
     deps: DepsMut,
     env: &Env,
     tasks: Vec<RequiredTask>,
@@ -216,7 +216,7 @@ pub fn try_add_tasks<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_account<S: Storage, A: Api, Q: Querier>(
+pub fn try_account(
     deps: DepsMut,
     env: &Env,
     addresses: Vec<AddressProofPermit>,
@@ -352,7 +352,7 @@ pub fn try_account<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
+pub fn try_disable_permit_key(
     deps: DepsMut,
     env: &Env,
     key: String,
@@ -368,7 +368,7 @@ pub fn try_disable_permit_key<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_viewing_key(
     deps: DepsMut,
     env: &Env,
     key: String,
@@ -387,7 +387,7 @@ pub fn try_set_viewing_key<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
+pub fn try_complete_task(
     deps: DepsMut,
     env: &Env,
     account: Addr,
@@ -419,7 +419,7 @@ pub fn try_complete_task<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_claim<S: Storage, A: Api, Q: Querier>(
+pub fn try_claim(
     deps: DepsMut,
     env: &Env,
 ) -> StdResult<Response> {
@@ -473,7 +473,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
+pub fn try_claim_decay(
     deps: DepsMut,
     env: &Env,
 ) -> StdResult<Response> {
@@ -518,7 +518,7 @@ pub fn try_claim_decay<S: Storage, A: Api, Q: Querier>(
     Err(decay_not_set())
 }
 
-pub fn finished_tasks<S: Storage>(storage: &S, account: String) -> StdResult<Vec<RequiredTask>> {
+pub fn finished_tasks<S: Storage>(storage: &dyn Storage, account: String) -> StdResult<Vec<RequiredTask>> {
     let mut finished_tasks = vec![];
     let config = config_r(storage).load()?;
 

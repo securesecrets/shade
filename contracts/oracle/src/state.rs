@@ -20,7 +20,7 @@ pub static SSWAP_PAIRS: &[u8] = b"sswap_pairs";
 pub static SIENNA_PAIRS: &[u8] = b"sienna_pairs";
 pub static INDEX: &[u8] = b"index";
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, OracleConfig> {
+pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, OracleConfig> {
     singleton_read(storage, CONFIG_KEY)
 }
 
@@ -28,7 +28,7 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, OracleConfig> {
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn dex_pairs_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<dex::TradingPair>> {
+pub fn dex_pairs_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Vec<dex::TradingPair>> {
     bucket_read(DEX_PAIRS, storage)
 }
 
@@ -36,7 +36,7 @@ pub fn dex_pairs_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<dex::TradingPai
     bucket(DEX_PAIRS, storage)
 }
 
-pub fn index_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<IndexElement>> {
+pub fn index_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Vec<IndexElement>> {
     bucket_read(INDEX, storage)
 }
 

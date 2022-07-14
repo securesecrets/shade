@@ -26,7 +26,7 @@ pub mod contract;
 pub mod profile;
 pub mod proposal;
 
-pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_config(
     deps: DepsMut,
     env: Env,
     treasury: Option<Addr>,
@@ -73,7 +73,7 @@ pub fn try_set_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_runtime_state<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_runtime_state(
     deps: DepsMut,
     env: Env,
     state: RuntimeState,

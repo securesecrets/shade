@@ -17,7 +17,7 @@ use shade_protocol::{
     utils::storage::plus::{ItemStorage, MapStorage},
 };
 
-pub fn token_info<S: Storage, A: Api, Q: Querier>(
+pub fn token_info(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let info = CoinInfo::load(&deps.storage)?;
@@ -35,7 +35,7 @@ pub fn token_info<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn token_config<S: Storage, A: Api, Q: Querier>(
+pub fn token_config(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::TokenConfig {
@@ -49,7 +49,7 @@ pub fn token_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn contract_status<S: Storage, A: Api, Q: Querier>(
+pub fn contract_status(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::ContractStatus {
@@ -57,7 +57,7 @@ pub fn contract_status<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn exchange_rate<S: Storage, A: Api, Q: Querier>(
+pub fn exchange_rate(
     deps: Deps,
 ) -> StdResult<QueryAnswer> {
     let decimals = CoinInfo::load(&deps.storage)?.decimals;
@@ -81,13 +81,13 @@ pub fn exchange_rate<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn minters<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn minters(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Minters {
         minters: Minters::load(&deps.storage)?.0,
     })
 }
 
-pub fn allowance<S: Storage, A: Api, Q: Querier>(
+pub fn allowance(
     deps: Deps,
     owner: Addr,
     spender: Addr,
@@ -105,7 +105,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn balance<S: Storage, A: Api, Q: Querier>(
+pub fn balance(
     deps: Deps,
     account: Addr,
 ) -> StdResult<QueryAnswer> {
@@ -114,7 +114,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn transfer_history<S: Storage, A: Api, Q: Querier>(
+pub fn transfer_history(
     deps: Deps,
     account: Addr,
     page: u32,
@@ -127,7 +127,7 @@ pub fn transfer_history<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn transaction_history<S: Storage, A: Api, Q: Querier>(
+pub fn transaction_history(
     deps: Deps,
     account: Addr,
     page: u32,

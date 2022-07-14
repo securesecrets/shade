@@ -70,7 +70,7 @@ use chrono::prelude::*;
 use shade_protocol::contract_interfaces::dao::adapter;
 use std::convert::TryFrom;
 
-pub fn receive<S: Storage, A: Api, Q: Querier>(
+pub fn receive(
     deps: DepsMut,
     env: Env,
     _sender: Addr,
@@ -135,7 +135,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     config: Config,
@@ -157,7 +157,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
+pub fn try_register_asset(
     deps: DepsMut,
     env: &Env,
     contract: &Contract,
@@ -204,7 +204,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn allocate<S: Storage, A: Api, Q: Querier>(
+pub fn allocate(
     deps: DepsMut,
     env: &Env,
     asset: Addr,
@@ -273,7 +273,7 @@ pub fn allocate<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn claim<S: Storage, A: Api, Q: Querier>(
+pub fn claim(
     deps: DepsMut,
     env: &Env,
     asset: Addr,
@@ -354,7 +354,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn update<S: Storage, A: Api, Q: Querier>(
+pub fn update(
     deps: DepsMut,
     env: &Env,
     asset: Addr,
@@ -488,7 +488,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn unbond<S: Storage, A: Api, Q: Querier>(
+pub fn unbond(
     deps: DepsMut,
     env: &Env,
     asset: Addr,
@@ -733,7 +733,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn add_holder<S: Storage, A: Api, Q: Querier>(
+pub fn add_holder(
     deps: DepsMut,
     env: &Env,
     holder: Addr,
@@ -768,7 +768,7 @@ pub fn add_holder<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn remove_holder<S: Storage, A: Api, Q: Querier>(
+pub fn remove_holder(
     deps: DepsMut,
     env: &Env,
     holder: Addr,

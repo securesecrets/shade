@@ -21,10 +21,10 @@ pub enum ContractStatusLevel {
 
 #[cfg(feature = "snip20-impl")]
 impl ContractStatusLevel {
-    pub fn save<S: Storage>(self, storage: &mut S) -> StdResult<()> {
+    pub fn save(self, storage: &mut dyn Storage) -> StdResult<()> {
         ContractStatus(self.into()).save(storage)
     }
-    pub fn load<S: Storage>(storage: & S) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
         let i = ContractStatus::load(storage)?.0;
         let item = match i {
             0 => ContractStatusLevel::NormalRun,
@@ -104,7 +104,7 @@ pub struct Config {
 
 #[cfg(feature = "snip20-impl")]
 impl Config {
-    pub fn save<S: Storage>(&self, storage: &mut S) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
         Self::set_public_total_supply(storage, self.public_total_supply)?;
         Self::set_deposit_enabled(storage, self.enable_deposit)?;
         Self::set_redeem_enabled(storage, self.enable_redeem)?;
@@ -114,56 +114,56 @@ impl Config {
         Ok(())
     }
 
-    pub fn public_total_supply<S: Storage>(storage: & S) -> StdResult<bool> {
+    pub fn public_total_supply(storage: &dyn Storage) -> StdResult<bool> {
         Ok(Setting::load(storage, PUBLIC_TOTAL_SUPPLY)?.0)
     }
 
-    pub fn set_public_total_supply<S: Storage>(storage: &mut S, setting: bool) -> StdResult<()> {
+    pub fn set_public_total_supply(storage: &mut dyn Storage, setting: bool) -> StdResult<()> {
         Setting(setting).save(storage, PUBLIC_TOTAL_SUPPLY)?;
         Ok(())
     }
 
-    pub fn deposit_enabled<S: Storage>(storage: & S) -> StdResult<bool> {
+    pub fn deposit_enabled(storage: &dyn Storage) -> StdResult<bool> {
         Ok(Setting::load(storage, ENABLE_DEPOSIT)?.0)
     }
 
-    pub fn set_deposit_enabled<S: Storage>(storage: &mut S, setting: bool) -> StdResult<()> {
+    pub fn set_deposit_enabled(storage: &mut dyn Storage, setting: bool) -> StdResult<()> {
         Setting(setting).save(storage, ENABLE_DEPOSIT)?;
         Ok(())
     }
 
-    pub fn redeem_enabled<S: Storage>(storage: & S) -> StdResult<bool> {
+    pub fn redeem_enabled(storage: &dyn Storage) -> StdResult<bool> {
         Ok(Setting::load(storage, ENABLE_REDEEM)?.0)
     }
 
-    pub fn set_redeem_enabled<S: Storage>(storage: &mut S, setting: bool) -> StdResult<()> {
+    pub fn set_redeem_enabled(storage: &mut dyn Storage, setting: bool) -> StdResult<()> {
         Setting(setting).save(storage, ENABLE_REDEEM)?;
         Ok(())
     }
 
-    pub fn mint_enabled<S: Storage>(storage: & S) -> StdResult<bool> {
+    pub fn mint_enabled(storage: &dyn Storage) -> StdResult<bool> {
         Ok(Setting::load(storage, ENABLE_MINT)?.0)
     }
 
-    pub fn set_mint_enabled<S: Storage>(storage: &mut S, setting: bool) -> StdResult<()> {
+    pub fn set_mint_enabled(storage: &mut dyn Storage, setting: bool) -> StdResult<()> {
         Setting(setting).save(storage, ENABLE_MINT)?;
         Ok(())
     }
 
-    pub fn burn_enabled<S: Storage>(storage: & S) -> StdResult<bool> {
+    pub fn burn_enabled(storage: &dyn Storage) -> StdResult<bool> {
         Ok(Setting::load(storage, ENABLE_BURN)?.0)
     }
 
-    pub fn set_burn_enabled<S: Storage>(storage: &mut S, setting: bool) -> StdResult<()> {
+    pub fn set_burn_enabled(storage: &mut dyn Storage, setting: bool) -> StdResult<()> {
         Setting(setting).save(storage, ENABLE_BURN)?;
         Ok(())
     }
 
-    pub fn transfer_enabled<S: Storage>(storage: & S) -> StdResult<bool> {
+    pub fn transfer_enabled(storage: &dyn Storage) -> StdResult<bool> {
         Ok(Setting::load(storage, ENABLE_TRANSFER)?.0)
     }
 
-    pub fn set_transfer_enabled<S: Storage>(storage: &mut S, setting: bool) -> StdResult<()> {
+    pub fn set_transfer_enabled(storage: &mut dyn Storage, setting: bool) -> StdResult<()> {
         Setting(setting).save(storage, ENABLE_TRANSFER)?;
         Ok(())
     }
@@ -179,15 +179,15 @@ impl ItemStorage for TotalSupply {
 
 #[cfg(feature = "snip20-impl")]
 impl TotalSupply {
-    pub fn set<S: Storage>(storage: &mut S, amount: Uint128) -> StdResult<()> {
+    pub fn set(storage: &mut dyn Storage, amount: Uint128) -> StdResult<()> {
         TotalSupply(amount).save(storage)
     }
-    pub fn add<S: Storage>(storage: &mut S, amount: Uint128) -> StdResult<Uint128> {
+    pub fn add(storage: &mut dyn Storage, amount: Uint128) -> StdResult<Uint128> {
         let supply = TotalSupply::load(storage)?.0.checked_add(amount)?;
         TotalSupply::set(storage, supply)?;
         Ok(supply)
     }
-    pub fn sub<S: Storage>(storage: &mut S, amount: Uint128) -> StdResult<Uint128> {
+    pub fn sub(storage: &mut dyn Storage, amount: Uint128) -> StdResult<Uint128> {
         let supply = TotalSupply::load(storage)?.0.checked_sub(amount)?;
         TotalSupply::set(storage, supply)?;
         Ok(supply)
@@ -204,10 +204,10 @@ impl MapStorage<'static, Addr> for Balance {
 
 #[cfg(feature = "snip20-impl")]
 impl Balance {
-    pub fn set<S: Storage>(storage: &mut S, amount: Uint128, addr: &Addr) -> StdResult<()> {
+    pub fn set(storage: &mut dyn Storage, amount: Uint128, addr: &Addr) -> StdResult<()> {
         Balance(amount).save(storage, addr.clone())
     }
-    pub fn add<S: Storage>(storage: &mut S, amount: Uint128, addr: &Addr) -> StdResult<Uint128> {
+    pub fn add(storage: &mut dyn Storage, amount: Uint128, addr: &Addr) -> StdResult<Uint128> {
         let supply = Self::may_load(storage, addr.clone())?
             .unwrap_or(Self(Uint128::zero())).0
             .checked_add(amount)?;
@@ -215,7 +215,7 @@ impl Balance {
         Balance::set(storage, supply, addr)?;
         Ok(supply)
     }
-    pub fn sub<S: Storage>(storage: &mut S, amount: Uint128, addr: &Addr) -> StdResult<Uint128> {
+    pub fn sub(storage: &mut dyn Storage, amount: Uint128, addr: &Addr) -> StdResult<Uint128> {
         let subtractee = match Self::load(storage, addr.clone()) {
             Ok(amount) => amount.0,
             Err(_) => return Err(no_funds())
@@ -227,8 +227,8 @@ impl Balance {
         Balance::set(storage, supply, addr)?;
         Ok(supply)
     }
-    pub fn transfer<S: Storage>(
-        storage: &mut S,
+    pub fn transfer(
+        storage: &mut dyn Storage,
         amount: Uint128,
         sender: &Addr,
         recipient: &Addr
@@ -271,8 +271,8 @@ impl Allowance {
         }
     }
 
-    pub fn spend<S: Storage>(
-        storage: &mut S,
+    pub fn spend(
+        storage: &mut dyn Storage,
         owner: &Addr,
         spender: &Addr,
         amount: Uint128,

@@ -25,7 +25,7 @@ use shade_protocol::{
     },
 };
 
-pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
+pub fn try_add_assembly_msg(
     deps: DepsMut,
     env: Env,
     name: String,
@@ -61,7 +61,7 @@ pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_assembly_msg(
     deps: DepsMut,
     env: Env,
     id: Uint128,
@@ -101,7 +101,7 @@ pub fn try_set_assembly_msg<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_add_assembly_msg_assemblies<S: Storage, A: Api, Q: Querier>(
+pub fn try_add_assembly_msg_assemblies(
     deps: DepsMut,
     env: Env,
     id: Uint128,

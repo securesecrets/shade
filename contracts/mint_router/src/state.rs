@@ -26,7 +26,7 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, Config> {
     singleton(storage, CONFIG)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Config> {
+pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Config> {
     singleton_read(storage, CONFIG)
 }
 
@@ -34,7 +34,7 @@ pub fn registered_asset_w<S: Storage>(storage: &mut S) -> Bucket<S, Contract> {
     bucket(REGISTERED_ASSETS, storage)
 }
 
-pub fn registered_asset_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Contract> {
+pub fn registered_asset_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Contract> {
     bucket_read(REGISTERED_ASSETS, storage)
 }
 
@@ -45,7 +45,7 @@ pub fn asset_path_w<S: Storage>(storage: &mut S) -> Bucket<S, Contract> {
     bucket(ASSET_PATH, storage)
 }
 
-pub fn asset_path_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Contract> {
+pub fn asset_path_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Contract> {
     bucket_read(ASSET_PATH, storage)
 }
 
@@ -53,7 +53,7 @@ pub fn final_asset_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
     singleton(storage, FINAL_ASSET)
 }
 
-pub fn final_asset_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Addr> {
+pub fn final_asset_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Addr> {
     singleton_read(storage, FINAL_ASSET)
 }
 
@@ -61,7 +61,7 @@ pub fn current_assets_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Contrac
     singleton(storage, CURRENT_ASSETS)
 }
 
-pub fn current_assets_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Contract>> {
+pub fn current_assets_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<Contract>> {
     singleton_read(storage, CURRENT_ASSETS)
 }
 
@@ -71,6 +71,6 @@ pub fn user_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
     singleton(storage, USER)
 }
 
-pub fn user_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Addr> {
+pub fn user_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Addr> {
     singleton_read(storage, USER)
 }

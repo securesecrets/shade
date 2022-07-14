@@ -36,7 +36,7 @@ const TOKEN_PROFILE_KEY: &'static [u8] = b"token_vote_profile-";
 
 #[cfg(feature = "governance-impl")]
 impl Profile {
-    pub fn load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage, id: &Uint128) -> StdResult<Self> {
         let data = Self::data(storage, id)?;
 
         Ok(Self {
@@ -49,14 +49,14 @@ impl Profile {
         })
     }
 
-    pub fn may_load<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<Self>> {
+    pub fn may_load(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<Self>> {
         if id > &ID::profile(storage)? {
             return Ok(None);
         }
         Ok(Some(Self::load(storage, id)?))
     }
 
-    pub fn save<S: Storage>(&self, storage: &mut S, id: &Uint128) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage, id: &Uint128) -> StdResult<()> {
         ProfileData {
             name: self.name.clone(),
             enabled: self.enabled,
@@ -73,51 +73,51 @@ impl Profile {
         Ok(())
     }
 
-    pub fn data<S: Storage>(storage: &S, id: &Uint128) -> StdResult<ProfileData> {
+    pub fn data(storage: &dyn Storage, id: &Uint128) -> StdResult<ProfileData> {
         ProfileData::load(storage, &id.to_be_bytes())
     }
 
-    pub fn save_data<S: Storage>(
-        storage: &mut S,
+    pub fn save_data(
+        storage: &mut dyn Storage,
         id: &Uint128,
         data: ProfileData,
     ) -> StdResult<()> {
         data.save(storage, &id.to_be_bytes())
     }
 
-    pub fn assembly_voting<S: Storage>(
-        storage: &S,
+    pub fn assembly_voting(
+        storage: &dyn Storage,
         id: &Uint128,
     ) -> StdResult<Option<VoteProfile>> {
         Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_assembly_voting<S: Storage>(
-        storage: &mut S,
+    pub fn save_assembly_voting(
+        storage: &mut dyn Storage,
         id: &Uint128,
         assembly: Option<VoteProfile>,
     ) -> StdResult<()> {
         VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())
     }
 
-    pub fn public_voting<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<VoteProfile>> {
+    pub fn public_voting(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<VoteProfile>> {
         Ok(VoteProfileType::load(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_public_voting<S: Storage>(
-        storage: &mut S,
+    pub fn save_public_voting(
+        storage: &mut dyn Storage,
         id: &Uint128,
         token: Option<VoteProfile>,
     ) -> StdResult<()> {
         VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())
     }
 
-    pub fn funding<S: Storage>(storage: &S, id: &Uint128) -> StdResult<Option<FundProfile>> {
+    pub fn funding(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<FundProfile>> {
         Ok(FundProfileType::load(storage, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_funding<S: Storage>(
-        storage: &mut S,
+    pub fn save_funding(
+        storage: &mut dyn Storage,
         id: &Uint128,
         funding: Option<FundProfile>,
     ) -> StdResult<()> {

@@ -15,7 +15,7 @@ use shade_protocol::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
-pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
+pub fn try_add_contract(
     deps: DepsMut,
     env: Env,
     name: String,
@@ -55,7 +55,7 @@ pub fn try_add_contract<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_contract(
     deps: DepsMut,
     env: Env,
     id: Uint128,
@@ -112,7 +112,7 @@ pub fn try_set_contract<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_add_contract_assemblies<S: Storage, A: Api, Q: Querier>(
+pub fn try_add_contract_assemblies(
     deps: DepsMut,
     env: Env,
     id: Uint128,

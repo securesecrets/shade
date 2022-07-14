@@ -34,7 +34,7 @@ use crate::{
     },
 };
 
-pub fn receive<S: Storage, A: Api, Q: Querier>(
+pub fn receive(
     deps: DepsMut,
     env: Env,
     _sender: Addr,
@@ -70,7 +70,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
 }
 
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     config: Config,
@@ -96,7 +96,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 /* Claim rewards and restake, hold enough for pending unbondings
  * Send available unbonded funds to treasury
  */
-pub fn update<S: Storage, A: Api, Q: Querier>(
+pub fn update(
     deps: DepsMut,
     env: Env,
     asset: Addr,
@@ -127,7 +127,7 @@ pub fn update<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn unbond<S: Storage, A: Api, Q: Querier>(
+pub fn unbond(
     deps: DepsMut,
     env: Env,
     asset: Addr,
@@ -175,7 +175,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn claim<S: Storage, A: Api, Q: Querier>(
+pub fn claim(
     deps: DepsMut,
     env: Env,
     asset: Addr,

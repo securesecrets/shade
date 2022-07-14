@@ -39,7 +39,7 @@ use shade_protocol::{
 };
 
 // Initializes a proposal on the public assembly with the blank command
-pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
+pub fn try_proposal(
     deps: DepsMut,
     env: Env,
     title: String,
@@ -74,7 +74,7 @@ pub fn try_proposal<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
+pub fn try_trigger(
     deps: DepsMut,
     env: Env,
     proposal: Uint128,
@@ -115,7 +115,7 @@ pub fn try_trigger<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_cancel<S: Storage, A: Api, Q: Querier>(
+pub fn try_cancel(
     deps: DepsMut,
     env: Env,
     proposal: Uint128,
@@ -182,7 +182,7 @@ fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> S
     return new_status;
 }
 
-pub fn try_update<S: Storage, A: Api, Q: Querier>(
+pub fn try_update(
     deps: DepsMut,
     env: Env,
     proposal: Uint128,
@@ -365,7 +365,7 @@ pub fn try_update<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_receive<S: Storage, A: Api, Q: Querier>(
+pub fn try_receive(
     deps: DepsMut,
     env: Env,
     sender: Addr,
@@ -472,7 +472,7 @@ pub fn try_receive<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
+pub fn try_claim_funding(
     deps: DepsMut,
     env: Env,
     id: Uint128,
@@ -524,7 +524,7 @@ pub fn try_claim_funding<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_receive_balance<S: Storage, A: Api, Q: Querier>(
+pub fn try_receive_balance(
     deps: DepsMut,
     env: Env,
     sender: Addr,

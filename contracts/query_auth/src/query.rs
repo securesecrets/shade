@@ -10,14 +10,14 @@ use shade_protocol::{
     utils::storage::plus::{ItemStorage, MapStorage},
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
         admin: Admin::load(&deps.storage)?.0,
         state: ContractStatus::load(&deps.storage)?,
     })
 }
 
-pub fn validate_vk<S: Storage, A: Api, Q: Querier>(
+pub fn validate_vk(
     deps: Deps,
     user: Addr,
     key: String,
@@ -27,7 +27,7 @@ pub fn validate_vk<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn validate_permit<S: Storage, A: Api, Q: Querier>(
+pub fn validate_permit(
     deps: Deps,
     permit: QueryPermit,
 ) -> StdResult<QueryAnswer> {

@@ -17,7 +17,7 @@ use shade_protocol::{
 use shade_protocol::snip20::helpers::send_msg;
 use crate::{query::trade_profitability};
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     config: Config,
@@ -35,7 +35,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-/*pub fn try_arbitrage_event<S: Storage, A: Api, Q: Querier>( //DEPRECIATED
+/*pub fn try_arbitrage_event( //DEPRECIATED
     deps: DepsMut,
     env: Env,
     amount: Uint128,
@@ -151,7 +151,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }*/
 
-pub fn try_execute<S: Storage, A: Api, Q: Querier>(
+pub fn try_execute(
     deps: DepsMut,
     env: Env,
     amount: Uint128,

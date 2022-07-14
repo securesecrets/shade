@@ -46,11 +46,11 @@ pub struct Constants {
 }
 
 pub struct ReadonlyConfig<'a, S: ReadonlyStorage> {
-    storage: ReadonlyPrefixedStorage<'a, S>,
+    storage: ReadonlyPrefixedStorage<'a>,
 }
 
-impl<'a, S: ReadonlyStorage> ReadonlyConfig<'a, S> {
-    pub fn from_storage(storage: &'a S) -> Self {
+impl<'a, S: ReadonlyStorage> ReadonlyConfig<'a> {
+    pub fn from_storage(storage: &'a mut dyn Storage) -> Self {
         Self {
             storage: ReadonlyPrefixedStorage::new(PREFIX_CONFIG, storage),
         }
@@ -89,14 +89,14 @@ fn deser_bin_data<T: DeserializeOwned>(data: &[u8]) -> StdResult<T> {
     bincode2::deserialize::<T>(data).map_err(|e| StdError::serialize_err(type_name::<T>(), e))
 }
 
-fn set_bin_data<T: Serialize, S: Storage>(storage: &mut S, key: &[u8], data: &T) -> StdResult<()> {
+fn set_bin_data<T: Serialize>(storage: &mut S, key: &[u8], data: &T) -> StdResult<()> {
     let bin_data = ser_bin_data(data)?;
 
     storage.set(key, &bin_data);
     Ok(())
 }
 
-fn get_bin_data<T: DeserializeOwned, S: ReadonlyStorage>(storage: &S, key: &[u8]) -> StdResult<T> {
+fn get_bin_data<T: DeserializeOwned, S: ReadonlyStorage>(storage: &dyn Storage, key: &[u8]) -> StdResult<T> {
     let bin_data = storage.get(key);
 
     match bin_data {
@@ -105,12 +105,12 @@ fn get_bin_data<T: DeserializeOwned, S: ReadonlyStorage>(storage: &S, key: &[u8]
     }
 }
 
-pub struct Config<'a, S: Storage> {
-    storage: PrefixedStorage<'a, S>,
+pub struct Config<'a> {
+    storage: PrefixedStorage<'a>,
 }
 
-impl<'a, S: Storage> Config<'a, S> {
-    pub fn from_storage(storage: &'a mut S) -> Self {
+impl<'a> Config<'a> {
+    pub fn from_storage(storage: &mut dyn Storage) -> Self {
         Self {
             storage: PrefixedStorage::new(PREFIX_CONFIG, storage),
         }
@@ -185,9 +185,9 @@ impl<'a, S: Storage> Config<'a, S> {
 ///
 /// This was the only way to prevent code duplication of these methods because of the way
 /// that `ReadonlyPrefixedStorage` and `PrefixedStorage` are implemented in `cosmwasm-std`
-struct ReadonlyConfigImpl<'a, S: ReadonlyStorage>(&'a S);
+struct ReadonlyConfigImpl<'a, S: ReadonlyStorage>(&'a mut dyn Storage);
 
-impl<'a, S: ReadonlyStorage> ReadonlyConfigImpl<'a, S> {
+impl<'a, S: ReadonlyStorage> ReadonlyConfigImpl<'a> {
     fn constants(&self) -> StdResult<Constants> {
         let consts_bytes = self
             .0
@@ -229,11 +229,11 @@ impl<'a, S: ReadonlyStorage> ReadonlyConfigImpl<'a, S> {
 // Balances
 
 pub struct ReadonlyBalances<'a, S: ReadonlyStorage> {
-    storage: ReadonlyPrefixedStorage<'a, S>,
+    storage: ReadonlyPrefixedStorage<'a>,
 }
 
-impl<'a, S: ReadonlyStorage> ReadonlyBalances<'a, S> {
-    pub fn from_storage(storage: &'a S) -> Self {
+impl<'a, S: ReadonlyStorage> ReadonlyBalances<'a> {
+    pub fn from_storage(storage: &'a mut dyn Storage) -> Self {
         Self {
             storage: ReadonlyPrefixedStorage::new(PREFIX_BALANCES, storage),
         }
@@ -248,12 +248,12 @@ impl<'a, S: ReadonlyStorage> ReadonlyBalances<'a, S> {
     }
 }
 
-pub struct Balances<'a, S: Storage> {
-    storage: PrefixedStorage<'a, S>,
+pub struct Balances<'a> {
+    storage: PrefixedStorage<'a>,
 }
 
-impl<'a, S: Storage> Balances<'a, S> {
-    pub fn from_storage(storage: &'a mut S) -> Self {
+impl<'a> Balances<'a> {
+    pub fn from_storage(storage: &mut dyn Storage) -> Self {
         Self {
             storage: PrefixedStorage::new(PREFIX_BALANCES, storage),
         }
@@ -277,9 +277,9 @@ impl<'a, S: Storage> Balances<'a, S> {
 ///
 /// This was the only way to prevent code duplication of these methods because of the way
 /// that `ReadonlyPrefixedStorage` and `PrefixedStorage` are implemented in `cosmwasm-std`
-struct ReadonlyBalancesImpl<'a, S: ReadonlyStorage>(&'a S);
+struct ReadonlyBalancesImpl<'a, S: ReadonlyStorage>(&'a mut dyn Storage);
 
-impl<'a, S: ReadonlyStorage> ReadonlyBalancesImpl<'a, S> {
+impl<'a, S: ReadonlyStorage> ReadonlyBalancesImpl<'a> {
     pub fn account_amount(&self, account: &CanonicalAddr) -> u128 {
         let account_bytes = account.as_slice();
         let result = self.0.get(account_bytes);
@@ -309,7 +309,7 @@ impl Allowance {
 }
 
 pub fn read_allowance<S: Storage>(
-    store: &S,
+    store: &dyn Storage,
     owner: &CanonicalAddr,
     spender: &CanonicalAddr,
 ) -> StdResult<Allowance> {
@@ -340,7 +340,7 @@ pub fn write_viewing_key<S: Storage>(store: &mut S, owner: &CanonicalAddr, key: 
     balance_store.set(owner.as_slice(), &key.to_hashed());
 }
 
-pub fn read_viewing_key<S: Storage>(store: &S, owner: &CanonicalAddr) -> Option<Vec<u8>> {
+pub fn read_viewing_key<S: Storage>(store: &dyn Storage, owner: &CanonicalAddr) -> Option<Vec<u8>> {
     let balance_store = ReadonlyPrefixedStorage::new(PREFIX_VIEW_KEY, store);
     balance_store.get(owner.as_slice())
 }
@@ -348,7 +348,7 @@ pub fn read_viewing_key<S: Storage>(store: &S, owner: &CanonicalAddr) -> Option<
 // Receiver Interface
 
 pub fn get_receiver_hash<S: ReadonlyStorage>(
-    store: &S,
+    store: &dyn Storage,
     account: &Addr,
 ) -> Option<StdResult<String>> {
     let store = ReadonlyPrefixedStorage::new(PREFIX_RECEIVERS, store);

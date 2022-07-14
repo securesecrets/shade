@@ -43,7 +43,7 @@ use shade_protocol::contract_interfaces::snip20::errors::{action_disabled, inval
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
+pub fn init(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -53,7 +53,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     Ok(Response::new())
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
+pub fn handle(
     deps: DepsMut,
     env: Env,
     msg: ExecuteMsg,
@@ -196,7 +196,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     )
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         to_binary(&match msg {
             QueryMsg::TokenInfo {} => query::token_info(deps)?,

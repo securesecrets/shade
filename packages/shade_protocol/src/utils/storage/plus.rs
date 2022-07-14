@@ -3,19 +3,19 @@ use secret_storage_plus::{Item, Map, PrimaryKey};
 use crate::serde::{de::DeserializeOwned, Serialize};
 
 pub trait NaiveItemStorage: Serialize + DeserializeOwned {
-    fn load<S: Storage>(storage: &S, item: Item<Self>) -> StdResult<Self> {
+    fn load(storage: &dyn Storage, item: Item<Self>) -> StdResult<Self> {
         item.load(storage)
     }
 
-    fn may_load<S: Storage>(storage: &S, item: Item<Self>) -> StdResult<Option<Self>> {
+    fn may_load(storage: &dyn Storage, item: Item<Self>) -> StdResult<Option<Self>> {
         item.may_load(storage)
     }
 
-    fn save<S: Storage>(&self, storage: &mut S, item: Item<Self>) -> StdResult<()> {
+    fn save(&self, storage: &mut dyn Storage, item: Item<Self>) -> StdResult<()> {
         item.save(storage, self)
     }
 
-    fn update<A, E, S: Storage>(&self, storage: &mut S, item: Item<Self>, action: A) -> Result<Self, E>
+    fn update<A, E>(&self, storage: &mut dyn Storage, item: Item<Self>, action: A) -> Result<Self, E>
         where
             A: FnOnce(Self) -> Result<Self, E>,
             E: From<StdError>,
@@ -27,19 +27,19 @@ pub trait NaiveItemStorage: Serialize + DeserializeOwned {
 pub trait ItemStorage: Serialize + DeserializeOwned {
     const ITEM: Item<'static, Self>;
 
-    fn load<S: Storage>(storage: &S) -> StdResult<Self> {
+    fn load(storage: &dyn Storage) -> StdResult<Self> {
         Self::ITEM.load(storage)
     }
 
-    fn may_load<S: Storage>(storage: &S) -> StdResult<Option<Self>> {
+    fn may_load(storage: &dyn Storage) -> StdResult<Option<Self>> {
         Self::ITEM.may_load(storage)
     }
 
-    fn save<S: Storage>(&self, storage: &mut S) -> StdResult<()> {
+    fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
         Self::ITEM.save(storage, self)
     }
 
-    fn update<A, E, S: Storage>(&self, storage: &mut S, action: A) -> Result<Self, E>
+    fn update<A, E>(&self, storage: &mut dyn Storage, action: A) -> Result<Self, E>
     where
         A: FnOnce(Self) -> Result<Self, E>,
         E: From<StdError>,
@@ -49,19 +49,19 @@ pub trait ItemStorage: Serialize + DeserializeOwned {
 }
 
 pub trait NaiveMapStorage<'a>: Serialize + DeserializeOwned {
-    fn load<S: Storage, K: PrimaryKey<'a>>(storage: &S, map: Map<'a, K, Self>, key: K) -> StdResult<Self> {
+    fn load<S: Storage, K: PrimaryKey<'a>>(storage: &dyn Storage, map: Map<'a, K, Self>, key: K) -> StdResult<Self> {
         map.load(storage, key)
     }
 
-    fn may_load<S: Storage, K: PrimaryKey<'a>>(storage: &S, map: Map<'a, K, Self>, key: K) -> StdResult<Option<Self>> {
+    fn may_load<S: Storage, K: PrimaryKey<'a>>(storage: &dyn Storage, map: Map<'a, K, Self>, key: K) -> StdResult<Option<Self>> {
         map.may_load(storage, key)
     }
 
-    fn save<S: Storage, K: PrimaryKey<'a>>(&self, storage: &mut S, map: Map<'a, K, Self>, key: K) -> StdResult<()> {
+    fn save<S: Storage, K: PrimaryKey<'a>>(&self, storage: &mut dyn Storage, map: Map<'a, K, Self>, key: K) -> StdResult<()> {
         map.save(storage, key, self)
     }
 
-    fn update<A, E, S: Storage, K: PrimaryKey<'a>>(&self, storage: &mut S, map: Map<'a, K, Self>, key: K, action: A) -> Result<Self, E>
+    fn update<A, E, K: PrimaryKey<'a>>(&self, storage: &mut dyn Storage, map: Map<'a, K, Self>, key: K, action: A) -> Result<Self, E>
         where
             A: FnOnce(Option<Self>) -> Result<Self, E>,
             E: From<StdError>,
@@ -73,19 +73,19 @@ pub trait NaiveMapStorage<'a>: Serialize + DeserializeOwned {
 pub trait MapStorage<'a, K: PrimaryKey<'a>>: Serialize + DeserializeOwned {
     const MAP: Map<'static, K, Self>;
 
-    fn load<S: Storage>(storage: &S, key: K) -> StdResult<Self> {
+    fn load(storage: &dyn Storage, key: K) -> StdResult<Self> {
         Self::MAP.load(storage, key)
     }
 
-    fn may_load<S: Storage>(storage: &S, key: K) -> StdResult<Option<Self>> {
+    fn may_load(storage: &dyn Storage, key: K) -> StdResult<Option<Self>> {
         Self::MAP.may_load(storage, key)
     }
 
-    fn save<S: Storage>(&self, storage: &mut S, key: K) -> StdResult<()> {
+    fn save(&self, storage: &mut dyn Storage, key: K) -> StdResult<()> {
         Self::MAP.save(storage, key, self)
     }
 
-    fn update<A, E, S: Storage>(&self, storage: &mut S, key: K, action: A) -> Result<Self, E>
+    fn update<A, E>(&self, storage: &mut dyn Storage, key: K, action: A) -> Result<Self, E>
     where
         A: FnOnce(Option<Self>) -> Result<Self, E>,
         E: From<StdError>,

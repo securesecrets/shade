@@ -65,7 +65,7 @@ use crate::{
 use chrono::prelude::*;
 use shade_protocol::contract_interfaces::dao::adapter;
 
-pub fn receive<S: Storage, A: Api, Q: Querier>(
+pub fn receive(
     deps: DepsMut,
     env: Env,
     sender: Addr,
@@ -84,7 +84,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     config: Config,
@@ -106,7 +106,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
+pub fn allowance_last_refresh(
     deps: Deps,
     env: &Env,
     allowance: &Allowance,
@@ -122,7 +122,7 @@ pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
         .map_err(|_| StdError::generic_err(format!("Failed to parse datetime {}", rfc3339)))
 }
 
-pub fn rebalance<S: Storage, A: Api, Q: Querier>(
+pub fn rebalance(
     deps: DepsMut,
     env: &Env,
     asset: Addr,
@@ -352,7 +352,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
+pub fn set_allowance(
     deps: Deps,
     env: &Env,
     spender: Addr,
@@ -395,7 +395,7 @@ pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
+pub fn try_register_asset(
     deps: DepsMut,
     env: &Env,
     contract: &Contract,
@@ -443,7 +443,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn register_manager<S: Storage, A: Api, Q: Querier>(
+pub fn register_manager(
     deps: DepsMut,
     env: &Env,
     contract: &mut Contract,
@@ -504,7 +504,7 @@ fn allowance_amount(allowance: &Allowance) -> Uint128 {
     }
 }
 
-pub fn allowance<S: Storage, A: Api, Q: Querier>(
+pub fn allowance(
     deps: DepsMut,
     env: &Env,
     asset: Addr,
@@ -618,7 +618,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn claim<S: Storage, A: Api, Q: Querier>(
+pub fn claim(
     deps: DepsMut,
     env: &Env,
     asset: Addr,
@@ -660,7 +660,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn unbond<S: Storage, A: Api, Q: Querier>(
+pub fn unbond(
     deps: DepsMut,
     env: &Env,
     asset: Addr,

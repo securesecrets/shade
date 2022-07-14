@@ -23,7 +23,7 @@ use shade_protocol::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
-pub fn register_pair<S: Storage, A: Api, Q: Querier>(
+pub fn register_pair(
     deps: DepsMut,
     env: Env,
     pair: Contract,
@@ -97,7 +97,7 @@ pub fn register_pair<S: Storage, A: Api, Q: Querier>(
     Err(StdError::generic_err("Failed to extract Trading Pair"))
 }
 
-pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
+pub fn unregister_pair(
     deps: DepsMut,
     env: Env,
     symbol: String,
@@ -134,7 +134,7 @@ pub fn unregister_pair<S: Storage, A: Api, Q: Querier>(
 /// Will fetch token Contract along with TokenInfo for {symbol} in pair argument.
 /// Pair argument must represent Secret Swap contract for {symbol}/sSCRT or sSCRT/{symbol}.
 ///
-fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
+fn fetch_token_paired_to_sscrt_on_sswap(
     deps: DepsMut,
     sscrt_addr: Addr,
     pair: &Contract,
@@ -176,7 +176,7 @@ fn fetch_token_paired_to_sscrt_on_sswap<S: Storage, A: Api, Q: Querier>(
     Ok((token_contract, token_info))
 }
 
-fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
+fn fetch_token_paired_to_sscrt_on_sienna(
     deps: DepsMut,
     sscrt_addr: Addr,
     pair: &Contract,
@@ -253,7 +253,7 @@ fn fetch_token_paired_to_sscrt_on_sienna<S: Storage, A: Api, Q: Querier>(
     Ok((token_contract, token_info))
 }
 
-pub fn register_index<S: Storage, A: Api, Q: Querier>(
+pub fn register_index(
     deps: DepsMut,
     env: Env,
     symbol: String,
@@ -283,7 +283,7 @@ pub fn register_index<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     admin: Option<Addr>,

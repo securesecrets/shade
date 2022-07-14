@@ -27,7 +27,7 @@ use shade_protocol::{
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
+pub fn init(
     deps: DepsMut,
     _env: Env,
     msg: InstantiateMsg,
@@ -42,7 +42,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     Ok(Response::new())
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
+pub fn handle(
     deps: DepsMut,
     env: Env,
     msg: ExecuteMsg,
@@ -87,7 +87,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     )
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     let status = ContractStatus::load(&deps.storage)?;
     match status {
         // Do nothing

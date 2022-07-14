@@ -22,7 +22,7 @@ use shade_protocol::{
 };
 use shade_protocol::contract_interfaces::snip20::errors::burning_disabled;
 
-pub fn try_burn<S: Storage, A: Api, Q: Querier>(
+pub fn try_burn(
     deps: DepsMut,
     env: Env,
     amount: Uint128,
@@ -57,7 +57,7 @@ pub fn try_burn<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
+pub fn try_burn_from(
     deps: DepsMut,
     env: Env,
     owner: Addr,
@@ -94,7 +94,7 @@ pub fn try_burn_from<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_batch_burn_from<S: Storage, A: Api, Q: Querier>(
+pub fn try_batch_burn_from(
     deps: DepsMut,
     env: Env,
     actions: Vec<batch::BurnFromAction>,

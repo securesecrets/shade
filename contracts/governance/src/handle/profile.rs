@@ -20,7 +20,7 @@ use shade_protocol::{
     utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
 };
 
-pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
+pub fn try_add_profile(
     deps: DepsMut,
     env: Env,
     profile: Profile,
@@ -41,7 +41,7 @@ pub fn try_add_profile<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_set_profile<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_profile(
     deps: DepsMut,
     env: Env,
     id: Uint128,

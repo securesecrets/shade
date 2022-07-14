@@ -24,7 +24,7 @@ use crate::{
     state::{config_w, current_assets_w},
 };
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
+pub fn init(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -50,7 +50,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     Ok(Response::new())
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
+pub fn handle(
     deps: DepsMut,
     env: Env,
     msg: ExecuteMsg,
@@ -67,7 +67,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(
+pub fn query(
     deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {

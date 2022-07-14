@@ -15,7 +15,7 @@ use crate::state::{
     viewing_key_r,
 };
 
-pub fn config<S: Storage, A: Api, Q: Querier>(
+pub fn config(
     deps: Deps,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Config {
@@ -23,7 +23,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn balance<S: Storage, A: Api, Q: Querier>(
+pub fn balance(
     deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -65,7 +65,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn reserves<S: Storage, A: Api, Q: Querier>(
+pub fn reserves(
     deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -108,7 +108,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn unbonding<S: Storage, A: Api, Q: Querier>(
+pub fn unbonding(
     deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -132,7 +132,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     Ok(adapter::QueryAnswer::Unbonding { amount: unbonding })
 }
 
-pub fn claimable<S: Storage, A: Api, Q: Querier>(
+pub fn claimable(
     deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -156,7 +156,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     Ok(adapter::QueryAnswer::Claimable { amount: claimable })
 }
 
-pub fn allowance<S: Storage, A: Api, Q: Querier>(
+pub fn allowance(
     deps: Deps,
     asset: &Addr,
     spender: &Addr,
@@ -183,7 +183,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     Err(StdError::generic_err(format!("Unknown Asset: {}", asset)))
 }
 
-pub fn assets<S: Storage, A: Api, Q: Querier>(
+pub fn assets(
     deps: Deps,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Assets {
@@ -191,7 +191,7 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn allowances<S: Storage, A: Api, Q: Querier>(
+pub fn allowances(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<treasury::QueryAnswer> {

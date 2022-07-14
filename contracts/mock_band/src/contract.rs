@@ -19,7 +19,7 @@ use shade_protocol::storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
 
 pub static PRICE: &[u8] = b"prices";
 
-pub fn price_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
+pub fn price_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Uint128> {
     bucket_read(PRICE, storage)
 }
 
@@ -27,7 +27,7 @@ pub fn price_w<S: Storage>(storage: &mut S) -> Bucket<S, Uint128> {
     bucket(PRICE, storage)
 }
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
+pub fn init(
     _deps: DepsMut,
     _env: Env,
     _msg: InstantiateMsg,
@@ -41,7 +41,7 @@ pub enum ExecuteMsg {
     MockPrice { symbol: String, price: Uint128 },
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
+pub fn handle(
     deps: DepsMut,
     _env: Env,
     msg: ExecuteMsg,
@@ -71,7 +71,7 @@ pub enum QueryMsg {
         quote_symbols: Vec<String>,
     },
 }
-pub fn query<S: Storage, A: Api, Q: Querier>(
+pub fn query(
     deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {

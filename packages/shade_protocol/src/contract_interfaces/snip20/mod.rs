@@ -56,7 +56,7 @@ fn is_valid_symbol(symbol: &str) -> bool {
 
 #[cfg(feature = "snip20-impl")]
 impl InstantiateMsg {
-    pub fn save<S: Storage>(&self, storage: &mut S, env: Env, info: MessageInfo) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage, env: Env, info: MessageInfo) -> StdResult<()> {
         if !is_valid_name(&self.name) {
             return Err(invalid_name_format(&self.name));
         }
@@ -148,7 +148,7 @@ impl Default for InitConfig {
 
 #[cfg(feature = "snip20-impl")]
 impl InitConfig {
-    pub fn save<S: Storage>(self, storage: &mut S) -> StdResult<()> {
+    pub fn save(self, storage: &mut dyn Storage) -> StdResult<()> {
         Config {
             public_total_supply: self.public_total_supply(),
             enable_deposit: self.deposit_enabled(),

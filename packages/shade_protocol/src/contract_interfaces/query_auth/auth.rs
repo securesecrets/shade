@@ -29,7 +29,7 @@ impl Key {
         Self(base64::encode(key))
     }
 
-    pub fn verify<S: Storage>(storage: &S, address: Addr, key: String) -> StdResult<bool> {
+    pub fn verify(storage: &dyn Storage, address: Addr, key: String) -> StdResult<bool> {
         Ok(match HashedKey::may_load(storage, address)? {
             None => {
                 // Empty compare for security reasons
@@ -65,11 +65,11 @@ impl MapStorage<'static, (Addr, String)> for PermitKey {
 }
 
 impl PermitKey {
-    pub fn revoke<S: Storage>(storage: &mut S, key: String, user: Addr) -> StdResult<()> {
+    pub fn revoke(storage: &mut dyn Storage, key: String, user: Addr) -> StdResult<()> {
         PermitKey(true).save(storage, (user, key))
     }
 
-    pub fn is_revoked<S: Storage>(storage: &mut S, key: String, user: Addr) -> StdResult<bool> {
+    pub fn is_revoked(storage: &mut dyn Storage, key: String, user: Addr) -> StdResult<bool> {
         Ok(match PermitKey::may_load(storage, (user, key))? {
             None => false,
             Some(_) => true

@@ -25,11 +25,11 @@ pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury_manager::C
     singleton(storage, CONFIG_KEY)
 }
 
-pub fn config_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, treasury_manager::Config> {
+pub fn config_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, treasury_manager::Config> {
     singleton_read(storage, CONFIG_KEY)
 }
 
-pub fn asset_list_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Addr>> {
+pub fn asset_list_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<Addr>> {
     singleton_read(storage, ASSET_LIST)
 }
 
@@ -37,7 +37,7 @@ pub fn asset_list_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Addr>> {
     singleton(storage, ASSET_LIST)
 }
 
-pub fn assets_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Snip20Asset> {
+pub fn assets_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Snip20Asset> {
     bucket_read(ASSETS, storage)
 }
 
@@ -45,7 +45,7 @@ pub fn assets_w<S: Storage>(storage: &mut S) -> Bucket<S, Snip20Asset> {
     bucket(ASSETS, storage)
 }
 
-pub fn viewing_key_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, String> {
+pub fn viewing_key_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, String> {
     singleton_read(storage, VIEWING_KEY)
 }
 
@@ -53,7 +53,7 @@ pub fn viewing_key_w<S: Storage>(storage: &mut S) -> Singleton<S, String> {
     singleton(storage, VIEWING_KEY)
 }
 
-pub fn self_address_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Addr> {
+pub fn self_address_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Addr> {
     singleton_read(storage, SELF_ADDRESS)
 }
 
@@ -62,7 +62,7 @@ pub fn self_address_w<S: Storage>(storage: &mut S) -> Singleton<S, Addr> {
 }
 
 pub fn allocations_r<S: Storage>(
-    storage: &S,
+    storage: &dyn Storage,
 ) -> ReadonlyBucket<S, Vec<treasury_manager::AllocationMeta>> {
     bucket_read(ALLOCATIONS, storage)
 }
@@ -73,7 +73,7 @@ pub fn allocations_w<S: Storage>(
     bucket(ALLOCATIONS, storage)
 }
 
-pub fn holders_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, Vec<Addr>> {
+pub fn holders_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, Vec<Addr>> {
     singleton_read(storage, HOLDERS)
 }
 
@@ -81,7 +81,7 @@ pub fn holders_w<S: Storage>(storage: &mut S) -> Singleton<S, Vec<Addr>> {
     singleton(storage, HOLDERS)
 }
 
-pub fn holder_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, treasury_manager::Holder> {
+pub fn holder_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, treasury_manager::Holder> {
     bucket_read(HOLDER, storage)
 }
 
@@ -89,7 +89,7 @@ pub fn holder_w<S: Storage>(storage: &mut S) -> Bucket<S, treasury_manager::Hold
     bucket(HOLDER, storage)
 }
 
-pub fn unbondings_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<treasury_manager::Unbonding>> {
+pub fn unbondings_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Vec<treasury_manager::Unbonding>> {
     bucket_read(UNBONDINGS, storage)
 }
 
@@ -98,7 +98,7 @@ pub fn unbondings_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury_manag
 }
 
 /*
-pub fn unbonding_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Uint128> {
+pub fn unbonding_r<S: Storage>(storage: &dyn Storage) -> ReadonlyBucket<S, Uint128> {
     bucket_read(UNBONDING, storage)
 }
 

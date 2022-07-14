@@ -41,7 +41,7 @@ impl InitCallback for InstantiateMsg {
 
 pub static PAIR_INFO: &[u8] = b"pair_info";
 
-pub fn pair_info_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, PairInfo> {
+pub fn pair_info_r<S: Storage>(storage: &dyn Storage) -> ReadonlySingleton<S, PairInfo> {
     singleton_read(storage, PAIR_INFO)
 }
 
@@ -49,7 +49,7 @@ pub fn pair_info_w<S: Storage>(storage: &mut S) -> Singleton<S, PairInfo> {
     singleton(storage, PAIR_INFO)
 }
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
+pub fn init(
     _deps: DepsMut,
     _env: Env,
     _msg: InstantiateMsg,
@@ -68,7 +68,7 @@ pub enum ExecuteMsg {
     },
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
+pub fn handle(
     deps: DepsMut,
     _env: Env,
     msg: ExecuteMsg,
@@ -114,7 +114,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     // TODO: actual swap handle
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(
+pub fn query(
     deps: Deps,
     msg: PairQuery,
 ) -> StdResult<Binary> {
