@@ -1,5 +1,5 @@
 use crate::handle::assembly::try_assembly_proposal;
-use shade_protocol::c_std::{MessageInfo, Uint128};
+use shade_protocol::c_std::{MessageInfo, SubMsg, Uint128};
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
@@ -80,6 +80,7 @@ pub fn try_trigger(
     proposal: Uint128,
 ) -> StdResult<Response> {
     let mut messages = vec![];
+
     let status = Proposal::status(deps.storage, &proposal)?;
     if let Status::Passed { .. } = status {
         let mut history = Proposal::status_history(deps.storage, &proposal)?;
@@ -90,24 +91,23 @@ pub fn try_trigger(
         // Trigger the msg
         let proposal_msg = Proposal::msg(deps.storage, &proposal)?;
         if let Some(prop_msgs) = proposal_msg {
-            for prop_msg in prop_msgs.iter() {
+            for (i, prop_msg) in prop_msgs.iter().enumerate() {
                 let contract = AllowedContract::data(deps.storage, &prop_msg.target)?.contract;
-                messages.push(
-                    WasmMsg::Execute {
-                        contract_addr: contract.address.into(),
-                        code_hash: contract.code_hash,
-                        msg: prop_msg.msg.clone(),
-                        funds: prop_msg.send.clone()
-                    }
-                    .into(),
-                );
+                // TODO: we can use this to setup a non fire and forget setup
+                let msg = WasmMsg::Execute {
+                    contract_addr: contract.address.into(),
+                    code_hash: contract.code_hash,
+                    msg: prop_msg.msg.clone(),
+                    funds: prop_msg.send.clone()
+                };
+                messages.push(SubMsg::reply_always(msg, i as u64));
             }
         }
     } else {
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Trigger {
+    Ok(Response::new().add_submessages(messages).set_data(to_binary(&HandleAnswer::Trigger {
             status: ResponseStatus::Success,
         })?))
 }

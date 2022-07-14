@@ -36,7 +36,7 @@ pub fn try_set_config(
         messages.push(register_receive(
             env.contract.code_hash.clone(),
             None,
-            vote_token
+            &vote_token
         )?);
     }
 
@@ -45,7 +45,7 @@ pub fn try_set_config(
         messages.push(register_receive(
             env.contract.code_hash.clone(),
             None,
-            funding_token
+            &funding_token
         )?);
     }
 
