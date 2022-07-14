@@ -66,7 +66,7 @@ pub trait InstantianteCallback: Serialize {
     #[cfg(feature = "multi-test")]
     fn test_init<T: Serialize, U: MultiTestable>(
         &self,
-        testable: &impl MultiTestable,
+        testable: impl MultiTestable,
         router: &mut App,
         sender: Addr,
         label: &str,
@@ -133,14 +133,14 @@ pub trait ExecuteCallback: Serialize {
     ///
     /// # Arguments
     ///
-    /// * `testable` - some struct implementing the MultiTestable trait
+    /// * `contract` - ContractInfo of an existing contract on the multi-test App
     /// * `router` - a mutable reference to the multi-test App 
     /// * `sender` - the user executing this message in the test env
     /// * `send_funds` - any funds transferred with this exec
     #[cfg(feature = "multi-test")]
     fn test_exec<T: Serialize + std::fmt::Debug>(
         &self,
-        testable: &impl MultiTestable,
+        contract: &ContractInfo,
         router: &mut App,
         sender: Addr,
         send_funds: &[Coin],
@@ -153,7 +153,7 @@ pub trait ExecuteCallback: Serialize {
             Self::BLOCK_SIZE
         };
         space_pad(&mut msg.0, padding);
-        router.execute_contract(sender, (*testable.get_info()).clone(), &msg, send_funds)
+        router.execute_contract(sender, contract, &msg, send_funds)
     }
 }
 
@@ -200,12 +200,12 @@ pub trait Query: Serialize {
     ///
     /// # Arguments
     ///
-    /// * `test_contract` - some struct implementing the MultiTestable trait
+    /// * `info` - contract info of instantiated contract
     /// * `router` - a reference to the multi-test App   
     #[cfg(feature = "multi-test")]
     fn test_query<T: DeserializeOwned>(
         &self, 
-        test_contract: &impl MultiTestable, 
+        info: &ContractInfo, 
         router: &App
     ) -> StdResult<T> {
         let mut msg = to_binary(self)?;
@@ -216,7 +216,6 @@ pub trait Query: Serialize {
             Self::BLOCK_SIZE
         };
         space_pad(&mut msg.0, padding);
-        let info = test_contract.get_info();
         router
             .wrap()
             .query(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -232,7 +231,7 @@ pub trait Query: Serialize {
 pub trait MultiTestable {
     fn get_info(&self) -> &ContractInfo;
     fn contract(&self) -> Box<dyn MultiContract<Empty>>;
-    fn new(info: ContractInfo) -> Self;
+    fn init_info(self, info: ContractInfo) -> Self;
     fn default() -> Self;
 }
 
