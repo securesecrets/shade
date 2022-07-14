@@ -229,9 +229,7 @@ pub trait Query: Serialize {
 #[cfg(feature = "multi-test")]
 /// Trait for making integration with multi-test easier.
 pub trait MultiTestable {
-    fn get_info(&self) -> &ContractInfo;
     fn contract(&self) -> Box<dyn MultiContract<Empty>>;
-    fn init_info(self, info: ContractInfo) -> Self;
     fn default() -> Self;
 }
 
