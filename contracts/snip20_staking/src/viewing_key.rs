@@ -1,7 +1,7 @@
 use std::fmt;
 
-use shade_protocol::schemars::JsonSchema;
-use shade_protocol::serde::{Deserialize, Serialize};
+
+use shade_protocol::cosmwasm_schema::cw_serde;
 
 use shade_protocol::c_std::Env;
 

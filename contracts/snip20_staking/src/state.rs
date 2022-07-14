@@ -5,8 +5,8 @@ use shade_protocol::storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 
 use shade_protocol::secret_toolkit::storage::{TypedStore, TypedStoreMut};
 
-use shade_protocol::schemars::JsonSchema;
-use shade_protocol::serde::{Deserialize, Serialize};
+
+use shade_protocol::cosmwasm_schema::cw_serde;
 
 use crate::{
     msg::{status_level_to_u8, u8_to_status_level, ContractStatusLevel},

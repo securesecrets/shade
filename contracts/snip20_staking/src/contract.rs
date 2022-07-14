@@ -61,6 +61,7 @@ use crate::{
     transaction_history::{get_transfers, get_txs, store_claim_reward, store_mint, store_transfer},
     viewing_key::{ViewingKey, VIEWING_KEY_SIZE},
 };
+use cosmwasm_std::MessageInfo;
 use shade_protocol::c_std::{Uint128, Uint256};
 /// This contract implements SNIP-20 standard:
 /// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
@@ -77,26 +78,24 @@ use shade_protocol::c_std::{
     Addr,
     Response,
     Querier,
-
-    ReadonlyStorage,
     StdError,
     StdResult,
     Storage,
 };
-use shade_protocol::secret_toolkit::{
-    permit::{validate, Permission, Permit, RevokedPermits},
-    snip20::helpers::{register_receive, send_msg, token_info_query},
+use shade_protocol::{
+    // permit::{validate, Permission, Permit, RevokedPermits},
+    contract_interfaces::snip20::helpers::{register_receive, send_msg, token_info},
 };
 use shade_protocol::{Contract, contract_interfaces::staking::snip20_staking::{
     stake::{Cooldown, StakeConfig, VecQueue},
     ReceiveType,
 }, utils::storage::default::{BucketStorage, SingletonStorage}};
 
-/// We make sure that responses from `handle` are padded to a multiple of this size.
+/// We make sure that responses from `execute` are padded to a multiple of this size.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
 
-pub fn init(
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -213,7 +212,7 @@ fn pad_response(response: StdResult<Response>) -> StdResult<Response> {
     })
 }
 
-pub fn handle(
+pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -302,9 +301,9 @@ pub fn handle(
             ..
         } => try_receive(deps, env, info, sender, from, amount, msg, memo),
         ExecuteMsg::Unbond { amount, .. } => try_unbond(deps, env, info, amount),
-        ExecuteMsg::ClaimUnbond { .. } => try_claim_unbond(deps, env),
-        ExecuteMsg::ClaimRewards { .. } => try_claim_rewards(deps, env),
-        ExecuteMsg::StakeRewards { .. } => try_stake_rewards(deps, env),
+        ExecuteMsg::ClaimUnbond { .. } => try_claim_unbond(deps, env, info),
+        ExecuteMsg::ClaimRewards { .. } => try_claim_rewards(deps, env, info),
+        ExecuteMsg::StakeRewards { .. } => try_stake_rewards(deps, env, info),
 
         // Balance
         ExecuteMsg::ExposeBalance {
@@ -1619,7 +1618,7 @@ mod staking_tests {
             distributors: Some(vec![Addr::unchecked("distributor".to_string())]),
         };
 
-        (init(&mut deps, env, info, init_msg), deps)
+        (instantiate(&mut deps, env, info, init_msg), deps)
     }
 
     // Handle tests
@@ -1634,9 +1633,9 @@ mod staking_tests {
             padding: None,
         };
         // Check that only admins can interact
-        let handle_result = handle(&mut deps, mock_env("not_admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("not_admin", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg);
         assert!(handle_result.is_ok());
 
         let query_balance_msg = QueryMsg::StakeConfig {};
@@ -1667,13 +1666,13 @@ mod staking_tests {
             padding: None,
         };
         // Bond tokens
-        let handle_result = handle(deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
         let handle_msg = ExecuteMsg::SetViewingKey {
             key: pwd.to_string(),
             padding: None,
         };
-        let handle_result = handle(deps, mock_env(acc, &[]), handle_msg.clone());
+        let handle_result = execute(deps, mock_env(acc, &[]), handle_msg.clone());
     }
 
     fn check_staked_state(
@@ -1706,17 +1705,17 @@ mod staking_tests {
             padding: None,
         };
         // Bond tokens with unsupported token
-        let handle_result = handle(&mut deps, mock_env("not_token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("not_token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
         // Bond tokens
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
         let handle_msg = ExecuteMsg::SetViewingKey {
             key: "key".to_string(),
             padding: None,
         };
         // Bond tokens with unsupported token
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
 
         check_staked_state(
             &deps,
@@ -1779,7 +1778,7 @@ mod staking_tests {
             amount: Uint128::new(1000 * 10u128.pow(8)),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
         // Unbond
@@ -1790,7 +1789,7 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 10;
-        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
+        let handle_result = execute(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query unbonding queue
@@ -1862,7 +1861,7 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 10;
-        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
+        let handle_result = execute(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query unbonding queue
@@ -1885,7 +1884,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query unbonding queue
@@ -1907,7 +1906,7 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 10;
-        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
+        let handle_result = execute(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query unbonding queue
@@ -1930,7 +1929,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query unbonding queue
@@ -1960,7 +1959,7 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 0;
-        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
+        let handle_result = execute(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Fund the unbond
@@ -1972,7 +1971,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query user stake
@@ -2005,7 +2004,7 @@ mod staking_tests {
         let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 0;
-        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
+        let handle_result = execute(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_err());
 
         // Query user stake
@@ -2038,7 +2037,7 @@ mod staking_tests {
         let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 11;
-        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
+        let handle_result = execute(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query user stake
@@ -2075,14 +2074,14 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 0;
-        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
+        let handle_result = execute(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Claim
         let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 11;
-        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
+        let handle_result = execute(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_err());
     }
 
@@ -2097,7 +2096,7 @@ mod staking_tests {
         // Claim rewards
         let handle_msg = ExecuteMsg::ClaimRewards { padding: None };
 
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
         // Add rewards; foo should get 50 tkn and bar 25
@@ -2109,7 +2108,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query user stake
@@ -2174,7 +2173,7 @@ mod staking_tests {
         // Claim rewards
         let handle_msg = ExecuteMsg::ClaimRewards { padding: None };
 
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         let query_msg = QueryMsg::Staked {
@@ -2218,7 +2217,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Check account to confirm it works
@@ -2248,7 +2247,7 @@ mod staking_tests {
         };
 
         let handle_msg = ExecuteMsg::StakeRewards { padding: None };
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         let query_msg = QueryMsg::Staked {
@@ -2294,7 +2293,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query user stake
@@ -2361,7 +2360,7 @@ mod staking_tests {
             amount: Uint128::new(50 * 10u128.pow(8)),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         let query_msg = QueryMsg::Staked {
@@ -2400,10 +2399,10 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("other", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("other", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
     }
 
@@ -2425,10 +2424,10 @@ mod staking_tests {
             distributors: vec![Addr::unchecked("new_distrib".to_string())],
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("not_admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("not_admin", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         let query_msg = QueryMsg::Distributors {};
@@ -2452,10 +2451,10 @@ mod staking_tests {
             distributors: vec![Addr::unchecked("new_distrib".to_string())],
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("not_admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("not_admin", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         let query_msg = QueryMsg::Distributors {};
@@ -2498,7 +2497,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Distrib is sender
@@ -2511,10 +2510,10 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("not_distrib", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("not_distrib", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
-        let handle_result = handle(&mut deps, mock_env("distrib", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("distrib", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Send to distrib
@@ -2527,7 +2526,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("sender", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("sender", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         let handle_msg = ExecuteMsg::Send {
@@ -2539,7 +2538,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("sender", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("sender", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
     }
 
@@ -2553,7 +2552,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Add rewards
@@ -2565,7 +2564,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Check account to confirm it works
@@ -2603,7 +2602,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Check that it was autoclaimed
@@ -2644,7 +2643,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Send msg
@@ -2656,7 +2655,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Check that it was autoclaimed
@@ -2697,7 +2696,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bar", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("bar", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Check that it was autoclaimed
@@ -2738,7 +2737,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bar", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("bar", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Check that it was autoclaimed
@@ -2781,7 +2780,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Send msg
@@ -2793,7 +2792,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Check that it was autoclaimed
@@ -2830,7 +2829,7 @@ mod staking_tests {
             amount: Uint128::new(100 * 10u128.pow(8)),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bar", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("bar", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Check that it was autoclaimed
@@ -2867,7 +2866,7 @@ mod staking_tests {
             amount: Uint128::new(10 * 10u128.pow(8)),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bar", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("bar", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Check that it was autoclaimed
@@ -2909,7 +2908,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         let pause_msg = ExecuteMsg::SetContractStatus {
@@ -2917,7 +2916,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), pause_msg);
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), pause_msg);
         assert!(handle_result.is_ok());
 
         let send_msg = ExecuteMsg::Transfer {
@@ -2926,7 +2925,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), send_msg);
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), send_msg);
         assert!(handle_result.is_ok());
 
         let handle_msg = ExecuteMsg::Receive {
@@ -2938,7 +2937,7 @@ mod staking_tests {
             padding: None,
         };
         // Bond tokens
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
         let handle_msg = ExecuteMsg::Receive {
@@ -2950,7 +2949,7 @@ mod staking_tests {
             padding: None,
         };
         // Bond tokens
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
         let handle_msg = ExecuteMsg::Unbond {
@@ -2958,7 +2957,7 @@ mod staking_tests {
             padding: None,
         };
         // Bond tokens
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
     }
 
@@ -2972,7 +2971,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
 
         let pause_msg = ExecuteMsg::SetContractStatus {
@@ -2980,7 +2979,7 @@ mod staking_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), pause_msg);
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), pause_msg);
         assert!(handle_result.is_ok());
 
         let send_msg = ExecuteMsg::Transfer {
@@ -2989,7 +2988,7 @@ mod staking_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), send_msg);
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), send_msg);
         assert!(handle_result.is_err());
 
         let handle_msg = ExecuteMsg::Receive {
@@ -3001,7 +3000,7 @@ mod staking_tests {
             padding: None,
         };
         // Bond tokens
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
         let handle_msg = ExecuteMsg::Receive {
@@ -3013,7 +3012,7 @@ mod staking_tests {
             padding: None,
         };
         // Bond tokens
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
 
         let handle_msg = ExecuteMsg::Unbond {
@@ -3021,7 +3020,7 @@ mod staking_tests {
             padding: None,
         };
         // Bond tokens
-        let handle_result = handle(&mut deps, mock_env("foo", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("foo", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
     }
 }
@@ -3069,13 +3068,13 @@ mod snip20_tests {
             padding: None,
         };
         // Bond tokens
-        let handle_result = handle(deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_ok());
         let handle_msg = ExecuteMsg::SetViewingKey {
             key: pwd.to_string(),
             padding: None,
         };
-        let handle_result = handle(deps, mock_env(acc, &[]), handle_msg.clone());
+        let handle_result = execute(deps, mock_env(acc, &[]), handle_msg.clone());
         assert!(handle_result.is_ok())
     }
 
@@ -3107,13 +3106,13 @@ mod snip20_tests {
             distributors: None,
         };
 
-        let init = init(&mut deps, env, info, init_msg);
+        let instantiate = instantiate(&mut deps, env, info, init_msg);
 
         for account in initial_balances.iter() {
             new_staked_account(&mut deps, account.acc, account.pwd, account.stake);
         }
 
-        (init, deps)
+        (instantiate, deps)
     }
 
     fn init_helper_with_config(
@@ -3164,13 +3163,13 @@ mod snip20_tests {
             distributors: None,
         };
 
-        let init = init(&mut deps, env, info, init_msg);
+        let instantiate = instantiate(&mut deps, env, info, init_msg);
 
         for account in initial_balances.iter() {
             new_staked_account(&mut deps, account.acc, account.pwd, account.stake);
         }
 
-        (init, deps)
+        (instantiate, deps)
     }
 
     /// Will return a ViewingKey only for the first account in `initial_balances`
@@ -3189,10 +3188,10 @@ mod snip20_tests {
             entropy: "42".to_string(),
             padding: None,
         };
-        let handle_response = handle(&mut deps, mock_env(account, &[]), create_vk_msg).unwrap();
+        let handle_response = execute(&mut deps, mock_env(account, &[]), create_vk_msg).unwrap();
         let vk = match from_binary(&handle_response.data.unwrap()).unwrap() {
             HandleAnswer::CreateViewingKey { key } => key,
-            _ => panic!("Unexpected result from handle"),
+            _ => panic!("Unexpected result from execute"),
         };
 
         (vk, deps)
@@ -3211,7 +3210,7 @@ mod snip20_tests {
             }
             Err(err) => match err {
                 StdError::GenericErr { msg, .. } => msg,
-                _ => panic!("Unexpected result from init"),
+                _ => panic!("Unexpected result from instantiate"),
             },
         }
     }
@@ -3328,7 +3327,7 @@ mod snip20_tests {
             padding: None,
         };
         // Bond tokens
-        let handle_result = handle(&mut deps, mock_env("token", &[]), handle_msg.clone());
+        let handle_result = execute(&mut deps, mock_env("token", &[]), handle_msg.clone());
         assert!(handle_result.is_err());
     }
 
@@ -3387,7 +3386,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
         let bob_canonical = deps
@@ -3408,7 +3407,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains("insufficient funds"));
 
@@ -3466,7 +3465,7 @@ mod snip20_tests {
             code_hash: "this_is_a_hash_of_a_code".to_string(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("contract", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("contract", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
@@ -3478,7 +3477,7 @@ mod snip20_tests {
             padding: None,
             msg: Some(to_binary("hey hey you you").unwrap()),
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result.clone()));
         assert!(
@@ -3516,7 +3515,7 @@ mod snip20_tests {
             code_hash: "this_is_a_hash_of_a_code".to_string(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("contract", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("contract", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
@@ -3543,10 +3542,10 @@ mod snip20_tests {
             entropy: "".to_string(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
         let answer: HandleAnswer = from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
@@ -3581,7 +3580,7 @@ mod snip20_tests {
             key: "hi lol".to_string(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let unwrapped_result: HandleAnswer =
             from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
         assert_eq!(
@@ -3598,7 +3597,7 @@ mod snip20_tests {
             key: actual_vk.0.clone(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let unwrapped_result: HandleAnswer =
             from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
         assert_eq!(
@@ -3634,7 +3633,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("alice", &[]), handle_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains("insufficient allowance"));
 
@@ -3645,10 +3644,10 @@ mod snip20_tests {
             padding: None,
             expiration: Some(1_571_797_420),
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
         let handle_msg = ExecuteMsg::TransferFrom {
@@ -3658,7 +3657,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("alice", &[]), handle_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains("insufficient allowance"));
 
@@ -3670,7 +3669,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(
+        let handle_result = execute(
             &mut deps,
             Env {
                 block: BlockInfo {
@@ -3701,10 +3700,10 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("alice", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
         let bob_canonical = deps
@@ -3732,7 +3731,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("alice", &[]), handle_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains("insufficient allowance"));
     }
@@ -3760,7 +3759,7 @@ mod snip20_tests {
             msg: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("alice", &[]), handle_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains("insufficient allowance"));
 
@@ -3771,10 +3770,10 @@ mod snip20_tests {
             padding: None,
             expiration: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
         let handle_msg = ExecuteMsg::SendFrom {
@@ -3786,7 +3785,7 @@ mod snip20_tests {
             msg: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("alice", &[]), handle_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains("insufficient allowance"));
 
@@ -3795,10 +3794,10 @@ mod snip20_tests {
             code_hash: "lolz".to_string(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("contract", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("contract", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
         let send_msg = Binary::from(r#"{ "some_msg": { "some_key": "some_val" } }"#.as_bytes());
@@ -3818,10 +3817,10 @@ mod snip20_tests {
             msg: Some(send_msg),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("alice", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
         assert!(
@@ -3858,7 +3857,7 @@ mod snip20_tests {
             msg: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("alice", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("alice", &[]), handle_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains("insufficient allowance"));
     }
@@ -3882,10 +3881,10 @@ mod snip20_tests {
             padding: None,
             expiration: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
 
@@ -3910,10 +3909,10 @@ mod snip20_tests {
             padding: None,
             expiration: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
 
@@ -3923,10 +3922,10 @@ mod snip20_tests {
             padding: None,
             expiration: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
 
@@ -3956,10 +3955,10 @@ mod snip20_tests {
             padding: None,
             expiration: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
 
@@ -3984,10 +3983,10 @@ mod snip20_tests {
             padding: None,
             expiration: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
 
@@ -4015,10 +4014,10 @@ mod snip20_tests {
             address: Addr::unchecked("bob".to_string()),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
 
@@ -4046,10 +4045,10 @@ mod snip20_tests {
             level: ContractStatusLevel::StopAll,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
 
@@ -4085,7 +4084,7 @@ mod snip20_tests {
             level: ContractStatusLevel::StopAll,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("not_admin", &[]), pause_msg);
+        let handle_result = execute(&mut deps, mock_env("not_admin", &[]), pause_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains(&admin_err.clone()));
 
@@ -4093,7 +4092,7 @@ mod snip20_tests {
             address: Addr::unchecked("not_admin".to_string()),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("not_admin", &[]), change_admin_msg);
+        let handle_result = execute(&mut deps, mock_env("not_admin", &[]), change_admin_msg);
         let error = extract_error_msg(handle_result);
         assert!(error.contains(&admin_err.clone()));
     }
@@ -4116,10 +4115,10 @@ mod snip20_tests {
             padding: None,
         };
 
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), pause_msg);
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), pause_msg);
         assert!(
             handle_result.is_ok(),
-            "Pause handle failed: {}",
+            "Pause execute failed: {}",
             handle_result.err().unwrap()
         );
 
@@ -4129,7 +4128,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("admin", &[]), send_msg);
+        let handle_result = execute(&mut deps, mock_env("admin", &[]), send_msg);
         let error = extract_error_msg(handle_result);
         assert_eq!(
             error,
@@ -4167,10 +4166,10 @@ mod snip20_tests {
             entropy: "34".to_string(),
             padding: None,
         };
-        let handle_response = handle(&mut deps, mock_env("giannis", &[]), create_vk_msg).unwrap();
+        let handle_response = execute(&mut deps, mock_env("giannis", &[]), create_vk_msg).unwrap();
         let vk = match from_binary(&handle_response.data.unwrap()).unwrap() {
             HandleAnswer::CreateViewingKey { key } => key,
-            _ => panic!("Unexpected result from handle"),
+            _ => panic!("Unexpected result from execute"),
         };
 
         let query_balance_msg = QueryMsg::Balance {
@@ -4229,7 +4228,7 @@ mod snip20_tests {
             limit_transfer: true,
             distributors: None,
         };
-        let init_result = init(&mut deps, env, info, init_msg);
+        let init_result = instantiate(&mut deps, env, info, init_msg);
         assert!(
             init_result.is_ok(),
             "Init failed: {}",
@@ -4301,7 +4300,7 @@ mod snip20_tests {
             limit_transfer: true,
             distributors: None,
         };
-        let init_result = init(&mut deps, env, info, init_msg);
+        let init_result = instantiate(&mut deps, env, info, init_msg);
         assert!(
             init_result.is_ok(),
             "Init failed: {}",
@@ -4347,10 +4346,10 @@ mod snip20_tests {
             padding: None,
             expiration: None,
         };
-        let handle_result = handle(&mut deps, mock_env("giannis", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("giannis", &[]), handle_msg);
         assert!(
             handle_result.is_ok(),
-            "handle() failed: {}",
+            "execute() failed: {}",
             handle_result.err().unwrap()
         );
 
@@ -4375,7 +4374,7 @@ mod snip20_tests {
             key: vk1.0.clone(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("lebron", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("lebron", &[]), handle_msg);
         let unwrapped_result: HandleAnswer =
             from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
         assert_eq!(
@@ -4390,7 +4389,7 @@ mod snip20_tests {
             key: vk2.0.clone(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("giannis", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("giannis", &[]), handle_msg);
         let unwrapped_result: HandleAnswer =
             from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
         assert_eq!(
@@ -4455,7 +4454,7 @@ mod snip20_tests {
             key: "key".to_string(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let unwrapped_result: HandleAnswer =
             from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
         assert_eq!(
@@ -4503,7 +4502,7 @@ mod snip20_tests {
             key: "key".to_string(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(ensure_success(handle_result.unwrap()));
 
         let handle_msg = ExecuteMsg::Transfer {
@@ -4512,7 +4511,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
         let handle_msg = ExecuteMsg::Transfer {
@@ -4521,7 +4520,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
         let handle_msg = ExecuteMsg::Transfer {
@@ -4530,7 +4529,7 @@ mod snip20_tests {
             memo: None,
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
@@ -4613,7 +4612,7 @@ mod snip20_tests {
             key: "key".to_string(),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         assert!(ensure_success(handle_result.unwrap()));
 
         let handle_msg = ExecuteMsg::Transfer {
@@ -4622,7 +4621,7 @@ mod snip20_tests {
             memo: Some("my transfer message #1".to_string()),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
@@ -4632,7 +4631,7 @@ mod snip20_tests {
             memo: Some("my transfer message #2".to_string()),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 
@@ -4642,7 +4641,7 @@ mod snip20_tests {
             memo: Some("my transfer message #3".to_string()),
             padding: None,
         };
-        let handle_result = handle(&mut deps, mock_env("bob", &[]), handle_msg);
+        let handle_result = execute(&mut deps, mock_env("bob", &[]), handle_msg);
         let result = handle_result.unwrap();
         assert!(ensure_success(result));
 

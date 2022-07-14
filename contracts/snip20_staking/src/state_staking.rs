@@ -75,16 +75,14 @@ impl SingletonStorage for DistributorsEnabled {
 
 // Unbonding Queues
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct UnbondingQueue(pub VecQueue<Unbonding>);
 
 impl BucketStorage for UnbondingQueue {
     const NAMESPACE: &'static [u8] = b"unbonding_queue";
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct DailyUnbondingQueue(pub VecQueue<DailyUnbonding>);
 
 impl SingletonStorage for DailyUnbondingQueue {

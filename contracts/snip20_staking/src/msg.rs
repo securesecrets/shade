@@ -1,7 +1,7 @@
 #![allow(clippy::field_reassign_with_default)] // This is triggered in `#[derive(JsonSchema)]`
 
-use shade_protocol::schemars::JsonSchema;
-use shade_protocol::serde::{Deserialize, Serialize};
+
+use shade_protocol::cosmwasm_schema::cw_serde;
 
 use crate::{
     batch,
@@ -61,8 +61,7 @@ impl InitConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     // Staking
     UpdateStakeConfig {
@@ -484,15 +483,13 @@ pub struct CreateViewingKeyResponse {
     pub key: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ResponseStatus {
     Success,
     Failure,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ContractStatusLevel {
     NormalRun,
     StopBonding,

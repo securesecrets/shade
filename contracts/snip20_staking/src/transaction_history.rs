@@ -1,5 +1,5 @@
-use shade_protocol::schemars::JsonSchema;
-use shade_protocol::serde::{Deserialize, Serialize};
+
+use shade_protocol::cosmwasm_schema::cw_serde;
 
 use shade_protocol::c_std::{
     Api,
@@ -97,8 +97,7 @@ pub struct RichTx {
 // Stored types:
 
 /// This type is the stored version of the legacy transfers
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 struct StoredLegacyTransfer {
     id: u64,
     from: CanonicalAddr,
@@ -169,8 +168,7 @@ impl TxCode {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 struct StoredTxAction {
     tx_type: u8,
     address1: Option<CanonicalAddr>,
@@ -352,8 +350,7 @@ impl StoredTxAction {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 struct StoredRichTx {
     id: u64,
     action: StoredTxAction,

@@ -1,5 +1,5 @@
-use shade_protocol::schemars::JsonSchema;
-use shade_protocol::serde::{Deserialize, Serialize};
+
+use shade_protocol::cosmwasm_schema::cw_serde;
 
 use crate::{
     msg::{HandleAnswer, ResponseStatus::Success},

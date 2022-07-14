@@ -32,8 +32,11 @@ debug-print = ["shade-protocol/debug-print"]
 
 # debug-print = ["cosmwasm-std/debug-print"]
 [dependencies]
-schemars = "0.7"
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+schemars = "0.8.9"
+serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
+thiserror = "1.0"
+
 bincode2 = "2.0.1"
 subtle = { version = "2.2.3", default-features = false }
 base64 = "0.12.3"

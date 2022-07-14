@@ -572,7 +572,7 @@ pub fn try_unbond(
 
     daily_unbond_queue.save(deps.storage)?;
 
-    // Check if user has an existing queue, if not, init one
+    // Check if user has an existing queue, if not, instantiate one
     let mut unbond_queue = UnbondingQueue::may_load(deps.storage, sender.as_str().as_bytes())?
         .unwrap_or(UnbondingQueue(VecQueue::new(vec![])));
 
@@ -637,7 +637,7 @@ pub fn try_claim_unbond(
     // Instead of iterating over it we just look at its smallest value (first in queue)
     let daily_unbond_queue = DailyUnbondingQueue::load(deps.storage)?.0;
 
-    // Check if user has an existing queue, if not, init one
+    // Check if user has an existing queue, if not, instantiate one
     let mut unbond_queue = UnbondingQueue::may_load(deps.storage, sender.as_str().as_bytes())?
         .expect("No unbonding queue found");
 
@@ -836,7 +836,7 @@ mod tests {
         let token_1 = Uint128::new(10000000 * 10u128.pow(token_decimals.into()));
         let share_1 = Uint256::from(10000000 * 10u128.pow(shares_decimals.into()));
 
-        // Check for proper init
+        // Check for proper instantiate
         assert_eq!(
             tokens_per_share(&config, &share_1, &Uint128::zero(), &Uint256::zero()).unwrap(),
             token_1
@@ -886,7 +886,7 @@ mod tests {
         let token_1 = Uint128::new(100 * 10u128.pow(token_decimals.into()));
         let share_1 = Uint256::from(100 * 10u128.pow(shares_decimals.into()));
 
-        // Check for proper init
+        // Check for proper instantiate
         assert_eq!(
             shares_per_token(&config, &token_1, &Uint128::zero(), &Uint256::zero()).unwrap(),
             share_1

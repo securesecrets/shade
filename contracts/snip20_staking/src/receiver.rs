@@ -1,7 +1,7 @@
 #![allow(clippy::field_reassign_with_default)] // This is triggered in `#[derive(JsonSchema)]`
 
-use shade_protocol::schemars::JsonSchema;
-use shade_protocol::serde::{Deserialize, Serialize};
+
+use shade_protocol::cosmwasm_schema::cw_serde;
 
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{to_binary, Binary, CosmosMsg, Addr, StdResult, WasmMsg};
@@ -9,8 +9,7 @@ use shade_protocol::c_std::{to_binary, Binary, CosmosMsg, Addr, StdResult, WasmM
 use crate::{contract::RESPONSE_BLOCK_SIZE, msg::space_pad};
 
 /// Snip20ReceiveMsg should be de/serialized under `Receive()` variant in a ExecuteMsg
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Snip20ReceiveMsg {
     pub sender: Addr,
     pub from: Addr,
@@ -54,17 +53,16 @@ impl Snip20ReceiveMsg {
         let msg = self.into_binary()?;
         let execute = WasmMsg::Execute {
             msg,
-            callback_code_hash,
+            code_hash: callback_code_hash,
             contract_addr,
-            send: vec![],
+            funds: vec![],
         };
         Ok(execute.into())
     }
 }
 
 // This is just a helper to properly serialize the above message
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 enum ReceiverHandleMsg {
     Receive(Snip20ReceiveMsg),
 }
