@@ -10,13 +10,13 @@ use shade_protocol::contract_interfaces::mint::{
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: config_r(deps.storage).load()?,
     })
 }
 
 pub fn assets(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Assets {
-        assets: current_assets_r(&deps.storage).load()?,
+        assets: current_assets_r(deps.storage).load()?,
     })
 }
 
@@ -26,13 +26,13 @@ pub fn route(
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {
     let mut path = vec![];
-    let mut input_asset = registered_asset_r(&deps.storage).load(&asset.to_string().as_bytes())?;
+    let mut input_asset = registered_asset_r(deps.storage).load(&asset.to_string().as_bytes())?;
     let mut input_amount = amount;
 
-    let final_asset = final_asset_r(&deps.storage).load()?;
+    let final_asset = final_asset_r(deps.storage).load()?;
 
     while input_asset.address != final_asset {
-        let mint = asset_path_r(&deps.storage).load(&input_asset.address.to_string().as_bytes())?;
+        let mint = asset_path_r(deps.storage).load(&input_asset.address.to_string().as_bytes())?;
         let (output_asset, output_amount) = match (mint::QueryMsg::Mint {
             offer_asset: input_asset.address.clone(),
             amount: input_amount,

@@ -73,7 +73,7 @@ pub fn try_update_config(
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = config_r(deps.storage).load()?;
 
     if !cur_config.admins.contains(&info.sender) {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -95,7 +95,7 @@ pub fn register_asset(
     env: Env,
     contract: &Contract,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if !config.admins.contains(&info.sender) {
         return Err(StdError::unauthorized());
@@ -123,7 +123,7 @@ pub fn register_asset(
             )?,
             // Set viewing key
             set_viewing_key_msg(
-                viewing_key_r(&deps.storage).load()?,
+                viewing_key_r(deps.storage).load()?,
                 None,
                 256,
                 contract.code_hash.clone(),
@@ -142,7 +142,7 @@ pub fn refill_rewards(
     env: Env,
     rewards: Vec<Reward>,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if info.sender != config.distributor {
         return Err(StdError::unauthorized());
@@ -151,7 +151,7 @@ pub fn refill_rewards(
     let mut messages = vec![];
 
     for reward in rewards {
-        let full_asset = match asset_r(&deps.storage).may_load(&reward.asset.as_str().as_bytes())? {
+        let full_asset = match asset_r(deps.storage).may_load(&reward.asset.as_str().as_bytes())? {
             Some(a) => a,
             None => {
                 return Err(StdError::generic_err(format!(
@@ -202,7 +202,7 @@ pub fn claim(
     _env: Env,
     asset: Addr,
 ) -> StdResult<Response> {
-    match asset_r(&deps.storage).may_load(&asset.as_str().as_bytes())? {
+    match asset_r(deps.storage).may_load(&asset.as_str().as_bytes())? {
         Some(_) => Ok(Response {
             messages: vec![],
             log: vec![],

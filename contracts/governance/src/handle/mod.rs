@@ -38,7 +38,7 @@ pub fn try_set_config(
     }
 
     let mut messages = vec![];
-    let mut config = Config::load(&deps.storage)?;
+    let mut config = Config::load(deps.storage)?;
 
     // Vote and funding tokens cannot be set to none after being set
     if let Some(vote_token) = vote_token {

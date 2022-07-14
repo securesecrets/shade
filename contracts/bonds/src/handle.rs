@@ -41,7 +41,7 @@ pub fn try_update_limit_config(
     reset_total_issued: Option<bool>,
     reset_total_claimed: Option<bool>,
 ) -> StdResult<Response> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = config_r(deps.storage).load()?;
 
     // Limit admin only
     if info.sender != cur_config.limit_admin {
@@ -105,7 +105,7 @@ pub fn try_update_config(
     airdrop: Option<Contract>,
     query_auth: Option<Contract>,
 ) -> StdResult<Response> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = config_r(deps.storage).load()?;
 
     // Admin-only
     let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
@@ -181,7 +181,7 @@ pub fn try_deposit(
     deposit_amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     // Check that sender isn't the treasury
     if config.treasury == sender {
@@ -213,7 +213,7 @@ pub fn try_deposit(
     }
 
     // Check that sender asset has an active bond opportunity
-    let bond_opportunity = match bond_opportunity_r(&deps.storage)
+    let bond_opportunity = match bond_opportunity_r(deps.storage)
         .may_load(info.sender.to_string().as_bytes())?
     {
         Some(prev_opp) => {
@@ -231,7 +231,7 @@ pub fn try_deposit(
         .unwrap();
 
     // Load mint asset information
-    let issuance_asset = issued_asset_r(&deps.storage).load()?;
+    let issuance_asset = issued_asset_r(deps.storage).load()?;
 
     // Calculate conversion of deposit to SHD
     let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(
@@ -260,7 +260,7 @@ pub fn try_deposit(
     };
 
     let mut opp =
-        bond_opportunity_r(&deps.storage).load(info.sender.to_string().as_bytes())?;
+        bond_opportunity_r(deps.storage).load(info.sender.to_string().as_bytes())?;
     opp.amount_issued += amount_to_issue;
     bond_opportunity_w(deps.storage).save(info.sender.to_string().as_bytes(), &opp)?;
 
@@ -294,7 +294,7 @@ pub fn try_deposit(
     };
 
     // Find user account, create if it doesn't exist
-    let mut account = match account_r(&deps.storage).may_load(sender.as_str().as_bytes())? {
+    let mut account = match account_r(deps.storage).may_load(sender.as_str().as_bytes())? {
         None => {
             // Airdrop task
             if let Some(airdrop) = config.airdrop {
@@ -366,11 +366,11 @@ pub fn try_claim(
 ) -> StdResult<Response> {
     // Check if bonding period has elapsed and allow user to claim
     // however much of the issuance asset they paid for with their deposit
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     // Find user account, error out if DNE
     let mut account =
-        match account_r(&deps.storage).may_load(info.sender.as_str().as_bytes())? {
+        match account_r(deps.storage).may_load(info.sender.as_str().as_bytes())? {
             None => {
                 return Err(StdError::NotFound {
                     kind: info.sender.to_string(),
@@ -452,7 +452,7 @@ pub fn try_open_bond(
     err_deposit_price: Uint128,
     minting_bond: bool,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     // Admin-only
     let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
@@ -472,7 +472,7 @@ pub fn try_open_bond(
     let mut messages = vec![];
 
     // Check whether previous bond for this asset exists
-    match bond_opportunity_r(&deps.storage)
+    match bond_opportunity_r(deps.storage)
         .may_load(deposit_asset.address.as_str().as_bytes())?
     {
         Some(prev_opp) => {
@@ -491,7 +491,7 @@ pub fn try_open_bond(
         }
         None => {
             // Save to list of current deposit addresses
-            match deposit_assets_r(&deps.storage).may_load()? {
+            match deposit_assets_r(deps.storage).may_load()? {
                 None => {
                     let assets = vec![deposit_asset.address.clone()];
                     deposit_assets_w(deps.storage).save(&assets)?;
@@ -522,13 +522,13 @@ pub fn try_open_bond(
             &deps.querier,
             config.treasury,
             env.contract.address.clone(),
-            allowance_key_r(&deps.storage).load()?.to_string(),
+            allowance_key_r(deps.storage).load()?.to_string(),
             1,
             config.issued_asset.code_hash,
             config.issued_asset.address,
         )?;
 
-        let allocated_allowance = allocated_allowance_r(&deps.storage).load()?;
+        let allocated_allowance = allocated_allowance_r(deps.storage).load()?;
         // Declaring again so 1.0 Uint128 works
         let snip_allowance = Uint128::from(snip20_allowance.allowance);
 
@@ -597,7 +597,7 @@ pub fn try_close_bond(
     env: Env,
     deposit_asset: Contract,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     // Admin-only
     let admin_response: ValidateAdminPermissionResponse = QueryMsg::ValidateAdminPermission {
@@ -616,7 +616,7 @@ pub fn try_close_bond(
 
     // Check whether previous bond for this asset exists
 
-    match bond_opportunity_r(&deps.storage)
+    match bond_opportunity_r(deps.storage)
         .may_load(deposit_asset.address.as_str().as_bytes())?
     {
         Some(prev_opp) => {
@@ -680,9 +680,9 @@ fn check_against_limits(
     bond_period: u64,
     bond_discount: Uint128,
 ) -> StdResult<bool> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     // Check that global issuance limit won't be exceeded by this opportunity's limit
-    let global_total_issued = global_total_issued_r(&deps.storage).load()?;
+    let global_total_issued = global_total_issued_r(deps.storage).load()?;
     let global_issuance_limit = config.global_issuance_limit;
 
     active(
@@ -852,7 +852,7 @@ pub fn oracle(
     deps: Deps,
     key: String,
 ) -> StdResult<Uint128> {
-    let config: Config = config_r(&deps.storage).load()?;
+    let config: Config = config_r(deps.storage).load()?;
     let answer: OraclePrice = GetPrice { key }.query(
         &deps.querier,
         config.oracle.code_hash,

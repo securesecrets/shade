@@ -21,8 +21,8 @@ use shade_protocol::utils::storage::default::SingletonStorage;
 pub fn get_distributor(
     deps: Deps,
 ) -> StdResult<Option<Vec<Addr>>> {
-    Ok(match DistributorsEnabled::load(&deps.storage)?.0 {
-        true => Some(Distributors::load(&deps.storage)?.0),
+    Ok(match DistributorsEnabled::load(deps.storage)?.0 {
+        true => Some(Distributors::load(deps.storage)?.0),
         false => None,
     })
 }
@@ -56,7 +56,7 @@ pub fn try_add_distributors(
 
     check_if_admin(&config, &info.sender)?;
 
-    let mut distributors = Distributors::load(&deps.storage)?;
+    let mut distributors = Distributors::load(deps.storage)?;
     distributors.0.extend(new_distributors);
     distributors.save(deps.storage)?;
 
@@ -91,8 +91,8 @@ pub fn try_set_distributors(
 
 pub fn distributors(deps: Deps) -> StdResult<Binary> {
     to_binary(&QueryAnswer::Distributors {
-        distributors: match DistributorsEnabled::load(&deps.storage)?.0 {
-            true => Some(Distributors::load(&deps.storage)?.0),
+        distributors: match DistributorsEnabled::load(deps.storage)?.0 {
+            true => Some(Distributors::load(deps.storage)?.0),
             false => None,
         },
     })

@@ -89,7 +89,7 @@ pub fn try_update_config(
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = config_r(deps.storage).load()?;
 
     if info.sender != cur_config.admin {
         return Err(StdError::unauthorized());
@@ -130,17 +130,17 @@ pub fn rebalance(
     let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
-    let key = viewing_key_r(&deps.storage).load()?;
-    let self_address = self_address_r(&deps.storage).load()?;
+    let key = viewing_key_r(deps.storage).load()?;
+    let self_address = self_address_r(deps.storage).load()?;
     let mut messages = vec![];
 
-    let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+    let full_asset = match assets_r(deps.storage).may_load(asset.as_str().as_bytes())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err("Not an asset"));
         }
     };
-    let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
+    let allowances = allowances_r(deps.storage).load(asset.as_str().as_bytes())?;
 
     let mut balance = balance_query(
         &deps.querier,
@@ -153,7 +153,7 @@ pub fn rebalance(
     .amount;
 
     /*
-    let unbonding = unbonding_r(&deps.storage).load(&asset.as_str().as_bytes())?;
+    let unbonding = unbonding_r(deps.storage).load(&asset.as_str().as_bytes())?;
     if unbonding > balance {
         balance = Uint128::zero();
     }
@@ -165,7 +165,7 @@ pub fn rebalance(
     let mut amount_total = Uint128::zero();
     let mut out_balance = Uint128::zero();
 
-    let mut managers = managers_r(&deps.storage).load()?;
+    let mut managers = managers_r(deps.storage).load()?;
 
     // Fetch & sum balances
     for allowance in &allowances {
@@ -212,7 +212,7 @@ pub fn rebalance(
     let mut portion_total = ((balance + out_balance) - amount_total)?;
 
     managers_w(deps.storage).save(&managers)?;
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     // Perform rebalance
     for allowance in allowances {
@@ -401,7 +401,7 @@ pub fn try_register_asset(
     contract: &Contract,
     reserves: Option<Uint128>,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if info.sender != config.admin {
         return Err(StdError::unauthorized());
@@ -429,7 +429,7 @@ pub fn try_register_asset(
             )?,
             // Set viewing key
             set_viewing_key_msg(
-                viewing_key_r(&deps.storage).load()?,
+                viewing_key_r(deps.storage).load()?,
                 None,
                 256,
                 contract.code_hash.clone(),
@@ -448,7 +448,7 @@ pub fn register_manager(
     env: &Env,
     contract: &mut Contract,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if info.sender != config.admin {
         return Err(StdError::unauthorized());
@@ -512,14 +512,14 @@ pub fn allowance(
 ) -> StdResult<Response> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     /* ADMIN ONLY */
     if info.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
-    let adapters = managers_r(&deps.storage).load()?;
+    let adapters = managers_r(deps.storage).load()?;
 
     // Disallow Portion on non-adapters
     match allowance {
@@ -538,7 +538,7 @@ pub fn allowance(
 
     let key = asset.as_str().as_bytes();
 
-    let mut apps = allowances_r(&deps.storage)
+    let mut apps = allowances_r(deps.storage)
         .may_load(key)?
         .unwrap_or_default();
 
@@ -626,8 +626,8 @@ pub fn claim(
 
     let key = asset.as_str().as_bytes();
 
-    let managers = managers_r(&deps.storage).load()?;
-    let allowances = allowances_r(&deps.storage).load(&key)?;
+    let managers = managers_r(deps.storage).load()?;
+    let allowances = allowances_r(deps.storage).load(&key)?;
 
     let mut messages = vec![];
 
@@ -667,19 +667,19 @@ pub fn unbond(
     amount: Uint128,
 ) -> StdResult<Response> {
     /*
-    if info.sender != config_r(&deps.storage).load()?.admin {
+    if info.sender != config_r(deps.storage).load()?.admin {
         return Err(StdError::unauthorized());
     }
     */
 
-    let managers = managers_r(&deps.storage).load()?;
+    let managers = managers_r(deps.storage).load()?;
 
     let mut messages = vec![];
 
     let mut unbond_amount = amount;
     let mut unbonded = Uint128::zero();
 
-    for allowance in allowances_r(&deps.storage).load(asset.as_str().as_bytes())? {
+    for allowance in allowances_r(deps.storage).load(asset.as_str().as_bytes())? {
         match allowance {
             Allowance::Amount { .. } => {}
             Allowance::Portion { spender, .. } => {

@@ -27,7 +27,7 @@ use crate::state::{asset_r, assets_r, config_r, self_address_r, viewing_key_r};
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: config_r(deps.storage).load()?,
     })
 }
 
@@ -35,7 +35,7 @@ pub fn pending_allowance(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<QueryAnswer> {
-    let full_asset = match asset_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+    let full_asset = match asset_r(deps.storage).may_load(asset.as_str().as_bytes())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err(format!(
@@ -45,13 +45,13 @@ pub fn pending_allowance(
         }
     };
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     let allowance = allowance_query(
         &deps.querier,
         config.treasury,
-        self_address_r(&deps.storage).load()?,
-        viewing_key_r(&deps.storage).load()?,
+        self_address_r(deps.storage).load()?,
+        viewing_key_r(deps.storage).load()?,
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),
@@ -65,7 +65,7 @@ pub fn balance(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let full_asset = match asset_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+    let full_asset = match asset_r(deps.storage).may_load(asset.as_str().as_bytes())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err(format!(
@@ -77,8 +77,8 @@ pub fn balance(
 
     let balance = balance_query(
         &deps.querier,
-        self_address_r(&deps.storage).load()?,
-        viewing_key_r(&deps.storage).load()?,
+        self_address_r(deps.storage).load()?,
+        viewing_key_r(deps.storage).load()?,
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),

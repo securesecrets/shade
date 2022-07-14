@@ -19,7 +19,7 @@ pub fn config(
     deps: Deps,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: config_r(deps.storage).load()?,
     })
 }
 
@@ -29,21 +29,21 @@ pub fn balance(
 ) -> StdResult<adapter::QueryAnswer> {
     //TODO: restrict to admin?
 
-    let managers = managers_r(&deps.storage).load()?;
+    let managers = managers_r(deps.storage).load()?;
 
-    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+    match assets_r(deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => {
             let mut balance = balance_query(
                 &deps.querier,
-                self_address_r(&deps.storage).load()?,
-                viewing_key_r(&deps.storage).load()?,
+                self_address_r(deps.storage).load()?,
+                viewing_key_r(deps.storage).load()?,
                 1,
                 a.contract.code_hash.clone(),
                 a.contract.address.clone(),
             )?
             .amount;
 
-            for allowance in allowances_r(&deps.storage).load(&asset.as_str().as_bytes())? {
+            for allowance in allowances_r(deps.storage).load(&asset.as_str().as_bytes())? {
                 match allowance {
                     treasury::Allowance::Portion { spender, .. } => {
                         let manager = managers
@@ -71,20 +71,20 @@ pub fn reserves(
 ) -> StdResult<adapter::QueryAnswer> {
     //TODO: restrict to admin?
 
-    let managers = managers_r(&deps.storage).load()?;
+    let managers = managers_r(deps.storage).load()?;
 
-    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+    match assets_r(deps.storage).may_load(asset.to_string().as_bytes())? {
         Some(a) => {
             let mut reserves = balance_query(
                 &deps.querier,
-                self_address_r(&deps.storage).load()?,
-                viewing_key_r(&deps.storage).load()?,
+                self_address_r(deps.storage).load()?,
+                viewing_key_r(deps.storage).load()?,
                 1,
                 a.contract.code_hash.clone(),
                 a.contract.address.clone(),
             )?.amount;
 
-            for allowance in allowances_r(&deps.storage).load(&asset.as_str().as_bytes())? {
+            for allowance in allowances_r(deps.storage).load(&asset.as_str().as_bytes())? {
                 match allowance {
                     treasury::Allowance::Portion { spender, .. } => {
                         let manager = managers
@@ -112,10 +112,10 @@ pub fn unbonding(
     deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let managers = managers_r(&deps.storage).load()?;
+    let managers = managers_r(deps.storage).load()?;
     let mut unbonding = Uint128::zero();
 
-    for allowance in allowances_r(&deps.storage).load(&asset.as_str().as_bytes())? {
+    for allowance in allowances_r(deps.storage).load(&asset.as_str().as_bytes())? {
         match allowance {
             treasury::Allowance::Portion { spender, .. } => {
                 let manager = managers
@@ -136,10 +136,10 @@ pub fn claimable(
     deps: Deps,
     asset: &Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let managers = managers_r(&deps.storage).load()?;
+    let managers = managers_r(deps.storage).load()?;
     let mut claimable = Uint128::zero();
 
-    for allowance in allowances_r(&deps.storage).load(&asset.as_str().as_bytes())? {
+    for allowance in allowances_r(deps.storage).load(&asset.as_str().as_bytes())? {
         match allowance {
             treasury::Allowance::Portion { spender, .. } => {
                 let manager = managers
@@ -161,10 +161,10 @@ pub fn allowance(
     asset: &Addr,
     spender: &Addr,
 ) -> StdResult<treasury::QueryAnswer> {
-    let self_address = self_address_r(&deps.storage).load()?;
-    let key = viewing_key_r(&deps.storage).load()?;
+    let self_address = self_address_r(deps.storage).load()?;
+    let key = viewing_key_r(deps.storage).load()?;
 
-    if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+    if let Some(full_asset) = assets_r(deps.storage).may_load(asset.to_string().as_bytes())? {
         let cur_allowance = allowance_query(
             &deps.querier,
             self_address,
@@ -187,7 +187,7 @@ pub fn assets(
     deps: Deps,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Assets {
-        assets: asset_list_r(&deps.storage).load()?,
+        assets: asset_list_r(deps.storage).load()?,
     })
 }
 
@@ -196,7 +196,7 @@ pub fn allowances(
     asset: Addr,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Allowances {
-        allowances: match allowances_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        allowances: match allowances_r(deps.storage).may_load(asset.to_string().as_bytes())? {
             None => vec![],
             Some(a) => a,
         },

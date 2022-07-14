@@ -375,17 +375,24 @@ pub fn try_complete_task(
 
     for (i, task) in config.task_claim.iter().enumerate() {
         if task.address == info.sender {
-            claim_status_w(deps.storage, i).update(
-                account.to_string().as_bytes(),
-                |status| {
-                    // If there was a state then ignore
-                    if let Some(status) = status {
-                        Ok(status)
-                    } else {
-                        Ok(false)
-                    }
-                },
-            )?;
+            // claim_status_w(deps.storage, i).update(
+            //     account.to_string().as_bytes(),
+            //     |status| {
+            //         // If there was a state then ignore
+            //         if let Some(status) = status {
+            //             Ok(status)
+            //         } else {
+            //             Ok(false)
+            //         }
+            //     },
+            // )?;
+            let status = claim_status_r(deps.storage, i).may_load(account.to_string().as_bytes())?;
+            claim_status_w(deps.storage, i)
+                .save(account.to_string().as_bytes(),
+                       &match status {
+                                None => false,
+                                Some(_) => true
+                            })?;
         }
     }
 
@@ -455,7 +462,7 @@ pub fn try_claim_decay(
     // Check if airdrop ended
     if let Some(end_date) = config.end_date {
         if let Some(dump_address) = config.dump_address {
-            if env.block.time > end_date {
+            if env.block.time.seconds() > end_date {
                 decay_claimed_w(deps.storage).update(|claimed| {
                     if claimed {
                         Err(decay_claimed())
@@ -657,7 +664,7 @@ pub fn try_add_account_addresses(
 }
 
 pub fn available(config: &Config, env: &Env) -> StdResult<()> {
-    let current_time = env.block.time;
+    let current_time = env.block.time.seconds();
 
     // Check if airdrop started
     if current_time < config.start_date {

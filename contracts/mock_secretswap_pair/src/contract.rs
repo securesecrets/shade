@@ -137,10 +137,10 @@ pub fn query(
     msg: PairQuery,
 ) -> StdResult<Binary> {
     match msg {
-        PairQuery::Pool {} => to_binary(&pool_r(&deps.storage).load()?),
-        PairQuery::Pair {} => to_binary(&pair_info_r(&deps.storage).load()?),
+        PairQuery::Pool {} => to_binary(&pool_r(deps.storage).load()?),
+        PairQuery::Pair {} => to_binary(&pair_info_r(deps.storage).load()?),
         PairQuery::Simulation { offer_asset } => {
-            let pool = pool_r(&deps.storage).load()?;
+            let pool = pool_r(deps.storage).load()?;
 
             if pool.assets[0].info == offer_asset.info {
                 /*

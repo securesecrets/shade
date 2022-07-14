@@ -16,14 +16,14 @@ pub fn config(
     deps: Deps
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: Config::load(&deps.storage)?,
+        config: Config::load(deps.storage)?,
     })
 }
 
 pub fn market_rate(
     deps: Deps
 ) -> StdResult<QueryAnswer> {
-    let config: Config = Config::load(&deps.storage)?;
+    let config: Config = Config::load(deps.storage)?;
 
     //Query mint contract
     let mint_info: mint::QueryAnswer = QueryMsg::Mint{
@@ -64,7 +64,7 @@ pub fn trade_profitability(
     deps: Deps,
     amount: Uint128,
 ) -> StdResult<QueryAnswer> {
-    let config: Config = Config::load(&deps.storage)?;
+    let config: Config = Config::load(deps.storage)?;
 
     let market_query = market_rate(&deps)?;
     let mint_price: Uint128;
@@ -155,9 +155,9 @@ pub fn get_balances(
     deps: Deps
 ) -> StdResult<QueryAnswer> {
 
-    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
-    let self_addr = SelfAddr::load(&deps.storage)?.0;
-    let config = Config::load(&deps.storage)?;
+    let viewing_key = ViewingKeys::load(deps.storage)?.0;
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    let config = Config::load(deps.storage)?;
     let mut is_error = false;
 
     let mut res = snip20::QueryMsg::Balance {

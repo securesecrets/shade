@@ -40,7 +40,7 @@ pub fn try_add_assembly_msg(
 
     // Check that assemblys exist
     for assembly in assemblies.iter() {
-        if *assembly > ID::assembly(&deps.storage)? {
+        if *assembly > ID::assembly(deps.storage)? {
             return Err(StdError::generic_err("Given assembly does not exist"));
         }
     }
@@ -113,7 +113,7 @@ pub fn try_add_assembly_msg_assemblies(
 
     let mut assembly_msg = AssemblyMsg::data(deps.storage, &id)?;
 
-    let assembly_id = ID::assembly(&deps.storage)?;
+    let assembly_id = ID::assembly(deps.storage)?;
     for assembly in assemblies.iter() {
         if assembly < &assembly_id && !assembly_msg.assemblies.contains(assembly) {
             assembly_msg.assemblies.push(assembly.clone());

@@ -50,7 +50,7 @@ pub fn receive(
 ) -> StdResult<Response> {
     debug_print!("Received {}", amount);
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if info.sender != config.sscrt.address {
         return Err(StdError::generic_err("Only accepts sSCRT"));
@@ -89,7 +89,7 @@ pub fn try_update_config(
     env: Env,
     config: Config,
 ) -> StdResult<Response> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = config_r(deps.storage).load()?;
 
     if cur_config.admins.contains(&info.sender) {
         return Err(StdError::Unauthorized { backtrace: None });
@@ -117,13 +117,13 @@ pub fn update(
 ) -> StdResult<Response> {
     let mut messages = vec![];
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
+    let scrt_balance = scrt_balance(deps, self_address_r(deps.storage).load()?)?;
 
     // Claim Rewards
     let rewards = query::rewards(&deps)?;
@@ -132,7 +132,7 @@ pub fn update(
     }
 
     let mut stake_amount = rewards + scrt_balance;
-    let unbonding = unbonding_r(&deps.storage).load()?;
+    let unbonding = unbonding_r(deps.storage).load()?;
 
     // Don't restake funds that unbonded
     if unbonding < stake_amount {
@@ -172,7 +172,7 @@ pub fn unbond(
      * and this contract will take all scrt->sscrt and send
      */
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     //TODO: needs treasury & manager as admin, maybe just manager?
     /*
@@ -188,7 +188,7 @@ pub fn unbond(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    let self_address = self_address_r(&deps.storage).load()?;
+    let self_address = self_address_r(deps.storage).load()?;
     let delegations = query::delegations(&deps)?;
 
     let delegated = Uint128::new(
@@ -204,7 +204,7 @@ pub fn unbond(
     let mut messages = vec![];
     let mut undelegated = vec![];
 
-    let mut unbonding = unbonding_r(&deps.storage).load()? + amount;
+    let mut unbonding = unbonding_r(deps.storage).load()? + amount;
     let total = scrt_balance + rewards + delegated;
     let mut reserves = scrt_balance + rewards;
 
@@ -305,7 +305,7 @@ pub fn withdraw_rewards(
     deps: DepsMut,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = vec![];
-    let address = self_address_r(&deps.storage).load()?;
+    let address = self_address_r(deps.storage).load()?;
 
     for delegation in deps.querier.query_all_delegations(address.clone())? {
         messages.push(CosmosMsg::Staking(StakingMsg::Withdraw {
@@ -345,7 +345,7 @@ pub fn claim(
     env: Env,
     asset: Addr,
 ) -> StdResult<Response> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err("Unrecognized Asset"));
@@ -357,10 +357,10 @@ pub fn claim(
 
     let mut messages = vec![];
 
-    let unbond_amount = unbonding_r(&deps.storage).load()?;
+    let unbond_amount = unbonding_r(deps.storage).load()?;
     let mut claim_amount = Uint128::zero();
 
-    let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
+    let scrt_balance = scrt_balance(deps, self_address_r(deps.storage).load()?)?;
 
     if scrt_balance >= unbond_amount {
         claim_amount = unbond_amount;
@@ -405,7 +405,7 @@ pub fn choose_validator(
     let mut validators = deps.querier.query_validators()?;
 
     // filter down to viable candidates
-    if let Some(bounds) = (config_r(&deps.storage).load()?).validator_bounds {
+    if let Some(bounds) = (config_r(deps.storage).load()?).validator_bounds {
         let mut candidates = vec![];
 
         for validator in validators {

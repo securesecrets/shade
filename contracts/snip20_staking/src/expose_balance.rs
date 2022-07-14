@@ -41,7 +41,7 @@ pub fn try_expose_balance(
     let receiver_hash: String;
     if let Some(code_hash) = code_hash {
         receiver_hash = code_hash;
-    } else if let Some(code_hash) = get_receiver_hash(&deps.storage, &recipient) {
+    } else if let Some(code_hash) = get_receiver_hash(deps.storage, &recipient) {
         receiver_hash = code_hash?;
     } else {
         return Err(StdError::generic_err("No code hash received"));
@@ -74,14 +74,14 @@ pub fn try_expose_balance_with_cooldown(
     let receiver_hash: String;
     if let Some(code_hash) = code_hash {
         receiver_hash = code_hash;
-    } else if let Some(code_hash) = get_receiver_hash(&deps.storage, &recipient) {
+    } else if let Some(code_hash) = get_receiver_hash(deps.storage, &recipient) {
         receiver_hash = code_hash?;
     } else {
         return Err(StdError::generic_err("No code hash received"));
     }
 
     let mut cooldown =
-        UserCooldown::may_load(&deps.storage, info.sender.to_string().as_bytes())?
+        UserCooldown::may_load(deps.storage, info.sender.to_string().as_bytes())?
             .unwrap_or(UserCooldown {
                 total: Uint128::zero(),
                 queue: VecQueue(vec![]),

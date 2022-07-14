@@ -19,7 +19,7 @@ use crate::{
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: config_r(deps.storage).load()?,
     })
 }
 
@@ -33,7 +33,7 @@ pub fn balance(
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if !is_supported_asset(&config, &asset) {
         return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
@@ -58,7 +58,7 @@ pub fn claimable(
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if !is_supported_asset(&config, &asset) {
         return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
@@ -68,14 +68,14 @@ pub fn claimable(
 
     let balance = balance_query(
         &deps.querier,
-        self_address_r(&deps.storage).load()?,
-        viewing_key_r(&deps.storage).load()?,
+        self_address_r(deps.storage).load()?,
+        viewing_key_r(deps.storage).load()?,
         1,
         asset_contract.code_hash.clone(),
         asset_contract.address.clone(),
     )?.amount;
 
-    let mut claimable = unbonding_r(&deps.storage).load(asset.as_str().as_bytes())?;
+    let mut claimable = unbonding_r(deps.storage).load(asset.as_str().as_bytes())?;
 
     if balance < claimable {
         claimable = balance;
@@ -91,14 +91,14 @@ pub fn unbonding(
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if !is_supported_asset(&config, &asset) {
         return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
     }
 
     Ok(adapter::QueryAnswer::Unbonding {
-        amount: unbonding_r(&deps.storage).load(asset.as_str().as_bytes())?
+        amount: unbonding_r(deps.storage).load(asset.as_str().as_bytes())?
     })
 }
 
@@ -107,13 +107,13 @@ pub fn unbondable(
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if !is_supported_asset(&config, &asset) {
         return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
     }
 
-    let unbonding = unbonding_r(&deps.storage).load(asset.as_str().as_bytes())?;
+    let unbonding = unbonding_r(deps.storage).load(asset.as_str().as_bytes())?;
 
     /* Need to check LP token redemption value
      */
@@ -141,7 +141,7 @@ pub fn reserves(
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if !is_supported_asset(&config, &asset) {
         return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
@@ -149,12 +149,12 @@ pub fn reserves(
 
     let asset_contract = get_supported_asset(&config, &asset);
 
-    let unbonding = unbonding_r(&deps.storage).load(asset.as_str().as_bytes())?;
+    let unbonding = unbonding_r(deps.storage).load(asset.as_str().as_bytes())?;
 
     let balance = balance_query(
         &deps.querier,
-        self_address_r(&deps.storage).load()?,
-        viewing_key_r(&deps.storage).load()?,
+        self_address_r(deps.storage).load()?,
+        viewing_key_r(deps.storage).load()?,
         1,
         asset_contract.code_hash.clone(),
         asset_contract.address.clone(),

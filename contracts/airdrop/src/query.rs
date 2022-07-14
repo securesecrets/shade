@@ -34,7 +34,7 @@ pub fn dates(
     deps: Deps,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     Ok(QueryAnswer::Dates {
         start: config.start_date,
         end: config.end_date,
@@ -48,10 +48,10 @@ pub fn total_claimed(
 ) -> StdResult<QueryAnswer> {
     let claimed: Uint128;
     let total_claimed = total_claimed_r(deps.storage).load()?;
-    if decay_claimed_r(&deps.storage).load()? {
+    if decay_claimed_r(deps.storage).load()? {
         claimed = total_claimed;
     } else {
-        let config = config_r(&deps.storage).load()?;
+        let config = config_r(deps.storage).load()?;
         claimed = total_claimed.checked_div(config.query_rounding)? * config.query_rounding;
     }
     Ok(QueryAnswer::TotalClaimed { claimed })
@@ -62,16 +62,16 @@ fn account_information(
     account_address: Addr,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
-    let account = account_r(&deps.storage).load(account_address.to_string().as_bytes())?;
+    let account = account_r(deps.storage).load(account_address.to_string().as_bytes())?;
 
     // Calculate eligible tasks
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     let mut finished_tasks: Vec<RequiredTask> = vec![];
     let mut completed_percentage = Uint128::zero();
     let mut unclaimed_percentage = Uint128::zero();
     for (index, task) in config.task_claim.iter().enumerate() {
         // Check if task has been completed
-        let state = claim_status_r(&deps.storage, index)
+        let state = claim_status_r(deps.storage, index)
             .may_load(account_address.to_string().as_bytes())?;
 
         match state {
@@ -103,7 +103,7 @@ fn account_information(
 
     Ok(QueryAnswer::Account {
         total: account.total_claimable,
-        claimed: account_total_claimed_r(&deps.storage)
+        claimed: account_total_claimed_r(deps.storage)
             .load(account_address.to_string().as_bytes())?,
         unclaimed,
         finished_tasks,
@@ -116,7 +116,7 @@ pub fn account(
     permit: AccountPermit,
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
     account_information(
         deps,
         validate_account_permit(deps, &permit, config.contract)?,
@@ -131,7 +131,7 @@ pub fn account_with_key(
     current_date: Option<u64>,
 ) -> StdResult<QueryAnswer> {
     // Validate address
-    let stored_hash = account_viewkey_r(&deps.storage).load(account.to_string().as_bytes())?;
+    let stored_hash = account_viewkey_r(deps.storage).load(account.to_string().as_bytes())?;
 
     if !AccountKey(key).compare(&stored_hash) {
         return Err(invalid_viewing_key());

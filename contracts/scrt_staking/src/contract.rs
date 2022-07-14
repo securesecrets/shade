@@ -59,7 +59,7 @@ pub fn init(
     Ok(Response {
         messages: vec![
             set_viewing_key_msg(
-                viewing_key_r(&deps.storage).load()?,
+                viewing_key_r(deps.storage).load()?,
                 None,
                 1,
                 config.sscrt.code_hash.clone(),

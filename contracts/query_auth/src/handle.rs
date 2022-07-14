@@ -27,7 +27,7 @@ use shade_protocol::{
 use shade_protocol::utils::asset::Contract;
 
 fn user_authorized(deps: Deps, env: Env) -> StdResult<bool> {
-    let contract = Admin::load(&deps.storage)?.0;
+    let contract = Admin::load(deps.storage)?.0;
 
     let authorized_users: AuthorizedUsersResponse = shade_admin::admin::QueryMsg::GetAuthorizedUsers {
         contract_address: env.contract.address.to_string()
@@ -77,7 +77,7 @@ pub fn try_create_viewing_key(
     env: Env,
     entropy: String,
 ) -> StdResult<Response> {
-    let seed = RngSeed::load(&deps.storage)?.0;
+    let seed = RngSeed::load(deps.storage)?.0;
 
     let key = Key::generate(&env, seed.as_slice(), &entropy.as_ref());
 

@@ -24,7 +24,7 @@ use crate::state::{config_r, self_address_r, unbonding_r};
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: config_r(deps.storage).load()?,
     })
 }
 
@@ -32,7 +32,7 @@ pub fn delegations(
     deps: Deps,
 ) -> StdResult<Vec<Delegation>> {
     deps.querier
-        .query_all_delegations(self_address_r(&deps.storage).load()?)
+        .query_all_delegations(self_address_r(deps.storage).load()?)
 }
 
 pub fn rewards(deps: Deps) -> StdResult<Uint128> {
@@ -40,7 +40,7 @@ pub fn rewards(deps: Deps) -> StdResult<Uint128> {
         .querier
         .query(
             &DistQuery::Rewards {
-                delegator: self_address_r(&deps.storage).load()?,
+                delegator: self_address_r(deps.storage).load()?,
             }
             .into(),
         )
@@ -74,7 +74,7 @@ pub fn balance(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!(
@@ -101,7 +101,7 @@ pub fn claimable(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!(
@@ -112,14 +112,14 @@ pub fn claimable(
 
     let scrt_balance: BalanceResponse = deps.querier.query(
         &BankQuery::Balance {
-            address: self_address_r(&deps.storage).load()?,
+            address: self_address_r(deps.storage).load()?,
             denom: "uscrt".to_string(),
         }
         .into(),
     )?;
 
     let mut amount = scrt_balance.amount.amount;
-    let unbonding = unbonding_r(&deps.storage).load()?;
+    let unbonding = unbonding_r(deps.storage).load()?;
 
     if amount > unbonding {
         amount = unbonding;
@@ -132,7 +132,7 @@ pub fn unbonding(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!(
@@ -142,7 +142,7 @@ pub fn unbonding(
     }
 
     Ok(adapter::QueryAnswer::Unbonding {
-        amount: unbonding_r(&deps.storage).load()?,
+        amount: unbonding_r(deps.storage).load()?,
     })
 }
 
@@ -150,7 +150,7 @@ pub fn unbondable(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!(
@@ -178,13 +178,13 @@ pub fn reserves(
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(&deps.storage).load()?;
+    let config = config_r(deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
     }
 
-    let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
+    let scrt_balance = scrt_balance(deps, self_address_r(deps.storage).load()?)?;
 
     Ok(adapter::QueryAnswer::Reserves {
         amount: scrt_balance + rewards(&deps)?,
@@ -197,7 +197,7 @@ pub fn delegation(
     deps: Deps,
     validator: Addr,
 ) -> StdResult<Option<FullDelegation>> {
-    let address = self_address_r(&deps.storage).load()?;
+    let address = self_address_r(deps.storage).load()?;
     deps.querier.query_delegation(address, validator)
 }
 */

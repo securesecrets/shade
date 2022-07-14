@@ -12,8 +12,8 @@ use shade_protocol::{
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        admin: Admin::load(&deps.storage)?.0,
-        state: ContractStatus::load(&deps.storage)?,
+        admin: Admin::load(deps.storage)?.0,
+        state: ContractStatus::load(deps.storage)?,
     })
 }
 
@@ -23,7 +23,7 @@ pub fn validate_vk(
     key: String,
 ) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::ValidateViewingKey {
-        is_valid: Key::verify(&deps.storage, user, key)?,
+        is_valid: Key::verify(deps.storage, user, key)?,
     })
 }
 
@@ -35,6 +35,6 @@ pub fn validate_permit(
 
     Ok(QueryAnswer::ValidatePermit {
         user: user.clone(),
-        is_revoked: PermitKey::may_load(&deps.storage, (user, permit.params.key))?.is_some(),
+        is_revoked: PermitKey::may_load(deps.storage, (user, permit.params.key))?.is_some(),
     })
 }
