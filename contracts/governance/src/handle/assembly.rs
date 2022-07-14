@@ -54,7 +54,7 @@ pub fn try_assembly_vote(
     .members
     .contains(&sender)
     {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"))
     }
 
     let mut tally = Proposal::assembly_votes(deps.storage, &proposal)?;
@@ -92,7 +92,7 @@ pub fn try_assembly_proposal(
     // Check if public; everyone is allowed
     if assembly_data.profile != Uint128::zero() {
         if !assembly_data.members.contains(&info.sender) {
-            return Err(StdError::unauthorized());
+            return Err(StdError::generic_err("unauthorized"));
         }
     }
 
@@ -144,14 +144,14 @@ pub fn try_assembly_proposal(
             // Check if msg is allowed in assembly
             let assembly_msg = AssemblyMsg::data(deps.storage, &msg.assembly_msg)?;
             if !assembly_msg.assemblies.contains(&assembly_id) {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
 
             // Check if msg is allowed in contract
             let contract = AllowedContract::data(deps.storage, &msg.target)?;
             if let Some(assemblies) = contract.assemblies {
                 if !assemblies.contains(&msg.target) {
-                    return Err(StdError::unauthorized());
+                    return Err(StdError::generic_err("unauthorized"));
                 }
             }
 
@@ -202,7 +202,7 @@ pub fn try_add_assembly(
     profile: Uint128,
 ) -> StdResult<Response> {
     if info.sender != env.contract.address {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let id = ID::add_assembly(deps.storage)?;
@@ -236,7 +236,7 @@ pub fn try_set_assembly(
     profile: Option<Uint128>,
 ) -> StdResult<Response> {
     if info.sender != env.contract.address {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut assembly = match Assembly::may_load(deps.storage, &id)? {

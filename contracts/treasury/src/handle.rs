@@ -90,7 +90,7 @@ pub fn try_update_config(
     let cur_config = config_r(deps.storage).load()?;
 
     if info.sender != cur_config.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     config_w(deps.storage).save(&config)?;
@@ -394,7 +394,7 @@ pub fn try_register_asset(
     let config = config_r(deps.storage).load()?;
 
     if info.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     asset_list_w(deps.storage).update(|mut list| {
@@ -440,7 +440,7 @@ pub fn register_manager(
     let config = config_r(deps.storage).load()?;
 
     if info.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     managers_w(deps.storage).update(|mut adapters| {
@@ -501,7 +501,7 @@ pub fn allowance(
 
     /* ADMIN ONLY */
     if info.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let adapters = managers_r(deps.storage).load()?;
@@ -645,7 +645,7 @@ pub fn unbond(
 ) -> StdResult<Response> {
     /*
     if info.sender != config_r(deps.storage).load()?.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
     */
 

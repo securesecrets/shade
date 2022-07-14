@@ -31,7 +31,7 @@ pub fn register_pair(
 ) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
     if info.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut trading_pair: Option<dex::TradingPair> = None;

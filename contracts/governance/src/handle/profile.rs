@@ -27,7 +27,7 @@ pub fn try_add_profile(
     profile: Profile,
 ) -> StdResult<Response> {
     if info.sender != env.contract.address {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let id = ID::add_profile(deps.storage)?;
@@ -46,7 +46,7 @@ pub fn try_set_profile(
     new_profile: UpdateProfile,
 ) -> StdResult<Response> {
     if info.sender != env.contract.address {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut profile = match Profile::may_load(deps.storage, &id)? {

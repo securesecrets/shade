@@ -93,7 +93,7 @@ pub fn register_asset(
     let config = config_r(deps.storage).load()?;
 
     if !config.admins.contains(&info.sender) {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     assets_w(deps.storage).update(|mut list| {
@@ -140,7 +140,7 @@ pub fn refill_rewards(
     let config = config_r(deps.storage).load()?;
 
     if info.sender != config.distributor {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut messages = vec![];

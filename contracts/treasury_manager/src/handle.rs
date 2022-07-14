@@ -141,7 +141,7 @@ pub fn try_update_config(
     let cur_config = config_r(deps.storage).load()?;
 
     if info.sender != cur_config.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     config_w(deps.storage).save(&config)?;
@@ -159,7 +159,7 @@ pub fn try_register_asset(
     let config = config_r(deps.storage).load()?;
 
     if info.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     asset_list_w(deps.storage).update(|mut list| {
@@ -209,7 +209,7 @@ pub fn allocate(
 
     /* ADMIN ONLY */
     if info.sender != config.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let key = asset.as_str().as_bytes();
@@ -282,7 +282,7 @@ pub fn claim(
     let holders = holders_r(deps.storage).load()?;
 
     if !holders.contains(&claimer) {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let holder = holder_r(deps.storage).load(&claimer.as_str().as_bytes())?;
@@ -523,7 +523,7 @@ pub fn unbond(
         holder_w(deps.storage).save(&unbonder.as_str().as_bytes(), &holder)?;
     }
     else {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut unbond_amount = amount;
@@ -717,7 +717,7 @@ pub fn add_holder(
 ) -> StdResult<Response> {
 
     if info.sender != config_r(deps.storage).load()?.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let key = holder.as_str().as_bytes();
@@ -747,7 +747,7 @@ pub fn remove_holder(
     holder: Addr,
 ) -> StdResult<Response> {
     if info.sender != config_r(deps.storage).load()?.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let key = holder.as_str().as_bytes();

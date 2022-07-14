@@ -24,7 +24,7 @@ pub fn try_update_config(
     config: Config,
 ) -> StdResult<Response> {
     if info.sender != Config::load(deps.storage)?.admin {
-        return Err(StdError::unauthorized())
+        return Err(StdError::generic_err("unauthorized"))
     }
     config.save(deps.storage)?;
     Ok(Response{

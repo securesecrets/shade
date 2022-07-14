@@ -176,7 +176,7 @@ pub fn unbond(
     }
     */
     if !config.admins.contains(&info.sender) || config.owner != info.sender {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     if asset != config.sscrt.address {
@@ -344,7 +344,7 @@ pub fn claim(
     }
 
     if !config.admins.contains(&info.sender) || !(config.owner == info.sender) {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut messages = vec![];

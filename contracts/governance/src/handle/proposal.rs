@@ -104,7 +104,7 @@ pub fn try_trigger(
             }
         }
     } else {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Trigger {
@@ -122,14 +122,14 @@ pub fn try_cancel(
     let status = Proposal::status(deps.storage, &proposal)?;
     if let Status::Passed { start, end } = status {
         if env.block.time.seconds() < end {
-            return Err(StdError::unauthorized());
+            return Err(StdError::generic_err("unauthorized"));
         }
         let mut history = Proposal::status_history(deps.storage, &proposal)?;
         history.push(status);
         Proposal::save_status_history(deps.storage, &proposal, history)?;
         Proposal::save_status(deps.storage, &proposal, Status::Canceled)?;
     } else {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Cancel {
@@ -194,7 +194,7 @@ pub fn try_update(
     match status.clone() {
         Status::AssemblyVote { start, end } => {
             if end > env.block.time.seconds() {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
 
             let votes = Proposal::assembly_votes(deps.storage, &proposal)?;
@@ -252,7 +252,7 @@ pub fn try_update(
                             + Profile::data(deps.storage, &profile)?.cancel_deadline,
                     }
                 } else if end > env.block.time.seconds() {
-                    return Err(StdError::unauthorized());
+                    return Err(StdError::generic_err("unauthorized"));
                 } else {
                     new_status = Status::Expired;
                 }
@@ -274,7 +274,7 @@ pub fn try_update(
         }
         Status::Voting { start, end } => {
             if end > env.block.time.seconds() {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
 
             let config = Config::load(deps.storage)?;

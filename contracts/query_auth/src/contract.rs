@@ -55,13 +55,13 @@ pub fn handle(
         ContractStatus::Default => {}
         // No permit interactions
         ContractStatus::DisablePermit => match msg {
-            ExecuteMsg::BlockPermitKey { .. } => return Err(StdError::unauthorized()),
+            ExecuteMsg::BlockPermitKey { .. } => return Err(StdError::generic_err("unauthorized")),
             _ => {}
         },
         // No VK interactions
         ContractStatus::DisableVK => match msg {
             ExecuteMsg::CreateViewingKey { .. } | ExecuteMsg::SetViewingKey { .. } => {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
             _ => {}
         },
@@ -69,7 +69,7 @@ pub fn handle(
         ContractStatus::DisableAll => match msg {
             ExecuteMsg::CreateViewingKey { .. }
             | ExecuteMsg::SetViewingKey { .. }
-            | ExecuteMsg::BlockPermitKey { .. } => return Err(StdError::unauthorized()),
+            | ExecuteMsg::BlockPermitKey { .. } => return Err(StdError::generic_err("unauthorized")),
             _ => {}
         },
     }
@@ -96,20 +96,20 @@ pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
         // No permit interactions
         ContractStatus::DisablePermit => {
             if let QueryMsg::ValidatePermit { .. } = msg {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
         }
         // No VK interactions
         ContractStatus::DisableVK => {
             if let QueryMsg::ValidateViewingKey { .. } = msg {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
         }
         // Nothing
         ContractStatus::DisableAll => {
             if let QueryMsg::Config { .. } = msg {
             } else {
-                return Err(StdError::unauthorized());
+                return Err(StdError::generic_err("unauthorized"));
             }
         }
     }

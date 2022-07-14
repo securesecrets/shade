@@ -758,7 +758,7 @@ fn try_transfer_impl(
     // Verify that this transfer is allowed
     if let Some(distributors) = distributors {
         if !distributors.contains(sender) && !distributors.contains(recipient) {
-            return Err(StdError::unauthorized());
+            return Err(StdError::generic_err("unauthorized"));
         }
     }
 
@@ -1111,7 +1111,7 @@ fn try_transfer_from_impl(
             && !distributors.contains(owner)
             && !distributors.contains(recipient)
         {
-            return Err(StdError::unauthorized());
+            return Err(StdError::generic_err("unauthorized"));
         }
     }
 

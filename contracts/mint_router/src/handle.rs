@@ -136,7 +136,7 @@ pub fn try_update_config(
 
     // Admin-only
     if info.sender != cur_config.admin {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut messages = vec![];

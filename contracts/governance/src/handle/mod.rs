@@ -24,7 +24,7 @@ pub fn try_set_config(
     funding_token: Option<Contract>,
 ) -> StdResult<Response> {
     if info.sender != env.contract.address {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut messages = vec![];

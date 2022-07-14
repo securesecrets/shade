@@ -43,7 +43,7 @@ pub fn try_set_admin(
     admin: Contract,
 ) -> StdResult<Response> {
     if  !user_authorized(&deps, env)? {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     Admin(admin).save(deps.storage)?;
@@ -58,7 +58,7 @@ pub fn try_set_run_state(
     state: ContractStatus,
 ) -> StdResult<Response> {
     if  !user_authorized(&deps, env)? {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     state.save(deps.storage)?;
