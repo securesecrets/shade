@@ -82,7 +82,7 @@ pub fn try_expose_balance_with_cooldown(
                 total: Uint128::zero(),
                 queue: VecQueue(vec![]),
             });
-    cooldown.update(env.block.time);
+    cooldown.update(env.block.time.seconds());
     cooldown.save(deps.storage, info.sender.to_string().as_bytes())?;
 
     let messages = vec![

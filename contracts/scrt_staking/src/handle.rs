@@ -56,7 +56,7 @@ pub fn receive(
         return Err(StdError::generic_err("Only accepts sSCRT"));
     }
 
-    let validator = choose_validator(&deps, env.block.time)?;
+    let validator = choose_validator(&deps, env.block.time.seconds())?;
 
     Ok(Response {
         messages: vec![
@@ -137,7 +137,7 @@ pub fn update(
     }
 
     if stake_amount > Uint128::zero() {
-        let validator = choose_validator(&deps, env.block.time)?;
+        let validator = choose_validator(&deps, env.block.time.seconds())?;
         messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
             validator: validator.address.clone(),
             amount: Coin {
@@ -404,7 +404,7 @@ pub fn choose_validator(
         return Err(StdError::generic_err("No validators within bounds"));
     }
 
-    // seed will likely be env.block.time
+    // seed will likely be env.block.time.seconds()
     Ok(validators[(seed % validators.len() as u64) as usize].clone())
 }
 

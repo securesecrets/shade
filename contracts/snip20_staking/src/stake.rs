@@ -551,7 +551,7 @@ pub fn try_unbond(
         &sender,
         &sender_canon,
         amount,
-        env.block.time,
+        env.block.time.seconds(),
     )?;
 
     let mut total_unbonding = TotalUnbonding::load(deps.storage)?;
@@ -564,7 +564,7 @@ pub fn try_unbond(
     daily_unbond_queue.0.push(&DailyUnbonding {
         unbonding: amount,
         funded: Default::default(),
-        release: round_date(env.block.time + stake_config.unbond_time),
+        release: round_date(env.block.time.seconds() + stake_config.unbond_time),
     });
 
     daily_unbond_queue.save(deps.storage)?;
@@ -576,7 +576,7 @@ pub fn try_unbond(
     // Add unbonding to user queue
     unbond_queue.0.push(&Unbonding {
         amount,
-        release: env.block.time + stake_config.unbond_time,
+        release: env.block.time.seconds() + stake_config.unbond_time,
     });
 
     unbond_queue.save(deps.storage, sender.as_str().as_bytes())?;
@@ -642,7 +642,7 @@ pub fn try_claim_unbond(
     while !unbond_queue.0.0.is_empty() {
         // Since the queue is sorted, the moment we find a date above the current then we assume
         // that no other item in the queue is eligible
-        if unbond_queue.0.0[0].release <= env.block.time {
+        if unbond_queue.0.0[0].release <= env.block.time.seconds() {
             // Daily unbond queue is also sorted, therefore as long as its next item is greater
             // than the unbond then we assume its funded
             if daily_unbond_queue.0.is_empty()

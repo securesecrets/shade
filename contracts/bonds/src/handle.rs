@@ -271,7 +271,7 @@ pub fn try_deposit(
     )?);
 
     // Format end date as String
-    let end: u64 = calculate_claim_date(env.block.time, bond_opportunity.bonding_period);
+    let end: u64 = calculate_claim_date(env.block.time.seconds(), bond_opportunity.bonding_period);
 
     // Begin PendingBond
     let new_bond = PendingBond {
@@ -375,7 +375,7 @@ pub fn try_claim(
     }
 
     // Set up loop comparison values.
-    let now = env.block.time; // Current time in seconds
+    let now = env.block.time.seconds(); // Current time in seconds
     let mut total = Uint128::zero();
 
     // Iterate through pending bonds and compare one's end to current time
@@ -641,11 +641,11 @@ fn bond_active(env: &Env, bond_opp: &BondOpportunity) -> StdResult<()> {
     if bond_opp.amount_issued >= bond_opp.issuance_limit {
         return Err(bond_limit_reached(bond_opp.issuance_limit));
     }
-    if bond_opp.start_time > env.block.time {
-        return Err(bond_not_started(bond_opp.start_time, env.block.time));
+    if bond_opp.start_time > env.block.time.seconds() {
+        return Err(bond_not_started(bond_opp.start_time, env.block.time.seconds()));
     }
-    if bond_opp.end_time < env.block.time {
-        return Err(bond_ended(bond_opp.end_time, env.block.time));
+    if bond_opp.end_time < env.block.time.seconds() {
+        return Err(bond_ended(bond_opp.end_time, env.block.time.seconds()));
     }
     Ok(())
 }

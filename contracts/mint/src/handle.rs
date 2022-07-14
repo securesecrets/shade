@@ -229,7 +229,7 @@ pub fn try_limit_refresh(
 ) -> StdResult<Uint128> {
     match DateTime::parse_from_rfc3339(&limit_refresh_r(deps.storage).load()?) {
         Ok(parsed) => {
-            let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
+            let naive = NaiveDateTime::from_timestamp(env.block.time.seconds() as i64, 0);
             let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
             let last_refresh: DateTime<Utc> = parsed.with_timezone(&Utc);
 

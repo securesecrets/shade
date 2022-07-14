@@ -37,6 +37,7 @@ use shade_protocol::{
         storage::default::SingletonStorage,
     },
 };
+use shade_protocol::utils::Query;
 
 // Initializes a proposal on the public assembly with the blank command
 pub fn try_proposal(
@@ -117,7 +118,7 @@ pub fn try_cancel(
     // Check if passed, and check if current time > cancel time
     let status = Proposal::status(deps.storage, &proposal)?;
     if let Status::Passed { start, end } = status {
-        if env.block.time < end {
+        if env.block.time.seconds() < end {
             return Err(StdError::unauthorized());
         }
         let mut history = Proposal::status_history(deps.storage, &proposal)?;
@@ -188,7 +189,7 @@ pub fn try_update(
 
     match status.clone() {
         Status::AssemblyVote { start, end } => {
-            if end > env.block.time {
+            if end > env.block.time.seconds() {
                 return Err(StdError::unauthorized());
             }
 
@@ -216,18 +217,18 @@ pub fn try_update(
                 if let Some(setting) = Profile::funding(deps.storage, &profile)? {
                     vote_conclusion = Status::Funding {
                         amount: Uint128::zero(),
-                        start: env.block.time,
-                        end: env.block.time + setting.deadline,
+                        start: env.block.time.seconds(),
+                        end: env.block.time.seconds() + setting.deadline,
                     }
                 } else if let Some(setting) = Profile::public_voting(deps.storage, &profile)? {
                     vote_conclusion = Status::Voting {
-                        start: env.block.time,
-                        end: env.block.time + setting.deadline,
+                        start: env.block.time.seconds(),
+                        end: env.block.time.seconds() + setting.deadline,
                     }
                 } else {
                     vote_conclusion = Status::Passed {
-                        start: env.block.time,
-                        end: env.block.time
+                        start: env.block.time.seconds(),
+                        end: env.block.time.seconds()
                             + Profile::data(deps.storage, &profile)?.cancel_deadline,
                     }
                 }
@@ -242,33 +243,33 @@ pub fn try_update(
                 // Check if deadline or funding limit reached
                 if amount >= setting.required {
                     new_status = Status::Passed {
-                        start: env.block.time,
-                        end: env.block.time
+                        start: env.block.time.seconds(),
+                        end: env.block.time.seconds()
                             + Profile::data(deps.storage, &profile)?.cancel_deadline,
                     }
-                } else if end > env.block.time {
+                } else if end > env.block.time.seconds() {
                     return Err(StdError::unauthorized());
                 } else {
                     new_status = Status::Expired;
                 }
             } else {
                 new_status = Status::Passed {
-                    start: env.block.time,
-                    end: env.block.time + Profile::data(deps.storage, &profile)?.cancel_deadline,
+                    start: env.block.time.seconds(),
+                    end: env.block.time.seconds() + Profile::data(deps.storage, &profile)?.cancel_deadline,
                 }
             }
 
             if let Status::Passed { .. } = new_status {
                 if let Some(setting) = Profile::public_voting(deps.storage, &profile)? {
                     new_status = Status::Voting {
-                        start: env.block.time,
-                        end: env.block.time + setting.deadline,
+                        start: env.block.time.seconds(),
+                        end: env.block.time.seconds() + setting.deadline,
                     }
                 }
             }
         }
         Status::Voting { start, end } => {
-            if end > env.block.time {
+            if end > env.block.time.seconds() {
                 return Err(StdError::unauthorized());
             }
 
@@ -278,8 +279,7 @@ pub fn try_update(
             let query: snip20_staking::QueryAnswer = snip20_staking::QueryMsg::TotalStaked {}
                 .query(
                     &deps.querier,
-                    config.vote_token.clone().unwrap().code_hash,
-                    config.vote_token.unwrap().address,
+                    &config.vote_token.unwrap(),
                 )?;
 
             // Get total staking power
@@ -319,9 +319,7 @@ pub fn try_update(
                                     None,
                                     None,
                                     None,
-                                    1,
-                                    config.funding_token.clone().unwrap().code_hash,
-                                    config.funding_token.unwrap().address,
+                                    &config.funding_token.unwrap(),
                                 )?);
                             }
                             break;
@@ -330,8 +328,8 @@ pub fn try_update(
                 }
             } else if let Status::Success = vote_conclusion {
                 vote_conclusion = Status::Passed {
-                    start: env.block.time,
-                    end: env.block.time + Profile::data(deps.storage, &profile)?.cancel_deadline,
+                    start: env.block.time.seconds(),
+                    end: env.block.time.seconds() + Profile::data(deps.storage, &profile)?.cancel_deadline,
                 }
             }
 
@@ -390,7 +388,7 @@ pub fn try_receive(
     } = status
     {
         // Check if proposal funding stage is set or funding limit already set
-        if env.block.time >= end {
+        if env.block.time.seconds() >= end {
             return Err(StdError::generic_err("Funding time limit reached"));
         }
 
@@ -443,9 +441,7 @@ pub fn try_receive(
             None,
             None,
             None,
-            256,
-            funding_token.code_hash,
-            funding_token.address,
+            &funding_token
         )?);
     }
 
@@ -488,19 +484,16 @@ pub fn try_claim_funding(
         Some(token) => token,
     };
 
-    Ok(Response {
-        messages: vec![send_msg(
+    Ok(Response::new()
+        .add_message(send_msg(
             info.sender,
             return_amount.into(),
             None,
             None,
             None,
-            256,
-            funding_token.code_hash,
-            funding_token.address,
-        )?],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::ClaimFunding {
+            &funding_token
+        )?)
+        .set_data(to_binary(&HandleAnswer::ClaimFunding {
             status: ResponseStatus::Success,
         })?))
 }
@@ -545,7 +538,7 @@ pub fn try_receive_balance(
 
     // Check if proposal in assembly voting
     if let Status::Voting { end, .. } = Proposal::status(deps.storage, &proposal)? {
-        if end <= env.block.time {
+        if end <= env.block.time.seconds() {
             return Err(StdError::generic_err("Voting time has been reached"));
         }
     } else {

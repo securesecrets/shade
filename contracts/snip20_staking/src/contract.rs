@@ -833,7 +833,7 @@ fn try_transfer(
         memo,
         &env.block,
         &distributor,
-        env.block.time,
+        env.block.time.seconds(),
     )?;
 
     let res = Response {
@@ -870,7 +870,7 @@ fn try_batch_transfer(
             action.memo,
             &env.block,
             &distributor,
-            env.block.time,
+            env.block.time.seconds(),
         )?;
     }
 
@@ -986,7 +986,7 @@ fn try_send(
         msg,
         &env.block,
         &distributor,
-        env.block.time,
+        env.block.time.seconds(),
     )?;
 
     let res = Response {
@@ -1021,7 +1021,7 @@ fn try_batch_send(
             action.msg,
             &env.block,
             &distributor,
-            env.block.time,
+            env.block.time.seconds(),
         )?;
     }
 
@@ -1165,7 +1165,7 @@ fn try_transfer_from(
         amount,
         memo,
         &get_distributor(deps)?,
-        env.block.time,
+        env.block.time.seconds(),
     )?;
 
     let res = Response {
@@ -1201,7 +1201,7 @@ fn try_batch_transfer_from(
             action.amount,
             action.memo,
             &distributor,
-            env.block.time,
+            env.block.time.seconds(),
         )?;
     }
 
@@ -1245,7 +1245,7 @@ fn try_send_from_impl(
         amount,
         memo.clone(),
         distributors,
-        env.block.time,
+        env.block.time.seconds(),
     )?;
 
     try_add_receiver_api_callback(
@@ -1773,7 +1773,7 @@ mod staking_tests {
         };
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
-        env.block.time = 10;
+        env.block.time.seconds() = 10;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
         assert!(handle_result.is_ok());
 
@@ -1845,7 +1845,7 @@ mod staking_tests {
         };
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
-        env.block.time = 10;
+        env.block.time.seconds() = 10;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
         assert!(handle_result.is_ok());
 
@@ -1890,7 +1890,7 @@ mod staking_tests {
         };
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
-        env.block.time = 10;
+        env.block.time.seconds() = 10;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
         assert!(handle_result.is_ok());
 
@@ -1943,7 +1943,7 @@ mod staking_tests {
         };
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
-        env.block.time = 0;
+        env.block.time.seconds() = 0;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
         assert!(handle_result.is_ok());
 
@@ -1988,7 +1988,7 @@ mod staking_tests {
         // Try to claim when its funded but the date hasn't been reached
         let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
-        env.block.time = 0;
+        env.block.time.seconds() = 0;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
         assert!(handle_result.is_err());
 
@@ -2021,7 +2021,7 @@ mod staking_tests {
         // Claim
         let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
-        env.block.time = 11;
+        env.block.time.seconds() = 11;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
         assert!(handle_result.is_ok());
 
@@ -2058,14 +2058,14 @@ mod staking_tests {
         };
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
-        env.block.time = 0;
+        env.block.time.seconds() = 0;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Claim
         let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
-        env.block.time = 11;
+        env.block.time.seconds() = 11;
         let handle_result = handle(&mut deps, env, handle_msg.clone());
         assert!(handle_result.is_err());
     }

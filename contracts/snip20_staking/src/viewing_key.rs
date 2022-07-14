@@ -28,7 +28,7 @@ impl ViewingKey {
         let entropy_len = 16 + info.sender.len() + entropy.len();
         let mut rng_entropy = Vec::with_capacity(entropy_len);
         rng_entropy.extend_from_slice(&env.block.height.to_be_bytes());
-        rng_entropy.extend_from_slice(&env.block.time.to_be_bytes());
+        rng_entropy.extend_from_slice(&env.block.time.seconds().to_be_bytes());
         rng_entropy.extend_from_slice(info.sender.0.as_bytes());
         rng_entropy.extend_from_slice(entropy);
 

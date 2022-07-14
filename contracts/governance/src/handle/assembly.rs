@@ -39,7 +39,7 @@ pub fn try_assembly_vote(
 
     // Check if proposal in assembly voting
     if let Status::AssemblyVote { end, .. } = Proposal::status(deps.storage, &proposal)? {
-        if end <= env.block.time {
+        if end <= env.block.time.seconds() {
             return Err(StdError::generic_err("Voting time has been reached"));
         }
     } else {
@@ -106,16 +106,16 @@ pub fn try_assembly_proposal(
     // Check if assembly voting
     if let Some(vote_settings) = Profile::assembly_voting(deps.storage, &assembly_data.profile)? {
         status = Status::AssemblyVote {
-            start: env.block.time,
-            end: env.block.time + vote_settings.deadline,
+            start: env.block.time.seconds(),
+            end: env.block.time.seconds() + vote_settings.deadline,
         }
     }
     // Check if funding
     else if let Some(fund_settings) = Profile::funding(deps.storage, &assembly_data.profile)? {
         status = Status::Funding {
             amount: Uint128::zero(),
-            start: env.block.time,
-            end: env.block.time + fund_settings.deadline,
+            start: env.block.time.seconds(),
+            end: env.block.time.seconds() + fund_settings.deadline,
         }
     }
     // Check if token voting
@@ -123,15 +123,15 @@ pub fn try_assembly_proposal(
         Profile::public_voting(deps.storage, &assembly_data.profile)?
     {
         status = Status::Voting {
-            start: env.block.time,
-            end: env.block.time + vote_settings.deadline,
+            start: env.block.time.seconds(),
+            end: env.block.time.seconds() + vote_settings.deadline,
         }
     }
     // Else push directly to passed
     else {
         status = Status::Passed {
-            start: env.block.time,
-            end: env.block.time + profile.cancel_deadline,
+            start: env.block.time.seconds(),
+            end: env.block.time.seconds() + profile.cancel_deadline,
         }
     }
 
