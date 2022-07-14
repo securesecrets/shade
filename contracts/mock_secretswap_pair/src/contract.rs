@@ -39,7 +39,6 @@ use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Sing
 
 pub static PAIR_INFO: &[u8] = b"pair_info";
 pub static POOL: &[u8] = b"pool";
-pub static REAL_BAL: &[u8] = b"real_bal";
 
 pub fn pair_info_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, PairResponse> {
     singleton_read(storage, PAIR_INFO)
@@ -56,19 +55,12 @@ pub fn pool_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, PoolResponse> {
 pub fn pool_w<S: Storage>(storage: &mut S) -> Singleton<S, PoolResponse> {
     singleton(storage, POOL)
 }
-pub fn real_bal_r<S: Storage>(storage: &S) -> ReadonlySingleton<S, bool> {
-    singleton_read(storage, REAL_BAL)
-}
-
-pub fn real_bal_w<S: Storage>(storage: &mut S) -> Singleton<S, bool> {
-    singleton(storage, REAL_BAL)
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InitMsg {
-    token_0: Contract,
-    token_1: Contract,
+    pub token_0: Contract,
+    pub token_1: Contract,
 }
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -109,8 +101,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             "SecretSwap".to_string(),
             None,
             1,
-            msg.token_1.code_hash.clone(),
-            msg.token_1.address.clone(),
+            msg.token_0.code_hash.clone(),
+            msg.token_0.address.clone(),
         )?,
         register_receive_msg(
             env.contract_code_hash.clone(),
@@ -231,7 +223,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             if let Some(message) = msg {
                 match from_binary(&message)? {
                     Snip20Handle::Lp {} => {
-                        check_bal(deps, env)?;
+                        update_pool(deps, env)?;
                     }
                     Snip20Handle::CallbackMsg {
                         swap: CallbackSwap { expected_return },
@@ -306,7 +298,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     };
 }
 
-pub fn check_bal<S: Storage, A: Api, Q: Querier>(
+pub fn update_pool<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
 ) -> StdResult<bool> {
