@@ -24,6 +24,7 @@ fn try_mint_impl(
 pub fn try_mint(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     recipient: Addr,
     amount: Uint128,
     memo: Option<String>,
@@ -53,6 +54,7 @@ pub fn try_mint(
 pub fn try_batch_mint(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     actions: Vec<batch::MintAction>,
 ) -> StdResult<Response> {
     // Mint enabled
@@ -92,6 +94,7 @@ pub fn try_batch_mint(
 pub fn try_add_minters(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     new_minters: Vec<Addr>
 ) -> StdResult<Response> {
     // Mint enabled
@@ -116,6 +119,7 @@ pub fn try_add_minters(
 pub fn try_remove_minters(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     minters_to_remove: Vec<Addr>
 ) -> StdResult<Response> {
     // Mint enabled
@@ -142,6 +146,7 @@ pub fn try_remove_minters(
 pub fn try_set_minters(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     minters: Vec<Addr>
 ) -> StdResult<Response> {
     // Mint enabled

@@ -26,6 +26,7 @@ use shade_protocol::{
 pub fn register_pair(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     pair: Contract,
 ) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
@@ -100,6 +101,7 @@ pub fn register_pair(
 pub fn unregister_pair(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     symbol: String,
     pair: Contract,
 ) -> StdResult<Response> {
@@ -256,6 +258,7 @@ fn fetch_token_paired_to_sscrt_on_sienna(
 pub fn register_index(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     symbol: String,
     basket: Vec<IndexElement>,
 ) -> StdResult<Response> {
@@ -282,6 +285,7 @@ pub fn register_index(
 pub fn try_update_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     admin: Option<Addr>,
     band: Option<Contract>,
 ) -> StdResult<Response> {

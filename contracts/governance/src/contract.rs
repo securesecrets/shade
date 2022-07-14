@@ -22,7 +22,7 @@ use crate::{
     },
     query,
 };
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{Deps, MessageInfo, Uint128};
 use shade_protocol::c_std::{
     to_binary,
     Api,
@@ -55,6 +55,7 @@ use shade_protocol::{
         storage::default::{BucketStorage, SingletonStorage},
     },
 };
+use shade_protocol::utils::{pad_handle_result, pad_query_result};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -76,16 +77,16 @@ pub fn init(
     let mut messages = vec![];
     if let Some(vote_token) = msg.vote_token.clone() {
         messages.push(register_receive(
-            env.contract_code_hash.clone(),
+            env.contract.code_hash.clone(),
             None,
-            vote_token
+            &vote_token
         )?);
     }
     if let Some(funding_token) = msg.funding_token.clone() {
         messages.push(register_receive(
-            env.contract_code_hash.clone(),
+            env.contract.code_hash.clone(),
             None,
-            funding_token
+            &funding_token
         )?);
     }
 
@@ -163,7 +164,7 @@ pub fn init(
         assemblies: None,
         contract: Contract {
             address: env.contract.address,
-            code_hash: env.contract_code_hash,
+            code_hash: env.contract.code_hash,
         },
     }
     .save(deps.storage, &Uint128::zero())?;
@@ -185,10 +186,10 @@ pub fn handle(
                 vote_token,
                 funding_token,
                 ..
-            } => try_set_config(deps, env, treasury, vote_token, funding_token),
+            } => try_set_config(deps, env, info, treasury, vote_token, funding_token),
 
             // TODO: set this, must be discussed with team
-            ExecuteMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, state),
+            ExecuteMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, info, state),
 
             // Proposals
             ExecuteMsg::Proposal {
@@ -198,11 +199,11 @@ pub fn handle(
                 msg,
                 coins,
                 ..
-            } => try_proposal(deps, env, title, metadata, contract, msg, coins),
+            } => try_proposal(deps, env, info, title, metadata, contract, msg, coins),
 
-            ExecuteMsg::Trigger { proposal, .. } => try_trigger(deps, env, proposal),
-            ExecuteMsg::Cancel { proposal, .. } => try_cancel(deps, env, proposal),
-            ExecuteMsg::Update { proposal, .. } => try_update(deps, env, proposal),
+            ExecuteMsg::Trigger { proposal, .. } => try_trigger(deps, env, info, proposal),
+            ExecuteMsg::Cancel { proposal, .. } => try_cancel(deps, env, info, proposal),
+            ExecuteMsg::Update { proposal, .. } => try_update(deps, env, info, proposal),
             ExecuteMsg::Receive {
                 sender,
                 from,
@@ -210,19 +211,19 @@ pub fn handle(
                 msg,
                 memo,
                 ..
-            } => try_receive(deps, env, sender, from, amount, msg, memo),
-            ExecuteMsg::ClaimFunding { id } => try_claim_funding(deps, env, id),
+            } => try_receive(deps, env, info, sender, from, amount, msg, memo),
+            ExecuteMsg::ClaimFunding { id } => try_claim_funding(deps, env, info, id),
 
             ExecuteMsg::ReceiveBalance {
                 sender,
                 msg,
                 balance,
                 memo,
-            } => try_receive_balance(deps, env, sender, msg, balance, memo),
+            } => try_receive_balance(deps, env, info, sender, msg, balance, memo),
 
             // Assemblies
             ExecuteMsg::AssemblyVote { proposal, vote, .. } => {
-                try_assembly_vote(deps, env, proposal, vote)
+                try_assembly_vote(deps, env, info, proposal, vote)
             }
 
             ExecuteMsg::AssemblyProposal {
@@ -231,7 +232,7 @@ pub fn handle(
                 metadata,
                 msgs,
                 ..
-            } => try_assembly_proposal(deps, env, assembly, title, metadata, msgs),
+            } => try_assembly_proposal(deps, env, info, assembly, title, metadata, msgs),
 
             ExecuteMsg::AddAssembly {
                 name,
@@ -239,7 +240,7 @@ pub fn handle(
                 members,
                 profile,
                 ..
-            } => try_add_assembly(deps, env, name, metadata, members, profile),
+            } => try_add_assembly(deps, env, info, name, metadata, members, profile),
 
             ExecuteMsg::SetAssembly {
                 id,
@@ -248,7 +249,7 @@ pub fn handle(
                 members,
                 profile,
                 ..
-            } => try_set_assembly(deps, env, id, name, metadata, members, profile),
+            } => try_set_assembly(deps, env, info, id, name, metadata, members, profile),
 
             // Assembly Msgs
             ExecuteMsg::AddAssemblyMsg {
@@ -256,7 +257,7 @@ pub fn handle(
                 msg,
                 assemblies,
                 ..
-            } => try_add_assembly_msg(deps, env, name, msg, assemblies),
+            } => try_add_assembly_msg(deps, env, info, name, msg, assemblies),
 
             ExecuteMsg::SetAssemblyMsg {
                 id,
@@ -264,16 +265,16 @@ pub fn handle(
                 msg,
                 assemblies,
                 ..
-            } => try_set_assembly_msg(deps, env, id, name, msg, assemblies),
+            } => try_set_assembly_msg(deps, env, info, id, name, msg, assemblies),
 
             ExecuteMsg::AddAssemblyMsgAssemblies { id, assemblies } => {
-                try_add_assembly_msg_assemblies(deps, env, id, assemblies)
+                try_add_assembly_msg_assemblies(deps, env, info, id, assemblies)
             }
 
             // Profiles
-            ExecuteMsg::AddProfile { profile, .. } => try_add_profile(deps, env, profile),
+            ExecuteMsg::AddProfile { profile, .. } => try_add_profile(deps, env, info, profile),
 
-            ExecuteMsg::SetProfile { id, profile, .. } => try_set_profile(deps, env, id, profile),
+            ExecuteMsg::SetProfile { id, profile, .. } => try_set_profile(deps, env, info, id, profile),
 
             // Contracts
             ExecuteMsg::AddContract {
@@ -282,7 +283,7 @@ pub fn handle(
                 contract,
                 assemblies,
                 ..
-            } => try_add_contract(deps, env, name, metadata, contract, assemblies),
+            } => try_add_contract(deps, env, info, name, metadata, contract, assemblies),
 
             ExecuteMsg::SetContract {
                 id,
@@ -295,6 +296,7 @@ pub fn handle(
             } => try_set_contract(
                 deps,
                 env,
+                info,
                 id,
                 name,
                 metadata,
@@ -304,7 +306,7 @@ pub fn handle(
             ),
 
             ExecuteMsg::AddContractAssemblies { id, assemblies } => {
-                try_add_contract_assemblies(deps, env, id, assemblies)
+                try_add_contract_assemblies(deps, env, info, id, assemblies)
             }
         },
         RESPONSE_BLOCK_SIZE,

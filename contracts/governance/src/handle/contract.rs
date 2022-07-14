@@ -1,4 +1,4 @@
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{MessageInfo, Uint128};
 use shade_protocol::c_std::{
     to_binary,
     Api,
@@ -18,6 +18,7 @@ use shade_protocol::{
 pub fn try_add_contract(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     name: String,
     metadata: String,
     contract: Contract,
@@ -54,6 +55,7 @@ pub fn try_add_contract(
 pub fn try_set_contract(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     id: Uint128,
     name: Option<String>,
     metadata: Option<String>,
@@ -107,6 +109,7 @@ pub fn try_set_contract(
 pub fn try_add_contract_assemblies(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     id: Uint128,
     assemblies: Vec<Uint128>,
 ) -> StdResult<Response> {

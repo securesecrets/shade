@@ -50,6 +50,7 @@ use crate::state::{
 pub fn try_burn(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     _sender: Addr,
     from: Addr,
     amount: Uint128,
@@ -115,7 +116,7 @@ pub fn try_burn(
 
     if let Some(limit) = config.limit {
         // Limit Refresh Check
-        try_limit_refresh(deps, env, limit)?;
+        try_limit_refresh(deps, env, info, limit)?;
 
         // Check & adjust limit if a limited asset
         if !burn_asset.unlimited {
@@ -225,6 +226,7 @@ pub fn try_burn(
 pub fn try_limit_refresh(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     limit: Limit,
 ) -> StdResult<Uint128> {
     match DateTime::parse_from_rfc3339(&limit_refresh_r(deps.storage).load()?) {
@@ -302,6 +304,7 @@ pub fn try_limit_refresh(
 pub fn try_update_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
     let cur_config = config_r(deps.storage).load()?;
@@ -415,7 +418,7 @@ pub fn try_remove_asset(
 
 pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> {
     helpers::register_receive(
-        env.contract_code_hash.clone(),
+        env.contract.code_hash.clone(),
         None,
         contract
     )

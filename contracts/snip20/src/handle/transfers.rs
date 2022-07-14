@@ -48,6 +48,7 @@ pub fn try_transfer_impl(
 pub fn try_transfer(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     recipient: Addr,
     amount: Uint128,
     memo: Option<String>
@@ -64,6 +65,7 @@ pub fn try_transfer(
 pub fn try_batch_transfer(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     actions: Vec<batch::TransferAction>,
 ) -> StdResult<Response> {
     let sender = info.sender;
@@ -138,6 +140,7 @@ pub fn try_send_impl(
 pub fn try_send(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     recipient: Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
@@ -171,6 +174,7 @@ pub fn try_send(
 pub fn try_batch_send(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     actions: Vec<batch::SendAction>
 ) -> StdResult<Response> {
     let mut messages = vec![];

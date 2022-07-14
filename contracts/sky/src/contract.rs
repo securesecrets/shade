@@ -69,8 +69,8 @@ pub fn handle(
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::UpdateConfig{ config } => handle::try_update_config(deps, env, config),
-        ExecuteMsg::ArbPeg{ amount } => handle::try_execute(deps, env, amount),
+        ExecuteMsg::UpdateConfig{ config } => handle::try_update_config(deps, env, info, config),
+        ExecuteMsg::ArbPeg{ amount } => handle::try_execute(deps, env, info, amount),
     }
 }
 

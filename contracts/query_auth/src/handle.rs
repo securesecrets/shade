@@ -39,6 +39,7 @@ fn user_authorized(deps: Deps, env: Env) -> StdResult<bool> {
 pub fn try_set_admin(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     admin: Contract,
 ) -> StdResult<Response> {
     if  !user_authorized(&deps, env)? {
@@ -53,6 +54,7 @@ pub fn try_set_admin(
 pub fn try_set_run_state(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     state: ContractStatus,
 ) -> StdResult<Response> {
     if  !user_authorized(&deps, env)? {
@@ -67,6 +69,7 @@ pub fn try_set_run_state(
 pub fn try_create_viewing_key(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     entropy: String,
 ) -> StdResult<Response> {
     let seed = RngSeed::load(deps.storage)?.0;
@@ -81,6 +84,7 @@ pub fn try_create_viewing_key(
 pub fn try_set_viewing_key(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     key: String,
 ) -> StdResult<Response> {
     HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
@@ -91,6 +95,7 @@ pub fn try_set_viewing_key(
 pub fn try_block_permit_key(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     key: String,
 ) -> StdResult<Response> {
     PermitKey::revoke(deps.storage, key, info.sender)?;

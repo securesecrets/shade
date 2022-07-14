@@ -37,6 +37,7 @@ use crate::{
 pub fn receive(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     _sender: Addr,
     _from: Addr,
     amount: Uint128,
@@ -69,6 +70,7 @@ pub fn receive(
 pub fn try_update_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
     let cur_config = config_r(deps.storage).load()?;
@@ -91,6 +93,7 @@ pub fn try_update_config(
 pub fn update(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset: Addr,
 ) -> StdResult<Response> {
 
@@ -118,6 +121,7 @@ pub fn update(
 pub fn unbond(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
@@ -162,6 +166,7 @@ pub fn unbond(
 pub fn claim(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset: Addr,
 ) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;

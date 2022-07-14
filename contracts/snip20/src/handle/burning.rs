@@ -25,6 +25,7 @@ use shade_protocol::contract_interfaces::snip20::errors::burning_disabled;
 pub fn try_burn(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     amount: Uint128,
     memo: Option<String>,
 ) -> StdResult<Response> {
@@ -56,6 +57,7 @@ pub fn try_burn(
 pub fn try_burn_from(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     owner: Addr,
     amount: Uint128,
     memo: Option<String>,
@@ -89,6 +91,7 @@ pub fn try_burn_from(
 pub fn try_batch_burn_from(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     actions: Vec<batch::BurnFromAction>,
 ) -> StdResult<Response> {
     let sender = &info.sender;

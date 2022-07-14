@@ -76,13 +76,13 @@ pub fn handle(
 
     pad_handle_result(
         match msg {
-            ExecuteMsg::SetAdminAuth { admin, .. } => handle::try_set_admin(deps, env, admin),
-            ExecuteMsg::SetRunState { state, .. } => handle::try_set_run_state(deps, env, state),
-            ExecuteMsg::SetViewingKey { key, .. } => handle::try_set_viewing_key(deps, env, key),
+            ExecuteMsg::SetAdminAuth { admin, .. } => handle::try_set_admin(deps, env, info, admin),
+            ExecuteMsg::SetRunState { state, .. } => handle::try_set_run_state(deps, env, info, state),
+            ExecuteMsg::SetViewingKey { key, .. } => handle::try_set_viewing_key(deps, env, info, key),
             ExecuteMsg::CreateViewingKey { entropy, .. } => {
-                handle::try_create_viewing_key(deps, env, entropy)
+                handle::try_create_viewing_key(deps, env, info, entropy)
             }
-            ExecuteMsg::BlockPermitKey { key, .. } => handle::try_block_permit_key(deps, env, key),
+            ExecuteMsg::BlockPermitKey { key, .. } => handle::try_block_permit_key(deps, env, info, key),
         },
         RESPONSE_BLOCK_SIZE,
     )

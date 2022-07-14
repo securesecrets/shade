@@ -48,14 +48,14 @@ pub fn handle(
 ) -> StdResult<Response> {
     match msg {
         ExecuteMsg::UpdateConfig { admin, band } => {
-            handle::try_update_config(deps, env, admin, band)
+            handle::try_update_config(deps, env, info, admin, band)
         }
-        ExecuteMsg::RegisterPair { pair } => handle::register_pair(deps, env, pair),
+        ExecuteMsg::RegisterPair { pair } => handle::register_pair(deps, env, info, pair),
         ExecuteMsg::UnregisterPair { symbol, pair } => {
-            handle::unregister_pair(deps, env, symbol, pair)
+            handle::unregister_pair(deps, env, info, symbol, pair)
         }
         ExecuteMsg::RegisterIndex { symbol, basket } => {
-            handle::register_index(deps, env, symbol, basket)
+            handle::register_index(deps, env, info, symbol, basket)
         }
     }
 }

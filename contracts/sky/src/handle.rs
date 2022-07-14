@@ -20,6 +20,7 @@ use crate::{query::trade_profitability};
 pub fn try_update_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
     if info.sender != Config::load(deps.storage)?.admin {
@@ -37,12 +38,13 @@ pub fn try_update_config(
 /*pub fn try_arbitrage_event( //DEPRECIATED
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     amount: Uint128,
 ) -> StdResult<Response> {
     let config: Config = Config::load(deps.storage)?;
     let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
         &deps.querier,
-        env.contract_code_hash.clone(),//TODO
+        env.contract.code_hash.clone(),//TODO
         config.market_swap_addr.address.clone(),
     )?;
     let test_amount: u128 = 100000000;
@@ -51,7 +53,7 @@ pub fn try_update_config(
         amount: Uint128::new(test_amount),
     }.query(
         &deps.querier,
-        env.contract_code_hash.clone(),//TODO
+        env.contract.code_hash.clone(),//TODO
         config.mint_addr.address.clone(),
     )?;
     let mut mint_price: Uint128 = Uint128::zero();
@@ -99,7 +101,7 @@ pub fn try_update_config(
         };
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute{ //swap
             contract_addr: config.shd_token.contract.address.clone(),
-            callback_code_hash: env.contract_code_hash.clone(),
+            callback_code_hash: env.contract.code_hash.clone(),
             msg: to_binary(&msg)?,
             send: vec![],
         }));
@@ -153,6 +155,7 @@ pub fn try_update_config(
 pub fn try_execute(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     amount: Uint128,
 ) -> StdResult<Response> {
 

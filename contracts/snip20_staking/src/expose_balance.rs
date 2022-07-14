@@ -29,6 +29,7 @@ use shade_protocol::{
 pub fn try_expose_balance(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     recipient: Addr,
     code_hash: Option<String>,
     msg: Option<Binary>,
@@ -58,6 +59,7 @@ pub fn try_expose_balance(
 pub fn try_expose_balance_with_cooldown(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     recipient: Addr,
     code_hash: Option<String>,
     msg: Option<Binary>,

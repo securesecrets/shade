@@ -1,4 +1,4 @@
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{MessageInfo, Uint128};
 use shade_protocol::c_std::{
     to_binary,
     Api,
@@ -28,6 +28,7 @@ use shade_protocol::{
 pub fn try_add_assembly_msg(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     name: String,
     msg: String,
     assemblies: Vec<Uint128>,
@@ -60,6 +61,7 @@ pub fn try_add_assembly_msg(
 pub fn try_set_assembly_msg(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     id: Uint128,
     name: Option<String>,
     msg: Option<String>,
@@ -96,6 +98,7 @@ pub fn try_set_assembly_msg(
 pub fn try_add_assembly_msg_assemblies(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     id: Uint128,
     assemblies: Vec<Uint128>,
 ) -> StdResult<Response> {

@@ -1,4 +1,4 @@
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{MessageInfo, Uint128};
 use shade_protocol::c_std::{
     to_binary,
     Api,
@@ -23,6 +23,7 @@ use shade_protocol::{
 pub fn try_add_profile(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     profile: Profile,
 ) -> StdResult<Response> {
     if info.sender != env.contract.address {
@@ -40,6 +41,7 @@ pub fn try_add_profile(
 pub fn try_set_profile(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     id: Uint128,
     new_profile: UpdateProfile,
 ) -> StdResult<Response> {

@@ -1,15 +1,4 @@
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
+use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, MessageInfo};
 use shade_protocol::snip20::helpers::register_receive;
 use shade_protocol::{
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
@@ -29,6 +18,7 @@ pub mod proposal;
 pub fn try_set_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     treasury: Option<Addr>,
     vote_token: Option<Contract>,
     funding_token: Option<Contract>,
@@ -44,7 +34,7 @@ pub fn try_set_config(
     if let Some(vote_token) = vote_token {
         config.vote_token = Some(vote_token.clone());
         messages.push(register_receive(
-            env.contract_code_hash.clone(),
+            env.contract.code_hash.clone(),
             None,
             vote_token
         )?);
@@ -53,7 +43,7 @@ pub fn try_set_config(
     if let Some(funding_token) = funding_token {
         config.funding_token = Some(funding_token.clone());
         messages.push(register_receive(
-            env.contract_code_hash.clone(),
+            env.contract.code_hash.clone(),
             None,
             funding_token
         )?);
@@ -72,6 +62,7 @@ pub fn try_set_config(
 pub fn try_set_runtime_state(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     state: RuntimeState,
 ) -> StdResult<Response> {
     todo!();

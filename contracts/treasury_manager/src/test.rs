@@ -30,7 +30,7 @@ pub mod tests {
             viewing_key,
         };
         let env = mock_env(admin, &coins(1000, "earth"));
-        let _res = init(&mut deps, env, msg).unwrap();
+        let _res = init(&mut deps, env, info, msg).unwrap();
 
         return deps
     }

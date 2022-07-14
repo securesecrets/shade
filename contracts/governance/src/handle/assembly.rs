@@ -1,4 +1,4 @@
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{MessageInfo, Uint128};
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
@@ -32,6 +32,7 @@ use std::convert::TryInto;
 pub fn try_assembly_vote(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     proposal: Uint128,
     vote: Vote,
 ) -> StdResult<Response> {
@@ -79,6 +80,7 @@ pub fn try_assembly_vote(
 pub fn try_assembly_proposal(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     assembly_id: Uint128,
     title: String,
     metadata: String,
@@ -193,6 +195,7 @@ pub fn try_assembly_proposal(
 pub fn try_add_assembly(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     name: String,
     metadata: String,
     members: Vec<Addr>,
@@ -225,6 +228,7 @@ pub fn try_add_assembly(
 pub fn try_set_assembly(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     id: Uint128,
     name: Option<String>,
     metadata: Option<String>,

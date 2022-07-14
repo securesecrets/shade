@@ -70,7 +70,7 @@ pub mod tests {
             */
         };
         let env = mock_env(admin, &coins(1000, "earth"));
-        let _res = init(&mut deps, env, msg).unwrap();
+        let _res = init(&mut deps, env, info, msg).unwrap();
 
         return deps;
     }
@@ -91,7 +91,7 @@ pub mod tests {
         let env = mock_env("creator", &coins(1000, "earth"));
 
         // we can just call .unwrap() to assert this was a success
-        let res = init(&mut deps, env, msg).unwrap();
+        let res = init(&mut deps, env, info, msg).unwrap();
         assert_eq!(0, res.messages.len());
     }
     */
@@ -184,7 +184,7 @@ pub mod tests {
         let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
-        let _res = handle(&mut deps, env, msg).unwrap();
+        let _res = handle(&mut deps, env, info, msg).unwrap();
 
         // Response should be an array of size 1
         let res = query(&deps, QueryMsg::GetSupportedAssets {}).unwrap();
@@ -209,7 +209,7 @@ pub mod tests {
         let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
-        let _res = handle(&mut deps, env, msg).unwrap();
+        let _res = handle(&mut deps, env, info, msg).unwrap();
 
         // Should not be allowed to add an existing asset
         let env = mock_env("admin", &coins(1000, "earth"));
@@ -217,7 +217,7 @@ pub mod tests {
         let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
-        let res = handle(&mut deps, env, msg);
+        let res = handle(&mut deps, env, info, msg);
         match res {
             Err(StdError::GenericErr { .. }) => {}
             _ => panic!("Must return not found error"),
@@ -237,7 +237,7 @@ pub mod tests {
         let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
-        let _res = handle(&mut deps, env, msg).unwrap();
+        let _res = handle(&mut deps, env, info, msg).unwrap();
 
         // users should not be allowed to update assets
         let user_env = mock_env("user", &coins(1000, "earth"));
@@ -268,7 +268,7 @@ pub mod tests {
         let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
-        let _res = handle(&mut deps, env, msg).unwrap();
+        let _res = handle(&mut deps, env, info, msg).unwrap();
 
         // admins can update assets
         let env = mock_env("admin", &coins(1000, "earth"));
@@ -278,7 +278,7 @@ pub mod tests {
             asset: dummy_contract.address,
             contract: new_dummy_contract,
         };
-        let _res = handle(&mut deps, env, msg).unwrap();
+        let _res = handle(&mut deps, env, info, msg).unwrap();
 
         // Response should be new dummy contract
         let res = query(&deps, QueryMsg::GetAsset { contract: "some_other_contract".to_string() }).unwrap();
@@ -303,7 +303,7 @@ pub mod tests {
         let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
-        let _res = handle(&mut deps, env, msg).unwrap();
+        let _res = handle(&mut deps, env, info, msg).unwrap();
 
         // Contract tries to send funds
         let env = mock_env("some_contract", &coins(1000, "earth"));
@@ -317,7 +317,7 @@ pub mod tests {
             memo: None
         };
 
-        let res = handle(&mut deps, env, msg);
+        let res = handle(&mut deps, env, info, msg);
         match res {
             Err(err) => {
                 match err {
@@ -346,7 +346,7 @@ pub mod tests {
         let msg = ExecuteMsg::RegisterAsset {
             contract: dummy_contract,
         };
-        let _res = handle(&mut deps, env, msg).unwrap();
+        let _res = handle(&mut deps, env, info, msg).unwrap();
 
         // Contract tries to send funds
         let env = mock_env("some_other_contract", &coins(1000, "earth"));
@@ -358,7 +358,7 @@ pub mod tests {
             msg: None,
             memo: None
         };
-        let res = handle(&mut deps, env, msg);
+        let res = handle(&mut deps, env, info, msg);
         match res {
             Err(StdError::NotFound { .. }) => {}
             _ => {panic!("Must return not found error")},

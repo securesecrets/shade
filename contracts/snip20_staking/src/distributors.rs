@@ -30,6 +30,7 @@ pub fn get_distributor(
 pub fn try_set_distributors_status(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     enabled: bool,
 ) -> StdResult<Response> {
     let config = Config::from_storage(deps.storage);
@@ -46,6 +47,7 @@ pub fn try_set_distributors_status(
 pub fn try_add_distributors(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     new_distributors: Vec<Addr>,
 ) -> StdResult<Response> {
     let config = Config::from_storage(deps.storage);
@@ -64,6 +66,7 @@ pub fn try_add_distributors(
 pub fn try_set_distributors(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     distributors: Vec<Addr>,
 ) -> StdResult<Response> {
     let config = Config::from_storage(deps.storage);

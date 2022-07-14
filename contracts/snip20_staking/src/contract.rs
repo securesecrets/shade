@@ -184,7 +184,7 @@ pub fn init(
     if let Some(addr) = msg.treasury {
         if let Some(code_hash) = msg.treasury_code_hash {
             messages.push(register_receive(
-                env.contract_code_hash.clone(),
+                env.contract.code_hash.clone(),
                 None,
                 &Contract {
                     address: addr,
@@ -195,7 +195,7 @@ pub fn init(
     }
 
     messages.push(register_receive(
-        env.contract_code_hash,
+        env.contract.code_hash,
         None,
         msg.staked_token
     )?);
@@ -216,6 +216,7 @@ fn pad_response(response: StdResult<Response>) -> StdResult<Response> {
 pub fn handle(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     let contract_status = ReadonlyConfig::from_storage(deps.storage).contract_status();
@@ -291,7 +292,7 @@ pub fn handle(
             disable_treasury,
             treasury,
             ..
-        } => try_update_stake_config(deps, env, unbond_time, disable_treasury, treasury),
+        } => try_update_stake_config(deps, env, info, unbond_time, disable_treasury, treasury),
         ExecuteMsg::Receive {
             sender,
             from,
@@ -299,8 +300,8 @@ pub fn handle(
             msg,
             memo,
             ..
-        } => try_receive(deps, env, sender, from, amount, msg, memo),
-        ExecuteMsg::Unbond { amount, .. } => try_unbond(deps, env, amount),
+        } => try_receive(deps, env, info, sender, from, amount, msg, memo),
+        ExecuteMsg::Unbond { amount, .. } => try_unbond(deps, env, info, amount),
         ExecuteMsg::ClaimUnbond { .. } => try_claim_unbond(deps, env),
         ExecuteMsg::ClaimRewards { .. } => try_claim_rewards(deps, env),
         ExecuteMsg::StakeRewards { .. } => try_stake_rewards(deps, env),
@@ -312,24 +313,24 @@ pub fn handle(
             msg,
             memo,
             ..
-        } => try_expose_balance(deps, env, recipient, code_hash, msg, memo),
+        } => try_expose_balance(deps, env, info, recipient, code_hash, msg, memo),
         ExecuteMsg::ExposeBalanceWithCooldown {
             recipient,
             code_hash,
             msg,
             memo,
             ..
-        } => try_expose_balance_with_cooldown(deps, env, recipient, code_hash, msg, memo),
+        } => try_expose_balance_with_cooldown(deps, env, info, recipient, code_hash, msg, memo),
 
         // Distributors
         ExecuteMsg::SetDistributorsStatus { enabled, .. } => {
-            try_set_distributors_status(deps, env, enabled)
+            try_set_distributors_status(deps, env, info, enabled)
         }
         ExecuteMsg::AddDistributors { distributors, .. } => {
-            try_add_distributors(deps, env, distributors)
+            try_add_distributors(deps, env, info, distributors)
         }
         ExecuteMsg::SetDistributors { distributors, .. } => {
-            try_set_distributors(deps, env, distributors)
+            try_set_distributors(deps, env, info, distributors)
         }
 
         // Base
@@ -338,7 +339,7 @@ pub fn handle(
             amount,
             memo,
             ..
-        } => try_transfer(deps, env, recipient, amount, memo),
+        } => try_transfer(deps, env, info, recipient, amount, memo),
         ExecuteMsg::Send {
             recipient,
             recipient_code_hash,
@@ -346,12 +347,12 @@ pub fn handle(
             msg,
             memo,
             ..
-        } => try_send(deps, env, recipient, recipient_code_hash, amount, memo, msg),
-        ExecuteMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, actions),
-        ExecuteMsg::BatchSend { actions, .. } => try_batch_send(deps, env, actions),
-        ExecuteMsg::RegisterReceive { code_hash, .. } => try_register_receive(deps, env, code_hash),
-        ExecuteMsg::CreateViewingKey { entropy, .. } => try_create_key(deps, env, entropy),
-        ExecuteMsg::SetViewingKey { key, .. } => try_set_key(deps, env, key),
+        } => try_send(deps, env, info, recipient, recipient_code_hash, amount, memo, msg),
+        ExecuteMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, info, actions),
+        ExecuteMsg::BatchSend { actions, .. } => try_batch_send(deps, env, info, actions),
+        ExecuteMsg::RegisterReceive { code_hash, .. } => try_register_receive(deps, env, info, code_hash),
+        ExecuteMsg::CreateViewingKey { entropy, .. } => try_create_key(deps, env, info, entropy),
+        ExecuteMsg::SetViewingKey { key, .. } => try_set_key(deps, env, info, key),
 
         // Allowance
         ExecuteMsg::IncreaseAllowance {
@@ -359,13 +360,13 @@ pub fn handle(
             amount,
             expiration,
             ..
-        } => try_increase_allowance(deps, env, spender, amount, expiration),
+        } => try_increase_allowance(deps, env, info, spender, amount, expiration),
         ExecuteMsg::DecreaseAllowance {
             spender,
             amount,
             expiration,
             ..
-        } => try_decrease_allowance(deps, env, spender, amount, expiration),
+        } => try_decrease_allowance(deps, env, info, spender, amount, expiration),
         ExecuteMsg::TransferFrom {
             owner,
             recipient,
@@ -394,12 +395,12 @@ pub fn handle(
         ExecuteMsg::BatchTransferFrom { actions, .. } => {
             try_batch_transfer_from(deps, &env, actions)
         }
-        ExecuteMsg::BatchSendFrom { actions, .. } => try_batch_send_from(deps, env, actions),
+        ExecuteMsg::BatchSendFrom { actions, .. } => try_batch_send_from(deps, env, info, actions),
 
         // Other
-        ExecuteMsg::ChangeAdmin { address, .. } => change_admin(deps, env, address),
-        ExecuteMsg::SetContractStatus { level, .. } => set_contract_status(deps, env, level),
-        ExecuteMsg::RevokePermit { permit_name, .. } => revoke_permit(deps, env, permit_name),
+        ExecuteMsg::ChangeAdmin { address, .. } => change_admin(deps, env, info, address),
+        ExecuteMsg::SetContractStatus { level, .. } => set_contract_status(deps, env, info, level),
+        ExecuteMsg::RevokePermit { permit_name, .. } => revoke_permit(deps, env, info, permit_name),
     };
 
     pad_response(response)
@@ -624,6 +625,7 @@ pub fn query_balance(
 fn change_admin(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     address: Addr,
 ) -> StdResult<Response> {
     let mut config = Config::from_storage(deps.storage);
@@ -674,6 +676,7 @@ pub fn try_mint_impl<S: Storage>(
 pub fn try_set_key(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     key: String,
 ) -> StdResult<Response> {
     let vk = ViewingKey(key);
@@ -687,6 +690,7 @@ pub fn try_set_key(
 pub fn try_create_key(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     entropy: String,
 ) -> StdResult<Response> {
     let constants = ReadonlyConfig::from_storage(deps.storage).constants()?;
@@ -703,6 +707,7 @@ pub fn try_create_key(
 fn set_contract_status(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     status_level: ContractStatusLevel,
 ) -> StdResult<Response> {
     let mut config = Config::from_storage(deps.storage);
@@ -810,6 +815,7 @@ fn try_transfer_impl(
 fn try_transfer(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     recipient: Addr,
     amount: Uint128,
     memo: Option<String>,
@@ -847,6 +853,7 @@ fn try_transfer(
 fn try_batch_transfer(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     actions: Vec<batch::TransferAction>,
 ) -> StdResult<Response> {
     let sender = info.sender;
@@ -962,6 +969,7 @@ fn try_send_impl(
 fn try_send(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     recipient: Addr,
     recipient_code_hash: Option<String>,
     amount: Uint128,
@@ -1000,6 +1008,7 @@ fn try_send(
 fn try_batch_send(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     actions: Vec<batch::SendAction>,
 ) -> StdResult<Response> {
     let mut messages = vec![];
@@ -1036,6 +1045,7 @@ fn try_batch_send(
 fn try_register_receive(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     code_hash: String,
 ) -> StdResult<Response> {
     set_receiver_hash(deps.storage, &info.sender, code_hash);
@@ -1219,6 +1229,7 @@ fn try_batch_transfer_from(
 fn try_send_from_impl(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     messages: &mut Vec<CosmosMsg>,
     spender: &Addr,
     spender_canon: &CanonicalAddr, // redundant but more efficient
@@ -1267,6 +1278,7 @@ fn try_send_from_impl(
 fn try_send_from(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     owner: Addr,
     recipient: Addr,
     recipient_code_hash: Option<String>,
@@ -1304,6 +1316,7 @@ fn try_send_from(
 fn try_batch_send_from(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     actions: Vec<batch::SendFromAction>,
 ) -> StdResult<Response> {
     let spender = &info.sender;
@@ -1340,6 +1353,7 @@ fn try_batch_send_from(
 fn try_increase_allowance(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
@@ -1385,6 +1399,7 @@ fn try_increase_allowance(
 fn try_decrease_allowance(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
@@ -1507,6 +1522,7 @@ fn perform_transfer<T: Storage>(
 fn revoke_permit(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     permit_name: String,
 ) -> StdResult<Response> {
     RevokedPermits::revoke_permit(
@@ -1603,7 +1619,7 @@ mod staking_tests {
             distributors: Some(vec![Addr::unchecked("distributor".to_string())]),
         };
 
-        (init(&mut deps, env, init_msg), deps)
+        (init(&mut deps, env, info, init_msg), deps)
     }
 
     // Handle tests
@@ -1774,7 +1790,7 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 10;
-        let handle_result = handle(&mut deps, env, handle_msg.clone());
+        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query unbonding queue
@@ -1846,7 +1862,7 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 10;
-        let handle_result = handle(&mut deps, env, handle_msg.clone());
+        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query unbonding queue
@@ -1891,7 +1907,7 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 10;
-        let handle_result = handle(&mut deps, env, handle_msg.clone());
+        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query unbonding queue
@@ -1944,7 +1960,7 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 0;
-        let handle_result = handle(&mut deps, env, handle_msg.clone());
+        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Fund the unbond
@@ -1989,7 +2005,7 @@ mod staking_tests {
         let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 0;
-        let handle_result = handle(&mut deps, env, handle_msg.clone());
+        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_err());
 
         // Query user stake
@@ -2022,7 +2038,7 @@ mod staking_tests {
         let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 11;
-        let handle_result = handle(&mut deps, env, handle_msg.clone());
+        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Query user stake
@@ -2059,14 +2075,14 @@ mod staking_tests {
         // Set time for ease of prediction
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 0;
-        let handle_result = handle(&mut deps, env, handle_msg.clone());
+        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_ok());
 
         // Claim
         let handle_msg = ExecuteMsg::ClaimUnbond { padding: None };
         let mut env = mock_env("foo", &[]);
         env.block.time.seconds() = 11;
-        let handle_result = handle(&mut deps, env, handle_msg.clone());
+        let handle_result = handle(&mut deps, env, info, handle_msg.clone());
         assert!(handle_result.is_err());
     }
 
@@ -3091,7 +3107,7 @@ mod snip20_tests {
             distributors: None,
         };
 
-        let init = init(&mut deps, env, init_msg);
+        let init = init(&mut deps, env, info, init_msg);
 
         for account in initial_balances.iter() {
             new_staked_account(&mut deps, account.acc, account.pwd, account.stake);
@@ -3148,7 +3164,7 @@ mod snip20_tests {
             distributors: None,
         };
 
-        let init = init(&mut deps, env, init_msg);
+        let init = init(&mut deps, env, info, init_msg);
 
         for account in initial_balances.iter() {
             new_staked_account(&mut deps, account.acc, account.pwd, account.stake);
@@ -4213,7 +4229,7 @@ mod snip20_tests {
             limit_transfer: true,
             distributors: None,
         };
-        let init_result = init(&mut deps, env, init_msg);
+        let init_result = init(&mut deps, env, info, init_msg);
         assert!(
             init_result.is_ok(),
             "Init failed: {}",
@@ -4285,7 +4301,7 @@ mod snip20_tests {
             limit_transfer: true,
             distributors: None,
         };
-        let init_result = init(&mut deps, env, init_msg);
+        let init_result = init(&mut deps, env, info, init_msg);
         assert!(
             init_result.is_ok(),
             "Init failed: {}",

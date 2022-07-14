@@ -181,7 +181,7 @@ pub fn handle(
             ),
             ExecuteMsg::CloseBond {
                 deposit_asset, ..
-            } => handle::try_close_bond(deps, env, deposit_asset),
+            } => handle::try_close_bond(deps, env, info, deposit_asset),
             ExecuteMsg::Receive {
                 sender,
                 from,

@@ -68,6 +68,7 @@ use shade_protocol::contract_interfaces::dao::adapter;
 pub fn receive(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     sender: Addr,
     _from: Addr,
     amount: Uint128,
@@ -83,6 +84,7 @@ pub fn receive(
 pub fn try_update_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
     let cur_config = config_r(deps.storage).load()?;
@@ -411,7 +413,7 @@ pub fn try_register_asset(
         messages: vec![
             // Register contract in asset
             register_receive(
-                env.contract_code_hash.clone(),
+                env.contract.code_hash.clone(),
                 None,
                 contract
             )?,

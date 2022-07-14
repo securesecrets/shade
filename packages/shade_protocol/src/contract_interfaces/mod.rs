@@ -9,7 +9,6 @@ pub mod oracles;
 #[cfg(feature = "mint")]
 pub mod mint;
 
-#[cfg(feature = "scrt_staking")]
 pub mod staking;
 
 pub mod sky;

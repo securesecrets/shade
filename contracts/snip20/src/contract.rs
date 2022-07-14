@@ -80,7 +80,7 @@ pub fn execute(
 
     pad_handle_result::<ExecuteMsg>(
         match msg {
-            ExecuteMsg::Redeem { amount, denom, .. } => try_redeem(deps, env, amount),
+            ExecuteMsg::Redeem { amount, denom, .. } => try_redeem(deps, env, info, amount),
 
             ExecuteMsg::Deposit { .. } => try_deposit(deps, env),
 
@@ -89,7 +89,7 @@ pub fn execute(
                 amount,
                 memo,
                 ..
-            } => try_transfer(deps, env, recipient, amount, memo),
+            } => try_transfer(deps, env, info, recipient, amount, memo),
 
             ExecuteMsg::Send {
                 recipient,
@@ -98,37 +98,37 @@ pub fn execute(
                 msg,
                 memo,
                 ..
-            } => try_send(deps, env, recipient, recipient_code_hash, amount, memo, msg),
+            } => try_send(deps, env, info, recipient, recipient_code_hash, amount, memo, msg),
 
-            ExecuteMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, actions),
+            ExecuteMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, info, actions),
 
-            ExecuteMsg::BatchSend { actions, .. } => try_batch_send(deps, env, actions),
+            ExecuteMsg::BatchSend { actions, .. } => try_batch_send(deps, env, info, actions),
 
-            ExecuteMsg::Burn { amount, memo, .. } => try_burn(deps, env, amount, memo),
+            ExecuteMsg::Burn { amount, memo, .. } => try_burn(deps, env, info, amount, memo),
 
             ExecuteMsg::RegisterReceive { code_hash, .. } => {
-                try_register_receive(deps, env, code_hash)
+                try_register_receive(deps, env, info, code_hash)
             }
 
             ExecuteMsg::CreateViewingKey { entropy, .. } => {
-                try_create_viewing_key(deps, env, entropy)
+                try_create_viewing_key(deps, env, info, entropy)
             }
 
-            ExecuteMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, env, key),
+            ExecuteMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, env, info, key),
 
             ExecuteMsg::IncreaseAllowance {
                 spender,
                 amount,
                 expiration,
                 ..
-            } => try_increase_allowance(deps, env, spender, amount, expiration),
+            } => try_increase_allowance(deps, env, info, spender, amount, expiration),
 
             ExecuteMsg::DecreaseAllowance {
                 spender,
                 amount,
                 expiration,
                 ..
-            } => try_decrease_allowance(deps, env, spender, amount, expiration),
+            } => try_decrease_allowance(deps, env, info, spender, amount, expiration),
 
             ExecuteMsg::TransferFrom {
                 owner,
@@ -136,7 +136,7 @@ pub fn execute(
                 amount,
                 memo,
                 ..
-            } => try_transfer_from(deps, env, owner, recipient, amount, memo),
+            } => try_transfer_from(deps, env, info, owner, recipient, amount, memo),
 
             ExecuteMsg::SendFrom {
                 owner,
@@ -158,41 +158,41 @@ pub fn execute(
             ),
 
             ExecuteMsg::BatchTransferFrom { actions, .. } => {
-                try_batch_transfer_from(deps, env, actions)
+                try_batch_transfer_from(deps, env, info, actions)
             }
 
-            ExecuteMsg::BatchSendFrom { actions, .. } => try_batch_send_from(deps, env, actions),
+            ExecuteMsg::BatchSendFrom { actions, .. } => try_batch_send_from(deps, env, info, actions),
 
             ExecuteMsg::BurnFrom {
                 owner,
                 amount,
                 memo,
                 ..
-            } => try_burn_from(deps, env, owner, amount, memo),
+            } => try_burn_from(deps, env, info, owner, amount, memo),
 
-            ExecuteMsg::BatchBurnFrom { actions, .. } => try_batch_burn_from(deps, env, actions),
+            ExecuteMsg::BatchBurnFrom { actions, .. } => try_batch_burn_from(deps, env, info, actions),
 
             ExecuteMsg::Mint {
                 recipient,
                 amount,
                 memo,
                 ..
-            } => try_mint(deps, env, recipient, amount, memo),
+            } => try_mint(deps, env, info, recipient, amount, memo),
 
-            ExecuteMsg::BatchMint { actions, .. } => try_batch_mint(deps, env, actions),
+            ExecuteMsg::BatchMint { actions, .. } => try_batch_mint(deps, env, info, actions),
 
-            ExecuteMsg::AddMinters { minters, .. } => try_add_minters(deps, env, minters),
+            ExecuteMsg::AddMinters { minters, .. } => try_add_minters(deps, env, info, minters),
 
-            ExecuteMsg::RemoveMinters { minters, .. } => try_remove_minters(deps, env, minters),
+            ExecuteMsg::RemoveMinters { minters, .. } => try_remove_minters(deps, env, info, minters),
 
-            ExecuteMsg::SetMinters { minters, .. } => try_set_minters(deps, env, minters),
+            ExecuteMsg::SetMinters { minters, .. } => try_set_minters(deps, env, info, minters),
 
-            ExecuteMsg::ChangeAdmin { address, .. } => try_change_admin(deps, env, address),
+            ExecuteMsg::ChangeAdmin { address, .. } => try_change_admin(deps, env, info, address),
 
-            ExecuteMsg::SetContractStatus { level, .. } => try_set_contract_status(deps, env, level),
+            ExecuteMsg::SetContractStatus { level, .. } => try_set_contract_status(deps, env, info, level),
 
             ExecuteMsg::RevokePermit { permit_name, .. } => {
-                try_revoke_permit(deps, env, permit_name)
+                try_revoke_permit(deps, env, info, permit_name)
             }
         },
         RESPONSE_BLOCK_SIZE,

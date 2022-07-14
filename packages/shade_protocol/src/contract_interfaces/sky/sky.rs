@@ -129,7 +129,7 @@ pub struct ArbPair {
         if self.dex_id.eq(&"sienna".to_string()) {
             let pool_info: PairInfoResponse = PairQuery::PairInfo.query(
                 &deps.querier,
-                env.contract_code_hash.clone(),
+                env.contract.code_hash.clone(),
                 self.pair_address.clone(),                
             )?;
             match pool_info.pair_info.pair.token_0 {

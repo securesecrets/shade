@@ -79,7 +79,7 @@ pub fn handle(
     msg: ExecuteMsg,
 ) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
         ExecuteMsg::RegisterAsset {
             contract,
             capture,
@@ -93,7 +93,7 @@ pub fn handle(
             amount,
             msg,
             ..
-        } => handle::try_burn(deps, env, sender, from, amount, msg),
+        } => handle::try_burn(deps, env, info, sender, from, amount, msg),
     }
 }
 

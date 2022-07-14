@@ -33,6 +33,7 @@ use crate::state::{
 pub fn try_update_limit_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     limit_admin: Option<Addr>,
     shade_admins: Option<Contract>,
     global_issuance_limit: Option<Uint128>,
@@ -88,6 +89,7 @@ pub fn try_update_limit_config(
 pub fn try_update_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     oracle: Option<Contract>,
     treasury: Option<Addr>,
     activated: Option<bool>,
@@ -351,6 +353,7 @@ pub fn try_deposit(
 pub fn try_claim(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
 ) -> StdResult<Response> {
     // Check if bonding period has elapsed and allow user to claim
     // however much of the issuance asset they paid for with their deposit
@@ -426,6 +429,7 @@ pub fn try_claim(
 pub fn try_open_bond(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     deposit_asset: Contract,
     start_time: u64,
     end_time: u64,
@@ -575,6 +579,7 @@ pub fn try_open_bond(
 pub fn try_close_bond(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     deposit_asset: Contract,
 ) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
@@ -818,7 +823,7 @@ pub fn calculate_claim_date(env_time: u64, bonding_period: u64) -> u64 {
 
 pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> {
     register_receive(
-        env.contract_code_hash.clone(),
+        env.contract.code_hash.clone(),
         None,
         contract
     )

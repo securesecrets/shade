@@ -1,5 +1,5 @@
 use crate::handle::assembly::try_assembly_proposal;
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{MessageInfo, Uint128};
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
@@ -43,6 +43,7 @@ use shade_protocol::utils::Query;
 pub fn try_proposal(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     title: String,
     metadata: String,
     contract: Option<Uint128>,
@@ -65,7 +66,7 @@ pub fn try_proposal(
         msgs = None;
     }
 
-    try_assembly_proposal(deps, env, Uint128::zero(), title, metadata, msgs)?;
+    try_assembly_proposal(deps, env, info, Uint128::zero(), title, metadata, msgs)?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Proposal {
             status: ResponseStatus::Success,
@@ -75,6 +76,7 @@ pub fn try_proposal(
 pub fn try_trigger(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     proposal: Uint128,
 ) -> StdResult<Response> {
     let mut messages = vec![];
@@ -92,10 +94,10 @@ pub fn try_trigger(
                 let contract = AllowedContract::data(deps.storage, &prop_msg.target)?.contract;
                 messages.push(
                     WasmMsg::Execute {
-                        contract_addr: contract.address,
-                        callback_code_hash: contract.code_hash,
+                        contract_addr: contract.address.into(),
+                        code_hash: contract.code_hash,
                         msg: prop_msg.msg.clone(),
-                        send: prop_msg.send.clone(),
+                        funds: prop_msg.send.clone()
                     }
                     .into(),
                 );
@@ -113,6 +115,7 @@ pub fn try_trigger(
 pub fn try_cancel(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     proposal: Uint128,
 ) -> StdResult<Response> {
     // Check if passed, and check if current time > cancel time
@@ -176,6 +179,7 @@ fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> S
 pub fn try_update(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     proposal: Uint128,
 ) -> StdResult<Response> {
     let mut history = Proposal::status_history(deps.storage, &proposal)?;
@@ -352,6 +356,7 @@ pub fn try_update(
 pub fn try_receive(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     sender: Addr,
     from: Addr,
     amount: Uint128,
@@ -453,6 +458,7 @@ pub fn try_receive(
 pub fn try_claim_funding(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     id: Uint128,
 ) -> StdResult<Response> {
     let reduction = match Proposal::status(deps.storage, &id)? {
@@ -501,6 +507,7 @@ pub fn try_claim_funding(
 pub fn try_receive_balance(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     sender: Addr,
     msg: Option<Binary>,
     balance: Uint128,

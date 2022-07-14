@@ -50,6 +50,7 @@ use shade_protocol::contract_interfaces::snip20::errors::{deposit_disabled, no_t
 pub fn try_redeem(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     amount: Uint128,
 ) -> StdResult<Response> {
     let sender = info.sender;
@@ -92,6 +93,7 @@ pub fn try_redeem(
 pub fn try_deposit(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
 ) -> StdResult<Response> {
     let sender = info.sender;
     let mut amount = Uint128::zero();
@@ -129,6 +131,7 @@ pub fn try_deposit(
 pub fn try_change_admin(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     address: Addr,
 ) -> StdResult<Response> {
     if info.sender != Admin::load(deps.storage)?.0 {
@@ -143,6 +146,7 @@ pub fn try_change_admin(
 pub fn try_set_contract_status(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     status_level: ContractStatusLevel,
 ) -> StdResult<Response> {
     if info.sender != Admin::load(deps.storage)?.0 {
@@ -159,6 +163,7 @@ pub fn try_set_contract_status(
 pub fn try_register_receive(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     code_hash: String,
 ) -> StdResult<Response> {
     ReceiverHash(code_hash).save(deps.storage, info.sender)?;
@@ -170,6 +175,7 @@ pub fn try_register_receive(
 pub fn try_create_viewing_key(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     entropy: String,
 ) -> StdResult<Response> {
     let seed = RandSeed::load(deps.storage)?.0;
@@ -184,6 +190,7 @@ pub fn try_create_viewing_key(
 pub fn try_set_viewing_key(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     key: String,
 ) -> StdResult<Response> {
     let seed = RandSeed::load(deps.storage)?.0;
@@ -196,6 +203,7 @@ pub fn try_set_viewing_key(
 pub fn try_revoke_permit(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     permit_name: String,
 ) -> StdResult<Response> {
     PermitKey::revoke(deps.storage, permit_name, info.sender)?;

@@ -50,6 +50,7 @@ use crate::state::{
 pub fn receive(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     sender: Addr,
     from: Addr,
     amount: Uint128,
@@ -128,6 +129,7 @@ pub fn receive(
 pub fn try_update_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
     let cur_config = config_r(deps.storage).load()?;
@@ -140,7 +142,7 @@ pub fn try_update_config(
     let mut messages = vec![];
 
     if cur_config.path != config.path {
-        messages.append(&mut build_path(deps, env, config.path.clone())?);
+        messages.append(&mut build_path(deps, env, info, config.path.clone())?);
     }
 
     config_w(deps.storage).save(&config)?;
@@ -153,6 +155,7 @@ pub fn try_update_config(
 pub fn build_path(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     path: Vec<Contract>,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = vec![];
@@ -180,7 +183,7 @@ pub fn build_path(
             .is_none()
             {
                 messages.push(register_receive(
-                    env.contract_code_hash.clone(),
+                    env.contract.code_hash.clone(),
                     None,
                     asset
                 )?);
@@ -210,7 +213,7 @@ pub fn build_path(
         .is_none()
     {
         messages.push(register_receive(
-            env.contract_code_hash.clone(),
+            env.contract.code_hash.clone(),
             None,
             final_asset
         )?);

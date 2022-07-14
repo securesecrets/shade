@@ -64,8 +64,8 @@ pub fn handle(
             amount,
             msg,
             ..
-        } => handle::receive(deps, env, sender, from, amount, msg),
-        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        } => handle::receive(deps, env, info, sender, from, amount, msg),
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
         ExecuteMsg::RegisterAsset { contract, reserves } => {
             handle::try_register_asset(deps, &env, &contract, reserves)
         }

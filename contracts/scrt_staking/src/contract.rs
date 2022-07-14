@@ -66,7 +66,7 @@ pub fn init(
                 config.sscrt.address.clone(),
             )?,
             register_receive(
-                env.contract_code_hash,
+                env.contract.code_hash,
                 None,
                 &config.sscrt
             )?,
@@ -88,14 +88,14 @@ pub fn handle(
             amount,
             msg,
             ..
-        } => handle::receive(deps, env, sender, from, amount, msg),
-        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
+        } => handle::receive(deps, env, info, sender, from, amount, msg),
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {
-                handle::unbond(deps, env, asset, amount)
+                handle::unbond(deps, env, info, asset, amount)
             }
-            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
-            adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, asset),
+            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, info, asset),
+            adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, info, asset),
         },
     }
 }

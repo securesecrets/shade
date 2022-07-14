@@ -62,10 +62,10 @@ pub fn handle(
             amount,
             msg,
             ..
-        } => handle::receive(deps, env, sender, from, amount, msg),
-        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
-        ExecuteMsg::RegisterAsset { asset } => handle::register_asset(deps, env, &asset),
-        ExecuteMsg::RefillRewards { rewards } => handle::refill_rewards(deps, env, rewards),
+        } => handle::receive(deps, env, info, sender, from, amount, msg),
+        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
+        ExecuteMsg::RegisterAsset { asset } => handle::register_asset(deps, env, info, &asset),
+        ExecuteMsg::RefillRewards { rewards } => handle::refill_rewards(deps, env, info, rewards),
 
         ExecuteMsg::Adapter(adapter) => match adapter {
             // Maybe should return an Ok still?
@@ -73,8 +73,8 @@ pub fn handle(
                 Err(StdError::generic_err("Cannot unbond from rewards"))
             }
             // If error on unbond, also error on claim
-            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
-            adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, asset),
+            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, info, asset),
+            adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, info, asset),
         },
     }
 }

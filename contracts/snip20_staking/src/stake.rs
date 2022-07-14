@@ -53,6 +53,7 @@ use std::convert::TryInto;
 pub fn try_update_stake_config(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     unbond_time: Option<u64>,
     disable_treasury: bool,
     treasury: Option<Addr>,
@@ -372,6 +373,7 @@ pub fn calculate_rewards(
 pub fn try_receive(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     sender: Addr,
     from: Addr,
     amount: Uint128,
@@ -534,6 +536,7 @@ pub fn remove_from_cooldown(
 pub fn try_unbond(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     amount: Uint128,
 ) -> StdResult<Response> {
     let sender = info.sender;
@@ -622,6 +625,7 @@ pub fn try_unbond(
 pub fn try_claim_unbond(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
 ) -> StdResult<Response> {
     let sender = &info.sender;
     let sender_canon = &deps.api.canonical_address(sender)?;
@@ -695,6 +699,7 @@ pub fn try_claim_unbond(
 pub fn try_claim_rewards(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
 ) -> StdResult<Response> {
     let stake_config = StakeConfig::load(deps.storage)?;
 
@@ -736,6 +741,7 @@ pub fn try_claim_rewards(
 pub fn try_stake_rewards(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
 ) -> StdResult<Response> {
     // Clam rewards
     let symbol = ReadonlyConfig::from_storage(deps.storage)
