@@ -30,3 +30,6 @@ pub mod wrap;
 #[cfg(feature = "math")]
 pub mod price;
 
+#[cfg(feature = "math")]
+pub mod rebase;
+
