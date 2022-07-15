@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Binary, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
+use shade_protocol::c_std::{Api, Binary, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary, MessageInfo};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::manager::{Allowance, CoinInfo};
@@ -38,15 +38,11 @@ pub fn try_increase_allowance(
 
     allowance.save(deps.storage, (owner.clone(), spender.clone()))?;
 
-    Ok(Response{
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::IncreaseAllowance {
-            spender,
-            owner,
-            allowance: allowance.amount
-        })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::IncreaseAllowance {
+        spender,
+        owner,
+        allowance: allowance.amount
+    })?))
 }
 
 pub fn try_decrease_allowance(
@@ -77,15 +73,11 @@ pub fn try_decrease_allowance(
 
     allowance.save(deps.storage, (owner.clone(), spender.clone()))?;
 
-    Ok(Response{
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::IncreaseAllowance {
-            spender,
-            owner,
-            allowance: allowance.amount
-        })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::IncreaseAllowance {
+        spender,
+        owner,
+        allowance: allowance.amount
+    })?))
 }
 
 pub fn try_transfer_from(
@@ -194,9 +186,5 @@ pub fn try_batch_send_from(
         )?;
     }
 
-    Ok(Response{
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BatchSendFrom { status: Success })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchSendFrom { status: Success })?))
 }

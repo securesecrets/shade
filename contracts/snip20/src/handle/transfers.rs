@@ -1,9 +1,11 @@
-use shade_protocol::c_std::{Api, Binary, CosmosMsg, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
+use shade_protocol::c_std::{Api, Binary, CosmosMsg, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary, MessageInfo};
 use shade_protocol::c_std::Uint128;
+use shade_protocol::Contract;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer, ReceiverHandleMsg};
 use shade_protocol::contract_interfaces::snip20::errors::transfer_disabled;
 use shade_protocol::contract_interfaces::snip20::manager::{Allowance, Balance, CoinInfo, Config, ContractStatusLevel, ReceiverHash};
 use shade_protocol::contract_interfaces::snip20::transaction_history::store_transfer;
+use shade_protocol::utils::ExecuteCallback;
 use shade_protocol::utils::generic_response::ResponseStatus::Success;
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 
@@ -55,11 +57,8 @@ pub fn try_transfer(
 ) -> StdResult<Response> {
     let denom = CoinInfo::load(deps.storage)?.symbol;
     try_transfer_impl(deps.storage, &info.sender, None, &recipient, amount, memo, denom, &env.block)?;
-    Ok(Response{
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Transfer { status: Success })?)
-    })
+
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Transfer { status: Success })?))
 }
 
 pub fn try_batch_transfer(
@@ -74,11 +73,7 @@ pub fn try_batch_transfer(
     for action in actions {
         try_transfer_impl(deps.storage, &sender, None, &action.recipient, action.amount, action.memo, denom.clone(), &block)?;
     }
-    Ok(Response{
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BatchTransfer { status: Success })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchTransfer { status: Success })?))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -101,7 +96,10 @@ fn try_add_receiver_api_callback(
     if let Some(hash) = receiver_hash {
         messages.push(
             ReceiverHandleMsg::new(sender, from, amount, memo, msg)
-                .to_cosmos_msg(hash.0, recipient, None)?
+                .to_cosmos_msg(&Contract{
+                    address: recipient,
+                    code_hash: hash.0
+                }, vec![])?
         );
     }
     Ok(())
@@ -164,11 +162,7 @@ pub fn try_send(
         &env.block
     )?;
 
-    Ok(Response{
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Send { status: Success })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Send { status: Success })?))
 }
 
 pub fn try_batch_send(
@@ -197,9 +191,5 @@ pub fn try_batch_send(
         )?;
     }
 
-    Ok(Response{
-        messages,
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BatchSend { status: Success })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchSend { status: Success })?))
 }

@@ -5,6 +5,7 @@ pub mod transfers;
 
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
+    MessageInfo,
     to_binary,
     Api,
     BankMsg,
@@ -80,14 +81,10 @@ pub fn try_redeem(
 
     store_redeem(deps.storage, &sender, amount, denom, &env.block)?;
 
-    Ok(Response {
-        messages: vec![CosmosMsg::Bank(BankMsg::Send {
-            from_address: env.contract.address,
-            to_address: sender,
-            amount: withdrawal_coins,
-        })],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Redeem { status: Success })?))
+    Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
+        to_address: sender.into(),
+        amount: withdrawal_coins,
+    })).set_data(to_binary(&HandleAnswer::Redeem { status: Success })?))
 }
 
 pub fn try_deposit(

@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary};
+use shade_protocol::c_std::{Api, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary, MessageInfo};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::errors::{minting_disabled, not_admin, not_minter};
