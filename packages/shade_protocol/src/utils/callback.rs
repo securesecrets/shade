@@ -141,7 +141,7 @@ pub trait ExecuteCallback: Serialize {
         sender: Addr,
         send_funds: &[Coin],
     ) -> AnyResult<AppResponse> where Self: Serialize + std::fmt::Debug  {
-        router.execute_contract(sender, contract.clone(), &self, send_funds)
+        router.execute_contract(sender, &contract, &self, send_funds)
     }
 }
 
