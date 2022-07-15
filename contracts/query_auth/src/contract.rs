@@ -1,16 +1,5 @@
 use crate::{handle, query};
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    DepsMut,
-    Response,
-    Querier,
-
-    StdError,
-    StdResult,
-    Storage,
-};
+use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Binary, Deps};
 use shade_protocol::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
     contract_interfaces::query_auth::{

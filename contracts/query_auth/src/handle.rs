@@ -1,14 +1,4 @@
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    DepsMut,
-    Response,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
+use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, Deps, MessageInfo};
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use shade_admin::admin::AuthorizedUsersResponse;
 use shade_protocol::{
@@ -26,7 +16,7 @@ use shade_protocol::{
 };
 use shade_protocol::utils::asset::Contract;
 
-fn user_authorized(deps: Deps, env: Env) -> StdResult<bool> {
+fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<bool> {
     let contract = Admin::load(deps.storage)?.0;
 
     let authorized_users: AuthorizedUsersResponse = shade_admin::admin::QueryMsg::GetAuthorizedUsers {
@@ -42,7 +32,7 @@ pub fn try_set_admin(
     info: MessageInfo,
     admin: Contract,
 ) -> StdResult<Response> {
-    if  !user_authorized(&deps, env)? {
+    if  !user_authorized(&deps.as_ref(), env, &info)? {
         return Err(StdError::generic_err("unauthorized"));
     }
 
@@ -57,7 +47,7 @@ pub fn try_set_run_state(
     info: MessageInfo,
     state: ContractStatus,
 ) -> StdResult<Response> {
-    if  !user_authorized(&deps, env)? {
+    if  !user_authorized(&deps.as_ref(), env, &info)? {
         return Err(StdError::generic_err("unauthorized"));
     }
 
@@ -74,7 +64,7 @@ pub fn try_create_viewing_key(
 ) -> StdResult<Response> {
     let seed = RngSeed::load(deps.storage)?.0;
 
-    let key = Key::generate(&env, seed.as_slice(), &entropy.as_ref());
+    let key = Key::generate(&info, &env, seed.as_slice(), &entropy.as_ref());
 
     HashedKey(key.hash()).save(deps.storage, info.sender)?;
 

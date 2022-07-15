@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdResult, Storage, Deps};
 use shade_protocol::{
     contract_interfaces::query_auth::{
         auth::{Key, PermitKey},
@@ -31,7 +31,7 @@ pub fn validate_permit(
     deps: Deps,
     permit: QueryPermit,
 ) -> StdResult<QueryAnswer> {
-    let user = permit.validate(&deps.api, None)?.as_Addr(None)?;
+    let user = permit.validate(deps.api, None)?.as_addr(None)?;
 
     Ok(QueryAnswer::ValidatePermit {
         user: user.clone(),

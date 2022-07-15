@@ -11,6 +11,7 @@ use shade_protocol::{
     },
     utils::storage::plus::ItemStorage,
 };
+use shade_protocol::utils::Query;
 
 pub fn config(
     deps: Deps
