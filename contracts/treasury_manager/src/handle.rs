@@ -83,6 +83,20 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     let config = config_r(&deps.storage).load()?;
     let asset = assets_r(&deps.storage).load(env.message.sender.to_string().as_bytes())?;
 
+    // Do nothing if its an adapter (claimed funds)
+    if let Some(adapter) = allocations_r(&deps.storage)
+        .load(env.message.sender.to_string().as_bytes())?
+        .iter()
+        .find(|a| a.contract.address == from) {
+            return Ok(HandleResponse {
+                messages: vec![],
+                log: vec![],
+                data: Some(to_binary(&HandleAnswer::Receive {
+                    status: ResponseStatus::Success,
+                })?),
+            });
+        }
+
     // Default to treasury if not sent by a holder
     let holder = match holders_r(&deps.storage).load()?.contains(&from) {
         true => from,
@@ -284,7 +298,7 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         Some(i) => i,
         None => {
             return Err(StdError::generic_err(
-                    format!("{} has no completed unbondings for {}",
+                    format!("{} has no unbondings for {}",
                              claimer, asset)
             ));
         }
@@ -342,8 +356,13 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
     }
     // Adjust unbonding amount
     holding.unbondings[unbonding_i].amount = (holding.unbondings[unbonding_i].amount - send_amount)?;
+    /*
+    panic!("saving claimed holding unbonding {} balance {}", 
+           holding.unbondings[unbonding_i].amount,
+           holding.balances[0].amount,
+       );
+    */
     holding_w(&mut deps.storage).save(&claimer.as_str().as_bytes(), &holding)?;
-
 
     //panic!("manager claim sending {}", send_amount);
 
