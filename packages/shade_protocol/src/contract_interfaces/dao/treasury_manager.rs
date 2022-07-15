@@ -7,6 +7,24 @@ use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
 
+pub mod storage {
+    use secret_storage_plus::{Map, Item};
+    use cosmwasm_std::HumanAddr;
+    use crate::contract_interfaces::snip20::helpers::Snip20Asset;
+
+    pub const CONFIG: Item<super::Config> = Item::new("config");
+    pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+    pub const SELF_ADDRESS: Item<HumanAddr> = Item::new("self_address");
+
+    pub const ASSET_LIST: Item<Vec<HumanAddr>> = Item::new("asset_list");
+    pub const ASSETS: Map<HumanAddr, Snip20Asset> = Map::new("assets");
+
+    pub const ALLOCATIONS: Map<HumanAddr, Vec<super::AllocationMeta>> = Map::new("allocations");
+    pub const HOLDERS: Item<Vec<super::HumanAddr>> = Item::new("holders");
+    pub const HOLDING: Map<HumanAddr, super::Holding> = Map::new("holding");
+    //pub const UNBONDINGS: Map<HumanAddr, Vec<super::Unbonding>> = Map::new("unbondings");
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {

@@ -21,6 +21,7 @@ pub static HOLDERS: &[u8] = b"holders";
 pub static HOLDER: &[u8] = b"holder";
 pub static UNBONDINGS: &[u8] = b"unbondings";
 
+/*
 pub fn config_w<S: Storage>(storage: &mut S) -> Singleton<S, treasury_manager::Config> {
     singleton(storage, CONFIG_KEY)
 }
@@ -96,3 +97,4 @@ pub fn unbondings_r<S: Storage>(storage: &S) -> ReadonlyBucket<S, Vec<treasury_m
 pub fn unbondings_w<S: Storage>(storage: &mut S) -> Bucket<S, Vec<treasury_manager::Unbonding>> {
     bucket(HOLDER, storage)
 }
+*/

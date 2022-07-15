@@ -8,12 +8,14 @@ use shade_protocol::{
             adapter,
             manager,
             treasury_manager::{
-                self
+                self,
+                storage::*,
             },
         },
     },
 };
 
+/*
 use crate::state::{
     allocations_r,
     asset_list_r,
@@ -24,12 +26,13 @@ use crate::state::{
     holding_r,
     holders_r,
 };
+*/
 
 pub fn config<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Config {
-        config: config_r(&deps.storage).load()?,
+        config: CONFIG.load(&deps.storage)?,
     })
 }
 
@@ -37,8 +40,8 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: HumanAddr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
-    let config = config_r(&deps.storage).load()?;
-    let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+    let config = CONFIG.load(&deps.storage)?;
+    let full_asset = match ASSETS.may_load(&deps.storage, asset)? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err(""));
@@ -48,8 +51,8 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     let allowance = allowance_query(
         &deps.querier,
         config.treasury,
-        self_address_r(&deps.storage).load()?,
-        viewing_key_r(&deps.storage).load()?,
+        SELF_ADDRESS.load(&deps.storage)?,
+        VIEWING_KEY.load(&deps.storage)?,
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),
@@ -62,14 +65,14 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
 
 pub fn reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: &HumanAddr,
+    asset: HumanAddr,
     holder: HumanAddr,
 ) -> StdResult<manager::QueryAnswer> {
-    if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+    if let Some(full_asset) = ASSETS.may_load(&deps.storage, asset)? {
         let reserves = balance_query(
             &deps.querier,
-            self_address_r(&deps.storage).load()?,
-            viewing_key_r(&deps.storage).load()?,
+            SELF_ADDRESS.load(&deps.storage)?,
+            VIEWING_KEY.load(&deps.storage)?,
             1,
             full_asset.contract.code_hash.clone(),
             full_asset.contract.address.clone(),
@@ -87,7 +90,7 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Assets {
-        assets: asset_list_r(&deps.storage).load()?,
+        assets: ASSET_LIST.load(&deps.storage)?,
     })
 }
 
@@ -96,7 +99,7 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Allocations {
-        allocations: match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+        allocations: match ALLOCATIONS.may_load(&deps.storage, asset)? {
             None => vec![],
             Some(a) => a,
         },
@@ -109,18 +112,18 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     holder: HumanAddr,
 ) -> StdResult<manager::QueryAnswer> {
 
-    if assets_r(&deps.storage).may_load(asset.to_string().as_bytes())?.is_none() {
+    if ASSETS.may_load(&deps.storage, asset.clone())?.is_none() {
         return Err(StdError::generic_err("Not an asset"));
     }
 
     //let allocations = allocations_r(&deps.storage).load(asset.to_string().as_bytes())?;
 
-    let _config = config_r(&deps.storage).load()?;
+    let _config = CONFIG.load(&deps.storage)?;
 
-    match holding_r(&deps.storage).may_load(&holder.as_str().as_bytes())? {
+    match HOLDING.may_load(&deps.storage, holder)? {
         Some(holder) => {
             Ok(manager::QueryAnswer::Unbonding {
-                amount: match holder.unbondings.iter().find(|u| u.token == asset) {
+                amount: match holder.unbondings.iter().find(|u| u.token == asset.clone()) {
                     Some(u) => u.amount,
                     None => Uint128::zero(),
                 }
@@ -138,13 +141,13 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     holder: HumanAddr,
 ) -> StdResult<manager::QueryAnswer> {
 
-    let full_asset = match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+    let full_asset = match ASSETS.may_load(&deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err("Not an asset"));
         }
     };
-    let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+    let allocations = match ALLOCATIONS.may_load(&deps.storage, asset.clone())? {
         Some(a) => a,
         None => { return Err(StdError::generic_err("Not an asset")); }
     };
@@ -152,8 +155,8 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
 
     let mut claimable = balance_query(
         &deps.querier,
-        self_address_r(&deps.storage).load()?,
-        viewing_key_r(&deps.storage).load()?,
+        SELF_ADDRESS.load(&deps.storage)?,
+        VIEWING_KEY.load(&deps.storage)?,
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),
@@ -170,7 +173,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     }
 
     //TODO other unbondings
-    match holding_r(&deps.storage).may_load(&holder.as_str().as_bytes())? {
+    match HOLDING.may_load(&deps.storage, holder)? {
         Some(holder) => {
             let unbonding = match holder.unbondings.iter().find(|u| u.token == asset) {
                 Some(u) => u.amount,
@@ -202,9 +205,9 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     holder: HumanAddr,
 ) -> StdResult<manager::QueryAnswer> {
 
-    if let Some(full_asset) = assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
-        let config = config_r(&deps.storage).load()?;
-        let allocations = match allocations_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+    if let Some(full_asset) = ASSETS.may_load(&deps.storage, asset.clone())? {
+        let config = CONFIG.load(&deps.storage)?;
+        let allocations = match ALLOCATIONS.may_load(&deps.storage, asset.clone())? {
             Some(a) => a,
             None => { return Err(StdError::generic_err("Not an asset")); }
         };
@@ -219,12 +222,12 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
         let mut balance = Uint128::zero();
         let mut unbonding = Uint128::zero();
 
-        match holding_r(&deps.storage).may_load(&holder.as_str().as_bytes())? {
+        match HOLDING.may_load(&deps.storage, holder)? {
             Some(h) => {
-                if let Some(u) = h.unbondings.iter().find(|u| u.token == asset) {
+                if let Some(u) = h.unbondings.iter().find(|u| u.token == asset.clone()) {
                     unbonding += u.amount;
                 }
-                if let Some(b) = h.balances.iter().find(|b| b.token == asset) {
+                if let Some(b) = h.balances.iter().find(|b| b.token == asset.clone()) {
                     balance += b.amount;
                 }
             }
@@ -235,8 +238,8 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
 
         let mut unbondable = balance_query(
             &deps.querier,
-            self_address_r(&deps.storage).load()?,
-            viewing_key_r(&deps.storage).load()?,
+            SELF_ADDRESS.load(&deps.storage)?,
+            VIEWING_KEY.load(&deps.storage)?,
             1,
             full_asset.contract.code_hash.clone(),
             full_asset.contract.address.clone(),
@@ -267,7 +270,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     holder: HumanAddr,
 ) -> StdResult<manager::QueryAnswer> {
 
-    match assets_r(&deps.storage).may_load(asset.to_string().as_bytes())? {
+    match ASSETS.may_load(&deps.storage, asset)? {
         Some(asset) => {
             /*
             let allocations = match allocations_r(&deps.storage).may_load(asset.contract.address.to_string().as_bytes())? {
@@ -276,7 +279,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
             };
             */
 
-            let holding = holding_r(&deps.storage).load(&holder.as_str().as_bytes())?;
+            let holding = HOLDING.load(&deps.storage, holder)?;
 
             Ok(manager::QueryAnswer::Balance {
                 amount: match holding.balances.iter().find(|u| u.token == asset.contract.address) {
@@ -294,7 +297,7 @@ pub fn holders<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Holders {
-        holders: holders_r(&deps.storage).load()?,
+        holders: HOLDERS.load(&deps.storage)?,
     })
 }
 
@@ -302,7 +305,7 @@ pub fn holding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     holder: HumanAddr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
-    match holding_r(&deps.storage).may_load(holder.as_str().as_bytes())? {
+    match HOLDING.may_load(&deps.storage, holder)? {
         Some(h) => Ok(treasury_manager::QueryAnswer::Holding { holding: h }),
         None => Err(StdError::generic_err("Not a holder")),
     }

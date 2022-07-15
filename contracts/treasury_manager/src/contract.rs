@@ -13,6 +13,7 @@ use shade_protocol::c_std::{
 };
 
 use shade_protocol::contract_interfaces::dao::treasury_manager::{
+    storage::*,
     Config,
     HandleMsg,
     InitMsg,
@@ -24,10 +25,12 @@ use shade_protocol::contract_interfaces::dao::treasury_manager::{
 use crate::{
     handle,
     query,
+    /*
     state::{
         asset_list_w, config_w, self_address_w, viewing_key_w,
         holders_w, holding_w,
     },
+    */
 };
 
 use shade_protocol::contract_interfaces::dao::manager;
@@ -38,17 +41,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
 
-    config_w(&mut deps.storage).save(&Config {
+    CONFIG.save(&mut deps.storage, &Config {
         admin: msg.admin.unwrap_or(env.message.sender.clone()),
         treasury: msg.treasury.clone(),
     })?;
 
-    viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
-    self_address_w(&mut deps.storage).save(&env.contract.address)?;
-    asset_list_w(&mut deps.storage).save(&Vec::new())?;
-    holders_w(&mut deps.storage).save(&vec![msg.treasury.clone()])?;
-    holding_w(&mut deps.storage).save(
-        msg.treasury.as_str().as_bytes(),
+    VIEWING_KEY.save(&mut deps.storage, &msg.viewing_key)?;
+    SELF_ADDRESS.save(&mut deps.storage, &env.contract.address)?;
+    ASSET_LIST.save(&mut deps.storage, &Vec::new())?;
+    HOLDERS.save(&mut deps.storage, &vec![msg.treasury.clone()])?;
+    HOLDING.save(&mut deps.storage,
+        msg.treasury,
         &Holding {
             balances: vec![],
             unbondings: vec![],
@@ -117,7 +120,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             manager::SubQueryMsg::Unbonding { asset, holder } => to_binary(&query::unbonding(deps, asset, holder)?),
             manager::SubQueryMsg::Unbondable { asset, holder } => to_binary(&query::unbondable(deps, asset, holder)?),
             manager::SubQueryMsg::Claimable { asset, holder } => to_binary(&query::claimable(deps, asset, holder)?),
-            manager::SubQueryMsg::Reserves { asset, holder } => to_binary(&query::reserves(deps, &asset, holder)?),
+            manager::SubQueryMsg::Reserves { asset, holder } => to_binary(&query::reserves(deps, asset, holder)?),
         }
     }
 }
