@@ -1,9 +1,3 @@
-#[cfg(feature = "admin")]
-pub mod admin {
-    use admin;
-    multi_derive::implement_multi!(AdminAuth, admin);
-}
-
 // #[cfg(feature = "mint")]
 // pub mod mint {
 //     use crate::multi_macro;

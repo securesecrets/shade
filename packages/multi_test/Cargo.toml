@@ -10,15 +10,15 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["admin"]
-admin = ["dep:admin"]
+default = []
+admin = ["shade-admin-multi-test"]
+snip20 = ["dep:snip20"]
 # mint = ["dep:mint"]
 # oracle = ["dep:oracle"]
 # mock_band= ["dep:mock_band"]
 # governance = ["dep:governance"]
 # snip20_staking = ["dep:spip_stkd_0"]
 # scrt_staking = ["dep:scrt_staking"]
-snip20 = ["dep:snip20"]
 # bonds = ["dep:bonds"]
 # query_auth = ["dep:query_auth"]
 # treasury = ["dep:treasury"]
@@ -40,4 +40,4 @@ snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 # treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
 # treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
-admin = { git = "https://github.com/securesecrets/shadeadmin", branch = "cosmwasm-v1-refactor", optional = true }
+shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "cosmwasm-v1-refactor", optional = true }

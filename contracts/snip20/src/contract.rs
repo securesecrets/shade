@@ -200,7 +200,7 @@ pub fn execute(
     )
 }
 
-pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         to_binary(&match msg {
             QueryMsg::TokenInfo {} => query::token_info(deps)?,
