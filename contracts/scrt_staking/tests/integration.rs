@@ -1,5 +1,5 @@
-use cosmwasm_math_compat as compat;
-use cosmwasm_std::{
+use shade_protocol::math_compat as compat;
+use shade_protocol::c_std::{
     to_binary,
     HumanAddr, Uint128, Coin, Decimal,
     Validator, Delegation,
@@ -20,8 +20,8 @@ use shade_protocol::{
 
 use contract_harness::harness::{
     scrt_staking::ScrtStaking,
-    snip20_reference_impl::Snip20ReferenceImpl as Snip20,
-    //snip20::Snip20,
+    //snip20_reference_impl::Snip20ReferenceImpl as Snip20,
+    snip20::Snip20,
 };
 
 use fadroma::{
@@ -39,6 +39,8 @@ fn basic_scrt_staking_integration(
     rewards: Uint128,
     expected_scrt_staking: Uint128,
 ) {
+
+    let viewing_key = "unguessable".to_string();
 
     let mut ensemble = ContractEnsemble::new(50);
 
@@ -82,7 +84,7 @@ fn basic_scrt_staking_integration(
                 code_hash: token.code_hash.clone(),
             },
             validator_bounds: None,
-            viewing_key: "viewing_key".to_string(),
+            viewing_key: viewing_key.clone(),
         },
         MockEnv::new(
             "admin",
@@ -99,6 +101,18 @@ fn basic_scrt_staking_integration(
         max_commission: Decimal::one(),
         max_change_rate: Decimal::one(),
     });
+
+    // set admin owner key
+    ensemble.execute(
+        &snip20::HandleMsg::SetViewingKey{
+            key: viewing_key.clone(),
+            padding: None,
+        },
+        MockEnv::new(
+            "admin", 
+            token.clone(),
+        ),
+    ).unwrap();
 
     if !deposit.is_zero() {
         let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
@@ -220,7 +234,11 @@ fn basic_scrt_staking_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Balance Post-Rewards");
+            if deposit.is_zero() {
+                assert_eq!(amount, Uint128::zero(), "Balance Post-Rewards");
+            } else {
+                assert_eq!(amount, deposit + rewards, "Balance Post-Rewards");
+            }
         },
         _ => assert!(false),
     };
@@ -238,7 +256,7 @@ fn basic_scrt_staking_integration(
         ),
     ).unwrap();
 
-    // reserves should be rewards
+    // reserves/rewards should be staked
     match ensemble.query(
         scrt_staking.address.clone(),
         &adapter::QueryMsg::Adapter(
@@ -327,6 +345,21 @@ fn basic_scrt_staking_integration(
         _ => assert!(false),
     };
 
+    // Claimable
+    match ensemble.query(
+        scrt_staking.address.clone(),
+        &adapter::QueryMsg::Adapter(
+            adapter::SubQueryMsg::Claimable {
+                asset: token.address.clone(),
+            }
+        )
+    ).unwrap() {
+        adapter::QueryAnswer::Claimable { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Claimable Pre unbond fast forward");
+        },
+        _ => assert!(false),
+    };
+
     ensemble.fast_forward_delegation_waits();
 
     // Claimable
@@ -339,7 +372,11 @@ fn basic_scrt_staking_integration(
         )
     ).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Claimable Post unbond fast forward");
+            if deposit.is_zero() {
+                assert_eq!(amount, Uint128::zero(), "Claimable post fast forward");
+            } else {
+                assert_eq!(amount, deposit + rewards, "Claimable post fast forwardd");
+            }
         },
         _ => assert!(false),
     };
@@ -385,6 +422,26 @@ fn basic_scrt_staking_integration(
             assert_eq!(amount, Uint128::zero(), "Balance Post Claim");
         },
         _ => assert!(false),
+    };
+
+    // ensure wrapped tokens were returned
+    match ensemble.query(
+        token.address.clone(),
+        &snip20::QueryMsg::Balance {
+            address: HumanAddr("admin".into()),
+            key: viewing_key.clone(),
+        },
+    ).unwrap() {
+        snip20::QueryAnswer::Balance { amount } => {
+            if deposit.is_zero() {
+                assert_eq!(amount.u128(), 0u128, "Final User balance");
+            } else {
+                assert_eq!(amount.u128(), deposit.u128() + rewards.u128(), "Final user balance");
+            }
+        },
+        _ => {
+            panic!("snip20 balance query failed");
+        }
     };
 }
 

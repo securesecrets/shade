@@ -4,6 +4,8 @@ use shade_protocol::c_std::{
     Extern, HumanAddr, StdError,
     Binary, StdResult, HandleResponse, Env,
     InitResponse, Uint128,
+    Coin, Decimal,
+    Validator,
 };
 
 use shade_protocol::{
@@ -32,7 +34,7 @@ use contract_harness::harness::{
     //snip20::Snip20,
 };
 
-use shade_protocol::fadroma::{
+use fadroma::{
     core::ContractLink,
     ensemble::{
        MockEnv,

@@ -59,7 +59,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     Ok(InitResponse {
         messages: vec![
             set_viewing_key_msg(
-                viewing_key_r(&deps.storage).load()?,
+                msg.viewing_key,
                 None,
                 1,
                 config.sscrt.code_hash.clone(),

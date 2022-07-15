@@ -15,14 +15,14 @@ use cosmwasm_std::{
 };
 
 use secret_toolkit::snip20::{send_msg, balance_query, set_viewing_key_msg, register_receive_msg};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
     contract_interfaces::dao::adapter,
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
-    }
+    },
+    schemars::JsonSchema,
 };
 use secret_storage_plus::Item; 
 
@@ -37,7 +37,23 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    Receive {
+        sender: HumanAddr,
+        from: HumanAddr,
+        amount: Uint128,
+        memo: Option<Binary>,
+        msg: Option<Binary>,
+    },
+    //RegisterAsset { token: Contract },
+    //CompleteUnbond { token: HumanAddr, amount: Uint128 },
     Adapter(adapter::SubHandleMsg),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryMsg {
+    Config,
+    Adapter(adapter::SubQueryMsg),
 }
 
 const viewing_key: String = "jUsTfOrTeStInG".into();
@@ -45,6 +61,7 @@ const viewing_key: String = "jUsTfOrTeStInG".into();
 const CONFIG: Item<Config> = Item::new("config");
 const ADDRESS: Item<HumanAddr> = Item::new("address");
 const BLOCK: Item<u64> = Item::new("block");
+const REWARDS: Item<Uint128> = Item::new("rewards");
 
 // (amount, block)
 const UNBONDINGS: Item<Vec<(Uint128, Uint128)>> = Item::new("unbondings");
@@ -63,13 +80,24 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     Ok(InitResponse {
         messages: vec![
             //TODO
-            //set_viewing_key_msg(),
-            //register_receive_msg(),
+            set_viewing_key_msg(
+                viewing_key,
+                None,
+                256,
+                token.code_hash.clone(),
+                token.address.clone(),
+            )?,
+            register_receive_msg(
+                env.contract_code_hash.clone(),
+                None,
+                256,
+                token.code_hash.clone(),
+                token.address.clone(),
+            )?,
         ],
         log: vec![],
     })
 }
-
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -81,6 +109,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     BLOCK.save(&mut deps.storage, &env.block.height)?;
 
     match msg {
+        HandleMsg::Receive {
+            sender, from, amount,
+            memo, msg,
+        } => {
+            if env.message.sender != config.token.address {
+                return Err(StdError::generic_err("Unrecognized Asset"));
+            }
+
+            /*
+            match from_binary(&msg)? {
+                // add rewards
+            }
+            */
+        },
         adapter::HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {
                 if asset != config.token.address {
@@ -108,7 +150,16 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 let mut messages = vec![];
 
                 if config.unbond_blocks.is_zero() {
-                    //TODO messages.push(send_msg()?);
+                    send_msg(
+                        config.owner.clone(),
+                        amount,
+                        None,
+                        None,
+                        None,
+                        1,
+                        full_asset.contract.code_hash.clone(),
+                        full_asset.contract.address.clone(),
+                    )?
                 }
                 else {
                     unbondings.push((amount, env.block.height));
@@ -162,12 +213,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum QueryMsg {
-    Config,
-    Adapter(adapter::SubQueryMsg),
-}
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -175,6 +220,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
 
     let config = CONFIG.load(&deps.storage)?;
+
     to_binary(&match msg {
         QueryMsg::Config => config,
         QueryMsg::Adapter(adapter) => match adapter {
@@ -200,7 +246,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 adapter::QueryAnswer::Unbonding { 
                     amount: UNBONDINGS.load(&deps.storage)?
                         .iter()
-                        .map(|(amount, block)| -> {
+                        .map(|(amount, block)| {
                             if BLOCK.load(&deps.storage)? - block >= config.unbond_blocks {
                                 Uint128::zero()
                             }
@@ -215,7 +261,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 adapter::QueryAnswer::Claimable { 
                     amount: UNBONDINGS.load(&deps.storage)?
                         .iter()
-                        .map(|(amount, block)| -> {
+                        .map(|(amount, block)| {
                             if BLOCK.load(&deps.storage)? - block >= config.unbond_blocks {
                                 amount
                             }

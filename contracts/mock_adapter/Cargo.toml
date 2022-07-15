@@ -36,3 +36,4 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 ] }
 #schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0" }
