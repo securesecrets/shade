@@ -28,7 +28,7 @@ members = [
   # - Adapters
   "contracts/scrt_staking",
   "contracts/rewards_emission",
-  "contracts/lp_shade_swap",
+  #"contracts/lp_shade_swap",
 
   "contracts/snip20_staking",
   
