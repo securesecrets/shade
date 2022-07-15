@@ -141,12 +141,14 @@ fn single_asset_portion_manager_integration(
         )
     ).unwrap().instance;
 
+    /*
     ensemble.add_validator(Validator {
         address: HumanAddr("validator".into()),
         commission: Decimal::zero(),
         max_commission: Decimal::one(),
         max_change_rate: Decimal::one(),
     });
+    */
 
     // Register treasury assets
     ensemble.execute(
@@ -468,7 +470,7 @@ fn single_asset_portion_manager_integration(
         _ => assert!(false),
     };
 
-    ensemble.fast_forward_delegation_waits();
+    //ensemble.fast_forward_delegation_waits();
 
     // scrt staking unbonding
     match ensemble.query(
@@ -701,6 +703,7 @@ macro_rules! single_asset_portion_manager_tests {
     }
 }
 
+/*
 single_asset_portion_manager_tests! {
     single_asset_portion_manager_0: (
         Uint128(100), // deposit 
@@ -712,7 +715,6 @@ single_asset_portion_manager_tests! {
         Uint128(0), // manager 0
         Uint128(90), // scrt_staking 90
     ),
-    /*
     single_asset_portion_manager_1: (
         Uint128(100), // deposit 
         Uint128(9 * 10u128.pow(17)), // manager allowance 90%
@@ -723,5 +725,5 @@ single_asset_portion_manager_tests! {
         Uint128(0), // manager 0
         Uint128(45), // scrt_staking 90
     ),
-    */
 }
+*/

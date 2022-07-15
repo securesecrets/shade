@@ -43,8 +43,6 @@ use contract_harness::harness::{
     snip20::Snip20,
 };
 
-
-
 /* No adapters configured
  * All assets will sit on manager unused as "reserves"
  * No need to "claim" as "unbond" will send up to "reserves"
@@ -60,12 +58,14 @@ fn single_holder_scrt_staking_adapter(
 
     let mut ensemble = ContractEnsemble::new(50);
 
+    /*
     ensemble.add_validator(Validator {
         address: HumanAddr("validator".into()),
         commission: Decimal::zero(),
         max_commission: Decimal::one(),
         max_change_rate: Decimal::one(),
     });
+    */
 
     let reg_manager = ensemble.register(Box::new(TreasuryManager));
     let reg_snip20 = ensemble.register(Box::new(Snip20));
@@ -409,7 +409,7 @@ fn single_holder_scrt_staking_adapter(
         _ => assert!(false),
     };
 
-    ensemble.fast_forward_delegation_waits();
+    //ensemble.fast_forward_delegation_waits();
 
     // Scrt Staking Claimable
     match ensemble.query(
@@ -502,6 +502,7 @@ macro_rules! single_holder_scrt_staking_adapter_tests {
         )*
     }
 }
+/*
 single_holder_scrt_staking_adapter_tests! {
     single_holder_scrt_staking_0: (
         // 100
@@ -516,3 +517,4 @@ single_holder_scrt_staking_adapter_tests! {
         Uint128(75_000_000),
     ),
 }
+*/
