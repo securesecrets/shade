@@ -9,7 +9,7 @@ use crate::c_std::{Binary, Env, Addr, StdError, StdResult, Storage};
 use crate::query_authentication::permit::Permit;
 
 use secret_toolkit::crypto::sha_256;
-use crate::utils::{ExecuteCallback, InstantianteCallback, Query};
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{invalid_decimals, invalid_name_format, invalid_symbol_format};
@@ -179,7 +179,7 @@ impl InitConfig {
     }
 }
 
-impl InstantianteCallback for InstantiateMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

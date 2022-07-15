@@ -5,7 +5,7 @@ use crate::{
 use crate::c_std::Uint128;
 use crate::c_std::{Binary, Addr};
 
-use crate::utils::{ExecuteCallback, InstantianteCallback, Query};
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 use std::convert::TryFrom;
 
@@ -63,7 +63,7 @@ pub struct InstantiateMsg {
     pub limit: Option<Limit>,
 }
 
-impl InstantianteCallback for InstantiateMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

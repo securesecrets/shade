@@ -3,7 +3,7 @@ use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
 
 use crate::contract_interfaces::dao::adapter;
 
-use crate::utils::{ExecuteCallback, InstantianteCallback, Query};
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 #[cw_serde]
@@ -33,7 +33,7 @@ pub struct InstantiateMsg {
     pub viewing_key: String,
 }
 
-impl InstantianteCallback for InstantiateMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

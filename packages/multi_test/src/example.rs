@@ -7,7 +7,7 @@ use shade_admin::{
 use shade_protocol::{
     c_std::{Addr, StdResult, ContractInfo},
     multi_test::App, 
-    utils::{InstantianteCallback, ExecuteCallback, Query, MultiTestable}
+    utils::{InstantiateCallback, ExecuteCallback, Query, MultiTestable}
 };
 
 #[test]

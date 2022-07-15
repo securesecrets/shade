@@ -16,7 +16,7 @@ use crate::c_std::{
     Validator,
 };
 
-use crate::utils::{ExecuteCallback, InstantianteCallback, Query};
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 #[cw_serde]

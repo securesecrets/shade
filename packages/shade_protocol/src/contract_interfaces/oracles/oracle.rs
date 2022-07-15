@@ -1,7 +1,7 @@
 use crate::c_std::Uint128;
 use crate::c_std::Addr;
 
-use crate::utils::{ExecuteCallback, InstantianteCallback, Query};
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 use crate::{
@@ -31,7 +31,7 @@ pub struct InstantiateMsg {
     pub sscrt: Contract,
 }
 
-impl InstantianteCallback for InstantiateMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

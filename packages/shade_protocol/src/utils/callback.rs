@@ -11,7 +11,7 @@ use super::space_pad;
 ///
 /// This trait requires specifying a padding block size and provides a method to create the
 /// CosmosMsg used to instantiate a contract
-pub trait InstantianteCallback: Serialize {
+pub trait InstantiateCallback: Serialize {
     /// pad the message to blocks of this size
     const BLOCK_SIZE: usize;
 
@@ -229,7 +229,7 @@ mod tests {
         pub f2: i8,
     }
 
-    impl InstantianteCallback for FooInit {
+    impl InstantiateCallback for FooInit {
         const BLOCK_SIZE: usize = 256;
     }
 
