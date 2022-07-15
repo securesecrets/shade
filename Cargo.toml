@@ -37,6 +37,7 @@ members = [
   "contracts/mock_secretswap_pair",
   "contracts/mock_sienna_pair",
   "contracts/mock_adapter",
+  "contracts/mock_shadeswap_pair",
 
   # Tools
   "tools/doc2book",

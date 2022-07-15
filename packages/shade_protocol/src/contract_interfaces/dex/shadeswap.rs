@@ -41,7 +41,10 @@ pub struct Simulation {
 #[serde(rename_all = "snake_case")]
 pub enum PairQuery {
     PairInfo,
-    GetEstimatedPrice { offer: TokenAmount },
+    GetEstimatedPrice {
+        offer: TokenAmount,
+        address: Option<HumanAddr>,
+    },
 }
 
 impl Query for PairQuery {

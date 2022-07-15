@@ -19,7 +19,11 @@
 
 use contract_harness::harness::{
     admin::Admin,
+    mint::Mint,
+    mock_band::MockBand,
     mock_secretswap_pair::MockSecretswapPair,
+    mock_shadeswap_pair::MockShadeswapPair,
+    oracle::Oracle,
     sky::Sky,
     snip20::Snip20,
 };
@@ -45,7 +49,7 @@ use shade_protocol::{
         StdResult,
     },
     contract_interfaces::{
-        dex::{self, dex::Dex, shadeswap},
+        dex::{self, dex::Dex, secretswap, shadeswap},
         sky,
         snip20,
     },
@@ -60,6 +64,10 @@ fn test_ensemble_sky(swap_amount: Uint128) {
     let reg_admin = ensemble.register(Box::new(Admin));
     let reg_sky = ensemble.register(Box::new(Sky));
     let reg_mock_secretswap = ensemble.register(Box::new(MockSecretswapPair));
+    let reg_mock_shadeswap = ensemble.register(Box::new(MockShadeswapPair));
+    let reg_oracle = ensemble.register(Box::new(Oracle));
+    let reg_mint = ensemble.register(Box::new(Mint));
+    let reg_band = ensemble.register(Box::new(MockBand));
     //let reg_mock_shdswp = ensemble.register(Box::new(MockShdSwp));
     //let reg_shadeswap_exchange = ensemble.register(Box::new(ShadeswapExchange));
     //let reg_shadeswap_factory = ensemble.register(Box::new(ShadeswapFactory));
@@ -367,7 +375,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         _ => assert!(false),
     }
 
-    println!("deploying shadeswap pair");
+    println!("deploying secretswap pair");
     let scrtswp = ensemble
         .instantiate(
             reg_mock_secretswap.id,
@@ -380,6 +388,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
                     address: silk.instance.address.clone(),
                     code_hash: silk.instance.code_hash.clone(),
                 },
+                fee_rate: Decimal::percent(1),
             },
             MockEnv::new("admin", ContractLink {
                 address: HumanAddr("scrtswp".into()),
@@ -404,6 +413,361 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         dex: Dex::SecretSwap,
     };
     assert!(scrtswp_pair_shd_silk.clone().validate_pair().unwrap());
+
+    println!("Sending secretswp silk shd pair some money");
+    ensemble
+        .execute(
+            &snip20::HandleMsg::Transfer {
+                recipient: scrtswp.instance.address.clone(),
+                amount: Uint128::new(10000000000000),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new("admin", shd.instance.clone()),
+        )
+        .unwrap();
+    ensemble
+        .execute(
+            &snip20::HandleMsg::Transfer {
+                recipient: scrtswp.instance.address.clone(),
+                amount: Uint128::new(1000000000000),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new("admin", silk.instance.clone()),
+        )
+        .unwrap();
+
+    println!("test secretswap swapsimulation query");
+    let query_res = ensemble
+        .query(
+            scrtswp.instance.address.clone(),
+            &secretswap::PairQuery::Simulation {
+                offer_asset: secretswap::Asset {
+                    amount: Uint128::new(100000000),
+                    info: secretswap::AssetInfo {
+                        token: secretswap::Token {
+                            contract_addr: shd.instance.address.clone(),
+                            token_code_hash: shd.instance.code_hash.clone(),
+                            viewing_key: "".to_string(),
+                        },
+                    },
+                },
+            },
+        )
+        .unwrap();
+    let swp_result = match query_res {
+        secretswap::SimulationResponse { return_amount, .. } => return_amount,
+        _ => Uint128::zero(),
+    };
+    assert_eq!(
+        swp_result.clone(),
+        dex::dex::pool_take_amount(
+            Uint128::new(100000000),
+            Uint128::new(10000000000000),
+            Uint128::new(1000000000000)
+        )
+        .checked_sub(
+            dex::dex::pool_take_amount(
+                Uint128::new(100000000),
+                Uint128::new(10000000000000),
+                Uint128::new(1000000000000)
+            ) * Decimal::percent(1)
+        )
+        .unwrap()
+    );
+
+    let old_shd_bal =
+        get_snip20_balance(&mut ensemble, shd.instance.address.clone(), "admin".into());
+    let old_silk_bal =
+        get_snip20_balance(&mut ensemble, silk.instance.address.clone(), "admin".into());
+    println!(
+        "Shd before swap: {}, Silk before swap: {}",
+        old_shd_bal, old_silk_bal
+    );
+
+    println!("test secretswap swap");
+    ensemble
+        .execute(
+            &snip20::HandleMsg::Send {
+                recipient: scrtswp.instance.address.clone(),
+                recipient_code_hash: Some(scrtswp.instance.code_hash.clone()),
+                amount: Uint128::new(100000000),
+                msg: Some(
+                    to_binary(&mock_secretswap_pair::contract::Snip20Handle::CallbackMsg {
+                        swap: secretswap::CallbackSwap {
+                            expected_return: Uint128::zero(),
+                        },
+                    })
+                    .unwrap(),
+                ),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new("admin", shd.instance.clone()),
+        )
+        .unwrap();
+
+    let new_shd_bal =
+        get_snip20_balance(&mut ensemble, shd.instance.address.clone(), "admin".into());
+    let new_silk_bal =
+        get_snip20_balance(&mut ensemble, silk.instance.address.clone(), "admin".into());
+    println!(
+        "Shd after swap: {}, Silk after swap: {}",
+        new_shd_bal, new_silk_bal
+    );
+
+    assert_eq!(
+        new_shd_bal,
+        old_shd_bal.checked_sub(Uint128::new(100000000)).unwrap()
+    );
+    assert_eq!(new_silk_bal, old_silk_bal.checked_add(swp_result).unwrap());
+
+    println!("deploying shadeswap pair");
+    let shdswp = ensemble
+        .instantiate(
+            reg_mock_shadeswap.id,
+            &mock_shadeswap_pair::contract::InitMsg {
+                token_0: Contract {
+                    address: shd.instance.address.clone(),
+                    code_hash: shd.instance.code_hash.clone(),
+                },
+                token_1: Contract {
+                    address: silk.instance.address.clone(),
+                    code_hash: silk.instance.code_hash.clone(),
+                },
+                fee_rate: Decimal::percent(1),
+                whitelist: sky.instance.address.clone(),
+            },
+            MockEnv::new("admin", ContractLink {
+                address: HumanAddr("shdswp".into()),
+                code_hash: reg_mock_shadeswap.code_hash.clone(),
+            }),
+        )
+        .unwrap();
+    println!("here");
+    let shdswp_pair_shd_silk = sky::cycles::ArbPair {
+        pair_contract: Some(Contract {
+            address: shdswp.instance.address.clone(),
+            code_hash: shdswp.instance.code_hash.clone(),
+        }),
+        mint_info: None,
+        token0: Contract {
+            address: shd.instance.address.clone(),
+            code_hash: shd.instance.code_hash.clone(),
+        },
+        token1: Contract {
+            address: silk.instance.address.clone(),
+            code_hash: silk.instance.code_hash.clone(),
+        },
+        dex: Dex::ShadeSwap,
+    };
+    assert!(shdswp_pair_shd_silk.clone().validate_pair().unwrap());
+
+    println!("Sending shadeswp silk shd pair some money");
+    ensemble
+        .execute(
+            &snip20::HandleMsg::Transfer {
+                recipient: shdswp.instance.address.clone(),
+                amount: Uint128::new(5000000000000),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new("admin", shd.instance.clone()),
+        )
+        .unwrap();
+    ensemble
+        .execute(
+            &snip20::HandleMsg::Transfer {
+                recipient: shdswp.instance.address.clone(),
+                amount: Uint128::new(1500000000000),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new("admin", silk.instance.clone()),
+        )
+        .unwrap();
+
+    println!("test shdswap swapsimulation query");
+    let query_res = ensemble
+        .query(
+            shdswp.instance.address.clone(),
+            &shadeswap::PairQuery::GetEstimatedPrice {
+                offer: shadeswap::TokenAmount {
+                    token: shadeswap::TokenType::CustomToken {
+                        contract_addr: shd.instance.address.clone(),
+                        token_code_hash: shd.instance.code_hash.clone(),
+                    },
+                    amount: Uint128::new(100000000),
+                },
+                address: Some(sky.instance.address.clone()),
+            },
+        )
+        .unwrap();
+    let swp_result = match query_res {
+        shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => estimated_price,
+        _ => Uint128::zero(),
+    };
+    assert_eq!(
+        swp_result.clone(),
+        dex::dex::pool_take_amount(
+            Uint128::new(100000000),
+            Uint128::new(15000000000000),
+            Uint128::new(500000000000)
+        )
+    );
+
+    let old_shd_bal =
+        get_snip20_balance(&mut ensemble, shd.instance.address.clone(), "admin".into());
+    let old_silk_bal =
+        get_snip20_balance(&mut ensemble, silk.instance.address.clone(), "admin".into());
+    println!(
+        "Shd before swap: {}, Silk before swap: {}",
+        old_shd_bal, old_silk_bal
+    );
+
+    println!("test shadeswap swap");
+    ensemble
+        .execute(
+            &snip20::HandleMsg::Send {
+                recipient: shdswp.instance.address.clone(),
+                recipient_code_hash: Some(shdswp.instance.code_hash.clone()),
+                amount: Uint128::new(100000000),
+                msg: Some(
+                    to_binary(&shadeswap::SwapTokens {
+                        to: None,
+                        expected_return: Some(Uint128::zero()),
+                        router_link: None,
+                        callback_signature: None,
+                    })
+                    .unwrap(),
+                ),
+                memo: None,
+                padding: None,
+            },
+            MockEnv::new("admin", shd.instance.clone()),
+        )
+        .unwrap();
+
+    let new_shd_bal =
+        get_snip20_balance(&mut ensemble, shd.instance.address.clone(), "admin".into());
+    let new_silk_bal =
+        get_snip20_balance(&mut ensemble, silk.instance.address.clone(), "admin".into());
+    println!(
+        "Shd after swap: {}, Silk after swap: {}",
+        new_shd_bal, new_silk_bal
+    );
+
+    assert_eq!(
+        new_shd_bal,
+        old_shd_bal.checked_sub(Uint128::new(100000000)).unwrap()
+    );
+    assert_eq!(new_silk_bal, old_silk_bal.checked_add(swp_result).unwrap());
+
+    /*    println!("set up mint contracts");
+    let band = ensemble
+        .instantiate(
+            reg_band.id,
+            &shade_protocol::contract_interfaces::oracles::band::InitMsg {},
+            MockEnv::new("admin", ContractLink {
+                address: HumanAddr("band".into()),
+                code_hash: reg_band.code_hash.clone(),
+            }),
+        )
+        .unwrap()
+        .instance;
+
+    let oracle = ensemble
+        .instantiate(
+            reg_oracle.id,
+            &shade_protocol::contract_interfaces::oracles::oracle::InitMsg {
+                admin: Some(HumanAddr("admin".into())),
+                band: Contract {
+                    address: band.address.clone(),
+                    code_hash: band.code_hash.clone(),
+                },
+                sscrt: Contract {
+                    address: sscrt.instance.address.clone(),
+                    code_hash: sscrt.instance.code_hash.clone(),
+                },
+            },
+            MockEnv::new("admin", ContractLink {
+                address: HumanAddr("oracle".into()),
+                code_hash: reg_oracle.code_hash.clone(),
+            }),
+        )
+        .unwrap()
+        .instance;
+
+    let silk_mint = ensemble
+        .instantiate(
+            reg_mint.id,
+            &shade_protocol::contract_interfaces::mint::mint::InitMsg {
+                admin: Some(HumanAddr("admin".into())),
+                oracle: Contract {
+                    address: oracle.address.clone(),
+                    code_hash: oracle.code_hash.clone(),
+                },
+                native_asset: Contract {
+                    address: shd.instance.address.clone(),
+                    code_hash: shd.instance.code_hash.clone(),
+                },
+                peg: None,
+                treasury: HumanAddr("admin".into()),
+                secondary_burn: None,
+                limit: None,
+            },
+            MockEnv::new("admin", ContractLink {
+                address: HumanAddr("mint".into()),
+                code_hash: reg_mint.code_hash.clone(),
+            }),
+        )
+        .unwrap()
+        .instance;
+    let shd_mint = ensemble
+        .instantiate(
+            reg_mint.id,
+            &shade_protocol::contract_interfaces::mint::mint::InitMsg {
+                admin: Some(HumanAddr("admin".into())),
+                oracle: Contract {
+                    address: oracle.address.clone(),
+                    code_hash: oracle.code_hash.clone(),
+                },
+                native_asset: Contract {
+                    address: shd.instance.address.clone(),
+                    code_hash: shd.instance.code_hash.clone(),
+                },
+                peg: None,
+                treasury: HumanAddr("admin".into()),
+                secondary_burn: None,
+                limit: None,
+            },
+            MockEnv::new("admin", ContractLink {
+                address: HumanAddr("mint".into()),
+                code_hash: reg_mint.code_hash,
+            }),
+        )
+        .unwrap()
+        .instance;*/
+
+    assert!(false);
+}
+
+pub fn get_snip20_balance(
+    ensemble: &mut ContractEnsemble,
+    snip20_addr: HumanAddr,
+    balance_owner: HumanAddr,
+) -> Uint128 {
+    match ensemble
+        .query(snip20_addr, &snip20::QueryMsg::Balance {
+            address: balance_owner,
+            key: String::from("key"),
+        })
+        .unwrap()
+    {
+        snip20::QueryAnswer::Balance { amount } => amount,
+        _ => Uint128::zero(),
+    }
 }
 
 macro_rules! sky_int_tests {

@@ -6,7 +6,17 @@ use crate::{
     utils::asset::Contract,
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Api, CosmosMsg, Extern, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{
+    to_binary,
+    Api,
+    CosmosMsg,
+    Extern,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+};
 use schemars::JsonSchema;
 use secret_toolkit::{snip20::send_msg, utils::Query};
 use serde::{Deserialize, Serialize};
@@ -27,6 +37,7 @@ impl ArbPair {
         self,
         deps: &Extern<S, A, Q>,
         offer: Offer,
+        address: Option<HumanAddr>,
     ) -> StdResult<Uint128> {
         let mut swap_result = Uint128::zero();
         match self.dex {
@@ -82,6 +93,7 @@ impl ArbPair {
                         },
                         amount: offer.amount,
                     },
+                    address,
                 }
                 .query(
                     &deps.querier,

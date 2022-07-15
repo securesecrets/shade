@@ -110,9 +110,11 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     for arb_pair in cycles[i].pair_addrs.clone() {
         // simulate swap will run a query with respect to which dex or minting that the pair says
         // it is
-        let estimated_return = arb_pair
-            .clone()
-            .simulate_swap(&deps, current_offer.clone())?;
+        let estimated_return = arb_pair.clone().simulate_swap(
+            &deps,
+            current_offer.clone(),
+            Some(SelfAddr::load(&deps.storage)?.0),
+        )?;
         swap_amounts.push(estimated_return.clone());
         // set up the next offer with the other token contract in the pair and the expected return
         // from the last query
@@ -153,9 +155,11 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     // this is a fancy way of iterating through a vec in reverse
     for arb_pair in cycles[i].pair_addrs.clone().iter().rev() {
         // get the estimated return from the simulate swap function
-        let estimated_return = arb_pair
-            .clone()
-            .simulate_swap(&deps, current_offer.clone())?;
+        let estimated_return = arb_pair.clone().simulate_swap(
+            &deps,
+            current_offer.clone(),
+            Some(SelfAddr::load(&deps.storage)?.0),
+        )?;
         swap_amounts.push(estimated_return.clone());
         // set the current offer to the other asset we are swapping into
         if current_offer.asset.code_hash.clone() == arb_pair.token0.code_hash.clone() {
