@@ -284,8 +284,6 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    //panic!("manager claim from unbonding amount {}", holding.unbondings[unbonding_i].amount);
-
     let reserves = balance_query(
         &deps.querier,
         SELF_ADDRESS.load(&deps.storage)?,
@@ -630,7 +628,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
         }
 
         else {
-            //panic!("reducing balance {} by unbonding {}", holding.balances[balance_i].amount, amount);
             holding.balances[balance_i].amount = (holding.balances[balance_i].amount - amount)?;
         }
 
@@ -809,7 +806,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                                           allocations[i].contract.clone())?;
 
                     if unbond_amount > unbondable {
-                        //panic!("unbonding unbondable {} from adapter", unbondable);
                         messages.push(
                             adapter::unbond_msg(
                                 asset.clone(),
@@ -820,7 +816,6 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                         unbond_amount = (unbond_amount - unbondable)?;
                     }
                     else {
-                        //panic!("unbonding unbond_amount {} from adapter", unbond_amount);
                         messages.push(
                             adapter::unbond_msg(
                                 asset.clone(),

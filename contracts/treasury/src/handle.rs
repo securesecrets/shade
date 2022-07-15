@@ -659,7 +659,6 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
             )?;
 
         if claimable > Uint128::zero() {
-            //panic!("claiming {} from manager", claimable);
             messages.push(
                 manager::claim_msg(
                     asset.clone(),
@@ -669,38 +668,6 @@ pub fn claim<S: Storage, A: Api, Q: Querier>(
             claimed += claimable;
         }
     }
-    /*
-    for allowance in allowances {
-        match allowance {
-            Allowance::Amount { .. } => {
-            }
-            Allowance::Portion { spender, .. } => {
-                if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
-                    //assert!(false, "claimable query to manager");
-                    let claimable =
-                        manager::claimable_query(
-                            &deps,
-                            &asset.clone(),
-                            self_address.clone(),
-                            manager.contract.clone()
-                        )?;
-                    //assert!(false, "ugh");
-
-                    if claimable > Uint128::zero() {
-                        assert!(false, "claiming {} from manager", claimable);
-                        messages.push(
-                            manager::claim_msg(
-                                asset.clone(),
-                                manager.contract.clone()
-                            )?
-                        );
-                        claimed += claimable;
-                    }
-                }
-            }
-        }
-    }
-    */
 
     Ok(HandleResponse {
         messages,

@@ -272,12 +272,6 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
     match ASSETS.may_load(&deps.storage, asset)? {
         Some(asset) => {
-            /*
-            let allocations = match allocations_r(&deps.storage).may_load(asset.contract.address.to_string().as_bytes())? {
-                Some(a) => a,
-                None => { return Err(StdError::generic_err("Not an asset")); }
-            };
-            */
 
             let holding = HOLDING.load(&deps.storage, holder)?;
 
