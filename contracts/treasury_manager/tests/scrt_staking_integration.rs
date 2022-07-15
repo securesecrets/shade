@@ -25,7 +25,15 @@ use shade_protocol::{
         to_binary, HumanAddr, Uint128,
         Decimal, Validator,
         Coin,
-    }
+    },
+    fadroma::{
+        core::ContractLink,
+        ensemble::{
+           MockEnv,
+           ContractHarness,
+           ContractEnsemble,
+        },
+    },
 };
 
 use contract_harness::harness::{
@@ -35,14 +43,6 @@ use contract_harness::harness::{
     snip20::Snip20,
 };
 
-use fadroma::{
-    core::ContractLink,
-    ensemble::{
-       MockEnv,
-       ContractHarness,
-       ContractEnsemble,
-    },
-};
 
 
 /* No adapters configured

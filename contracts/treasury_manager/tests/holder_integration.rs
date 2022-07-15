@@ -18,21 +18,18 @@ use shade_protocol::{
     utils::{
         asset::Contract,
     },
+    fadroma::{
+        core::ContractLink,
+        ensemble::{
+           MockEnv, 
+           ContractHarness, ContractEnsemble,
+        },
+    },
 };
 
 use contract_harness::harness::{
     treasury_manager::TreasuryManager,
     snip20_reference_impl::Snip20ReferenceImpl as Snip20,
-};
-
-use fadroma::{
-    core::{
-        ContractLink,
-    },
-    ensemble::{
-       MockEnv, 
-       ContractHarness, ContractEnsemble,
-    },
 };
 
 

@@ -24,6 +24,14 @@ use shade_protocol::{
     utils::{
         asset::Contract,
     },
+    fadroma::{
+        core::ContractLink,
+        ensemble::{
+           MockEnv,
+           ContractHarness,
+           ContractEnsemble,
+        },
+    },
 };
 
 use contract_harness::harness::{
@@ -32,15 +40,6 @@ use contract_harness::harness::{
     scrt_staking::ScrtStaking,
     snip20_reference_impl::Snip20ReferenceImpl as Snip20,
     //snip20::Snip20,
-};
-
-use fadroma::{
-    core::ContractLink,
-    ensemble::{
-       MockEnv,
-       ContractHarness,
-       ContractEnsemble,
-    },
 };
 
 // Add other adapters here as they come
