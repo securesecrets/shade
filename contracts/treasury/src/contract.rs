@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    debug_print,
+
     to_binary,
     Api,
     Binary,
@@ -46,7 +46,7 @@ pub fn init(
     managers_w(deps.storage).save(&Vec::new())?;
     //account_list_w(deps.storage).save(&Vec::new())?;
 
-    debug_print!("Contract was initialized by {}", info.sender);
+    deps.api.debug("Contract was initialized by {}", info.sender);
 
     Ok(Response::new())
 }

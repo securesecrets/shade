@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    debug_print, to_binary, Api, Binary, Env, DepsMut, Response, Querier,
+    to_binary, Api, Binary, Env, DepsMut, Response, Querier,
     StdError, StdResult, Storage, self,
 };
 use shade_protocol::snip20::helpers::set_viewing_key_msg;
@@ -35,7 +35,7 @@ pub fn init(
     state.save(deps.storage)?;
     SelfAddr(env.contract.address).save(deps.storage)?;
 
-    debug_print!("Contract was initialized by {}", info.sender);
+    deps.api.debug("Contract was initialized by {}", info.sender);
 
     let mut messages = vec![
         set_viewing_key_msg(

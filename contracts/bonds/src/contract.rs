@@ -10,7 +10,7 @@ use shade_protocol::contract_interfaces::{
     snip20::helpers::Snip20Asset,
 };
 
-use shade_protocol::snip20::helpers::token_config_query;
+use shade_protocol::snip20::helpers::token_config;
 use shade_protocol::utils::{pad_handle_result, pad_query_result};
 
 use crate::{
@@ -73,7 +73,7 @@ pub fn init(
         state.issued_asset.address.clone(),
     )?;
 
-    let token_config = token_config_query(
+    let token_config = token_config(
         &deps.querier,
         256,
         state.issued_asset.code_hash.clone(),

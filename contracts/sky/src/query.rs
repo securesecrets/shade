@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    Storage, Api, Querier, DepsMut, StdResult, StdError, debug_print,
+    Storage, Api, Querier, DepsMut, StdResult, StdError,
 };
 use shade_protocol::c_std::Uint128;
 use shade_protocol::{
@@ -170,7 +170,7 @@ pub fn get_balances(
         config.shd_token.contract.address.clone(),
     )?;
 
-    debug_print!("{}", viewing_key);
+    deps.api.debug("{}", viewing_key);
 
     let mut shd_bal = Uint128::new(0);
 

@@ -1,7 +1,7 @@
 use chrono::prelude::*;
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{Deps, MessageInfo, QuerierWrapper, Uint128};
 use shade_protocol::c_std::{
-    debug_print,
+
     from_binary,
     to_binary,
     Api,
@@ -17,8 +17,7 @@ use shade_protocol::c_std::{
     Storage,
 };
 use shade_protocol::{
-    snip20::helpers::{self, burn_msg, mint_msg, send_msg, token_info_query,
-             token_config_query, TokenConfig},
+    snip20::helpers::{self, burn_msg, mint_msg, send_msg, TokenConfig},
 };
 use shade_protocol::{
     contract_interfaces::{
@@ -29,6 +28,10 @@ use shade_protocol::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use std::{cmp::Ordering, convert::TryFrom};
+use std::borrow::BorrowMut;
+use std::fmt::format;
+use shade_protocol::snip20::helpers::{token_config, token_info};
+use shade_protocol::utils::Query;
 
 use crate::state::{
     asset_list_w,
@@ -59,7 +62,7 @@ pub fn try_burn(
     let config = config_r(deps.storage).load()?;
     // Check if contract enabled
     if !config.activated {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mint_asset = native_asset_r(deps.storage).load()?;
@@ -75,18 +78,15 @@ pub fn try_burn(
     let burn_asset =
         match assets_r(deps.storage).may_load(info.sender.to_string().as_bytes())? {
             Some(supported_asset) => {
-                debug_print!(
-                    "Found Burn Asset: {} {}",
+                deps.api.debug(
+                    &format!("Found Burn Asset: {} {}",
                     &supported_asset.asset.token_info.symbol,
-                    info.sender.to_string()
+                    info.sender.to_string())
                 );
                 supported_asset
             }
             None => {
-                return Err(StdError::NotFound {
-                    kind: info.sender.to_string(),
-                    backtrace: None,
-                });
+                return Err(StdError::not_found(info.sender));
             }
         };
 
@@ -105,18 +105,16 @@ pub fn try_burn(
             None,
             None,
             None,
-            1,
-            burn_asset.asset.contract.code_hash.clone(),
-            burn_asset.asset.contract.address.clone(),
+            &burn_asset.asset.contract
         )?);
     }
 
     // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(deps, input_amount, &burn_asset, &mint_asset)?;
+    let amount_to_mint: Uint128 = mint_amount(deps.as_ref(), input_amount, &burn_asset, &mint_asset)?;
 
     if let Some(limit) = config.limit {
         // Limit Refresh Check
-        try_limit_refresh(deps, env, info, limit)?;
+        try_limit_refresh(deps.storage, &deps.querier, env, info, limit)?;
 
         // Check & adjust limit if a limited asset
         if !burn_asset.unlimited {
@@ -142,9 +140,7 @@ pub fn try_burn(
             None,
             None,
             None,
-            1,
-            burn_asset.asset.contract.code_hash.clone(),
-            burn_asset.asset.contract.address.clone(),
+            &burn_asset.asset.contract
         )?);
 
         burn_amount = input_amount.checked_sub(capture_amount)?;
@@ -158,9 +154,7 @@ pub fn try_burn(
                     burn_amount.into(),
                     None,
                     None,
-                    256,
-                    burn_asset.asset.contract.code_hash.clone(),
-                    burn_asset.asset.contract.address.clone(),
+                    &burn_asset.asset.contract
                 )?);
             } else if let Some(recipient) = config.secondary_burn {
                 messages.push(send_msg(
@@ -169,9 +163,7 @@ pub fn try_burn(
                     None,
                     None,
                     None,
-                    1,
-                    burn_asset.asset.contract.code_hash.clone(),
-                    burn_asset.asset.contract.address.clone(),
+                    &burn_asset.asset.contract
                 )?);
             }
         } else if let Some(recipient) = config.secondary_burn {
@@ -181,19 +173,17 @@ pub fn try_burn(
                 None,
                 None,
                 None,
-                1,
-                burn_asset.asset.contract.code_hash.clone(),
-                burn_asset.asset.contract.address.clone(),
+                &burn_asset.asset.contract
             )?);
         }
     }
 
     total_burned_w(deps.storage).update(
         burn_asset.asset.contract.address.to_string().as_bytes(),
-        |burned| match burned {
+        |burned| -> StdResult<Uint128> { match burned {
             Some(burned) => Ok(burned + burn_amount),
             None => Ok(burn_amount),
-        },
+        }},
     )?;
 
     if let Some(message) = msg {
@@ -212,9 +202,7 @@ pub fn try_burn(
         amount_to_mint.into(),
         None,
         None,
-        256,
-        mint_asset.contract.code_hash.clone(),
-        mint_asset.contract.address,
+        &mint_asset.contract
     )?);
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Mint {
@@ -224,12 +212,13 @@ pub fn try_burn(
 }
 
 pub fn try_limit_refresh(
-    deps: DepsMut,
+    storage: &mut dyn Storage,
+    querier: &QuerierWrapper,
     env: Env,
     info: MessageInfo,
     limit: Limit,
 ) -> StdResult<Uint128> {
-    match DateTime::parse_from_rfc3339(&limit_refresh_r(deps.storage).load()?) {
+    match DateTime::parse_from_rfc3339(&limit_refresh_r(storage).load()?) {
         Ok(parsed) => {
             let naive = NaiveDateTime::from_timestamp(env.block.time.seconds() as i64, 0);
             let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
@@ -237,13 +226,11 @@ pub fn try_limit_refresh(
 
             let mut fresh_amount = Uint128::zero();
 
-            let native_asset = native_asset_r(deps.storage).load()?;
+            let native_asset = native_asset_r(storage).load()?;
 
-            let token_info = token_info_query(
-                &deps.querier,
-                1,
-                native_asset.contract.code_hash.clone(),
-                native_asset.contract.address.clone(),
+            let token_info = token_info(
+                querier,
+                &native_asset.contract
             )?;
 
             let supply = match token_info.total_supply {
@@ -285,14 +272,14 @@ pub fn try_limit_refresh(
             }
 
             if fresh_amount > Uint128::zero() {
-                let minted = minted_r(deps.storage).load()?;
+                let minted = minted_r(storage).load()?;
 
-                limit_w(deps.storage).update(|state| {
+                limit_w(storage).update(|state| -> StdResult<Uint128> {
                     // Stack with previous unminted limit
                     Ok(state.checked_sub(minted)? + fresh_amount)
                 })?;
-                limit_refresh_w(deps.storage).save(&now.to_rfc3339())?;
-                minted_w(deps.storage).save(&Uint128::zero())?;
+                limit_refresh_w(storage).save(&now.to_rfc3339())?;
+                minted_w(storage).save(&Uint128::zero())?;
             }
 
             Ok(fresh_amount)
@@ -324,6 +311,7 @@ pub fn try_update_config(
 pub fn try_register_asset(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     contract: &Contract,
     capture: Option<Uint128>,
     fee: Option<Uint128>,
@@ -332,30 +320,28 @@ pub fn try_register_asset(
     let config = config_r(deps.storage).load()?;
     // Check if admin
     if info.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
     // Check if contract enabled
     if !config.activated {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let contract_str = contract.address.to_string();
 
     // Add the new asset
-    let asset_info = token_info_query(
+    let asset_info = token_info(
         &deps.querier,
-        1,
-        contract.code_hash.clone(),
-        contract.address.clone(),
+        &contract
     )?;
 
     let asset_config: Option<TokenConfig> =
-        match token_config_query(&deps.querier, 256, contract.code_hash.clone(), contract.address.clone()) {
+        match token_config(&deps.querier, &contract) {
             Ok(c) => Option::from(c),
             Err(_) => None,
         };
 
-    debug_print!("Registering {}", asset_info.symbol);
+    deps.api.debug(&format!("Registering {}", asset_info.symbol));
     assets_w(deps.storage).save(contract_str.as_bytes(), &SupportedAsset {
         asset: Snip20Asset {
             contract: contract.clone(),
@@ -380,7 +366,7 @@ pub fn try_register_asset(
     total_burned_w(deps.storage).save(contract_str.as_bytes(), &Uint128::zero())?;
 
     // Add the asset to list
-    asset_list_w(deps.storage).update(|mut state| {
+    asset_list_w(deps.storage).update(|mut state| -> StdResult<Vec<Contract>> {
         state.push(contract.clone());
         Ok(state)
     })?;
@@ -401,7 +387,7 @@ pub fn try_remove_asset(
     let address_str = address.to_string();
 
     // Remove asset from the array
-    asset_list_w(deps.storage).update(|mut state| {
+    asset_list_w(deps.storage).update(|mut state| -> StdResult<Vec<Contract>> {
         state.retain(|value| value.address != address);
         Ok(state)
     })?;
@@ -430,18 +416,18 @@ pub fn mint_amount(
     burn_asset: &SupportedAsset,
     mint_asset: &Snip20Asset,
 ) -> StdResult<Uint128> {
-    debug_print!(
-        "Burning {} {} for {}",
+    deps.api.debug(
+        &format!("Burning {} {} for {}",
         burn_amount,
         burn_asset.asset.token_info.symbol,
-        mint_asset.token_info.symbol
+        mint_asset.token_info.symbol)
     );
 
     let burn_price = oracle(deps, burn_asset.asset.token_info.symbol.clone())?;
-    debug_print!("Burn Price: {}", burn_price);
+    deps.api.debug(&format!("Burn Price: {}", burn_price));
 
     let mint_price = oracle(deps, asset_peg_r(deps.storage).load()?)?;
-    debug_print!("Mint Price: {}", mint_price);
+    deps.api.debug(&format!("Mint Price: {}", mint_price));
 
     Ok(calculate_mint(
         burn_price,
@@ -528,8 +514,7 @@ fn oracle(
     let config: Config = config_r(deps.storage).load()?;
     let answer: ReferenceData = Price { symbol }.query(
         &deps.querier,
-        config.oracle.code_hash,
-        config.oracle.address,
+        &config.oracle
     )?;
 
     Ok(Uint128::from(answer.rate))

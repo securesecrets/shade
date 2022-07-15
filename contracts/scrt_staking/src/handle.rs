@@ -172,7 +172,7 @@ pub fn unbond(
     //TODO: needs treasury & manager as admin, maybe just manager?
     /*
     if info.sender != config.admin && info.sender != config.treasury {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
     */
     if !config.admins.contains(&info.sender) || config.owner != info.sender {

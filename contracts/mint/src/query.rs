@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use chrono::prelude::*;
-use shade_protocol::c_std::Uint128;
+use shade_protocol::c_std::{Deps, Uint128};
 use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage};
 use shade_protocol::contract_interfaces::mint::mint::QueryAnswer;
 
@@ -45,10 +45,7 @@ pub fn asset(
             asset,
             burned: total_burned_r(deps.storage).load(contract.as_bytes())?,
         }),
-        None => Err(StdError::NotFound {
-            kind: contract,
-            backtrace: None,
-        }),
+        None => Err(StdError::not_found(contract)),
     }
 }
 
@@ -83,9 +80,6 @@ pub fn mint(
                 amount,
             })
         }
-        None => Err(StdError::NotFound {
-            kind: offer_asset.to_string(),
-            backtrace: None,
-        }),
+        None => Err(StdError::not_found(offer_asset.to_string())),
     }
 }

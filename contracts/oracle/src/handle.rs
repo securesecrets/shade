@@ -107,7 +107,7 @@ pub fn unregister_pair(
 ) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
     if info.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     if let Some(mut pair_list) = dex_pairs_r(deps.storage).may_load(symbol.as_bytes())? {
@@ -264,7 +264,7 @@ pub fn register_index(
 ) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
     if info.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     if let Some(pairs) = dex_pairs_r(deps.storage).may_load(symbol.as_bytes())? {
@@ -291,7 +291,7 @@ pub fn try_update_config(
 ) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
     if info.sender != config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     // Save new info

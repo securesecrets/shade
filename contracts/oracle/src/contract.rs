@@ -1,6 +1,6 @@
 use crate::{handle, query, state::config_w};
 use shade_protocol::c_std::{
-    debug_print,
+
     to_binary,
     Api,
     Binary,
@@ -35,7 +35,7 @@ pub fn init(
 
     config_w(deps.storage).save(&state)?;
 
-    debug_print!("Contract was initialized by {}", info.sender);
+    deps.api.debug("Contract was initialized by {}", info.sender);
 
     Ok(Response::default())
 }

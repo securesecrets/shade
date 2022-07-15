@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    debug_print,
+
     to_binary,
     Api,
     Binary,
@@ -11,7 +11,7 @@ use shade_protocol::c_std::{
     Storage,
     Uint128,
 };
-use shade_protocol::snip20::helpers::{register_receive, token_info, token_config_query};
+use shade_protocol::snip20::helpers::{register_receive, token_info, token_config};
 
 use shade_protocol::contract_interfaces::{
     mint::mint_router::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},

@@ -30,7 +30,7 @@ use mock_band;
 use oracle;
 
 use mint::{
-    contract::{handle, init, query},
+    contract::{handle, instantiate, query},
     handle::{calculate_mint, calculate_portion, try_burn},
 };
 

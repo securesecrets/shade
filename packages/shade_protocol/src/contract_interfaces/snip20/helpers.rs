@@ -21,18 +21,6 @@ pub fn fetch_snip20(contract: &Contract, querier: &QuerierWrapper) -> StdResult<
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Send
-///
-/// # Arguments
-///
-/// * `recipient` - the address tokens are to be sent to
-/// * `amount` - Uint128 amount of tokens to send
-/// * `msg` - Optional base64 encoded string to pass to the recipient contract's
-///           Receive function
-/// * `memo` - A message to include in transaction
-/// * `padding` - Optional String used as padding if you don't want to use block padding
-/// * `block_size` - pad the message to blocks of this size
-/// * `callback_code_hash` - String holding the code hash of the contract being called
-/// * `contract_addr` - address of the contract being called
 #[allow(clippy::too_many_arguments)]
 pub fn send_msg(
     recipient: Addr,
@@ -56,15 +44,6 @@ pub fn send_msg(
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Redeem
-///
-/// # Arguments
-///
-/// * `amount` - Uint128 amount of token to redeem for SCRT
-/// * `denom` - Optional String to hold the denomination of tokens to redeem
-/// * `padding` - Optional String used as padding if you don't want to use block padding
-/// * `block_size` - pad the message to blocks of this size
-/// * `callback_code_hash` - String holding the code hash of the contract being called
-/// * `contract_addr` - address of the contract being called
 pub fn redeem_msg(
     amount: Uint128,
     denom: Option<String>,
@@ -79,14 +58,6 @@ pub fn redeem_msg(
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Deposit
-///
-/// # Arguments
-///
-/// * `amount` - Uint128 amount of uSCRT to convert to the SNIP20 token
-/// * `padding` - Optional String used as padding if you don't want to use block padding
-/// * `block_size` - pad the message to blocks of this size
-/// * `callback_code_hash` - String holding the code hash of the contract being called
-/// * `contract_addr` - address of the contract being called
 pub fn deposit_msg(
     amount: Uint128,
     padding: Option<String>,
@@ -101,15 +72,39 @@ pub fn deposit_msg(
     )
 }
 
+/// Returns a StdResult<CosmosMsg> used to execute Mint
+pub fn mint_msg(
+    recipient: Addr,
+    amount: Uint128,
+    memo: Option<String>,
+    padding: Option<String>,
+    contract: &Contract
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Mint {
+        recipient,
+        amount,
+        memo,
+        padding,
+    }
+        .to_cosmos_msg(contract, vec![])
+}
+
+/// Returns a StdResult<CosmosMsg> used to execute Burn
+pub fn burn_msg(
+    amount: Uint128,
+    memo: Option<String>,
+    padding: Option<String>,
+    contract: &Contract
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Burn {
+        amount,
+        memo,
+        padding,
+    }
+        .to_cosmos_msg(contract, vec![])
+}
+
 /// Returns a StdResult<CosmosMsg> used to execute RegisterReceive
-///
-/// # Arguments
-///
-/// * `your_contracts_code_hash` - String holding the code hash of your contract
-/// * `padding` - Optional String used as padding if you don't want to use block padding
-/// * `block_size` - pad the message to blocks of this size
-/// * `callback_code_hash` - String holding the code hash of the contract being called
-/// * `contract_addr` - address of the contract being called
 pub fn register_receive(
     register_hash: String,
     padding: Option<String>,
@@ -141,13 +136,6 @@ pub struct TokenInfo {
     pub total_supply: Option<Uint128>,
 }
 /// Returns a StdResult<TokenInfo> from performing TokenInfo query
-///
-/// # Arguments
-///
-/// * `querier` - a reference to the Querier dependency of the querying contract
-/// * `block_size` - pad the message to blocks of this size
-/// * `callback_code_hash` - String holding the code hash of the contract being queried
-/// * `contract_addr` - address of the contract being queried
 pub fn token_info(
     querier: &QuerierWrapper,
     contract: &Contract,
@@ -179,13 +167,6 @@ pub struct TokenConfig {
     pub transfer_enabled: Option<bool>
 }
 /// Returns a StdResult<TokenConfig> from performing TokenConfig query
-///
-/// # Arguments
-///
-/// * `querier` - a reference to the Querier dependency of the querying contract
-/// * `block_size` - pad the message to blocks of this size
-/// * `callback_code_hash` - String holding the code hash of the contract being queried
-/// * `contract_addr` - address of the contract being queried
 pub fn token_config(
     querier: &QuerierWrapper,
     contract: &Contract,

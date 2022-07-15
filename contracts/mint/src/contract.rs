@@ -1,16 +1,5 @@
-use shade_protocol::c_std::{
-    debug_print,
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Querier,
-    StdResult,
-    Storage,
-};
-use shade_protocol::snip20::helpers::{token_info, token_config_query};
+use shade_protocol::c_std::{entry_point, to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdResult, Storage, MessageInfo, Deps};
+use shade_protocol::snip20::helpers::{token_info, token_config};
 
 use shade_protocol::contract_interfaces::{
     mint::mint::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -23,7 +12,8 @@ use crate::{
     state::{asset_list_w, asset_peg_w, config_w, limit_w, native_asset_w},
 };
 
-pub fn init(
+#[entry_point]
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -43,14 +33,12 @@ pub fn init(
 
     config_w(deps.storage).save(&state)?;
 
-    let token_info = token_info_query(
+    let token_info = token_info(
         &deps.querier,
-        1,
-        msg.native_asset.code_hash.clone(),
-        msg.native_asset.address.clone(),
+        &msg.native_asset
     )?;
 
-    let token_config = token_config_query(&deps.querier, 256, msg.native_asset.code_hash.clone(), msg.native_asset.address.clone())?;
+    let token_config = token_config(&deps.querier, &msg.native_asset)?;
 
     let peg = match msg.peg {
         Some(p) => p,
@@ -58,7 +46,7 @@ pub fn init(
     };
     asset_peg_w(deps.storage).save(&peg)?;
 
-    debug_print!("Setting native asset");
+    deps.api.debug("Setting native asset");
     native_asset_w(deps.storage).save(&Snip20Asset {
         contract: msg.native_asset.clone(),
         token_info,
@@ -67,12 +55,13 @@ pub fn init(
 
     asset_list_w(deps.storage).save(&vec![])?;
 
-    debug_print!("Contract was initialized by {}", info.sender);
+    deps.api.debug(&format!("Contract was initialized by {}", info.sender));
 
     Ok(Response::new())
 }
 
-pub fn handle(
+#[entry_point]
+pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -85,7 +74,7 @@ pub fn handle(
             capture,
             fee,
             unlimited,
-        } => handle::try_register_asset(deps, &env, &contract, capture, fee, unlimited),
+        } => handle::try_register_asset(deps, &env, info, &contract, capture, fee, unlimited),
         ExecuteMsg::RemoveAsset { address } => handle::try_remove_asset(deps, &env, address),
         ExecuteMsg::Receive {
             sender,
@@ -97,6 +86,7 @@ pub fn handle(
     }
 }
 
+#[entry_point]
 pub fn query(
     deps: Deps,
     msg: QueryMsg,

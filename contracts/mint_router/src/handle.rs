@@ -1,7 +1,7 @@
 use chrono::prelude::*;
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
-    debug_print,
+
     from_binary,
     to_binary,
     Api,
@@ -17,7 +17,7 @@ use shade_protocol::c_std::{
     Storage,
 };
 use shade_protocol::{
-    snip20::helpers::{burn_msg, mint_msg, register_receive, send_msg, token_info_query, TokenConfig, token_config_query},
+    snip20::helpers::{burn_msg, mint_msg, register_receive, send_msg, token_info_query, TokenConfig, token_config},
 };
 use shade_protocol::{
     contract_interfaces::{

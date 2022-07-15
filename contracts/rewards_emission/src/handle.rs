@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    debug_print,
+
     to_binary,
     Api,
     BalanceResponse,
@@ -74,7 +74,7 @@ pub fn try_update_config(
     let cur_config = config_r(deps.storage).load()?;
 
     if !cur_config.admins.contains(&info.sender) {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     config_w(deps.storage).save(&config)?;

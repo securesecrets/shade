@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{
-    debug_print, to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, DepsMut,
+    to_binary, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Env, DepsMut,
     Response, Addr, Querier, StakingMsg, StdError, StdResult, Storage, Uint128,
 };
 
@@ -76,7 +76,7 @@ pub fn try_update_config(
     let cur_config = config_r(deps.storage).load()?;
 
     if info.sender != cur_config.admin {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     // Save new info
@@ -131,7 +131,7 @@ pub fn unbond(
     //TODO: needs treasury & manager as admin, maybe just manager?
     /*
     if info.sender != config.admin && info.sender != config.treasury {
-        return Err(StdError::Unauthorized { backtrace: None });
+        return Err(StdError::generic_err("unauthorized"));
     }
     */
 
