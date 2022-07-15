@@ -1,7 +1,7 @@
 pub mod handle;
 pub mod query;
 
-use crate::contract::{handle, init, query};
+use crate::contract::{execute, instantiate, query};
 use contract_harness::harness::governance::Governance;
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{

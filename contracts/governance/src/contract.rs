@@ -24,6 +24,7 @@ use crate::{
 };
 use shade_protocol::c_std::{Deps, MessageInfo, Uint128};
 use shade_protocol::c_std::{
+    entry_point,
     to_binary,
     Api,
     Binary,
@@ -60,7 +61,8 @@ use shade_protocol::utils::{pad_handle_result, pad_query_result};
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
-pub fn init(
+#[entry_point]
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -172,7 +174,8 @@ pub fn init(
     Ok(Response::new())
 }
 
-pub fn handle(
+#[entry_point]
+pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
