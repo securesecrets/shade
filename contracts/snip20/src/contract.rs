@@ -78,11 +78,11 @@ pub fn execute(
         },
     }
 
-    pad_handle_result::<ExecuteMsg>(
+    pad_handle_result(
         match msg {
             ExecuteMsg::Redeem { amount, denom, .. } => try_redeem(deps, env, info, amount),
 
-            ExecuteMsg::Deposit { .. } => try_deposit(deps, env),
+            ExecuteMsg::Deposit { .. } => try_deposit(deps, env, info),
 
             ExecuteMsg::Transfer {
                 recipient,
@@ -149,6 +149,7 @@ pub fn execute(
             } => try_send_from(
                 deps,
                 env,
+                info,
                 owner,
                 recipient,
                 recipient_code_hash,
@@ -210,7 +211,7 @@ pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
 
             QueryMsg::WithPermit { permit, query } => {
                 // Validate permit and get account
-                let account = permit.validate(&deps.api, None)?.as_addr(None)?;
+                let account = permit.validate(deps.api, None)?.as_addr(None)?;
 
                 // Check that permit is not revoked
                 if PermitKey::may_load(

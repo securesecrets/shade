@@ -94,7 +94,7 @@ pub fn try_deposit(
 ) -> StdResult<Response> {
     let sender = info.sender;
     let mut amount = Uint128::zero();
-    for coin in &env.message.sent_funds {
+    for coin in &info.funds {
         // TODO: implement IBC coins
         if coin.denom == "uscrt" {
             amount = Uint128::from(coin.amount)
@@ -177,7 +177,7 @@ pub fn try_create_viewing_key(
 ) -> StdResult<Response> {
     let seed = RandSeed::load(deps.storage)?.0;
 
-    let key = Key::generate(&env, seed.as_slice(), (&entropy).as_ref());
+    let key = Key::generate(&info, &env, seed.as_slice(), (&entropy).as_ref());
 
     HashedKey(key.hash()).save(deps.storage, info.sender)?;
 

@@ -44,11 +44,7 @@ pub fn try_mint(
     let denom = CoinInfo::load(deps.storage)?.symbol;
     try_mint_impl(deps.storage, &sender, &recipient, amount, denom, memo, &block)?;
 
-    Ok(Response{
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::Mint { status: Success })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::Mint { status: Success })?))
 }
 
 pub fn try_batch_mint(
@@ -84,11 +80,7 @@ pub fn try_batch_mint(
     }
     supply.save(deps.storage)?;
 
-    Ok(Response{
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::BatchMint { status: Success })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchMint { status: Success })?))
 }
 
 pub fn try_add_minters(
@@ -109,11 +101,7 @@ pub fn try_add_minters(
     minters.0.extend(new_minters);
     minters.save(deps.storage)?;
 
-    Ok(Response{
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::AddMinters { status: Success })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddMinters { status: Success })?))
 }
 
 pub fn try_remove_minters(
@@ -136,11 +124,7 @@ pub fn try_remove_minters(
     }
     minters.save(deps.storage)?;
 
-    Ok(Response{
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RemoveMinters { status: Success })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::RemoveMinters { status: Success })?))
 }
 
 pub fn try_set_minters(
@@ -159,9 +143,5 @@ pub fn try_set_minters(
 
     Minters(minters).save(deps.storage)?;
 
-    Ok(Response{
-        messages: vec![],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::SetMinters { status: Success })?)
-    })
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetMinters { status: Success })?))
 }
