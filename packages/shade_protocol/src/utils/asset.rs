@@ -8,6 +8,7 @@ use crate::c_std::{
 };
 
 use cosmwasm_schema::{cw_serde};
+use cosmwasm_std::ContractInfo;
 #[cfg(feature = "ensemble")]
 use fadroma::prelude::ContractLink;
 
@@ -38,7 +39,7 @@ impl Contract {
     pub fn new(address: &Addr, code_hash: &String) -> Self {
         Contract {
             address: address.clone(),
-            code_hash: code_hash.to_string().clone(),
+            code_hash: code_hash.to_string(),
         }
     }
 
@@ -47,12 +48,24 @@ impl Contract {
         Ok(Contract::new(&valid_addr, code_hash))
     }
 
-    #[cfg(feature = "ensemble")]
-    pub fn new_link(link: ContractLink<Addr>) -> Self {
+}
+
+impl From<ContractInfo> for Contract {
+    fn from(item: ContractInfo) -> Self {
         Contract {
-            address: link.address,
-            code_hash: link.code_hash,
-        }
+            address: item.address,
+            code_hash: item.code_hash,
+        }    
+    }
+}
+
+#[cfg(feature = "ensemble")]
+impl From<ContractLink<Addr>> for Contract {
+    fn from(item: ContractLink<Addr>) -> Self {
+        Contract {
+            address: item.address,
+            code_hash: item.code_hash,
+        }    
     }
 }
 
