@@ -17,7 +17,7 @@ CONTRACTS = \
 		airdrop bonds governance snip20_staking mint mint_router \
 		treasury treasury_manager scrt_staking rewards_emission \
 		lp_shade_swap oracle snip20 query_auth\
-		mock_band mock_secretswap_pair mock_sienna_pair sky
+		mock_band mock_secretswap_pair mock_shadeswap_pair mock_sienna_pair sky
 
 PACKAGES = \
 	  shade_protocol contract_harness cosmwasm_math_compat \

@@ -1,9 +1,7 @@
 [package]
 name = "sky"
 version = "0.1.0"
-authors = [
-  "jackb7",
-]
+authors = [ "Jack Sisson <sissonjack67@gmail.com>" ]
 edition = "2018"
 
 exclude = [
@@ -31,7 +29,8 @@ admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0" 
 
 [dev-dependencies]
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"]  }
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "sky", "snip20", "mock_secretswap_pair", "bonds", "oracle", "mock_band", "query_auth", "admin", "shade-oracles-ensemble" ] }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["mint", "sky", "snip20", "mock_secretswap_pair", "mock_shadeswap_pair", "bonds", "oracle", "mock_band", "query_auth", "admin", "shade-oracles-ensemble" ] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] } 
 mock_secretswap_pair = { version = "0.1.0", path = "../mock_secretswap_pair" }
+mock_shadeswap_pair = { version = "0.1.0", path = "../mock_shadeswap_pair" }
