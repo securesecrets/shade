@@ -1,8 +1,10 @@
 use crate::Contract;
 use crate::serde::{de::DeserializeOwned, Serialize};
 use crate::c_std::{to_binary, Coin, CosmosMsg, Addr, Querier, QueryRequest, StdResult, Uint128, WasmMsg, WasmQuery, SubMsg, ReplyOn, QuerierWrapper, ContractInfo, Empty};
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "multi-test")]
 use crate::multi_test::{App, AppResponse, Contract as MultiContract, ContractWrapper, Executor};
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "multi-test")]
 use anyhow::Result as AnyResult;
 use super::space_pad;
@@ -63,6 +65,7 @@ pub trait InstantiateCallback: Serialize {
     /// * `sender` - user performing init
     /// * `label` - label used to reference this contract
     /// * `send_funds` - any funds sent with this init
+    #[cfg(not(target_arch = "wasm32"))]
     #[cfg(feature = "multi-test")]
     fn test_init(
         &self,
@@ -129,6 +132,7 @@ pub trait ExecuteCallback: Serialize {
     /// * `router` - a mutable reference to the multi-test App 
     /// * `sender` - the user executing this message in the test env
     /// * `send_funds` - any funds transferred with this exec
+    #[cfg(not(target_arch = "wasm32"))]
     #[cfg(feature = "multi-test")]
     fn test_exec(
         &self,
@@ -186,6 +190,7 @@ pub trait Query: Serialize {
     ///
     /// * `info` - contract info of instantiated contract
     /// * `router` - a reference to the multi-test App   
+    #[cfg(not(target_arch = "wasm32"))]
     #[cfg(feature = "multi-test")]
     fn test_query<T: DeserializeOwned>(
         &self, 

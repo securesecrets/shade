@@ -25,6 +25,7 @@ pub use query_authentication;
 #[cfg(feature = "ensemble")]
 pub use fadroma;
 
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "multi-test")]
 pub use secret_multi_test as multi_test;
 
