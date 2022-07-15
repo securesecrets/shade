@@ -1,8 +1,6 @@
 #[cfg(feature = "admin")]
 pub mod admin {
     use admin;
-    pub struct AdminAuth { info: ContractInfo }
-
     multi_derive::implement_multi!(AdminAuth, admin);
 }
 
@@ -62,13 +60,8 @@ pub mod admin {
 
 #[cfg(feature = "snip20")]
 pub mod snip20 {
-    use crate::multi_macro;
     use snip20;
-    pub struct Snip20 {
-        pub info: ContractInfo,
-    }
-
-    multi_macro::implement_multi!(Snip20, snip20);
+    multi_derive::implement_multi!(Snip20, snip20);
 }
 
 // #[cfg(feature = "bonds")]
