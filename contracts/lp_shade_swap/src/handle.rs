@@ -6,14 +6,15 @@ use shade_protocol::c_std::{
 use shade_protocol::secret_toolkit::snip20::{balance_query};
 
 use shade_protocol::{
-    contract_interfaces::dao::{
-        lp_shade_swap::{
-            HandleAnswer, Config, SplitMethod,
-            is_supported_asset, get_supported_asset,
+    contract_interfaces::{
+        dao::{
+            lp_shade_swap::{
+                HandleAnswer, Config, SplitMethod,
+                is_supported_asset, get_supported_asset,
+            },
+            adapter,
         },
-        treasury::Flag,
         mint,
-        adapter,
     },
     utils::{
         generic_response::ResponseStatus,
@@ -59,12 +60,12 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     let mut desired_token: Contract;
 
     if env.message.sender == config.token_a.address {
-        desired_token = config.token_0;
+        desired_token = config.token_a;
     }
     else if env.message.sender == config.token_b.address {
-        desired_token = config.token_1;
+        desired_token = config.token_b;
     }
-    else if env.message.sender == config.lp_token {
+    else if env.message.sender == config.liquidity_token.address {
         // TODO: stake lp tokens & exit
     }
     else {
@@ -75,6 +76,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
     match config.split {
         Some(split) => {
             match split {
+                /*
                 SplitMethod::Conversion { mint } => {
                     // TODO: get exchange rate
                     mint::QueryMsg::Mint {
@@ -83,12 +85,14 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
                     }.query(
                     );
                 },
+                */
                 //SplitMethod::Market { contract } => { }
                 //SplitMethod::Lend { contract } => { }
             }
         }
     }
 
+    /*
     let pair_info: amm_pair::QueryMsgResponse::PairInfoResponse = match amm_pair::QueryMsg::GetPairInfo.query(
         &deps.querier,
         msg.pair.code_hash.clone(),
@@ -99,6 +103,7 @@ pub fn receive<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::generic_err("Failed to query pair"));
         }
     };
+    */
 
     if desired_token.address == pair_info.token_0.address {
         denominator = pair_info.amount_0;

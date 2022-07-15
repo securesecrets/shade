@@ -1,7 +1,6 @@
 use shade_protocol::c_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, StdError,
-    Storage, Uint128,
+    StdResult, StdError, Storage, Uint128, HumanAddr,
 };
 
 use shade_protocol::{
@@ -18,10 +17,12 @@ use shade_protocol::{
     utils::asset::{Contract, set_allowance},
 };
 
+/*
 use shadeswap_shared::{
     self as shadeswap,
     msg::amm_pair,
 };
+*/
 
 use shade_protocol::secret_toolkit::{
     snip20::{register_receive_msg, set_viewing_key_msg},
@@ -106,10 +107,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         token_a: token_a.clone(),
         token_b: token_b.clone(),
         liquidity_token: pair_info.liquidity_token.clone(),
-        lp_token: pair_info.lp_token.clone(),
         staking_contract: staking_info.staking_contract.clone(),
         // TODO: query reward token from staking contract
         reward_token: None, 
+        //TODO: add this
+        split: None,
     };
     // TODO verify split contract
     let mut assets = vec![
@@ -118,7 +120,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         pair_info.liquidity_token.clone(),
     ];
 
-    if Some(token) = config.reward_token {
+    if let Some(token) = config.reward_token {
         assets.push(token);
     }
 
@@ -131,7 +133,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             &Uint128::zero(),
         )?;
 
-        messages.push(
+        messages.append(&mut vec![
             set_viewing_key_msg(
                 msg.viewing_key.clone(),
                 None,
@@ -146,7 +148,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 token.code_hash.clone(),
                 token.address.clone(),
             )?,
-        );
+        ]);
     }
 
     // Init approvals to max
