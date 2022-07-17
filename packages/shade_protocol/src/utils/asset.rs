@@ -5,26 +5,61 @@ use crate::c_std::{
     StdResult,
     Uint128,
     Deps,
+    Api,
 };
-
 use cosmwasm_schema::{cw_serde};
 use cosmwasm_std::ContractInfo;
 #[cfg(feature = "ensemble")]
 use fadroma::prelude::ContractLink;
 
+/// Validates an optional address.
+pub fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<Option<Addr>> {
+    let addr = if let Some(addr) = addr {
+        Some(api.addr_validate(&addr)?)
+    } else {
+        None
+    };
+
+    Ok(addr)
+}
+
+/// A contract that does not contain a validated address.
 /// Should be accepted as user input because we shouldn't assume addresses are verified Addrs.
 /// https://docs.rs/cosmwasm-std/latest/cosmwasm_std/struct.Addr.html
 #[derive(Hash, Eq)]
 #[cw_serde]
-pub struct UnvalidatedContract {
+pub struct RawContract {
     pub address: String,
     pub code_hash: String,
 }
 
-impl UnvalidatedContract {
-    pub fn validate(self, deps: Deps) -> StdResult<Contract> {
-        let valid_addr = deps.api.addr_validate(self.address.as_str())?;
+impl RawContract {
+    #[allow(clippy::ptr_arg)]
+    pub fn new (address: &String, code_hash: &String) -> Self {
+        RawContract { address: address.clone(), code_hash: code_hash.clone() }
+    }
+    pub fn into_valid(self, api: &dyn Api) -> StdResult<Contract> {
+        let valid_addr = api.addr_validate(self.address.as_str())?;
         Ok(Contract::new(&valid_addr, &self.code_hash))
+    }
+}
+
+impl From<Contract> for RawContract {
+    fn from (item: Contract) -> Self {
+        RawContract { address: item.address.into(), code_hash: item.code_hash }
+    }
+}
+
+impl From<ContractInfo> for RawContract {
+    fn from (item: ContractInfo) -> Self {
+        RawContract { address: item.address.into(), code_hash: item.code_hash }
+    }
+}
+
+#[cfg(feature = "ensemble")]
+impl From<ContractLink<Addr>> for RawContract {
+    fn from(item: ContractLink<Addr>) -> Self {
+        RawContract { address: item.address.into(), code_hash: item.code_hash, }    
     }
 }
 
@@ -36,11 +71,9 @@ pub struct Contract {
 }
 
 impl Contract {
+    #[allow(clippy::ptr_arg)]
     pub fn new(address: &Addr, code_hash: &String) -> Self {
-        Contract {
-            address: address.clone(),
-            code_hash: code_hash.to_string(),
-        }
+        Contract { address: address.clone(), code_hash: code_hash.clone() }
     }
 
     pub fn validate_new(deps: Deps, address: &str, code_hash: &String) -> StdResult<Self> {
