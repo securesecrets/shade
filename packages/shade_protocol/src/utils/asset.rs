@@ -23,6 +23,17 @@ pub fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<
     Ok(addr)
 }
 
+/// Validates an optional RawContract.
+pub fn optional_raw_contract_validate(api: &dyn Api, contract: Option<RawContract>) -> StdResult<Option<Contract>> {
+    let contract = if let Some(contract) = contract {
+        Some(contract.into_valid(api)?)
+    } else {
+        None
+    };
+
+    Ok(contract)
+}
+
 /// A contract that does not contain a validated address.
 /// Should be accepted as user input because we shouldn't assume addresses are verified Addrs.
 /// https://docs.rs/cosmwasm-std/latest/cosmwasm_std/struct.Addr.html
