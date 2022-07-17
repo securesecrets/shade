@@ -148,9 +148,9 @@ pub struct Dependencies(Vec<Dependency>);
 
 impl Dependencies {
     pub fn get_dep(&self, name: &String) -> StdResult<Contract> {
-        let item = self.0.into_iter().find(|c| c.name.eq(name));
+        let item = self.0.as_slice().iter().find(|c| c.name.eq(name));
         match item {
-            Some(item) => Ok(item.contract),
+            Some(item) => Ok(item.contract.clone()),
             None => Err(StdError::generic_err(format!("Could not find dependency named {}", name))),
         }
     }
