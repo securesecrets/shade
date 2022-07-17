@@ -5,10 +5,9 @@ use crate::c_std::{
     StdResult,
     Uint128,
     Deps,
-    Api,
+    Api, ContractInfo, StdError
 };
 use cosmwasm_schema::{cw_serde};
-use cosmwasm_std::ContractInfo;
 #[cfg(feature = "ensemble")]
 use fadroma::prelude::ContractLink;
 
@@ -141,6 +140,19 @@ pub struct Dependency {
 impl Dependency {
     pub fn new(name: String, contract: Contract) -> Self {
         Dependency { name, contract }
+    }
+}
+
+#[cw_serde]
+pub struct Dependencies(Vec<Dependency>);
+
+impl Dependencies {
+    pub fn get_dep(&self, name: &String) -> StdResult<Contract> {
+        let item = self.0.into_iter().find(|c| c.name.eq(name));
+        match item {
+            Some(item) => Ok(item.contract),
+            None => Err(StdError::generic_err(format!("Could not find dependency named {}", name))),
+        }
     }
 }
 
