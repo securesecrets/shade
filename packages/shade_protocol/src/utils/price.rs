@@ -1,22 +1,29 @@
 use crate::c_std::Uint128;
 use std::convert::TryFrom;
 
-/* Translate price from symbol/sSCRT -> symbol/USD
- *
- * scrt_price: SCRT/USD price from BAND
- * trade_price: SCRT/token trade amount from 1 sSCRT (normalized to price * 10^18)
- * return: token/USD price
- */
-pub fn translate_price(scrt_price: Uint128, trade_price: Uint128) -> Uint128 {
-    scrt_price.multiply_ratio(10u128.pow(18), trade_price)
+/// Returns price of `token_1` in `denom` from `token_1/token_2` pair
+/// 
+/// Denom is whatever `token_2` is quoted in.
+/// 
+/// ### Arguments (normalized to 10^18)
+/// * `scrt_price` - amount of denom per 1 token_2 from some oracle (ex: 9.18USD per 1 SCRT)
+/// * `trade_price` - amount of 1 token_2 in token_1 (ex: 0.1 SHD per 1 SCRT)
+pub fn translate_price(token_2_price: Uint128, trade_amount: Uint128) -> Uint128 {
+    token_2_price.multiply_ratio(10u128.pow(18), trade_amount)
 }
 
-/* Normalize the price from snip20 amount with decimals to BAND rate
- * amount: unsigned quantity received in trade for 1sSCRT
- * decimals: number of decimals for received snip20
- */
+/// Normalize the price from some amount (usually snip20) with decimals to 10^18.
+/// 
+/// ### Arguments
+/// * `amount` - unsigned quantity
+/// * `decimals` -  number of decimals for received quantity
 pub fn normalize_price(amount: Uint128, decimals: u8) -> Uint128 {
     (amount.u128() * 10u128.pow(18u32 - u32::try_from(decimals).unwrap())).into()
+}
+
+/// Returns 1 * 10^factor.
+pub fn get_precision(factor: u8) -> Uint128 {
+    Uint128::from(10u128.pow(factor.into()))
 }
 
 #[cfg(test)]
