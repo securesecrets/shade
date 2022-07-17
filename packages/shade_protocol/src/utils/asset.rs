@@ -113,6 +113,37 @@ impl From<ContractLink<Addr>> for Contract {
     }
 }
 
+// In case we ever want to store a dynamic list of dependencies and refer to them in the contract by name.
+// Helpful if we ever create a generic interface for something (i.e. oracles).
+
+#[cw_serde]
+pub struct RawDependency {
+    pub name: String,
+    pub contract: RawContract,
+}
+
+impl RawDependency {
+    pub fn new(name: String, contract: RawContract) -> Self {
+        RawDependency { name, contract }
+    }
+
+    pub fn into_valid(&self, api: &dyn Api) ->  StdResult<Dependency> {
+        Ok(Dependency::new(self.name.clone(), self.contract.clone().into_valid(api)?))
+    }
+}
+
+#[cw_serde]
+pub struct Dependency {
+    pub name: String,
+    pub contract: Contract,
+}
+
+impl Dependency {
+    pub fn new(name: String, contract: Contract) -> Self {
+        Dependency { name, contract }
+    }
+}
+
 //TODO:  move away from here
 pub fn scrt_balance(
     deps: Deps,
