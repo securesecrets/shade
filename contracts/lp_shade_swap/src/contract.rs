@@ -1,17 +1,24 @@
 use shade_protocol::c_std::{
-    debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, StdError,
-    Storage, Uint128,
+    debug_print,
+    to_binary,
+    Api,
+    Binary,
+    Env,
+    Extern,
+    HandleResponse,
+    InitResponse,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
 };
 
 use shade_protocol::{
     contract_interfaces::{
         dao::{
             adapter,
-            lp_shade_swap::{
-                Config, HandleMsg, InitMsg, QueryMsg,
-                is_supported_asset,
-            },
+            lp_shade_swap::{is_supported_asset, Config, HandleMsg, InitMsg, QueryMsg},
         },
         dex::shadeswap,
     },
@@ -24,12 +31,9 @@ use shade_protocol::secret_toolkit::{
 };
 
 use crate::{
-    handle, query,
-    state::{
-        config_w, self_address_w, 
-        viewing_key_r, viewing_key_w,
-        unbonding_w,
-    },
+    handle,
+    query,
+    state::{config_w, self_address_w, unbonding_w, viewing_key_r, viewing_key_w},
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -37,7 +41,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
 
@@ -49,22 +52,21 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         Ok(info) => info,
         Err(_) => {
             return Err(StdError::generic_err("Failed to query pair"));
-        }
-        /*
-        shadeswap::PairInfoResponse {
-            liquidity_token, factory, pair,
-            amount_0, amount_1,
-            total_liquidity, contract_version,
-        } => {
-        }
-        */
+        } /*
+          shadeswap::PairInfoResponse {
+              liquidity_token, factory, pair,
+              amount_0, amount_1,
+              total_liquidity, contract_version,
+          } => {
+          }
+          */
     };
 
-    let token_a = match pair_info.pair.0 {
+    let token_a = match pair_info.pair.token_0 {
         shadeswap::TokenType::CustomToken {
             contract_addr,
-            token_code_hash
-        } => Contract { 
+            token_code_hash,
+        } => Contract {
             address: contract_addr,
             code_hash: token_code_hash,
         },
@@ -73,11 +75,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    let token_b = match pair_info.pair.1 {
+    let token_b = match pair_info.pair.token_1 {
         shadeswap::TokenType::CustomToken {
             contract_addr,
-            token_code_hash
-        } => Contract { 
+            token_code_hash,
+        } => Contract {
             address: contract_addr,
             code_hash: token_code_hash,
         },
@@ -105,14 +107,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     // Init unbondings to 0
     for asset in vec![
-            token_a.clone(),
-            token_b.clone(),
-            pair_info.liquidity_token.clone(),
-        ] {
-        unbonding_w(&mut deps.storage).save(
-            asset.address.as_str().as_bytes(),
-            &Uint128::zero(),
-        )?;
+        token_a.clone(),
+        token_b.clone(),
+        pair_info.liquidity_token.clone(),
+    ] {
+        unbonding_w(&mut deps.storage).save(asset.address.as_str().as_bytes(), &Uint128::zero())?;
     }
 
     config_w(&mut deps.storage).save(&config.clone())?;
@@ -163,7 +162,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     ];
 
     if let Some(ref reward_token) = config.reward_token {
-
         if !is_supported_asset(&config.clone(), &reward_token.address) {
             messages.append(&mut vec![
                 set_viewing_key_msg(
@@ -205,7 +203,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => handle::receive(deps, env, sender, from, amount, msg),
         HandleMsg::UpdateConfig { config } => handle::try_update_config(deps, env, config),
         HandleMsg::Adapter(adapter) => match adapter {
-            adapter::SubHandleMsg::Unbond { asset, amount } => handle::unbond(deps, env, asset, amount),
+            adapter::SubHandleMsg::Unbond { asset, amount } => {
+                handle::unbond(deps, env, asset, amount)
+            }
             adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, asset),
             adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, asset),
         },
@@ -222,8 +222,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
             adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
             adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
-            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(deps, asset)?),
+            adapter::SubQueryMsg::Unbondable { asset } => {
+                to_binary(&query::unbondable(deps, asset)?)
+            }
             adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(deps, asset)?),
-        }
+        },
     }
 }

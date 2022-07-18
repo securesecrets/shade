@@ -24,7 +24,7 @@ use shade_protocol::{
             PairQuery,
             QueryMsgResponse,
             SwapTokens,
-            TokenPair,
+            TokenPairSerde,
             TokenType,
         },
     },
@@ -104,20 +104,20 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             address: HumanAddr("".to_string()),
             code_hash: "".to_string(),
         },
-        pair: TokenPair(
-            TokenType::CustomToken {
+        pair: TokenPairSerde {
+            token_0: TokenType::CustomToken {
                 contract_addr: msg.token_0.address.clone(),
                 token_code_hash: msg.token_0.code_hash.clone(),
             },
-            TokenType::CustomToken {
+            token_1: TokenType::CustomToken {
                 contract_addr: msg.token_1.address.clone(),
                 token_code_hash: msg.token_1.code_hash.clone(),
             },
-        ),
+        },
         amount_0: Uint128::zero(),
         amount_1: Uint128::zero(),
         total_liquidity: Uint128::zero(),
-        contract_version: 1,
+        contract_version: Uint128::zero(),
     })?;
     let messages = vec![
         set_viewing_key_msg(
@@ -199,20 +199,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     address: HumanAddr("".to_string()),
                     code_hash: "".to_string(),
                 },
-                pair: TokenPair(
-                    TokenType::CustomToken {
+                pair: TokenPairSerde {
+                    token_0: TokenType::CustomToken {
                         contract_addr: token_a.address.clone(),
                         token_code_hash: token_a.code_hash.clone(),
                     },
-                    TokenType::CustomToken {
+                    token_1: TokenType::CustomToken {
                         contract_addr: token_b.address.clone(),
                         token_code_hash: token_b.code_hash.clone(),
                     },
-                ),
+                },
                 amount_0: amount_a,
                 amount_1: amount_b,
                 total_liquidity: Uint128::zero(),
-                contract_version: 1,
+                contract_version: Uint128::zero(),
             })?;
 
             mock_w(&mut deps.storage).save(&true)?;
@@ -234,7 +234,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                         let pair = get_pair_res(&deps).unwrap();
                         let mut token_0_addr = HumanAddr("".to_string());
                         let mut token_0_code_hash = "".to_string();
-                        match pair.pair.0 {
+                        match pair.pair.token_0 {
                             TokenType::CustomToken {
                                 contract_addr,
                                 token_code_hash,
@@ -246,7 +246,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                         }
                         let mut token_1_addr = HumanAddr("".to_string());
                         let mut token_1_code_hash = "".to_string();
-                        match pair.pair.1 {
+                        match pair.pair.token_1 {
                             TokenType::CustomToken {
                                 contract_addr,
                                 token_code_hash,
@@ -260,8 +260,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                         let mut contract_addr = HumanAddr("".to_string());
                         let mut contract_code_hash = "".to_string();
                         let mut return_amount = Uint128::zero();
-                        let mut token_0_bal = Uint128::zero();
-                        let mut token_1_bal = Uint128::zero();
                         if token_0_addr == env.message.sender {
                             contract_addr = token_1_addr.clone();
                             contract_code_hash = token_1_code_hash.clone();
@@ -276,9 +274,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                             } else {
                                 return_amount = return_amount_pre_fee.checked_sub(fee)?;
                             }
-                            token_0_bal = pair.amount_0.clone().checked_add(amount)?;
-                            token_1_bal =
-                                pair.amount_1.clone().checked_sub(return_amount.clone())?;
                         } else if token_1_addr == env.message.sender {
                             contract_addr = token_0_addr.clone();
                             contract_code_hash = token_0_code_hash.clone();
@@ -290,9 +285,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                             } else {
                                 return_amount = return_amount_pre_fee.checked_sub(fee)?;
                             }
-                            token_0_bal =
-                                pair.amount_0.clone().checked_sub(return_amount.clone())?;
-                            token_1_bal = pair.amount_1.clone().checked_add(amount.clone())?;
                         }
                         if return_amount < expected_return.unwrap() {
                             return Err(StdError::unauthorized());
@@ -325,7 +317,7 @@ pub fn get_pair_res<S: Storage, A: Api, Q: Querier>(
     let mut pair = pair_info_r(&deps.storage).load()?;
     let mut token_0_addr = HumanAddr("".to_string());
     let mut token_0_code_hash = "".to_string();
-    match pair.pair.0.clone() {
+    match pair.pair.token_0.clone() {
         TokenType::CustomToken {
             contract_addr,
             token_code_hash,
@@ -337,7 +329,7 @@ pub fn get_pair_res<S: Storage, A: Api, Q: Querier>(
     }
     let mut token_1_addr = HumanAddr("".to_string());
     let mut token_1_code_hash = "".to_string();
-    match pair.pair.1.clone() {
+    match pair.pair.token_1.clone() {
         TokenType::CustomToken {
             contract_addr,
             token_code_hash,
@@ -389,7 +381,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 pair = pair_info_r(&deps.storage).load()?;
             }
             let mut return_amount = Uint128::zero();
-            if pair.pair.0 == offer.token {
+            if pair.pair.token_0 == offer.token {
                 /*
                 let take_amount = dex::pool_take_amount(
                         offer_asset.amount,
@@ -413,7 +405,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 } else {
                     return_amount = return_amount_pre_fee.checked_sub(fee)?;
                 }
-            } else if pair.pair.1 == offer.token {
+            } else if pair.pair.token_1 == offer.token {
                 let return_amount_pre_fee =
                     dex::pool_take_amount(offer.amount, pair.amount_1, pair.amount_0);
                 let fee = return_amount_pre_fee * fee_rate_r(&deps.storage).load()?;
