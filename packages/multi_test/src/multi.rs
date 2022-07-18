@@ -1,20 +1,20 @@
-// #[cfg(feature = "mint")]
-// pub mod mint {
-//     use crate::multi_macro;
-//     use mint;
+#[cfg(feature = "snip20")]
+pub mod snip20 {
+    use snip20;
+    multi_derive::implement_multi!(Snip20, snip20);
+}
 
-//     pub struct Mint;
-//     multi_macro::implement_multi!(Mint, mint);
-// }
+#[cfg(feature = "mint")]
+pub mod mint {
+    use mint;
+    multi_derive::implement_multi!(Mint, mint);
+}
 
-// #[cfg(feature = "oracle")]
-// pub mod oracle {
-//     use crate::multi_macro;
-//     use oracle;
-
-//     pub struct Oracle;
-//     multi_macro::implement_multi!(Oracle, oracle);
-// }
+#[cfg(feature = "oracle")]
+pub mod oracle {
+    use oracle;
+    multi_derive::implement_multi!(Oracle, oracle);
+}
 
 // #[cfg(feature = "mock_band")]
 // pub mod mock_band {
@@ -52,12 +52,6 @@
 //     multi_macro::implement_multi!(ScrtStaking, scrt_staking);
 // }
 
-#[cfg(feature = "snip20")]
-pub mod snip20 {
-    use snip20;
-    multi_derive::implement_multi!(Snip20, snip20);
-}
-
 // #[cfg(feature = "bonds")]
 // pub mod bonds {
 //     use crate::multi_macro;
@@ -74,15 +68,6 @@ pub mod snip20 {
 
 //     pub struct QueryAuth;
 //     multi_macro::implement_multi!(QueryAuth, query_auth);
-// }
-
-// #[cfg(feature = "admin")]
-// pub mod admin {
-//     use crate::multi_macro;
-//     use admin;
-
-//     pub struct Admin;
-//     multi_macro::implement_multi!(Admin, admin);
 // }
 
 // #[cfg(feature = "treasury_manager")]
