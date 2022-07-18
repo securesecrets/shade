@@ -16,6 +16,7 @@ use cosmwasm_std::{
 
 use secret_toolkit::snip20::{send_msg, balance_query, set_viewing_key_msg, register_receive_msg};
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use shade_protocol::{
     contract_interfaces::dao::adapter,
     utils::{
@@ -84,15 +85,15 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 viewing_key,
                 None,
                 256,
-                token.code_hash.clone(),
-                token.address.clone(),
+                msg.token.code_hash.clone(),
+                msg.token.address.clone(),
             )?,
             register_receive_msg(
                 env.contract_code_hash.clone(),
                 None,
                 256,
-                token.code_hash.clone(),
-                token.address.clone(),
+                msg.token.code_hash.clone(),
+                msg.token.address.clone(),
             )?,
         ],
         log: vec![],
@@ -157,8 +158,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                         None,
                         None,
                         1,
-                        full_asset.contract.code_hash.clone(),
-                        full_asset.contract.address.clone(),
+                        config.token.code_hash.clone(),
+                        config.token.address.clone(),
                     )?
                 }
                 else {
