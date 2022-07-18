@@ -1,3 +1,5 @@
+use std::vec;
+
 use crate::c_std::{
     BalanceResponse,
     BankQuery,
@@ -131,6 +133,7 @@ impl RawDependency {
     }
 }
 
+#[derive(Default)]
 #[cw_serde]
 pub struct RawDependencies(pub Vec<RawDependency>);
 
@@ -153,6 +156,7 @@ impl Dependency {
     }
 }
 
+#[derive(Default)]
 #[cw_serde]
 pub struct Dependencies(pub Vec<Dependency>);
 
