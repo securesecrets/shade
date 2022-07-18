@@ -132,6 +132,9 @@ impl RawDependency {
 }
 
 #[cw_serde]
+pub struct RawDependencies(pub Vec<RawDependency>);
+
+#[cw_serde]
 pub struct Dependency {
     pub name: String,
     pub contract: Contract,
@@ -144,7 +147,7 @@ impl Dependency {
 }
 
 #[cw_serde]
-pub struct Dependencies(Vec<Dependency>);
+pub struct Dependencies(pub Vec<Dependency>);
 
 impl Dependencies {
     pub fn get_dep(&self, name: &String) -> StdResult<Contract> {
