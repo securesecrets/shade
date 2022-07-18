@@ -114,62 +114,6 @@ impl From<ContractLink<Addr>> for Contract {
     }
 }
 
-// In case we ever want to store a dynamic list of dependencies and refer to them in the contract by name.
-// Helpful if we ever create a generic interface for something (i.e. oracles).
-
-#[cw_serde]
-pub struct RawDependency {
-    pub name: String,
-    pub contract: RawContract,
-}
-
-impl RawDependency {
-    pub fn new(name: String, contract: RawContract) -> Self {
-        RawDependency { name, contract }
-    }
-
-    pub fn into_valid(&self, api: &dyn Api) ->  StdResult<Dependency> {
-        Ok(Dependency::new(self.name.clone(), self.contract.clone().into_valid(api)?))
-    }
-}
-
-#[derive(Default)]
-#[cw_serde]
-pub struct RawDependencies(pub Vec<RawDependency>);
-
-impl RawDependencies {
-    pub fn into_valid(&self, api: &dyn Api) -> StdResult<Dependencies> {
-        let deps = self.0.clone().into_iter().map(|d| d.into_valid(api)).collect::<StdResult<Vec<_>>>()?;
-        Ok(Dependencies(deps))
-    }
-}
-
-#[cw_serde]
-pub struct Dependency {
-    pub name: String,
-    pub contract: Contract,
-}
-
-impl Dependency {
-    pub fn new(name: String, contract: Contract) -> Self {
-        Dependency { name, contract }
-    }
-}
-
-#[derive(Default)]
-#[cw_serde]
-pub struct Dependencies(pub Vec<Dependency>);
-
-impl Dependencies {
-    pub fn get_dep(&self, name: &str) -> StdResult<Contract> {
-        let item = self.0.as_slice().iter().find(|c| c.name.eq(name));
-        match item {
-            Some(item) => Ok(item.contract.clone()),
-            None => Err(StdError::generic_err(format!("Could not find dependency named {}", name))),
-        }
-    }
-}
-
 //TODO:  move away from here
 pub fn scrt_balance(
     deps: Deps,
