@@ -21,10 +21,10 @@ use shade_protocol::{
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
+        storage::plus::Item,
     },
     schemars::JsonSchema,
 };
-use secret_storage_plus::Item; 
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

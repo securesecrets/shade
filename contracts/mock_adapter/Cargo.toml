@@ -33,7 +33,8 @@ secret-toolkit = { version = "0.2" }
 cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "adapter",
+  "storage_plus",
 ] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0" }
+#secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0" }
