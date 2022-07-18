@@ -131,9 +131,9 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    if swap_amounts.len() > cycles[i].pair_addrs.clone().len() {
+    /*if swap_amounts.len() > cycles[i].pair_addrs.clone().len() {
         return Err(StdError::generic_err("More swap amounts than arb pairs"));
-    }
+    }*/
 
     // if the last calculated swap is greater than the initial amount, return true
     if current_offer.amount.u128() > amount.u128() {
