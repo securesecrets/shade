@@ -134,6 +134,13 @@ impl RawDependency {
 #[cw_serde]
 pub struct RawDependencies(pub Vec<RawDependency>);
 
+impl RawDependencies {
+    pub fn into_valid(&self, api: &dyn Api) -> StdResult<Dependencies> {
+        let deps = self.0.clone().into_iter().map(|d| d.into_valid(api)).collect::<StdResult<Vec<_>>>()?;
+        Ok(Dependencies(deps))
+    }
+}
+
 #[cw_serde]
 pub struct Dependency {
     pub name: String,
