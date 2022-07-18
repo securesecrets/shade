@@ -161,7 +161,7 @@ impl Dependency {
 pub struct Dependencies(pub Vec<Dependency>);
 
 impl Dependencies {
-    pub fn get_dep(&self, name: &String) -> StdResult<Contract> {
+    pub fn get_dep(&self, name: &str) -> StdResult<Contract> {
         let item = self.0.as_slice().iter().find(|c| c.name.eq(name));
         match item {
             Some(item) => Ok(item.contract.clone()),
