@@ -1,4 +1,4 @@
-//pub mod handle;
+pub mod handle;
 pub mod query;
 
 use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};

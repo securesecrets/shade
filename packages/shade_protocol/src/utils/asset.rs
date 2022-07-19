@@ -10,6 +10,7 @@ use crate::c_std::{
     Api, ContractInfo, StdError
 };
 use cosmwasm_schema::{cw_serde};
+use cosmwasm_std::{DepsMut, Env, CosmosMsg};
 #[cfg(feature = "ensemble")]
 use fadroma::prelude::ContractLink;
 
@@ -130,15 +131,20 @@ pub fn scrt_balance(
     Ok(resp.amount.amount)
 }
 
-pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+#[cfg(feature = "snip20")]
+pub fn set_allowance(
+    deps: DepsMut,
     env: &Env,
-    spender: HumanAddr,
+    spender: Addr,
     amount: Uint128,
     key: String,
     asset: Contract,
     cur_allowance: Option<Uint128>,
 ) -> StdResult<Vec<CosmosMsg>> {
+    use secret_toolkit::snip20::allowance_query;
+
+    use crate::snip20::helpers::{decrease_allowance_msg, increase_allowance_msg};
+
 
     let mut allowance = match cur_allowance {
         Some(cur) => cur,

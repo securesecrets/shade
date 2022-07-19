@@ -23,9 +23,9 @@ pub struct ArbPair {
 
 impl ArbPair {
     // Returns the calculated swap result when passed an offer with respect to the dex enum option
-    pub fn simulate_swap<S: Storage, A: Api, Q: Querier>(
+    pub fn simulate_swap(
         self,
-        deps: &Extern<S, A, Q>,
+        deps: DepsMut,
         offer: Offer,
     ) -> StdResult<Uint128> {
         let mut swap_result = Uint128::zero();

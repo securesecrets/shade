@@ -1,27 +1,28 @@
 use shade_protocol::c_std::{Coin, Addr};
-use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::c_std::Uint128;
+use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
 use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitConfig, InitialBalance};
 use shade_protocol::contract_interfaces::snip20::manager::{ContractStatusLevel, HashedKey, Key, ReceiverHash};
 use shade_protocol::utils::storage::plus::MapStorage;
 use crate::tests::init_snip20_with_config;
 
-pub mod transfer;
-pub mod wrap;
-pub mod mint;
-pub mod burn;
-pub mod allowance;
+// pub mod transfer;
+//pub mod wrap;
+// pub mod mint;
+// pub mod burn;
+// pub mod allowance;
 
 #[test]
 fn register_receive() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
-
-    assert!(chain.execute(&ExecuteMsg::RegisterReceive {
+    
+    assert!(ExecuteMsg::RegisterReceive {
         code_hash: "some_hash".to_string(),
         padding: None
-    }, MockEnv::new("contract", snip.clone())).is_ok());
+    }.test_exec(&snip, &chain, Addr::unchecked("contract"), &[]).is_ok());
 
-    chain.deps(snip.address, |borrowed_chain| {
+    chain.read_module(|router, _, storage| router.wasm.load_contract(storage, address));
+    chain.(snip.address, |borrowed_chain| {
         let hash = ReceiverHash::load(&borrowed_chain.storage, Addr::from("contract")).unwrap();
         assert_eq!(hash.0, "some_hash".to_string());
     }).unwrap();

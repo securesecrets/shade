@@ -2,6 +2,7 @@ use cosmwasm_std::{Coin, SubMsg};
 use cosmwasm_schema::{cw_serde};
 use crate::c_std::{StdError, StdResult, Addr, Uint128, Binary, CosmosMsg, QuerierWrapper};
 use crate::utils::{ExecuteCallback, Query};
+use super::manager::{Allowance, AllowanceResponse};
 use super::{QueryAnswer, QueryMsg, ExecuteMsg};
 use crate::utils::asset::Contract;
 
@@ -184,5 +185,106 @@ pub fn token_config(
             transfer_enabled: None
         }),
         _ => Err(StdError::generic_err("Wrong answer")) //TODO: better error
+    }
+}
+
+/// Returns a StdResult<CosmosMsg> used to execute IncreaseAllowance
+///
+/// # Arguments
+///
+/// * `spender` - the address of the allowed spender
+/// * `amount` - Uint128 additional amount the spender is allowed to send/burn
+/// * `expiration` - Optional u64 denoting the epoch time in seconds that the allowance will expire
+/// * `padding` - Optional String used as padding if you don't want to use block padding
+/// * `block_size` - pad the message to blocks of this size
+/// * `callback_code_hash` - String holding the code hash of the contract being called
+/// * `contract_addr` - address of the contract being called
+pub fn increase_allowance_msg(
+    spender: String,
+    amount: Uint128,
+    expiration: Option<u64>,
+    padding: Option<String>,
+    block_size: usize,
+    contract: &Contract,
+    funds: Vec<Coin>,
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::IncreaseAllowance {
+        spender,
+        amount,
+        expiration,
+        padding,
+    }
+    .to_cosmos_msg(contract, funds)
+}
+
+/// Returns a StdResult<CosmosMsg> used to execute DecreaseAllowance
+///
+/// # Arguments
+///
+/// * `spender` - the address of the allowed spender
+/// * `amount` - Uint128 amount the spender is no longer allowed to send/burn
+/// * `expiration` - Optional u64 denoting the epoch time in seconds that the allowance will expire
+/// * `padding` - Optional String used as padding if you don't want to use block padding
+/// * `block_size` - pad the message to blocks of this size
+/// * `callback_code_hash` - String holding the code hash of the contract being called
+/// * `contract_addr` - address of the contract being called
+pub fn decrease_allowance_msg(
+    spender: String,
+    amount: Uint128,
+    expiration: Option<u64>,
+    padding: Option<String>,
+    block_size: usize,
+    contract: &Contract,
+    funds: Vec<Coin>,
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::DecreaseAllowance {
+        spender,
+        amount,
+        expiration,
+        padding,
+    }
+    .to_cosmos_msg(contract, funds)
+}
+
+/// Returns a StdResult<Allowance> from performing Allowance query
+///
+/// # Arguments
+///
+/// * `querier` - a reference to the Querier dependency of the querying contract
+/// * `owner` - the address that owns the tokens
+/// * `spender` - the address allowed to send/burn tokens
+/// * `key` - String holding the authentication key needed to view the allowance
+/// * `block_size` - pad the message to blocks of this size
+/// * `callback_code_hash` - String holding the code hash of the contract being queried
+/// * `contract_addr` - address of the contract being queried
+#[allow(clippy::too_many_arguments)]
+pub fn allowance_query(
+    querier: &QuerierWrapper,
+    owner: String,
+    spender: String,
+    key: String,
+    block_size: usize,
+    contract: &Contract,
+) -> StdResult<AllowanceResponse> {
+    let answer: QueryAnswer = QueryMsg::Allowance {
+        owner,
+        spender,
+        key,
+    }
+    .query(querier, contract)?;
+    match answer {
+        QueryAnswer::Allowance {
+            spender,
+            owner,
+            allowance,
+            expiration,
+        } => Ok(AllowanceResponse {
+            spender,
+            owner,
+            expiration,
+            amount: todo!(),
+        }),
+        QueryAnswer::ViewingKeyError { .. } => Err(StdError::unauthorized()),
+        _ => Err(StdError::generic_err("Invalid Allowance query response")),
     }
 }
