@@ -2,8 +2,10 @@
 macro_rules! implement_harness {
     ($x:ident, $s:ident) => {
         use cosmwasm_std::{HumanAddr, from_binary, Binary, Env, HandleResponse, InitResponse, StdResult};
-        use fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
-        use fadroma::core::ContractLink;
+        use shade_protocol::fadroma::{
+            ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv},
+            core::ContractLink,
+        };
         use serde::Serialize;
         impl ContractHarness for $x {
             fn init(&self, deps: &mut MockDeps, env: Env, msg: Binary) -> StdResult<InitResponse> {

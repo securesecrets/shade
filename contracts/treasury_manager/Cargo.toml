@@ -31,10 +31,12 @@ schemars = "0.7"
 chrono = "0.4.19"
 
 [dev-dependencies]
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness" }
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["snip20_reference_impl", "treasury", "treasury_manager", "scrt_staking", "snip20"]}
+# fadroma = { path = "../../../fadroma-staking/crates/fadroma", features = ["ensemble", "scrt"] }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "mint",
   "band",
   "ensemble"
 ] }
 snip20-reference-impl = { version = "0.1.0", path = "../../contracts/snip20-reference-impl" }
+cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }

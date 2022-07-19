@@ -89,6 +89,7 @@ pub enum HandleAnswer {
 pub enum QueryMsg {
     Config {},
     Delegations {},
+    Rewards {},
     Adapter(adapter::SubQueryMsg),
 }
 

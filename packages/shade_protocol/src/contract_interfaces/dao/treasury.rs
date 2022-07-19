@@ -1,10 +1,29 @@
-use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStatus};
+use crate::utils::{
+    asset::Contract,
+    cycle::Cycle,
+    generic_response::ResponseStatus,
+};
 
 use crate::contract_interfaces::dao::adapter;
 use crate::c_std::{Binary, HumanAddr, StdResult, Uint128};
 use crate::schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use crate::serde::{Deserialize, Serialize};
+
+pub mod storage {
+    use secret_storage_plus::{Map, Item};
+    use cosmwasm_std::HumanAddr;
+    use crate::contract_interfaces::snip20::helpers::Snip20Asset;
+
+    pub const CONFIG: Item<super::Config> = Item::new("config");
+    pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+    pub const ASSET_LIST: Item<Vec<HumanAddr>> = Item::new("asset_list");
+    pub const SELF_ADDRESS: Item<HumanAddr> = Item::new("self_address");
+    pub const MANAGERS: Item<Vec<super::Manager>> = Item::new("managers");
+
+    pub const ALLOWANCES: Map<HumanAddr, Vec<super::Allowance>> = Map::new("allowances");
+    pub const ASSETS: Map<HumanAddr, Snip20Asset> = Map::new("assets");
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -51,40 +70,15 @@ pub struct Manager {
     pub desired: Uint128,
 }
 
-/*
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Balance {
-    pub token: HumanAddr,
-    pub amount: Uint128,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Status {
-    Active,
-    Disabled,
-    Closed,
-    Transferred,
-}
-
-//TODO: move accounts to treasury manager
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct Account {
-    pub balances: Vec<Balance>,
-    pub unbondings: Vec<Balance>,
-    pub claimable: Vec<Balance>,
-    pub status: Status,
-}
-*/
 
 // Flag to be sent with funds
+/*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Flag {
     pub flag: String,
 }
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
@@ -111,7 +105,6 @@ pub enum HandleMsg {
     },
     RegisterAsset {
         contract: Contract,
-        reserves: Option<Uint128>,
     },
     RegisterManager {
         contract: Contract,
@@ -193,7 +186,7 @@ pub enum QueryAnswer {
     Assets { assets: Vec<HumanAddr> },
     Allowances { allowances: Vec<Allowance> },
     CurrentAllowances { allowances: Vec<Allowance> },
-    Allowance { allowance: Uint128 },
+    Allowance { amount: Uint128 },
     //Accounts { accounts: Vec<HumanAddr> },
     //Account { account: Account },
 }

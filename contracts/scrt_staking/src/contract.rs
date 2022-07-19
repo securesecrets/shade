@@ -59,7 +59,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     Ok(InitResponse {
         messages: vec![
             set_viewing_key_msg(
-                viewing_key_r(&deps.storage).load()?,
+                msg.viewing_key,
                 None,
                 1,
                 config.sscrt.code_hash.clone(),
@@ -108,6 +108,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
+        QueryMsg::Rewards {} => to_binary(&query::rewards(deps)?),
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
             adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),

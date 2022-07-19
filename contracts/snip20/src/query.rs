@@ -97,6 +97,8 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         (owner.clone(), spender.clone())
     )?.unwrap_or_default();
 
+    //panic!("allowance {}", allowance.amount);
+
     Ok(QueryAnswer::Allowance {
         spender,
         owner,

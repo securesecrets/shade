@@ -1,5 +1,5 @@
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use crate::c_std::{
+use cosmwasm_std::{
     Api,
     Binary,
     CosmosMsg,
@@ -14,9 +14,9 @@ use crate::c_std::{
     Uint128,
     Validator,
 };
-use crate::schemars::JsonSchema;
+use schemars::JsonSchema;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use crate::serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -35,7 +35,7 @@ impl HandleCallback for SubHandleMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    Adapter(SubHandleMsg),
+    Manager(SubHandleMsg),
 }
 
 impl HandleCallback for HandleMsg {
@@ -65,17 +65,17 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SubQueryMsg {
-    Balance { asset: HumanAddr },
-    Unbonding { asset: HumanAddr },
-    Claimable { asset: HumanAddr },
-    Unbondable { asset: HumanAddr },
-    Reserves { asset: HumanAddr },
+    Balance { asset: HumanAddr, holder: HumanAddr, },
+    Unbonding { asset: HumanAddr, holder: HumanAddr, },
+    Claimable { asset: HumanAddr, holder: HumanAddr,  },
+    Unbondable { asset: HumanAddr, holder: HumanAddr, },
+    Reserves { asset: HumanAddr, holder: HumanAddr, },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    Adapter(SubQueryMsg),
+    Manager(SubQueryMsg),
 }
 
 impl Query for QueryMsg {
@@ -95,17 +95,19 @@ pub enum QueryAnswer {
 pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-    adapter: Contract,
+    holder: HumanAddr,
+    manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Adapter(SubQueryMsg::Claimable {
+    match (QueryMsg::Manager(SubQueryMsg::Claimable {
         asset: asset.clone(),
+        holder: holder.clone(),
     })
-    .query(&deps.querier, adapter.code_hash, adapter.address.clone())?)
+    .query(&deps.querier, manager.code_hash, manager.address.clone())?)
     {
         QueryAnswer::Claimable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
-            "Failed to query adapter claimable from {}",
-            adapter.address
+            "Failed to query manager claimable from {}",
+            manager.address
         ))),
     }
 }
@@ -113,17 +115,19 @@ pub fn claimable_query<S: Storage, A: Api, Q: Querier>(
 pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-    adapter: Contract,
+    holder: HumanAddr,
+    manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Adapter(SubQueryMsg::Unbonding {
+    match (QueryMsg::Manager(SubQueryMsg::Unbonding {
         asset: asset.clone(),
+        holder: holder.clone(),
     })
-    .query(&deps.querier, adapter.code_hash, adapter.address.clone())?)
+    .query(&deps.querier, manager.code_hash, manager.address.clone())?)
     {
         QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
-            "Failed to query adapter unbonding from {}",
-            adapter.address
+            "Failed to query manager unbonding from {}",
+            manager.address
         ))),
     }
 }
@@ -131,17 +135,19 @@ pub fn unbonding_query<S: Storage, A: Api, Q: Querier>(
 pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-    adapter: Contract,
+    holder: HumanAddr,
+    manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Adapter(SubQueryMsg::Unbondable {
+    match (QueryMsg::Manager(SubQueryMsg::Unbondable {
         asset: asset.clone(),
+        holder: holder.clone(),
     })
-    .query(&deps.querier, adapter.code_hash, adapter.address.clone())?)
+    .query(&deps.querier, manager.code_hash, manager.address.clone())?)
     {
         QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
-            "Failed to query adapter unbondable from {}",
-            adapter.address
+            "Failed to query manager unbondable from {}",
+            manager.address
         ))),
     }
 }
@@ -149,15 +155,17 @@ pub fn unbondable_query<S: Storage, A: Api, Q: Querier>(
 pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-    adapter: Contract,
+    holder: HumanAddr,
+    manager: Contract,
 ) -> StdResult<Uint128> {
 
-    match (QueryMsg::Adapter(SubQueryMsg::Reserves {
+    match (QueryMsg::Manager(SubQueryMsg::Reserves {
         asset: asset.clone(),
-    }).query(&deps.querier, adapter.code_hash, adapter.address.clone())?) {
+        holder: holder.clone(),
+    }).query(&deps.querier, manager.code_hash, manager.address.clone())?) {
         QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
-            format!("Failed to query adapter unbondable from {}", adapter.address)
+            format!("Failed to query manager unbondable from {}", manager.address)
         ))
     }
 }
@@ -165,41 +173,43 @@ pub fn reserves_query<S: Storage, A: Api, Q: Querier>(
 pub fn balance_query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: &HumanAddr,
-    adapter: Contract,
+    holder: HumanAddr,
+    manager: Contract,
 ) -> StdResult<Uint128> {
-    match (QueryMsg::Adapter(SubQueryMsg::Balance {
+    match (QueryMsg::Manager(SubQueryMsg::Balance {
         asset: asset.clone(),
+        holder: holder.clone(),
     })
-    .query(&deps.querier, adapter.code_hash, adapter.address.clone())?)
+    .query(&deps.querier, manager.code_hash, manager.address.clone())?)
     {
         QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
-            "Failed to query adapter balance from {}",
-            adapter.address
+            "Failed to query manager balance from {}",
+            manager.address
         ))),
     }
 }
 
-pub fn claim_msg(asset: HumanAddr, adapter: Contract) -> StdResult<CosmosMsg> {
-    HandleMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
-        adapter.code_hash,
-        adapter.address,
+pub fn claim_msg(asset: HumanAddr, manager: Contract) -> StdResult<CosmosMsg> {
+    HandleMsg::Manager(SubHandleMsg::Claim { asset }).to_cosmos_msg(
+        manager.code_hash,
+        manager.address,
         None,
     )
 }
 
-pub fn unbond_msg(asset: HumanAddr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
-    HandleMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
-        adapter.code_hash,
-        adapter.address,
+pub fn unbond_msg(asset: HumanAddr, amount: Uint128, manager: Contract) -> StdResult<CosmosMsg> {
+    HandleMsg::Manager(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
+        manager.code_hash,
+        manager.address,
         None,
     )
 }
 
-pub fn update_msg(asset: HumanAddr, adapter: Contract) -> StdResult<CosmosMsg> {
-    HandleMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
-        adapter.code_hash,
-        adapter.address,
+pub fn update_msg(asset: HumanAddr, manager: Contract) -> StdResult<CosmosMsg> {
+    HandleMsg::Manager(SubHandleMsg::Update { asset }).to_cosmos_msg(
+        manager.code_hash,
+        manager.address,
         None,
     )
 }

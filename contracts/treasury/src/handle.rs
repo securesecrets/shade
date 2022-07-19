@@ -1,6 +1,5 @@
 use shade_protocol::c_std::{
     self,
-    from_binary,
     to_binary,
     Api,
     Binary,
@@ -24,57 +23,42 @@ use shade_protocol::secret_toolkit::{
         register_receive_msg,
         set_viewing_key_msg,
     },
-    utils::Query,
 };
 
 use shade_protocol::{
     contract_interfaces::{
-        dao::treasury::{
-            Allowance,
-            Config,
-            Flag,
-            HandleAnswer,
-            Manager,
-            QueryAnswer,
+        dao::{
+            treasury::{
+                Allowance,
+                Config,
+                HandleAnswer,
+                Manager,
+                storage::*,
+            },
+            //adapter,
+            manager,
         },
         snip20,
     },
     utils::{
-        asset::Contract,
-        cycle::{exceeds_cycle, parse_utc_datetime, Cycle},
+        asset::{Contract, set_allowance},
+        cycle::{exceeds_cycle, parse_utc_datetime},
         generic_response::ResponseStatus,
     },
 };
 
-use crate::{
-    query,
-    state::{
-        allowances_r,
-        allowances_w,
-        asset_list_r,
-        asset_list_w,
-        assets_r,
-        assets_w,
-        config_r,
-        config_w,
-        managers_r,
-        managers_w,
-        self_address_r,
-        viewing_key_r,
-    },
-};
 use chrono::prelude::*;
-use shade_protocol::contract_interfaces::dao::adapter;
+use std::collections::HashMap;
 
 pub fn receive<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _deps: &mut Extern<S, A, Q>,
+    _env: Env,
     sender: HumanAddr,
     _from: HumanAddr,
-    amount: Uint128,
-    msg: Option<Binary>,
+    _amount: Uint128,
+    _msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
-    let key = sender.as_str().as_bytes();
+    //let _key = sender.as_str().as_bytes();
 
     Ok(HandleResponse {
         messages: vec![],
@@ -90,13 +74,13 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     env: Env,
     config: Config,
 ) -> StdResult<HandleResponse> {
-    let cur_config = config_r(&deps.storage).load()?;
+    let cur_config = CONFIG.load(&deps.storage)?;
 
     if env.message.sender != cur_config.admin {
         return Err(StdError::unauthorized());
     }
 
-    config_w(&mut deps.storage).save(&config)?;
+    CONFIG.save(&mut deps.storage, &config)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -108,8 +92,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn allowance_last_refresh<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    env: &Env,
+    _deps: &Extern<S, A, Q>,
+    _env: &Env,
     allowance: &Allowance,
 ) -> StdResult<Option<DateTime<Utc>>> {
     // Parse previous refresh datetime
@@ -131,22 +115,23 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     let naive = NaiveDateTime::from_timestamp(env.block.time as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
-    let key = viewing_key_r(&deps.storage).load()?;
-    let self_address = self_address_r(&deps.storage).load()?;
+    let viewing_key = VIEWING_KEY.load(&deps.storage)?;
+    let self_address = SELF_ADDRESS.load(&deps.storage)?;
     let mut messages = vec![];
 
-    let full_asset = match assets_r(&deps.storage).may_load(asset.as_str().as_bytes())? {
+    let full_asset = match ASSETS.may_load(&deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err("Not an asset"));
         }
     };
-    let allowances = allowances_r(&deps.storage).load(asset.as_str().as_bytes())?;
 
-    let mut balance = balance_query(
+    let allowances = ALLOWANCES.load(&deps.storage, asset.clone())?;
+
+    let token_balance = balance_query(
         &deps.querier,
-        self_address,
-        key.clone(),
+        self_address.clone(),
+        viewing_key.clone(),
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),
@@ -163,61 +148,59 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     }
     */
 
-    let mut amount_total = Uint128::zero();
+
+    let managers = MANAGERS.load(&deps.storage)?;
+
+    // manager_addr: (balance, allowance)
+    let mut manager_data: HashMap<HumanAddr, (Uint128, Uint128)> = HashMap::new();
+
+    // Total amount of funds that are "out" or allocated to an manager (sky, scrt_staking)
     let mut out_balance = Uint128::zero();
 
-    let mut managers = managers_r(&deps.storage).load()?;
+    // Fetch balances & allowances
+    for manager in managers.clone() {
 
-    // Fetch & sum balances
-    for allowance in &allowances {
-        match allowance {
-            Allowance::Amount {
-                spender,
-                cycle,
-                amount,
-                last_refresh,
-            } => {
-                //TODO: Query allowance
-                amount_total += *amount;
-                let i = managers
-                    .iter()
-                    .position(|m| m.contract.address == *spender)
-                    .unwrap();
-                managers[i].balance = adapter::balance_query(
-                    &deps,
-                    &full_asset.contract.address.clone(),
-                    managers[i].contract.clone(),
-                )?;
-                out_balance += managers[i].balance;
-            },
-            Allowance::Portion {
-                spender,
-                portion,
-                last_refresh,
-                tolerance,
-            } => {
-                let i = managers
-                    .iter()
-                    .position(|m| m.contract.address == *spender)
-                    .unwrap();
-                managers[i].balance = adapter::balance_query(
-                    &deps,
-                    &full_asset.contract.address.clone(),
-                    managers[i].contract.clone(),
-                )?;
-                out_balance += managers[i].balance;
-            }
-        }
+        let balance = manager::balance_query(
+            &deps,
+            &full_asset.contract.address.clone(),
+            self_address.clone(),
+            manager.contract.clone(),
+        )?;
+        out_balance += balance;
+
+        let allowance = allowance_query(
+            &deps.querier,
+            env.contract.address.clone(),
+            manager.contract.address.clone(),
+            viewing_key.clone(),
+            1,
+            full_asset.contract.code_hash.clone(),
+            full_asset.contract.address.clone(),
+        )?
+        .allowance;
+
+        manager_data.insert(manager.contract.address, (balance, allowance));
     }
 
-    let mut portion_total = ((balance + out_balance) - amount_total)?;
+    // Total for "amount" allowances (govt, assemblies, etc.)
+    let mut amount_total = Uint128::zero();
 
-    managers_w(&mut deps.storage).save(&managers)?;
-    let config = config_r(&deps.storage).load()?;
+    MANAGERS.save(&mut deps.storage, &managers)?;
+    //let _config = CONFIG.load(&deps.storage)?;
 
-    // Perform rebalance
-    for allowance in allowances {
+    let (
+        amount_allowances, 
+        portion_allowances
+    ): (Vec<Allowance>, Vec<Allowance>) = allowances
+        .into_iter()
+        .partition(|a| match a { 
+            Allowance::Amount { .. } => true, 
+            Allowance::Portion { .. } => false 
+        });
+
+    for allowance in amount_allowances {
         match allowance {
+            // TODO: change this to a "flag" instead of type
             Allowance::Amount {
                 spender,
                 cycle,
@@ -226,29 +209,82 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
             } => {
                 let datetime = parse_utc_datetime(&last_refresh)?;
 
+                // Refresh allowance if cycle is exceeded
                 if exceeds_cycle(&datetime, &now, cycle) {
-                    if let Some(msg) = set_allowance(
-                        &deps,
-                        env,
-                        spender,
-                        amount,
-                        key.clone(),
-                        full_asset.contract.clone(),
-                    )? {
-                        messages.push(msg);
+
+                    let mut cur_allowance = Uint128::zero();
+                    if let Some(m) = manager_data.get(&spender) {
+                        cur_allowance = m.1;
+                    }
+                    else {
+                        cur_allowance = allowance_query(
+                            &deps.querier,
+                            env.contract.address.clone(),
+                            spender.clone(),
+                            viewing_key.clone(),
+                            1,
+                            full_asset.contract.code_hash.clone(),
+                            full_asset.contract.address.clone(),
+                        )?.allowance;
+
+                        // hasn't been accounted for by manager data
+                        amount_total += cur_allowance;
+                    }
+
+                    amount_total += cur_allowance;
+
+                    match amount.cmp(&cur_allowance) {
+                        // Decrease Allowance
+                        std::cmp::Ordering::Less => {
+                            messages.push(
+                                decrease_allowance_msg(
+                                    spender.clone(),
+                                    (cur_allowance - amount)?,
+                                    None,
+                                    None,
+                                    1,
+                                    full_asset.contract.code_hash.clone(),
+                                    full_asset.contract.address.clone(),
+                                )?
+                            );
+                        },
+                        // Increase Allowance
+                        std::cmp::Ordering::Greater => {
+                            messages.push(
+                                increase_allowance_msg(
+                                    spender.clone(),
+                                    (amount - cur_allowance)?,
+                                    None,
+                                    None,
+                                    1,
+                                    full_asset.contract.code_hash.clone(),
+                                    full_asset.contract.address.clone(),
+                                )?
+                            );
+                        },
+                        _ => {},
                     }
                 }
             }
+            _ => {}
+        }
+    }
+
+    // Total for "portion" allowances (managers for farming mostly & reallocating)
+    let portion_total = ((token_balance + out_balance) - amount_total)?;
+
+    for allowance in portion_allowances {
+        match allowance {
             Allowance::Portion {
                 spender,
                 portion,
-                last_refresh,
+                last_refresh: _,
                 tolerance,
             } => {
                 let desired_amount = portion_total.multiply_ratio(portion, 10u128.pow(18));
                 let threshold = desired_amount.multiply_ratio(tolerance, 10u128.pow(18));
 
-                let adapter = managers
+                let manager = managers
                     .clone()
                     .into_iter()
                     .find(|m| m.contract.address == spender)
@@ -257,16 +293,17 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 /* NOTE: remove claiming if rebalance tx becomes too heavy
                  * alternatives:
                  *  - separate rebalance & update,
-                 *  - update could do an adapter.update on all "children"
-                 *  - rebalance can be unique as its not needed as an adapter
+                 *  - update could do an manager.update on all "children"
+                 *  - rebalance can be unique as its not needed as an manager
                  */
-                if adapter::claimable_query(&deps, 
+                if manager::claimable_query(&deps, 
                                             &asset, 
-                                            adapter.contract.clone()
+                                            self_address.clone(),
+                                            manager.contract.clone()
                                     )? > Uint128::zero() {
-                    messages.push(adapter::claim_msg(
+                    messages.push(manager::claim_msg(
                         asset.clone(),
-                        adapter.contract.clone()
+                        manager.contract.clone()
                     )?);
                 };
 
@@ -274,7 +311,7 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                     &deps.querier,
                     env.contract.address.clone(),
                     spender.clone(),
-                    key.clone(),
+                    viewing_key.clone(),
                     1,
                     full_asset.contract.code_hash.clone(),
                     full_asset.contract.address.clone(),
@@ -282,8 +319,8 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                 .allowance;
 
                 // UnderFunded
-                if cur_allowance + adapter.balance < desired_amount {
-                    let increase = (desired_amount - (adapter.balance + cur_allowance))?;
+                if cur_allowance + manager.balance < desired_amount {
+                    let increase = (desired_amount - (manager.balance + cur_allowance))?;
                     if increase < threshold {
                         continue;
                     }
@@ -298,8 +335,8 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
                     )?);
                 }
                 // Overfunded
-                else if cur_allowance + adapter.balance > desired_amount {
-                    let mut decrease = ((adapter.balance + cur_allowance) - desired_amount)?;
+                else if cur_allowance + manager.balance > desired_amount {
+                    let mut decrease = ((manager.balance + cur_allowance) - desired_amount)?;
                     if decrease < threshold {
                         continue;
                     }
@@ -333,14 +370,15 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
 
                     // Unbond remaining
                     if decrease > Uint128::zero() {
-                        messages.push(adapter::unbond_msg(
+                        messages.push(manager::unbond_msg(
                             asset.clone(),
                             decrease,
-                            adapter.contract,
+                            manager.contract,
                         )?);
                     }
                 }
-            }
+            },
+            _ => {},
         }
     }
 
@@ -353,72 +391,33 @@ pub fn rebalance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn set_allowance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    env: &Env,
-    spender: HumanAddr,
-    amount: Uint128,
-    key: String,
-    asset: Contract,
-) -> StdResult<Option<CosmosMsg>> {
-    let cur_allowance = allowance_query(
-        &deps.querier,
-        env.contract.address.clone(),
-        spender.clone(),
-        key,
-        1,
-        asset.code_hash.clone(),
-        asset.address.clone(),
-    )?;
-
-    match amount.cmp(&cur_allowance.allowance) {
-        // Decrease Allowance
-        std::cmp::Ordering::Less => Ok(Some(decrease_allowance_msg(
-            spender.clone(),
-            (cur_allowance.allowance - amount)?,
-            None,
-            None,
-            1,
-            asset.code_hash.clone(),
-            asset.address.clone(),
-        )?)),
-        // Increase Allowance
-        std::cmp::Ordering::Greater => Ok(Some(increase_allowance_msg(
-            spender.clone(),
-            (amount - cur_allowance.allowance)?,
-            None,
-            None,
-            1,
-            asset.code_hash.clone(),
-            asset.address.clone(),
-        )?)),
-        _ => Ok(None),
-    }
-}
-
 pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
-    reserves: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+    let config = CONFIG.load(&deps.storage)?;
 
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
-    asset_list_w(&mut deps.storage).update(|mut list| {
+    let mut asset_list = ASSET_LIST.load(&deps.storage)?;
+    asset_list.push(contract.address.clone());
+    ASSET_LIST.save(&mut deps.storage, &asset_list)?;
+    /*
+    ASSET_LIST.update(&mut deps.storage, |mut list| {
         list.push(contract.address.clone());
         Ok(list)
     })?;
+    */
 
-    assets_w(&mut deps.storage).save(
-        contract.address.to_string().as_bytes(),
-        &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
+    ASSETS.save(&mut deps.storage,
+                contract.address.clone(),
+                &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
     )?;
 
-    allowances_w(&mut deps.storage).save(contract.address.as_str().as_bytes(), &Vec::new())?;
+    ALLOWANCES.save(&mut deps.storage, contract.address.clone(), &Vec::new())?;
 
     Ok(HandleResponse {
         messages: vec![
@@ -432,7 +431,7 @@ pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
             )?,
             // Set viewing key
             set_viewing_key_msg(
-                viewing_key_r(&deps.storage).load()?,
+                VIEWING_KEY.load(&deps.storage)?,
                 None,
                 256,
                 contract.code_hash.clone(),
@@ -451,14 +450,14 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
     env: &Env,
     contract: &mut Contract,
 ) -> StdResult<HandleResponse> {
-    let config = config_r(&deps.storage).load()?;
+    let config = CONFIG.load(&deps.storage)?;
 
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
-    managers_w(&mut deps.storage).update(|mut adapters| {
-        if adapters
+    MANAGERS.update(&mut deps.storage, |mut managers| {
+        if managers
             .iter()
             .map(|m| m.contract.clone())
             .collect::<Vec<_>>()
@@ -466,12 +465,12 @@ pub fn register_manager<S: Storage, A: Api, Q: Querier>(
         {
             return Err(StdError::generic_err("Manager already registered"));
         }
-        adapters.push(Manager {
+        managers.push(Manager {
             contract: contract.clone(),
             balance: Uint128::zero(),
             desired: Uint128::zero(),
         });
-        Ok(adapters)
+        Ok(managers)
     })?;
 
     Ok(HandleResponse {
@@ -515,34 +514,38 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
-    let config = config_r(&deps.storage).load()?;
+    let config = CONFIG.load(&deps.storage)?;
 
     /* ADMIN ONLY */
     if env.message.sender != config.admin {
         return Err(StdError::unauthorized());
     }
 
-    let adapters = managers_r(&deps.storage).load()?;
+    let full_asset = match ASSETS.may_load(&deps.storage, asset.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Not an asset"));
+        }
+    };
 
-    // Disallow Portion on non-adapters
+    let managers = MANAGERS.load(&deps.storage)?;
+
+    // Disallow Portion on non-managers
     match allowance {
         Allowance::Portion { ref spender, .. } => {
-            if adapters
+            if managers
                 .clone()
                 .into_iter()
                 .find(|m| m.contract.address == *spender)
                 .is_none()
             {
-                return Err(StdError::generic_err("Portion allowances to adapters only"));
+                return Err(StdError::generic_err("Portion allowances to managers only"));
             }
         }
         _ => {}
     };
 
-    let key = asset.as_str().as_bytes();
-
-    let mut apps = allowances_r(&deps.storage)
-        .may_load(key)?
+    let mut apps = ALLOWANCES.may_load(&deps.storage, asset.clone())?
         .unwrap_or_default();
 
     let allow_address = allowance_address(&allowance);
@@ -583,7 +586,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         Allowance::Portion {
             spender,
             portion,
-            last_refresh,
+            last_refresh: _,
             tolerance,
         } => {
             apps.push(Allowance::Portion {
@@ -598,7 +601,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
             spender,
             cycle,
             amount,
-            last_refresh,
+            last_refresh: _,
         } => {
             apps.push(Allowance::Amount {
                 spender: spender.clone(),
@@ -610,7 +613,18 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    allowances_w(&mut deps.storage).save(key, &apps)?;
+    ALLOWANCES.save(&mut deps.storage, asset, &apps)?;
+    /*
+    set_allowance(
+        &deps,
+        &env,
+        spender,
+        amount.clone(),
+        VIEWING_KEY.load(&deps.storage)?,
+        full_asset.contract,
+        None,
+    )?,
+    */
 
     Ok(HandleResponse {
         messages: vec![],
@@ -623,40 +637,42 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
 
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: &Env,
+    _env: &Env,
     asset: HumanAddr,
 ) -> StdResult<HandleResponse> {
 
-    let key = asset.as_str().as_bytes();
-
-    let managers = managers_r(&deps.storage).load()?;
-    let allowances = allowances_r(&deps.storage).load(&key)?;
+    let managers = MANAGERS.load(&deps.storage)?;
+    let allowances = ALLOWANCES.load(&deps.storage, asset.clone())?;
+    let self_address = SELF_ADDRESS.load(&deps.storage)?;
 
     let mut messages = vec![];
 
     let mut claimed = Uint128::zero();
 
-    for allowance in allowances {
-        match allowance {
-            Allowance::Amount { .. } => {}
-            Allowance::Portion { spender, .. } => {
-                if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
-                    let claimable =
-                        adapter::claimable_query(&deps, &asset, manager.contract.clone())?;
+    for manager in managers {
+        let claimable =
+            manager::claimable_query(
+                &deps,
+                &asset.clone(),
+                self_address.clone(),
+                manager.contract.clone()
+            )?;
 
-                    if claimable > Uint128::zero() {
-                        messages.push(adapter::claim_msg(asset.clone(), manager.contract.clone())?);
-                        claimed += claimable;
-                    }
-                }
-            }
+        if claimable > Uint128::zero() {
+            messages.push(
+                manager::claim_msg(
+                    asset.clone(),
+                    manager.contract.clone()
+                )?
+            );
+            claimed += claimable;
         }
     }
 
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+        data: Some(to_binary(&manager::HandleAnswer::Claim {
             status: ResponseStatus::Success,
             amount: claimed,
         })?),
@@ -669,29 +685,34 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     asset: HumanAddr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
-    /*
-    if env.message.sender != config_r(&deps.storage).load()?.admin {
+
+    if env.message.sender != CONFIG.load(&deps.storage)?.admin {
         return Err(StdError::unauthorized());
     }
-    */
 
-    let managers = managers_r(&deps.storage).load()?;
+    let managers = MANAGERS.load(&deps.storage)?;
+    let self_address = SELF_ADDRESS.load(&deps.storage)?;
 
     let mut messages = vec![];
 
     let mut unbond_amount = amount;
     let mut unbonded = Uint128::zero();
 
-    for allowance in allowances_r(&deps.storage).load(asset.as_str().as_bytes())? {
+    for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
         match allowance {
             Allowance::Amount { .. } => {}
             Allowance::Portion { spender, .. } => {
                 if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
-                    let unbondable = adapter::unbondable_query(&deps, &asset.clone(), manager.contract.clone())?;
+                    let unbondable = manager::unbondable_query(
+                        &deps, 
+                        &asset.clone(), 
+                        self_address.clone(),
+                        manager.contract.clone()
+                    )?;
 
                     if unbondable > unbond_amount {
                         messages.push(
-                            adapter::unbond_msg(
+                            manager::unbond_msg(
                                 asset.clone(),
                                 unbond_amount,
                                 manager.contract.clone(),
@@ -702,7 +723,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
                     }
                     else {
                         messages.push(
-                            adapter::unbond_msg(
+                            manager::unbond_msg(
                                 asset.clone(),
                                 unbondable,
                                 manager.contract.clone(),
@@ -732,7 +753,7 @@ pub fn unbond<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages,
         log: vec![],
-        data: Some(to_binary(&adapter::HandleAnswer::Claim {
+        data: Some(to_binary(&manager::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
             amount,
         })?),

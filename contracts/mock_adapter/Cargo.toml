@@ -1,7 +1,9 @@
-[package] 
-name = "scrt_staking"
+[package]
+name = "mock_adapter"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = [
+  "Jack Swenson <jacksonswenson22@gmail.com>",
+]
 edition = "2018"
 
 exclude = [
@@ -19,21 +21,20 @@ crate-type = ["cdylib", "rlib"]
 default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
-backtraces = ["shade-protocol/backtraces"]
-debug-print = ["shade-protocol/debug-print"]
+backtraces = ["cosmwasm-std/backtraces"]
+debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
+cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std" }
+#cosmwasm-storage-plus = { version = "0.10", package = "secret-storage-plus" }
+#secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0"}
+cosmwasm-schema = "0.10.1"
+secret-toolkit = { version = "0.2" }
+cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "scrt_staking",
-  "treasury",
-  "math",
+  "adapter",
+  "storage_plus",
 ] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "0.6.3" }
-
-[dev-dependencies]
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["scrt_staking", "snip20_reference_impl", "snip20" ] }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "ensemble",
-] }
+#secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0" }
