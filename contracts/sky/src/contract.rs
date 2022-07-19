@@ -107,9 +107,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             handle::try_update_cycle(deps, env, cycle, index)
         }
         HandleMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, index),
-        HandleMsg::ArbCycle { amount, index, .. } => {
-            handle::try_arb_cycle(deps, env, amount, index)
-        }
+        HandleMsg::ArbCycle {
+            amount,
+            index,
+            payback_addr,
+            ..
+        } => handle::try_arb_cycle(deps, env, amount, index, payback_addr),
         HandleMsg::ArbAllCycles { amount, .. } => handle::try_arb_all_cycles(deps, env, amount),
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {

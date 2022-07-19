@@ -269,7 +269,7 @@ impl Cycle {
                 return Err(StdError::generic_err("cycle not complete"));
             }
         }
-        let initial_len = hash_vec.clone().len();
+        /*let initial_len = hash_vec.clone().len();
         // Sorting and dedup ing will remove any dublicates and tell us if there's 2 of the same
         // pair contract included in the cycle
         hash_vec.sort();
@@ -278,7 +278,7 @@ impl Cycle {
             return Err(StdError::generic_err(
                 "cycles should include one copy of each pair",
             ));
-        }
+        }*/
         Ok(true)
     }
 }
