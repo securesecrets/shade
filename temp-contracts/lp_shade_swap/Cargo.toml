@@ -1,5 +1,5 @@
 [package]
-name = "scrt_staking"
+name = "lp_shade_swap"
 version = "0.1.0"
 authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
 edition = "2018"
@@ -20,17 +20,19 @@ default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
+cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std", features = [
+  "staking",
+] }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "scrt_staking",
+  "lp_shade_swap",
   "treasury",
   "math",
+  "dex",
 ] }
-
-
-[dev-dependencies]
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["scrt_staking", "snip20", "snip20" ] }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "ensemble",
-] }
+schemars = "0.7"
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+snafu = { version = "0.6.3" }
+# shadeswap-shared = { git = "https://github.com/securesecrets/shadeswap.git", branch = "touch-ups"}

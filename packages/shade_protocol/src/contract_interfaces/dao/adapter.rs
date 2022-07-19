@@ -176,28 +176,22 @@ pub fn balance_query(
 }
 
 pub fn claim_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    Ok(
-        ExecuteMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
-            &adapter,
-            vec![]
-        )?,
+    ExecuteMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
+        &adapter,
+        vec![],
     )
 }
 
 pub fn unbond_msg(asset: Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
-    Ok(
-        ExecuteMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
-            &adapter,
-            vec![],
-        )?,
+    ExecuteMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
+        &adapter,
+        vec![],
     )
 }
 
 pub fn update_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    Ok(
-        ExecuteMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
-            &adapter,
-            vec![],
-        )?,
+    ExecuteMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
+        &adapter,
+        vec![],
     )
 }

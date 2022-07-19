@@ -6,6 +6,21 @@ use crate::c_std::{Binary, Addr, StdResult, Uint128};
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
+pub mod storage {
+    use secret_storage_plus::{Map, Item};
+    use cosmwasm_std::HumanAddr;
+    use crate::contract_interfaces::snip20::helpers::Snip20Asset;
+
+    pub const CONFIG: Item<super::Config> = Item::new("config");
+    pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+    pub const ASSET_LIST: Item<Vec<HumanAddr>> = Item::new("asset_list");
+    pub const SELF_ADDRESS: Item<HumanAddr> = Item::new("self_address");
+    pub const MANAGERS: Item<Vec<super::Manager>> = Item::new("managers");
+
+    pub const ALLOWANCES: Map<HumanAddr, Vec<super::Allowance>> = Map::new("allowances");
+    pub const ASSETS: Map<HumanAddr, Snip20Asset> = Map::new("assets");
+}
+
 #[cw_serde]
 pub struct Config {
     pub admin: Addr,
@@ -74,10 +89,12 @@ pub struct Account {
 */
 
 // Flag to be sent with funds
+/*
 #[cw_serde]
 pub struct Flag {
     pub flag: String,
 }
+*/
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -103,7 +120,6 @@ pub enum ExecuteMsg {
     },
     RegisterAsset {
         contract: Contract,
-        reserves: Option<Uint128>,
     },
     RegisterManager {
         contract: Contract,
@@ -182,7 +198,7 @@ pub enum QueryAnswer {
     Assets { assets: Vec<Addr> },
     Allowances { allowances: Vec<Allowance> },
     CurrentAllowances { allowances: Vec<Allowance> },
-    Allowance { allowance: Uint128 },
-    //Accounts { accounts: Vec<Addr> },
+    Allowance { amount: Uint128 },
+    //Accounts { accounts: Vec<HumanAddr> },
     //Account { account: Account },
 }

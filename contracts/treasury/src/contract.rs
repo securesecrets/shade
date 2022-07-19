@@ -18,17 +18,12 @@ use shade_protocol::contract_interfaces::dao::treasury::{Config, ExecuteMsg, Ins
 use crate::{
     handle,
     query,
-    state::{
-        allowances_w,
-        asset_list_w,
-        config_w,
-        managers_w,
-        self_address_w,
-        viewing_key_w,
-    },
 };
-use chrono::prelude::*;
-use shade_protocol::contract_interfaces::dao::adapter;
+
+use shade_protocol::contract_interfaces::dao::{
+    adapter,
+    treasury::storage::*,
+};
 
 pub fn init(
     deps: DepsMut,
@@ -36,15 +31,14 @@ pub fn init(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    config_w(deps.storage).save(&Config {
+    CONFIG.save(&mut deps.storage, &Config {
         admin: msg.admin.unwrap_or(info.sender.clone()),
     })?;
 
-    viewing_key_w(deps.storage).save(&msg.viewing_key)?;
-    self_address_w(deps.storage).save(&env.contract.address)?;
-    asset_list_w(deps.storage).save(&Vec::new())?;
-    managers_w(deps.storage).save(&Vec::new())?;
-    //account_list_w(deps.storage).save(&Vec::new())?;
+    VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
+    SELF_ADDRESS.save(deps.storage, &env.contract.address)?;
+    ASSET_LIST.save(deps.storage, &Vec::new())?;
+    MANAGERS.save(deps.storage, &Vec::new())?;
 
     deps.api.debug("Contract was initialized by {}", info.sender);
 
@@ -93,14 +87,14 @@ pub fn query(
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
         QueryMsg::Allowances { asset } => to_binary(&query::allowances(deps, asset)?),
-        QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, &asset, &spender)?),
+        QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, asset, spender)?),
 
         QueryMsg::Adapter(adapter) => match adapter {
-            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(&deps, &asset)?),
-            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(&deps, &asset)?),
-            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&StdError::generic_err("Not Implemented")),
-            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(&deps, &asset)?),
-            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(&deps, &asset)?),
+            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(&deps, asset)?),
+            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(&deps, asset)?),
+            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(&deps, asset)?),
+            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(&deps, asset)?),
+            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(&deps, asset)?),
         }
     }
 }

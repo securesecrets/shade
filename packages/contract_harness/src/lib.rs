@@ -8,7 +8,7 @@ pub mod harness_macro;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod assertions {
     use cosmwasm_std::{StdError, StdResult};
-    use fadroma::ensemble::ExecuteResponse;
+    use shade_protocol::fadroma::ensemble::ExecuteResponse;
 
     use std::error::Error;
     use std::panic::Location;

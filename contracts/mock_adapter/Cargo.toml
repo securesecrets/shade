@@ -1,7 +1,9 @@
 [package]
-name = "lp_shade_swap"
+name = "mock_adapter"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = [
+  "Jack Swenson <jacksonswenson22@gmail.com>",
+]
 edition = "2018"
 
 exclude = [
@@ -23,13 +25,10 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std", features = [
-  "staking",
-] }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "lp_shade_swap",
-  "treasury",
-  "math",
-  "dex",
+  "adapter",
+  "storage_plus",
 ] }
 schemars = "0.7"
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+#secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0" }

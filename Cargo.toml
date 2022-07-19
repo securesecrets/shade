@@ -27,7 +27,7 @@ members = [
   # - Adapters
   "contracts/scrt_staking",
   "contracts/rewards_emission",
-  "contracts/lp_shade_swap",
+  #"contracts/lp_shade_swap",
 
   "contracts/snip20_staking",
   
@@ -35,6 +35,7 @@ members = [
   "contracts/mock_band",
   "contracts/mock_secretswap_pair",
   "contracts/mock_sienna_pair",
+  "contracts/mock_adapter",
 
   # Tools
   "tools/doc2book",

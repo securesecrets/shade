@@ -12,6 +12,23 @@ use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 #[cw_serde]
+pub enum SplitMethod {
+    Conversion {
+        contract: Contract,
+    },
+    //TODO implement
+    /*
+    Market {
+        // "market_buy" contract
+        contract: Contract,
+    },
+    Lend {
+        overseer: Contract,
+    },
+    */
+}
+
+#[cw_serde]
 pub struct Config {
     pub admin: Addr,
     pub treasury: Addr,
@@ -19,8 +36,9 @@ pub struct Config {
     pub token_a: Contract,
     pub token_b: Contract,
     pub liquidity_token: Contract,
+    pub staking_contract: Option<Contract>,
     pub reward_token: Option<Contract>,
-    pub rewards_contract: Option<Contract>,
+    pub split: Option<SplitMethod>,
 }
 
 #[cw_serde]
@@ -31,7 +49,7 @@ pub struct InstantiateMsg {
     pub pair: Contract,
     pub token_a: Contract,
     pub token_b: Contract,
-    pub rewards_contract: Option<Contract>,
+    pub staking_contract: Option<Contract>,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -53,6 +71,9 @@ pub enum ExecuteMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
+    // TODO Refresh approvals to max
+    // admin only
+    RefreshApprovals,
     UpdateConfig {
         config: Config,
     },
@@ -102,11 +123,17 @@ pub enum QueryAnswer {
  * Otherwise it will be sent straight to treasury on claim
  */
 pub fn is_supported_asset(config: &Config, asset: &Addr) -> bool {
+    if let Some(reward_token) = &config.reward_token {
+        if reward_token.address == *asset {
+            return true;
+        }
+    }
+
     vec![
         config.token_a.address.clone(),
         config.token_b.address.clone(),
         config.liquidity_token.address.clone(),
-    ].contains(asset) 
+    ].contains(asset)
 }
 
 pub fn get_supported_asset(
