@@ -26,7 +26,6 @@ use shade_protocol::{
     contract_interfaces::dao::{
         adapter,
         scrt_staking::{Config, HandleAnswer, ValidatorBounds},
-        treasury::Flag,
     },
     utils::{
         asset::{scrt_balance, Contract},
@@ -125,7 +124,7 @@ pub fn update(
 
     // Claim Rewards
     let rewards = query::rewards(&deps)?;
-    if rewards >= Uint128::zero() {
+    if !rewards.is_zero() {
         messages.append(&mut withdraw_rewards(deps)?);
     }
 
@@ -169,14 +168,8 @@ pub fn unbond(
 
     let config = config_r(deps.storage).load()?;
 
-    //TODO: needs treasury & manager as admin, maybe just manager?
-    /*
-    if info.sender != config.admin && info.sender != config.treasury {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-    */
-    if !config.admins.contains(&info.sender) || config.owner != info.sender {
-        return Err(StdError::generic_err("unauthorized"));
+    if !config.admins.contains(&info.sender) && config.owner != info.sender {
+        return Err(StdError::unauthorized());
     }
 
     if asset != config.sscrt.address {
@@ -195,11 +188,16 @@ pub fn unbond(
     let scrt_balance = scrt_balance(&deps, self_address)?;
     let rewards = query::rewards(deps)?;
 
-
     let mut messages = vec![];
+
+    if !rewards.is_zero() {
+        messages.append(&mut withdraw_rewards(deps)?);
+    }
+
     let mut undelegated = vec![];
 
-    let mut unbonding = unbonding_r(deps.storage).load()? + amount;
+    let mut unbonding = amount + unbonding_r(&deps.storage).load()?;
+
     let total = scrt_balance + rewards + delegated;
     let mut reserves = scrt_balance + rewards;
 
@@ -216,20 +214,20 @@ pub fn unbond(
                                            config.owner, 
                                            config.sscrt, 
                                            None)?);
-        reserves = (reserves - unbonding)?;
         unbonding = Uint128::zero();
     }
     // Send all reserves
-    else {
+    else if !reserves.is_zero(){
         messages.append(&mut wrap_and_send(reserves, 
                                            config.owner, 
                                            config.sscrt, 
                                            None)?);
-        reserves = Uint128::zero();
         unbonding = (unbonding - reserves)?;
     }
 
-    while unbonding > Uint128::zero() {
+    unbonding_w(&mut deps.storage).save(&unbonding)?;
+
+    while !unbonding.is_zero() {
 
         // Unbond from largest validator first
         let max_delegation = delegations.iter().max_by_key(|d| {
@@ -283,8 +281,6 @@ pub fn unbond(
             }
         }
     }
-
-    unbonding_w(deps.storage).save(&unbonding)?;
 
     Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Unbond {
             status: ResponseStatus::Success,
@@ -343,9 +339,12 @@ pub fn claim(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    if !config.admins.contains(&info.sender) || !(config.owner == info.sender) {
-        return Err(StdError::generic_err("unauthorized"));
+    /*
+    // Anyone can probably do this, as it just sends claimable to owner
+    if !config.admins.contains(&env.message.sender) && config.owner != env.message.sender {
+        return Err(StdError::unauthorized());
     }
+    */
 
     let mut messages = vec![];
 
@@ -360,7 +359,8 @@ pub fn claim(
         // Claim Rewards
         let rewards = query::rewards(&deps)?;
 
-        if rewards >= Uint128::zero() {
+        if !rewards.is_zero() {
+            assert!(false, "withdraw rewards");
             messages.append(&mut withdraw_rewards(deps)?);
         }
 
@@ -371,14 +371,18 @@ pub fn claim(
         }
     }
 
-    messages.append(&mut wrap_and_send(
-        claim_amount,
-        config.owner,
-        config.sscrt,
-        None,
-    )?);
+    if !claim_amount.is_zero() {
+        messages.append(&mut wrap_and_send(
+            claim_amount,
+            config.owner,
+            config.sscrt,
+            None,
+        )?);
 
-    unbonding_w(deps.storage).update(|u| Ok((u - claim_amount)?))?;
+        //assert!(false, "u - claim_amount: {} - {}", unbond_amount, claim_amount);
+        unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
+    }
+
 
     Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,

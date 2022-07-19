@@ -1,6 +1,7 @@
 use crate::c_std::{StdError, StdResult, Storage};
-use secret_storage_plus::{Item, Map, PrimaryKey};
 use crate::serde::{de::DeserializeOwned, Serialize};
+
+pub use secret_storage_plus::{Item, Map, PrimaryKey};
 
 pub trait NaiveItemStorage: Serialize + DeserializeOwned {
     fn load(storage: &dyn Storage, item: Item<Self>) -> StdResult<Self> {

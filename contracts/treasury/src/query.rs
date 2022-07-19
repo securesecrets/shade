@@ -1,10 +1,15 @@
-use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::snip20::helpers::{allowance_query, balance_query};
+use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use shade_protocol::secret_toolkit::{
+    snip20::{allowance_query, balance_query},
+};
 use shade_protocol::contract_interfaces::{
-    dao::{adapter, treasury},
-    snip20,
+    dao::{
+        manager, 
+        treasury::{self, storage::*},
+    },
 };
 
+/*
 use crate::state::{
     allowances_r,
     asset_list_r,
@@ -14,36 +19,41 @@ use crate::state::{
     self_address_r,
     viewing_key_r,
 };
+*/
 
-pub fn config(
-    deps: Deps,
+pub fn config<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Config {
-        config: config_r(deps.storage).load()?,
+        config: CONFIG.load(&deps.storage)?,
     })
 }
 
-pub fn balance(
-    deps: Deps,
-    asset: &Addr,
-) -> StdResult<adapter::QueryAnswer> {
+pub fn balance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<manager::QueryAnswer> {
     //TODO: restrict to admin?
 
-    let managers = managers_r(deps.storage).load()?;
+    let managers = MANAGERS.load(&deps.storage)?;
 
-    match assets_r(deps.storage).may_load(asset.to_string().as_bytes())? {
+    match ASSETS.may_load(&deps.storage, asset.clone())? {
         Some(a) => {
             let mut balance = balance_query(
                 &deps.querier,
-                self_address_r(deps.storage).load()?,
-                viewing_key_r(deps.storage).load()?,
+                SELF_ADDRESS.load(&deps.storage)?,
+                VIEWING_KEY.load(&deps.storage)?,
                 1,
                 a.contract.code_hash.clone(),
                 a.contract.address.clone(),
             )?
             .amount;
 
-            for allowance in allowances_r(deps.storage).load(&asset.as_str().as_bytes())? {
+            //panic!("BALANCE {}", balance);
+
+            let self_address = SELF_ADDRESS.load(&deps.storage)?;
+
+            for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
                 match allowance {
                     treasury::Allowance::Portion { spender, .. } => {
                         let manager = managers
@@ -51,12 +61,17 @@ pub fn balance(
                             .into_iter()
                             .find(|m| m.contract.address == spender)
                             .unwrap();
-                        balance += adapter::balance_query(&deps, asset, manager.contract)?;
+                        balance += manager::balance_query(
+                            &deps,
+                            &asset.clone(),
+                            self_address.clone(),
+                            manager.contract,
+                        )?;
                     }
                     _ => {}
                 };
             }
-            Ok(adapter::QueryAnswer::Balance { amount: balance })
+            Ok(manager::QueryAnswer::Balance { amount: balance })
         }
         None => Err(StdError::NotFound {
             kind: asset.to_string(),
@@ -65,57 +80,59 @@ pub fn balance(
     }
 }
 
-pub fn reserves(
-    deps: Deps,
-    asset: &Addr,
-) -> StdResult<adapter::QueryAnswer> {
+pub fn reserves<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<manager::QueryAnswer> {
     //TODO: restrict to admin?
 
-    let managers = managers_r(deps.storage).load()?;
+    let managers = MANAGERS.load(&deps.storage)?;
+    let self_address = SELF_ADDRESS.load(&deps.storage)?;
 
-    match assets_r(deps.storage).may_load(asset.to_string().as_bytes())? {
+    match ASSETS.may_load(&deps.storage, asset.clone())? {
         Some(a) => {
             let mut reserves = balance_query(
                 &deps.querier,
-                self_address_r(deps.storage).load()?,
-                viewing_key_r(deps.storage).load()?,
+                self_address.clone(),
+                VIEWING_KEY.load(&deps.storage)?,
                 1,
                 a.contract.code_hash.clone(),
                 a.contract.address.clone(),
             )?.amount;
 
-            for allowance in allowances_r(deps.storage).load(&asset.as_str().as_bytes())? {
+            /*
+            for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
                 match allowance {
                     treasury::Allowance::Portion { spender, .. } => {
                         let manager = managers
                             .clone().into_iter()
                             .find(|m| m.contract.address == spender).unwrap();
-                        reserves += adapter::reserves_query(
+                        reserves += manager::reserves_query(
                             &deps,
-                            asset,
+                            &asset.clone(),
+                            self_address.clone(),
                             manager.contract
                         )?;
                     }
                     _ => {}
                 };
             }
-            Ok(adapter::QueryAnswer::Reserves { amount: reserves })
+            */
+            Ok(manager::QueryAnswer::Reserves { amount: reserves })
         }
-        None => Err(StdError::NotFound {
-            kind: asset.to_string(),
-            backtrace: None,
-        }),
+        None => Err(StdError::generic_err(format!("Asset not found {}", asset))),
     }
 }
 
-pub fn unbonding(
-    deps: Deps,
-    asset: &Addr,
-) -> StdResult<adapter::QueryAnswer> {
-    let managers = managers_r(deps.storage).load()?;
+pub fn unbonding<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<manager::QueryAnswer> {
+    let managers = MANAGERS.load(&deps.storage)?;
+    let self_address = SELF_ADDRESS.load(&deps.storage)?;
     let mut unbonding = Uint128::zero();
 
-    for allowance in allowances_r(deps.storage).load(&asset.as_str().as_bytes())? {
+    for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
         match allowance {
             treasury::Allowance::Portion { spender, .. } => {
                 let manager = managers
@@ -123,23 +140,28 @@ pub fn unbonding(
                     .into_iter()
                     .find(|m| m.contract.address == spender)
                     .unwrap();
-                unbonding += adapter::unbonding_query(&deps, asset, manager.contract)?;
+                unbonding += manager::unbonding_query(&deps, &asset, self_address.clone(), manager.contract)?;
             }
             _ => {}
         };
     }
 
-    Ok(adapter::QueryAnswer::Unbonding { amount: unbonding })
+    Ok(manager::QueryAnswer::Unbonding { amount: unbonding })
 }
 
-pub fn claimable(
-    deps: Deps,
-    asset: &Addr,
-) -> StdResult<adapter::QueryAnswer> {
-    let managers = managers_r(deps.storage).load()?;
-    let mut claimable = Uint128::zero();
+pub fn unbondable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<manager::QueryAnswer> {
+    let managers = MANAGERS.load(&deps.storage)?;
+    let mut unbondable = Uint128::zero();
+    let self_address = SELF_ADDRESS.load(&deps.storage)?;
 
-    for allowance in allowances_r(deps.storage).load(&asset.as_str().as_bytes())? {
+    for manager in managers {
+        unbondable += manager::unbondable_query(&deps, &asset, self_address.clone(), manager.contract)?;
+    }
+    /*
+    for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
         match allowance {
             treasury::Allowance::Portion { spender, .. } => {
                 let manager = managers
@@ -147,24 +169,44 @@ pub fn claimable(
                     .into_iter()
                     .find(|m| m.contract.address == spender)
                     .unwrap();
-                claimable += adapter::claimable_query(&deps, asset, manager.contract)?;
+                unbondable += manager::unbondable_query(&deps, &asset, manager.contract)?;
             }
             _ => {}
         };
     }
+    */
 
-    Ok(adapter::QueryAnswer::Claimable { amount: claimable })
+    Ok(manager::QueryAnswer::Unbondable { amount: unbondable })
 }
 
-pub fn allowance(
-    deps: Deps,
-    asset: &Addr,
-    spender: &Addr,
+pub fn claimable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+) -> StdResult<manager::QueryAnswer> {
+    let managers = MANAGERS.load(&deps.storage)?;
+    let self_address = SELF_ADDRESS.load(&deps.storage)?;
+    let claimable = managers
+        .into_iter()
+        .map(|m| manager::claimable_query(
+                &deps, 
+                &asset, 
+                self_address.clone(),
+                m.contract
+            ).ok().unwrap().u128())
+        .sum();
+
+    Ok(manager::QueryAnswer::Claimable { amount: Uint128(claimable) })
+}
+
+pub fn allowance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
+    spender: HumanAddr,
 ) -> StdResult<treasury::QueryAnswer> {
-    let self_address = self_address_r(deps.storage).load()?;
-    let key = viewing_key_r(deps.storage).load()?;
+    let self_address = SELF_ADDRESS.load(&deps.storage)?;
+    let key = VIEWING_KEY.load(&deps.storage)?;
 
-    if let Some(full_asset) = assets_r(deps.storage).may_load(asset.to_string().as_bytes())? {
+    if let Some(full_asset) = ASSETS.may_load(&deps.storage, asset.clone())? {
         let cur_allowance = allowance_query(
             &deps.querier,
             self_address,
@@ -176,27 +218,27 @@ pub fn allowance(
         )?;
 
         return Ok(treasury::QueryAnswer::Allowance {
-            allowance: cur_allowance.allowance,
+            amount: cur_allowance.allowance,
         });
     }
 
     Err(StdError::generic_err(format!("Unknown Asset: {}", asset)))
 }
 
-pub fn assets(
-    deps: Deps,
+pub fn assets<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Assets {
-        assets: asset_list_r(deps.storage).load()?,
+        assets: ASSET_LIST.load(&deps.storage)?,
     })
 }
 
-pub fn allowances(
-    deps: Deps,
-    asset: Addr,
+pub fn allowances<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Allowances {
-        allowances: match allowances_r(deps.storage).may_load(asset.to_string().as_bytes())? {
+        allowances: match ALLOWANCES.may_load(&deps.storage, asset)? {
             None => vec![],
             Some(a) => a,
         },

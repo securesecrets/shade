@@ -1,13 +1,14 @@
-use cosmwasm_std::Deps;
 use shade_protocol::c_std::{
     Api,
     BalanceResponse,
     BankQuery,
     Delegation,
-    DepsMut,
+    DistQuery,
+    Extern,
     FullDelegation,
-    Addr,
+    HumanAddr,
     Querier,
+    RewardsResponse,
     StdError,
     StdResult,
     Storage,
@@ -21,25 +22,25 @@ use shade_protocol::{
 
 use crate::state::{config_r, self_address_r, unbonding_r};
 
-pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
+pub fn config<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(deps.storage).load()?,
+        config: config_r(&deps.storage).load()?,
     })
 }
 
-pub fn delegations(
-    deps: Deps,
+pub fn delegations<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
 ) -> StdResult<Vec<Delegation>> {
     deps.querier
-        .query_all_delegations(self_address_r(deps.storage).load()?)
+        .query_all_delegations(self_address_r(&deps.storage).load()?)
 }
 
-pub fn rewards(deps: Deps) -> StdResult<Uint128> {
+pub fn rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> StdResult<Uint128> {
     let query_rewards: RewardsResponse = deps
         .querier
         .query(
             &DistQuery::Rewards {
-                delegator: self_address_r(deps.storage).load()?,
+                delegator: self_address_r(&deps.storage).load()?,
             }
             .into(),
         )
@@ -69,11 +70,11 @@ pub fn rewards(deps: Deps) -> StdResult<Uint128> {
         })
 }
 
-pub fn balance(
-    deps: Deps,
-    asset: Addr,
+pub fn balance<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = config_r(deps.storage).load()?;
+    let config = config_r(&deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!(
@@ -82,25 +83,27 @@ pub fn balance(
         )));
     }
 
-    let delegated = Uint128::new(
+    let delegated = Uint128(
         delegations(deps)?
             .into_iter()
             .map(|d| d.amount.amount.u128())
             .sum::<u128>(),
     );
 
+    let scrt_balance = scrt_balance(&deps, self_address_r(&deps.storage).load()?)?;
+
     let rewards = rewards(deps)?;
 
     Ok(adapter::QueryAnswer::Balance {
-        amount: delegated + rewards,
+        amount: delegated + rewards + scrt_balance,
     })
 }
 
-pub fn claimable(
-    deps: Deps,
-    asset: Addr,
+pub fn claimable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = config_r(deps.storage).load()?;
+    let config = config_r(&deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!(
@@ -109,17 +112,13 @@ pub fn claimable(
         )));
     }
 
-    let scrt_balance: BalanceResponse = deps.querier.query(
-        &BankQuery::Balance {
-            address: self_address_r(deps.storage).load()?.to_string(),
-            denom: "uscrt".to_string(),
-        }
-        .into(),
-    )?;
+    let scrt_balance = scrt_balance(&deps, self_address_r(&deps.storage).load()?)?;
+    let rewards = rewards(&deps)?;
+    //assert!(false, "balance {}", scrt_balance);
+    let unbonding = unbonding_r(&deps.storage).load()?;
+    //assert!(false, "unbonding {}", unbonding);
 
-    let mut amount = scrt_balance.amount.amount;
-    let unbonding = unbonding_r(deps.storage).load()?;
-
+    let mut amount = scrt_balance + rewards;
     if amount > unbonding {
         amount = unbonding;
     }
@@ -127,11 +126,11 @@ pub fn claimable(
     Ok(adapter::QueryAnswer::Claimable { amount })
 }
 
-pub fn unbonding(
-    deps: Deps,
-    asset: Addr,
+pub fn unbonding<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = config_r(deps.storage).load()?;
+    let config = config_r(&deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!(
@@ -140,16 +139,20 @@ pub fn unbonding(
         )));
     }
 
+    let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
+
+    let rewards = rewards(&deps)?;
+
     Ok(adapter::QueryAnswer::Unbonding {
-        amount: unbonding_r(deps.storage).load()?,
+        amount: (unbonding_r(&deps.storage).load()? - (scrt_balance + rewards))?,
     })
 }
 
-pub fn unbondable(
-    deps: Deps,
-    asset: Addr,
+pub fn unbondable<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = config_r(deps.storage).load()?;
+    let config = config_r(&deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!(
@@ -158,12 +161,24 @@ pub fn unbondable(
         )));
     }
 
+    /* TODO: issues since we cant query unbondings
+     *    While assets are unbonding they don't reflect anywhere in balance
+     *    Once the unbonding funds are here they will show, making it difficult to present
+     *    unbondable funds that arent being currently unbonded
+     */
     let unbondable = match balance(deps, asset)? {
         adapter::QueryAnswer::Balance { amount } => amount,
         _ => {
             return Err(StdError::generic_err("Failed to query balance"));
         }
     };
+
+    /*
+    let unbonding = unbonding_r(&deps.storage).load()?;
+    if !unbonding.is_zero() {
+        panic!("unbondable {}, unbonding {}", unbondable, unbonding);
+    }
+    */
 
     /*TODO: Query current unbondings
      * u >= 7 = 0
@@ -172,28 +187,37 @@ pub fn unbondable(
     Ok(adapter::QueryAnswer::Unbondable { amount: unbondable })
 }
 
-pub fn reserves(
-    deps: Deps,
-    asset: Addr,
+pub fn reserves<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    asset: HumanAddr,
 ) -> StdResult<adapter::QueryAnswer> {
 
-    let config = config_r(deps.storage).load()?;
+    let config = config_r(&deps.storage).load()?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err(format!("Unrecognized Asset {}", asset)));
     }
 
-    let scrt_balance = scrt_balance(deps, self_address_r(deps.storage).load()?)?;
+    let scrt_balance = scrt_balance(deps, self_address_r(&deps.storage).load()?)?;
 
+    let rewards = rewards(&deps)?;
+    //assert!(false, "rewards {}", rewards);
+
+    if !scrt_balance.is_zero() {
+        assert!(false, "scrt bal {}", scrt_balance);
+    }
     Ok(adapter::QueryAnswer::Reserves {
-        amount: scrt_balance + rewards(deps)?,
+        amount: scrt_balance + rewards,
     })
 }
 
-pub fn delegation(
-    deps: Deps,
-    validator: Addr,
+// This won't work until cosmwasm 0.16
+/*
+pub fn delegation<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    validator: HumanAddr,
 ) -> StdResult<Option<FullDelegation>> {
-    let address = self_address_r(deps.storage).load()?;
+    let address = self_address_r(&deps.storage).load()?;
     deps.querier.query_delegation(address, validator)
 }
+*/

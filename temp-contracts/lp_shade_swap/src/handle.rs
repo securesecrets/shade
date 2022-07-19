@@ -6,13 +6,15 @@ use shade_protocol::c_std::{
 use shade_protocol::snip20::helpers::{balance_query};
 
 use shade_protocol::{
-    contract_interfaces::dao::{
-        lp_shade_swap::{
-            HandleAnswer, Config,
-            is_supported_asset, get_supported_asset,
+    contract_interfaces::{
+        dao::{
+            lp_shade_swap::{
+                HandleAnswer, Config, SplitMethod,
+                is_supported_asset, get_supported_asset,
+            },
+            adapter,
         },
-        treasury::Flag,
-        adapter,
+        mint,
     },
     utils::{
         generic_response::ResponseStatus,
@@ -46,7 +48,7 @@ pub fn receive(
 
     let config = config_r(deps.storage).load()?;
 
-    if is_supported_asset(&config, &info.sender) {
+    if !is_supported_asset(&config, &info.sender) {
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
@@ -56,9 +58,90 @@ pub fn receive(
      * bond LP token into rewards
      */
 
-    /* LP token
-     *
-     * deposit into rewards pool
+    let mut desired_token: Contract;
+
+    if env.message.sender == config.token_a.address {
+        desired_token = config.token_a;
+    }
+    else if env.message.sender == config.token_b.address {
+        desired_token = config.token_b;
+    }
+    else if env.message.sender == config.liquidity_token.address {
+        // TODO: stake lp tokens & exit
+    }
+    else {
+        // TODO: send to treasury, non-pair rewards token
+    }
+
+    // get exchange rate & Split tokens
+    match config.split {
+        Some(split) => {
+            match split {
+                /*
+                SplitMethod::Conversion { mint } => {
+                    // TODO: get exchange rate
+                    mint::QueryMsg::Mint {
+                        offer_asset: desired_token.address.clone(),
+                        amount: Uint128(1u128.pow(desired_token.decimals)),
+                    }.query(
+                    );
+                },
+                */
+                //SplitMethod::Market { contract } => { }
+                //SplitMethod::Lend { contract } => { }
+            }
+        }
+    }
+
+    /*
+    let pair_info: amm_pair::QueryMsgResponse::PairInfoResponse = match amm_pair::QueryMsg::GetPairInfo.query(
+        &deps.querier,
+        msg.pair.code_hash.clone(),
+        msg.pair.address.clone(),
+    ) {
+        Ok(info) => info,
+        Err(_) => {
+            return Err(StdError::generic_err("Failed to query pair"));
+        }
+    };
+    */
+
+    if desired_token.address == pair_info.token_0.address {
+        denominator = pair_info.amount_0;
+    }
+    else if desired_token.address == pair_info.token_1.address {
+        denominator = pair_info.amount_1;
+    }
+    else {
+        return Err(StdError::generic_err(format!(
+                    "Asset configuration conflict, pair info missing: {}",
+                    desired_token.address.to_string()
+                )));
+    }
+
+    let provide_amounts: (Uint128, Uint128);
+    // TODO math with exchange_rate & pool ratio & received amount
+
+    // Can be added with a trigger if too slow
+    let mut messages = vec![];
+    messages.append(
+        set_allowance(&deps, &env,
+                      config.pair.clone(),
+                      provide_amounts.0,
+                      msg.viewing_key.clone(),
+                      config.token_a.clone(),
+                  )?);
+    messages.append(
+        set_allowance(&deps, &env,
+                      config.pair.clone(),
+                      provide_amounts.0,
+                      msg.viewing_key.clone(),
+                      config.token_b.clone(),
+                  )?);
+
+    /* TODO
+     * - add LP to pair
+     * - stake LP tokens in staking_contract (auto complete from pair?)
      */
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
@@ -108,8 +191,8 @@ pub fn update(
     /* Claim Rewards
      *
      * If rewards is an LP denom, try to re-add LP based on balances
-     * e.g. sSCRT/SHD w/ SHD rewards
-     *      pair the new SHD with sSCRT and provide
+     * e.g. SILK/SHD w/ SHD rewards
+     *      pair/split the new SHD with SILK and provide
      *
      * Else send direct to treasury e.g. sSCRT/sETH w/ SHD rewards
      */
@@ -194,7 +277,10 @@ pub fn claim(
         claim_amount = balance;
     }
 
-    unbonding_w(deps.storage).update(asset.as_str().as_bytes(), |u| Ok((u.unwrap() - claim_amount)?))?;
+    unbonding_w(&mut deps.storage).update(
+        asset.as_str().as_bytes(),
+        |u| Ok((u.unwrap() - claim_amount)?)
+    )?;
 
     Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
             status: ResponseStatus::Success,

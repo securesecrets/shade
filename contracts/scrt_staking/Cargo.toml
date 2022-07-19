@@ -22,12 +22,15 @@ default = []
 backtraces = ["shade-protocol/backtraces"]
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-schemars = "0.8.9"
-serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
-
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "scrt_staking",
   "treasury",
   "math",
+] }
+
+
+[dev-dependencies]
+contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["scrt_staking", "snip20_reference_impl", "snip20" ] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+  "ensemble",
 ] }

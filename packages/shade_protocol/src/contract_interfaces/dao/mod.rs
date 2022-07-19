@@ -1,6 +1,9 @@
 #[cfg(feature = "adapter")]
 pub mod adapter;
 
+#[cfg(feature = "manager")]
+pub mod manager;
+
 #[cfg(feature = "treasury_manager")]
 pub mod treasury_manager;
 

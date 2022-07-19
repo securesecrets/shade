@@ -7,6 +7,24 @@ use crate::c_std::{Binary, Addr, Uint128};
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
+pub mod storage {
+    use secret_storage_plus::{Map, Item};
+    use cosmwasm_std::HumanAddr;
+    use crate::contract_interfaces::snip20::helpers::Snip20Asset;
+
+    pub const CONFIG: Item<super::Config> = Item::new("config");
+    pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
+    pub const SELF_ADDRESS: Item<HumanAddr> = Item::new("self_address");
+
+    pub const ASSET_LIST: Item<Vec<HumanAddr>> = Item::new("asset_list");
+    pub const ASSETS: Map<HumanAddr, Snip20Asset> = Map::new("assets");
+
+    pub const ALLOCATIONS: Map<HumanAddr, Vec<super::AllocationMeta>> = Map::new("allocations");
+    pub const HOLDERS: Item<Vec<super::HumanAddr>> = Item::new("holders");
+    pub const HOLDING: Map<HumanAddr, super::Holding> = Map::new("holding");
+    //pub const UNBONDINGS: Map<HumanAddr, Vec<super::Unbonding>> = Map::new("unbondings");
+}
+
 #[cw_serde]
 pub struct Config {
     pub admin: Addr,
@@ -29,7 +47,7 @@ pub enum Status {
 
 //TODO: move accounts to treasury manager
 #[cw_serde]
-pub struct Holder {
+pub struct Holding {
     pub balances: Vec<Balance>,
     pub unbondings: Vec<Balance>,
     //pub claimable: Vec<Balance>,
@@ -104,7 +122,7 @@ pub enum ExecuteMsg {
     RemoveHolder {
         holder: Addr,
     },
-    Adapter(adapter::SubHandleMsg),
+    Manager(manager::SubHandleMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -135,7 +153,7 @@ pub enum HandleAnswer {
     RemoveHolder {
         status: ResponseStatus,
     },
-    Adapter(adapter::HandleAnswer),
+    Manager(manager::HandleAnswer),
 }
 
 #[cw_serde]
@@ -145,12 +163,14 @@ pub enum QueryMsg {
     Allocations { asset: Addr },
     PendingAllowance { asset: Addr },
     Holders { },
-    Holder { holder: Addr },
-    Balance { asset: Addr, holder: Addr },
-    Unbonding { asset: Addr, holder: Addr },
-    Unbondable { asset: Addr, holder: Addr },
-    Claimable { asset: Addr, holder: Addr },
-    Adapter(adapter::SubQueryMsg),
+    Holding { holder: Addr },
+    /*
+    Balance { asset: HumanAddr, holder: HumanAddr },
+    Unbonding { asset: HumanAddr, holder: HumanAddr },
+    Unbondable { asset: HumanAddr, holder: HumanAddr },
+    Claimable { asset: HumanAddr, holder: HumanAddr },
+    */
+    Manager(manager::SubQueryMsg),
 }
 
 impl Query for QueryMsg {
@@ -164,6 +184,6 @@ pub enum QueryAnswer {
     Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
     Holders { holders: Vec<Addr> },
-    Holder { holder: Holder },
-    Adapter(adapter::QueryAnswer),
+    Holding { holding: Holding},
+    Manager(manager::QueryAnswer),
 }

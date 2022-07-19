@@ -34,6 +34,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 schemars = "0.7"
 
 [dev-dependencies]
+fadroma = { branch = "v100", git = "https://github.com/a-stgeorge/fadroma-staking.git", features = ["ensemble", "scrt"] }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "oracles",
   "dex",
