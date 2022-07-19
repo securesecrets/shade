@@ -43,7 +43,7 @@ pub enum PairQuery {
     PairInfo,
     GetEstimatedPrice {
         offer: TokenAmount,
-        address: Option<HumanAddr>,
+        feeless: Option<bool>,
     },
 }
 

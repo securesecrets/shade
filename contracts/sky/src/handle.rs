@@ -298,7 +298,15 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             }
             // if tx is unprofitable, err out
             if !is_profitable {
-                return Err(StdError::generic_err("Unprofitable"));
+                return Ok(HandleResponse {
+                    messages: vec![],
+                    log: vec![],
+                    data: Some(to_binary(&HandleAnswer::ExecuteArbCycle {
+                        status: false,
+                        swap_amounts: vec![],
+                        payback_amount: Uint128::zero(),
+                    })?),
+                });
             }
             //loop through the pairs in the cycle
             for (i, arb_pair) in direction.pair_addrs.clone().iter().enumerate() {

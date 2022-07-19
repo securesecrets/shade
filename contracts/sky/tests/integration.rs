@@ -969,7 +969,13 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             MockEnv::new("admin", sky.instance.clone()),
         )
         .unwrap();
-    println!("{:?}", res);
+    let payback = match from_binary(&res.response.data.unwrap()).unwrap() {
+        sky::HandleAnswer::ArbAllCycles {
+            status,
+            payback_amount,
+        } => payback_amount,
+        _ => Uint128::zero(),
+    };
     let new_shd_bal =
         get_snip20_balance(&mut ensemble, shd.instance.address.clone(), "admin".into());
     let new_silk_bal =
@@ -980,6 +986,43 @@ fn test_ensemble_sky(swap_amount: Uint128) {
     );
     assert!(new_shd_bal > old_shd_bal);
 
+    let mut not_err = true;
+    while not_err {
+        let res = ensemble.execute(
+            &sky::HandleMsg::ArbAllCycles {
+                amount: Uint128::new(1000000000),
+                padding: None,
+            },
+            MockEnv::new("admin", sky.instance.clone()),
+        );
+        match res {
+            Ok(..) => {}
+            Err(..) => {
+                not_err = false;
+            }
+        }
+    }
+
+    let res = ensemble
+        .query(
+            sky.instance.address.clone(),
+            &sky::QueryMsg::IsAnyCycleProfitable {
+                amount: Uint128::new(1000000000),
+            },
+        )
+        .unwrap();
+    match res {
+        sky::QueryAnswer::IsAnyCycleProfitable {
+            is_profitable,
+            direction,
+            swap_amounts,
+            profit,
+        } => {
+            assert!(!is_profitable[0]);
+            assert!(!is_profitable[1]);
+        }
+        _ => {}
+    }
     /*    println!("set up mint contracts");
     let band = ensemble
         .instantiate(
@@ -1066,7 +1109,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .unwrap()
         .instance;*/
 
-    //assert!(false);
+    assert!(false);
 }
 
 pub fn get_snip20_balance(
