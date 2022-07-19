@@ -99,6 +99,7 @@ pub enum HandleMsg {
     ArbCycle {
         amount: Uint128,
         index: Uint128,
+        payback_addr: Option<HumanAddr>,
         padding: Option<String>,
     },
     ArbAllCycles {

@@ -22,6 +22,7 @@ use shade_protocol::{
         secretswap::{
             Asset,
             AssetInfo,
+            CallbackMsg,
             CallbackSwap,
             PairQuery,
             PairResponse,
@@ -182,12 +183,6 @@ pub enum HandleMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Snip20Handle {
-    CallbackMsg { swap: CallbackSwap },
-}
-
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -255,7 +250,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             let mut messages = vec![];
             if let Some(message) = msg {
                 match from_binary(&message)? {
-                    Snip20Handle::CallbackMsg {
+                    CallbackMsg {
                         swap: CallbackSwap { expected_return },
                     } => {
                         let pool = get_pool_res(&deps).unwrap();

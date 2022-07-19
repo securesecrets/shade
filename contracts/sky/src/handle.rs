@@ -265,6 +265,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     amount: Uint128,
     index: Uint128,
+    payback_addr: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
     let mut messages = vec![];
     let mut return_swap_amounts = vec![];
@@ -331,16 +332,29 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             payback_amount = profit * Config::load(&deps.storage)?.payback_rate;
 
             // add the payback msg
-            messages.push(send_msg(
-                env.message.sender,
-                c_std::Uint128(payback_amount.u128()),
-                None,
-                None,
-                None,
-                1,
-                cur_asset.code_hash.clone(),
-                cur_asset.address.clone(),
-            )?);
+            if let Some(payback_addr) = payback_addr {
+                messages.push(send_msg(
+                    payback_addr,
+                    c_std::Uint128(payback_amount.u128()),
+                    None,
+                    None,
+                    None,
+                    1,
+                    cur_asset.code_hash.clone(),
+                    cur_asset.address.clone(),
+                )?);
+            } else {
+                messages.push(send_msg(
+                    env.message.sender.clone(),
+                    c_std::Uint128(payback_amount.u128()),
+                    None,
+                    None,
+                    None,
+                    1,
+                    cur_asset.code_hash.clone(),
+                    cur_asset.address.clone(),
+                )?);
+            }
         }
         _ => {}
     }
@@ -386,6 +400,7 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
                         sky::HandleMsg::ArbCycle {
                             amount,
                             index: Uint128::from(i as u128),
+                            payback_addr: Some(env.message.sender.clone()),
                             padding: None,
                         }
                         .to_cosmos_msg(
