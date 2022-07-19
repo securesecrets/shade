@@ -34,7 +34,7 @@ fn add_assembly() {
 fn unauthorised_add_assembly() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::AddAssembly {
                 name: "Other assembly".to_string(),
@@ -49,7 +49,7 @@ fn unauthorised_add_assembly() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err())
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn set_assembly() {
 fn unauthorised_set_assembly() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::SetAssembly {
                 id: Uint128::new(1),
@@ -106,5 +106,5 @@ fn unauthorised_set_assembly() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err())
 }

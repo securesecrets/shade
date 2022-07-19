@@ -13,11 +13,12 @@ use shade_protocol::c_std::{
 };
 use shade_protocol::{
     contract_interfaces::governance::{
-        profile::{Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
+        profile::{Profile, UpdateProfile},
         stored_id::ID,
         HandleAnswer,
     },
-    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+    math_compat::Uint128,
+    utils::generic_response::ResponseStatus,
 };
 
 pub fn try_add_profile(

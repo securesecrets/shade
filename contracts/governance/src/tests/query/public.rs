@@ -1,20 +1,3 @@
-// TODO: Queries
-// TODO: Check proposal without voting or funding and see how it returns
-
-// TODO: Verify proposal history
-// TODO: quwery proposals
-
-// TODO: Query user funding
-// TODO: Query where theres no user funding
-
-// TODO: Query user assembly vote
-// TODO: Query where theres no user vote
-
-// TODO: Query user vote
-// TODO: Query where theres no user vote
-
-// TODO: funding privacy
-
 use crate::tests::{
     admin_only_governance,
     get_assemblies,
@@ -29,7 +12,7 @@ use shade_protocol::contract_interfaces::governance;
 
 #[test]
 fn query_total_assembly_msg() {
-    let (mut chain, gov) = admin_only_governance().unwrap();
+    let (chain, gov) = admin_only_governance().unwrap();
 
     let query: governance::QueryAnswer = chain
         .query(
@@ -69,13 +52,12 @@ fn query_assembly_msg_large_end() {
 fn query_assembly_msg_wrong_index() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    let assemblies =
-        get_assembly_msgs(&mut chain, &gov, Uint128::new(5), Uint128::new(10)).is_err();
+    assert!(get_assembly_msgs(&mut chain, &gov, Uint128::new(5), Uint128::new(10)).is_err());
 }
 
 #[test]
 fn query_total_contracts() {
-    let (mut chain, gov) = admin_only_governance().unwrap();
+    let (chain, gov) = admin_only_governance().unwrap();
 
     let query: governance::QueryAnswer = chain
         .query(
@@ -114,12 +96,12 @@ fn query_contracts_large_end() {
 fn query_contracts_wrong_index() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    get_contract(&mut chain, &gov, Uint128::new(5), Uint128::new(10)).is_err();
+    assert!(get_contract(&mut chain, &gov, Uint128::new(5), Uint128::new(10)).is_err());
 }
 
 #[test]
 fn query_total_profiles() {
-    let (mut chain, gov) = admin_only_governance().unwrap();
+    let (chain, gov) = admin_only_governance().unwrap();
 
     let query: governance::QueryAnswer = chain
         .query(gov.address.clone(), &governance::QueryMsg::TotalProfiles {})
@@ -155,12 +137,12 @@ fn query_profiles_large_end() {
 fn query_profiles_wrong_index() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    get_profiles(&mut chain, &gov, Uint128::new(5), Uint128::new(10)).is_err();
+    assert!(get_profiles(&mut chain, &gov, Uint128::new(5), Uint128::new(10)).is_err());
 }
 
 #[test]
 fn query_total_assemblies() {
-    let (mut chain, gov) = admin_only_governance().unwrap();
+    let (chain, gov) = admin_only_governance().unwrap();
 
     let query: governance::QueryAnswer = chain
         .query(
@@ -199,7 +181,7 @@ fn query_assemblies_large_end() {
 fn query_assemblies_wrong_index() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    get_assemblies(&mut chain, &gov, Uint128::new(5), Uint128::new(10)).is_err();
+    assert!(get_assemblies(&mut chain, &gov, Uint128::new(5), Uint128::new(10)).is_err());
 }
 
 #[test]

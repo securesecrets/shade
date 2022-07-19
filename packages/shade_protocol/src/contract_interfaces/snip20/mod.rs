@@ -20,8 +20,6 @@ use crate::contract_interfaces::snip20::transaction_history::store_mint;
 use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::ItemStorage;
-#[cfg(feature = "snip20-impl")]
-use secret_storage_plus::Item;
 
 pub const VERSION: &str = "SNIP24";
 

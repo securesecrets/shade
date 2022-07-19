@@ -7,7 +7,6 @@ use shade_protocol::c_std::{
     Response,
     Addr,
     Querier,
-    StdError,
     StdResult,
     Storage,
 };

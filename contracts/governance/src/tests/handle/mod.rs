@@ -40,7 +40,8 @@ fn set_config_msg() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap().instance;
+        .unwrap()
+        .instance;
 
     chain
         .execute(
@@ -75,7 +76,7 @@ fn set_config_msg() {
 fn unauthorised_set_config_msg() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::SetConfig {
                 treasury: None,
@@ -89,7 +90,7 @@ fn unauthorised_set_config_msg() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err());
 }
 
 #[test]
@@ -114,7 +115,8 @@ fn reject_disable_config_tokens() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap().instance;
+        .unwrap()
+        .instance;
 
     chain
         .execute(

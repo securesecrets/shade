@@ -1,6 +1,6 @@
 use crate::utils::{
     asset::Contract,
-    storage::default::{BucketStorage, SingletonStorage},
+    storage::default::SingletonStorage,
 };
 use crate::c_std::Uint128;
 use crate::c_std::Addr;

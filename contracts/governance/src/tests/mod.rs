@@ -34,24 +34,28 @@ pub fn init_governance(
 ) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
     let mut chain = ContractEnsemble::new(50);
 
-    // Register governance
-    let gov = chain.register(Box::new(Governance));
-    let gov = chain.instantiate(
-        gov.id,
-        &msg,
-        MockEnv::new("admin", ContractLink {
-            address: "gov".into(),
-            code_hash: gov.code_hash,
-        }),
-    )?.instance;
+    let msg = &query_auth::InitMsg {
+        admin_auth: Contract {
+            address: admin.address.clone(),
+            code_hash: admin.code_hash.clone(),
+        },
+        prng_seed: Binary::from("random".as_bytes()),
+    };
 
-    Ok((chain, gov))
+    harness::query_auth::init(chain, &msg)
 }
 
 pub fn admin_only_governance() -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
-    init_governance(governance::InstantiateMsg {
-        treasury: Addr::unchecked("treasury".to_string()),
-        admin_members: vec![Addr::unchecked("admin".to_string())],
+    let mut chain = ContractEnsemble::new(50);
+    let auth = init_query_auth(&mut chain)?;
+
+    let msg = governance::InitMsg {
+        treasury: HumanAddr("treasury".to_string()),
+        query_auth: Contract {
+            address: auth.address,
+            code_hash: auth.code_hash,
+        },
+        admin_members: vec![HumanAddr("admin".to_string())],
         admin_profile: Profile {
             name: "admin".to_string(),
             enabled: true,
@@ -70,7 +74,11 @@ pub fn admin_only_governance() -> StdResult<(ContractEnsemble, ContractLink<Addr
         },
         funding_token: None,
         vote_token: None,
-    })
+    };
+
+    let gov = harness::governance::init(&mut chain, &msg)?;
+
+    Ok((chain, gov))
 }
 
 pub fn gov_generic_proposal(

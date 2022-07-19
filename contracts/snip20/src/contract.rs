@@ -31,7 +31,6 @@ use shade_protocol::{
         ExecuteMsg,
         InstantiateMsg,
         Permission,
-        QueryAnswer,
         QueryMsg,
         QueryWithPermit,
     },

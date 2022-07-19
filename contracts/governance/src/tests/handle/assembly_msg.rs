@@ -32,21 +32,23 @@ fn add_assembly_msg() {
 fn unauthorised_add_assembly_msg() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::AddAssemblyMsg {
-                name: "Some Assembly name".to_string(),
-                msg: "{}".to_string(),
-                assemblies: vec![Uint128::zero()],
-                padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                "random",
-                gov.clone(),
-            ),
-        )
-        .is_err();
+    assert!(
+        chain
+            .execute(
+                &governance::ExecuteMsg::AddAssemblyMsg {
+                    name: "Some Assembly name".to_string(),
+                    msg: "{}".to_string(),
+                    assemblies: vec![Uint128::zero()],
+                    padding: None,
+                },
+                MockEnv::new(
+                    // Sender is self
+                    "random",
+                    gov.clone(),
+                ),
+            )
+            .is_err()
+    );
 }
 
 #[test]
@@ -86,20 +88,22 @@ fn set_assembly_msg() {
 fn unauthorised_set_assembly_msg() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::SetAssemblyMsg {
-                id: Uint128::zero(),
-                name: Some("New name".to_string()),
-                msg: None,
-                assemblies: None,
-                padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                "random",
-                gov.clone(),
-            ),
-        )
-        .is_err();
+    assert!(
+        chain
+            .execute(
+                &governance::ExecuteMsg::SetAssemblyMsg {
+                    id: Uint128::zero(),
+                    name: Some("New name".to_string()),
+                    msg: None,
+                    assemblies: None,
+                    padding: None,
+                },
+                MockEnv::new(
+                    // Sender is self
+                    "random",
+                    gov.clone(),
+                ),
+            )
+            .is_err()
+    );
 }

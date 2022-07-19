@@ -36,7 +36,7 @@ fn add_contract() {
 fn unauthorised_add_contract() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
@@ -54,7 +54,7 @@ fn unauthorised_add_contract() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err());
 }
 #[test]
 fn set_contract() {
@@ -245,7 +245,7 @@ fn enable_contract_assemblies() {
 fn unauthorised_set_contract() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::SetContract {
                 id: Uint128::new(1),
@@ -265,7 +265,7 @@ fn unauthorised_set_contract() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err());
 }
 #[test]
 fn add_contract_assemblies() {

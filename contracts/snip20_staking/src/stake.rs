@@ -28,7 +28,6 @@ use shade_protocol::c_std::{
     Api,
     Binary,
     CanonicalAddr,
-    Decimal,
     Env,
     DepsMut,
     Response,

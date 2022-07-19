@@ -12,8 +12,8 @@ use crate::{
             try_cancel,
             try_claim_funding,
             try_proposal,
-            try_receive,
-            try_receive_balance,
+            try_receive_funding,
+            try_receive_vote,
             try_trigger,
             try_update,
         },
@@ -70,7 +70,8 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     // Setup config
     Config {
-        treasury: msg.treasury.clone(),
+        query: msg.query_auth,
+        treasury: msg.treasury,
         vote_token: msg.vote_token.clone(),
         funding_token: msg.funding_token.clone(),
     }
@@ -185,11 +186,12 @@ pub fn execute(
         match msg {
             // State setups
             ExecuteMsg::SetConfig {
+                query_auth,
                 treasury,
                 vote_token,
                 funding_token,
                 ..
-            } => try_set_config(deps, env, info, treasury, vote_token, funding_token),
+            } => try_set_config(deps, env, info, query_auth, treasury, vote_token, funding_token),
 
             // TODO: set this, must be discussed with team
             ExecuteMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, info, state),
@@ -214,15 +216,15 @@ pub fn execute(
                 msg,
                 memo,
                 ..
-            } => try_receive(deps, env, info, sender, from, amount, msg, memo),
-            ExecuteMsg::ClaimFunding { id } => try_claim_funding(deps, env, info, id),
+            } => try_receive_funding(deps, env, sender, from, amount, msg, memo),
+            ExecuteMsg::ClaimFunding { id } => try_claim_funding(deps, env, id),
 
             ExecuteMsg::ReceiveBalance {
                 sender,
                 msg,
                 balance,
                 memo,
-            } => try_receive_balance(deps, env, info, sender, msg, balance, memo),
+            } => try_receive_vote(deps, env, info, sender, msg, balance, memo),
 
             // Assemblies
             ExecuteMsg::AssemblyVote { proposal, vote, .. } => {
@@ -345,7 +347,73 @@ pub fn query(
             QueryMsg::Contracts { start, end } => to_binary(&query::contracts(deps, start, end)?),
 
             QueryMsg::Config {} => to_binary(&query::config(deps)?),
+
+            QueryMsg::WithVK { user, key, query } => {
+                // Query VK info
+                let authenticator = Config::load(&deps.storage)?.query;
+                let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidateViewingKey {
+                    user: user.clone(),
+                    key,
+                }
+                .query(
+                    &deps.querier,
+                    authenticator.code_hash,
+                    authenticator.address,
+                )?;
+
+                match res {
+                    query_auth::QueryAnswer::ValidateViewingKey { is_valid } => {
+                        if !is_valid {
+                            return Err(StdError::unauthorized());
+                        }
+                    }
+                    _ => return Err(StdError::unauthorized()),
+                }
+
+                auth_queries(deps, query, user)
+            }
+
+            QueryMsg::WithPermit { permit, query } => {
+                // Query Permit info
+                let authenticator = Config::load(&deps.storage)?.query;
+                let _args: QueryData = from_binary(&permit.params.data)?;
+                let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidatePermit { permit }
+                    .query(
+                        &deps.querier,
+                        authenticator.code_hash,
+                        authenticator.address,
+                    )?;
+
+                let sender: HumanAddr;
+
+                match res {
+                    query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
+                        sender = user;
+                        if is_revoked {
+                            return Err(StdError::unauthorized());
+                        }
+                    }
+                    _ => return Err(StdError::unauthorized()),
+                }
+
+                auth_queries(deps, query, sender)
+            }
         },
         RESPONSE_BLOCK_SIZE,
     )
+}
+
+pub fn auth_queries<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    msg: AuthQuery,
+    user: HumanAddr,
+) -> StdResult<Binary> {
+    to_binary(&match msg {
+        AuthQuery::Proposals { pagination } => query::user_proposals(deps, user, pagination)?,
+        AuthQuery::AssemblyVotes { pagination } => {
+            query::user_assembly_votes(deps, user, pagination)?
+        }
+        AuthQuery::Funding { pagination } => query::user_funding(deps, user, pagination)?,
+        AuthQuery::Votes { pagination } => query::user_votes(deps, user, pagination)?,
+    })
 }

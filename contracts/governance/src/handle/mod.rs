@@ -19,6 +19,7 @@ pub fn try_set_config(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    query_auth: Option<Contract>,
     treasury: Option<Addr>,
     vote_token: Option<Contract>,
     funding_token: Option<Contract>,
@@ -51,6 +52,10 @@ pub fn try_set_config(
 
     if let Some(treasury) = treasury {
         config.treasury = treasury;
+    }
+
+    if let Some(query_auth) = query_auth {
+        config.query = query_auth;
     }
 
     config.save(deps.storage)?;

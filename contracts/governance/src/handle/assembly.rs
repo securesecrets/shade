@@ -18,16 +18,15 @@ use shade_protocol::{
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
-        profile::{Profile, VoteProfile},
+        profile::Profile,
         proposal::{Proposal, ProposalMsg, Status},
-        stored_id::ID,
+        stored_id::{UserID, ID},
         vote::Vote,
         HandleAnswer,
         MSG_VARIABLE,
     },
     utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
 };
-use std::convert::TryInto;
 
 pub fn try_assembly_vote(
     deps: DepsMut,
@@ -71,6 +70,9 @@ pub fn try_assembly_vote(
 
     Proposal::save_assembly_vote(deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_assembly_votes(deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+
+    // Save data for user queries
+    UserID::add_assembly_vote(&mut deps.storage, sender.clone(), proposal.clone())?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::AssemblyVote {
             status: ResponseStatus::Success,
@@ -184,8 +186,7 @@ pub fn try_assembly_proposal(
         funders: None,
     };
 
-    let prop_id = ID::add_proposal(deps.storage)?;
-    prop.save(deps.storage, &prop_id)?;
+    prop.save(&mut deps.storage)?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::AssemblyProposal {
             status: ResponseStatus::Success,

@@ -8,7 +8,7 @@ use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{legacy_cannot_convert_from_tx, tx_code_invalid_conversion};
 
 #[cfg(feature = "snip20-impl")]
-use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveMapStorage};
+use crate::utils::storage::plus::{ItemStorage, MapStorage};
 #[cfg(feature = "snip20-impl")]
 use secret_storage_plus::{Item, Map};
 
@@ -153,7 +153,7 @@ impl TxCode {
             2 => Ok(Burn),
             3 => Ok(Deposit),
             4 => Ok(Redeem),
-            other => Err(tx_code_invalid_conversion(n)),
+            _ => Err(tx_code_invalid_conversion(n)),
         }
     }
 }
@@ -368,14 +368,13 @@ pub fn store_transfer(
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
-    let tx = StoredRichTx{
+    let tx = StoredRichTx::new(
         id,
-        action: StoredTxAction::transfer(owner.clone(), sender.clone(), receiver.clone()),
+        StoredTxAction::transfer(owner.clone(), sender.clone(), receiver.clone()),
         coins,
         memo,
-        block_time: block.time,
-        block_height: block.height
-    };
+        block
+    );
 
     // Write to the owners history if it's different from the other two addresses
     if owner != sender && owner != receiver {

@@ -23,7 +23,7 @@ use shade_protocol::{
     utils::asset::Contract,
 };
 
-fn init_voting_governance_with_proposal() -> StdResult<(
+pub fn init_voting_governance_with_proposal() -> StdResult<(
     ContractEnsemble,
     ContractLink<Addr>,
     ContractLink<Addr>,
@@ -134,54 +134,80 @@ fn init_voting_governance_with_proposal() -> StdResult<(
     )?;
 
     // Register governance
-    let gov = chain.register(Box::new(Governance));
-    let gov = chain.instantiate(
-        gov.id,
-        &InstantiateMsg {
-            treasury: Addr::from("treasury"),
-            admin_members: vec![
-                Addr::from("alpha"),
-                Addr::from("beta"),
-                Addr::from("charlie"),
-            ],
-            admin_profile: Profile {
-                name: "admin".to_string(),
-                enabled: true,
-                assembly: None,
-                funding: None,
-                token: Some(VoteProfile {
-                    deadline: 10000,
-                    threshold: Count::LiteralCount {
-                        count: Uint128::new(10_000_000),
-                    },
-                    yes_threshold: Count::LiteralCount {
-                        count: Uint128::new(15_000_000),
-                    },
-                    veto_threshold: Count::LiteralCount {
-                        count: Uint128::new(15_000_000),
-                    },
-                }),
-                cancel_deadline: 0,
+    let auth = init_query_auth(&mut chain)?;
+    chain
+        .execute(
+            &query_auth::HandleMsg::SetViewingKey {
+                key: "password".to_string(),
+                padding: None,
             },
-            public_profile: Profile {
-                name: "public".to_string(),
-                enabled: false,
-                assembly: None,
-                funding: None,
-                token: None,
-                cancel_deadline: 0,
+            MockEnv::new("alpha", auth.clone()),
+        )
+        .unwrap();
+
+    chain
+        .execute(
+            &query_auth::HandleMsg::SetViewingKey {
+                key: "password".to_string(),
+                padding: None,
             },
-            funding_token: None,
-            vote_token: Some(Contract {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
+            MockEnv::new("beta", auth.clone()),
+        )
+        .unwrap();
+
+    chain
+        .execute(
+            &query_auth::HandleMsg::SetViewingKey {
+                key: "password".to_string(),
+                padding: None,
+            },
+            MockEnv::new("charlie", auth.clone()),
+        )
+        .unwrap();
+    let gov = harness::governance::init(&mut chain, &InitMsg {
+        treasury: HumanAddr::from("treasury"),
+        query_auth: Contract {
+            address: auth.address,
+            code_hash: auth.code_hash,
         },
-        MockEnv::new("admin", ContractLink {
-            address: "gov".into(),
-            code_hash: gov.code_hash,
+        admin_members: vec![
+            HumanAddr::from("alpha"),
+            HumanAddr::from("beta"),
+            HumanAddr::from("charlie"),
+        ],
+        admin_profile: Profile {
+            name: "admin".to_string(),
+            enabled: true,
+            assembly: None,
+            funding: None,
+            token: Some(VoteProfile {
+                deadline: 10000,
+                threshold: Count::LiteralCount {
+                    count: Uint128::new(10_000_000),
+                },
+                yes_threshold: Count::LiteralCount {
+                    count: Uint128::new(15_000_000),
+                },
+                veto_threshold: Count::LiteralCount {
+                    count: Uint128::new(15_000_000),
+                },
+            }),
+            cancel_deadline: 0,
+        },
+        public_profile: Profile {
+            name: "public".to_string(),
+            enabled: false,
+            assembly: None,
+            funding: None,
+            token: None,
+            cancel_deadline: 0,
+        },
+        funding_token: None,
+        vote_token: Some(Contract {
+            address: stkd_tkn.address.clone(),
+            code_hash: stkd_tkn.code_hash.clone(),
         }),
-    )?.instance;
+    })?;
 
     chain.execute(
         &governance::ExecuteMsg::AssemblyProposal {
@@ -206,6 +232,11 @@ fn voting() {
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+
+    assert_eq!(prop.title, "Title".to_string());
+    assert_eq!(prop.metadata, "Text only proposal".to_string());
+    assert_eq!(prop.proposer, HumanAddr::from("alpha"));
+    assert_eq!(prop.assembly, Uint128::new(1));
 
     match prop.status {
         Status::Voting { .. } => assert!(true),
@@ -599,6 +630,12 @@ fn vote_passed() {
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
+
+    // Check that history works
+    match prop.status_history[0] {
+        Status::Voting { .. } => assert!(true),
+        _ => assert!(false),
+    }
 
     match prop.status {
         Status::Passed { .. } => assert!(true),
@@ -1202,8 +1239,6 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
-
     let mut chain = ContractEnsemble::new(50);
 
     // Register snip20
@@ -1238,7 +1273,8 @@ fn vote_count_percentage() {
                 code_hash: snip20.code_hash,
             }),
         )
-        .unwrap().instance;
+        .unwrap()
+        .instance;
 
     let stkd_tkn = chain.register(Box::new(Snip20Staking));
     let stkd_tkn = chain
@@ -1267,7 +1303,8 @@ fn vote_count_percentage() {
                 code_hash: stkd_tkn.code_hash,
             }),
         )
-        .unwrap().instance;
+        .unwrap()
+        .instance;
 
     // Stake tokens
     chain
@@ -1326,50 +1363,46 @@ fn vote_count_percentage() {
         .unwrap();
 
     // Register governance
-    let gov = chain.register(Box::new(Governance));
-    let gov = chain
-        .instantiate(
-            gov.id,
-            &InstantiateMsg {
-                treasury: Addr::from("treasury"),
-                admin_members: vec![
-                    Addr::from("alpha"),
-                    Addr::from("beta"),
-                    Addr::from("charlie"),
-                ],
-                admin_profile: Profile {
-                    name: "admin".to_string(),
-                    enabled: true,
-                    assembly: None,
-                    funding: None,
-                    token: Some(VoteProfile {
-                        deadline: 10000,
-                        threshold: Count::Percentage { percent: 3300 },
-                        yes_threshold: Count::Percentage { percent: 6600 },
-                        veto_threshold: Count::Percentage { percent: 3300 },
-                    }),
-                    cancel_deadline: 0,
-                },
-                public_profile: Profile {
-                    name: "public".to_string(),
-                    enabled: false,
-                    assembly: None,
-                    funding: None,
-                    token: None,
-                    cancel_deadline: 0,
-                },
-                funding_token: None,
-                vote_token: Some(Contract {
-                    address: stkd_tkn.address.clone(),
-                    code_hash: stkd_tkn.code_hash.clone(),
-                }),
-            },
-            MockEnv::new("admin", ContractLink {
-                address: "gov".into(),
-                code_hash: gov.code_hash,
+    let auth = init_query_auth(&mut chain).unwrap();
+    let gov = harness::governance::init(&mut chain, &InitMsg {
+        treasury: HumanAddr::from("treasury"),
+        query_auth: Contract {
+            address: auth.address,
+            code_hash: auth.code_hash,
+        },
+        admin_members: vec![
+            HumanAddr::from("alpha"),
+            HumanAddr::from("beta"),
+            HumanAddr::from("charlie"),
+        ],
+        admin_profile: Profile {
+            name: "admin".to_string(),
+            enabled: true,
+            assembly: None,
+            funding: None,
+            token: Some(VoteProfile {
+                deadline: 10000,
+                threshold: Count::Percentage { percent: 3300 },
+                yes_threshold: Count::Percentage { percent: 6600 },
+                veto_threshold: Count::Percentage { percent: 3300 },
             }),
-        )
-        .unwrap().instance;
+            cancel_deadline: 0,
+        },
+        public_profile: Profile {
+            name: "public".to_string(),
+            enabled: false,
+            assembly: None,
+            funding: None,
+            token: None,
+            cancel_deadline: 0,
+        },
+        funding_token: None,
+        vote_token: Some(Contract {
+            address: stkd_tkn.address.clone(),
+            code_hash: stkd_tkn.code_hash.clone(),
+        }),
+    })
+    .unwrap();
 
     chain
         .execute(

@@ -69,6 +69,15 @@ pub struct PoolResponse {
     pub total_share: Uint128,
 }
 
+#[cw_serde]
+pub struct CallbackMsg {
+    pub swap: CallbackSwap,
+}
+#[cw_serde]
+pub struct CallbackSwap {
+    pub expected_return: Uint128,
+}
+
 pub fn is_pair(
     deps: DepsMut,
     pair: Contract,

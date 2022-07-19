@@ -22,10 +22,9 @@ default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["shade-protocol/backtraces"]
-debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "sky-impl", "math"] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "sky-impl", "adapter", "math"] }
 schemars = "0.7"
 
 [dev-dependencies]

@@ -40,7 +40,7 @@ fn add_profile() {
 fn unauthorised_add_profile() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::AddProfile {
                 profile: Profile {
@@ -59,7 +59,7 @@ fn unauthorised_add_profile() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err());
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn set_profile() {
 fn unauthorised_set_profile() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
@@ -132,7 +132,7 @@ fn unauthorised_set_profile() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err());
 }
 
 #[test]
@@ -218,7 +218,7 @@ fn set_profile_disable_assembly() {
 fn set_profile_set_incomplete_assembly() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
@@ -248,7 +248,7 @@ fn set_profile_set_incomplete_assembly() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err());
 }
 
 #[test]
@@ -334,7 +334,7 @@ fn set_profile_disable_token() {
 fn set_profile_set_incomplete_token() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
@@ -364,7 +364,7 @@ fn set_profile_set_incomplete_token() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err());
 }
 
 #[test]
@@ -444,7 +444,7 @@ fn set_profile_disable_funding() {
 fn set_profile_set_incomplete_fuding() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
+    assert!(chain
         .execute(
             &governance::ExecuteMsg::SetProfile {
                 id: Uint128::new(1),
@@ -472,5 +472,5 @@ fn set_profile_set_incomplete_fuding() {
                 gov.clone(),
             ),
         )
-        .is_err();
+        .is_err());
 }

@@ -24,6 +24,7 @@ use shade_protocol::{
             contract::AllowedContract,
             profile::{Count, Profile, VoteProfile},
             proposal::{Funding, Proposal, ProposalMsg, Status},
+            stored_id::UserID,
             vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
             Config,
             HandleAnswer,
@@ -240,7 +241,7 @@ pub fn try_update(
 
             new_status = vote_conclusion;
         }
-        Status::Funding { amount, start, end } => {
+        Status::Funding { amount, end, .. } => {
             // This helps combat the possibility of the profile changing
             // before another proposal is finished
             if let Some(setting) = Profile::funding(deps.storage, &profile)? {
@@ -288,8 +289,7 @@ pub fn try_update(
 
             // Get total staking power
             let total_power = match query {
-                // TODO: fix when uint update is merged
-                snip20_staking::QueryAnswer::TotalStaked { shares, tokens } => tokens.into(),
+                snip20_staking::QueryAnswer::TotalStaked { tokens, .. } => tokens.into(),
                 _ => return Err(StdError::generic_err("Wrong query returned")),
             };
 
@@ -353,7 +353,7 @@ pub fn try_update(
         })?))
 }
 
-pub fn try_receive(
+pub fn try_receive_funding(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -434,6 +434,9 @@ pub fn try_receive(
             amount: funder_amount,
             claimed: false,
         })?;
+
+        // Add funding info to cross search
+        UserID::add_funding(&mut deps.storage, from.clone(), proposal.clone())?;
     } else {
         return Err(StdError::generic_err("Not in funding status"));
     }
@@ -504,7 +507,7 @@ pub fn try_claim_funding(
         })?))
 }
 
-pub fn try_receive_balance(
+pub fn try_receive_vote(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -561,6 +564,7 @@ pub fn try_receive_balance(
 
     Proposal::save_public_vote(deps.storage, &proposal, &sender, &vote)?;
     Proposal::save_public_votes(deps.storage, &proposal, &tally.checked_add(&vote)?)?;
+    UserID::add_vote(deps.storage, sender.clone(), proposal.clone())?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::ReceiveBalance {
             status: ResponseStatus::Success,
