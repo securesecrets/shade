@@ -409,13 +409,13 @@ pub enum HandleAnswer {
 
     // Allowance
     IncreaseAllowance {
-        spender: String,
-        owner: String,
+        spender: Addr,
+        owner: Addr,
         allowance: Uint128,
     },
     DecreaseAllowance {
-        spender: String,
-        owner: String,
+        spender: Addr,
+        owner: Addr,
         allowance: Uint128,
     },
     TransferFrom {

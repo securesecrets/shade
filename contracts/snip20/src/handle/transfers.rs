@@ -71,7 +71,7 @@ pub fn try_batch_transfer(
     let block = env.block;
     let denom = CoinInfo::load(deps.storage)?.symbol;
     for action in actions {
-        try_transfer_impl(deps.storage, &sender, None, &action.recipient, action.amount, action.memo, denom.clone(), &block)?;
+        try_transfer_impl(deps.storage, &sender, None, &deps.api.addr_validate(action.recipient.as_str())?, action.amount, action.memo, denom.clone(), &block)?;
     }
     Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchTransfer { status: Success })?))
 }
@@ -95,7 +95,7 @@ fn try_add_receiver_api_callback(
 
     if let Some(hash) = receiver_hash {
         messages.push(
-            ReceiverHandleMsg::new(sender, from, amount, memo, msg)
+            ReceiverHandleMsg::new(sender.to_string(), from.to_string(), amount, memo, msg)
                 .to_cosmos_msg(&Contract{
                     address: recipient,
                     code_hash: hash.0
@@ -181,7 +181,7 @@ pub fn try_batch_send(
             &mut messages,
             &sender,
             None,
-            &action.recipient,
+            &deps.api.addr_validate(action.recipient.as_str())?,
             action.recipient_code_hash,
             action.amount,
             action.memo,

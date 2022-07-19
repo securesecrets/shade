@@ -17,6 +17,7 @@ fn deposit() {
         enable_transfer: None
     })).unwrap();
 
+    chain.read_module(query_fn)
     let scrt_coin = Coin {
         denom: "uscrt".to_string(),
         amount: Uint128::new(1000)

@@ -21,9 +21,8 @@ fn register_receive() {
         padding: None
     }.test_exec(&snip, &chain, Addr::unchecked("contract"), &[]).is_ok());
 
-    chain.read_module(|router, _, storage| router.wasm.load_contract(storage, address));
-    chain.(snip.address, |borrowed_chain| {
-        let hash = ReceiverHash::load(&borrowed_chain.storage, Addr::from("contract")).unwrap();
+    chain.deps(&snip.address, |borrowed_chain| {
+        let hash = ReceiverHash::load(&borrowed_chain, Addr::from("contract")).unwrap();
         assert_eq!(hash.0, "some_hash".to_string());
     }).unwrap();
 }
@@ -37,9 +36,9 @@ fn create_viewing_key() {
         padding: None
     }, MockEnv::new("Sam", snip.clone())).is_ok());
 
-    chain.deps(snip.address, |borrowed_chain| {
+    chain.deps(&snip.address, |borrowed_chain| {
         assert!(HashedKey::
-        may_load(&borrowed_chain.storage, Addr::from("Sam"))
+        may_load(&borrowed_chain, Addr::from("Sam"))
             .unwrap().is_some());
     }).unwrap();
 }
@@ -53,9 +52,9 @@ fn set_viewing_key() {
         padding: None
     }, MockEnv::new("Sam", snip.clone())).is_ok());
 
-    chain.deps(snip.address, |borrowed_chain| {
+    chain.deps(&snip.address, |borrowed_chain| {
         assert!(Key::verify(
-            &borrowed_chain.storage,
+            &borrowed_chain,
             Addr::from("Sam"),
             "some_key".to_string()
         ).unwrap());
@@ -91,8 +90,8 @@ fn set_contract_status() {
         padding: None
     }, MockEnv::new("notAdmin", snip.clone())).is_err());
 
-    chain.deps(snip.address.clone(), |deps| {
-        assert_eq!(ContractStatusLevel::load(deps.storage).unwrap(), ContractStatusLevel::NormalRun);
+    chain.deps(&snip.address.clone(), |storage| {
+        assert_eq!(ContractStatusLevel::load(storage).unwrap(), ContractStatusLevel::NormalRun);
     });
 
     assert!(chain.execute(&ExecuteMsg::SetContractStatus {
@@ -100,8 +99,8 @@ fn set_contract_status() {
         padding: None
     }, MockEnv::new("admin", snip.clone())).is_ok());
 
-    chain.deps(snip.address, |deps| {
-        assert_eq!(ContractStatusLevel::load(deps.storage).unwrap(), ContractStatusLevel::StopAll);
+    chain.deps(&snip.address, |storage| {
+        assert_eq!(ContractStatusLevel::load(storage).unwrap(), ContractStatusLevel::StopAll);
     });
 }
 

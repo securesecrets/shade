@@ -34,6 +34,7 @@ use shade_protocol::{
         QueryMsg,
         QueryWithPermit,
     },
+    utils::asset::validate_vec,
     utils::storage::plus::MapStorage,
 };
 use shade_protocol::contract_interfaces::snip20::errors::{action_disabled, invalid_viewing_key, not_authenticated_msg, permit_revoked, unauthorized_permit};
@@ -49,7 +50,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    msg.save(deps.storage, env, info)?;
+    msg.save(deps.storage, deps.api, env, info)?;
     Ok(Response::new())
 }
 
@@ -88,7 +89,10 @@ pub fn execute(
                 amount,
                 memo,
                 ..
-            } => try_transfer(deps, env, info, recipient, amount, memo),
+            } => {
+                let recipient = deps.api.addr_validate(recipient.as_str())?;
+                try_transfer(deps, env, info, recipient, amount, memo)
+            },
 
             ExecuteMsg::Send {
                 recipient,
@@ -97,7 +101,10 @@ pub fn execute(
                 msg,
                 memo,
                 ..
-            } => try_send(deps, env, info, recipient, recipient_code_hash, amount, memo, msg),
+            } => {
+                let recipient = deps.api.addr_validate(recipient.as_str())?;
+                try_send(deps, env, info, recipient, recipient_code_hash, amount, memo, msg)
+            },
 
             ExecuteMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, info, actions),
 
@@ -120,23 +127,30 @@ pub fn execute(
                 amount,
                 expiration,
                 ..
-            } => try_increase_allowance(deps, env, info, spender, amount, expiration),
-
+            } => {
+                let spender = deps.api.addr_validate(spender.as_str())?;
+                try_increase_allowance(deps, env, info, spender, amount, expiration)
+            },
             ExecuteMsg::DecreaseAllowance {
                 spender,
                 amount,
                 expiration,
                 ..
-            } => try_decrease_allowance(deps, env, info, spender, amount, expiration),
-
+            } => {
+                let spender = deps.api.addr_validate(spender.as_str())?;
+                try_decrease_allowance(deps, env, info, spender, amount, expiration)
+            },
             ExecuteMsg::TransferFrom {
                 owner,
                 recipient,
                 amount,
                 memo,
                 ..
-            } => try_transfer_from(deps, env, info, owner, recipient, amount, memo),
-
+            } => {
+                let owner = deps.api.addr_validate(owner.as_str())?;
+                let recipient = deps.api.addr_validate(recipient.as_str())?;
+                try_transfer_from(deps, env, info, owner, recipient, amount, memo)
+            },
             ExecuteMsg::SendFrom {
                 owner,
                 recipient,
@@ -145,7 +159,10 @@ pub fn execute(
                 msg,
                 memo,
                 ..
-            } => try_send_from(
+            } => {
+                let owner = deps.api.addr_validate(owner.as_str())?;
+                let recipient = deps.api.addr_validate(recipient.as_str())?;
+                try_send_from(
                 deps,
                 env,
                 info,
@@ -155,8 +172,8 @@ pub fn execute(
                 amount,
                 msg,
                 memo,
-            ),
-
+                )
+            },
             ExecuteMsg::BatchTransferFrom { actions, .. } => {
                 try_batch_transfer_from(deps, env, info, actions)
             }
@@ -168,27 +185,37 @@ pub fn execute(
                 amount,
                 memo,
                 ..
-            } => try_burn_from(deps, env, info, owner, amount, memo),
-
+            } => {
+                let owner = deps.api.addr_validate(owner.as_str())?;
+                try_burn_from(deps, env, info, owner, amount, memo)
+            },
             ExecuteMsg::BatchBurnFrom { actions, .. } => try_batch_burn_from(deps, env, info, actions),
-
             ExecuteMsg::Mint {
                 recipient,
                 amount,
                 memo,
                 ..
-            } => try_mint(deps, env, info, recipient, amount, memo),
-
+            } => {
+                let recipient = deps.api.addr_validate(recipient.as_str())?;
+                try_mint(deps, env, info, recipient, amount, memo)
+            },
             ExecuteMsg::BatchMint { actions, .. } => try_batch_mint(deps, env, info, actions),
-
-            ExecuteMsg::AddMinters { minters, .. } => try_add_minters(deps, env, info, minters),
-
-            ExecuteMsg::RemoveMinters { minters, .. } => try_remove_minters(deps, env, info, minters),
-
-            ExecuteMsg::SetMinters { minters, .. } => try_set_minters(deps, env, info, minters),
-
-            ExecuteMsg::ChangeAdmin { address, .. } => try_change_admin(deps, env, info, address),
-
+            ExecuteMsg::AddMinters { minters, .. } => {
+                let minters = validate_vec(deps.api, minters)?;
+                try_add_minters(deps, env, info, minters)
+            },
+            ExecuteMsg::RemoveMinters { minters, .. } => {
+                let minters = validate_vec(deps.api, minters)?;
+                try_remove_minters(deps, env, info, minters)
+            },
+            ExecuteMsg::SetMinters { minters, .. } => {
+                let minters = validate_vec(deps.api, minters)?;
+                try_set_minters(deps, env, info, minters)
+            },
+            ExecuteMsg::ChangeAdmin { address, .. } => {
+                let address = deps.api.addr_validate(address.as_str())?;
+                try_change_admin(deps, env, info, address)
+            },
             ExecuteMsg::SetContractStatus { level, .. } => try_set_contract_status(deps, env, info, level),
 
             ExecuteMsg::RevokePermit { permit_name, .. } => {

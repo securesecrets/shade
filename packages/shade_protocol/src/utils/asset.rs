@@ -37,6 +37,12 @@ pub fn optional_raw_contract_validate(api: &dyn Api, contract: Option<RawContrac
     Ok(contract)
 }
 
+/// Validates a vector of Strings as Addrs
+pub fn validate_vec(api: &dyn Api, unvalidated_addresses: Vec<String>) -> StdResult<Vec<Addr>> {
+    let items: Result<Vec<_>, _> = unvalidated_addresses.iter().map(|f| api.addr_validate(f.as_str())).collect();
+    Ok(items?)
+}
+
 /// A contract that does not contain a validated address.
 /// Should be accepted as user input because we shouldn't assume addresses are verified Addrs.
 /// https://docs.rs/cosmwasm-std/latest/cosmwasm_std/struct.Addr.html

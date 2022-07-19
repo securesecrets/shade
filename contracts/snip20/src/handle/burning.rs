@@ -106,20 +106,20 @@ pub fn try_batch_burn_from(
     for action in actions {
         Allowance::spend(
             deps.storage,
-            &action.owner,
+            &deps.api.addr_validate(action.owner.as_str())?,
             &sender,
             action.amount,
             &env.block,
         )?;
 
-        Balance::sub(deps.storage, action.amount, &action.owner)?;
+        Balance::sub(deps.storage, action.amount, &deps.api.addr_validate(action.owner.as_str())?);
 
         // Dec total supply
         supply.0 = supply.0.checked_sub(action.amount)?;
 
         store_burn(
             deps.storage,
-            &action.owner,
+            &deps.api.addr_validate(action.owner.as_str())?,
             &sender,
             action.amount,
             denom.clone(),

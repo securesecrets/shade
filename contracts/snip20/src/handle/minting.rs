@@ -71,7 +71,7 @@ pub fn try_batch_mint(
         try_mint_impl(
             deps.storage,
             &sender,
-            &action.recipient,
+            &deps.api.addr_validate(action.recipient.as_str())?,
             action.amount,
             denom.clone(),
             action.memo,
