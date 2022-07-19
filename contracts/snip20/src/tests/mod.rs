@@ -1,6 +1,7 @@
 pub mod handle;
 pub mod query;
 
+use shade_multi_test::snip20::Snip20;
 use contract_harness::harness::snip20::Snip20;
 use shade_protocol::c_std::{Binary, Addr, StdResult};
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};

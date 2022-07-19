@@ -1,6 +1,7 @@
 use shade_protocol::c_std::Addr;
 use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::c_std::Uint128;
+//use shade_multi_test::snip20::Snip20;
 use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitialBalance, QueryAnswer, QueryMsg};
 use crate::tests::init_snip20_with_config;
 
