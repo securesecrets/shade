@@ -1,9 +1,9 @@
-pub mod handle;
+//pub mod handle;
 pub mod query;
 
 use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
 use shade_protocol::multi_test::App;
-use shade_multi_test::snip20::Snip20;
+use shade_multi_test::multi::snip20::Snip20;
 use shade_protocol::c_std::{Binary, Addr, StdResult, ContractInfo};
 use shade_protocol::contract_interfaces::{
     snip20,
@@ -53,6 +53,6 @@ pub fn create_vk(
     snip20::ExecuteMsg::SetViewingKey {
         key: key.unwrap_or("password".to_string()),
         padding: None,
-    }.test_exec(snip20, chain, Addr::unchecked(addr), &[])?;
+    }.test_exec(snip, chain, Addr::unchecked(addr), &[]).unwrap();
     Ok(())
 }

@@ -29,9 +29,8 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "storage_plus",
   "snip20-impl",
   "query_auth",
-  "ensemble",
-  "multi-test"
 ] }
 
 [dev-dependencies]
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "multi-test" ] }
 shade-multi-test = { path = "../../packages/multi_test", features = [ "snip20" ] }
