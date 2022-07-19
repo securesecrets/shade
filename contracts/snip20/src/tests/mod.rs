@@ -1,11 +1,10 @@
 pub mod handle;
 pub mod query;
 
+use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
+use shade_protocol::multi_test::App;
 use shade_multi_test::snip20::Snip20;
-use contract_harness::harness::snip20::Snip20;
-use shade_protocol::c_std::{Binary, Addr, StdResult};
-use shade_protocol::fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
-use shade_protocol::fadroma::core::ContractLink;
+use shade_protocol::c_std::{Binary, Addr, StdResult, ContractInfo};
 use shade_protocol::contract_interfaces::{
     snip20,
     snip20::{InitConfig, InitialBalance},
@@ -13,27 +12,19 @@ use shade_protocol::contract_interfaces::{
 
 //TODO: test rng
 
-pub fn init_snip20(msg: snip20::InstantiateMsg) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
-    let mut chain = ContractEnsemble::new(50);
-
+pub fn init_snip20(msg: snip20::InstantiateMsg) -> StdResult<(App, ContractInfo)> {
+    let mut app = App::default();
+    let admin = Addr::unchecked("admin");
     // Register governance
-    let gov = chain.register(Box::new(Snip20));
-    let gov = chain.instantiate(
-        gov.id,
-        &msg,
-        MockEnv::new("admin", ContractLink {
-            address: "snip20".into(),
-            code_hash: gov.code_hash,
-        }),
-    )?.instance;
+    let contract = msg.test_init(Snip20::default(), &mut app, admin, "snip20", &[])?;
 
-    Ok((chain, gov))
+    Ok((app, contract))
 }
 
 pub fn init_snip20_with_config(
     initial_balances: Option<Vec<InitialBalance>>,
     config: Option<InitConfig>,
-) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
+) -> StdResult<(App, ContractInfo)> {
     let (mut chain, snip) = init_snip20(snip20::InstantiateMsg {
         name: "Token".to_string(),
         admin: None,
@@ -54,17 +45,14 @@ pub fn init_snip20_with_config(
 }
 
 pub fn create_vk(
-    chain: &mut ContractEnsemble,
-    snip: &ContractLink<Addr>,
+    chain: &mut App,
+    snip: &ContractInfo,
     addr: &str,
     key: Option<String>,
 ) -> StdResult<()> {
-    chain.execute(
-        &snip20::ExecuteMsg::SetViewingKey {
-            key: key.unwrap_or("password".to_string()),
-            padding: None,
-        },
-        MockEnv::new(addr, snip.clone()),
-    )?;
+    snip20::ExecuteMsg::SetViewingKey {
+        key: key.unwrap_or("password".to_string()),
+        padding: None,
+    }.test_exec(snip20, chain, Addr::unchecked(addr), &[])?;
     Ok(())
 }
