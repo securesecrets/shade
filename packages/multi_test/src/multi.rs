@@ -9,17 +9,17 @@ pub mod snip20 {
     multi_derive::implement_multi!(Snip20, snip20);
 }
 
-#[cfg(feature = "mint")]
-pub mod mint {
-    use mint;
-    multi_derive::implement_multi!(Mint, mint);
-}
+// #[cfg(feature = "mint")]
+// pub mod mint {
+//     use mint;
+//     multi_derive::implement_multi!(Mint, mint);
+// }
 
-#[cfg(feature = "oracle")]
-pub mod oracle {
-    use oracle;
-    multi_derive::implement_multi!(Oracle, oracle);
-}
+// #[cfg(feature = "oracle")]
+// pub mod oracle {
+//     use oracle;
+//     multi_derive::implement_multi!(Oracle, oracle);
+// }
 
 // #[cfg(feature = "mock_band")]
 // pub mod mock_band {
