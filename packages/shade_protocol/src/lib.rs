@@ -2,6 +2,7 @@
 pub mod contract_interfaces;
 pub use contract_interfaces::*;
 
+pub const BLOCK_SIZE: usize = 256;
 pub mod utils;
 
 // Forward important libs to avoid constantly importing them in the cargo crates, could help reduce compile times

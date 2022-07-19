@@ -11,6 +11,7 @@ use crate::c_std::{
 };
 use cosmwasm_schema::{cw_serde};
 use cosmwasm_std::{DepsMut, Env, CosmosMsg};
+use crate::BLOCK_SIZE;
 #[cfg(feature = "ensemble")]
 use fadroma::prelude::ContractLink;
 
@@ -138,12 +139,10 @@ pub fn set_allowance(
     spender: Addr,
     amount: Uint128,
     key: String,
-    asset: Contract,
+    asset: &Contract,
     cur_allowance: Option<Uint128>,
 ) -> StdResult<Vec<CosmosMsg>> {
-    use secret_toolkit::snip20::allowance_query;
-
-    use crate::snip20::helpers::{decrease_allowance_msg, increase_allowance_msg};
+    use crate::snip20::helpers::{allowance_query, decrease_allowance_msg, increase_allowance_msg};
 
 
     let mut allowance = match cur_allowance {
@@ -154,31 +153,30 @@ pub fn set_allowance(
                     spender.clone(),
                     key,
                     1,
-                    asset.code_hash.clone(),
-                    asset.address.clone(),
-                )?.allowance,
+                    asset,
+                )?.amount,
     };
 
     match amount.cmp(&allowance) {
         // Decrease Allowance
         std::cmp::Ordering::Less => Ok(vec![decrease_allowance_msg(
-            spender.clone(),
-            (allowance - amount)?,
+            spender.into_string(),
+            allowance.checked_sub(amount)?,
             None,
             None,
-            1,
-            asset.code_hash.clone(),
-            asset.address.clone(),
+            BLOCK_SIZE,
+            asset,
+            vec![]
         )?]),
         // Increase Allowance
         std::cmp::Ordering::Greater => Ok(vec![increase_allowance_msg(
-            spender.clone(),
-            (amount - allowance)?,
+            spender.into_string(),
+            amount.checked_sub(amount)?,
             None,
             None,
-            1,
-            asset.code_hash.clone(),
-            asset.address.clone(),
+            BLOCK_SIZE,
+            asset,
+            vec![]
         )?]),
         _ => Ok(vec![]),
     }

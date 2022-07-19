@@ -4,7 +4,7 @@ pub mod transaction_history;
 pub mod errors;
 pub mod helpers;
 
-use cosmwasm_std::MessageInfo;
+use cosmwasm_std::{MessageInfo, Api};
 use crate::c_std::{Binary, Env, Addr, StdError, StdResult, Storage};
 use crate::query_authentication::permit::Permit;
 
@@ -33,7 +33,7 @@ pub struct InitialBalance {
 #[cw_serde]
 pub struct InstantiateMsg {
     pub name: String,
-    pub admin: Option<Addr>,
+    pub admin: Option<String>,
     pub symbol: String,
     pub decimals: u8,
     pub initial_balances: Option<Vec<InitialBalance>>,
@@ -55,7 +55,7 @@ fn is_valid_symbol(symbol: &str) -> bool {
 
 #[cfg(feature = "snip20-impl")]
 impl InstantiateMsg {
-    pub fn save(&self, storage: &mut dyn Storage, env: Env, info: MessageInfo) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage, api: &dyn Api, env: Env, info: MessageInfo) -> StdResult<()> {
         if !is_valid_name(&self.name) {
             return Err(invalid_name_format(&self.name));
         }
@@ -77,8 +77,14 @@ impl InstantiateMsg {
             decimals: self.decimals
         }.save(storage)?;
 
-        let admin = self.admin.clone().unwrap_or(info.sender);
-        Admin(admin.clone()).save(storage)?;
+        let admin_addr;
+        if let Some(admin) = &self.admin {
+            admin_addr = api.addr_validate(admin.as_str())?
+        } else {
+            admin_addr = info.sender;
+        }
+
+        Admin(admin_addr.clone()).save(storage)?;
         RandSeed(sha_256(&self.prng_seed.0).to_vec()).save(storage)?;
 
         let mut total_supply = Uint128::zero();
@@ -90,7 +96,7 @@ impl InstantiateMsg {
 
                 store_mint(
                     storage,
-                    &admin,
+                    &admin_addr,
                     &balance.address,
                     balance.amount,
                     self.symbol.clone(),
@@ -196,13 +202,13 @@ pub enum ExecuteMsg {
 
     // Base ERC-20 stuff
     Transfer {
-        recipient: Addr,
+        recipient: String,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
     },
     Send {
-        recipient: Addr,
+        recipient: String,
         recipient_code_hash: Option<String>,
         amount: Uint128,
         msg: Option<Binary>,
@@ -237,27 +243,27 @@ pub enum ExecuteMsg {
 
     // Allowance
     IncreaseAllowance {
-        spender: Addr,
+        spender: String,
         amount: Uint128,
         expiration: Option<u64>,
         padding: Option<String>,
     },
     DecreaseAllowance {
-        spender: Addr,
+        spender: String,
         amount: Uint128,
         expiration: Option<u64>,
         padding: Option<String>,
     },
     TransferFrom {
-        owner: Addr,
-        recipient: Addr,
+        owner: String,
+        recipient: String,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
     },
     SendFrom {
-        owner: Addr,
-        recipient: Addr,
+        owner: String,
+        recipient: String,
         recipient_code_hash: Option<String>,
         amount: Uint128,
         msg: Option<Binary>,
@@ -273,7 +279,7 @@ pub enum ExecuteMsg {
         padding: Option<String>,
     },
     BurnFrom {
-        owner: Addr,
+        owner: String,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
@@ -285,7 +291,7 @@ pub enum ExecuteMsg {
 
     // Mint
     Mint {
-        recipient: Addr,
+        recipient: String,
         amount: Uint128,
         memo: Option<String>,
         padding: Option<String>,
@@ -295,21 +301,21 @@ pub enum ExecuteMsg {
         padding: Option<String>,
     },
     AddMinters {
-        minters: Vec<Addr>,
+        minters: Vec<String>,
         padding: Option<String>,
     },
     RemoveMinters {
-        minters: Vec<Addr>,
+        minters: Vec<String>,
         padding: Option<String>,
     },
     SetMinters {
-        minters: Vec<Addr>,
+        minters: Vec<String>,
         padding: Option<String>,
     },
 
     // Admin
     ChangeAdmin {
-        address: Addr,
+        address: String,
         padding: Option<String>,
     },
     SetContractStatus {
@@ -330,8 +336,8 @@ impl ExecuteCallback for ExecuteMsg {
 
 #[cw_serde]
 pub struct Snip20ReceiveMsg {
-    pub sender: Addr,
-    pub from: Addr,
+    pub sender: String,
+    pub from: String,
     pub amount: Uint128,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
@@ -345,8 +351,8 @@ pub enum ReceiverHandleMsg {
 
 impl ReceiverHandleMsg {
     pub fn new(
-        sender: Addr,
-        from: Addr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<String>,
         msg: Option<Binary>,
@@ -403,13 +409,13 @@ pub enum HandleAnswer {
 
     // Allowance
     IncreaseAllowance {
-        spender: Addr,
-        owner: Addr,
+        spender: String,
+        owner: String,
         allowance: Uint128,
     },
     DecreaseAllowance {
-        spender: Addr,
-        owner: Addr,
+        spender: String,
+        owner: String,
         allowance: Uint128,
     },
     TransferFrom {

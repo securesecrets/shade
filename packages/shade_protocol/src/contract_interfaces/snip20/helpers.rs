@@ -32,7 +32,7 @@ pub fn send_msg(
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     Ok(ExecuteMsg::Send {
-        recipient,
+        recipient: recipient.into_string(),
         recipient_code_hash: None,
         amount,
         msg,
@@ -82,7 +82,7 @@ pub fn mint_msg(
     contract: &Contract
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::Mint {
-        recipient,
+        recipient: recipient.into_string(),
         amount,
         memo,
         padding,
@@ -260,8 +260,8 @@ pub fn decrease_allowance_msg(
 #[allow(clippy::too_many_arguments)]
 pub fn allowance_query(
     querier: &QuerierWrapper,
-    owner: String,
-    spender: String,
+    owner: Addr,
+    spender: Addr,
     key: String,
     block_size: usize,
     contract: &Contract,
@@ -284,7 +284,7 @@ pub fn allowance_query(
             expiration,
             amount: todo!(),
         }),
-        QueryAnswer::ViewingKeyError { .. } => Err(StdError::unauthorized()),
+        QueryAnswer::ViewingKeyError { .. } => Err(StdError::generic_err("Unauthorized")),
         _ => Err(StdError::generic_err("Invalid Allowance query response")),
     }
 }
