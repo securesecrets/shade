@@ -28,7 +28,6 @@ use shade_protocol::{
 
 use contract_harness::harness::{
     scrt_staking::ScrtStaking,
-    //snip20_reference_impl::Snip20ReferenceImpl as Snip20,
     snip20::Snip20,
 };
 
