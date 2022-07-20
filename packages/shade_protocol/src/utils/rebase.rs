@@ -26,7 +26,7 @@ impl Rebase {
     }
 
     /// Calculates the base value in relationship to `elastic` and self
-    pub fn to_base(self, elastic: Uint256, round_up: bool) -> StdResult<Uint256> {
+    pub fn to_base(&self, elastic: Uint256, round_up: bool) -> StdResult<Uint256> {
         let mut base: Uint256;
         if self.elastic.is_zero() {
             base = elastic;
@@ -40,7 +40,7 @@ impl Rebase {
     }
 
     /// Calculates the elastic value in relationship to `base` and self
-    pub fn to_elastic(self, base: Uint256, round_up: bool) -> StdResult<Uint256> {
+    pub fn to_elastic(&self, base: Uint256, round_up: bool) -> StdResult<Uint256> {
         let mut elastic: Uint256;
         if self.base.is_zero() {
             elastic = base;
