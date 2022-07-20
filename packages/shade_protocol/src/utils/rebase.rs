@@ -1,10 +1,10 @@
 use std::ops::Div;
 
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Uint256;
 use cosmwasm_std::StdResult;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[cw_serde]
 /// Version capable of doing math
 pub struct Rebase {
     pub elastic: Uint256,
