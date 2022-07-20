@@ -15,7 +15,6 @@ pub fn try_increase_allowance(
     expiration: Option<u64>,
 ) -> StdResult<Response> {
     let owner = info.sender;
-
     let mut allowance = Allowance::may_load(
         deps.storage,
         (owner.clone(), spender.clone())

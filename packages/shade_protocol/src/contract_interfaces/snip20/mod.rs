@@ -26,7 +26,7 @@ pub const VERSION: &str = "SNIP24";
 
 #[cw_serde]
 pub struct InitialBalance {
-    pub address: Addr,
+    pub address: String,
     pub amount: Uint128,
 }
 
@@ -91,13 +91,14 @@ impl InstantiateMsg {
 
         if let Some(initial_balances) = &self.initial_balances{
             for balance in initial_balances.iter() {
-                Balance::set(storage, balance.amount.clone(), &balance.address)?;
+                let address = api.addr_validate(balance.address.as_str())?;
+                Balance::set(storage, balance.amount.clone(), &address)?;
                 total_supply = total_supply.checked_add(balance.amount)?;
 
                 store_mint(
                     storage,
                     &admin_addr,
-                    &balance.address,
+                    &address,
                     balance.amount,
                     self.symbol.clone(),
                     Some("Initial Balance".to_string()),

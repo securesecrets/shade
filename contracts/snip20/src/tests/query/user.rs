@@ -8,13 +8,13 @@ use crate::tests::{create_vk, init_snip20_with_config};
 fn allowance_vk() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
 
-    let saul = Addr::unchecked("Saul");
-    let goodman = Addr::unchecked("Goodman");
+    let saul = Addr::unchecked("saul");
+    let goodman = Addr::unchecked("goodman");
 
-    create_vk(&mut chain, &snip, "Saul", None).unwrap();
+    create_vk(&mut chain, &snip, "saul", None).unwrap();
 
     ExecuteMsg::IncreaseAllowance {
-        spender: goodman.clone(),
+        spender: goodman.clone().into_string(),
         amount: Uint128::new(100),
         expiration: None,
         padding: None
@@ -40,12 +40,12 @@ fn allowance_vk() {
 #[test]
 fn balance_vk() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![InitialBalance {
-        address: Addr::unchecked("Robinson"),
+        address: "robinson".to_string(),
         amount: Uint128::new(1500)
     }]), None).unwrap();
 
     let answer: QueryAnswer = QueryMsg::Balance {
-        address: Addr::unchecked("Robinson"),
+        address: Addr::unchecked("robinson"),
         key: "password".to_string()
     }.test_query(&snip, &chain).unwrap();
 
@@ -61,46 +61,46 @@ fn balance_vk() {
 
 #[test]
 fn transaction_history() {
-    let setsuna = Addr::unchecked("Setsuna");
-    let stratos = Addr::unchecked("Stratos");
-    let smirnoff = Addr::unchecked("Smirnoff");
-    let felt = Addr::unchecked("Felt");
-    let tieria = Addr::unchecked("Tieria");
+    let setsuna = Addr::unchecked("setsuna");
+    let stratos = Addr::unchecked("stratos");
+    let smirnoff = Addr::unchecked("smirnoff");
+    let felt = Addr::unchecked("felt");
+    let tieria = Addr::unchecked("tieria");
 
     let (mut chain, snip) = init_snip20_with_config(Some(vec![InitialBalance {
-        address: setsuna.clone(),
+        address: setsuna.clone().into_string(),
         amount: Uint128::new(1500)
     }]), None).unwrap();
 
     ExecuteMsg::Transfer {
-        recipient: stratos.clone(),
+        recipient: stratos.clone().into_string(),
         amount: Uint128::new(200),
         memo: None,
         padding: None
-    }.test_exec(&snip, &mut chain, setsuna.clone(), &[]).unwrap();
+    }.test_exec(&snip, &mut chain, Addr::unchecked("setsuna"), &[]).unwrap();
 
     ExecuteMsg::Send {
-        recipient: smirnoff.clone(),
+        recipient: smirnoff.clone().into_string(),
         recipient_code_hash: None,
         amount: Uint128::new(140),
         msg: None,
         memo: None,
         padding: None
-    }.test_exec(&snip, &mut chain, setsuna.clone(), &[]).unwrap();
+    }.test_exec(&snip, &mut chain, Addr::unchecked("setsuna"), &[]).unwrap();
 
     ExecuteMsg::Transfer {
-        recipient: felt.clone(),
+        recipient: felt.clone().into_string(),
         amount: Uint128::new(300),
         memo: None,
         padding: None
-    }.test_exec(&snip, &mut chain, setsuna.clone(), &[]).unwrap();
+    }.test_exec(&snip, &mut chain, Addr::unchecked("setsuna"), &[]).unwrap();
 
     ExecuteMsg::Transfer {
-        recipient: tieria.clone(),
+        recipient: tieria.clone().into_string(),
         amount: Uint128::new(540),
         memo: None,
         padding: None
-    }.test_exec(&snip, &mut chain, setsuna.clone(), &[]).unwrap();
+    }.test_exec(&snip, &mut chain, Addr::unchecked("setsuna"), &[]).unwrap();
 
     let answer: QueryAnswer = QueryMsg::TransactionHistory {
         address: setsuna.clone(),
