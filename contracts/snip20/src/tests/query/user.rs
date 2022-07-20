@@ -21,9 +21,9 @@ fn allowance_vk() {
     }.test_exec(&snip, &mut chain, saul.clone(), &[]).unwrap();
     
     let answer: QueryAnswer = QueryMsg::Allowance {
-        owner: saul.clone(),
-        spender: goodman.clone(),
-        key: "password".to_string()
+        owner: saul.clone().into(),
+        spender: goodman.clone().into(),
+        key: "password".into()
     }.test_query(&snip, &chain).unwrap();
 
     match answer {
@@ -40,13 +40,13 @@ fn allowance_vk() {
 #[test]
 fn balance_vk() {
     let (mut chain, snip) = init_snip20_with_config(Some(vec![InitialBalance {
-        address: "robinson".to_string(),
+        address: "robinson".into(),
         amount: Uint128::new(1500)
     }]), None).unwrap();
 
     let answer: QueryAnswer = QueryMsg::Balance {
-        address: Addr::unchecked("robinson"),
-        key: "password".to_string()
+        address: "robinson".into(),
+        key: "password".into()
     }.test_query(&snip, &chain).unwrap();
 
     match answer {
@@ -103,8 +103,8 @@ fn transaction_history() {
     }.test_exec(&snip, &mut chain, Addr::unchecked("setsuna"), &[]).unwrap();
 
     let answer: QueryAnswer = QueryMsg::TransactionHistory {
-        address: setsuna.clone(),
-        key: "password".to_string(),
+        address: setsuna.clone().into(),
+        key: "password".into(),
         page: None,
         page_size: 10
     }.test_query(&snip, &chain).unwrap();
@@ -119,7 +119,7 @@ fn transaction_history() {
                 recipient: setsuna.clone()
             });
             assert_eq!(txs[0].coins, Coin {
-                denom: "TKN".to_string(),
+                denom: "TKN".into(),
                 amount: Uint128::new(1500)
             });
 
@@ -130,7 +130,7 @@ fn transaction_history() {
                 recipient: stratos.clone()
             });
             assert_eq!(txs[1].coins, Coin {
-                denom: "TKN".to_string(),
+                denom: "TKN".into(),
                 amount: Uint128::new(200)
             });
 
@@ -141,7 +141,7 @@ fn transaction_history() {
                 recipient: smirnoff.clone()
             });
             assert_eq!(txs[2].coins, Coin {
-                denom: "TKN".to_string(),
+                denom: "TKN".into(),
                 amount: Uint128::new(140)
             });
 
@@ -152,7 +152,7 @@ fn transaction_history() {
                 recipient: felt.clone()
             });
             assert_eq!(txs[3].coins, Coin {
-                denom: "TKN".to_string(),
+                denom: "TKN".into(),
                 amount: Uint128::new(300)
             });
 
@@ -163,7 +163,7 @@ fn transaction_history() {
                 recipient: tieria.clone()
             });
             assert_eq!(txs[4].coins, Coin {
-                denom: "TKN".to_string(),
+                denom: "TKN".into(),
                 amount: Uint128::new(540)
             });
 

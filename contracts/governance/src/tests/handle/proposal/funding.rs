@@ -50,15 +50,15 @@ pub fn init_funding_governance_with_proposal() -> StdResult<(
             decimals: 6,
             initial_balances: Some(vec![
                 snip20::InitialBalance {
-                    address: Addr::from("alpha"),
+                    address: Addr::unchecked("alpha"),
                     amount: Uint128::new(10000),
                 },
                 snip20::InitialBalance {
-                    address: Addr::from("beta"),
+                    address: Addr::unchecked("beta"),
                     amount: Uint128::new(10000),
                 },
                 snip20::InitialBalance {
-                    address: Addr::from("charlie"),
+                    address: Addr::unchecked("charlie"),
                     amount: Uint128::new(10000),
                 },
             ]),
@@ -105,15 +105,15 @@ pub fn init_funding_governance_with_proposal() -> StdResult<(
         .unwrap();
 
     let gov = harness::governance::init(&mut chain, &InitMsg {
-        treasury: HumanAddr::from("treasury"),
+        treasury: HumanAddr::unchecked("treasury"),
         query_auth: Contract {
             address: auth.address,
             code_hash: auth.code_hash,
         },
         admin_members: vec![
-            HumanAddr::from("alpha"),
-            HumanAddr::from("beta"),
-            HumanAddr::from("charlie"),
+            HumanAddr::unchecked("alpha"),
+            HumanAddr::unchecked("beta"),
+            HumanAddr::unchecked("charlie"),
         ],
         admin_profile: Profile {
             name: "admin".to_string(),
@@ -306,7 +306,7 @@ fn assembly_to_funding_transition() {
 
     assert_eq!(prop.title, "Title".to_string());
     assert_eq!(prop.metadata, "Text only proposal".to_string());
-    assert_eq!(prop.proposer, HumanAddr::from("alpha"));
+    assert_eq!(prop.proposer, HumanAddr::unchecked("alpha"));
     assert_eq!(prop.assembly, Uint128::new(1));
 
     // Check that history works
@@ -335,15 +335,15 @@ fn fake_funding_token() {
                 decimals: 6,
                 initial_balances: Some(vec![
                     snip20::InitialBalance {
-                        address: Addr::from("alpha"),
+                        address: Addr::unchecked("alpha"),
                         amount: Uint128::new(10000),
                     },
                     snip20::InitialBalance {
-                        address: Addr::from("beta"),
+                        address: Addr::unchecked("beta"),
                         amount: Uint128::new(10000),
                     },
                     snip20::InitialBalance {
-                        address: Addr::from("charlie"),
+                        address: Addr::unchecked("charlie"),
                         amount: Uint128::new(10000),
                     },
                 ]),
@@ -390,7 +390,7 @@ fn fake_funding_token() {
                 },
                 MockEnv::new(
                     // Sender is self
-                    Addr::from("alpha"),
+                    Addr::unchecked("alpha"),
                     snip20.clone()
                 )
             )
@@ -414,7 +414,7 @@ fn funding_proposal_without_msg() {
                 },
                 MockEnv::new(
                     // Sender is self
-                    Addr::from("alpha"),
+                    Addr::unchecked("alpha"),
                     snip20.clone()
                 )
             )
@@ -437,7 +437,7 @@ fn funding_proposal() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("alpha"),
+                Addr::unchecked("alpha"),
                 snip20.clone(),
             ),
         )
@@ -455,7 +455,7 @@ fn funding_proposal() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("beta"),
+                Addr::unchecked("beta"),
                 snip20.clone(),
             ),
         )
@@ -488,7 +488,7 @@ fn funding_proposal_after_deadline() {
                 },
                 MockEnv::new(
                     // Sender is self
-                    Addr::from("alpha"),
+                    Addr::unchecked("alpha"),
                     snip20.clone()
                 )
             )
@@ -530,7 +530,7 @@ fn update_when_fully_funded() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("alpha"),
+                Addr::unchecked("alpha"),
                 snip20.clone(),
             ),
         )
@@ -548,7 +548,7 @@ fn update_when_fully_funded() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("beta"),
+                Addr::unchecked("beta"),
                 snip20.clone(),
             ),
         )
@@ -589,7 +589,7 @@ fn update_after_failed_funding() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("alpha"),
+                Addr::unchecked("alpha"),
                 snip20.clone(),
             ),
         )
@@ -632,7 +632,7 @@ fn claim_when_not_finished() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("alpha"),
+                Addr::unchecked("alpha"),
                 snip20.clone(),
             ),
         )
@@ -646,7 +646,7 @@ fn claim_when_not_finished() {
                 },
                 MockEnv::new(
                     // Sender is self
-                    Addr::from("alpha"),
+                    Addr::unchecked("alpha"),
                     snip20.clone()
                 )
             )
@@ -669,7 +669,7 @@ fn claim_after_failing() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("alpha"),
+                Addr::unchecked("alpha"),
                 snip20.clone(),
             ),
         )
@@ -695,7 +695,7 @@ fn claim_after_failing() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("alpha"),
+                Addr::unchecked("alpha"),
                 gov.clone(),
             ),
         )
@@ -705,7 +705,7 @@ fn claim_after_failing() {
         .query(
             snip20.address.clone(),
             &snip20::QueryMsg::Balance {
-                address: Addr::from("alpha"),
+                address: Addr::unchecked("alpha"),
                 key: "password".to_string(),
             },
         )
@@ -734,7 +734,7 @@ fn claim_after_passing() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("alpha"),
+                Addr::unchecked("alpha"),
                 snip20.clone(),
             ),
         )
@@ -758,7 +758,7 @@ fn claim_after_passing() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("alpha"),
+                Addr::unchecked("alpha"),
                 gov.clone(),
             ),
         )
@@ -769,14 +769,14 @@ fn claim_after_passing() {
 
     assert_eq!(
         prop.funders.unwrap()[0],
-        (HumanAddr::from("alpha"), Uint128::new(2000))
+        (HumanAddr::unchecked("alpha"), Uint128::new(2000))
     );
 
     let query: snip20::QueryAnswer = chain
         .query(
             snip20.address.clone(),
             &snip20::QueryMsg::Balance {
-                address: Addr::from("alpha"),
+                address: Addr::unchecked("alpha"),
                 key: "password".to_string(),
             },
         )
@@ -809,15 +809,15 @@ fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
                 decimals: 6,
                 initial_balances: Some(vec![
                     snip20::InitialBalance {
-                        address: HumanAddr::from("alpha"),
+                        address: HumanAddr::unchecked("alpha"),
                         amount: Uint128::new(10000),
                     },
                     snip20::InitialBalance {
-                        address: HumanAddr::from("beta"),
+                        address: HumanAddr::unchecked("beta"),
                         amount: Uint128::new(10000),
                     },
                     snip20::InitialBalance {
-                        address: HumanAddr::from("charlie"),
+                        address: HumanAddr::unchecked("charlie"),
                         amount: Uint128::new(10000),
                     },
                 ]),
@@ -834,15 +834,15 @@ fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
     // Register governance
     let auth = init_query_auth(&mut chain)?;
     let gov = harness::governance::init(&mut chain, &InitMsg {
-        treasury: HumanAddr::from("treasury"),
+        treasury: HumanAddr::unchecked("treasury"),
         query_auth: Contract {
             address: auth.address,
             code_hash: auth.code_hash,
         },
         admin_members: vec![
-            HumanAddr::from("alpha"),
-            HumanAddr::from("beta"),
-            HumanAddr::from("charlie"),
+            HumanAddr::unchecked("alpha"),
+            HumanAddr::unchecked("beta"),
+            HumanAddr::unchecked("charlie"),
         ],
         admin_profile: Profile {
             name: "admin".to_string(),
@@ -905,7 +905,7 @@ fn funding_privacy() {
             },
             MockEnv::new(
                 // Sender is self
-                HumanAddr::from("alpha"),
+                HumanAddr::unchecked("alpha"),
                 snip20.clone(),
             ),
         )

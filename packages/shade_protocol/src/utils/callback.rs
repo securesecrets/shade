@@ -1,12 +1,12 @@
 use crate::Contract;
 use crate::serde::{de::DeserializeOwned, Serialize};
-use crate::c_std::{to_binary, Coin, CosmosMsg, Addr, Querier, QueryRequest, StdResult, Uint128, WasmMsg, WasmQuery, SubMsg, ReplyOn, QuerierWrapper, ContractInfo, Empty};
+use crate::c_std::{to_binary, Coin, CosmosMsg, Addr, QueryRequest, StdResult, Uint128, WasmMsg, WasmQuery, SubMsg, ReplyOn, QuerierWrapper, ContractInfo, Empty};
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "multi-test")]
-use crate::multi_test::{App, AppResponse, Contract as MultiContract, ContractWrapper, Executor};
+use crate::multi_test::{App, AppResponse, Contract as MultiContract, Executor};
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "multi-test")]
-use anyhow::Result as AnyResult;
+use crate::AnyResult;
 use super::space_pad;
 
 /// A trait marking types that define the instantiation message of a contract
@@ -74,10 +74,10 @@ pub trait InstantiateCallback: Serialize {
         sender: Addr,
         label: &str,
         send_funds: &[Coin],
-    ) -> StdResult<ContractInfo> {
+    ) -> AnyResult<ContractInfo> {
         let stored_code = router.store_code(testable.contract());
-        Ok(router
-            .instantiate_contract(stored_code, sender, &self, send_funds, label, None).unwrap())
+        router
+            .instantiate_contract(stored_code, sender, &self, send_funds, label, None)
     }
 }
 

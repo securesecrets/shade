@@ -24,7 +24,7 @@ pub fn fetch_snip20(contract: &Contract, querier: &QuerierWrapper) -> StdResult<
 /// Returns a StdResult<CosmosMsg> used to execute Send
 #[allow(clippy::too_many_arguments)]
 pub fn send_msg(
-    recipient: Addr,
+    recipient: String,
     amount: Uint128,
     msg: Option<Binary>,
     memo: Option<String>,
@@ -32,7 +32,7 @@ pub fn send_msg(
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     Ok(ExecuteMsg::Send {
-        recipient: recipient.into_string(),
+        recipient,
         recipient_code_hash: None,
         amount,
         msg,
@@ -75,14 +75,14 @@ pub fn deposit_msg(
 
 /// Returns a StdResult<CosmosMsg> used to execute Mint
 pub fn mint_msg(
-    recipient: Addr,
+    recipient: String,
     amount: Uint128,
     memo: Option<String>,
     padding: Option<String>,
     contract: &Contract
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::Mint {
-        recipient: recipient.into_string(),
+        recipient: recipient,
         amount,
         memo,
         padding,
@@ -260,8 +260,8 @@ pub fn decrease_allowance_msg(
 #[allow(clippy::too_many_arguments)]
 pub fn allowance_query(
     querier: &QuerierWrapper,
-    owner: Addr,
-    spender: Addr,
+    owner: String,
+    spender: String,
     key: String,
     block_size: usize,
     contract: &Contract,

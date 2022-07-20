@@ -130,7 +130,7 @@ fn run_testnet() -> Result<()> {
         // The next governance votes will not require voting
         staker: None,
         funding_token: Contract {
-            address: Addr::from(shade.address.clone()),
+            address: Addr::unchecked(shade.address.clone()),
             code_hash: shade.code_hash.clone(),
         },
         funding_amount: Uint128::new(1000000),
@@ -166,7 +166,7 @@ fn run_testnet() -> Result<()> {
     // Change contract admin
     {
         let msg = snip20::ExecuteMsg::ChangeAdmin {
-            address: Addr::from(governance.address.clone()),
+            address: Addr::unchecked(governance.address.clone()),
             padding: None,
         };
 
@@ -226,11 +226,11 @@ fn run_testnet() -> Result<()> {
         oracle::InstantiateMsg {
             admin: None,
             band: Contract {
-                address: Addr::from(band.address),
+                address: Addr::unchecked(band.address),
                 code_hash: band.code_hash,
             },
             sscrt: Contract {
-                address: Addr::from(s_sCRT.address.clone()),
+                address: Addr::unchecked(s_sCRT.address.clone()),
                 code_hash: s_sCRT.code_hash.clone(),
             },
         },
@@ -276,7 +276,7 @@ fn run_testnet() -> Result<()> {
         governance::ExecuteMsg::UpdateConfig {
             admin: None,
             staker: Some(Contract {
-                address: Addr::from(staker.address.clone()),
+                address: Addr::unchecked(staker.address.clone()),
                 code_hash: staker.code_hash.clone(),
             }),
             proposal_deadline: None,
@@ -328,7 +328,7 @@ fn run_testnet() -> Result<()> {
 
         handle(
             &snip20::ExecuteMsg::Send {
-                recipient: Addr::from(governance.address.clone()),
+                recipient: Addr::unchecked(governance.address.clone()),
                 amount: Uint128::new(1000000),
                 msg: Some(to_binary(&proposal).unwrap()),
                 memo: None,
@@ -461,7 +461,7 @@ fn run_testnet() -> Result<()> {
         print_warning("Funding proposal");
         handle(
             &snip20::ExecuteMsg::Send {
-                recipient: Addr::from(governance.address.clone()),
+                recipient: Addr::unchecked(governance.address.clone()),
                 amount: Uint128::new(1000000),
                 msg: Some(to_binary(&proposal).unwrap()),
                 memo: None,
@@ -581,7 +581,7 @@ fn run_testnet() -> Result<()> {
 
         handle(
             &snip20::ExecuteMsg::Send {
-                recipient: Addr::from(governance.address.clone()),
+                recipient: Addr::unchecked(governance.address.clone()),
                 amount: lost_amount,
                 msg: Some(to_binary(&proposal).unwrap()),
                 memo: None,
@@ -607,7 +607,7 @@ fn run_testnet() -> Result<()> {
         // Trigger funding
         handle(
             &snip20::ExecuteMsg::Send {
-                recipient: Addr::from(governance.address.clone()),
+                recipient: Addr::unchecked(governance.address.clone()),
                 amount: lost_amount,
                 msg: Some(to_binary(&proposal).unwrap()),
                 memo: None,

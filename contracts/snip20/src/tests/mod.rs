@@ -1,8 +1,9 @@
 pub mod handle;
 pub mod query;
 
+use shade_protocol::AnyResult;
 use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
-use shade_protocol::multi_test::App;
+use shade_protocol::multi_test::{App, AppResponse};
 use shade_multi_test::multi::snip20::Snip20;
 use shade_protocol::c_std::{Binary, Addr, StdResult, ContractInfo};
 use shade_protocol::contract_interfaces::{
@@ -12,7 +13,7 @@ use shade_protocol::contract_interfaces::{
 
 //TODO: test rng
 
-pub fn init_snip20(msg: snip20::InstantiateMsg) -> StdResult<(App, ContractInfo)> {
+pub fn init_snip20(msg: snip20::InstantiateMsg) -> AnyResult<(App, ContractInfo)> {
     let mut app = App::default();
     let admin = Addr::unchecked("admin");
     // Register governance
@@ -24,11 +25,11 @@ pub fn init_snip20(msg: snip20::InstantiateMsg) -> StdResult<(App, ContractInfo)
 pub fn init_snip20_with_config(
     initial_balances: Option<Vec<InitialBalance>>,
     config: Option<InitConfig>,
-) -> StdResult<(App, ContractInfo)> {
+) -> AnyResult<(App, ContractInfo)> {
     let (mut chain, snip) = init_snip20(snip20::InstantiateMsg {
-        name: "Token".to_string(),
+        name: "Token".into(),
         admin: None,
-        symbol: "TKN".to_string(),
+        symbol: "TKN".into(),
         decimals: 8,
         initial_balances: initial_balances.clone(),
         prng_seed: Binary::from("random".as_bytes()),
@@ -49,10 +50,9 @@ pub fn create_vk(
     snip: &ContractInfo,
     addr: &str,
     key: Option<String>,
-) -> StdResult<()> {
+) -> AnyResult<AppResponse> {
     snip20::ExecuteMsg::SetViewingKey {
-        key: key.unwrap_or("password".to_string()),
+        key: key.unwrap_or("password".into()),
         padding: None,
-    }.test_exec(snip, chain, Addr::unchecked(addr), &[]).unwrap();
-    Ok(())
+    }.test_exec(snip, chain, Addr::unchecked(addr), &[])
 }

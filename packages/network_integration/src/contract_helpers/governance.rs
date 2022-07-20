@@ -48,7 +48,7 @@ pub fn get_contract(governance: &NetContract, target: String) -> Result<Contract
     let query: governance::QueryAnswer = query(governance, &msg, None)?;
 
     let mut ctrc = Contract {
-        address: Addr::from("not_found".to_string()),
+        address: Addr::unchecked("not_found".to_string()),
         code_hash: "not_found".to_string(),
     };
 
@@ -70,7 +70,7 @@ pub fn add_contract(
     let msg = governance::ExecuteMsg::AddSupportedContract {
         name: name.clone(),
         contract: Contract {
-            address: Addr::from(target.address.clone()),
+            address: Addr::unchecked(target.address.clone()),
             code_hash: target.code_hash.clone(),
         },
     };

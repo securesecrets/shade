@@ -251,6 +251,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
                 match query {
                     QueryWithPermit::Allowance { owner, spender, .. } => {
+                        let owner = deps.api.addr_validate(&owner)?;
+                        let spender = deps.api.addr_validate(&spender)?;
+
                         if !permit.params.contains(Permission::Allowance) {
                             return Err(unauthorized_permit(Permission::Allowance));
                         }
@@ -301,6 +304,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     spender,
                     key,
                 } => {
+                    let owner = deps.api.addr_validate(&owner)?;
+                    let spender = deps.api.addr_validate(&spender)?;
                     if Key::verify(deps.storage, owner.clone(), key.clone())?
                         || Key::verify(deps.storage, spender.clone(), key)?
                     {
@@ -310,6 +315,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     }
                 }
                 QueryMsg::Balance { address, key } => {
+                    let address = deps.api.addr_validate(&address)?;
                     if Key::verify(deps.storage, address.clone(), key.clone())? {
                         query::balance(deps, address.clone())?
                     } else {
@@ -322,6 +328,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     page,
                     page_size,
                 } => {
+                    let address = deps.api.addr_validate(&address)?;
                     if Key::verify(deps.storage, address.clone(), key.clone())? {
                         query::transfer_history(
                             deps,
@@ -339,6 +346,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     page,
                     page_size,
                 } => {
+                    let address = deps.api.addr_validate(&address)?;
                     if Key::verify(deps.storage, address.clone(), key.clone())? {
                         query::transaction_history(
                             deps,

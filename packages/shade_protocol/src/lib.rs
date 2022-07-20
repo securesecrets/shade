@@ -30,6 +30,9 @@ pub use fadroma;
 #[cfg(feature = "multi-test")]
 pub use secret_multi_test as multi_test;
 
+#[cfg(feature = "multi-test")]
+pub use anyhow::Result as AnyResult;
+
 // Expose contract in root since its so used
 #[cfg(feature = "utils")]
 pub use utils::asset::Contract;

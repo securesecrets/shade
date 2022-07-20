@@ -55,15 +55,15 @@ pub fn init_assembly_governance_with_proposal()
         .unwrap();
 
     let gov = harness::governance::init(&mut chain, &InitMsg {
-        treasury: HumanAddr::from("treasury"),
+        treasury: HumanAddr::unchecked("treasury"),
         query_auth: Contract {
             address: auth.address,
             code_hash: auth.code_hash,
         },
         admin_members: vec![
-            Addr::from("alpha"),
-            Addr::from("beta"),
-            Addr::from("charlie"),
+            Addr::unchecked("alpha"),
+            Addr::unchecked("beta"),
+            Addr::unchecked("charlie"),
         ],
         admin_profile: Profile {
             name: "admin".to_string(),
@@ -122,7 +122,7 @@ fn assembly_voting() {
 
     assert_eq!(prop.title, "Title".to_string());
     assert_eq!(prop.metadata, "Text only proposal".to_string());
-    assert_eq!(prop.proposer, HumanAddr::from("alpha"));
+    assert_eq!(prop.proposer, HumanAddr::unchecked("alpha"));
     assert_eq!(prop.assembly, Uint128::new(1));
 
     match prop.status {
@@ -950,15 +950,15 @@ fn vote_count_percentage() {
     let mut chain = ContractEnsemble::new(50);
     let auth = init_query_auth(&mut chain).unwrap();
     let gov = harness::governance::init(&mut chain, &InstantiateMsg {
-        treasury: Addr::from("treasury"),
+        treasury: Addr::unchecked("treasury"),
         query_auth: Contract {
             address: auth.address,
             code_hash: auth.code_hash,
         },
         admin_members: vec![
-            Addr::from("alpha"),
-            Addr::from("beta"),
-            Addr::from("charlie"),
+            Addr::unchecked("alpha"),
+            Addr::unchecked("beta"),
+            Addr::unchecked("charlie"),
         ],
         admin_profile: Profile {
             name: "admin".to_string(),

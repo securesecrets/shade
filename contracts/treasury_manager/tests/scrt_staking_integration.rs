@@ -196,7 +196,7 @@ fn single_holder_scrt_staking_adapter(
     ).unwrap();
 
     let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-    ensemble.add_funds(HumanAddr::from("holder"), vec![deposit_coin.clone()]);
+    ensemble.add_funds(HumanAddr::unchecked("holder"), vec![deposit_coin.clone()]);
 
     assert!(deposit_coin.amount > Uint128::zero());
 

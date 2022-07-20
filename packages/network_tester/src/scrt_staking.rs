@@ -78,7 +78,7 @@ fn main() -> Result<()> {
                 Some("test"))?;
 
     snip20::ExecuteMsg::Send {
-        recipient: Addr::from(minter),
+        recipient: Addr::unchecked(minter),
         Uint128::new(100),
         memo: None,
         padding: None
@@ -108,7 +108,7 @@ fn main() -> Result<()> {
             label: shade.label.clone(),
             admin: None,
             prng_seed: Default::default(),
-            initial_balances: Some(vec![InitialBalance{ address: Addr::from(account.clone()), amount: Uint128::new(10000000) }])
+            initial_balances: Some(vec![InitialBalance{ address: Addr::unchecked(account.clone()), amount: Uint128::new(10000000) }])
         },
         silk: Snip20ContractInfo {
             label: silk.label.clone(),
@@ -164,8 +164,8 @@ fn main() -> Result<()> {
     print_header("Initializing Oracle");
     let oracle = oracle::InstantiateMsg {
         admin: None,
-        band: Contract { address: Addr::from(band.address), code_hash: band.code_hash },
-        sscrt: Contract { address: Addr::from(sSCRT.address.clone()),
+        band: Contract { address: Addr::unchecked(band.address), code_hash: band.code_hash },
+        sscrt: Contract { address: Addr::unchecked(sSCRT.address.clone()),
             code_hash: sSCRT.code_hash.clone() }
     }.inst_init("../../compiled/oracle.wasm.gz", &*generate_label(8),
                 ACCOUNT_KEY, Some(STORE_GAS), Some(GAS),
@@ -186,10 +186,10 @@ fn main() -> Result<()> {
 
     print_header("Initializing Mint-Shade");
     let mint_shade = mint::InstantiateMsg {
-        admin: Some(Addr::from(governance.address.clone())),
-        native_asset: Contract { address: Addr::from(shade.address.clone()),
+        admin: Some(Addr::unchecked(governance.address.clone())),
+        native_asset: Contract { address: Addr::unchecked(shade.address.clone()),
             code_hash: shade.code_hash.clone() },
-        oracle: Contract { address: Addr::from(oracle.address.clone()),
+        oracle: Contract { address: Addr::unchecked(oracle.address.clone()),
             code_hash: oracle.code_hash.clone() },
         peg: None,
         treasury: None,
@@ -212,7 +212,7 @@ fn main() -> Result<()> {
         proposal: serde_json::to_string(&governance::ExecuteMsg::AddSupportedContract {
             name: "mint-shade".to_string(),
             contract: Contract{
-                address: Addr::from(mint_shade.address.clone()),
+                address: Addr::unchecked(mint_shade.address.clone()),
                 code_hash: mint_shade.code_hash.clone()
             }
         })?,
@@ -389,7 +389,7 @@ fn print_vec<Type: Display>(prefix: &str, vec: Vec<Type>) {
 
 fn get_balance(contract: &NetContract, from: String, ) -> Uint128 {
     let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-        address: Addr::from(from),
+        address: Addr::unchecked(from),
         key: String::from(VIEW_KEY),
     }.t_query(contract).unwrap();
 
@@ -403,7 +403,7 @@ fn get_balance(contract: &NetContract, from: String, ) -> Uint128 {
 fn mint(snip: &NetContract, sender: &str, minter: String, amount: Uint128,
         minimum_expected: Uint128, backend: &str) {
     snip20::ExecuteMsg::Send {
-        recipient: Addr::from(minter),
+        recipient: Addr::unchecked(minter),
         amount,
         msg: Some(to_binary(&mint::MintMsgHook {
             minimum_expected_amount: minimum_expected}).unwrap()),

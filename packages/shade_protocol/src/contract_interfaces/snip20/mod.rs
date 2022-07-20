@@ -509,22 +509,22 @@ pub enum QueryMsg {
     ContractStatus {},
     ExchangeRate {},
     Allowance {
-        owner: Addr,
-        spender: Addr,
+        owner: String,
+        spender: String,
         key: String,
     },
     Balance {
-        address: Addr,
+        address: String,
         key: String,
     },
     TransferHistory {
-        address: Addr,
+        address: String,
         key: String,
         page: Option<u32>,
         page_size: u32,
     },
     TransactionHistory {
-        address: Addr,
+        address: String,
         key: String,
         page: Option<u32>,
         page_size: u32,
@@ -543,8 +543,8 @@ impl Query for QueryMsg {
 #[cw_serde]
 pub enum QueryWithPermit {
     Allowance {
-        owner: Addr,
-        spender: Addr,
+        owner: String,
+        spender: String,
     },
     Balance {},
     TransferHistory {

@@ -46,7 +46,7 @@ fn set_config_msg() {
     chain
         .execute(
             &governance::ExecuteMsg::SetConfig {
-                treasury: Some(Addr::from("random")),
+                treasury: Some(Addr::unchecked("random")),
                 funding_token: Some(Contract {
                     address: snip20.address.clone(),
                     code_hash: snip20.code_hash.clone(),
@@ -121,7 +121,7 @@ fn reject_disable_config_tokens() {
     chain
         .execute(
             &governance::ExecuteMsg::SetConfig {
-                treasury: Some(Addr::from("random")),
+                treasury: Some(Addr::unchecked("random")),
                 funding_token: Some(Contract {
                     address: snip20.address.clone(),
                     code_hash: snip20.code_hash.clone(),

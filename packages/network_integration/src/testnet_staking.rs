@@ -25,7 +25,7 @@ fn main() -> Result<()> {
         symbol: "SHD".to_string(),
         decimals: 8,
         initial_balances: Some(vec![InitialBalance {
-            address: Addr::from("secret1xtl6rt2pwhseuzct00h8uw6trkzjj2l8lu38se".to_string()),
+            address: Addr::unchecked("secret1xtl6rt2pwhseuzct00h8uw6trkzjj2l8lu38se".to_string()),
             amount: Uint128::new(1000000000000000),
         }]),
         prng_seed: Default::default(),

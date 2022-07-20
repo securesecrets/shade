@@ -57,11 +57,11 @@ pub fn init_contracts() -> StdResult<(
             issu.id,
             &snip20::InstantiateMsg {
                 name: "Issued".into(),
-                admin: Some(Addr::from("admin")),
+                admin: Some(Addr::unchecked("admin")),
                 symbol: "ISSU".into(),
                 decimals: 8,
                 initial_balances: Some(vec![InitialBalance {
-                    address: Addr::from("admin"),
+                    address: Addr::unchecked("admin"),
                     amount: Uint128::new(1_000_000_000_000_000),
                 }]),
                 prng_seed: Default::default(),
@@ -97,11 +97,11 @@ pub fn init_contracts() -> StdResult<(
             depo.id,
             &snip20::InstantiateMsg {
                 name: "Deposit".into(),
-                admin: Some(Addr::from("admin")),
+                admin: Some(Addr::unchecked("admin")),
                 symbol: "DEPO".into(),
                 decimals: 8,
                 initial_balances: Some(vec![InitialBalance {
-                    address: Addr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
+                    address: Addr::unchecked("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
                     amount: Uint128::new(1_000_000_000_000_000),
                 }]),
                 prng_seed: Default::default(),
@@ -131,11 +131,11 @@ pub fn init_contracts() -> StdResult<(
             atom.id,
             &snip20::InstantiateMsg {
                 name: "Atom".into(),
-                admin: Some(Addr::from("admin")),
+                admin: Some(Addr::unchecked("admin")),
                 symbol: "ATOM".into(),
                 decimals: 6,
                 initial_balances: Some(vec![InitialBalance {
-                    address: Addr::from("other_user"),
+                    address: Addr::unchecked("other_user"),
                     amount: Uint128::new(1_000_000_000_000_000),
                 }]),
                 prng_seed: Default::default(),
@@ -339,7 +339,7 @@ pub fn init_contracts() -> StdResult<(
         .instantiate(
             bonds.id,
             &bonds::InstantiateMsg {
-                limit_admin: Addr::from("limit_admin"),
+                limit_admin: Addr::unchecked("limit_admin"),
                 global_issuance_limit: Uint128::new(100_000_000_000_000_000),
                 global_minimum_bonding_period: 0,
                 global_maximum_discount: Uint128::new(10_000),
@@ -347,7 +347,7 @@ pub fn init_contracts() -> StdResult<(
                     address: router.address.clone(),
                     code_hash: router.code_hash.clone(),
                 },
-                treasury: Addr::from("admin"),
+                treasury: Addr::unchecked("admin"),
                 issued_asset: Contract {
                     address: issu.address.clone(),
                     code_hash: issu.code_hash.clone(),
@@ -440,7 +440,7 @@ pub fn check_balances(
     admin_expected_depo: Uint128,
 ) -> StdResult<()> {
     let msg = snip20::QueryMsg::Balance {
-        address: Addr::from("admin".to_string()),
+        address: Addr::unchecked("admin".to_string()),
         key: "key".to_string(),
     };
 
@@ -454,7 +454,7 @@ pub fn check_balances(
     }
 
     let msg = snip20::QueryMsg::Balance {
-        address: Addr::from("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq".to_string()),
+        address: Addr::unchecked("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq".to_string()),
         key: "key".to_string(),
     };
 

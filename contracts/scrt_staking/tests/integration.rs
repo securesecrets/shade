@@ -117,7 +117,7 @@ fn basic_scrt_staking_integration(
 
     if !deposit.is_zero() {
         let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-        ensemble.add_funds(HumanAddr::from("admin"), vec![deposit_coin.clone()]);
+        ensemble.add_funds(HumanAddr::unchecked("admin"), vec![deposit_coin.clone()]);
 
         // Wrap L1 into tokens
         ensemble.execute(

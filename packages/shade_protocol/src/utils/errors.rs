@@ -29,7 +29,7 @@ impl<T: CodeType + Serialize> DetailedError<T> {
     }
 
     pub fn to_string(&self) -> String {
-        self.to_string()
+        to_string(&self).unwrap_or("".to_string())
     }
 
     pub fn from_code(target: &str, code: T, context: Vec<&str>) -> Self {

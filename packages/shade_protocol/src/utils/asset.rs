@@ -142,7 +142,7 @@ pub fn scrt_balance(
 pub fn set_allowance(
     deps: DepsMut,
     env: &Env,
-    spender: Addr,
+    spender: String,
     amount: Uint128,
     key: String,
     asset: &Contract,
@@ -155,7 +155,7 @@ pub fn set_allowance(
         Some(cur) => cur,
         None => allowance_query(
                     &deps.querier,
-                    env.contract.address.clone(),
+                    env.contract.address.clone().into_string(),
                     spender.clone(),
                     key,
                     1,
@@ -166,7 +166,7 @@ pub fn set_allowance(
     match amount.cmp(&allowance) {
         // Decrease Allowance
         std::cmp::Ordering::Less => Ok(vec![decrease_allowance_msg(
-            spender.into_string(),
+            spender,
             allowance.checked_sub(amount)?,
             None,
             None,
@@ -176,7 +176,7 @@ pub fn set_allowance(
         )?]),
         // Increase Allowance
         std::cmp::Ordering::Greater => Ok(vec![increase_allowance_msg(
-            spender.into_string(),
+            spender,
             amount.checked_sub(amount)?,
             None,
             None,

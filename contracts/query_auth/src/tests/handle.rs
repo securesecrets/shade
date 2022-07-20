@@ -12,7 +12,7 @@ fn set_admin() {
 
     let msg = query_auth::ExecuteMsg::SetAdminAuth {
         admin: Contract {
-            address: Addr::from("some_addr"),
+            address: Addr::unchecked("some_addr"),
             code_hash: "some_hash".to_string()
         },
         padding: None,
@@ -36,7 +36,7 @@ fn set_admin() {
 
     match query {
         query_auth::QueryAnswer::Config { admin, .. } => {
-            assert_eq!(admin.address, Addr::from("some_addr"));
+            assert_eq!(admin.address, Addr::unchecked("some_addr"));
         }
         _ => assert!(false),
     };
@@ -137,7 +137,7 @@ fn runstate_block_permits() {
     let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidateViewingKey {
-            user: Addr::from("user"),
+            user: Addr::unchecked("user"),
             key: "key".to_string(),
         },
     );
@@ -207,7 +207,7 @@ fn runstate_block_vks() {
     let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidateViewingKey {
-            user: Addr::from("user"),
+            user: Addr::unchecked("user"),
             key: "key".to_string(),
         },
     );
@@ -277,7 +277,7 @@ fn runstate_block_all() {
     let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
         auth.address.clone(),
         &query_auth::QueryMsg::ValidateViewingKey {
-            user: Addr::from("user"),
+            user: Addr::unchecked("user"),
             key: "key".to_string(),
         },
     );
@@ -333,7 +333,7 @@ fn create_vk() {
         .query(
             auth.address.clone(),
             &query_auth::QueryMsg::ValidateViewingKey {
-                user: Addr::from("user"),
+                user: Addr::unchecked("user"),
                 key,
             },
         )

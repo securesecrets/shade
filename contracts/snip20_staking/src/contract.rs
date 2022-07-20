@@ -3682,7 +3682,7 @@ mod snip20_tests {
                     sent_funds: vec![],
                 },
                 contract: ContractInfo {
-                    address: Addr::from(MOCK_CONTRACT_ADDR),
+                    address: Addr::unchecked(MOCK_CONTRACT_ADDR),
                 },
                 contract_key: Some("".to_string()),
                 contract_code_hash: "".to_string(),

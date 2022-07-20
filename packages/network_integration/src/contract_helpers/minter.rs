@@ -28,7 +28,7 @@ pub fn initialize_minter(
         contract_name,
         MINT_FILE,
         mint::InstantiateMsg {
-            admin: Some(Addr::from(governance.address.clone())),
+            admin: Some(Addr::unchecked(governance.address.clone())),
             native_asset: native_asset.clone(),
             oracle: get_contract(governance, "oracle".to_string())?,
             peg: None,
@@ -64,7 +64,7 @@ pub fn setup_minters(
         "shade_minter".to_string(),
         mint::ExecuteMsg::RegisterAsset {
             contract: Contract {
-                address: Addr::from(sscrt.address.clone()),
+                address: Addr::unchecked(sscrt.address.clone()),
                 code_hash: sscrt.code_hash.clone(),
             },
             capture: Some(Uint128::new(1000u128)),
@@ -105,7 +105,7 @@ pub fn setup_minters(
         governance,
         "shade".to_string(),
         snip20::ExecuteMsg::SetMinters {
-            minters: vec![Addr::from(mint_shade.address.clone())],
+            minters: vec![Addr::unchecked(mint_shade.address.clone())],
             padding: None,
         },
         Some("Set minters"),
@@ -135,7 +135,7 @@ pub fn setup_minters(
         governance,
         "silk".to_string(),
         snip20::ExecuteMsg::SetMinters {
-            minters: vec![Addr::from(mint_silk.address.clone())],
+            minters: vec![Addr::unchecked(mint_silk.address.clone())],
             padding: None,
         },
         Some("Set minters"),
@@ -165,7 +165,7 @@ pub fn setup_minters(
 
 pub fn get_balance(contract: &NetContract, from: String) -> Uint128 {
     let msg = snip20::QueryMsg::Balance {
-        address: Addr::from(from),
+        address: Addr::unchecked(from),
         key: String::from(VIEW_KEY),
     };
 
@@ -188,7 +188,7 @@ pub fn mint(
     report: &mut Vec<Report>,
 ) {
     let msg = snip20::ExecuteMsg::Send {
-        recipient: Addr::from(minter),
+        recipient: Addr::unchecked(minter),
         recipient_code_hash: None,
         amount,
         msg: Some(

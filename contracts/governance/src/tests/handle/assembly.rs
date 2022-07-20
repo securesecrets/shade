@@ -45,7 +45,7 @@ fn unauthorised_add_assembly() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("random"),
+                Addr::unchecked("random"),
                 gov.clone(),
             ),
         )
@@ -102,7 +102,7 @@ fn unauthorised_set_assembly() {
             },
             MockEnv::new(
                 // Sender is self
-                Addr::from("random"),
+                Addr::unchecked("random"),
                 gov.clone(),
             ),
         )

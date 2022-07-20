@@ -85,7 +85,7 @@ fn proposals() {
 
     let query: governance::QueryAnswer = chain
         .query(gov.address.clone(), &governance::QueryMsg::WithVK {
-            user: HumanAddr::from("admin"),
+            user: HumanAddr::unchecked("admin"),
             key: "password".to_string(),
             query: AuthQuery::Proposals {
                 pagination: Pagination {
@@ -122,7 +122,7 @@ fn proposals() {
 
     let query: governance::QueryAnswer = chain
         .query(gov.address.clone(), &governance::QueryMsg::WithVK {
-            user: HumanAddr::from("admin"),
+            user: HumanAddr::unchecked("admin"),
             key: "password".to_string(),
             query: AuthQuery::Proposals {
                 pagination: Pagination {
@@ -143,7 +143,7 @@ fn proposals() {
 
     let query: StdResult<governance::QueryAnswer> =
         chain.query(gov.address.clone(), &governance::QueryMsg::WithVK {
-            user: HumanAddr::from("admin"),
+            user: HumanAddr::unchecked("admin"),
             key: "not_password".to_string(),
             query: AuthQuery::Proposals {
                 pagination: Pagination {
@@ -180,7 +180,7 @@ fn assembly_votes() {
 
     let query: governance::QueryAnswer = chain
         .query(gov.address.clone(), &governance::QueryMsg::WithVK {
-            user: HumanAddr::from("alpha"),
+            user: HumanAddr::unchecked("alpha"),
             key: "password".to_string(),
             query: AuthQuery::AssemblyVotes {
                 pagination: Pagination {
@@ -214,13 +214,13 @@ fn funding() {
                 memo: None,
                 padding: None,
             },
-            MockEnv::new(HumanAddr::from("alpha"), snip20.clone()),
+            MockEnv::new(HumanAddr::unchecked("alpha"), snip20.clone()),
         )
         .unwrap();
 
     let query: governance::QueryAnswer = chain
         .query(gov.address.clone(), &governance::QueryMsg::WithVK {
-            user: HumanAddr::from("alpha"),
+            user: HumanAddr::unchecked("alpha"),
             key: "password".to_string(),
             query: AuthQuery::Funding {
                 pagination: Pagination {
@@ -273,7 +273,7 @@ fn votes() {
 
     let query: governance::QueryAnswer = chain
         .query(gov.address.clone(), &governance::QueryMsg::WithVK {
-            user: HumanAddr::from("alpha"),
+            user: HumanAddr::unchecked("alpha"),
             key: "password".to_string(),
             query: AuthQuery::Votes {
                 pagination: Pagination {

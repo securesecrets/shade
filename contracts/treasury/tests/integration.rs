@@ -234,7 +234,7 @@ fn single_asset_portion_manager_integration(
     ).unwrap();
 
     let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-    ensemble.add_funds(HumanAddr::from("admin"), vec![deposit_coin.clone()]);
+    ensemble.add_funds(HumanAddr::unchecked("admin"), vec![deposit_coin.clone()]);
 
     assert!(deposit_coin.amount > Uint128::zero());
 

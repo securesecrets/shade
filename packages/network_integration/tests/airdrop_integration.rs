@@ -138,7 +138,7 @@ fn setup_contracts(
         symbol: "TEST".to_string(),
         decimals: 6,
         initial_balances: Some(vec![InitialBalance {
-            address: Addr::from(account_a.clone()),
+            address: Addr::unchecked(account_a.clone()),
             amount: airdrop_total,
         }]),
         prng_seed: Default::default(),
@@ -166,7 +166,7 @@ fn setup_contracts(
         admin: None,
         dump_address,
         airdrop_token: Contract {
-            address: Addr::from(snip.address.clone()),
+            address: Addr::unchecked(snip.address.clone()),
             code_hash: snip.code_hash.clone(),
         },
         airdrop_amount: airdrop_total,
@@ -213,7 +213,7 @@ fn setup_contracts(
     /// Assert that we start with nothing
     handle(
         &snip20::ExecuteMsg::Send {
-            recipient: Addr::from(airdrop.address.clone()),
+            recipient: Addr::unchecked(airdrop.address.clone()),
             amount: airdrop_total,
             msg: None,
             memo: None,
@@ -326,7 +326,7 @@ fn run_airdrop() -> Result<()> {
     let end_date = decay_date + 60;
 
     let (airdrop, snip) = setup_contracts(
-        Some(Addr::from(account_a.clone())),
+        Some(Addr::unchecked(account_a.clone())),
         None,
         Some(end_date),
         Some(decay_date),
@@ -335,7 +335,7 @@ fn run_airdrop() -> Result<()> {
         a_airdrop,
         Uint128::new(50),
         vec![RequiredTask {
-            address: Addr::from(account_a.clone()),
+            address: Addr::unchecked(account_a.clone()),
             percent: Uint128::new(50),
         }],
         Uint128::new(30000000),
@@ -431,7 +431,7 @@ fn run_airdrop() -> Result<()> {
 
     handle(
         &airdrop::ExecuteMsg::CompleteTask {
-            address: Addr::from(account_a.clone()),
+            address: Addr::unchecked(account_a.clone()),
             padding: None,
         },
         &airdrop,
@@ -841,7 +841,7 @@ fn airdrop_gas_prices() -> Result<()> {
     for _ in 0..loops {
         {
             let (airdrop, snip) = setup_contracts(
-                Some(Addr::from(account_a.clone())),
+                Some(Addr::unchecked(account_a.clone())),
                 None,
                 None,
                 None,
@@ -850,7 +850,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: Addr::from(account_a.clone()),
+                    address: Addr::unchecked(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -871,7 +871,7 @@ fn airdrop_gas_prices() -> Result<()> {
 
         {
             let (airdrop, snip) = setup_contracts(
-                Some(Addr::from(account_a.clone())),
+                Some(Addr::unchecked(account_a.clone())),
                 None,
                 None,
                 None,
@@ -880,7 +880,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: Addr::from(account_a.clone()),
+                    address: Addr::unchecked(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -912,7 +912,7 @@ fn airdrop_gas_prices() -> Result<()> {
     let mut reports_1 = vec![];
     for _ in 0..loops {
         let (airdrop, snip) = setup_contracts(
-            Some(Addr::from(account_a.clone())),
+            Some(Addr::unchecked(account_a.clone())),
             None,
             None,
             None,
@@ -921,7 +921,7 @@ fn airdrop_gas_prices() -> Result<()> {
             Uint128::new(1001),
             Uint128::new(20),
             vec![RequiredTask {
-                address: Addr::from(account_a.clone()),
+                address: Addr::unchecked(account_a.clone()),
                 percent: Uint128::new(80),
             }],
             Uint128::new(30000000),
@@ -952,7 +952,7 @@ fn airdrop_gas_prices() -> Result<()> {
     let mut reports_2 = vec![];
     for _ in 0..loops {
         let (airdrop, snip) = setup_contracts(
-            Some(Addr::from(account_a.clone())),
+            Some(Addr::unchecked(account_a.clone())),
             None,
             None,
             None,
@@ -961,7 +961,7 @@ fn airdrop_gas_prices() -> Result<()> {
             Uint128::new(1001),
             Uint128::new(20),
             vec![RequiredTask {
-                address: Addr::from(account_a.clone()),
+                address: Addr::unchecked(account_a.clone()),
                 percent: Uint128::new(80),
             }],
             Uint128::new(30000000),
@@ -992,7 +992,7 @@ fn airdrop_gas_prices() -> Result<()> {
     let mut reports_3 = vec![];
     for _ in 0..loops {
         let (airdrop, snip) = setup_contracts(
-            Some(Addr::from(account_a.clone())),
+            Some(Addr::unchecked(account_a.clone())),
             None,
             None,
             None,
@@ -1001,7 +1001,7 @@ fn airdrop_gas_prices() -> Result<()> {
             Uint128::new(1001),
             Uint128::new(20),
             vec![RequiredTask {
-                address: Addr::from(account_a.clone()),
+                address: Addr::unchecked(account_a.clone()),
                 percent: Uint128::new(80),
             }],
             Uint128::new(30000000),
@@ -1033,7 +1033,7 @@ fn airdrop_gas_prices() -> Result<()> {
     for _ in 0..loops {
         {
             let (airdrop, snip) = setup_contracts(
-                Some(Addr::from(account_a.clone())),
+                Some(Addr::unchecked(account_a.clone())),
                 None,
                 None,
                 None,
@@ -1042,7 +1042,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: Addr::from(account_a.clone()),
+                    address: Addr::unchecked(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -1068,7 +1068,7 @@ fn airdrop_gas_prices() -> Result<()> {
 
         {
             let (airdrop, snip) = setup_contracts(
-                Some(Addr::from(account_a.clone())),
+                Some(Addr::unchecked(account_a.clone())),
                 None,
                 None,
                 None,
@@ -1077,7 +1077,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: Addr::from(account_a.clone()),
+                    address: Addr::unchecked(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -1115,7 +1115,7 @@ fn airdrop_gas_prices() -> Result<()> {
     for _ in 0..loops {
         {
             let (airdrop, snip) = setup_contracts(
-                Some(Addr::from(account_a.clone())),
+                Some(Addr::unchecked(account_a.clone())),
                 None,
                 None,
                 None,
@@ -1124,7 +1124,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: Addr::from(account_a.clone()),
+                    address: Addr::unchecked(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),
@@ -1151,7 +1151,7 @@ fn airdrop_gas_prices() -> Result<()> {
 
         {
             let (airdrop, snip) = setup_contracts(
-                Some(Addr::from(account_a.clone())),
+                Some(Addr::unchecked(account_a.clone())),
                 None,
                 None,
                 None,
@@ -1160,7 +1160,7 @@ fn airdrop_gas_prices() -> Result<()> {
                 Uint128::new(1001),
                 Uint128::new(20),
                 vec![RequiredTask {
-                    address: Addr::from(account_a.clone()),
+                    address: Addr::unchecked(account_a.clone()),
                     percent: Uint128::new(80),
                 }],
                 Uint128::new(30000000),

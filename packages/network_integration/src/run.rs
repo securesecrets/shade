@@ -106,7 +106,7 @@ fn main() -> Result<()> {
             admin: None,
             prng_seed: Default::default(),
             initial_balances: Some(vec![InitialBalance {
-                address: Addr::from(account.clone()),
+                address: Addr::unchecked(account.clone()),
                 amount: Uint128::new(10000000),
             }]),
         },
@@ -179,11 +179,11 @@ fn main() -> Result<()> {
     let oracle = oracle::InstantiateMsg {
         admin: None,
         band: Contract {
-            address: Addr::from(band.address),
+            address: Addr::unchecked(band.address),
             code_hash: band.code_hash,
         },
         sscrt: Contract {
-            address: Addr::from(sSCRT.address.clone()),
+            address: Addr::unchecked(sSCRT.address.clone()),
             code_hash: sSCRT.code_hash.clone(),
         },
     }
@@ -202,11 +202,11 @@ fn main() -> Result<()> {
     let mint_shade = mint::InstantiateMsg {
         admin: None,
         native_asset: Contract {
-            address: Addr::from(shade.address.clone()),
+            address: Addr::unchecked(shade.address.clone()),
             code_hash: shade.code_hash.clone(),
         },
         oracle: Contract {
-            address: Addr::from(oracle.address.clone()),
+            address: Addr::unchecked(oracle.address.clone()),
             code_hash: oracle.code_hash.clone(),
         },
         peg: None,
@@ -231,11 +231,11 @@ fn main() -> Result<()> {
     let mint_silk = mint::InstantiateMsg {
         admin: None,
         native_asset: Contract {
-            address: Addr::from(silk.address.clone()),
+            address: Addr::unchecked(silk.address.clone()),
             code_hash: silk.code_hash.clone(),
         },
         oracle: Contract {
-            address: Addr::from(oracle.address.clone()),
+            address: Addr::unchecked(oracle.address.clone()),
             code_hash: oracle.code_hash.clone(),
         },
         peg: None,
@@ -259,7 +259,7 @@ fn main() -> Result<()> {
     print_header("Registering allowed tokens");
     mint::ExecuteMsg::RegisterAsset {
         contract: Contract {
-            address: Addr::from(sSCRT.address.clone()),
+            address: Addr::unchecked(sSCRT.address.clone()),
             code_hash: sSCRT.code_hash.clone(),
         },
         commission: Some(Uint128::new(1000)),
@@ -267,7 +267,7 @@ fn main() -> Result<()> {
     .t_handle(&mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
     mint::ExecuteMsg::RegisterAsset {
         contract: Contract {
-            address: Addr::from(silk.address.clone()),
+            address: Addr::unchecked(silk.address.clone()),
             code_hash: silk.code_hash.clone(),
         },
         commission: Some(Uint128::new(1000)),
@@ -275,7 +275,7 @@ fn main() -> Result<()> {
     .t_handle(&mint_shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
     mint::ExecuteMsg::RegisterAsset {
         contract: Contract {
-            address: Addr::from(shade.address.clone()),
+            address: Addr::unchecked(shade.address.clone()),
             code_hash: shade.code_hash.clone(),
         },
         commission: Some(Uint128::new(1000)),
@@ -300,7 +300,7 @@ fn main() -> Result<()> {
     print_header("Setting minters in snip20s");
 
     snip20::ExecuteMsg::SetMinters {
-        minters: vec![Addr::from(mint_shade.address.clone())],
+        minters: vec![Addr::unchecked(mint_shade.address.clone())],
         padding: None,
     }
     .t_handle(&shade, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
@@ -313,7 +313,7 @@ fn main() -> Result<()> {
     }
 
     snip20::ExecuteMsg::SetMinters {
-        minters: vec![Addr::from(mint_silk.address.clone())],
+        minters: vec![Addr::unchecked(mint_silk.address.clone())],
         padding: None,
     }
     .t_handle(&silk, ACCOUNT_KEY, Some(GAS), Some("test"), None)?;
@@ -427,7 +427,7 @@ fn print_vec<Type: Display>(prefix: &str, vec: Vec<Type>) {
 
 fn get_balance(contract: &NetContract, from: String) -> Uint128 {
     let balance: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-        address: Addr::from(from),
+        address: Addr::unchecked(from),
         key: String::from(VIEW_KEY),
     }
     .t_query(contract)
@@ -449,7 +449,7 @@ fn mint(
     backend: &str,
 ) {
     snip20::ExecuteMsg::Send {
-        recipient: Addr::from(minter),
+        recipient: Addr::unchecked(minter),
         amount,
         msg: Some(
             to_binary(&mint::MintMsgHook {

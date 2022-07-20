@@ -1,28 +1,28 @@
 use shade_protocol::c_std::{Coin, Addr};
 use shade_protocol::c_std::Uint128;
-use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
-use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitConfig, InitialBalance};
+use shade_protocol::utils::{ExecuteCallback};
+use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitConfig};
 use shade_protocol::contract_interfaces::snip20::manager::{ContractStatusLevel, HashedKey, Key, ReceiverHash};
 use shade_protocol::utils::storage::plus::MapStorage;
 use crate::tests::init_snip20_with_config;
 
-// pub mod transfer;
-//pub mod wrap;
-// pub mod mint;
-// pub mod burn;
-// pub mod allowance;
+pub mod transfer;
+pub mod wrap;
+pub mod mint;
+pub mod burn;
+pub mod allowance;
 
 #[test]
 fn register_receive() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
     
     assert!(ExecuteMsg::RegisterReceive {
-        code_hash: "some_hash".to_string(),
+        code_hash: "some_hash".into(),
         padding: None
-    }.test_exec(&snip, &chain, Addr::unchecked("contract"), &[]).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("contract"), &[]).is_ok());
 
     chain.deps(&snip.address, |borrowed_chain| {
-        let hash = ReceiverHash::load(&borrowed_chain, Addr::from("contract")).unwrap();
+        let hash = ReceiverHash::load(borrowed_chain, Addr::unchecked("contract")).unwrap();
         assert_eq!(hash.0, "some_hash".to_string());
     }).unwrap();
 }
@@ -31,14 +31,14 @@ fn register_receive() {
 fn create_viewing_key() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
 
-    assert!(chain.execute(&ExecuteMsg::CreateViewingKey {
-        entropy: "some_entropy".to_string(),
+    assert!(ExecuteMsg::CreateViewingKey {
+        entropy: "some_entropy".into(),
         padding: None
-    }, MockEnv::new("Sam", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("sam"), &[]).is_ok());
 
     chain.deps(&snip.address, |borrowed_chain| {
         assert!(HashedKey::
-        may_load(&borrowed_chain, Addr::from("Sam"))
+        may_load(borrowed_chain, Addr::unchecked("sam"))
             .unwrap().is_some());
     }).unwrap();
 }
@@ -47,16 +47,16 @@ fn create_viewing_key() {
 fn set_viewing_key() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
 
-    assert!(chain.execute(&ExecuteMsg::SetViewingKey {
-        key: "some_key".to_string(),
+    assert!(ExecuteMsg::SetViewingKey {
+        key: "some_key".into(),
         padding: None
-    }, MockEnv::new("Sam", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("sam"), &[]).is_ok());
 
     chain.deps(&snip.address, |borrowed_chain| {
         assert!(Key::verify(
-            &borrowed_chain,
-            Addr::from("Sam"),
-            "some_key".to_string()
+            borrowed_chain,
+            Addr::unchecked("sam"),
+            "some_key".into()
         ).unwrap());
     }).unwrap();
 }
@@ -65,43 +65,43 @@ fn set_viewing_key() {
 fn change_admin() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
 
-    assert!(chain.execute(&ExecuteMsg::ChangeAdmin {
-        address: Addr::from("NewAdmin"),
+    assert!(ExecuteMsg::ChangeAdmin {
+        address: "newadmin".into(),
         padding: None
-    }, MockEnv::new("NotAdmin", snip.clone())).is_err());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("notadmin"), &[]).is_err());
 
-    assert!(chain.execute(&ExecuteMsg::ChangeAdmin {
-        address: Addr::from("NewAdmin"),
+    assert!(ExecuteMsg::ChangeAdmin {
+        address: "newadmin".into(),
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::ChangeAdmin {
-        address: Addr::from("OtherAdmin"),
+    assert!(ExecuteMsg::ChangeAdmin {
+        address: "otheradmin".into(),
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_err());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_err());
 }
 
 #[test]
 fn set_contract_status() {
     let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
 
-    assert!(chain.execute(&ExecuteMsg::SetContractStatus {
+    assert!(ExecuteMsg::SetContractStatus {
         level: ContractStatusLevel::StopAll,
         padding: None
-    }, MockEnv::new("notAdmin", snip.clone())).is_err());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("notadmin"), &[]).is_err());
 
     chain.deps(&snip.address.clone(), |storage| {
         assert_eq!(ContractStatusLevel::load(storage).unwrap(), ContractStatusLevel::NormalRun);
-    });
+    }).unwrap();
 
-    assert!(chain.execute(&ExecuteMsg::SetContractStatus {
+    assert!(ExecuteMsg::SetContractStatus {
         level: ContractStatusLevel::StopAll,
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
     chain.deps(&snip.address, |storage| {
         assert_eq!(ContractStatusLevel::load(storage).unwrap(), ContractStatusLevel::StopAll);
-    });
+    }).unwrap();
 }
 
 #[test]
@@ -116,54 +116,54 @@ fn contract_status_stop_all() {
     })).unwrap();
 
     let scrt_coin = Coin {
-        denom: "uscrt".to_string(),
+        denom: "uscrt".into(),
         amount: Uint128::new(1000)
     };
 
-    chain.add_funds(Addr::from("Bob"), vec![
-        scrt_coin.clone()]);
+    chain.init_modules(|router, _, storage| {
+        router.bank.init_balance(storage, &Addr::unchecked("bob"), vec![scrt_coin.clone()]).unwrap();
+    });
 
     // Deposit
-    let mut env = MockEnv::new("Bob", snip.clone()).sent_funds(vec![scrt_coin]);
-    assert!(chain.execute(&ExecuteMsg::Deposit {
+    assert!(ExecuteMsg::Deposit {
         padding: None
-    }, env).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[scrt_coin]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::SetContractStatus {
+    assert!(ExecuteMsg::SetContractStatus {
         level: ContractStatusLevel::StopAll,
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::Transfer {
-        recipient: Addr::from("Dylan"),
+    assert!(ExecuteMsg::Transfer {
+        recipient: "dylan".into(),
         amount: Uint128::new(100),
         memo: None,
         padding: None
-    }, MockEnv::new("Bob", snip.clone())).is_err());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[]).is_err());
 
-    assert!(chain.execute(&ExecuteMsg::Redeem {
+    assert!(ExecuteMsg::Redeem {
         amount: Uint128::new(100),
         denom: None,
         padding: None
-    }, MockEnv::new("Bob", snip.clone())).is_err());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[]).is_err());
 
-    assert!(chain.execute(&ExecuteMsg::SetContractStatus {
-        level: ContractStatusLevel::NormalRun,
-        padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    assert!(ExecuteMsg::SetContractStatus { 
+        level: ContractStatusLevel::NormalRun, 
+        padding: None 
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::Transfer {
-        recipient: Addr::from("Dylan"),
+    assert!(ExecuteMsg::Transfer {
+        recipient: "dylan".into(),
         amount: Uint128::new(100),
         memo: None,
         padding: None
-    }, MockEnv::new("Bob", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::Redeem {
+    assert!(ExecuteMsg::Redeem {
         amount: Uint128::new(100),
         denom: None,
         padding: None
-    }, MockEnv::new("Bob", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[]).is_ok());
 }
 
 #[test]
@@ -178,52 +178,52 @@ fn contract_status_stop_all_but_redeem() {
     })).unwrap();
 
     let scrt_coin = Coin {
-        denom: "uscrt".to_string(),
+        denom: "uscrt".into(),
         amount: Uint128::new(1000)
     };
 
-    chain.add_funds(Addr::from("Bob"), vec![
-        scrt_coin.clone()]);
+    chain.init_modules(|router, _, storage| {
+        router.bank.init_balance(storage, &Addr::unchecked("bob"), vec![scrt_coin.clone()]).unwrap();
+    });
 
     // Deposit
-    let mut env = MockEnv::new("Bob", snip.clone()).sent_funds(vec![scrt_coin]);
-    assert!(chain.execute(&ExecuteMsg::Deposit {
+    assert!(ExecuteMsg::Deposit {
         padding: None
-    }, env).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[scrt_coin]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::SetContractStatus {
+    assert!(ExecuteMsg::SetContractStatus {
         level: ContractStatusLevel::StopAllButRedeems,
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::Transfer {
-        recipient: Addr::from("Dylan"),
+    assert!(ExecuteMsg::Transfer {
+        recipient: "dylan".into(),
         amount: Uint128::new(100),
         memo: None,
         padding: None
-    }, MockEnv::new("Bob", snip.clone())).is_err());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[]).is_err());
 
-    assert!(chain.execute(&ExecuteMsg::Redeem {
+    assert!(ExecuteMsg::Redeem {
         amount: Uint128::new(100),
         denom: None,
         padding: None
-    }, MockEnv::new("Bob", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::SetContractStatus {
+    assert!(ExecuteMsg::SetContractStatus {
         level: ContractStatusLevel::NormalRun,
         padding: None
-    }, MockEnv::new("admin", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("admin"), &[]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::Transfer {
-        recipient: Addr::from("Dylan"),
+    assert!(ExecuteMsg::Transfer {
+        recipient: "dylan".into(),
         amount: Uint128::new(100),
         memo: None,
         padding: None
-    }, MockEnv::new("Bob", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[]).is_ok());
 
-    assert!(chain.execute(&ExecuteMsg::Redeem {
+    assert!(ExecuteMsg::Redeem {
         amount: Uint128::new(100),
         denom: None,
         padding: None
-    }, MockEnv::new("Bob", snip.clone())).is_ok());
+    }.test_exec(&snip, &mut chain, Addr::unchecked("bob"), &[]).is_ok());
 }
