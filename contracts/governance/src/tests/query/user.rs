@@ -7,6 +7,7 @@ use crate::tests::{
     init_query_auth,
 };
 use contract_harness::harness;
+use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query};
 use shade_protocol::{
     c_std::{to_binary, Addr, StdResult},
     contract_interfaces::{
@@ -17,7 +18,7 @@ use shade_protocol::{
     },
     fadroma::{
         core::ContractLink,
-        ensemble::{ContractEnsemble, MockEnv},
+        ensemble::{BasicApp, MockEnv},
     },
     math_compat::Uint128,
     utils::asset::Contract,
@@ -25,17 +26,13 @@ use shade_protocol::{
 
 #[test]
 fn proposals() {
-    let mut chain = ContractEnsemble::new(50);
+    let mut chain = BasicApp::new(50);
     let auth = init_query_auth(&mut chain).unwrap();
 
-    chain
-        .execute(
-            &query_auth::HandleMsg::SetViewingKey {
+    query_auth::ExecuteMsg::SetViewingKey {
                 key: "password".to_string(),
                 padding: None,
-            },
-            MockEnv::new("admin", auth.clone()),
-        )
+            }.test_exec("admin", auth.clone())
         .unwrap();
 
     let msg = governance::InitMsg {
@@ -67,20 +64,13 @@ fn proposals() {
 
     let gov = harness::governance::init(&mut chain, &msg).unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyProposal {
+    governance::ExecuteMsg::AssemblyProposal {
                 assembly: Uint128::new(1),
                 title: "Title".to_string(),
                 metadata: "Text".to_string(),
                 msgs: None,
                 padding: None,
-            },
-            MockEnv::new("admin", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
         .unwrap();
 
     let query: governance::QueryAnswer = chain
@@ -104,20 +94,13 @@ fn proposals() {
         _ => assert!(false),
     }
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyProposal {
+    governance::ExecuteMsg::AssemblyProposal {
                 assembly: Uint128::new(1),
                 title: "Title".to_string(),
                 metadata: "Text".to_string(),
                 msgs: None,
                 padding: None,
-            },
-            MockEnv::new("admin", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
         .unwrap();
 
     let query: governance::QueryAnswer = chain
@@ -159,9 +142,7 @@ fn proposals() {
 fn assembly_votes() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &governance::HandleMsg::AssemblyVote {
+    governance::ExecuteMsg::AssemblyVote {
                 proposal: Uint128::new(0),
                 vote: Vote {
                     yes: Uint128::new(1),
@@ -170,12 +151,7 @@ fn assembly_votes() {
                     abstain: Uint128::zero(),
                 },
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
 
     let query: governance::QueryAnswer = chain
@@ -204,18 +180,14 @@ fn assembly_votes() {
 fn funding() {
     let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20::HandleMsg::Send {
+    snip20::ExecuteMsg::Send {
                 recipient: gov.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(100),
                 msg: Some(to_binary(&Uint128::zero()).unwrap()),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new(Addr::unchecked("alpha"), snip20.clone()),
-        )
+            }.test_exec(Addr::unchecked("alpha"), snip20.clone())
         .unwrap();
 
     let query: governance::QueryAnswer = chain
@@ -244,9 +216,7 @@ fn funding() {
 fn votes() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::HandleMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -263,12 +233,10 @@ fn votes() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
+            }.test_exec("alpha", ContractLink {
                 address: stkd_tkn.address.clone(),
                 code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            })
         .unwrap();
 
     let query: governance::QueryAnswer = chain

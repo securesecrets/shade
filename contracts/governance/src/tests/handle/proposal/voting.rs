@@ -5,9 +5,8 @@ use contract_harness::harness::{
     snip20_staking::Snip20Staking,
 };
 use shade_protocol::c_std::Uint128;
+use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query};
 use shade_protocol::c_std::{to_binary, Addr, StdResult};
-use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
-use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::{
     contract_interfaces::{
         governance,
@@ -24,11 +23,11 @@ use shade_protocol::{
 };
 
 pub fn init_voting_governance_with_proposal() -> StdResult<(
-    ContractEnsemble,
-    ContractLink<Addr>,
-    ContractLink<Addr>,
+    BasicApp,
+    ContractInfo,
+    ContractInfo,
 )> {
-    let mut chain = ContractEnsemble::new(50);
+    let mut chain = BasicApp::new(50);
 
     // Register snip20
     let snip20 = chain.register(Box::new(Snip20));
@@ -41,22 +40,21 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(
             decimals: 6,
             initial_balances: Some(vec![
                 snip20::InitialBalance {
-                    address: Addr::unchecked("alpha"),
+                    address: "alpha".into(),
                     amount: Uint128::new(20_000_000),
                 },
                 snip20::InitialBalance {
-                    address: Addr::unchecked("beta"),
+                    address: "beta".into(),
                     amount: Uint128::new(20_000_000),
                 },
                 snip20::InitialBalance {
-                    address: Addr::unchecked("charlie"),
+                    address: "charlie".into(),
                     amount: Uint128::new(20_000_000),
                 },
             ]),
             prng_seed: Default::default(),
             config: None,
-        },
-        MockEnv::new("admin", ContractLink {
+        }.test_exec("admin", ContractLink {
             address: "token".into(),
             code_hash: snip20.code_hash,
         }),
@@ -82,86 +80,58 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(
             treasury_code_hash: None,
             limit_transfer: false,
             distributors: None,
-        },
-        MockEnv::new("admin", ContractLink {
+        }.test_exec("admin", ContractLink {
             address: "staked_token".into(),
             code_hash: stkd_tkn.code_hash,
         }),
     )?.instance;
 
     // Stake tokens
-    chain.execute(
-        &snip20::ExecuteMsg::Send {
+    snip20::ExecuteMsg::Send {
             recipient: stkd_tkn.address.clone(),
             recipient_code_hash: None,
             amount: Uint128::new(20_000_000),
             memo: None,
             msg: Some(to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap()),
             padding: None,
-        },
-        MockEnv::new("alpha", ContractLink {
-            address: snip20.address.clone(),
-            code_hash: snip20.code_hash.clone(),
-        }),
-    )?;
-    chain.execute(
-        &snip20::ExecuteMsg::Send {
+        }.test_exec(&snip20, &mut chain, Addr::unchecked("alpha"), &[])?;
+    snip20::ExecuteMsg::Send {
             recipient: stkd_tkn.address.clone(),
             recipient_code_hash: None,
             amount: Uint128::new(20_000_000),
             memo: None,
             msg: Some(to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap()),
             padding: None,
-        },
-        MockEnv::new("beta", ContractLink {
-            address: snip20.address.clone(),
-            code_hash: snip20.code_hash.clone(),
-        }),
-    )?;
-    chain.execute(
-        &snip20::ExecuteMsg::Send {
+        }.test_exec(&snip20, &mut chain, Addr::unchecked("beta"), &[])?;
+    snip20::ExecuteMsg::Send {
             recipient: stkd_tkn.address.clone(),
             recipient_code_hash: None,
             amount: Uint128::new(20_000_000),
             memo: None,
             msg: Some(to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap()),
             padding: None,
-        },
-        MockEnv::new("charlie", ContractLink {
-            address: snip20.address.clone(),
-            code_hash: snip20.code_hash.clone(),
-        }),
-    )?;
+        }.test_exec(&snip20, &mut chain, Addr::unchecked("charlie"), &[])?;
 
     // Register governance
     let auth = init_query_auth(&mut chain)?;
-    chain
-        .execute(
-            &query_auth::HandleMsg::SetViewingKey {
+    query_auth::ExecuteMsg::SetViewingKey {
                 key: "password".to_string(),
                 padding: None,
-            },
-            MockEnv::new("alpha", auth.clone()),
+            }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[]
         )
         .unwrap();
 
-    chain
-        .execute(
-            &query_auth::HandleMsg::SetViewingKey {
+    query_auth::ExecuteMsg::SetViewingKey {
                 key: "password".to_string(),
                 padding: None,
-            },
-            MockEnv::new("beta", auth.clone()),
+            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[]
         )
         .unwrap();
 
-    chain
-        .execute(
-            &query_auth::HandleMsg::SetViewingKey {
+    query_auth::ExecuteMsg::SetViewingKey {
                 key: "password".to_string(),
                 padding: None,
-            },
-            MockEnv::new("charlie", auth.clone()),
+            }.test_exec(&auth, &mut chain, Addr::unchecked("charlie"), &[]
         )
         .unwrap();
     let gov = harness::governance::init(&mut chain, &InitMsg {
@@ -209,19 +179,13 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(
         }),
     })?;
 
-    chain.execute(
-        &governance::ExecuteMsg::AssemblyProposal {
+    governance::ExecuteMsg::AssemblyProposal {
             assembly: Uint128::new(1),
             title: "Title".to_string(),
             metadata: "Text only proposal".to_string(),
             msgs: None,
             padding: None,
-        },
-        MockEnv::new("alpha", ContractLink {
-            address: gov.address.clone(),
-            code_hash: gov.code_hash.clone(),
-        }),
-    )?;
+        }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])?;
 
     Ok((chain, gov, stkd_tkn))
 }
@@ -249,17 +213,10 @@ fn update_before_deadline() {
     let (mut chain, gov, _) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
-        chain
-            .execute(
-                &governance::ExecuteMsg::Update {
+        governance::ExecuteMsg::Update {
                     proposal: Uint128::new(0),
                     padding: None
-                },
-                MockEnv::new("alpha", ContractLink {
-                    address: gov.address.clone(),
-                    code_hash: gov.code_hash.clone(),
-                })
-            )
+                }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
             .is_err()
     );
 }
@@ -271,17 +228,10 @@ fn update_after_deadline() {
     chain.block_mut().time += 30000;
 
     assert!(
-        chain
-            .execute(
-                &governance::ExecuteMsg::Update {
+        governance::ExecuteMsg::Update {
                     proposal: Uint128::new(0),
                     padding: None
-                },
-                MockEnv::new("alpha", ContractLink {
-                    address: gov.address.clone(),
-                    code_hash: gov.code_hash.clone(),
-                })
-            )
+                }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
             .is_ok()
     );
 }
@@ -291,9 +241,7 @@ fn invalid_vote() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
-        chain
-            .execute(
-                &snip20_staking::ExecuteMsg::ExposeBalance {
+        snip20_staking::ExecuteMsg::ExposeBalance {
                     recipient: gov.address,
                     code_hash: None,
                     msg: Some(
@@ -310,12 +258,7 @@ fn invalid_vote() {
                     ),
                     memo: None,
                     padding: None
-                },
-                MockEnv::new("alpha", ContractLink {
-                    address: stkd_tkn.address.clone(),
-                    code_hash: stkd_tkn.code_hash.clone(),
-                })
-            )
+                }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
             .is_err()
     );
 }
@@ -327,9 +270,7 @@ fn vote_after_deadline() {
     chain.block_mut().time += 30000;
 
     assert!(
-        chain
-            .execute(
-                &snip20_staking::ExecuteMsg::ExposeBalance {
+        snip20_staking::ExecuteMsg::ExposeBalance {
                     recipient: gov.address,
                     code_hash: None,
                     msg: Some(
@@ -346,12 +287,7 @@ fn vote_after_deadline() {
                     ),
                     memo: None,
                     padding: None
-                },
-                MockEnv::new("alpha", ContractLink {
-                    address: stkd_tkn.address.clone(),
-                    code_hash: stkd_tkn.code_hash.clone(),
-                })
-            )
+                }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
             .is_err()
     );
 }
@@ -360,9 +296,7 @@ fn vote_after_deadline() {
 fn vote_yes() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -379,12 +313,7 @@ fn vote_yes() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
 
     let prop =
@@ -410,9 +339,7 @@ fn vote_yes() {
 fn vote_abstain() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -429,12 +356,7 @@ fn vote_abstain() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
 
     let prop =
@@ -460,9 +382,7 @@ fn vote_abstain() {
 fn vote_no() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -479,12 +399,7 @@ fn vote_no() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
 
     let prop =
@@ -510,9 +425,7 @@ fn vote_no() {
 fn vote_veto() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -529,12 +442,7 @@ fn vote_veto() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
 
     let prop =
@@ -560,9 +468,7 @@ fn vote_veto() {
 fn vote_passed() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -579,16 +485,9 @@ fn vote_passed() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -605,27 +504,15 @@ fn vote_passed() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     chain.block_mut().time += 30000;
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::Update {
+    governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     let prop =
@@ -647,9 +534,7 @@ fn vote_passed() {
 fn vote_abstained() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -666,16 +551,9 @@ fn vote_abstained() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -692,27 +570,15 @@ fn vote_abstained() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     chain.block_mut().time += 30000;
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::Update {
+    governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     let prop =
@@ -728,9 +594,7 @@ fn vote_abstained() {
 fn vote_rejected() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -747,16 +611,9 @@ fn vote_rejected() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -773,27 +630,15 @@ fn vote_rejected() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     chain.block_mut().time += 30000;
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::Update {
+    governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     let prop =
@@ -809,9 +654,7 @@ fn vote_rejected() {
 fn vote_vetoed() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -828,16 +671,9 @@ fn vote_vetoed() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -854,27 +690,15 @@ fn vote_vetoed() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     chain.block_mut().time += 30000;
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::Update {
+    governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     let prop =
@@ -890,9 +714,7 @@ fn vote_vetoed() {
 fn vote_no_quorum() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -909,16 +731,9 @@ fn vote_no_quorum() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -935,27 +750,15 @@ fn vote_no_quorum() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     chain.block_mut().time += 30000;
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::Update {
+    governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     let prop =
@@ -971,9 +774,7 @@ fn vote_no_quorum() {
 fn vote_total() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -990,17 +791,10 @@ fn vote_total() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1017,17 +811,10 @@ fn vote_total() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1044,12 +831,7 @@ fn vote_total() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("charlie", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("charlie"), &[])
         .unwrap();
 
     let prop =
@@ -1075,9 +857,7 @@ fn vote_total() {
 fn update_vote() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1094,12 +874,7 @@ fn update_vote() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
 
     let prop =
@@ -1115,9 +890,7 @@ fn update_vote() {
         })
     );
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1134,12 +907,7 @@ fn update_vote() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
 
     let prop =
@@ -1160,9 +928,7 @@ fn update_vote() {
 fn vote_count() {
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1179,16 +945,9 @@ fn vote_count() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1205,27 +964,15 @@ fn vote_count() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     chain.block_mut().time += 30000;
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::Update {
+    governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     let prop =
@@ -1239,7 +986,7 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let mut chain = ContractEnsemble::new(50);
+    let mut chain = BasicApp::new(50);
 
     // Register snip20
     let snip20 = chain.register(Box::new(Snip20));
@@ -1267,8 +1014,7 @@ fn vote_count_percentage() {
                 ]),
                 prng_seed: Default::default(),
                 config: None,
-            },
-            MockEnv::new("admin", ContractLink {
+            }.test_exec("admin", ContractLink {
                 address: "token".into(),
                 code_hash: snip20.code_hash,
             }),
@@ -1297,8 +1043,7 @@ fn vote_count_percentage() {
                 treasury_code_hash: None,
                 limit_transfer: false,
                 distributors: None,
-            },
-            MockEnv::new("admin", ContractLink {
+            }.test_exec("admin", ContractLink {
                 address: "staked_token".into(),
                 code_hash: stkd_tkn.code_hash,
             }),
@@ -1307,9 +1052,7 @@ fn vote_count_percentage() {
         .instance;
 
     // Stake tokens
-    chain
-        .execute(
-            &snip20::ExecuteMsg::Send {
+    snip20::ExecuteMsg::Send {
                 recipient: stkd_tkn.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(20_000_000),
@@ -1318,16 +1061,9 @@ fn vote_count_percentage() {
                     to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap(),
                 ),
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: snip20.address.clone(),
-                code_hash: snip20.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&snip20, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
-    chain
-        .execute(
-            &snip20::ExecuteMsg::Send {
+    snip20::ExecuteMsg::Send {
                 recipient: stkd_tkn.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(20_000_000),
@@ -1336,16 +1072,9 @@ fn vote_count_percentage() {
                     to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap(),
                 ),
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: snip20.address.clone(),
-                code_hash: snip20.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&snip20, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
-    chain
-        .execute(
-            &snip20::ExecuteMsg::Send {
+    snip20::ExecuteMsg::Send {
                 recipient: stkd_tkn.address.clone(),
                 recipient_code_hash: None,
                 amount: Uint128::new(20_000_000),
@@ -1354,12 +1083,7 @@ fn vote_count_percentage() {
                     to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap(),
                 ),
                 padding: None,
-            },
-            MockEnv::new("charlie", ContractLink {
-                address: snip20.address.clone(),
-                code_hash: snip20.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&snip20, &mut chain, Addr::unchecked("charlie"), &[])
         .unwrap();
 
     // Register governance
@@ -1404,27 +1128,18 @@ fn vote_count_percentage() {
     })
     .unwrap();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::AssemblyProposal {
+    governance::ExecuteMsg::AssemblyProposal {
                 assembly: Uint128::new(1),
                 title: "Title".to_string(),
                 metadata: "Text only proposal".to_string(),
                 msgs: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
 
     let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
 
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1441,16 +1156,9 @@ fn vote_count_percentage() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
         .unwrap();
-    chain
-        .execute(
-            &snip20_staking::ExecuteMsg::ExposeBalance {
+    snip20_staking::ExecuteMsg::ExposeBalance {
                 recipient: gov.address.clone(),
                 code_hash: None,
                 msg: Some(
@@ -1467,27 +1175,15 @@ fn vote_count_percentage() {
                 ),
                 memo: None,
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     chain.block_mut().time += 30000;
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::Update {
+    governance::ExecuteMsg::Update {
                 proposal: Uint128::zero(),
                 padding: None,
-            },
-            MockEnv::new("beta", ContractLink {
-                address: gov.address.clone(),
-                code_hash: gov.code_hash.clone(),
-            }),
-        )
+            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
         .unwrap();
 
     let prop =

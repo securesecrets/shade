@@ -317,8 +317,10 @@ pub fn execute(
     )
 }
 
+#[entry_point]
 pub fn query(
     deps: Deps,
+    env: Env,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     pad_query_result(

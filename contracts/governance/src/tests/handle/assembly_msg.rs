@@ -1,25 +1,19 @@
 use crate::tests::{admin_only_governance, get_assembly_msgs};
 use shade_protocol::c_std::Uint128;
-use shade_protocol::fadroma::ensemble::MockEnv;
+use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query};
 use shade_protocol::contract_interfaces::{governance, governance::assembly::AssemblyMsg};
 
 #[test]
 fn add_assembly_msg() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::AddAssemblyMsg {
+    governance::ExecuteMsg::AddAssemblyMsg {
                 name: "Some Assembly name".to_string(),
                 msg: "{}".to_string(),
                 assemblies: vec![Uint128::zero()],
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
@@ -33,19 +27,13 @@ fn unauthorised_add_assembly_msg() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     assert!(
-        chain
-            .execute(
-                &governance::ExecuteMsg::AddAssemblyMsg {
+        governance::ExecuteMsg::AddAssemblyMsg {
                     name: "Some Assembly name".to_string(),
                     msg: "{}".to_string(),
                     assemblies: vec![Uint128::zero()],
                     padding: None,
-                },
-                MockEnv::new(
-                    // Sender is self
-                    "random",
-                    gov.clone(),
-                ),
+                }.test_exec(// Sender is self
+                    &gov, &mut chain, Addr::unchecked("random"), &[]
             )
             .is_err()
     );
@@ -58,20 +46,14 @@ fn set_assembly_msg() {
     let original_msg =
         get_assembly_msgs(&mut chain, &gov, Uint128::zero(), Uint128::new(1)).unwrap()[0].clone();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::SetAssemblyMsg {
+    governance::ExecuteMsg::SetAssemblyMsg {
                 id: Uint128::zero(),
                 name: Some("New name".to_string()),
                 msg: None,
                 assemblies: None,
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
@@ -89,20 +71,14 @@ fn unauthorised_set_assembly_msg() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     assert!(
-        chain
-            .execute(
-                &governance::ExecuteMsg::SetAssemblyMsg {
+        governance::ExecuteMsg::SetAssemblyMsg {
                     id: Uint128::zero(),
                     name: Some("New name".to_string()),
                     msg: None,
                     assemblies: None,
                     padding: None,
-                },
-                MockEnv::new(
-                    // Sender is self
-                    "random",
-                    gov.clone(),
-                ),
+                }.test_exec(// Sender is self
+                    &gov, &mut chain, Addr::unchecked("random"), &[]
             )
             .is_err()
     );

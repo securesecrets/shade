@@ -1,6 +1,5 @@
 use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, Deps, MessageInfo};
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
-use shade_protocol::shade_admin::admin;
 use shade_protocol::{
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
@@ -14,15 +13,19 @@ use shade_protocol::{
         storage::plus::{ItemStorage, MapStorage},
     },
 };
+use shade_protocol::admin::validate_admin;
+
 use shade_protocol::utils::asset::Contract;
 
-fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<bool> {
+fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<()> {
     let contract = Admin::load(deps.storage)?.0;
 
-    let authorized_users: admin::AdminsResponse = admin::QueryMsg::GetAdmins {}
-        .query(&deps.querier, &contract)?;
-
-    Ok(authorized_users.authorized_users.contains(&info.sender.to_string()))
+    validate_admin(
+        &deps.querier,
+        env.contract.address.into(),
+        info.sender.clone().into(),
+        &contract
+    )
 }
 
 pub fn try_set_admin(
@@ -31,9 +34,7 @@ pub fn try_set_admin(
     info: MessageInfo,
     admin: Contract,
 ) -> StdResult<Response> {
-    if  !user_authorized(&deps.as_ref(), env, &info)? {
-        return Err(StdError::generic_err("unauthorized"));
-    }
+    user_authorized(&deps.as_ref(), env, &info)?;
 
     Admin(admin).save(deps.storage)?;
 
@@ -46,9 +47,7 @@ pub fn try_set_run_state(
     info: MessageInfo,
     state: ContractStatus,
 ) -> StdResult<Response> {
-    if  !user_authorized(&deps.as_ref(), env, &info)? {
-        return Err(StdError::generic_err("unauthorized"));
-    }
+    user_authorized(&deps.as_ref(), env, &info)?;
 
     state.save(deps.storage)?;
 

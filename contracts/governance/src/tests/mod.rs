@@ -2,8 +2,8 @@ pub mod handle;
 pub mod query;
 
 use crate::contract::{execute, instantiate, query};
-use shade_multi_test::query_auth::QueryAuth;
-use shade_protocol::c_std::Uint128;
+use shade_multi_test;
+use shade_protocol::c_std::{ContractInfo, Uint128};
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
@@ -14,7 +14,6 @@ use shade_protocol::c_std::{
     StdError,
     StdResult,
 };
-use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::serde::Serialize;
 use shade_protocol::contract_interfaces::{
     governance,
@@ -26,31 +25,37 @@ use shade_protocol::contract_interfaces::{
         Config,
     },
 };
-use shade_protocol::multi_test::{App, BasicApp};
+use shade_protocol::multi_test::{App, BasicApp, ContractInfo};
 use shade_protocol::query_auth;
-use shade_protocol::utils::InstantiateCallback;
+use shade_protocol::utils::{ExecuteCallback, InstantiateCallback};
+use shade_protocol::utils::wrap::unwrap;
 
-pub fn init_governance(
-    msg: governance::InstantiateMsg,
-) -> StdResult<(BasicApp, ContractLink<Addr>)> {
+pub fn init_chain(
+) -> (BasicApp, ContractInfo) {
     let mut chain = App::default();
 
-    query_auth::InstantiateMsg {
+    let auth = query_auth::InstantiateMsg {
         admin_auth: Contract {
             address: admin.address.clone(),
             code_hash: admin.code_hash.clone(),
         },
         prng_seed: Binary::from("random".as_bytes()),
-    }.test_init(QueryAuth::default());
+    }.test_init(
+        QueryAuth::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "query_auth",
+        &[]
+    ).unwrap();
 
-    harness::query_auth::init(chain, &msg)
+    (chain, auth)
 }
 
-pub fn admin_only_governance() -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
-    let mut chain = ContractEnsemble::new(50);
-    let auth = init_query_auth(&mut chain)?;
+pub fn admin_only_governance() -> StdResult<(BasicApp, ContractInfo)> {
 
-    let msg = governance::InitMsg {
+    let (mut chain, auth) = init_chain();
+
+    let gov = governance::InitMsg {
         treasury: Addr("treasury".to_string()),
         query_auth: Contract {
             address: auth.address,
@@ -75,16 +80,20 @@ pub fn admin_only_governance() -> StdResult<(ContractEnsemble, ContractLink<Addr
         },
         funding_token: None,
         vote_token: None,
-    };
-
-    let gov = harness::governance::init(&mut chain, &msg)?;
+    }.test_init(
+        Governance::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "gov",
+        &[]
+    ).unwrap();
 
     Ok((chain, gov))
 }
 
 pub fn gov_generic_proposal(
-    chain: &mut ContractEnsemble,
-    gov: &ContractLink<Addr>,
+    chain: &mut BasicApp,
+    gov: &ContractInfo,
     sender: &str,
     msg: governance::ExecuteMsg,
 ) -> StdResult<()> {
@@ -97,27 +106,25 @@ pub fn gov_generic_proposal(
 }
 
 pub fn gov_msg_proposal(
-    chain: &mut ContractEnsemble,
-    gov: &ContractLink<Addr>,
+    chain: &mut BasicApp,
+    gov: &ContractInfo,
     sender: &str,
     msgs: Vec<ProposalMsg>,
 ) -> StdResult<()> {
-    chain.execute(
-        &governance::ExecuteMsg::AssemblyProposal {
-            assembly: Uint128::new(1),
-            title: "Title".to_string(),
-            metadata: "Proposal metadata".to_string(),
-            msgs: Some(msgs),
-            padding: None,
-        },
-        MockEnv::new(sender, gov.clone()),
-    )?;
+    governance::ExecuteMsg::AssemblyProposal {
+        assembly: Uint128::new(1),
+        title: "Title".to_string(),
+        metadata: "Proposal metadata".to_string(),
+        msgs: Some(msgs),
+        padding: None,
+    }.test_exec(gov, chain, Addr::unchecked(sender), &[]).unwrap();
+
     Ok(())
 }
 
 pub fn get_assembly_msgs(
-    chain: &mut ContractEnsemble,
-    gov: &ContractLink<Addr>,
+    chain: &mut BasicApp,
+    gov: &ContractInfo,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<AssemblyMsg>> {
@@ -136,8 +143,8 @@ pub fn get_assembly_msgs(
 }
 
 pub fn get_contract(
-    chain: &mut ContractEnsemble,
-    gov: &ContractLink<Addr>,
+    chain: &mut BasicApp,
+    gov: &ContractInfo,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<AllowedContract>> {
@@ -154,8 +161,8 @@ pub fn get_contract(
 }
 
 pub fn get_profiles(
-    chain: &mut ContractEnsemble,
-    gov: &ContractLink<Addr>,
+    chain: &mut BasicApp,
+    gov: &ContractInfo,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<Profile>> {
@@ -172,8 +179,8 @@ pub fn get_profiles(
 }
 
 pub fn get_assemblies(
-    chain: &mut ContractEnsemble,
-    gov: &ContractLink<Addr>,
+    chain: &mut BasicApp,
+    gov: &ContractInfo,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<Assembly>> {
@@ -190,8 +197,8 @@ pub fn get_assemblies(
 }
 
 pub fn get_proposals(
-    chain: &mut ContractEnsemble,
-    gov: &ContractLink<Addr>,
+    chain: &mut BasicApp,
+    gov: &ContractInfo,
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<Proposal>> {
@@ -208,8 +215,8 @@ pub fn get_proposals(
 }
 
 pub fn get_config(
-    chain: &mut ContractEnsemble,
-    gov: &ContractLink<Addr>,
+    chain: &mut BasicApp,
+    gov: &ContractInfo,
 ) -> StdResult<Config> {
     let query: governance::QueryAnswer =
         chain.query(gov.address.clone(), &governance::QueryMsg::Config {})?;

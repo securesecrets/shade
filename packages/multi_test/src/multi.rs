@@ -23,69 +23,66 @@ pub mod snip20 {
 
 // #[cfg(feature = "mock_band")]
 // pub mod mock_band {
-//     use crate::multi_macro;
+//     use crate::multi_derive;
 //     use mock_band;
 
 //     pub struct MockBand;
-//     multi_macro::implement_multi!(MockBand, mock_band);
+//     multi_derive::implement_multi!(MockBand, mock_band);
 // }
 
 #[cfg(feature = "governance")]
 pub mod governance {
     use governance;
 
-    pub struct Governance;
-    multi_macro::implement_multi!(Governance, governance);
+    multi_derive::implement_multi!(Governance, governance);
 }
 
 #[cfg(feature = "snip20_staking")]
 pub mod snip20_staking {
     use spip_stkd_0;
 
-    pub struct Snip20Staking;
-    multi_macro::implement_multi!(Snip20Staking, spip_stkd_0);
+    multi_derive::implement_multi!(Snip20Staking, spip_stkd_0);
 }
 
 // #[cfg(feature = "scrt_staking")]
 // pub mod scrt_staking {
-//     use crate::multi_macro;
+//     use crate::multi_derive;
 //     use scrt_staking;
 
 //     pub struct ScrtStaking;
-//     multi_macro::implement_multi!(ScrtStaking, scrt_staking);
+//     multi_derive::implement_multi!(ScrtStaking, scrt_staking);
 // }
 
 // #[cfg(feature = "bonds")]
 // pub mod bonds {
-//     use crate::multi_macro;
+//     use crate::multi_derive;
 //     use bonds;
 
 //     pub struct Bonds;
-//     multi_macro::implement_multi!(Bonds, bonds);
+//     multi_derive::implement_multi!(Bonds, bonds);
 // }
 
 #[cfg(feature = "query_auth")]
 pub mod query_auth {
     use query_auth;
 
-    pub struct QueryAuth;
-    multi_macro::implement_multi!(QueryAuth, query_auth);
+    multi_derive::implement_multi!(QueryAuth, query_auth);
 }
 
 // #[cfg(feature = "treasury_manager")]
 // pub mod treasury_manager {
-//     use crate::multi_macro;
+//     use crate::multi_derive;
 //     use treasury_manager;
 
 //     pub struct TreasuryManager;
-//     multi_macro::implement_multi!(TreasuryManager, treasury_manager);
+//     multi_derive::implement_multi!(TreasuryManager, treasury_manager);
 // }
 
 // #[cfg(feature = "treasury")]
 // pub mod treasury {
-//     use crate::multi_macro;
+//     use crate::multi_derive;
 //     use treasury;
 
 //     pub struct Treasury;
-//     multi_macro::implement_multi!(Treasury, treasury);
+//     multi_derive::implement_multi!(Treasury, treasury);
 // }
