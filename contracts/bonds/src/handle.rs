@@ -839,9 +839,7 @@ pub fn calculate_claim_date(env_time: u64, bonding_period: u64) -> u64 {
     // Previously, translated the passed u64 as days and converted to seconds.
     // Now, however, it treats the passed value as seconds, due to that being
     // how the block environment tracks it.
-    let end = env_time.checked_add(bonding_period).unwrap();
-
-    end
+    env_time.checked_add(bonding_period).unwrap()
 }
 
 pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> {
