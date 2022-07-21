@@ -255,7 +255,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         let msg: SlipMsg = from_binary(&message)?;
 
         // Check Slippage
-        if amount_to_issue.clone() < msg.minimum_expected_amount.clone() {
+        if amount_to_issue < msg.minimum_expected_amount {
             return Err(slippage_tolerance_exceeded(
                 amount_to_issue,
                 msg.minimum_expected_amount,
@@ -287,7 +287,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 
     // Begin PendingBond
     let new_bond = PendingBond {
-        claim_amount: amount_to_issue.clone(),
+        claim_amount: amount_to_issue,
         end_time: end,
         deposit_denom: bond_opportunity.deposit_denom,
         deposit_amount,
@@ -326,7 +326,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     if !bond_opportunity.minting_bond {
         // Decrease AllocatedAllowance since user is claiming
         allocated_allowance_w(&mut deps.storage)
-            .update(|allocated| Ok(allocated.checked_sub(amount_to_issue.clone())?))?;
+            .update(|allocated| Ok(allocated.checked_sub(amount_to_issue)?))?;
 
         // Transfer funds using allowance to bonds
         messages.push(transfer_from_msg(
@@ -416,7 +416,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
     account_w(&mut deps.storage).save(env.message.sender.as_str().as_bytes(), &account)?;
 
     global_total_claimed_w(&mut deps.storage)
-        .update(|global_total_claimed| Ok(global_total_claimed.checked_add(total.clone())?))?;
+        .update(|global_total_claimed| Ok(global_total_claimed.checked_add(total)?))?;
 
     //Set up empty message vec
     let mut messages = vec![];
@@ -484,7 +484,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
                 .issuance_limit
                 .checked_sub(prev_opp.amount_issued)?;
             global_total_issued_w(&mut deps.storage)
-                .update(|issued| Ok(issued.checked_sub(unspent.clone())?))?;
+                .update(|issued| Ok(issued.checked_sub(unspent)?))?;
 
             if !prev_opp.minting_bond {
                 // Unallocate allowance that wasn't issued
@@ -525,7 +525,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
         let snip20_allowance = allowance_query(
             &deps.querier,
             config.treasury,
-            env.contract.address.clone(),
+            env.contract.address,
             allowance_key_r(&deps.storage).load()?.to_string(),
             1,
             config.issued_asset.code_hash,
@@ -550,7 +550,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             .update(|allocated| Ok(allocated.checked_add(limit)?))?;
     }
 
-    let deposit_denom = fetch_snip20(&deposit_asset.clone(), &deps.querier)?;
+    let deposit_denom = fetch_snip20(&deposit_asset, &deps.querier)?;
 
     // Generate bond opportunity
     let bond_opportunity = BondOpportunity {
@@ -637,7 +637,7 @@ pub fn try_close_bond<S: Storage, A: Api, Q: Querier>(
                 .issuance_limit
                 .checked_sub(prev_opp.amount_issued)?;
             global_total_issued_w(&mut deps.storage)
-                .update(|issued| Ok(issued.checked_sub(unspent.clone())?))?;
+                .update(|issued| Ok(issued.checked_sub(unspent)?))?;
 
             if !prev_opp.minting_bond {
                 // Unallocate allowance that wasn't issued
@@ -750,8 +750,8 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     if deposit_price > max_accepted_deposit_price {
         if deposit_price > err_deposit_price {
             return Err(deposit_price_exceeds_limit(
-                deposit_price.clone(),
-                err_deposit_price.clone(),
+                deposit_price,
+                err_deposit_price,
             ));
         }
         deposit_price = max_accepted_deposit_price;
@@ -759,8 +759,8 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     let mut issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?;
     if issued_price < err_issued_price {
         return Err(issued_price_below_minimum(
-            issued_price.clone(),
-            err_issued_price.clone(),
+            issued_price,
+            err_issued_price,
         ));
     }
     if issued_price < min_accepted_issued_price {
@@ -768,7 +768,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
         issued_price = min_accepted_issued_price;
     }
     let (issued_amount, discount_price) = calculate_issuance(
-        deposit_price.clone(),
+        deposit_price,
         deposit_amount,
         deposit_asset.token_info.decimals,
         issued_price,
