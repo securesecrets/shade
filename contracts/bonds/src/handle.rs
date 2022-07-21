@@ -221,7 +221,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         .may_load(env.message.sender.to_string().as_bytes())?
     {
         Some(prev_opp) => {
-            bond_active(&env, &prev_opp)?;
+            bond_active(env, &prev_opp)?;
             prev_opp
         }
         None => {
@@ -239,7 +239,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
 
     // Calculate conversion of deposit to SHD
     let (amount_to_issue, deposit_price, claim_price, discount_price) = amount_to_issue(
-        &deps,
+        deps,
         deposit_amount,
         available,
         bond_opportunity.deposit_denom.clone(),
@@ -518,7 +518,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
     let period = bonding_period.unwrap_or(config.bonding_period);
     let discount = discount.unwrap_or(config.discount);
 
-    check_against_limits(&deps, limit, period, discount)?;
+    check_against_limits(deps, limit, period, discount)?;
 
     if !minting_bond {
         // Check bond issuance amount against snip20 allowance and allocated_allowance
@@ -746,7 +746,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     err_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
     let mut disc = discount;
-    let mut deposit_price = oracle(&deps, deposit_asset.token_info.symbol.clone())?;
+    let mut deposit_price = oracle(deps, deposit_asset.token_info.symbol.clone())?;
     if deposit_price > max_accepted_deposit_price {
         if deposit_price > err_deposit_price {
             return Err(deposit_price_exceeds_limit(
