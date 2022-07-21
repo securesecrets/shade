@@ -3,15 +3,14 @@ use cosmwasm_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
 };
 
-use secret_toolkit::snip20::{set_viewing_key_msg, token_info_query};
+use shade_protocol::secret_toolkit::snip20::set_viewing_key_msg;
 
 use shade_protocol::contract_interfaces::{
     bonds::{Config, HandleMsg, InitMsg, QueryMsg, SnipViewingKey},
-    snip20::helpers::Snip20Asset,
+    snip20::helpers::fetch_snip20,
 };
 
-use secret_toolkit::snip20::token_config_query;
-use secret_toolkit::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::secret_toolkit::utils::{pad_handle_result, pad_query_result};
 
 use crate::{
     handle::{self, register_receive},
@@ -65,25 +64,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     )?);
     allowance_key_w(&mut deps.storage).save(&allowance_key.0)?;
 
-    let token_info = token_info_query(
-        &deps.querier,
-        1,
-        state.issued_asset.code_hash.clone(),
-        state.issued_asset.address.clone(),
-    )?;
+    let issued_asset_info = fetch_snip20(&state.issued_asset.clone(), &deps.querier)?;
 
-    let token_config = token_config_query(
-        &deps.querier,
-        256,
-        state.issued_asset.code_hash.clone(),
-        state.issued_asset.address.clone(),
-    )?;
-
-    issued_asset_w(&mut deps.storage).save(&Snip20Asset {
-        contract: state.issued_asset.clone(),
-        token_info,
-        token_config: Option::from(token_config),
-    })?;
+    issued_asset_w(&mut deps.storage).save(&issued_asset_info)?;
 
     messages.push(register_receive(&env, &state.issued_asset)?);
 
