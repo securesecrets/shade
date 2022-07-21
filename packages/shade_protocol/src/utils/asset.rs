@@ -46,7 +46,7 @@ pub fn validate_vec(api: &dyn Api, unvalidated_addresses: Vec<String>) -> StdRes
 /// A contract that does not contain a validated address.
 /// Should be accepted as user input because we shouldn't assume addresses are verified Addrs.
 /// https://docs.rs/cosmwasm-std/latest/cosmwasm_std/struct.Addr.html
-#[derive(Hash, Eq)]
+#[derive(Hash, Eq, Default)]
 #[cw_serde]
 pub struct RawContract {
     pub address: String,
@@ -83,7 +83,7 @@ impl From<ContractLink<Addr>> for RawContract {
     }
 }
 
-#[derive(Hash, Eq)]
+#[derive(Hash, Eq, Default)]
 #[cw_serde]
 pub struct Contract {
     pub address: Addr,
