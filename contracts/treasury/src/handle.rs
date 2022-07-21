@@ -109,18 +109,18 @@ pub fn rebalance(
     let naive = NaiveDateTime::from_timestamp(env.block.time.seconds() as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
-    let viewing_key = VIEWING_KEY.load(&deps.storage)?;
-    let self_address = SELF_ADDRESS.load(&deps.storage)?;
+    let viewing_key = VIEWING_KEY.load(deps.storage)?;
+    let self_address = SELF_ADDRESS.load(deps.storage)?;
     let mut messages = vec![];
 
-    let full_asset = match ASSETS.may_load(&deps.storage, asset.clone())? {
+    let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err("Not an asset"));
         }
     };
 
-    let allowances = ALLOWANCES.load(&deps.storage, asset.clone())?;
+    let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
 
     let token_balance = balance_query(
         &deps.querier,
@@ -143,7 +143,7 @@ pub fn rebalance(
     */
 
 
-    let managers = MANAGERS.load(&deps.storage)?;
+    let managers = MANAGERS.load(deps.storage)?;
 
     // manager_addr: (balance, allowance)
     let mut manager_data: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
@@ -179,8 +179,8 @@ pub fn rebalance(
     // Total for "amount" allowances (govt, assemblies, etc.)
     let mut amount_total = Uint128::zero();
 
-    MANAGERS.save(&mut deps.storage, &managers)?;
-    //let _config = CONFIG.load(&deps.storage)?;
+    MANAGERS.save(deps.storage, &managers)?;
+    //let _config = CONFIG.load(deps.storage)?;
 
     let (
         amount_allowances,
@@ -381,33 +381,33 @@ pub fn rebalance(
         })?))
 }
 
-pub fn try_register_asset<A: Api, Q: Querier>(
+pub fn try_register_asset(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
 ) -> StdResult<HandleResponse> {
-    let config = CONFIG.load(&deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     if info.sender != config.admin {
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    let mut asset_list = ASSET_LIST.load(&deps.storage)?;
+    let mut asset_list = ASSET_LIST.load(deps.storage)?;
     asset_list.push(contract.address.clone());
-    ASSET_LIST.save(&mut deps.storage, &asset_list)?;
+    ASSET_LIST.save(deps.storage, &asset_list)?;
     /*
-    ASSET_LIST.update(&mut deps.storage, |mut list| {
+    ASSET_LIST.update(deps.storage, |mut list| {
         list.push(contract.address.clone());
         Ok(list)
     })?;
     */
 
-    ASSETS.save(&mut deps.storage,
+    ASSETS.save(deps.storage,
                 contract.address.clone(),
                 &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
     )?;
 
-    ALLOWANCES.save(&mut deps.storage, contract.address.clone(), &Vec::new())?;
+    ALLOWANCES.save(deps.storage, contract.address.clone(), &Vec::new())?;
 
     Ok(Response {
         messages: vec![
@@ -419,7 +419,7 @@ pub fn try_register_asset<A: Api, Q: Querier>(
             )?,
             // Set viewing key
             set_viewing_key_msg(
-                VIEWING_KEY.load(&deps.storage)?,
+                VIEWING_KEY.load(deps.storage)?,
                 None,
                 256,
                 contract.code_hash.clone(),
@@ -437,13 +437,13 @@ pub fn register_manager(
     env: &Env,
     contract: &mut Contract,
 ) -> StdResult<HandleResponse> {
-    let config = CONFIG.load(&deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     if info.sender != config.admin {
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    MANAGERS.update(&mut deps.storage, |mut managers| {
+    MANAGERS.update(deps.storage, |mut managers| {
         if managers
             .iter()
             .map(|m| m.contract.clone())
@@ -497,21 +497,21 @@ pub fn allowance(
 ) -> StdResult<Response> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
-    let config = CONFIG.load(&deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     /* ADMIN ONLY */
     if info.sender != config.admin {
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    let full_asset = match ASSETS.may_load(&deps.storage, asset.clone())? {
+    let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err("Not an asset"));
         }
     };
 
-    let managers = MANAGERS.load(&deps.storage)?;
+    let managers = MANAGERS.load(deps.storage)?;
 
     // Disallow Portion on non-managers
     match allowance {
@@ -528,7 +528,7 @@ pub fn allowance(
         _ => {}
     };
 
-    let mut apps = ALLOWANCES.may_load(&deps.storage, asset.clone())?
+    let mut apps = ALLOWANCES.may_load(deps.storage, asset.clone())?
         .unwrap_or_default();
 
     let allow_address = allowance_address(&allowance);
@@ -596,14 +596,14 @@ pub fn allowance(
         }
     };
 
-    ALLOWANCES.save(&mut deps.storage, asset, &apps)?;
+    ALLOWANCES.save(deps.storage, asset, &apps)?;
     /*
     set_allowance(
         &deps,
         &env,
         spender,
         amount.clone(),
-        VIEWING_KEY.load(&deps.storage)?,
+        VIEWING_KEY.load(deps.storage)?,
         full_asset.contract,
         None,
     )?,
@@ -614,15 +614,15 @@ pub fn allowance(
         })?))
 }
 
-pub fn claim<A: Api, Q: Querier>(
+pub fn claim(
     deps: &mut Extern<S, A, Q>,
     _env: &Env,
     asset: Addr,
 ) -> StdResult<HandleResponse> {
 
-    let managers = MANAGERS.load(&deps.storage)?;
-    let allowances = ALLOWANCES.load(&deps.storage, asset.clone())?;
-    let self_address = SELF_ADDRESS.load(&deps.storage)?;
+    let managers = MANAGERS.load(deps.storage)?;
+    let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
+    let self_address = SELF_ADDRESS.load(deps.storage)?;
 
     let mut messages = vec![];
 
@@ -664,19 +664,19 @@ pub fn unbond(
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
 
-    if env.message.sender != CONFIG.load(&deps.storage)?.admin {
-        return Err(StdError::unauthorized());
+    if env.message.sender != CONFIG.load(deps.storage)?.admin {
+        return Err(StdError::generic_err("Unauthorized"));
     }
 
-    let managers = MANAGERS.load(&deps.storage)?;
-    let self_address = SELF_ADDRESS.load(&deps.storage)?;
+    let managers = MANAGERS.load(deps.storage)?;
+    let self_address = SELF_ADDRESS.load(deps.storage)?;
 
     let mut messages = vec![];
 
     let mut unbond_amount = amount;
     let mut unbonded = Uint128::zero();
 
-    for allowance in ALLOWANCES.load(&deps.storage, asset.clone())? {
+    for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
         match allowance {
             Allowance::Amount { .. } => {}
             Allowance::Portion { spender, .. } => {

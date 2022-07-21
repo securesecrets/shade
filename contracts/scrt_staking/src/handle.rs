@@ -169,7 +169,7 @@ pub fn unbond(
     let config = config_r(deps.storage).load()?;
 
     if !config.admins.contains(&info.sender) && config.owner != info.sender {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("Unauthorized"));
     }
 
     if asset != config.sscrt.address {
@@ -196,7 +196,7 @@ pub fn unbond(
 
     let mut undelegated = vec![];
 
-    let mut unbonding = amount + unbonding_r(&deps.storage).load()?;
+    let mut unbonding = amount + unbonding_r(deps.storage).load()?;
 
     let total = scrt_balance + rewards + delegated;
     let mut reserves = scrt_balance + rewards;
@@ -225,7 +225,7 @@ pub fn unbond(
         unbonding = (unbonding - reserves)?;
     }
 
-    unbonding_w(&mut deps.storage).save(&unbonding)?;
+    unbonding_w(deps.storage).save(&unbonding)?;
 
     while !unbonding.is_zero() {
 
@@ -342,7 +342,7 @@ pub fn claim(
     /*
     // Anyone can probably do this, as it just sends claimable to owner
     if !config.admins.contains(&env.message.sender) && config.owner != env.message.sender {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("Unauthorized"));
     }
     */
 
@@ -380,7 +380,7 @@ pub fn claim(
         )?);
 
         //assert!(false, "u - claim_amount: {} - {}", unbond_amount, claim_amount);
-        unbonding_w(&mut deps.storage).update(|u| Ok((u - claim_amount)?))?;
+        unbonding_w(deps.storage).update(|u| Ok((u - claim_amount)?))?;
     }
 
 

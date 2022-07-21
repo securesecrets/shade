@@ -73,16 +73,16 @@ const REWARDS: Item<Uint128> = Item::new("rewards");
 // (amount, block)
 const UNBONDINGS: Item<Vec<(Uint128, Uint128)>> = Item::new("unbondings");
 
-pub fn init<A: Api, Q: Querier>(
+pub fn init(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: Config,
 ) -> StdResult<InitResponse> {
 
-    CONFIG.save(&mut deps.storage, &msg)?;
-    ADDRESS.save(&mut deps.storage, &env.contract.address)?;
-    UNBONDINGS.save(&mut deps.storage, &Vec::new())?;
-    BLOCK.save(&mut deps.storage, &Uint128(env.block.height as u128))?;
+    CONFIG.save(deps.storage, &msg)?;
+    ADDRESS.save(deps.storage, &env.contract.address)?;
+    UNBONDINGS.save(deps.storage, &Vec::new())?;
+    BLOCK.save(deps.storage, &Uint128(env.block.height as u128))?;
 
     Ok(InitResponse {
         messages: vec![
@@ -106,14 +106,14 @@ pub fn init<A: Api, Q: Querier>(
     })
 }
 
-pub fn handle<A: Api, Q: Querier>(
+pub fn handle(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
 
-    let config = CONFIG.load(&deps.storage)?;
-    BLOCK.save(&mut deps.storage, &Uint128(env.block.height as u128))?;
+    let config = CONFIG.load(deps.storage)?;
+    BLOCK.save(deps.storage, &Uint128(env.block.height as u128))?;
 
     match msg {
         HandleMsg::Receive {
@@ -149,7 +149,7 @@ pub fn handle<A: Api, Q: Querier>(
 
                 let balance = balance_query(
                     &deps.querier,
-                    ADDRESS.load(&deps.storage)?,
+                    ADDRESS.load(deps.storage)?,
                     viewing_key.to_string(),
                     1,
                     config.token.code_hash.clone(),
@@ -157,7 +157,7 @@ pub fn handle<A: Api, Q: Querier>(
                 )?
                 .amount;
 
-                let mut unbondings = UNBONDINGS.load(&deps.storage)?;
+                let mut unbondings = UNBONDINGS.load(deps.storage)?;
                 let total_unbondings = Uint128(unbondings.iter().map(|(amount, _)| amount.u128()).sum());
 
                 let available = (balance - total_unbondings)?;
@@ -194,7 +194,7 @@ pub fn handle<A: Api, Q: Querier>(
                 })
             },
             adapter::SubHandleMsg::Claim { asset } => {
-                let mut unbonding = UNBONDINGS.load(&deps.storage)?;
+                let mut unbonding = UNBONDINGS.load(deps.storage)?;
                 let mut remaining = vec![];
                 let mut claimed = Uint128::zero();
 
@@ -233,12 +233,12 @@ pub fn handle<A: Api, Q: Querier>(
 }
 
 
-pub fn query<A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn query(
+    deps: Deps,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
 
-    let config = CONFIG.load(&deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     match msg {
         QueryMsg::Config => to_binary(&QueryAnswer::Config { config }),
@@ -247,14 +247,14 @@ pub fn query<A: Api, Q: Querier>(
 
                 let balance = balance_query(
                     &deps.querier,
-                    ADDRESS.load(&deps.storage)?,
+                    ADDRESS.load(deps.storage)?,
                     viewing_key.to_string(),
                     1,
                     config.token.code_hash.clone(),
                     config.token.address.clone(),
                 )?
                 .amount;
-                let unbonding = Uint128(UNBONDINGS.load(&deps.storage)?
+                let unbonding = Uint128(UNBONDINGS.load(deps.storage)?
                     .iter()
                     .map(|(amount, _)| amount.u128())
                     .sum());
@@ -262,9 +262,9 @@ pub fn query<A: Api, Q: Querier>(
                 adapter::QueryAnswer::Balance { amount: (balance - unbonding)? }
             },
             adapter::SubQueryMsg::Unbonding { asset } => {
-                let last_block = BLOCK.load(&deps.storage)?;
+                let last_block = BLOCK.load(deps.storage)?;
                 adapter::QueryAnswer::Unbonding { 
-                    amount: Uint128(UNBONDINGS.load(&deps.storage)?
+                    amount: Uint128(UNBONDINGS.load(deps.storage)?
                         .into_iter()
                         .map(|(amount, block)| {
                             if Uint128(last_block.u128() - block.u128()) >= config.unbond_blocks {
@@ -278,9 +278,9 @@ pub fn query<A: Api, Q: Querier>(
                 }
             },
             adapter::SubQueryMsg::Claimable { asset } => {
-                let last_block = BLOCK.load(&deps.storage)?;
+                let last_block = BLOCK.load(deps.storage)?;
                 adapter::QueryAnswer::Claimable { 
-                    amount: Uint128(UNBONDINGS.load(&deps.storage)?
+                    amount: Uint128(UNBONDINGS.load(deps.storage)?
                         .into_iter()
                         .map(|(amount, block)| {
                             if Uint128(last_block.u128() - block.u128()) >= config.unbond_blocks {
@@ -294,11 +294,11 @@ pub fn query<A: Api, Q: Querier>(
                 }
             },
             adapter::SubQueryMsg::Unbondable { asset } => {
-                let unbondings = UNBONDINGS.load(&deps.storage)?;
+                let unbondings = UNBONDINGS.load(deps.storage)?;
                 let sum = Uint128(unbondings.iter().map(|(amount, _)| amount.u128()).sum());
                 let balance = balance_query(
                     &deps.querier,
-                    ADDRESS.load(&deps.storage)?,
+                    ADDRESS.load(deps.storage)?,
                     viewing_key.to_string(),
                     1,
                     config.token.code_hash.clone(),
@@ -310,14 +310,14 @@ pub fn query<A: Api, Q: Querier>(
             },
             adapter::SubQueryMsg::Reserves { asset } => {
                 let mut reserves = Uint128::zero();
-                let unbondings = Uint128(UNBONDINGS.load(&deps.storage)?.iter()
+                let unbondings = Uint128(UNBONDINGS.load(deps.storage)?.iter()
                     .map(|(amount, _)| amount.u128())
                     .sum());
 
                 if config.unbond_blocks.is_zero() {
                     reserves = balance_query(
                         &deps.querier,
-                        ADDRESS.load(&deps.storage)?,
+                        ADDRESS.load(deps.storage)?,
                         viewing_key.to_string(),
                         1,
                         config.token.code_hash.clone(),

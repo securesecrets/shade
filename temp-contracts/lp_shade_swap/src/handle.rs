@@ -277,7 +277,7 @@ pub fn claim(
         claim_amount = balance;
     }
 
-    unbonding_w(&mut deps.storage).update(
+    unbonding_w(deps.storage).update(
         asset.as_str().as_bytes(),
         |u| Ok((u.unwrap() - claim_amount)?)
     )?;

@@ -17,7 +17,6 @@ use shade_protocol::{
         stored_id::ID,
         HandleAnswer,
     },
-    math_compat::Uint128,
     utils::generic_response::ResponseStatus,
 };
 

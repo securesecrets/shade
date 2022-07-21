@@ -129,7 +129,7 @@ pub fn init(
 
     // Init unbondings & msgs
     for token in assets {
-        unbonding_w(&mut deps.storage).save(
+        unbonding_w(deps.storage).save(
             token.address.as_str().as_bytes(),
             &Uint128::zero(),
         )?;
@@ -164,7 +164,7 @@ pub fn init(
     }
     */
 
-    config_w(&mut deps.storage).save(&config.clone())?;
+    config_w(deps.storage).save(&config.clone())?;
 
     Ok(Response::new())
 }

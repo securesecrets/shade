@@ -41,7 +41,7 @@ pub fn init(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
 
-    CONFIG.save(&mut deps.storage, &Config {
+    CONFIG.save(deps.storage, &Config {
         admin: msg.admin.unwrap_or(info.sender.clone()),
         treasury: msg.treasury.clone(),
     })?;

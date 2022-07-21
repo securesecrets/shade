@@ -66,11 +66,11 @@ pub fn receive(
      * All other assets from all other addresses will be credited to the treasury (default account)
      */
 
-    let config = CONFIG.load(&deps.storage)?;
-    let asset = ASSETS.load(&deps.storage, env.message.sender.clone())?;
+    let config = CONFIG.load(deps.storage)?;
+    let asset = ASSETS.load(deps.storage, env.message.sender.clone())?;
 
     // Do nothing if its an adapter (claimed funds)
-    if let Some(adapter) = ALLOCATIONS.load(&deps.storage, env.message.sender.clone())?
+    if let Some(adapter) = ALLOCATIONS.load(deps.storage, env.message.sender.clone())?
         .iter()
         .find(|a| a.contract.address == from) {
             return Ok(HandleResponse {
@@ -83,13 +83,13 @@ pub fn receive(
         }
 
     // Default to treasury if not sent by a holder
-    let holder = match HOLDERS.load(&deps.storage)?.contains(&from) {
+    let holder = match HOLDERS.load(deps.storage)?.contains(&from) {
         true => from,
         false => config.treasury,
     };
 
     // Update holdings
-    HOLDING.update(&mut deps.storage, holder, |h| -> StdResult<Holding> {
+    HOLDING.update(deps.storage, holder, |h| -> StdResult<Holding> {
         let mut holding = h.unwrap();
         if let Some(i) = holding.balances.iter().position(|b| b.token == asset.contract.address) {
             holding.balances[i].amount += amount;
@@ -116,13 +116,13 @@ pub fn try_update_config(
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
-    let cur_config = CONFIG.load(&deps.storage)?;
+    let cur_config = CONFIG.load(deps.storage)?;
 
     if info.sender != cur_config.admin {
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    CONFIG.save(&mut deps.storage, &config)?;
+    CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
@@ -134,22 +134,22 @@ pub fn try_register_asset(
     env: &Env,
     contract: &Contract,
 ) -> StdResult<Response> {
-    let config = CONFIG.load(&deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     if info.sender != config.admin {
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    ASSET_LIST.update(&mut deps.storage, |mut list| -> StdResult<Vec<Addr>> {
+    ASSET_LIST.update(deps.storage, |mut list| -> StdResult<Vec<Addr>> {
         list.push(contract.address.clone());
         Ok(list)
     })?;
 
-    ASSETS.save(&mut deps.storage, contract.address.clone(),
+    ASSETS.save(deps.storage, contract.address.clone(),
         &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
     )?;
 
-    ALLOCATIONS.save(&mut deps.storage, contract.address.clone(), &Vec::new())?;
+    ALLOCATIONS.save(deps.storage, contract.address.clone(), &Vec::new())?;
 
     Ok(Response {
         messages: vec![
@@ -161,7 +161,7 @@ pub fn try_register_asset(
             )?,
             // Set viewing key
             set_viewing_key_msg(
-                VIEWING_KEY.load(&deps.storage)?,
+                VIEWING_KEY.load(deps.storage)?,
                 None,
                 256,
                 contract.code_hash.clone(),
@@ -182,14 +182,14 @@ pub fn allocate(
 ) -> StdResult<Response> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
-    let config = CONFIG.load(&deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     /* ADMIN ONLY */
     if info.sender != config.admin {
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    let mut apps = ALLOCATIONS.may_load(&deps.storage, asset.clone())?
+    let mut apps = ALLOCATIONS.may_load(deps.storage, asset.clone())?
         .unwrap_or_default();
 
     let stale_alloc = apps
@@ -228,7 +228,7 @@ pub fn allocate(
         ));
     }
 
-    ALLOCATIONS.save(&mut deps.storage, asset.clone(), &apps)?;
+    ALLOCATIONS.save(deps.storage, asset.clone(), &apps)?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Allocate {
             status: ResponseStatus::Success,
@@ -241,12 +241,12 @@ pub fn claim(
     asset: Addr,
 ) -> StdResult<Response> {
 
-    if !ASSET_LIST.load(&deps.storage)?.contains(&asset.clone()) {
+    if !ASSET_LIST.load(deps.storage)?.contains(&asset.clone()) {
         return Err(StdError::generic_err("Unrecognized asset"));
     }
-    let full_asset = ASSETS.load(&deps.storage, asset.clone())?;
+    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
-    let config = CONFIG.load(&deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let mut claimer = env.message.sender.clone();
 
     if claimer == config.admin {
@@ -254,12 +254,12 @@ pub fn claim(
         claimer = config.treasury;
     }
 
-    let holders = HOLDERS.load(&deps.storage)?;
+    let holders = HOLDERS.load(deps.storage)?;
 
     if !holders.contains(&claimer.clone()) {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("Unauthorized"));
     }
-    let mut holding = HOLDING.load(&deps.storage, claimer.clone())?;
+    let mut holding = HOLDING.load(deps.storage, claimer.clone())?;
 
     let unbonding_i = match holding.unbondings.iter_mut().position(|u| u.token == asset.clone()) {
         Some(i) => i,
@@ -273,8 +273,8 @@ pub fn claim(
 
     let reserves = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(&deps.storage)?,
-        VIEWING_KEY.load(&deps.storage)?,
+        SELF_ADDRESS.load(deps.storage)?,
+        VIEWING_KEY.load(deps.storage)?,
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),
@@ -288,7 +288,7 @@ pub fn claim(
         //assert!(false, "reduce claim_amount {} - {}", unbonding.amount, reserves);
         let mut claim_amount = (holding.unbondings[unbonding_i].amount - reserves)?;
 
-        for alloc in ALLOCATIONS.load(&deps.storage, asset.clone())? {
+        for alloc in ALLOCATIONS.load(deps.storage, asset.clone())? {
             if claim_amount == Uint128::zero() {
                 break;
             }
@@ -318,7 +318,7 @@ pub fn claim(
     }
     // Adjust unbonding amount
     holding.unbondings[unbonding_i].amount = (holding.unbondings[unbonding_i].amount - send_amount)?;
-    HOLDING.save(&mut deps.storage, claimer.clone(), &holding)?;
+    HOLDING.save(deps.storage, claimer.clone(), &holding)?;
 
     // Send claimed funds
     messages.push(
@@ -345,11 +345,11 @@ pub fn update(
     env: &Env,
     asset: Addr,
 ) -> StdResult<Response> {
-    let config = CONFIG.load(&deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
-    let full_asset = ASSETS.load(&deps.storage, asset.clone())?;
+    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
-    let mut allocations = ALLOCATIONS.load(&mut deps.storage, asset.clone())?;
+    let mut allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
 
     // Build metadata
     let mut amount_total = Uint128::zero();
@@ -372,8 +372,8 @@ pub fn update(
     let mut unbonding = Uint128::zero();
 
     // Withold pending unbondings
-    for h in HOLDERS.load(&deps.storage)? {
-        let holder = HOLDING.load(&deps.storage, h)?;
+    for h in HOLDERS.load(deps.storage)? {
+        let holder = HOLDING.load(deps.storage, h)?;
         if let Some(u) = holder.unbondings.iter().find(|u| u.token == asset) {
             unbonding += u.amount;
         }
@@ -384,7 +384,7 @@ pub fn update(
     let mut send_actions = vec![];
     let mut messages = vec![];
 
-    let key = VIEWING_KEY.load(&deps.storage)?;
+    let key = VIEWING_KEY.load(deps.storage)?;
 
     // Available treasury allowance
     let mut allowance = allowance_query(
@@ -401,7 +401,7 @@ pub fn update(
     // Available balance
     let mut balance = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(&deps.storage)?,
+        SELF_ADDRESS.load(deps.storage)?,
         key.clone(),
         1,
         full_asset.contract.code_hash.clone(),
@@ -522,7 +522,7 @@ pub fn update(
     }
 
     // Credit treasury balance with allowance used
-    HOLDING.update(&mut deps.storage, config.treasury, |h| -> StdResult<Holding> {
+    HOLDING.update(deps.storage, config.treasury, |h| -> StdResult<Holding> {
         let mut holding = h.unwrap();
         if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
             holding.balances[i].amount = holding.balances[i].amount + allowance_used;
@@ -570,7 +570,7 @@ pub fn unbond(
     amount: Uint128,
 ) -> StdResult<Response> {
 
-    let config = CONFIG.load(&deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     let mut unbonder = info.sender.clone();
 
@@ -579,13 +579,13 @@ pub fn unbond(
         unbonder = config.treasury.clone();
     }
 
-    let full_asset = ASSETS.load(&deps.storage, asset.clone())?;
+    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
-    let holders = HOLDERS.load(&deps.storage)?;
+    let holders = HOLDERS.load(deps.storage)?;
 
     // Adjust holder balance
     if holders.contains(&unbonder.clone()) {
-        let mut holding = HOLDING.load(&deps.storage, unbonder.clone())?;
+        let mut holding = HOLDING.load(deps.storage, unbonder.clone())?;
 
         if holding.status != Status::Active {
             return Err(StdError::generic_err("Inactive Holding"));
@@ -623,7 +623,7 @@ pub fn unbond(
             );
         }
 
-        HOLDING.save(&mut deps.storage, unbonder.clone(), &holding)?;
+        HOLDING.save(deps.storage, unbonder.clone(), &holding)?;
     }
     else {
         return Err(StdError::generic_err("unauthorized"));
@@ -638,7 +638,7 @@ pub fn unbond(
         if h == unbonder.clone() {
             continue;
         }
-        let other_holding = HOLDING.load(&deps.storage, h)?;
+        let other_holding = HOLDING.load(deps.storage, h)?;
         if let Some(u) = other_holding.unbondings.iter().find(|u| u.token == asset.clone()) {
             other_unbondings += u.amount;
         }
@@ -647,8 +647,8 @@ pub fn unbond(
     // Reserves to be sent immediately
     let mut reserves = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(&deps.storage)?,
-        VIEWING_KEY.load(&deps.storage)?,
+        SELF_ADDRESS.load(deps.storage)?,
+        VIEWING_KEY.load(deps.storage)?,
         1,
         full_asset.contract.code_hash.clone(),
         full_asset.contract.address.clone(),
@@ -683,7 +683,7 @@ pub fn unbond(
             unbond_amount = (unbond_amount - reserves)?;
 
             // Reflect sent funds in unbondings
-            HOLDING.update(&mut deps.storage, unbonder, |h| -> StdResult<Holding> {
+            HOLDING.update(deps.storage, unbonder, |h| -> StdResult<Holding> {
                 let mut holding = h.unwrap();
                 if let Some(i) = holding.unbondings.iter().position(|u| u.token == asset) {
                     holding.unbondings[i].amount = (holding.unbondings[i].amount - reserves)?;
@@ -710,7 +710,7 @@ pub fn unbond(
             unbond_amount = (unbond_amount - amount)?;
 
             // Reflect sent funds in unbondings
-            HOLDING.update(&mut deps.storage, unbonder, |h| {
+            HOLDING.update(deps.storage, unbonder, |h| {
                 let mut holder = h.unwrap();
                 if let Some(i) = holder.unbondings.iter().position(|u| u.token == asset) {
                     holder.unbondings[i].amount = (holder.unbondings[i].amount - amount)?;
@@ -725,9 +725,9 @@ pub fn unbond(
 
     if unbond_amount >= Uint128::zero() {
 
-        let full_asset = ASSETS.load(&deps.storage, asset.clone())?;
+        let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
-        let mut allocations = ALLOCATIONS.load(&mut deps.storage, asset.clone())?;
+        let mut allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
 
         // Build metadata
         let mut amount_total = Uint128::zero();
@@ -752,7 +752,7 @@ pub fn unbond(
             &deps.querier,
             config.treasury.clone(),
             env.contract.address.clone(),
-            VIEWING_KEY.load(&deps.storage)?,
+            VIEWING_KEY.load(deps.storage)?,
             1,
             full_asset.contract.code_hash.clone(),
             full_asset.contract.address.clone(),
@@ -822,11 +822,11 @@ pub fn add_holder(
     holder: Addr,
 ) -> StdResult<Response> {
 
-    if info.sender != CONFIG.load(&deps.storage)?.admin {
+    if info.sender != CONFIG.load(deps.storage)?.admin {
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    HOLDERS.update(&mut deps.storage, |mut h| {
+    HOLDERS.update(deps.storage, |mut h| {
         if h.contains(&holder.clone()) {
             return Err(StdError::generic_err("Holding already exists"));
         }
@@ -834,7 +834,7 @@ pub fn add_holder(
         Ok(h)
     })?;
 
-    HOLDING.save(&mut deps.storage, holder, &Holding {
+    HOLDING.save(deps.storage, holder, &Holding {
         balances: Vec::new(),
         unbondings: Vec::new(),
         status: Status::Active,
@@ -852,13 +852,13 @@ pub fn remove_holder(
 ) -> StdResult<Response> {
     // TODO: unbond all or move all funds to treasury?
     // Should probably disallow fully deleting holders, just freeze/transfer
-    if env.message.sender != CONFIG.load(&deps.storage)?.admin {
-        return Err(StdError::unauthorized());
+    if env.message.sender != CONFIG.load(deps.storage)?.admin {
+        return Err(StdError::generic_err("Unauthorized"));
     }
 
-    if let Some(mut holding) = HOLDING.may_load(&deps.storage, holder.clone())? {
+    if let Some(mut holding) = HOLDING.may_load(deps.storage, holder.clone())? {
         holding.status = Status::Closed;
-        HOLDING.save(&mut deps.storage, holder, &holding)?;
+        HOLDING.save(deps.storage, holder, &holding)?;
     } else {
         return Err(StdError::generic_err("Not an authorized holder"));
     }

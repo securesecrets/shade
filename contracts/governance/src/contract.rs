@@ -22,7 +22,7 @@ use crate::{
     },
     query,
 };
-use shade_protocol::c_std::{Deps, MessageInfo, Uint128};
+use shade_protocol::c_std::{Addr, Deps, from_binary, MessageInfo, Uint128};
 use shade_protocol::c_std::{
     entry_point,
     to_binary,
@@ -36,9 +36,7 @@ use shade_protocol::c_std::{
     StdResult,
     Storage,
 };
-use shade_protocol::{
-    snip20::helpers::register_receive,
-};
+use shade_protocol::{query_auth, snip20::helpers::register_receive};
 use shade_protocol::{
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
@@ -56,7 +54,8 @@ use shade_protocol::{
         storage::default::{BucketStorage, SingletonStorage},
     },
 };
-use shade_protocol::utils::{pad_handle_result, pad_query_result};
+use shade_protocol::governance::{AuthQuery, QueryData};
+use shade_protocol::utils::{pad_handle_result, pad_query_result, Query};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -216,8 +215,8 @@ pub fn execute(
                 msg,
                 memo,
                 ..
-            } => try_receive_funding(deps, env, sender, from, amount, msg, memo),
-            ExecuteMsg::ClaimFunding { id } => try_claim_funding(deps, env, id),
+            } => try_receive_funding(deps, env, info, sender, from, amount, msg, memo),
+            ExecuteMsg::ClaimFunding { id } => try_claim_funding(deps, env, info, id),
 
             ExecuteMsg::ReceiveBalance {
                 sender,
@@ -350,24 +349,24 @@ pub fn query(
 
             QueryMsg::WithVK { user, key, query } => {
                 // Query VK info
-                let authenticator = Config::load(&deps.storage)?.query;
+                let authenticator = Config::load(deps.storage)?.query;
                 let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidateViewingKey {
                     user: user.clone(),
                     key,
                 }
                 .query(
                     &deps.querier,
-                    authenticator.code_hash,
-                    authenticator.address,
+                    &authenticator,
                 )?;
 
                 match res {
                     query_auth::QueryAnswer::ValidateViewingKey { is_valid } => {
                         if !is_valid {
-                            return Err(StdError::unauthorized());
+                            return Err(StdError::generic_err("Unauthorized"));
+
                         }
                     }
-                    _ => return Err(StdError::unauthorized()),
+                    _ => return Err(StdError::generic_err("Unauthorized")),
                 }
 
                 auth_queries(deps, query, user)
@@ -375,13 +374,12 @@ pub fn query(
 
             QueryMsg::WithPermit { permit, query } => {
                 // Query Permit info
-                let authenticator = Config::load(&deps.storage)?.query;
+                let authenticator = Config::load(deps.storage)?.query;
                 let _args: QueryData = from_binary(&permit.params.data)?;
                 let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidatePermit { permit }
                     .query(
                         &deps.querier,
-                        authenticator.code_hash,
-                        authenticator.address,
+                        &authenticator,
                     )?;
 
                 let sender: Addr;
@@ -390,10 +388,10 @@ pub fn query(
                     query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
                         sender = user;
                         if is_revoked {
-                            return Err(StdError::unauthorized());
+                            return Err(StdError::generic_err("Unauthorized"));
                         }
                     }
-                    _ => return Err(StdError::unauthorized()),
+                    _ => return Err(StdError::generic_err("Unauthorized")),
                 }
 
                 auth_queries(deps, query, sender)
@@ -403,8 +401,8 @@ pub fn query(
     )
 }
 
-pub fn auth_queries<A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn auth_queries(
+    deps: Deps,
     msg: AuthQuery,
     user: Addr,
 ) -> StdResult<Binary> {

@@ -72,7 +72,7 @@ pub fn try_assembly_vote(
     Proposal::save_assembly_votes(deps.storage, &proposal, &tally.checked_add(&vote)?)?;
 
     // Save data for user queries
-    UserID::add_assembly_vote(&mut deps.storage, sender.clone(), proposal.clone())?;
+    UserID::add_assembly_vote(deps.storage, sender.clone(), proposal.clone())?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::AssemblyVote {
             status: ResponseStatus::Success,
@@ -186,7 +186,7 @@ pub fn try_assembly_proposal(
         funders: None,
     };
 
-    prop.save(&mut deps.storage)?;
+    prop.save(deps.storage)?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::AssemblyProposal {
             status: ResponseStatus::Success,

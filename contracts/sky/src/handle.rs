@@ -28,10 +28,10 @@ pub fn try_update_config(
     payback_rate: Option<Decimal>,
 ) -> StdResult<HandleResponse> {
     //Admin-only
-    let mut config = Config::load(&mut deps.storage)?;
+    let mut config = Config::load(deps.storage)?;
     let admin_response: ValidateAdminPermissionResponse =
         admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            contract_address: SelfAddr::load(deps.storage)?.0.to_string(),
             admin_address: env.message.sender.to_string(),
         }
         .query(
@@ -41,7 +41,7 @@ pub fn try_update_config(
         )?;
 
     if admin_response.error_msg.is_some() {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("Unauthorized"));
     }
 
     let mut messages = vec![];
@@ -52,7 +52,7 @@ pub fn try_update_config(
     if let Some(shd_token) = shd_token {
         config.shd_token = shd_token;
         messages.push(set_viewing_key_msg(
-            ViewingKeys::load(&deps.storage)?.0,
+            ViewingKeys::load(deps.storage)?.0,
             None,
             1,
             config.shd_token.code_hash.clone(),
@@ -62,7 +62,7 @@ pub fn try_update_config(
     if let Some(silk_token) = silk_token {
         config.silk_token = silk_token;
         messages.push(set_viewing_key_msg(
-            ViewingKeys::load(&deps.storage)?.0,
+            ViewingKeys::load(deps.storage)?.0,
             None,
             1,
             config.silk_token.code_hash.clone(),
@@ -72,7 +72,7 @@ pub fn try_update_config(
     if let Some(sscrt_token) = sscrt_token {
         config.sscrt_token = sscrt_token;
         messages.push(set_viewing_key_msg(
-            ViewingKeys::load(&deps.storage)?.0,
+            ViewingKeys::load(deps.storage)?.0,
             None,
             1,
             config.sscrt_token.code_hash.clone(),
@@ -88,7 +88,7 @@ pub fn try_update_config(
         }
         config.payback_rate = payback_rate;
     }
-    config.save(&mut deps.storage)?;
+    config.save(deps.storage)?;
     Ok(HandleResponse {
         messages,
         log: vec![],
@@ -96,22 +96,22 @@ pub fn try_update_config(
     })
 }
 
-pub fn try_set_cycles<A: Api, Q: Querier>(
+pub fn try_set_cycles(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     cycles_to_set: Vec<Cycle>,
 ) -> StdResult<HandleResponse> {
     //Admin-only
-    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let shade_admin = Config::load(deps.storage)?.shade_admin;
     let admin_response: ValidateAdminPermissionResponse =
         admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            contract_address: SelfAddr::load(deps.storage)?.0.to_string(),
             admin_address: env.message.sender.to_string(),
         }
         .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
 
     if admin_response.error_msg.is_some() {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("Unauthorized"));
     }
 
     if cycles_to_set.clone().len() > 40 {
@@ -124,7 +124,7 @@ pub fn try_set_cycles<A: Api, Q: Querier>(
     }
 
     let new_cycles = Cycles(cycles_to_set);
-    new_cycles.save(&mut deps.storage)?;
+    new_cycles.save(deps.storage)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -133,29 +133,29 @@ pub fn try_set_cycles<A: Api, Q: Querier>(
     })
 }
 
-pub fn try_append_cycle<A: Api, Q: Querier>(
+pub fn try_append_cycle(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     cycles_to_add: Vec<Cycle>,
 ) -> StdResult<HandleResponse> {
     //Admin-only
-    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let shade_admin = Config::load(deps.storage)?.shade_admin;
     let admin_response: ValidateAdminPermissionResponse =
         admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            contract_address: SelfAddr::load(deps.storage)?.0.to_string(),
             admin_address: env.message.sender.to_string(),
         }
         .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
 
     if admin_response.error_msg.is_some() {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("Unauthorized"));
     }
 
     for cycle in cycles_to_add.clone() {
         cycle.validate_cycle()?;
     }
 
-    let mut cycles = Cycles::load(&deps.storage)?;
+    let mut cycles = Cycles::load(deps.storage)?;
 
     if cycles.0.clone().len() + cycles_to_add.clone().len() > 40 {
         return Err(StdError::generic_err("Too many cycles"));
@@ -163,7 +163,7 @@ pub fn try_append_cycle<A: Api, Q: Querier>(
 
     cycles.0.append(&mut cycles_to_add.clone());
 
-    cycles.save(&mut deps.storage)?;
+    cycles.save(deps.storage)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -172,7 +172,7 @@ pub fn try_append_cycle<A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_cycle<A: Api, Q: Querier>(
+pub fn try_update_cycle(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     cycle: Cycle,
@@ -180,25 +180,25 @@ pub fn try_update_cycle<A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     let i = index.u128() as usize;
     // Admin-only
-    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let shade_admin = Config::load(deps.storage)?.shade_admin;
     let admin_response: ValidateAdminPermissionResponse =
         admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            contract_address: SelfAddr::load(deps.storage)?.0.to_string(),
             admin_address: env.message.sender.to_string(),
         }
         .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
 
     if admin_response.error_msg.is_some() {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("Unauthorized"));
     }
 
     cycle.validate_cycle()?;
-    let mut cycles = Cycles::load(&deps.storage)?;
+    let mut cycles = Cycles::load(deps.storage)?;
     if i > cycles.0.clone().len() - 1 {
         return Err(StdError::generic_err("index out of bounds"));
     }
     cycles.0[i] = cycle;
-    cycles.save(&mut deps.storage)?;
+    cycles.save(deps.storage)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -207,34 +207,34 @@ pub fn try_update_cycle<A: Api, Q: Querier>(
     })
 }
 
-pub fn try_remove_cycle<A: Api, Q: Querier>(
+pub fn try_remove_cycle(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     index: Uint128,
 ) -> StdResult<HandleResponse> {
     let i = index.u128() as usize;
     //Admin-only
-    let shade_admin = Config::load(&mut deps.storage)?.shade_admin;
+    let shade_admin = Config::load(deps.storage)?.shade_admin;
     let admin_response: ValidateAdminPermissionResponse =
         admin::QueryMsg::ValidateAdminPermission {
-            contract_address: SelfAddr::load(&mut deps.storage)?.0.to_string(),
+            contract_address: SelfAddr::load(deps.storage)?.0.to_string(),
             admin_address: env.message.sender.to_string(),
         }
         .query(&deps.querier, shade_admin.code_hash, shade_admin.address)?;
 
     if admin_response.error_msg.is_some() {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("Unauthorized"));
     }
 
     // I'm pissed I couldn't do this in one line
-    let mut cycles = Cycles::load(&deps.storage)?.0;
+    let mut cycles = Cycles::load(deps.storage)?.0;
 
     if i > cycles.clone().len() - 1 {
         return Err(StdError::generic_err("index out of bounds"));
     }
 
     cycles.remove(i);
-    Cycles(cycles).save(&mut deps.storage)?;
+    Cycles(cycles).save(deps.storage)?;
 
     Ok(HandleResponse {
         messages: vec![],
@@ -243,7 +243,7 @@ pub fn try_remove_cycle<A: Api, Q: Querier>(
     })
 }
 
-pub fn try_arb_cycle<A: Api, Q: Querier>(
+pub fn try_arb_cycle(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     info: MessageInfo,
@@ -312,7 +312,7 @@ pub fn try_arb_cycle<A: Api, Q: Querier>(
                 }
             }
             // calculate payback amount
-            payback_amount = profit * Config::load(&deps.storage)?.payback_rate;
+            payback_amount = profit * Config::load(deps.storage)?.payback_rate;
 
             // add the payback msg
             messages.push(send_msg(
@@ -330,7 +330,7 @@ pub fn try_arb_cycle<A: Api, Q: Querier>(
     }
 
     // the final cur_asset should be the same as the start_addr
-    if !(cur_asset.clone() == Cycles::load(&deps.storage)?.0[i].start_addr) {
+    if !(cur_asset.clone() == Cycles::load(deps.storage)?.0[i].start_addr) {
         return Err(StdError::generic_err(
             "final asset not equal to start asset",
         ));
@@ -347,7 +347,7 @@ pub fn try_arb_cycle<A: Api, Q: Querier>(
     })
 }
 
-pub fn try_arb_all_cycles<A: Api, Q: Querier>(
+pub fn try_arb_all_cycles(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     info: MessageInfo,
@@ -386,7 +386,7 @@ pub fn try_arb_all_cycles<A: Api, Q: Querier>(
         _ => {}
     }
     // calculate payback_amount
-    let payback_amount = total_profit * Config::load(&deps.storage)?.payback_rate;
+    let payback_amount = total_profit * Config::load(deps.storage)?.payback_rate;
     Ok(HandleResponse {
         messages,
         log: vec![],
@@ -397,16 +397,16 @@ pub fn try_arb_all_cycles<A: Api, Q: Querier>(
     })
 }
 
-pub fn try_adapter_unbond<A: Api, Q: Querier>(
+pub fn try_adapter_unbond(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
-    let config = Config::load(&deps.storage)?;
+    let config = Config::load(deps.storage)?;
     // Error out if anyone other than the treasury is asking for money
     if !(env.message.sender == config.treasury.address) {
-        return Err(StdError::unauthorized());
+        return Err(StdError::generic_err("Unauthorized"));
     }
     // Error out if the treasury is asking for an asset sky doesn't account for
     if !(config.shd_token.address == asset
@@ -450,7 +450,7 @@ pub fn try_adapter_unbond<A: Api, Q: Querier>(
 }
 
 // Unessesary for sky
-pub fn try_adapter_claim<A: Api, Q: Querier>(
+pub fn try_adapter_claim(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     _asset: Addr,
@@ -466,7 +466,7 @@ pub fn try_adapter_claim<A: Api, Q: Querier>(
 }
 
 // Unessesary for sky
-pub fn try_adapter_update<A: Api, Q: Querier>(
+pub fn try_adapter_update(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     _asset: Addr,

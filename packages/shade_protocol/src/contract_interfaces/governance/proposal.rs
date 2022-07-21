@@ -58,7 +58,7 @@ const PUBLIC_VOTES: &'static [u8] = b"total-public-votes-";
 
 #[cfg(feature = "governance-impl")]
 impl Proposal {
-    pub fn save(&self, storage: &mut dyn Storage, id: &Uint128) -> StdResult<()> {
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
         // Create new ID
         let id = &ID::add_proposal(storage)?;
 

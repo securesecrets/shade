@@ -318,7 +318,7 @@ pub fn try_update(
                                 let config = Config::load(deps.storage)?;
                                 // Update slash amount
                                 messages.push(send_msg(
-                                    config.treasury,
+                                    config.treasury.into(),
                                     Uint128::new(send_amount.u128()),
                                     None,
                                     None,
@@ -436,7 +436,7 @@ pub fn try_receive_funding(
         })?;
 
         // Add funding info to cross search
-        UserID::add_funding(&mut deps.storage, from.clone(), proposal.clone())?;
+        UserID::add_funding(deps.storage, from.clone(), proposal.clone())?;
     } else {
         return Err(StdError::generic_err("Not in funding status"));
     }
@@ -444,7 +444,7 @@ pub fn try_receive_funding(
     let mut messages = vec![];
     if return_amount != Uint128::zero() {
         messages.push(send_msg(
-            from,
+            from.into(),
             return_amount.into(),
             None,
             None,
@@ -495,7 +495,7 @@ pub fn try_claim_funding(
 
     Ok(Response::new()
         .add_message(send_msg(
-            info.sender,
+            info.sender.into(),
             return_amount.into(),
             None,
             None,

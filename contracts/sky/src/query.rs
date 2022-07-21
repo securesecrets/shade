@@ -24,9 +24,9 @@ pub fn config(
 pub fn get_balances(
     deps: Deps
 ) -> StdResult<QueryAnswer> {
-    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
-    let self_addr = SelfAddr::load(&deps.storage)?.0;
-    let config = Config::load(&deps.storage)?;
+    let viewing_key = ViewingKeys::load(deps.storage)?.0;
+    let self_addr = SelfAddr::load(deps.storage)?.0;
+    let config = Config::load(deps.storage)?;
 
     // Query shd balance
     let mut res = snip20::QueryMsg::Balance {
@@ -83,12 +83,12 @@ pub fn get_balances(
     })
 }
 
-pub fn get_cycles<A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn get_cycles(
+    deps: Deps,
 ) -> StdResult<QueryAnswer> {
     //Need to make private eventually
     Ok(QueryAnswer::GetCycles {
-        cycles: Cycles::load(&deps.storage)?.0,
+        cycles: Cycles::load(deps.storage)?.0,
     })
 }
 
@@ -97,7 +97,7 @@ pub fn cycle_profitability(
     amount: Uint128,
     index: Uint128,
 ) -> StdResult<QueryAnswer> {
-    let mut cycles = Cycles::load(&deps.storage)?.0;
+    let mut cycles = Cycles::load(deps.storage)?.0;
     let mut swap_amounts = vec![amount];
     let i = index.u128() as usize;
 
@@ -201,7 +201,7 @@ pub fn any_cycles_profitable(
     deps: Deps,
     amount: Uint128
 ) -> StdResult<QueryAnswer> {
-    let cycles = Cycles::load(&deps.storage)?.0;
+    let cycles = Cycles::load(deps.storage)?.0;
     let mut return_is_profitable = vec![];
     let mut return_directions = vec![];
     let mut return_swap_amounts = vec![];
@@ -240,13 +240,13 @@ pub fn any_cycles_profitable(
     })
 }
 
-pub fn adapter_balance<A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn adapter_balance(
+    deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = Config::load(&deps.storage)?;
-    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
-    let self_addr = SelfAddr::load(&deps.storage)?.0;
+    let config = Config::load(deps.storage)?;
+    let viewing_key = ViewingKeys::load(deps.storage)?.0;
+    let self_addr = SelfAddr::load(deps.storage)?.0;
 
     let contract;
     if config.shd_token.address == asset {
@@ -281,8 +281,8 @@ pub fn adapter_balance<A: Api, Q: Querier>(
     })
 }
 
-pub fn adapter_claimable<A: Api, Q: Querier>(
-    _deps: &Extern<S, A, Q>,
+pub fn adapter_claimable(
+    _deps: Deps,
     _asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     Ok(adapter::QueryAnswer::Claimable {
@@ -291,13 +291,13 @@ pub fn adapter_claimable<A: Api, Q: Querier>(
 }
 
 // Same as adapter_balance
-pub fn adapter_unbondable<A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn adapter_unbondable(
+    deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = Config::load(&deps.storage)?;
-    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
-    let self_addr = SelfAddr::load(&deps.storage)?.0;
+    let config = Config::load(deps.storage)?;
+    let viewing_key = ViewingKeys::load(deps.storage)?.0;
+    let self_addr = SelfAddr::load(deps.storage)?.0;
 
     let contract;
     if config.shd_token.address == asset {
@@ -332,8 +332,8 @@ pub fn adapter_unbondable<A: Api, Q: Querier>(
     })
 }
 
-pub fn adapter_unbonding<A: Api, Q: Querier>(
-    _deps: &Extern<S, A, Q>,
+pub fn adapter_unbonding(
+    _deps: Deps,
     _asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     Ok(adapter::QueryAnswer::Unbonding {
@@ -342,13 +342,13 @@ pub fn adapter_unbonding<A: Api, Q: Querier>(
 }
 
 // Same as adapter_balance
-pub fn adapter_reserves<A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn adapter_reserves(
+    deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let config = Config::load(&deps.storage)?;
-    let viewing_key = ViewingKeys::load(&deps.storage)?.0;
-    let self_addr = SelfAddr::load(&deps.storage)?.0;
+    let config = Config::load(deps.storage)?;
+    let viewing_key = ViewingKeys::load(deps.storage)?.0;
+    let self_addr = SelfAddr::load(deps.storage)?.0;
 
     let contract;
     if config.shd_token.address == asset {
