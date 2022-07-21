@@ -12,7 +12,7 @@ use shade_protocol::c_std::{to_binary, Binary, Addr, StdResult};
 use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
 use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::{
-    c_std::{to_binary, HumanAddr, StdResult},
+    c_std::{to_binary, Addr, StdResult},
     contract_interfaces::{
         governance,
         governance::{
@@ -105,15 +105,15 @@ pub fn init_funding_governance_with_proposal() -> StdResult<(
         .unwrap();
 
     let gov = harness::governance::init(&mut chain, &InitMsg {
-        treasury: HumanAddr::unchecked("treasury"),
+        treasury: Addr::unchecked("treasury"),
         query_auth: Contract {
             address: auth.address,
             code_hash: auth.code_hash,
         },
         admin_members: vec![
-            HumanAddr::unchecked("alpha"),
-            HumanAddr::unchecked("beta"),
-            HumanAddr::unchecked("charlie"),
+            Addr::unchecked("alpha"),
+            Addr::unchecked("beta"),
+            Addr::unchecked("charlie"),
         ],
         admin_profile: Profile {
             name: "admin".to_string(),
@@ -306,7 +306,7 @@ fn assembly_to_funding_transition() {
 
     assert_eq!(prop.title, "Title".to_string());
     assert_eq!(prop.metadata, "Text only proposal".to_string());
-    assert_eq!(prop.proposer, HumanAddr::unchecked("alpha"));
+    assert_eq!(prop.proposer, Addr::unchecked("alpha"));
     assert_eq!(prop.assembly, Uint128::new(1));
 
     // Check that history works
@@ -769,7 +769,7 @@ fn claim_after_passing() {
 
     assert_eq!(
         prop.funders.unwrap()[0],
-        (HumanAddr::unchecked("alpha"), Uint128::new(2000))
+        (Addr::unchecked("alpha"), Uint128::new(2000))
     );
 
     let query: snip20::QueryAnswer = chain
@@ -792,8 +792,8 @@ fn claim_after_passing() {
 
 fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
     ContractEnsemble,
-    ContractLink<HumanAddr>,
-    ContractLink<HumanAddr>,
+    ContractLink<Addr>,
+    ContractLink<Addr>,
 )> {
     let mut chain = ContractEnsemble::new(50);
 
@@ -809,15 +809,15 @@ fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
                 decimals: 6,
                 initial_balances: Some(vec![
                     snip20::InitialBalance {
-                        address: HumanAddr::unchecked("alpha"),
+                        address: Addr::unchecked("alpha"),
                         amount: Uint128::new(10000),
                     },
                     snip20::InitialBalance {
-                        address: HumanAddr::unchecked("beta"),
+                        address: Addr::unchecked("beta"),
                         amount: Uint128::new(10000),
                     },
                     snip20::InitialBalance {
-                        address: HumanAddr::unchecked("charlie"),
+                        address: Addr::unchecked("charlie"),
                         amount: Uint128::new(10000),
                     },
                 ]),
@@ -834,15 +834,15 @@ fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
     // Register governance
     let auth = init_query_auth(&mut chain)?;
     let gov = harness::governance::init(&mut chain, &InitMsg {
-        treasury: HumanAddr::unchecked("treasury"),
+        treasury: Addr::unchecked("treasury"),
         query_auth: Contract {
             address: auth.address,
             code_hash: auth.code_hash,
         },
         admin_members: vec![
-            HumanAddr::unchecked("alpha"),
-            HumanAddr::unchecked("beta"),
-            HumanAddr::unchecked("charlie"),
+            Addr::unchecked("alpha"),
+            Addr::unchecked("beta"),
+            Addr::unchecked("charlie"),
         ],
         admin_profile: Profile {
             name: "admin".to_string(),
@@ -905,7 +905,7 @@ fn funding_privacy() {
             },
             MockEnv::new(
                 // Sender is self
-                HumanAddr::unchecked("alpha"),
+                Addr::unchecked("alpha"),
                 snip20.clone(),
             ),
         )

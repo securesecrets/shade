@@ -22,7 +22,7 @@ macro_rules! implement_harness {
             }
         }
 
-        pub fn init<T: Serialize>(chain: &mut ContractEnsemble, msg: &T) -> StdResult<ContractLink<HumanAddr>> {
+        pub fn init<T: Serialize>(chain: &mut ContractEnsemble, msg: &T) -> StdResult<ContractLink<Addr>> {
             let contract = chain.register(Box::new($x));
             let contract = chain.instantiate(
                 contract.id,

@@ -29,7 +29,7 @@ use cosmwasm_std::{
     Env,
     Extern,
     HandleResponse,
-    HumanAddr,
+    Addr,
     InitResponse,
     StdError,
     StdResult,
@@ -62,18 +62,18 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             reg_snip20.id,
             &snip20_reference_impl::msg::InitMsg {
                 name: "secretSCRT".into(),
-                admin: Some(HumanAddr("admin".into())),
+                admin: Some(Addr("admin".into())),
                 symbol: "SSCRT".into(),
                 decimals: 6,
                 initial_balances: Some(vec![snip20_reference_impl::msg::InitialBalance {
-                    address: HumanAddr("admin".into()),
+                    address: Addr("admin".into()),
                     amount: cosmwasm_std::Uint128(100000000000), // 100,000 SSCRT
                 }]),
                 prng_seed: to_binary("").ok().unwrap(),
                 config: None,
             },
             MockEnv::new("admin", ContractLink {
-                address: HumanAddr("sscrt".into()),
+                address: Addr("sscrt".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
@@ -87,18 +87,18 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             reg_snip20.id,
             &snip20_reference_impl::msg::InitMsg {
                 name: "Shade".into(),
-                admin: Some(HumanAddr("admin".into())),
+                admin: Some(Addr("admin".into())),
                 symbol: "SHD".into(),
                 decimals: 8,
                 initial_balances: Some(vec![snip20_reference_impl::msg::InitialBalance {
-                    address: HumanAddr("admin".into()),
+                    address: Addr("admin".into()),
                     amount: cosmwasm_std::Uint128(10000000000000), // 100,000 SHD
                 }]),
                 prng_seed: to_binary("").ok().unwrap(),
                 config: None,
             },
             MockEnv::new("admin", ContractLink {
-                address: HumanAddr("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek".into()),
+                address: Addr("secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
@@ -112,18 +112,18 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             reg_snip20.id,
             &snip20_reference_impl::msg::InitMsg {
                 name: "Silk".into(),
-                admin: Some(HumanAddr("admin".into())),
+                admin: Some(Addr("admin".into())),
                 symbol: "SILK".into(),
                 decimals: 6,
                 initial_balances: Some(vec![snip20_reference_impl::msg::InitialBalance {
-                    address: HumanAddr("admin".into()),
+                    address: Addr("admin".into()),
                     amount: cosmwasm_std::Uint128(100000000000), // 100,000 SILK
                 }]),
                 prng_seed: to_binary("").ok().unwrap(),
                 config: None,
             },
             MockEnv::new("admin", ContractLink {
-                address: HumanAddr("secret14m2ffr7fyjhzv8cdknn2yp8sneht3luvsh9495".into()),
+                address: Addr("secret14m2ffr7fyjhzv8cdknn2yp8sneht3luvsh9495".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }),
         )
@@ -224,11 +224,11 @@ fn test_ensemble_sky(swap_amount: Uint128) {
                 sienna_fee: factory::Fee { nom: 0, denom: 0 },
                 sienna_burner: None,
             },
-            admin: Some(HumanAddr("admin".into())),
+            admin: Some(Addr("admin".into())),
             prng_seed: to_binary("").ok().unwrap(),
         },
         MockEnv::new("admin", ContractLink {
-            address: HumanAddr("reg_sienna_factory".into()),
+            address: Addr("reg_sienna_factory".into()),
             code_hash: reg_sienna_factory.code_hash.clone(),
         }),
     ).unwrap();
@@ -278,7 +278,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             entropy: to_binary("").ok().unwrap(),
         },
         MockEnv::new("admin", ContractLink {
-            address: HumanAddr("reg_sienna_exchange".into()),
+            address: Addr("reg_sienna_exchange".into()),
             code_hash: reg_sienna_exchange.code_hash.clone(),
         }),
     ).unwrap();*/
@@ -311,8 +311,8 @@ pub struct InitMsg {
     pub lp_token_contract: ContractInstantiationInfo,
     /// Used by the exchange contract to
     /// send back its address to the factory on init
-    pub factory_info: ContractLink<HumanAddr>,
-    pub callback: Callback<HumanAddr>,
+    pub factory_info: ContractLink<Addr>,
+    pub callback: Callback<Addr>,
     pub prng_seed: Binary,
     pub entropy: Binary,
 }*/

@@ -94,7 +94,7 @@ pub fn init(
 
     //TODO need this query
     let reward_token: Contract = Contract {
-        address: HumanAddr("".into()),
+        address: Addr("".into()),
         code_hash: "".into(),
     };
 

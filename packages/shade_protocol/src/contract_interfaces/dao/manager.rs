@@ -6,7 +6,7 @@ use cosmwasm_std::{
     Decimal,
     Delegation,
     Extern,
-    HumanAddr,
+    Addr,
     Querier,
     StdError,
     StdResult,
@@ -22,10 +22,10 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub enum SubHandleMsg {
     // Begin unbonding amount
-    Unbond { asset: HumanAddr, amount: Uint128 },
-    Claim { asset: HumanAddr },
+    Unbond { asset: Addr, amount: Uint128 },
+    Claim { asset: Addr },
     // Maintenance trigger e.g. claim rewards and restake
-    Update { asset: HumanAddr },
+    Update { asset: Addr },
 }
 
 impl HandleCallback for SubHandleMsg {
@@ -47,7 +47,7 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     Init {
         status: ResponseStatus,
-        address: HumanAddr,
+        address: Addr,
     },
     Unbond {
         status: ResponseStatus,
@@ -65,11 +65,11 @@ pub enum HandleAnswer {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SubQueryMsg {
-    Balance { asset: HumanAddr, holder: HumanAddr, },
-    Unbonding { asset: HumanAddr, holder: HumanAddr, },
-    Claimable { asset: HumanAddr, holder: HumanAddr,  },
-    Unbondable { asset: HumanAddr, holder: HumanAddr, },
-    Reserves { asset: HumanAddr, holder: HumanAddr, },
+    Balance { asset: Addr, holder: Addr, },
+    Unbonding { asset: Addr, holder: Addr, },
+    Claimable { asset: Addr, holder: Addr,  },
+    Unbondable { asset: Addr, holder: Addr, },
+    Reserves { asset: Addr, holder: Addr, },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -94,8 +94,8 @@ pub enum QueryAnswer {
 
 pub fn claimable_query(
     deps: DepsMut,
-    asset: &HumanAddr,
-    holder: HumanAddr,
+    asset: &Addr,
+    holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Manager(SubQueryMsg::Claimable {
@@ -114,8 +114,8 @@ pub fn claimable_query(
 
 pub fn unbonding_query(
     deps: DepsMut,
-    asset: &HumanAddr,
-    holder: HumanAddr,
+    asset: &Addr,
+    holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Manager(SubQueryMsg::Unbonding {
@@ -134,8 +134,8 @@ pub fn unbonding_query(
 
 pub fn unbondable_query(
     deps: DepsMut,
-    asset: &HumanAddr,
-    holder: HumanAddr,
+    asset: &Addr,
+    holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Manager(SubQueryMsg::Unbondable {
@@ -154,8 +154,8 @@ pub fn unbondable_query(
 
 pub fn reserves_query(
     deps: DepsMut,
-    asset: &HumanAddr,
-    holder: HumanAddr,
+    asset: &Addr,
+    holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
 
@@ -172,8 +172,8 @@ pub fn reserves_query(
 
 pub fn balance_query(
     deps: DepsMut,
-    asset: &HumanAddr,
-    holder: HumanAddr,
+    asset: &Addr,
+    holder: Addr,
     manager: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Manager(SubQueryMsg::Balance {
@@ -190,7 +190,7 @@ pub fn balance_query(
     }
 }
 
-pub fn claim_msg(asset: HumanAddr, manager: Contract) -> StdResult<CosmosMsg> {
+pub fn claim_msg(asset: Addr, manager: Contract) -> StdResult<CosmosMsg> {
     HandleMsg::Manager(SubHandleMsg::Claim { asset }).to_cosmos_msg(
         manager.code_hash,
         manager.address,
@@ -198,7 +198,7 @@ pub fn claim_msg(asset: HumanAddr, manager: Contract) -> StdResult<CosmosMsg> {
     )
 }
 
-pub fn unbond_msg(asset: HumanAddr, amount: Uint128, manager: Contract) -> StdResult<CosmosMsg> {
+pub fn unbond_msg(asset: Addr, amount: Uint128, manager: Contract) -> StdResult<CosmosMsg> {
     HandleMsg::Manager(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
         manager.code_hash,
         manager.address,
@@ -206,7 +206,7 @@ pub fn unbond_msg(asset: HumanAddr, amount: Uint128, manager: Contract) -> StdRe
     )
 }
 
-pub fn update_msg(asset: HumanAddr, manager: Contract) -> StdResult<CosmosMsg> {
+pub fn update_msg(asset: Addr, manager: Contract) -> StdResult<CosmosMsg> {
     HandleMsg::Manager(SubHandleMsg::Update { asset }).to_cosmos_msg(
         manager.code_hash,
         manager.address,

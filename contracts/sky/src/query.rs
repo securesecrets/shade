@@ -242,7 +242,7 @@ pub fn any_cycles_profitable(
 
 pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
     let viewing_key = ViewingKeys::load(&deps.storage)?.0;
@@ -283,7 +283,7 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
 
 pub fn adapter_claimable<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
-    _asset: HumanAddr,
+    _asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     Ok(adapter::QueryAnswer::Claimable {
         amount: c_std::Uint128::zero(),
@@ -293,7 +293,7 @@ pub fn adapter_claimable<S: Storage, A: Api, Q: Querier>(
 // Same as adapter_balance
 pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
     let viewing_key = ViewingKeys::load(&deps.storage)?.0;
@@ -334,7 +334,7 @@ pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
 
 pub fn adapter_unbonding<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
-    _asset: HumanAddr,
+    _asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     Ok(adapter::QueryAnswer::Unbonding {
         amount: c_std::Uint128::zero(),
@@ -344,7 +344,7 @@ pub fn adapter_unbonding<S: Storage, A: Api, Q: Querier>(
 // Same as adapter_balance
 pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
     let config = Config::load(&deps.storage)?;
     let viewing_key = ViewingKeys::load(&deps.storage)?.0;

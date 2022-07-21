@@ -1,6 +1,6 @@
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
-    Extern, HumanAddr, StdError,
+    Extern, Addr, StdError,
     Binary, StdResult, HandleResponse, Env,
     InitResponse, Uint128,
 };
@@ -58,7 +58,7 @@ fn single_asset_holder_no_adapters(
             decimals: 6,
             initial_balances: Some(vec![
                 snip20_reference_impl::msg::InitialBalance {
-                    address: HumanAddr("holder".into()),
+                    address: Addr("holder".into()),
                     amount: initial,
                 },
             ]),
@@ -68,7 +68,7 @@ fn single_asset_holder_no_adapters(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("token".into()),
+                address: Addr("token".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }
         )
@@ -77,14 +77,14 @@ fn single_asset_holder_no_adapters(
     let manager = ensemble.instantiate(
         reg_manager.id,
         &treasury_manager::InitMsg {
-            admin: Some(HumanAddr("admin".into())),
-            treasury: HumanAddr("treasury".into()),
+            admin: Some(Addr("admin".into())),
+            treasury: Addr("treasury".into()),
             viewing_key: viewing_key.clone(),
         },
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("manager".into()),
+                address: Addr("manager".into()),
                 code_hash: reg_manager.code_hash,
             }
         )
@@ -119,7 +119,7 @@ fn single_asset_holder_no_adapters(
     // Add 'holder' as holder
     ensemble.execute(
         &treasury_manager::HandleMsg::AddHolder {
-            holder: HumanAddr("holder".into())
+            holder: Addr("holder".into())
         },
         MockEnv::new(
             "admin",
@@ -151,7 +151,7 @@ fn single_asset_holder_no_adapters(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Balance {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -166,7 +166,7 @@ fn single_asset_holder_no_adapters(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
             asset: token.address.clone(),
-            holder: HumanAddr("treasury".into()),
+            holder: Addr("treasury".into()),
         })
     ).unwrap() {
         manager::QueryAnswer::Balance { amount } => {
@@ -180,7 +180,7 @@ fn single_asset_holder_no_adapters(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         })
     ).unwrap() {
         manager::QueryAnswer::Balance { amount } => {
@@ -193,7 +193,7 @@ fn single_asset_holder_no_adapters(
     match ensemble.query(
         token.address.clone(),
         &snip20_reference_impl::msg::QueryMsg::Balance {
-            address: HumanAddr("holder".into()),
+            address: Addr("holder".into()),
             key: viewing_key.clone(),
         }
     ).unwrap() {
@@ -210,7 +210,7 @@ fn single_asset_holder_no_adapters(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         })
     ).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
@@ -224,7 +224,7 @@ fn single_asset_holder_no_adapters(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         })
     ).unwrap() {
         manager::QueryAnswer::Reserves { amount } => {
@@ -252,7 +252,7 @@ fn single_asset_holder_no_adapters(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         })
     ).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
@@ -265,7 +265,7 @@ fn single_asset_holder_no_adapters(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Unbondable {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -281,7 +281,7 @@ fn single_asset_holder_no_adapters(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Unbonding {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -295,7 +295,7 @@ fn single_asset_holder_no_adapters(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Unbonding {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -311,7 +311,7 @@ fn single_asset_holder_no_adapters(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Claimable {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -325,7 +325,7 @@ fn single_asset_holder_no_adapters(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Claimable {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -341,7 +341,7 @@ fn single_asset_holder_no_adapters(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Balance {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         ),
     ).unwrap() {
@@ -357,7 +357,7 @@ fn single_asset_holder_no_adapters(
     match ensemble.query(
         token.address.clone(),
         &snip20_reference_impl::msg::QueryMsg::Balance {
-            address: HumanAddr("holder".into()),
+            address: Addr("holder".into()),
             key: viewing_key.clone(),
         },
     ).unwrap() {

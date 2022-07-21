@@ -146,7 +146,7 @@ pub fn rebalance(
     let managers = MANAGERS.load(&deps.storage)?;
 
     // manager_addr: (balance, allowance)
-    let mut manager_data: HashMap<HumanAddr, (Uint128, Uint128)> = HashMap::new();
+    let mut manager_data: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
 
     // Total amount of funds that are "out" or allocated to an manager (sky, scrt_staking)
     let mut out_balance = Uint128::zero();
@@ -617,7 +617,7 @@ pub fn allowance(
 pub fn claim<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: &Env,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<HandleResponse> {
 
     let managers = MANAGERS.load(&deps.storage)?;

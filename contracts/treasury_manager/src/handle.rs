@@ -140,7 +140,7 @@ pub fn try_register_asset(
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    ASSET_LIST.update(&mut deps.storage, |mut list| -> StdResult<Vec<HumanAddr>> {
+    ASSET_LIST.update(&mut deps.storage, |mut list| -> StdResult<Vec<Addr>> {
         list.push(contract.address.clone());
         Ok(list)
     })?;
@@ -871,9 +871,9 @@ pub fn remove_holder(
 /*
 pub fn distribute_gain(
     gain: Uint128,
-    token: HumanAddr,
-    holders: &mut HashMap<HumanAddr, Holding>,
-) -> StdResult<HashMap<HumanAddr, Holding>> {
+    token: Addr,
+    holders: &mut HashMap<Addr, Holding>,
+) -> StdResult<HashMap<Addr, Holding>> {
     let ratios = holding_ratios(&mut holders);
 
     for addr, holder  in holders {
@@ -888,8 +888,8 @@ pub fn distribute_gain(
 
 pub fn distribute_loss(
     loss: Uint128,
-    token: HumanAddr,
-    holders: mut HashMap<HumanAddr, Holding>,
+    token: Addr,
+    holders: mut HashMap<Addr, Holding>,
 ) -> StdResult<Vec<Holding>> {
     let ratios = holding_ratios(&mut holders);
 
@@ -897,14 +897,14 @@ pub fn distribute_loss(
 }
 */
 
-/* Builds a map of { HumanAddr: <asset_portion * 10^18> }
+/* Builds a map of { Addr: <asset_portion * 10^18> }
  */
 pub fn holding_shares(
-    holdings: HashMap<HumanAddr, Holding>,
-    asset: HumanAddr,
-) -> HashMap<HumanAddr, Uint128> {
+    holdings: HashMap<Addr, Holding>,
+    asset: Addr,
+) -> HashMap<Addr, Uint128> {
 
-    let mut ratios: HashMap<HumanAddr, Uint128> = HashMap::new();
+    let mut ratios: HashMap<Addr, Uint128> = HashMap::new();
     let denominator = 10u128.pow(18);
 
     let total = holdings

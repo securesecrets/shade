@@ -1,7 +1,7 @@
 use shade_protocol::math_compat as compat;
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
-    Extern, HumanAddr, StdError,
+    Extern, Addr, StdError,
     Binary, StdResult, HandleResponse, Env,
     InitResponse, Uint128,
     Coin, Decimal,
@@ -83,7 +83,7 @@ fn single_asset_portion_manager_integration(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("token".into()),
+                address: Addr("token".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }
         )
@@ -92,13 +92,13 @@ fn single_asset_portion_manager_integration(
     let treasury = ensemble.instantiate(
         reg_treasury.id,
         &treasury::InitMsg {
-            admin: Some(HumanAddr("admin".into())),
+            admin: Some(Addr("admin".into())),
             viewing_key: "viewing_key".to_string(),
         },
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("treasury".into()),
+                address: Addr("treasury".into()),
                 code_hash: reg_treasury.code_hash,
             }
         )
@@ -107,14 +107,14 @@ fn single_asset_portion_manager_integration(
     let manager = ensemble.instantiate(
         reg_manager.id,
         &treasury_manager::InitMsg {
-            admin: Some(HumanAddr("admin".into())),
-            treasury: HumanAddr("treasury".into()),
+            admin: Some(Addr("admin".into())),
+            treasury: Addr("treasury".into()),
             viewing_key: "viewing_key".to_string(),
         },
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("manager".into()),
+                address: Addr("manager".into()),
                 code_hash: reg_manager.code_hash,
             }
         )
@@ -135,7 +135,7 @@ fn single_asset_portion_manager_integration(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("scrt_staking".into()),
+                address: Addr("scrt_staking".into()),
                 code_hash: reg_scrt_staking.code_hash,
             }
         )
@@ -143,7 +143,7 @@ fn single_asset_portion_manager_integration(
 
     /*
     ensemble.add_validator(Validator {
-        address: HumanAddr("validator".into()),
+        address: Addr("validator".into()),
         commission: Decimal::zero(),
         max_commission: Decimal::one(),
         max_change_rate: Decimal::one(),
@@ -234,7 +234,7 @@ fn single_asset_portion_manager_integration(
     ).unwrap();
 
     let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-    ensemble.add_funds(HumanAddr::unchecked("admin"), vec![deposit_coin.clone()]);
+    ensemble.add_funds(Addr::unchecked("admin"), vec![deposit_coin.clone()]);
 
     assert!(deposit_coin.amount > Uint128::zero());
 

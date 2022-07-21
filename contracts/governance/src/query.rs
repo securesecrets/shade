@@ -181,7 +181,7 @@ pub fn contracts(
 
 pub fn user_proposals<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    user: HumanAddr,
+    user: Addr,
     pagination: Pagination,
 ) -> StdResult<QueryAnswer> {
     let total = UserID::total_proposals(&deps.storage, user.clone())?;
@@ -206,7 +206,7 @@ pub fn user_proposals<S: Storage, A: Api, Q: Querier>(
 
 pub fn user_assembly_votes<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    user: HumanAddr,
+    user: Addr,
     pagination: Pagination,
 ) -> StdResult<QueryAnswer> {
     let total = UserID::total_assembly_votes(&deps.storage, user.clone())?;
@@ -231,7 +231,7 @@ pub fn user_assembly_votes<S: Storage, A: Api, Q: Querier>(
 
 pub fn user_funding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    user: HumanAddr,
+    user: Addr,
     pagination: Pagination,
 ) -> StdResult<QueryAnswer> {
     let total = UserID::total_funding(&deps.storage, user.clone())?;
@@ -256,7 +256,7 @@ pub fn user_funding<S: Storage, A: Api, Q: Querier>(
 
 pub fn user_votes<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    user: HumanAddr,
+    user: Addr,
     pagination: Pagination,
 ) -> StdResult<QueryAnswer> {
     let total = UserID::total_votes(&deps.storage, user.clone())?;

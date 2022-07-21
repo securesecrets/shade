@@ -384,7 +384,7 @@ pub fn query(
                         authenticator.address,
                     )?;
 
-                let sender: HumanAddr;
+                let sender: Addr;
 
                 match res {
                     query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
@@ -406,7 +406,7 @@ pub fn query(
 pub fn auth_queries<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: AuthQuery,
-    user: HumanAddr,
+    user: Addr,
 ) -> StdResult<Binary> {
     to_binary(&match msg {
         AuthQuery::Proposals { pagination } => query::user_proposals(deps, user, pagination)?,

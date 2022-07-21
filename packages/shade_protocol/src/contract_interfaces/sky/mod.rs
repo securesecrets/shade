@@ -6,7 +6,7 @@ use crate::{
     utils::{asset::Contract, storage::plus::ItemStorage},
 };
 use cosmwasm_math_compat::{Decimal, Uint128};
-use cosmwasm_std::HumanAddr;
+use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use secret_storage_plus::Item;
 use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
@@ -37,7 +37,7 @@ impl ItemStorage for ViewingKeys {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct SelfAddr(pub HumanAddr);
+pub struct SelfAddr(pub Addr);
 
 impl ItemStorage for SelfAddr {
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");

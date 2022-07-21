@@ -2,21 +2,19 @@ pub mod handle;
 pub mod query;
 
 use crate::contract::{execute, instantiate, query};
-use contract_harness::harness::governance::Governance;
+use shade_multi_test::query_auth::QueryAuth;
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     from_binary,
     to_binary,
     Binary,
     Env,
-    Response,
     Addr,
     Response,
     StdError,
     StdResult,
 };
 use shade_protocol::fadroma::core::ContractLink;
-use shade_protocol::fadroma::ensemble::{ContractEnsemble, ContractHarness, MockDeps, MockEnv};
 use shade_protocol::serde::Serialize;
 use shade_protocol::contract_interfaces::{
     governance,
@@ -28,19 +26,22 @@ use shade_protocol::contract_interfaces::{
         Config,
     },
 };
+use shade_protocol::multi_test::{App, BasicApp};
+use shade_protocol::query_auth;
+use shade_protocol::utils::InstantiateCallback;
 
 pub fn init_governance(
     msg: governance::InstantiateMsg,
-) -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
-    let mut chain = ContractEnsemble::new(50);
+) -> StdResult<(BasicApp, ContractLink<Addr>)> {
+    let mut chain = App::default();
 
-    let msg = &query_auth::InitMsg {
+    query_auth::InstantiateMsg {
         admin_auth: Contract {
             address: admin.address.clone(),
             code_hash: admin.code_hash.clone(),
         },
         prng_seed: Binary::from("random".as_bytes()),
-    };
+    }.test_init(QueryAuth::default());
 
     harness::query_auth::init(chain, &msg)
 }
@@ -50,12 +51,12 @@ pub fn admin_only_governance() -> StdResult<(ContractEnsemble, ContractLink<Addr
     let auth = init_query_auth(&mut chain)?;
 
     let msg = governance::InitMsg {
-        treasury: HumanAddr("treasury".to_string()),
+        treasury: Addr("treasury".to_string()),
         query_auth: Contract {
             address: auth.address,
             code_hash: auth.code_hash,
         },
-        admin_members: vec![HumanAddr("admin".to_string())],
+        admin_members: vec![Addr("admin".to_string())],
         admin_profile: Profile {
             name: "admin".to_string(),
             enabled: true,

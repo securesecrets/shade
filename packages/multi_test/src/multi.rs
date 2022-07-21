@@ -30,23 +30,21 @@ pub mod snip20 {
 //     multi_macro::implement_multi!(MockBand, mock_band);
 // }
 
-// #[cfg(feature = "governance")]
-// pub mod governance {
-//     use crate::multi_macro;
-//     use governance;
+#[cfg(feature = "governance")]
+pub mod governance {
+    use governance;
 
-//     pub struct Governance;
-//     multi_macro::implement_multi!(Governance, governance);
-// }
+    pub struct Governance;
+    multi_macro::implement_multi!(Governance, governance);
+}
 
-// #[cfg(feature = "snip20_staking")]
-// pub mod snip20_staking {
-//     use crate::multi_macro;
-//     use spip_stkd_0;
+#[cfg(feature = "snip20_staking")]
+pub mod snip20_staking {
+    use spip_stkd_0;
 
-//     pub struct Snip20Staking;
-//     multi_macro::implement_multi!(Snip20Staking, spip_stkd_0);
-// }
+    pub struct Snip20Staking;
+    multi_macro::implement_multi!(Snip20Staking, spip_stkd_0);
+}
 
 // #[cfg(feature = "scrt_staking")]
 // pub mod scrt_staking {
@@ -66,14 +64,13 @@ pub mod snip20 {
 //     multi_macro::implement_multi!(Bonds, bonds);
 // }
 
-// #[cfg(feature = "query_auth")]
-// pub mod query_auth {
-//     use crate::multi_macro;
-//     use query_auth;
+#[cfg(feature = "query_auth")]
+pub mod query_auth {
+    use query_auth;
 
-//     pub struct QueryAuth;
-//     multi_macro::implement_multi!(QueryAuth, query_auth);
-// }
+    pub struct QueryAuth;
+    multi_macro::implement_multi!(QueryAuth, query_auth);
+}
 
 // #[cfg(feature = "treasury_manager")]
 // pub mod treasury_manager {

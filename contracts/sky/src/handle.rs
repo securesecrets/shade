@@ -256,7 +256,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     let i = index.u128() as usize;
     // cur_asset will keep track of the asset that we currently "have"
     let mut cur_asset = Contract {
-        address: HumanAddr::default(),
+        address: Addr::default(),
         code_hash: "".to_string(),
     };
 
@@ -400,7 +400,7 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
 pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    asset: HumanAddr,
+    asset: Addr,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
     let config = Config::load(&deps.storage)?;
@@ -453,7 +453,7 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
 pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
-    _asset: HumanAddr,
+    _asset: Addr,
 ) -> StdResult<HandleResponse> {
     Ok(HandleResponse {
         messages: vec![],
@@ -469,7 +469,7 @@ pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
 pub fn try_adapter_update<S: Storage, A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
-    _asset: HumanAddr,
+    _asset: Addr,
 ) -> StdResult<HandleResponse> {
     Ok(HandleResponse {
         messages: vec![],

@@ -9,20 +9,20 @@ use cosmwasm_schema::{cw_serde};
 
 pub mod storage {
     use secret_storage_plus::{Map, Item};
-    use cosmwasm_std::HumanAddr;
+    use cosmwasm_std::Addr;
     use crate::contract_interfaces::snip20::helpers::Snip20Asset;
 
     pub const CONFIG: Item<super::Config> = Item::new("config");
     pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
-    pub const SELF_ADDRESS: Item<HumanAddr> = Item::new("self_address");
+    pub const SELF_ADDRESS: Item<Addr> = Item::new("self_address");
 
-    pub const ASSET_LIST: Item<Vec<HumanAddr>> = Item::new("asset_list");
-    pub const ASSETS: Map<HumanAddr, Snip20Asset> = Map::new("assets");
+    pub const ASSET_LIST: Item<Vec<Addr>> = Item::new("asset_list");
+    pub const ASSETS: Map<Addr, Snip20Asset> = Map::new("assets");
 
-    pub const ALLOCATIONS: Map<HumanAddr, Vec<super::AllocationMeta>> = Map::new("allocations");
-    pub const HOLDERS: Item<Vec<super::HumanAddr>> = Item::new("holders");
-    pub const HOLDING: Map<HumanAddr, super::Holding> = Map::new("holding");
-    //pub const UNBONDINGS: Map<HumanAddr, Vec<super::Unbonding>> = Map::new("unbondings");
+    pub const ALLOCATIONS: Map<Addr, Vec<super::AllocationMeta>> = Map::new("allocations");
+    pub const HOLDERS: Item<Vec<super::Addr>> = Item::new("holders");
+    pub const HOLDING: Map<Addr, super::Holding> = Map::new("holding");
+    //pub const UNBONDINGS: Map<Addr, Vec<super::Unbonding>> = Map::new("unbondings");
 }
 
 #[cw_serde]
@@ -165,10 +165,10 @@ pub enum QueryMsg {
     Holders { },
     Holding { holder: Addr },
     /*
-    Balance { asset: HumanAddr, holder: HumanAddr },
-    Unbonding { asset: HumanAddr, holder: HumanAddr },
-    Unbondable { asset: HumanAddr, holder: HumanAddr },
-    Claimable { asset: HumanAddr, holder: HumanAddr },
+    Balance { asset: Addr, holder: Addr },
+    Unbonding { asset: Addr, holder: Addr },
+    Unbondable { asset: Addr, holder: Addr },
+    Claimable { asset: Addr, holder: Addr },
     */
     Manager(manager::SubQueryMsg),
 }

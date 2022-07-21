@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128};
 use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, balance_query},
 };
@@ -38,7 +38,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 
 pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     let config = CONFIG.load(&deps.storage)?;
     let full_asset = match ASSETS.may_load(&deps.storage, asset)? {
@@ -65,8 +65,8 @@ pub fn pending_allowance<S: Storage, A: Api, Q: Querier>(
 
 pub fn reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: HumanAddr,
+    asset: Addr,
+    holder: Addr,
 ) -> StdResult<manager::QueryAnswer> {
     if let Some(full_asset) = ASSETS.may_load(&deps.storage, asset)? {
         let reserves = balance_query(
@@ -96,7 +96,7 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
 
 pub fn allocations<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Allocations {
         allocations: match ALLOCATIONS.may_load(&deps.storage, asset)? {
@@ -108,8 +108,8 @@ pub fn allocations<S: Storage, A: Api, Q: Querier>(
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: HumanAddr,
+    asset: Addr,
+    holder: Addr,
 ) -> StdResult<manager::QueryAnswer> {
 
     if ASSETS.may_load(&deps.storage, asset.clone())?.is_none() {
@@ -137,8 +137,8 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: HumanAddr,
+    asset: Addr,
+    holder: Addr,
 ) -> StdResult<manager::QueryAnswer> {
 
     let full_asset = match ASSETS.may_load(&deps.storage, asset.clone())? {
@@ -201,8 +201,8 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
  */
 pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: HumanAddr,
+    asset: Addr,
+    holder: Addr,
 ) -> StdResult<manager::QueryAnswer> {
 
     if let Some(full_asset) = ASSETS.may_load(&deps.storage, asset.clone())? {
@@ -266,8 +266,8 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    holder: HumanAddr,
+    asset: Addr,
+    holder: Addr,
 ) -> StdResult<manager::QueryAnswer> {
 
     match ASSETS.may_load(&deps.storage, asset)? {
@@ -297,7 +297,7 @@ pub fn holders<S: Storage, A: Api, Q: Querier>(
 
 pub fn holding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    holder: HumanAddr,
+    holder: Addr,
 ) -> StdResult<treasury_manager::QueryAnswer> {
     match HOLDING.may_load(&deps.storage, holder)? {
         Some(h) => Ok(treasury_manager::QueryAnswer::Holding { holding: h }),

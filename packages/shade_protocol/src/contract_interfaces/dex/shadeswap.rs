@@ -99,13 +99,13 @@ pub enum QueryMsgResponse {
         data: Vec<TradeHistory>,
     },
     GetWhiteListAddress {
-        addresses: Vec<HumanAddr>,
+        addresses: Vec<Addr>,
     },
     GetTradeCount {
         count: u64,
     },
     GetAdminAddress {
-        address: HumanAddr,
+        address: Addr,
     },
     GetClaimReward {
         amount: Uint128,
@@ -129,8 +129,8 @@ pub struct TokenAmount {
 #[serde(rename_all = "snake_case")]
 pub struct SwapTokens {
     pub expected_return: Option<Uint128>,
-    pub to: Option<HumanAddr>,
-    pub router_link: Option<ContractLink<HumanAddr>>,
+    pub to: Option<Addr>,
+    pub router_link: Option<ContractLink<Addr>>,
     pub callback_signature: Option<Binary>,
 }
 

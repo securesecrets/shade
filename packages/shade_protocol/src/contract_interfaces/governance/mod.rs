@@ -310,7 +310,7 @@ pub enum QueryMsg {
 
     Contracts { start: Uint128, end: Uint128 },
 
-    WithVK { user: HumanAddr, key: String, query: AuthQuery },
+    WithVK { user: Addr, key: String, query: AuthQuery },
 
     WithPermit { permit: QueryPermit, query: AuthQuery },
 }

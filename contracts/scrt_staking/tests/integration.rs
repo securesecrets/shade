@@ -1,7 +1,7 @@
 use shade_protocol::math_compat as compat;
 use shade_protocol::c_std::{
     to_binary,
-    HumanAddr, Uint128, Coin, Decimal,
+    Addr, Uint128, Coin, Decimal,
     Validator, Delegation,
 };
 
@@ -67,7 +67,7 @@ fn basic_scrt_staking_integration(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("token".into()),
+                address: Addr("token".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }
         )
@@ -77,7 +77,7 @@ fn basic_scrt_staking_integration(
         reg_scrt_staking.id,
         &scrt_staking::InitMsg {
             admins: None,
-            owner: HumanAddr("admin".into()),
+            owner: Addr("admin".into()),
             sscrt: Contract {
                 address: token.address.clone(),
                 code_hash: token.code_hash.clone(),
@@ -88,7 +88,7 @@ fn basic_scrt_staking_integration(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("scrt_staking".into()),
+                address: Addr("scrt_staking".into()),
                 code_hash: reg_scrt_staking.code_hash,
             }
         )
@@ -96,7 +96,7 @@ fn basic_scrt_staking_integration(
 
     /*
     ensemble.add_validator(Validator {
-        address: HumanAddr("validator".into()),
+        address: Addr("validator".into()),
         commission: Decimal::zero(),
         max_commission: Decimal::one(),
         max_change_rate: Decimal::one(),
@@ -117,7 +117,7 @@ fn basic_scrt_staking_integration(
 
     if !deposit.is_zero() {
         let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-        ensemble.add_funds(HumanAddr::unchecked("admin"), vec![deposit_coin.clone()]);
+        ensemble.add_funds(Addr::unchecked("admin"), vec![deposit_coin.clone()]);
 
         // Wrap L1 into tokens
         ensemble.execute(
@@ -429,7 +429,7 @@ fn basic_scrt_staking_integration(
     match ensemble.query(
         token.address.clone(),
         &snip20::QueryMsg::Balance {
-            address: HumanAddr("admin".into()),
+            address: Addr("admin".into()),
             key: viewing_key.clone(),
         },
     ).unwrap() {

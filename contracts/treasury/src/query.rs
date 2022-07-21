@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdError, StdResult, Storage, Uint128};
+use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128};
 use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, balance_query},
 };
@@ -31,7 +31,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
 
 pub fn balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
     //TODO: restrict to admin?
 
@@ -82,7 +82,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
 
 pub fn reserves<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
     //TODO: restrict to admin?
 
@@ -126,7 +126,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
 
 pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
     let managers = MANAGERS.load(&deps.storage)?;
     let self_address = SELF_ADDRESS.load(&deps.storage)?;
@@ -151,7 +151,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
 
 pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
     let managers = MANAGERS.load(&deps.storage)?;
     let mut unbondable = Uint128::zero();
@@ -181,7 +181,7 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
 
 pub fn claimable<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
     let managers = MANAGERS.load(&deps.storage)?;
     let self_address = SELF_ADDRESS.load(&deps.storage)?;
@@ -200,8 +200,8 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
 
 pub fn allowance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
-    spender: HumanAddr,
+    asset: Addr,
+    spender: Addr,
 ) -> StdResult<treasury::QueryAnswer> {
     let self_address = SELF_ADDRESS.load(&deps.storage)?;
     let key = VIEWING_KEY.load(&deps.storage)?;
@@ -235,7 +235,7 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
 
 pub fn allowances<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-    asset: HumanAddr,
+    asset: Addr,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Allowances {
         allowances: match ALLOWANCES.may_load(&deps.storage, asset)? {

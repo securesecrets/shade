@@ -22,7 +22,7 @@ use shade_protocol::{
         asset::Contract,
     },
     c_std::{
-        to_binary, HumanAddr, Uint128,
+        to_binary, Addr, Uint128,
         Decimal, Validator,
         Coin,
     },
@@ -60,7 +60,7 @@ fn single_holder_scrt_staking_adapter(
 
     /*
     ensemble.add_validator(Validator {
-        address: HumanAddr("validator".into()),
+        address: Addr("validator".into()),
         commission: Decimal::zero(),
         max_commission: Decimal::one(),
         max_change_rate: Decimal::one(),
@@ -94,7 +94,7 @@ fn single_holder_scrt_staking_adapter(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("token".into()),
+                address: Addr("token".into()),
                 code_hash: reg_snip20.code_hash.clone(),
             }
         )
@@ -103,14 +103,14 @@ fn single_holder_scrt_staking_adapter(
     let manager = ensemble.instantiate(
         reg_manager.id,
         &treasury_manager::InitMsg {
-            admin: Some(HumanAddr("admin".into())),
-            treasury: HumanAddr("treasury".into()),
+            admin: Some(Addr("admin".into())),
+            treasury: Addr("treasury".into()),
             viewing_key: viewing_key.clone(),
         },
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("manager".into()),
+                address: Addr("manager".into()),
                 code_hash: reg_manager.code_hash,
             }
         )
@@ -131,7 +131,7 @@ fn single_holder_scrt_staking_adapter(
         MockEnv::new(
             "admin",
             ContractLink {
-                address: HumanAddr("scrt_staking".into()),
+                address: Addr("scrt_staking".into()),
                 code_hash: reg_scrt_staking.code_hash,
             }
         )
@@ -166,7 +166,7 @@ fn single_holder_scrt_staking_adapter(
     // Add 'holder' as holder
     ensemble.execute(
         &treasury_manager::HandleMsg::AddHolder {
-            holder: HumanAddr("holder".into())
+            holder: Addr("holder".into())
         },
         MockEnv::new(
             "admin",
@@ -196,7 +196,7 @@ fn single_holder_scrt_staking_adapter(
     ).unwrap();
 
     let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-    ensemble.add_funds(HumanAddr::unchecked("holder"), vec![deposit_coin.clone()]);
+    ensemble.add_funds(Addr::unchecked("holder"), vec![deposit_coin.clone()]);
 
     assert!(deposit_coin.amount > Uint128::zero());
 
@@ -248,7 +248,7 @@ fn single_holder_scrt_staking_adapter(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Balance {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -263,7 +263,7 @@ fn single_holder_scrt_staking_adapter(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
             asset: token.address.clone(),
-            holder: HumanAddr("treasury".into()),
+            holder: Addr("treasury".into()),
         })
     ).unwrap() {
         manager::QueryAnswer::Balance { amount } => {
@@ -292,7 +292,7 @@ fn single_holder_scrt_staking_adapter(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         })
     ).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
@@ -308,7 +308,7 @@ fn single_holder_scrt_staking_adapter(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         })
     ).unwrap() {
         manager::QueryAnswer::Reserves { amount } => {
@@ -323,7 +323,7 @@ fn single_holder_scrt_staking_adapter(
         manager.address.clone(),
         &manager::QueryMsg::Manager(manager::SubQueryMsg::Claimable {
             asset: token.address.clone(),
-            holder: HumanAddr("holder".into()),
+            holder: Addr("holder".into()),
         })
     ).unwrap() {
         manager::QueryAnswer::Claimable { amount } => {
@@ -367,7 +367,7 @@ fn single_holder_scrt_staking_adapter(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Unbondable {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -383,7 +383,7 @@ fn single_holder_scrt_staking_adapter(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Unbonding {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -399,7 +399,7 @@ fn single_holder_scrt_staking_adapter(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Claimable {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -432,7 +432,7 @@ fn single_holder_scrt_staking_adapter(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Claimable {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         )
     ).unwrap() {
@@ -461,7 +461,7 @@ fn single_holder_scrt_staking_adapter(
         &manager::QueryMsg::Manager(
             manager::SubQueryMsg::Balance {
                 asset: token.address.clone(),
-                holder: HumanAddr("holder".into()),
+                holder: Addr("holder".into()),
             }
         ),
     ).unwrap() {
@@ -477,7 +477,7 @@ fn single_holder_scrt_staking_adapter(
     match ensemble.query(
         token.address.clone(),
         &snip20_reference_impl::msg::QueryMsg::Balance {
-            address: HumanAddr("holder".into()),
+            address: Addr("holder".into()),
             key: viewing_key.clone(),
         },
     ).unwrap() {

@@ -2,7 +2,7 @@ use cosmwasm_std::{
     to_binary,
     Api,
     Binary,
-    HumanAddr,
+    Addr,
     Uint128,
     Env,
     Extern,
@@ -29,7 +29,7 @@ use shade_protocol::{
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub owner: HumanAddr,
+    pub owner: Addr,
     pub unbond_blocks: Uint128,
     pub token: Contract,
 }
@@ -38,14 +38,14 @@ pub struct Config {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     Receive {
-        sender: HumanAddr,
-        from: HumanAddr,
+        sender: Addr,
+        from: Addr,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
     //RegisterAsset { token: Contract },
-    //CompleteUnbond { token: HumanAddr, amount: Uint128 },
+    //CompleteUnbond { token: Addr, amount: Uint128 },
     Adapter(adapter::SubHandleMsg),
 }
 
@@ -66,7 +66,7 @@ pub enum QueryAnswer {
 const viewing_key: &str = "jUsTfOrTeStInG";
 
 const CONFIG: Item<Config> = Item::new("config");
-const ADDRESS: Item<HumanAddr> = Item::new("address");
+const ADDRESS: Item<Addr> = Item::new("address");
 const BLOCK: Item<Uint128> = Item::new("block");
 const REWARDS: Item<Uint128> = Item::new("rewards");
 

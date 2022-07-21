@@ -1,7 +1,7 @@
 /*
 use cosmwasm_std::{
     coins, from_binary, to_binary,
-    Extern, HumanAddr, StdError,
+    Extern, Addr, StdError,
     Binary, StdResult, HandleResponse, Env,
     InitResponse, Uint128,
 };
