@@ -1,6 +1,6 @@
 use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, Deps, MessageInfo};
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
-use shade_admin::admin::AuthorizedUsersResponse;
+use shade_protocol::shade_admin::admin;
 use shade_protocol::{
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
@@ -19,9 +19,8 @@ use shade_protocol::utils::asset::Contract;
 fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<bool> {
     let contract = Admin::load(deps.storage)?.0;
 
-    let authorized_users: AuthorizedUsersResponse = shade_admin::admin::QueryMsg::GetAuthorizedUsers {
-        contract_address: env.contract.address.to_string()
-    }.query(&deps.querier, contract.code_hash, contract.address)?;
+    let authorized_users: admin::AdminsResponse = admin::QueryMsg::GetAdmins {}
+        .query(&deps.querier, &contract)?;
 
     Ok(authorized_users.authorized_users.contains(&info.sender.to_string()))
 }

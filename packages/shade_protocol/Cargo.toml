@@ -71,6 +71,7 @@ query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
 sky              = ["snip20", "dex"]
 dao              = ["interface"]
+shade_admin      = ["dep:shade-admin"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
@@ -88,10 +89,13 @@ debug-print = [] # TODO: remove this from all cargo configs
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+
+
 schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0"
 
+shade-admin = { git = "https://github.com/securesecrets/shadeadmin", branch = "cosmwasm-v1-refactor", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 # Testing
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
