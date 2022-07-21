@@ -179,7 +179,7 @@ pub fn contracts(
     Ok(QueryAnswer::Contracts { contracts: items })
 }
 
-pub fn user_proposals<S: Storage, A: Api, Q: Querier>(
+pub fn user_proposals<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     user: Addr,
     pagination: Pagination,
@@ -204,7 +204,7 @@ pub fn user_proposals<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::UserProposals { props, total })
 }
 
-pub fn user_assembly_votes<S: Storage, A: Api, Q: Querier>(
+pub fn user_assembly_votes<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     user: Addr,
     pagination: Pagination,
@@ -229,7 +229,7 @@ pub fn user_assembly_votes<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::UserAssemblyVotes { votes, total })
 }
 
-pub fn user_funding<S: Storage, A: Api, Q: Querier>(
+pub fn user_funding<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     user: Addr,
     pagination: Pagination,
@@ -254,7 +254,7 @@ pub fn user_funding<S: Storage, A: Api, Q: Querier>(
     Ok(QueryAnswer::UserFunding { funds, total })
 }
 
-pub fn user_votes<S: Storage, A: Api, Q: Querier>(
+pub fn user_votes<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     user: Addr,
     pagination: Pagination,

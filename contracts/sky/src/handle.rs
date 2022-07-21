@@ -96,7 +96,7 @@ pub fn try_update_config(
     })
 }
 
-pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
+pub fn try_set_cycles<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     cycles_to_set: Vec<Cycle>,
@@ -133,7 +133,7 @@ pub fn try_set_cycles<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
+pub fn try_append_cycle<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     cycles_to_add: Vec<Cycle>,
@@ -172,7 +172,7 @@ pub fn try_append_cycle<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_update_cycle<S: Storage, A: Api, Q: Querier>(
+pub fn try_update_cycle<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     cycle: Cycle,
@@ -207,7 +207,7 @@ pub fn try_update_cycle<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
+pub fn try_remove_cycle<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     index: Uint128,
@@ -243,7 +243,7 @@ pub fn try_remove_cycle<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
+pub fn try_arb_cycle<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     info: MessageInfo,
@@ -347,7 +347,7 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
+pub fn try_arb_all_cycles<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     info: MessageInfo,
@@ -397,7 +397,7 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
+pub fn try_adapter_unbond<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     asset: Addr,
@@ -450,7 +450,7 @@ pub fn try_adapter_unbond<S: Storage, A: Api, Q: Querier>(
 }
 
 // Unessesary for sky
-pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
+pub fn try_adapter_claim<A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     _asset: Addr,
@@ -466,7 +466,7 @@ pub fn try_adapter_claim<S: Storage, A: Api, Q: Querier>(
 }
 
 // Unessesary for sky
-pub fn try_adapter_update<S: Storage, A: Api, Q: Querier>(
+pub fn try_adapter_update<A: Api, Q: Querier>(
     _deps: &mut Extern<S, A, Q>,
     _env: Env,
     _asset: Addr,

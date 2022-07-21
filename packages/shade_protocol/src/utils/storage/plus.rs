@@ -50,19 +50,19 @@ pub trait ItemStorage: Serialize + DeserializeOwned {
 }
 
 pub trait NaiveMapStorage<'a>: Serialize + DeserializeOwned {
-    fn load<S: Storage, K: PrimaryKey<'a>>(storage: &dyn Storage, map: Map<'a, K, Self>, key: K) -> StdResult<Self> {
+    fn load<K: PrimaryKey<'a>>(storage: &dyn Storage, map: Map<'a, K, Self>, key: K) -> StdResult<Self> {
         map.load(storage, key)
     }
 
-    fn may_load<S: Storage, K: PrimaryKey<'a>>(storage: &dyn Storage, map: Map<'a, K, Self>, key: K) -> StdResult<Option<Self>> {
+    fn may_load<K: PrimaryKey<'a>>(storage: &dyn Storage, map: Map<'a, K, Self>, key: K) -> StdResult<Option<Self>> {
         map.may_load(storage, key)
     }
 
-    fn save<S: Storage, K: PrimaryKey<'a>>(&self, storage: &mut dyn Storage, map: Map<'a, K, Self>, key: K) -> StdResult<()> {
+    fn save<K: PrimaryKey<'a>>(&self, storage: &mut dyn Storage, map: Map<'a, K, Self>, key: K) -> StdResult<()> {
         map.save(storage, key, self)
     }
 
-    fn update<A, E, S: Storage, K: PrimaryKey<'a>>(&self, storage: &mut dyn Storage, map: Map<'a, K, Self>, key: K, action: A) -> Result<Self, E>
+    fn update<A, E, K: PrimaryKey<'a>>(&self, storage: &mut dyn Storage, map: Map<'a, K, Self>, key: K, action: A) -> Result<Self, E>
         where
             A: FnOnce(Option<Self>) -> Result<Self, E>,
             E: From<StdError>,

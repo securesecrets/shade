@@ -381,7 +381,7 @@ pub fn rebalance(
         })?))
 }
 
-pub fn try_register_asset<S: Storage, A: Api, Q: Querier>(
+pub fn try_register_asset<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     contract: &Contract,
@@ -614,7 +614,7 @@ pub fn allowance(
         })?))
 }
 
-pub fn claim<S: Storage, A: Api, Q: Querier>(
+pub fn claim<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: &Env,
     asset: Addr,

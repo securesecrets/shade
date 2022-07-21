@@ -21,6 +21,8 @@ use crate::c_std::{Binary, Coin, Addr};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
+use crate::governance::proposal::Funding;
+use crate::query_auth::QueryPermit;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::SingletonStorage;

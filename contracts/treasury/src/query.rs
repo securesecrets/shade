@@ -21,7 +21,7 @@ use crate::state::{
 };
 */
 
-pub fn config<S: Storage, A: Api, Q: Querier>(
+pub fn config<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Config {
@@ -29,7 +29,7 @@ pub fn config<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn balance<S: Storage, A: Api, Q: Querier>(
+pub fn balance<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
@@ -80,7 +80,7 @@ pub fn balance<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn reserves<S: Storage, A: Api, Q: Querier>(
+pub fn reserves<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
@@ -124,7 +124,7 @@ pub fn reserves<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-pub fn unbonding<S: Storage, A: Api, Q: Querier>(
+pub fn unbonding<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
@@ -149,7 +149,7 @@ pub fn unbonding<S: Storage, A: Api, Q: Querier>(
     Ok(manager::QueryAnswer::Unbonding { amount: unbonding })
 }
 
-pub fn unbondable<S: Storage, A: Api, Q: Querier>(
+pub fn unbondable<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
@@ -179,7 +179,7 @@ pub fn unbondable<S: Storage, A: Api, Q: Querier>(
     Ok(manager::QueryAnswer::Unbondable { amount: unbondable })
 }
 
-pub fn claimable<S: Storage, A: Api, Q: Querier>(
+pub fn claimable<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
 ) -> StdResult<manager::QueryAnswer> {
@@ -198,7 +198,7 @@ pub fn claimable<S: Storage, A: Api, Q: Querier>(
     Ok(manager::QueryAnswer::Claimable { amount: Uint128(claimable) })
 }
 
-pub fn allowance<S: Storage, A: Api, Q: Querier>(
+pub fn allowance<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
     spender: Addr,
@@ -225,7 +225,7 @@ pub fn allowance<S: Storage, A: Api, Q: Querier>(
     Err(StdError::generic_err(format!("Unknown Asset: {}", asset)))
 }
 
-pub fn assets<S: Storage, A: Api, Q: Querier>(
+pub fn assets<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Assets {
@@ -233,7 +233,7 @@ pub fn assets<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn allowances<S: Storage, A: Api, Q: Querier>(
+pub fn allowances<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
 ) -> StdResult<treasury::QueryAnswer> {

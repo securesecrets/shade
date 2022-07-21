@@ -2,7 +2,7 @@ use crate::{
     contract_interfaces::governance::{
         assembly::Assembly,
         profile::Profile,
-        stored_id::ID,
+        stored_id::{ID, UserID},
         vote::Vote,
     },
 };

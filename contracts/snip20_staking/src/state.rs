@@ -89,7 +89,7 @@ fn deser_bin_data<T: DeserializeOwned>(data: &[u8]) -> StdResult<T> {
     bincode2::deserialize::<T>(data).map_err(|e| StdError::serialize_err(type_name::<T>(), e))
 }
 
-fn set_bin_data<T: Serialize>(storage: &mut S, key: &[u8], data: &T) -> StdResult<()> {
+fn set_bin_data<T: Serialize>(storage: &mut dyn Storage, key: &[u8], data: &T) -> StdResult<()> {
     let bin_data = ser_bin_data(data)?;
 
     storage.set(key, &bin_data);
@@ -321,7 +321,7 @@ pub fn read_allowance(
 }
 
 pub fn write_allowance(
-    store: &mut S,
+    store: &mut dyn Storage,
     owner: &CanonicalAddr,
     spender: &CanonicalAddr,
     allowance: Allowance,
@@ -335,7 +335,7 @@ pub fn write_allowance(
 
 // Viewing Keys
 
-pub fn write_viewing_key(store: &mut S, owner: &CanonicalAddr, key: &ViewingKey) {
+pub fn write_viewing_key(store: &mut dyn Storage, owner: &CanonicalAddr, key: &ViewingKey) {
     let mut balance_store = PrefixedStorage::new(PREFIX_VIEW_KEY, store);
     balance_store.set(owner.as_slice(), &key.to_hashed());
 }
@@ -358,7 +358,7 @@ pub fn get_receiver_hash<S: ReadonlyStorage>(
     })
 }
 
-pub fn set_receiver_hash(store: &mut S, account: &Addr, code_hash: String) {
+pub fn set_receiver_hash(store: &mut dyn Storage, account: &Addr, code_hash: String) {
     let mut store = PrefixedStorage::new(PREFIX_RECEIVERS, store);
     store.set(account.as_str().as_bytes(), code_hash.as_bytes());
 }

@@ -73,7 +73,7 @@ pub fn receive(
         // TODO: send to treasury, non-pair rewards token
     }
 
-    // get exchange rate & Split tokens
+    // get exchange rate &dyn Storageplit tokens
     match config.split {
         Some(split) => {
             match split {

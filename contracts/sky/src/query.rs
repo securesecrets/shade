@@ -83,7 +83,7 @@ pub fn get_balances(
     })
 }
 
-pub fn get_cycles<S: Storage, A: Api, Q: Querier>(
+pub fn get_cycles<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<QueryAnswer> {
     //Need to make private eventually
@@ -240,7 +240,7 @@ pub fn any_cycles_profitable(
     })
 }
 
-pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
+pub fn adapter_balance<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -281,7 +281,7 @@ pub fn adapter_balance<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn adapter_claimable<S: Storage, A: Api, Q: Querier>(
+pub fn adapter_claimable<A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
     _asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -291,7 +291,7 @@ pub fn adapter_claimable<S: Storage, A: Api, Q: Querier>(
 }
 
 // Same as adapter_balance
-pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
+pub fn adapter_unbondable<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -332,7 +332,7 @@ pub fn adapter_unbondable<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn adapter_unbonding<S: Storage, A: Api, Q: Querier>(
+pub fn adapter_unbonding<A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
     _asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
@@ -342,7 +342,7 @@ pub fn adapter_unbonding<S: Storage, A: Api, Q: Querier>(
 }
 
 // Same as adapter_balance
-pub fn adapter_reserves<S: Storage, A: Api, Q: Querier>(
+pub fn adapter_reserves<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {

@@ -73,7 +73,7 @@ const REWARDS: Item<Uint128> = Item::new("rewards");
 // (amount, block)
 const UNBONDINGS: Item<Vec<(Uint128, Uint128)>> = Item::new("unbondings");
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
+pub fn init<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: Config,
@@ -106,7 +106,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
+pub fn handle<A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: HandleMsg,
@@ -233,7 +233,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 
-pub fn query<S: Storage, A: Api, Q: Querier>(
+pub fn query<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
 ) -> StdResult<Binary> {

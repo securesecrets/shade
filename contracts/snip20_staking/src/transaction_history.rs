@@ -404,7 +404,7 @@ impl StoredRichTx {
 
 // Storage functions:
 
-fn increment_tx_count(store: &mut S) -> StdResult<u64> {
+fn increment_tx_count(store: &mut dyn Storage) -> StdResult<u64> {
     let mut config = Config::from_storage(store);
     let id = config.tx_count() + 1;
     config.set_tx_count(id)?;
@@ -413,7 +413,7 @@ fn increment_tx_count(store: &mut S) -> StdResult<u64> {
 
 #[allow(clippy::too_many_arguments)] // We just need them
 pub fn store_transfer(
-    store: &mut S,
+    store: &mut dyn Storage,
     owner: &CanonicalAddr,
     sender: &CanonicalAddr,
     receiver: &CanonicalAddr,
@@ -460,7 +460,7 @@ pub fn store_transfer(
 }
 
 pub fn store_mint(
-    store: &mut S,
+    store: &mut dyn Storage,
     minter: &CanonicalAddr,
     recipient: &CanonicalAddr,
     amount: Uint128,
@@ -485,7 +485,7 @@ pub fn store_mint(
 }
 
 pub fn store_burn(
-    store: &mut S,
+    store: &mut dyn Storage,
     owner: &CanonicalAddr,
     burner: &CanonicalAddr,
     amount: Uint128,
@@ -510,7 +510,7 @@ pub fn store_burn(
 }
 
 pub fn store_stake(
-    store: &mut S,
+    store: &mut dyn Storage,
     staker: &CanonicalAddr,
     amount: Uint128,
     denom: String,
@@ -531,7 +531,7 @@ pub fn store_stake(
 }
 
 pub fn store_add_reward(
-    store: &mut S,
+    store: &mut dyn Storage,
     staker: &CanonicalAddr,
     amount: Uint128,
     denom: String,
@@ -552,7 +552,7 @@ pub fn store_add_reward(
 }
 
 pub fn store_fund_unbond(
-    store: &mut S,
+    store: &mut dyn Storage,
     staker: &CanonicalAddr,
     amount: Uint128,
     denom: String,
@@ -573,7 +573,7 @@ pub fn store_fund_unbond(
 }
 
 pub fn store_unbond(
-    store: &mut S,
+    store: &mut dyn Storage,
     staker: &CanonicalAddr,
     amount: Uint128,
     denom: String,
@@ -594,7 +594,7 @@ pub fn store_unbond(
 }
 
 pub fn store_claim_unbond(
-    store: &mut S,
+    store: &mut dyn Storage,
     staker: &CanonicalAddr,
     amount: Uint128,
     denom: String,
@@ -615,7 +615,7 @@ pub fn store_claim_unbond(
 }
 
 pub fn store_claim_reward(
-    store: &mut S,
+    store: &mut dyn Storage,
     staker: &CanonicalAddr,
     amount: Uint128,
     denom: String,
@@ -636,7 +636,7 @@ pub fn store_claim_reward(
 }
 
 fn append_tx(
-    store: &mut S,
+    store: &mut dyn Storage,
     tx: &StoredRichTx,
     for_address: &CanonicalAddr,
 ) -> StdResult<()> {
@@ -646,7 +646,7 @@ fn append_tx(
 }
 
 fn append_transfer(
-    store: &mut S,
+    store: &mut dyn Storage,
     tx: &StoredLegacyTransfer,
     for_address: &CanonicalAddr,
 ) -> StdResult<()> {

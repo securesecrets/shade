@@ -638,8 +638,8 @@ fn change_admin(
     Ok(Response::new().set_data(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?))
 }
 
-pub fn try_mint_impl<S: Storage>(
-    storage: &mut S,
+pub fn try_mint_impl(
+    storage: &mut dyn Storage,
     minter: &CanonicalAddr,
     recipient: &CanonicalAddr,
     amount: Uint128,
@@ -1065,8 +1065,8 @@ fn insufficient_allowance(allowance: u128, required: u128) -> StdError {
     ))
 }
 
-fn use_allowance<S: Storage>(
-    storage: &mut S,
+fn use_allowance(
+    storage: &mut dyn Storage,
     env: &Env,
     owner: &CanonicalAddr,
     spender: &CanonicalAddr,
@@ -1534,7 +1534,7 @@ fn revoke_permit(
     Ok(Response::new().set_data(to_binary(&HandleAnswer::RevokePermit { status: Success })?))
 }
 
-fn is_admin<S: Storage>(config: &Config<S>, account: &Addr) -> StdResult<bool> {
+fn is_admin(config: &Config<S>, account: &Addr) -> StdResult<bool> {
     let consts = config.constants()?;
     if &consts.admin != account {
         return Ok(false);
@@ -1543,7 +1543,7 @@ fn is_admin<S: Storage>(config: &Config<S>, account: &Addr) -> StdResult<bool> {
     Ok(true)
 }
 
-pub fn check_if_admin<S: Storage>(config: &Config<S>, account: &Addr) -> StdResult<()> {
+pub fn check_if_admin(config: &Config<S>, account: &Addr) -> StdResult<()> {
     if !is_admin(config, account)? {
         return Err(StdError::generic_err(
             "This is an admin command. Admin commands can only be run from admin address",

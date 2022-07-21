@@ -2,6 +2,9 @@ use crate::utils::storage::default::NaiveSingletonStorage;
 use crate::c_std::Uint128;
 use crate::c_std::{StdResult, Storage};
 use cosmwasm_schema::{cw_serde};
+use cosmwasm_std::Addr;
+use secret_storage_plus::Map;
+use crate::utils::storage::plus::NaiveMapStorage;
 
 #[cw_serde]// Used to get total IDs
 pub struct ID(Uint128);
@@ -123,15 +126,15 @@ const USER_VOTES: Map<'static, (Addr, u128), UserID> = Map::new("user_votes_list
 
 impl UserID {
     // Stores the proposal's id
-    pub fn total_proposals<S: Storage>(storage: & S, user: Addr) -> StdResult<Uint128> {
+    pub fn total_proposals(storage: &dyn Storage, user: Addr) -> StdResult<Uint128> {
         Ok(UserID::may_load(storage, USER_PROP_ID, user)?.unwrap_or(UserID(Uint128::zero())).0)
     }
 
-    pub fn proposal<S: Storage>(storage: & S, user: Addr, id: Uint128) -> StdResult<Uint128> {
+    pub fn proposal(storage: &dyn Storage, user: Addr, id: Uint128) -> StdResult<Uint128> {
         Ok(UserID::load(storage, USER_PROP, (user, id.u128()))?.0)
     }
 
-    pub fn add_proposal<S: Storage>(storage: &mut S, user: Addr, prop_id: Uint128) -> StdResult<Uint128> {
+    pub fn add_proposal(storage: &mut dyn Storage, user: Addr, prop_id: Uint128) -> StdResult<Uint128> {
         let item = match UserID::may_load(storage, USER_PROP_ID, user.clone())? {
             None => Uint128::zero(),
             Some(i) => i.0.checked_add(Uint128::new(1))?
@@ -142,15 +145,15 @@ impl UserID {
     }
 
     // Stores the proposal's ID so it can be cross searched
-    pub fn total_assembly_votes<S: Storage>(storage: & S, user: Addr) -> StdResult<Uint128> {
+    pub fn total_assembly_votes(storage: &dyn Storage, user: Addr) -> StdResult<Uint128> {
         Ok(UserID::may_load(storage, USER_ASSEMBLY_VOTE_ID, user)?.unwrap_or(UserID(Uint128::zero())).0)
     }
 
-    pub fn assembly_vote<S: Storage>(storage: & S, user: Addr, id: Uint128) -> StdResult<Uint128> {
+    pub fn assembly_vote(storage: &dyn Storage, user: Addr, id: Uint128) -> StdResult<Uint128> {
         Ok(UserID::load(storage, USER_ASSEMBLY_VOTE, (user, id.u128()))?.0)
     }
 
-    pub fn add_assembly_vote<S: Storage>(storage: &mut S, user: Addr, prop_id: Uint128) -> StdResult<Uint128> {
+    pub fn add_assembly_vote(storage: &mut dyn Storage, user: Addr, prop_id: Uint128) -> StdResult<Uint128> {
         let item = match UserID::may_load(storage, USER_ASSEMBLY_VOTE_ID, user.clone())? {
             None => Uint128::zero(),
             Some(i) => i.0.checked_add(Uint128::new(1))?
@@ -161,15 +164,15 @@ impl UserID {
     }
 
     // Stores the proposal's ID so it can be cross searched
-    pub fn total_funding<S: Storage>(storage: & S, user: Addr) -> StdResult<Uint128> {
+    pub fn total_funding(storage: &dyn Storage, user: Addr) -> StdResult<Uint128> {
         Ok(UserID::may_load(storage, USER_FUNDING_ID, user)?.unwrap_or(UserID(Uint128::zero())).0)
     }
 
-    pub fn funding<S: Storage>(storage: & S, user: Addr, id: Uint128) -> StdResult<Uint128> {
+    pub fn funding(storage: &dyn Storage, user: Addr, id: Uint128) -> StdResult<Uint128> {
         Ok(UserID::load(storage, USER_FUNDING, (user, id.u128()))?.0)
     }
 
-    pub fn add_funding<S: Storage>(storage: &mut S, user: Addr, prop_id: Uint128) -> StdResult<Uint128> {
+    pub fn add_funding(storage: &mut dyn Storage, user: Addr, prop_id: Uint128) -> StdResult<Uint128> {
         let item = match UserID::may_load(storage, USER_FUNDING_ID, user.clone())? {
             None => Uint128::zero(),
             Some(i) => i.0.checked_add(Uint128::new(1))?
@@ -180,15 +183,15 @@ impl UserID {
     }
 
     // Stores the proposal's ID so it can be cross searched
-    pub fn total_votes<S: Storage>(storage: & S, user: Addr) -> StdResult<Uint128> {
+    pub fn total_votes(storage: &dyn Storage, user: Addr) -> StdResult<Uint128> {
         Ok(UserID::may_load(storage, USER_VOTES_ID, user)?.unwrap_or(UserID(Uint128::zero())).0)
     }
 
-    pub fn votes<S: Storage>(storage: & S, user: Addr, id: Uint128) -> StdResult<Uint128> {
+    pub fn votes(storage: &dyn Storage, user: Addr, id: Uint128) -> StdResult<Uint128> {
         Ok(UserID::load(storage, USER_VOTES, (user, id.u128()))?.0)
     }
 
-    pub fn add_vote<S: Storage>(storage: &mut S, user: Addr, prop_id: Uint128) -> StdResult<Uint128> {
+    pub fn add_vote(storage: &mut dyn Storage, user: Addr, prop_id: Uint128) -> StdResult<Uint128> {
         let item = match UserID::may_load(storage, USER_VOTES_ID, user.clone())? {
             None => Uint128::zero(),
             Some(i) => i.0.checked_add(Uint128::new(1))?

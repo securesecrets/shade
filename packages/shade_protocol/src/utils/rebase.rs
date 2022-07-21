@@ -54,7 +54,7 @@ impl Rebase {
     }
 
     /// Add `elastic` to `self` and update `total.base`
-    pub fn add(&mut self, elastic: Uint256, round_up: bool) -> StdResult<(&mut Self, Uint256)> {
+    pub fn add(&mut self, elastic: Uint256, round_up: bool) -> StdResult<(& mut Self, Uint256)> {
         let base = self.to_base(elastic, round_up)?;
         self.elastic = self.elastic.checked_add(elastic)?;
         self.base = self.base.checked_add(base)?;
@@ -62,7 +62,7 @@ impl Rebase {
     }
 
     /// Sub `base` from `total` and update `self.elastic`
-    pub fn sub(&mut self, base: Uint256, round_up: bool) -> StdResult<(&mut Self, Uint256)> {
+    pub fn sub(&mut self, base: Uint256, round_up: bool) -> StdResult<(& mut Self, Uint256)> {
         let elastic = self.to_elastic(base, round_up)?;
         self.elastic = self.elastic.checked_sub(elastic)?;
         self.base = self.base.checked_sub(base)?;
@@ -70,14 +70,14 @@ impl Rebase {
     }
 
     /// Add `elastic` and `base` to self.
-    pub fn add_self(&mut self, elastic: Uint256, base: Uint256) -> StdResult<&mut Self> {
+    pub fn add_self(&mut self, elastic: Uint256, base: Uint256) -> StdResult<& mut Self> {
         self.elastic = self.elastic.checked_add(elastic)?;
         self.base = self.base.checked_add(base)?;
         Ok(self)
     }
 
     /// Subtract `elastic` and `base` from self.
-    pub fn sub_self(&mut self, elastic: Uint256, base: Uint256) -> StdResult<&mut Self> {
+    pub fn sub_self(&mut self, elastic: Uint256, base: Uint256) -> StdResult<& mut Self> {
         self.elastic = self.elastic.checked_sub(elastic)?;
         self.base = self.base.checked_sub(base)?;
         Ok(self)

@@ -509,7 +509,7 @@ pub fn try_receive(
 }
 
 pub fn remove_from_cooldown(
-    store: &mut S,
+    store: &mut dyn Storage,
     user: &Addr,
     user_tokens: Uint128,
     remove_amount: Uint128,

@@ -403,7 +403,7 @@ pub fn query(
     )
 }
 
-pub fn auth_queries<S: Storage, A: Api, Q: Querier>(
+pub fn auth_queries<A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: AuthQuery,
     user: Addr,
