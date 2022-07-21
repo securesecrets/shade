@@ -26,6 +26,7 @@ use shade_protocol::utils::generic_response::ResponseStatus;
 
 use std::{cmp::Ordering, convert::TryFrom};
 
+use crate::contract::RESPONSE_BLOCK_SIZE;
 use crate::state::{
     account_r, account_w, allocated_allowance_r, allocated_allowance_w, allowance_key_r,
     allowance_key_w, bond_opportunity_r, bond_opportunity_w, deposit_assets_r,
@@ -334,7 +335,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
             amount_to_issue.into(),
             None,
             None,
-            256,
+            RESPONSE_BLOCK_SIZE,
             config.issued_asset.code_hash.clone(),
             config.issued_asset.address,
         )?);
@@ -344,7 +345,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
             amount_to_issue.into(),
             None,
             None,
-            256,
+            RESPONSE_BLOCK_SIZE,
             config.issued_asset.code_hash,
             config.issued_asset.address,
         )?);
@@ -426,7 +427,7 @@ pub fn try_claim<S: Storage, A: Api, Q: Querier>(
         None,
         None,
         None,
-        256,
+        RESPONSE_BLOCK_SIZE,
         config.issued_asset.code_hash.clone(),
         config.issued_asset.address,
     )?);
@@ -847,7 +848,7 @@ pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> 
     register_receive_msg(
         env.contract_code_hash.clone(),
         None,
-        256,
+        RESPONSE_BLOCK_SIZE,
         contract.code_hash.clone(),
         contract.address.clone(),
     )

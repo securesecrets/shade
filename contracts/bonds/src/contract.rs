@@ -58,7 +58,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     messages.push(set_viewing_key_msg(
         allowance_key.0.clone(),
         None,
-        256,
+        RESPONSE_BLOCK_SIZE,
         state.issued_asset.code_hash.clone(),
         state.issued_asset.address.clone(),
     )?);
