@@ -11,8 +11,8 @@ pub mod snip20 {
 
 #[cfg(feature = "ics20")]
 pub mod ics20 {
-    use ics20;
-    multi_derive::implement_multi!(Ics20, ics20);
+    use ics20_proxy;
+    multi_derive::implement_multi!(Ics20, ics20_proxy);
 }
 
 // #[cfg(feature = "mint")]
