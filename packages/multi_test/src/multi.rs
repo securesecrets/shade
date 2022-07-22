@@ -9,6 +9,12 @@ pub mod snip20 {
     multi_derive::implement_multi!(Snip20, snip20);
 }
 
+#[cfg(feature = "ics20")]
+pub mod ics20 {
+    use ics20;
+    multi_derive::implement_multi!(Ics20, ics20);
+}
+
 // #[cfg(feature = "mint")]
 // pub mod mint {
 //     use mint;
