@@ -1,23 +1,29 @@
 use crate::tests::{admin_only_governance, get_assemblies};
-use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::Addr;
-use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query};
-use shade_protocol::contract_interfaces::governance;
+use shade_protocol::{
+    c_std::{Addr, Uint128},
+    contract_interfaces::governance,
+    utils::{ExecuteCallback, InstantiateCallback, Query},
+};
 
 #[test]
 fn add_assembly() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     governance::ExecuteMsg::AddAssembly {
-                name: "Other assembly".to_string(),
-                metadata: "some data".to_string(),
-                members: vec![],
-                profile: Uint128::new(1),
-                padding: None,
-            }.test_exec(// Sender is self
-                &gov, &mut chain, gov.address.clone(), &[]
-        )
-        .unwrap();
+        name: "Other assembly".to_string(),
+        metadata: "some data".to_string(),
+        members: vec![],
+        profile: Uint128::new(1),
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &gov,
+        &mut chain,
+        gov.address.clone(),
+        &[],
+    )
+    .unwrap();
 
     let assemblies = get_assemblies(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap();
 
@@ -28,16 +34,23 @@ fn add_assembly() {
 fn unauthorised_add_assembly() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    assert!(governance::ExecuteMsg::AddAssembly {
-                name: "Other assembly".to_string(),
-                metadata: "some data".to_string(),
-                members: vec![],
-                profile: Uint128::new(1),
-                padding: None,
-            }.test_exec(// Sender is self
-                &gov, &mut chain, Addr::unchecked("random"), &[]
+    assert!(
+        governance::ExecuteMsg::AddAssembly {
+            name: "Other assembly".to_string(),
+            metadata: "some data".to_string(),
+            members: vec![],
+            profile: Uint128::new(1),
+            padding: None,
+        }
+        .test_exec(
+            // Sender is self
+            &gov,
+            &mut chain,
+            Addr::unchecked("random"),
+            &[]
         )
-        .is_err())
+        .is_err()
+    )
 }
 
 #[test]
@@ -48,16 +61,21 @@ fn set_assembly() {
         get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetAssembly {
-                id: Uint128::new(1),
-                name: Some("Random name".to_string()),
-                metadata: Some("data".to_string()),
-                members: None,
-                profile: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &gov, &mut chain, gov.address.clone(), &[]
-        )
-        .unwrap();
+        id: Uint128::new(1),
+        name: Some("Random name".to_string()),
+        metadata: Some("data".to_string()),
+        members: None,
+        profile: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &gov,
+        &mut chain,
+        gov.address.clone(),
+        &[],
+    )
+    .unwrap();
 
     let new_assembly =
         get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
@@ -72,15 +90,22 @@ fn set_assembly() {
 fn unauthorised_set_assembly() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    assert!(governance::ExecuteMsg::SetAssembly {
-                id: Uint128::new(1),
-                name: Some("Random name".to_string()),
-                metadata: Some("data".to_string()),
-                members: None,
-                profile: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &gov, &mut chain, Addr::unchecked("random"), &[]
+    assert!(
+        governance::ExecuteMsg::SetAssembly {
+            id: Uint128::new(1),
+            name: Some("Random name".to_string()),
+            metadata: Some("data".to_string()),
+            members: None,
+            profile: None,
+            padding: None,
+        }
+        .test_exec(
+            // Sender is self
+            &gov,
+            &mut chain,
+            Addr::unchecked("random"),
+            &[]
         )
-        .is_err())
+        .is_err()
+    )
 }

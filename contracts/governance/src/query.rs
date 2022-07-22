@@ -1,6 +1,5 @@
-use shade_protocol::c_std::{Addr, Deps, Uint128};
-use shade_protocol::c_std::{Api, DepsMut, Querier, StdError, StdResult, Storage};
 use shade_protocol::{
+    c_std::{Addr, Api, Deps, DepsMut, Querier, StdError, StdResult, Storage, Uint128},
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
@@ -10,10 +9,9 @@ use shade_protocol::{
         Config,
         QueryAnswer,
     },
+    governance::{stored_id::UserID, Pagination, ResponseWithID},
     utils::storage::default::SingletonStorage,
 };
-use shade_protocol::governance::{Pagination, ResponseWithID};
-use shade_protocol::governance::stored_id::UserID;
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -21,19 +19,13 @@ pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn total_proposals(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn total_proposals(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::proposal(deps.storage)?.checked_add(Uint128::new(1))?,
     })
 }
 
-pub fn proposals(
-    deps: Deps,
-    start: Uint128,
-    end: Uint128,
-) -> StdResult<QueryAnswer> {
+pub fn proposals(deps: Deps, start: Uint128, end: Uint128) -> StdResult<QueryAnswer> {
     let mut items = vec![];
     let mut end = end;
     let total = ID::proposal(deps.storage)?;
@@ -53,19 +45,13 @@ pub fn proposals(
     Ok(QueryAnswer::Proposals { props: items })
 }
 
-pub fn total_profiles(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn total_profiles(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::profile(deps.storage)?.checked_add(Uint128::new(1))?,
     })
 }
 
-pub fn profiles(
-    deps: Deps,
-    start: Uint128,
-    end: Uint128,
-) -> StdResult<QueryAnswer> {
+pub fn profiles(deps: Deps, start: Uint128, end: Uint128) -> StdResult<QueryAnswer> {
     let mut items = vec![];
     let mut end = end;
     let total = ID::profile(deps.storage)?;
@@ -85,19 +71,13 @@ pub fn profiles(
     Ok(QueryAnswer::Profiles { profiles: items })
 }
 
-pub fn total_assemblies(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn total_assemblies(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::assembly(deps.storage)?.checked_add(Uint128::new(1))?,
     })
 }
 
-pub fn assemblies(
-    deps: Deps,
-    start: Uint128,
-    end: Uint128,
-) -> StdResult<QueryAnswer> {
+pub fn assemblies(deps: Deps, start: Uint128, end: Uint128) -> StdResult<QueryAnswer> {
     let mut items = vec![];
     let mut end = end;
     let total = ID::assembly(deps.storage)?;
@@ -117,19 +97,13 @@ pub fn assemblies(
     Ok(QueryAnswer::Assemblies { assemblies: items })
 }
 
-pub fn total_assembly_msgs(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn total_assembly_msgs(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::assembly_msg(deps.storage)?.checked_add(Uint128::new(1))?,
     })
 }
 
-pub fn assembly_msgs(
-    deps: Deps,
-    start: Uint128,
-    end: Uint128,
-) -> StdResult<QueryAnswer> {
+pub fn assembly_msgs(deps: Deps, start: Uint128, end: Uint128) -> StdResult<QueryAnswer> {
     let mut items = vec![];
     let mut end = end;
     let total = ID::assembly_msg(deps.storage)?;
@@ -149,19 +123,13 @@ pub fn assembly_msgs(
     Ok(QueryAnswer::AssemblyMsgs { msgs: items })
 }
 
-pub fn total_contracts(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn total_contracts(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Total {
         total: ID::contract(deps.storage)?.checked_add(Uint128::new(1))?,
     })
 }
 
-pub fn contracts(
-    deps: Deps,
-    start: Uint128,
-    end: Uint128,
-) -> StdResult<QueryAnswer> {
+pub fn contracts(deps: Deps, start: Uint128, end: Uint128) -> StdResult<QueryAnswer> {
     let mut items = vec![];
     let mut end = end;
     let total = ID::contract(deps.storage)?;
@@ -181,11 +149,7 @@ pub fn contracts(
     Ok(QueryAnswer::Contracts { contracts: items })
 }
 
-pub fn user_proposals(
-    deps: Deps,
-    user: Addr,
-    pagination: Pagination,
-) -> StdResult<QueryAnswer> {
+pub fn user_proposals(deps: Deps, user: Addr, pagination: Pagination) -> StdResult<QueryAnswer> {
     let total = UserID::total_proposals(deps.storage, user.clone())?;
 
     let start = pagination.amount.checked_mul(pagination.page).unwrap();
@@ -231,11 +195,7 @@ pub fn user_assembly_votes(
     Ok(QueryAnswer::UserAssemblyVotes { votes, total })
 }
 
-pub fn user_funding(
-    deps: Deps,
-    user: Addr,
-    pagination: Pagination,
-) -> StdResult<QueryAnswer> {
+pub fn user_funding(deps: Deps, user: Addr, pagination: Pagination) -> StdResult<QueryAnswer> {
     let total = UserID::total_funding(deps.storage, user.clone())?;
 
     let start = pagination.amount.checked_mul(pagination.page).unwrap();
@@ -256,11 +216,7 @@ pub fn user_funding(
     Ok(QueryAnswer::UserFunding { funds, total })
 }
 
-pub fn user_votes(
-    deps: Deps,
-    user: Addr,
-    pagination: Pagination,
-) -> StdResult<QueryAnswer> {
+pub fn user_votes(deps: Deps, user: Addr, pagination: Pagination) -> StdResult<QueryAnswer> {
     let total = UserID::total_votes(deps.storage, user.clone())?;
 
     let start = pagination.amount.checked_mul(pagination.page).unwrap();

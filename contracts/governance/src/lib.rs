@@ -1,4 +1,5 @@
-pub mod contract;    pub struct QueryAuth;
+pub mod contract;
+pub struct QueryAuth;
 
 pub mod handle;
 pub mod query;

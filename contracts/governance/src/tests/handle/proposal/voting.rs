@@ -1,144 +1,85 @@
-use crate::tests::{get_proposals, init_governance};
-use contract_harness::harness::{
-    governance::Governance,
-    snip20::Snip20,
-    snip20_staking::Snip20Staking,
-};
-use shade_protocol::c_std::Uint128;
-use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query};
-use shade_protocol::c_std::{to_binary, Addr, StdResult};
-use shade_protocol::{
-    contract_interfaces::{
-        governance,
-        snip20,
-        governance::{
-            profile::{Count, Profile, VoteProfile},
-            proposal::Status,
-            vote::Vote,
-            InstantiateMsg,
-        },
-        staking::snip20_staking,
+use crate::tests::{get_proposals, init_chain};
+use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
+use shade_protocol::{AnyResult, c_std::{to_binary, Addr, ContractInfo, StdResult, Uint128}, contract_interfaces::{
+    governance,
+    governance::{
+        profile::{Count, Profile, VoteProfile},
+        proposal::Status,
+        vote::Vote,
+        InstantiateMsg,
     },
-    utils::asset::Contract,
-};
+    snip20,
+    staking::snip20_staking,
+}, multi_test::App, query_auth, utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query}};
+use shade_protocol::multi_test::AppResponse;
+use shade_protocol::query_auth::ContractStatus::Default;
 
-pub fn init_voting_governance_with_proposal() -> StdResult<(
-    BasicApp,
-    ContractInfo,
-    ContractInfo,
-)> {
-    let mut chain = BasicApp::new(50);
+pub fn init_voting_governance_with_proposal()
+-> StdResult<(App, ContractInfo, String, ContractInfo)> {
+    let (mut chain, auth) = init_chain();
 
     // Register snip20
-    let snip20 = chain.register(Box::new(Snip20));
-    let snip20 = chain.instantiate(
-        snip20.id,
-        &snip20::InstantiateMsg {
-            name: "token".to_string(),
-            admin: None,
-            symbol: "TKN".to_string(),
-            decimals: 6,
-            initial_balances: Some(vec![
-                snip20::InitialBalance {
-                    address: "alpha".into(),
-                    amount: Uint128::new(20_000_000),
-                },
-                snip20::InitialBalance {
-                    address: "beta".into(),
-                    amount: Uint128::new(20_000_000),
-                },
-                snip20::InitialBalance {
-                    address: "charlie".into(),
-                    amount: Uint128::new(20_000_000),
-                },
-            ]),
-            prng_seed: Default::default(),
-            config: None,
-        }.test_exec("admin", ContractLink {
-            address: "token".into(),
-            code_hash: snip20.code_hash,
-        }),
-    )?.instance;
-
-    let stkd_tkn = chain.register(Box::new(Snip20Staking));
-    let stkd_tkn = chain.instantiate(
-        stkd_tkn.id,
-        &spip_stkd_0::msg::InstantiateMsg {
-            name: "Staked TKN".to_string(),
-            admin: None,
-            symbol: "TKN".to_string(),
-            decimals: Some(6),
-            share_decimals: 18,
-            prng_seed: Default::default(),
-            config: None,
-            unbond_time: 0,
-            staked_token: Contract {
-                address: snip20.address.clone(),
-                code_hash: snip20.code_hash.clone(),
+    let snip20 = snip20::InstantiateMsg {
+        name: "token".to_string(),
+        admin: None,
+        symbol: "TKN".to_string(),
+        decimals: 6,
+        initial_balances: Some(vec![
+            snip20::InitialBalance {
+                address: "alpha".into(),
+                amount: Uint128::new(20_000_000),
             },
-            treasury: None,
-            treasury_code_hash: None,
-            limit_transfer: false,
-            distributors: None,
-        }.test_exec("admin", ContractLink {
-            address: "staked_token".into(),
-            code_hash: stkd_tkn.code_hash,
-        }),
-    )?.instance;
+            snip20::InitialBalance {
+                address: "beta".into(),
+                amount: Uint128::new(20_000_000),
+            },
+            snip20::InitialBalance {
+                address: "charlie".into(),
+                amount: Uint128::new(20_000_000),
+            },
+        ]),
+        prng_seed: to_binary("some seed").unwrap(),
+        config: None,
+    }
+    .test_init(
+        Snip20::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "token",
+        &[],
+    )
+    .unwrap();
 
-    // Stake tokens
-    snip20::ExecuteMsg::Send {
-            recipient: stkd_tkn.address.clone(),
-            recipient_code_hash: None,
-            amount: Uint128::new(20_000_000),
-            memo: None,
-            msg: Some(to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap()),
-            padding: None,
-        }.test_exec(&snip20, &mut chain, Addr::unchecked("alpha"), &[])?;
-    snip20::ExecuteMsg::Send {
-            recipient: stkd_tkn.address.clone(),
-            recipient_code_hash: None,
-            amount: Uint128::new(20_000_000),
-            memo: None,
-            msg: Some(to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap()),
-            padding: None,
-        }.test_exec(&snip20, &mut chain, Addr::unchecked("beta"), &[])?;
-    snip20::ExecuteMsg::Send {
-            recipient: stkd_tkn.address.clone(),
-            recipient_code_hash: None,
-            amount: Uint128::new(20_000_000),
-            memo: None,
-            msg: Some(to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap()),
-            padding: None,
-        }.test_exec(&snip20, &mut chain, Addr::unchecked("charlie"), &[])?;
+    let stkd_tkn = "staked_token";
+    // Assume they got 20_000_000 total staked
 
     // Register governance
-    let auth = init_query_auth(&mut chain)?;
     query_auth::ExecuteMsg::SetViewingKey {
-                key: "password".to_string(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[]
-        )
-        .unwrap();
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
     query_auth::ExecuteMsg::SetViewingKey {
-                key: "password".to_string(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[]
-        )
-        .unwrap();
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     query_auth::ExecuteMsg::SetViewingKey {
-                key: "password".to_string(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("charlie"), &[]
-        )
-        .unwrap();
-    let gov = harness::governance::init(&mut chain, &InitMsg {
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("charlie"), &[])
+    .unwrap();
+
+    let gov = InstantiateMsg {
         treasury: Addr::unchecked("treasury"),
         query_auth: Contract {
-            address: auth.address,
-            code_hash: auth.code_hash,
+            address: auth.address.clone(),
+            code_hash: auth.code_hash.clone(),
         },
         admin_members: vec![
             Addr::unchecked("alpha"),
@@ -174,25 +115,47 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(
         },
         funding_token: None,
         vote_token: Some(Contract {
-            address: stkd_tkn.address.clone(),
-            code_hash: stkd_tkn.code_hash.clone(),
+            address: Addr::unchecked(stkd_tkn),
+            code_hash: "code_hash".to_string(),
         }),
-    })?;
+    }
+    .test_init(
+        Governance::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "governance",
+        &[],
+    )
+    .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-            assembly: Uint128::new(1),
-            title: "Title".to_string(),
-            metadata: "Text only proposal".to_string(),
-            msgs: None,
-            padding: None,
-        }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])?;
+        assembly: Uint128::new(1),
+        title: "Title".to_string(),
+        metadata: "Text only proposal".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    Ok((chain, gov, stkd_tkn))
+    Ok((chain, gov, stkd_tkn.to_string(), auth))
+}
+
+pub fn vote(gov: &ContractInfo, chain: &mut App, stkd: &str, voter: &str, vote: governance::vote::ReceiveBalanceMsg, balance: Uint128) -> AnyResult<AppResponse> {
+    governance::ExecuteMsg::ReceiveBalance {
+        sender: Addr::unchecked(voter),
+        msg: Some(
+            to_binary(&vote)
+                .unwrap(),
+        ),
+        balance,
+        memo: None
+    }.test_exec(gov, chain, Addr::unchecked(stkd), &[])
 }
 
 #[test]
 fn voting() {
-    let (mut chain, gov, _) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, _, auth) = init_voting_governance_with_proposal().unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -210,111 +173,80 @@ fn voting() {
 
 #[test]
 fn update_before_deadline() {
-    let (mut chain, gov, _) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, _, auth) = init_voting_governance_with_proposal().unwrap();
 
     assert!(
         governance::ExecuteMsg::Update {
-                    proposal: Uint128::new(0),
-                    padding: None
-                }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
-            .is_err()
+            proposal: Uint128::new(0),
+            padding: None
+        }
+        .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+        .is_err()
     );
 }
 
 #[test]
 fn update_after_deadline() {
-    let (mut chain, gov, _) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, _, auth) = init_voting_governance_with_proposal().unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     assert!(
         governance::ExecuteMsg::Update {
-                    proposal: Uint128::new(0),
-                    padding: None
-                }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
-            .is_ok()
+            proposal: Uint128::new(0),
+            padding: None
+        }
+        .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+        .is_ok()
     );
 }
 
 #[test]
 fn invalid_vote() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    assert!(
-        snip20_staking::ExecuteMsg::ExposeBalance {
-                    recipient: gov.address,
-                    code_hash: None,
-                    msg: Some(
-                        to_binary(&governance::vote::ReceiveBalanceMsg {
-                            vote: Vote {
-                                yes: Uint128::new(25_000_000),
-                                no: Default::default(),
-                                no_with_veto: Default::default(),
-                                abstain: Default::default()
-                            },
-                            proposal: Uint128::zero()
-                        })
-                        .unwrap()
-                    ),
-                    memo: None,
-                    padding: None
-                }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-            .is_err()
-    );
+    // TODO: should work
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(25_000_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_err());
 }
 
 #[test]
 fn vote_after_deadline() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
-    assert!(
-        snip20_staking::ExecuteMsg::ExposeBalance {
-                    recipient: gov.address,
-                    code_hash: None,
-                    msg: Some(
-                        to_binary(&governance::vote::ReceiveBalanceMsg {
-                            vote: Vote {
-                                yes: Uint128::new(25_000_000),
-                                no: Default::default(),
-                                no_with_veto: Default::default(),
-                                abstain: Default::default()
-                            },
-                            proposal: Uint128::zero()
-                        })
-                        .unwrap()
-                    ),
-                    memo: None,
-                    padding: None
-                }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-            .is_err()
-    );
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10_000_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_err());
 }
 
 #[test]
 fn vote_yes() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(1_000_000),
-                            no: Default::default(),
-                            no_with_veto: Default::default(),
-                            abstain: Default::default(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(1_000_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -337,27 +269,17 @@ fn vote_yes() {
 
 #[test]
 fn vote_abstain() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::new(1_000_000),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::new(1_000_000)
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -380,27 +302,17 @@ fn vote_abstain() {
 
 #[test]
 fn vote_no() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::new(1_000_000),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::new(1_000_000),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -423,27 +335,17 @@ fn vote_no() {
 
 #[test]
 fn vote_veto() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::new(1_000_000),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(1_000_000),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -466,54 +368,35 @@ fn vote_veto() {
 
 #[test]
 fn vote_passed() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10_000_000),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10_000_000),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10_000_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "beta", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10_000_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -532,54 +415,35 @@ fn vote_passed() {
 
 #[test]
 fn vote_abstained() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::new(10_000_000),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::new(10_000_000),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::new(10_000_000)
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "beta", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::new(10_000_000)
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -592,54 +456,35 @@ fn vote_abstained() {
 
 #[test]
 fn vote_rejected() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::new(10_000_000),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::new(10_000_000),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::new(10_000_000),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "beta", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::new(10_000_000),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -652,54 +497,35 @@ fn vote_rejected() {
 
 #[test]
 fn vote_vetoed() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::new(10_000_000),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::new(10_000_000),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(10_000_000),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "beta", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(10_000_000),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -712,54 +538,35 @@ fn vote_vetoed() {
 
 #[test]
 fn vote_no_quorum() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "beta", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -772,67 +579,35 @@ fn vote_no_quorum() {
 
 #[test]
 fn vote_total() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::new(10_000),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
-
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::new(23_000),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::new(10_000),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("charlie"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "beta", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(10_000),
+            abstain: Uint128::zero()
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "charlie", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::new(23_000),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::new(10_000),
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -855,27 +630,17 @@ fn vote_total() {
 
 #[test]
 fn update_vote() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::zero(),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::new(22_000),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::zero(),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::new(22_000),
+            abstain: Uint128::zero(),
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -890,25 +655,15 @@ fn update_vote() {
         })
     );
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10_000),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -926,54 +681,36 @@ fn update_vote() {
 
 #[test]
 fn vote_count() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10_000_000),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10_000_000),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10_000_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
-    chain.block_mut().time += 30000;
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "beta", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10_000_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
+
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -986,205 +723,37 @@ fn vote_count() {
 
 #[test]
 fn vote_count_percentage() {
-    let mut chain = BasicApp::new(50);
+    let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    // Register snip20
-    let snip20 = chain.register(Box::new(Snip20));
-    let snip20 = chain
-        .instantiate(
-            snip20.id,
-            &snip20::InstantiateMsg {
-                name: "token".to_string(),
-                admin: None,
-                symbol: "TKN".to_string(),
-                decimals: 6,
-                initial_balances: Some(vec![
-                    snip20::InitialBalance {
-                        address: Addr::unchecked("alpha"),
-                        amount: Uint128::new(20_000_000),
-                    },
-                    snip20::InitialBalance {
-                        address: Addr::unchecked("beta"),
-                        amount: Uint128::new(20_000_000),
-                    },
-                    snip20::InitialBalance {
-                        address: Addr::unchecked("charlie"),
-                        amount: Uint128::new(20_000_000),
-                    },
-                ]),
-                prng_seed: Default::default(),
-                config: None,
-            }.test_exec("admin", ContractLink {
-                address: "token".into(),
-                code_hash: snip20.code_hash,
-            }),
-        )
-        .unwrap()
-        .instance;
-
-    let stkd_tkn = chain.register(Box::new(Snip20Staking));
-    let stkd_tkn = chain
-        .instantiate(
-            stkd_tkn.id,
-            &spip_stkd_0::msg::InstantiateMsg {
-                name: "Staked TKN".to_string(),
-                admin: None,
-                symbol: "TKN".to_string(),
-                decimals: Some(6),
-                share_decimals: 18,
-                prng_seed: Default::default(),
-                config: None,
-                unbond_time: 0,
-                staked_token: Contract {
-                    address: snip20.address.clone(),
-                    code_hash: snip20.code_hash.clone(),
-                },
-                treasury: None,
-                treasury_code_hash: None,
-                limit_transfer: false,
-                distributors: None,
-            }.test_exec("admin", ContractLink {
-                address: "staked_token".into(),
-                code_hash: stkd_tkn.code_hash,
-            }),
-        )
-        .unwrap()
-        .instance;
-
-    // Stake tokens
-    snip20::ExecuteMsg::Send {
-                recipient: stkd_tkn.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(20_000_000),
-                memo: None,
-                msg: Some(
-                    to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap(),
-                ),
-                padding: None,
-            }.test_exec(&snip20, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-    snip20::ExecuteMsg::Send {
-                recipient: stkd_tkn.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(20_000_000),
-                memo: None,
-                msg: Some(
-                    to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap(),
-                ),
-                padding: None,
-            }.test_exec(&snip20, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
-    snip20::ExecuteMsg::Send {
-                recipient: stkd_tkn.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(20_000_000),
-                memo: None,
-                msg: Some(
-                    to_binary(&snip20_staking::ReceiveType::Bond { use_from: None }).unwrap(),
-                ),
-                padding: None,
-            }.test_exec(&snip20, &mut chain, Addr::unchecked("charlie"), &[])
-        .unwrap();
-
-    // Register governance
-    let auth = init_query_auth(&mut chain).unwrap();
-    let gov = harness::governance::init(&mut chain, &InitMsg {
-        treasury: Addr::unchecked("treasury"),
-        query_auth: Contract {
-            address: auth.address,
-            code_hash: auth.code_hash,
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10_000_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
         },
-        admin_members: vec![
-            Addr::unchecked("alpha"),
-            Addr::unchecked("beta"),
-            Addr::unchecked("charlie"),
-        ],
-        admin_profile: Profile {
-            name: "admin".to_string(),
-            enabled: true,
-            assembly: None,
-            funding: None,
-            token: Some(VoteProfile {
-                deadline: 10000,
-                threshold: Count::Percentage { percent: 3300 },
-                yes_threshold: Count::Percentage { percent: 6600 },
-                veto_threshold: Count::Percentage { percent: 3300 },
-            }),
-            cancel_deadline: 0,
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
+
+
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "beta", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(10_000_000),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
         },
-        public_profile: Profile {
-            name: "public".to_string(),
-            enabled: false,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
-        funding_token: None,
-        vote_token: Some(Contract {
-            address: stkd_tkn.address.clone(),
-            code_hash: stkd_tkn.code_hash.clone(),
-        }),
-    })
-    .unwrap();
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
-    governance::ExecuteMsg::AssemblyProposal {
-                assembly: Uint128::new(1),
-                title: "Title".to_string(),
-                metadata: "Text only proposal".to_string(),
-                msgs: None,
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
-
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10_000_000),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(10_000_000),
-                            no: Uint128::zero(),
-                            no_with_veto: Uint128::zero(),
-                            abstain: Uint128::zero(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec(&stkd_tkn, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
-
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-                proposal: Uint128::zero(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();

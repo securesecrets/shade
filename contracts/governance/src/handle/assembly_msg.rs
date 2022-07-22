@@ -1,17 +1,18 @@
-use shade_protocol::c_std::{MessageInfo, Uint128};
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Addr,
+        Api,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
     contract_interfaces::governance::{
         assembly::AssemblyMsg,
         stored_id::ID,
@@ -53,9 +54,11 @@ pub fn try_add_assembly_msg(
     }
     .save(deps.storage, &id)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddAssemblyMsg {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::AddAssemblyMsg {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_set_assembly_msg(
@@ -90,9 +93,11 @@ pub fn try_set_assembly_msg(
 
     assembly_msg.save(deps.storage, &id)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetAssemblyMsg {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::SetAssemblyMsg {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_add_assembly_msg_assemblies(
@@ -117,7 +122,9 @@ pub fn try_add_assembly_msg_assemblies(
 
     AssemblyMsg::save_data(deps.storage, &id, assembly_msg)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetAssemblyMsg {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::SetAssemblyMsg {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }

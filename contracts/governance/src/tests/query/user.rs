@@ -2,46 +2,40 @@ use crate::tests::{
     handle::proposal::{
         assembly_voting::init_assembly_governance_with_proposal,
         funding::init_funding_governance_with_proposal,
-        voting::init_voting_governance_with_proposal,
+        voting::{init_voting_governance_with_proposal, vote},
     },
-    init_query_auth,
+    init_chain,
 };
-use contract_harness::harness;
-use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query};
+use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
 use shade_protocol::{
-    c_std::{to_binary, Addr, StdResult},
+    c_std::{to_binary, Addr, StdResult, Uint128},
     contract_interfaces::{
         governance::{self, profile::Profile, vote::Vote, AuthQuery, Pagination, QueryAnswer},
         query_auth,
         snip20,
         staking::snip20_staking,
     },
-    fadroma::{
-        core::ContractLink,
-        ensemble::{BasicApp, MockEnv},
-    },
-    math_compat::Uint128,
-    utils::asset::Contract,
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 #[test]
 fn proposals() {
-    let mut chain = BasicApp::new(50);
-    let auth = init_query_auth(&mut chain).unwrap();
+    let (mut chain, auth) = init_chain();
 
     query_auth::ExecuteMsg::SetViewingKey {
-                key: "password".to_string(),
-                padding: None,
-            }.test_exec("admin", auth.clone())
-        .unwrap();
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
 
-    let msg = governance::InitMsg {
-        treasury: Addr("treasury".to_string()),
+    let msg = governance::InstantiateMsg {
+        treasury: Addr::unchecked("treasury".to_string()),
         query_auth: Contract {
             address: auth.address,
             code_hash: auth.code_hash,
         },
-        admin_members: vec![Addr("admin".to_string())],
+        admin_members: vec![Addr::unchecked("admin".to_string())],
         admin_profile: Profile {
             name: "admin".to_string(),
             enabled: true,
@@ -62,19 +56,27 @@ fn proposals() {
         vote_token: None,
     };
 
-    let gov = harness::governance::init(&mut chain, &msg).unwrap();
-
-    governance::ExecuteMsg::AssemblyProposal {
-                assembly: Uint128::new(1),
-                title: "Title".to_string(),
-                metadata: "Text".to_string(),
-                msgs: None,
-                padding: None,
-            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+    let gov = msg
+        .test_init(
+            Governance::default(),
+            &mut chain,
+            Addr::unchecked("admin"),
+            "governance",
+            &[],
+        )
         .unwrap();
 
-    let query: governance::QueryAnswer = chain
-        .query(gov.address.clone(), &governance::QueryMsg::WithVK {
+    governance::ExecuteMsg::AssemblyProposal {
+        assembly: Uint128::new(1),
+        title: "Title".to_string(),
+        metadata: "Text".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
+
+    let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
             user: Addr::unchecked("admin"),
             key: "password".to_string(),
             query: AuthQuery::Proposals {
@@ -83,8 +85,7 @@ fn proposals() {
                     amount: 10,
                 },
             },
-        })
-        .unwrap();
+        }.test_query(&gov, &chain).unwrap();
 
     match query {
         QueryAnswer::UserProposals { props, total } => {
@@ -95,16 +96,16 @@ fn proposals() {
     }
 
     governance::ExecuteMsg::AssemblyProposal {
-                assembly: Uint128::new(1),
-                title: "Title".to_string(),
-                metadata: "Text".to_string(),
-                msgs: None,
-                padding: None,
-            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
-        .unwrap();
+        assembly: Uint128::new(1),
+        title: "Title".to_string(),
+        metadata: "Text".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
 
-    let query: governance::QueryAnswer = chain
-        .query(gov.address.clone(), &governance::QueryMsg::WithVK {
+    let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
             user: Addr::unchecked("admin"),
             key: "password".to_string(),
             query: AuthQuery::Proposals {
@@ -113,8 +114,7 @@ fn proposals() {
                     amount: 10,
                 },
             },
-        })
-        .unwrap();
+        }.test_query(&gov, &chain).unwrap();
 
     match query {
         QueryAnswer::UserProposals { props, total } => {
@@ -124,8 +124,7 @@ fn proposals() {
         _ => assert!(false),
     }
 
-    let query: StdResult<governance::QueryAnswer> =
-        chain.query(gov.address.clone(), &governance::QueryMsg::WithVK {
+    let query: StdResult<governance::QueryAnswer> = governance::QueryMsg::WithVK {
             user: Addr::unchecked("admin"),
             key: "not_password".to_string(),
             query: AuthQuery::Proposals {
@@ -134,7 +133,7 @@ fn proposals() {
                     amount: 10,
                 },
             },
-        });
+        }.test_query(&gov, &chain);
     assert!(query.is_err())
 }
 
@@ -143,19 +142,19 @@ fn assembly_votes() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
-                proposal: Uint128::new(0),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+        proposal: Uint128::new(0),
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    let query: governance::QueryAnswer = chain
-        .query(gov.address.clone(), &governance::QueryMsg::WithVK {
+    let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
             user: Addr::unchecked("alpha"),
             key: "password".to_string(),
             query: AuthQuery::AssemblyVotes {
@@ -164,8 +163,7 @@ fn assembly_votes() {
                     amount: 10,
                 },
             },
-        })
-        .unwrap();
+        }.test_query(&gov, &chain).unwrap();
 
     match query {
         QueryAnswer::UserAssemblyVotes { votes, total } => {
@@ -178,20 +176,20 @@ fn assembly_votes() {
 
 #[test]
 fn funding() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(100),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(Addr::unchecked("alpha"), snip20.clone())
-        .unwrap();
+        recipient: gov.address.clone().into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(100),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(&snip20, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    let query: governance::QueryAnswer = chain
-        .query(gov.address.clone(), &governance::QueryMsg::WithVK {
+    let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
             user: Addr::unchecked("alpha"),
             key: "password".to_string(),
             query: AuthQuery::Funding {
@@ -200,8 +198,7 @@ fn funding() {
                     amount: 10,
                 },
             },
-        })
-        .unwrap();
+        }.test_query(&gov, &chain).unwrap();
 
     match query {
         QueryAnswer::UserFunding { funds, total } => {
@@ -214,33 +211,19 @@ fn funding() {
 
 #[test]
 fn votes() {
-    let (mut chain, gov, stkd_tkn) = init_voting_governance_with_proposal().unwrap();
+    let (mut chain, gov, stkd_tkn, _) = init_voting_governance_with_proposal().unwrap();
 
-    snip20_staking::ExecuteMsg::ExposeBalance {
-                recipient: gov.address.clone(),
-                code_hash: None,
-                msg: Some(
-                    to_binary(&governance::vote::ReceiveBalanceMsg {
-                        vote: Vote {
-                            yes: Uint128::new(1_000_000),
-                            no: Default::default(),
-                            no_with_veto: Default::default(),
-                            abstain: Default::default(),
-                        },
-                        proposal: Uint128::zero(),
-                    })
-                    .unwrap(),
-                ),
-                memo: None,
-                padding: None,
-            }.test_exec("alpha", ContractLink {
-                address: stkd_tkn.address.clone(),
-                code_hash: stkd_tkn.code_hash.clone(),
-            })
-        .unwrap();
+    assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
+        vote: Vote {
+            yes: Uint128::new(1_000_000),
+            no: Default::default(),
+            no_with_veto: Default::default(),
+            abstain: Default::default(),
+        },
+        proposal: Uint128::zero()
+    }, Uint128::new(20_000_000)).is_ok());
 
-    let query: governance::QueryAnswer = chain
-        .query(gov.address.clone(), &governance::QueryMsg::WithVK {
+    let query: governance::QueryAnswer = governance::QueryMsg::WithVK {
             user: Addr::unchecked("alpha"),
             key: "password".to_string(),
             query: AuthQuery::Votes {
@@ -249,8 +232,7 @@ fn votes() {
                     amount: 10,
                 },
             },
-        })
-        .unwrap();
+        }.test_query(&gov, &chain).unwrap();
 
     match query {
         QueryAnswer::UserVotes { votes, total } => {
