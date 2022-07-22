@@ -15,6 +15,7 @@ pub mod storage {
 }
 
 pub use serde;
+pub use schemars;
 pub use thiserror;
 pub use cosmwasm_schema;
 #[cfg(feature = "storage_plus")]

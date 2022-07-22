@@ -85,7 +85,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = [] # TODO: remove this from all cargo configs
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret", features = ["stargate"] }
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
 schemars = "0.8.9"
