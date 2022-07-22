@@ -1,9 +1,8 @@
 use shade_protocol::{
-    schemars::JsonSchema,
-    serde::{Deserialize, Serialize},
     c_std::{
         Uint128, Addr, Binary,
     },
+    schemars, serde, cosmwasm_schema, cosmwasm_schema::cw_serde
 };
 
 use crate::state::ChannelInfo;
