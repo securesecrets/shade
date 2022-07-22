@@ -2,11 +2,19 @@ pub mod contract;
 pub mod handle;
 pub mod query;
 
+#[cfg(test)]
+pub mod tests;
+
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::contract;
     use shade_protocol::c_std::{
-        do_handle, do_init, do_query, ExternalApi, ExternalQuerier, ExternalStorage,
+        do_handle,
+        do_init,
+        do_query,
+        ExternalApi,
+        ExternalQuerier,
+        ExternalStorage,
     };
 
     #[no_mangle]
