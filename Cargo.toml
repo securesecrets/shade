@@ -19,7 +19,7 @@ members = [
   "contracts/oracle",
   "contracts/sky",
   "contracts/query_auth",
-  "contracts/ics20",
+  "contracts/ics20_proxy",
 
   # DAO
   # - Core

@@ -6,8 +6,8 @@ use shade_protocol::{
 };
 
 use crate::state::ChannelInfo;
-use cosmwasm_schema::{cw_serde};
 
+/*
 #[cw_serde]
 pub struct Snip20ReceiveMsg {
     pub sender: Addr,
@@ -25,6 +25,7 @@ pub struct Snip20TransferMsg {
     memo: Option<String>,
     padding: Option<String>,
 }
+*/
 
 #[cw_serde]
 pub struct Contract {
@@ -44,7 +45,7 @@ pub struct InitMsg {
     //pub allowlist: Vec<AllowMsg>,
     /// If set, contracts off the allowlist will run with this gas limit.
     /// If unset, will refuse to accept any contract off the allow list.
-    pub default_gas_limit: Option<u64>,
+    pub default_gas_limit: u64,
 }
 
 /*
@@ -61,8 +62,10 @@ pub struct MigrateMsg {
 */
 
 #[cw_serde]
-pub struct IbcReceiver {
+pub struct IbcSendMsg {
     pub receiver: Addr,
+    pub channel: String,
+    pub timeout: u32,
 }
 
 #[cw_serde]
@@ -95,7 +98,7 @@ pub struct TransferMsg {
     /// and cannot be validated locally
     pub remote_address: String,
     /// How long the packet lives in seconds. If not specified, use default_timeout
-    pub timeout: Option<u64>,
+    pub timeout: u64,
 }
 
 #[cw_serde]
@@ -115,11 +118,11 @@ pub enum QueryMsg {
     /// Query if a given cw20 contract is allowed. Returns AllowedResponse
     Allowed { contract: String },
     /// List all allowed cw20 contracts. Returns ListAllowedResponse
-    */
     ListAllowed {
         start_after: Option<String>,
         limit: Option<u32>,
     },
+    */
 }
 
 #[cw_serde]
@@ -146,14 +149,14 @@ pub struct PortResponse {
 #[cw_serde]
 pub struct ConfigResponse {
     pub default_timeout: u64,
-    pub default_gas_limit: Option<u64>,
-    pub gov_contract: String,
+    pub default_gas_limit: u64,
+    pub gov_contract: Addr,
 }
 
 #[cw_serde]
 pub struct AllowedResponse {
     pub is_allowed: bool,
-    pub gas_limit: Option<u64>,
+    pub gas_limit: u64,
 }
 
 #[cw_serde]
@@ -164,5 +167,5 @@ pub struct ListAllowedResponse {
 #[cw_serde]
 pub struct AllowedInfo {
     pub contract: String,
-    pub gas_limit: Option<u64>,
+    pub gas_limit: u64,
 }

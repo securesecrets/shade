@@ -1,5 +1,5 @@
 [package]
-name = "ics20-proxy"
+name = "ics20_proxy"
 version = "0.1.0"
 authors = ["Jackson Swenson <jacksonswenson22@securesecrets.org>"]
 edition = "2018"
@@ -25,6 +25,7 @@ backtraces = ["shade-protocol/backtraces"]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "storage_plus",
   "utils",
+  "snip20",
 ] }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
 schemars = "0.8.9"
@@ -32,4 +33,4 @@ serde = { version = "1.0.103", default-features = false, features = ["derive", "
 
 [dev-dependencies]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "multi-test" ] }
-shade-multi-test = { path = "../../packages/multi_test", features = [ "ics20" ] }
+shade-multi-test = { path = "../../packages/multi_test", features = ["ics20-proxy"] }

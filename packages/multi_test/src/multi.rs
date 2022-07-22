@@ -9,8 +9,8 @@ pub mod snip20 {
     multi_derive::implement_multi!(Snip20, snip20);
 }
 
-#[cfg(feature = "ics20")]
-pub mod ics20 {
+#[cfg(feature = "ics20_proxy")]
+pub mod ics20_proxy {
     use ics20_proxy;
     multi_derive::implement_multi!(Ics20, ics20_proxy);
 }

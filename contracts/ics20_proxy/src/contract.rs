@@ -11,6 +11,7 @@ use crate::ibc::Ics20Packet;
 use crate::msg::{
     ChannelResponse, ConfigResponse, ExecuteMsg, InitMsg,
     ListChannelsResponse, PortResponse, QueryMsg, TransferMsg,
+    IbcSendMsg,
 };
 use crate::state::{
     Config, CHANNEL_INFO, CHANNEL_STATE,
@@ -32,6 +33,7 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     //set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let cfg = Config {
+        admin: info.sender,
         channel_id: msg.channel_id,
         default_timeout: msg.default_timeout,
         default_gas_limit: msg.default_gas_limit,
@@ -89,7 +91,7 @@ pub fn execute_receive(
     msg: Option<Binary>,
 ) -> StdResult<Response> {
 
-    let msg: IbcReceiver = match msg {
+    let msg: IbcSendMsg = match msg {
         Some(m) => from_binary(&m)?,
         None => { return Err(StdError::generic_err("Invalid msg")); }
     };
@@ -97,7 +99,7 @@ pub fn execute_receive(
     let native_token = NATIVE_TOKEN.load(deps.storage)?;
 
     if info.sender != native_token.address {
-        Err(StdError::generic_err("Invalid Token"))
+        return Err(StdError::generic_err("Invalid Token"));
     }
 
     if amount.is_zero() {
@@ -105,22 +107,19 @@ pub fn execute_receive(
     }
 
     let config = CONFIG.load(deps.storage)?;
-    // delta from user is in seconds
-    let timeout_delta = match msg.timeout {
-        Some(t) => t,
-        None => config.default_timeout,
-    };
     // timeout is in nanoseconds
-    let timeout = env.block.time.plus_seconds(timeout_delta);
+    let timeout = env.block.time.plus_seconds(msg.timeout.into());
 
     // build ics20 packet
-    let packet = Ics20Packet::new(
+    let packet = Ics20Packet {
+        receiver: msg.receiver,
+        sender,
+        from,
         amount,
-        "denom".into(),
-        sender.as_ref(),
-        &msg.remote_address,
-    );
-    packet.validate()?;
+        msg: None,
+        memo,
+    };
+    //packet.validate()?;
 
     // Update the balance now (optimistically) like ibctransfer modules.
     // In on_packet_failure (ack with error message or a timeout), we reduce the balance appropriately.
@@ -140,13 +139,14 @@ pub fn execute_receive(
         .add_attribute("action", "transfer")
         .add_attribute("sender", &packet.sender)
         .add_attribute("receiver", &packet.receiver)
-        .add_attribute("denom", &packet.denom)
+        //.add_attribute("denom", &packet.denom)
         .add_attribute("amount", &packet.amount.to_string());
     Ok(res)
 
     //execute_transfer(deps, env, msg, amount, deps.api.addr_validate(&wrapper.sender)?)
 }
 
+/*
 pub fn execute_transfer(
     deps: DepsMut,
     env: Env,
@@ -185,14 +185,15 @@ pub fn execute_transfer(
     // timeout is in nanoseconds
     let timeout = env.block.time.plus_seconds(timeout_delta);
 
-    // build ics20 packet
-    let packet = Ics20Packet::new(
+    let packet = Ics20Packet {
+        receiver: msg.receiver,
+        sender,
+        from,
         amount,
-        "denom".into(),
-        sender.as_ref(),
-        &msg.remote_address,
-    );
-    packet.validate()?;
+        memo,
+        msg,
+    };
+    //packet.validate()?;
 
     // Update the balance now (optimistically) like ibctransfer modules.
     // In on_packet_failure (ack with error message or a timeout), we reduce the balance appropriately.
@@ -212,10 +213,10 @@ pub fn execute_transfer(
         .add_attribute("action", "transfer")
         .add_attribute("sender", &packet.sender)
         .add_attribute("receiver", &packet.receiver)
-        .add_attribute("denom", &packet.denom)
         .add_attribute("amount", &packet.amount.to_string());
     Ok(res)
 }
+*/
 
 /// The gov contract can allow new contracts, or increase the gas limit on existing contracts.
 /// It cannot block or reduce the limit to avoid forcible sticking tokens in the channel.

@@ -32,9 +32,10 @@ pub struct ChannelState {
 
 #[cw_serde]
 pub struct Config {
+    pub admin: Addr,
     pub channel_id: String,
     pub default_timeout: u64,
-    pub default_gas_limit: Option<u64>,
+    pub default_gas_limit: u64,
 }
 
 #[cw_serde]
@@ -57,7 +58,7 @@ pub struct AllowInfo {
 #[cw_serde]
 pub struct ReplyArgs {
     pub channel: String,
-    pub denom: String,
+    //pub denom: String,
     pub amount: Uint128,
 }
 
