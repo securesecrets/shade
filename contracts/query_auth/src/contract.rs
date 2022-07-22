@@ -1,5 +1,5 @@
 use crate::{handle, query};
-use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Binary, Deps};
+use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Binary, Deps, entry_point};
 use shade_protocol::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
     contract_interfaces::query_auth::{
@@ -16,9 +16,11 @@ use shade_protocol::{
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
-pub fn init(
+#[entry_point]
+pub fn instantiate(
     deps: DepsMut,
     _env: Env,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     Admin(msg.admin_auth)
@@ -31,7 +33,8 @@ pub fn init(
     Ok(Response::new())
 }
 
-pub fn handle(
+#[entry_point]
+pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -77,7 +80,8 @@ pub fn handle(
     )
 }
 
-pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
+#[entry_point]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let status = ContractStatus::load(deps.storage)?;
     match status {
         // Do nothing

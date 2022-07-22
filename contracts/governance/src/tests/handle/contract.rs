@@ -1,16 +1,14 @@
 use crate::tests::{admin_only_governance, get_contract};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::Addr;
-use shade_protocol::fadroma::ensemble::MockEnv;
+use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query};
 use shade_protocol::{contract_interfaces::governance, utils::asset::Contract};
 
 #[test]
 fn add_contract() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::AddContract {
+    governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -19,12 +17,8 @@ fn add_contract() {
                 },
                 assemblies: None,
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
@@ -36,9 +30,7 @@ fn add_contract() {
 fn unauthorised_add_contract() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    assert!(chain
-        .execute(
-            &governance::ExecuteMsg::AddContract {
+    assert!(governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -47,12 +39,8 @@ fn unauthorised_add_contract() {
                 },
                 assemblies: None,
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                Addr::unchecked("random"),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, Addr::unchecked("random"), &[]
         )
         .is_err());
 }
@@ -60,9 +48,7 @@ fn unauthorised_add_contract() {
 fn set_contract() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::AddContract {
+    governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -71,21 +57,15 @@ fn set_contract() {
                 },
                 assemblies: None,
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
     let old_contract =
         get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::SetContract {
+    governance::ExecuteMsg::SetContract {
                 id: Uint128::new(1),
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
@@ -96,12 +76,8 @@ fn set_contract() {
                 disable_assemblies: false,
                 assemblies: None,
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
@@ -121,9 +97,7 @@ fn set_contract() {
 fn disable_contract_assemblies() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::AddContract {
+    governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -132,21 +106,15 @@ fn disable_contract_assemblies() {
                 },
                 assemblies: Some(vec![Uint128::zero()]),
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
     let old_contract =
         get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::SetContract {
+    governance::ExecuteMsg::SetContract {
                 id: Uint128::new(1),
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
@@ -157,12 +125,8 @@ fn disable_contract_assemblies() {
                 disable_assemblies: true,
                 assemblies: None,
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
@@ -183,9 +147,7 @@ fn disable_contract_assemblies() {
 fn enable_contract_assemblies() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::AddContract {
+    governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -194,21 +156,15 @@ fn enable_contract_assemblies() {
                 },
                 assemblies: None,
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
     let old_contract =
         get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::SetContract {
+    governance::ExecuteMsg::SetContract {
                 id: Uint128::new(1),
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
@@ -219,12 +175,8 @@ fn enable_contract_assemblies() {
                 disable_assemblies: false,
                 assemblies: Some(vec![Uint128::zero()]),
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
@@ -245,9 +197,7 @@ fn enable_contract_assemblies() {
 fn unauthorised_set_contract() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    assert!(chain
-        .execute(
-            &governance::ExecuteMsg::SetContract {
+    assert!(governance::ExecuteMsg::SetContract {
                 id: Uint128::new(1),
                 name: Some("New name".to_string()),
                 metadata: Some("New desc".to_string()),
@@ -258,12 +208,8 @@ fn unauthorised_set_contract() {
                 disable_assemblies: false,
                 assemblies: None,
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                Addr::unchecked("random"),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, Addr::unchecked("random"), &[]
         )
         .is_err());
 }
@@ -271,9 +217,7 @@ fn unauthorised_set_contract() {
 fn add_contract_assemblies() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::AddContract {
+    governance::ExecuteMsg::AddContract {
                 name: "Contract".to_string(),
                 metadata: "some description".to_string(),
                 contract: Contract {
@@ -282,29 +226,19 @@ fn add_contract_assemblies() {
                 },
                 assemblies: Some(vec![Uint128::zero()]),
                 padding: None,
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
     let old_contract =
         get_contract(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
 
-    chain
-        .execute(
-            &governance::ExecuteMsg::AddContractAssemblies {
+    governance::ExecuteMsg::AddContractAssemblies {
                 id: Uint128::new(1),
                 assemblies: vec![Uint128::new(1)],
-            },
-            MockEnv::new(
-                // Sender is self
-                gov.address.clone(),
-                gov.clone(),
-            ),
+            }.test_exec(// Sender is self
+                &gov, &mut chain, gov.address.clone(), &[]
         )
         .unwrap();
 
