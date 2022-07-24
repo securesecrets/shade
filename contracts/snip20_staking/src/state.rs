@@ -49,15 +49,15 @@ pub struct ReadonlyConfig<'a> {
     storage: ReadonlyPrefixedStorage<'a>,
 }
 
-impl<'a, S: ReadonlyStorage> ReadonlyConfig<'a> {
+impl<'a, S: Storage> ReadonlyConfig<'a> {
     pub fn from_storage(storage: &'a mut dyn Storage) -> Self {
         Self {
             storage: ReadonlyPrefixedStorage::new(PREFIX_CONFIG, storage),
         }
     }
 
-    fn as_readonly(&self) -> ReadonlyConfigImpl<ReadonlyPrefixedStorage<S>> {
-        ReadonlyConfigImpl(&self.storage)
+    fn as_readonly(&self) -> ReadonlyConfigImpl<ReadonlyPrefixedStorage> {
+        ReadonlyConfigImpl(self.storage)
     }
 
     pub fn constants(&self) -> StdResult<Constants> {

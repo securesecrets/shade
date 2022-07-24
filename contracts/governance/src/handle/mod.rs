@@ -1,7 +1,19 @@
-use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, MessageInfo};
-use shade_protocol::snip20::helpers::register_receive;
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Addr,
+        Api,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
+    snip20::helpers::register_receive,
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
@@ -37,7 +49,7 @@ pub fn try_set_config(
         messages.push(register_receive(
             env.contract.code_hash.clone(),
             None,
-            &vote_token
+            &vote_token,
         )?);
     }
 
@@ -46,7 +58,7 @@ pub fn try_set_config(
         messages.push(register_receive(
             env.contract.code_hash.clone(),
             None,
-            &funding_token
+            &funding_token,
         )?);
     }
 
@@ -59,9 +71,11 @@ pub fn try_set_config(
     }
 
     config.save(deps.storage)?;
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetConfig {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::SetConfig {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_set_runtime_state(
@@ -71,7 +85,9 @@ pub fn try_set_runtime_state(
     state: RuntimeState,
 ) -> StdResult<Response> {
     todo!();
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetRuntimeState {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::SetRuntimeState {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }

@@ -61,13 +61,11 @@ use crate::{
     transaction_history::{get_transfers, get_txs, store_claim_reward, store_mint, store_transfer},
     viewing_key::{ViewingKey, VIEWING_KEY_SIZE},
 };
-use cosmwasm_std::MessageInfo;
 use shade_protocol::c_std::{Deps, MessageInfo, Uint128, Uint256};
 /// This contract implements SNIP-20 standard:
 /// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
 use shade_protocol::c_std::{
     from_binary,
-    log,
     to_binary,
     Api,
     Binary,
@@ -91,6 +89,7 @@ use shade_protocol::{Contract, contract_interfaces::staking::snip20_staking::{
     ReceiveType,
 }, utils::storage::default::{BucketStorage, SingletonStorage}};
 use shade_protocol::query_authentication::permit::Permit;
+use shade_protocol::snip20::Permission;
 
 /// We make sure that responses from `execute` are padded to a multiple of this size.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;

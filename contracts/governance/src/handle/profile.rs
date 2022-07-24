@@ -1,17 +1,18 @@
-use shade_protocol::c_std::{MessageInfo, Uint128};
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Addr,
+        Api,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
     contract_interfaces::governance::{
         profile::{Profile, UpdateProfile},
         stored_id::ID,
@@ -33,9 +34,11 @@ pub fn try_add_profile(
     let id = ID::add_profile(deps.storage)?;
     profile.save(deps.storage, &id)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddProfile {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::AddProfile {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_set_profile(
@@ -86,7 +89,9 @@ pub fn try_set_profile(
 
     profile.save(deps.storage, &id)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetProfile {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::SetProfile {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }

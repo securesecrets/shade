@@ -1,23 +1,24 @@
 use crate::handle::assembly::try_assembly_proposal;
-use shade_protocol::c_std::{MessageInfo, SubMsg, Uint128};
-use shade_protocol::c_std::{
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    Coin,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    WasmMsg,
-};
-use shade_protocol::snip20::helpers::send_msg;
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        Coin,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        SubMsg,
+        Uint128,
+        WasmMsg,
+    },
     contract_interfaces::{
         governance::{
             assembly::Assembly,
@@ -27,18 +28,19 @@ use shade_protocol::{
             stored_id::UserID,
             vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
             Config,
-            HandleAnswer,
             ExecuteMsg::Receive,
+            HandleAnswer,
         },
         staking::snip20_staking,
     },
+    snip20::helpers::send_msg,
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
         storage::default::SingletonStorage,
+        Query,
     },
 };
-use shade_protocol::utils::Query;
 
 // Initializes a proposal on the public assembly with the blank command
 pub fn try_proposal(
@@ -70,8 +72,8 @@ pub fn try_proposal(
     try_assembly_proposal(deps, env, info, Uint128::zero(), title, metadata, msgs)?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Proposal {
-            status: ResponseStatus::Success,
-        })?))
+        status: ResponseStatus::Success,
+    })?))
 }
 
 pub fn try_trigger(
@@ -99,7 +101,7 @@ pub fn try_trigger(
                     contract_addr: contract.address.into(),
                     code_hash: contract.code_hash,
                     msg: prop_msg.msg.clone(),
-                    funds: prop_msg.send.clone()
+                    funds: prop_msg.send.clone(),
                 };
                 messages.push(SubMsg::reply_always(msg, i as u64));
             }
@@ -108,7 +110,9 @@ pub fn try_trigger(
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    Ok(Response::new().add_submessages(messages).set_data(to_binary(&HandleAnswer::Trigger {
+    Ok(Response::new()
+        .add_submessages(messages)
+        .set_data(to_binary(&HandleAnswer::Trigger {
             status: ResponseStatus::Success,
         })?))
 }
@@ -134,8 +138,8 @@ pub fn try_cancel(
     }
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Cancel {
-            status: ResponseStatus::Success,
-        })?))
+        status: ResponseStatus::Success,
+    })?))
 }
 
 fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> Status {
@@ -260,7 +264,8 @@ pub fn try_update(
             } else {
                 new_status = Status::Passed {
                     start: env.block.time.seconds(),
-                    end: env.block.time.seconds() + Profile::data(deps.storage, &profile)?.cancel_deadline,
+                    end: env.block.time.seconds()
+                        + Profile::data(deps.storage, &profile)?.cancel_deadline,
                 }
             }
 
@@ -282,10 +287,7 @@ pub fn try_update(
             let votes = Proposal::public_votes(deps.storage, &proposal)?;
 
             let query: snip20_staking::QueryAnswer = snip20_staking::QueryMsg::TotalStaked {}
-                .query(
-                    &deps.querier,
-                    &config.vote_token.unwrap(),
-                )?;
+                .query(&deps.querier, &config.vote_token.unwrap())?;
 
             // Get total staking power
             let total_power = match query {
@@ -333,7 +335,8 @@ pub fn try_update(
             } else if let Status::Success = vote_conclusion {
                 vote_conclusion = Status::Passed {
                     start: env.block.time.seconds(),
-                    end: env.block.time.seconds() + Profile::data(deps.storage, &profile)?.cancel_deadline,
+                    end: env.block.time.seconds()
+                        + Profile::data(deps.storage, &profile)?.cancel_deadline,
                 }
             }
 
@@ -349,8 +352,8 @@ pub fn try_update(
     Proposal::save_status(deps.storage, &proposal, new_status.clone())?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Update {
-            status: ResponseStatus::Success,
-        })?))
+        status: ResponseStatus::Success,
+    })?))
 }
 
 pub fn try_receive_funding(
@@ -449,13 +452,13 @@ pub fn try_receive_funding(
             None,
             None,
             None,
-            &funding_token
+            &funding_token,
         )?);
     }
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
-            status: ResponseStatus::Success,
-        })?))
+        status: ResponseStatus::Success,
+    })?))
 }
 
 pub fn try_claim_funding(
@@ -500,7 +503,7 @@ pub fn try_claim_funding(
             None,
             None,
             None,
-            &funding_token
+            &funding_token,
         )?)
         .set_data(to_binary(&HandleAnswer::ClaimFunding {
             status: ResponseStatus::Success,
@@ -566,7 +569,9 @@ pub fn try_receive_vote(
     Proposal::save_public_votes(deps.storage, &proposal, &tally.checked_add(&vote)?)?;
     UserID::add_vote(deps.storage, sender.clone(), proposal.clone())?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::ReceiveBalance {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::ReceiveBalance {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }

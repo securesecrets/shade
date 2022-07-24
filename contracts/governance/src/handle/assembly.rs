@@ -1,20 +1,21 @@
-use shade_protocol::c_std::{MessageInfo, Uint128};
-use shade_protocol::c_std::{
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    Coin,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        Coin,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
@@ -46,14 +47,11 @@ pub fn try_assembly_vote(
         return Err(StdError::generic_err("Not in assembly vote phase"));
     }
     // Check if user in assembly
-    if !Assembly::data(
-        deps.storage,
-        &Proposal::assembly(deps.storage, &proposal)?,
-    )?
-    .members
-    .contains(&sender)
+    if !Assembly::data(deps.storage, &Proposal::assembly(deps.storage, &proposal)?)?
+        .members
+        .contains(&sender)
     {
-        return Err(StdError::generic_err("unauthorized"))
+        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut tally = Proposal::assembly_votes(deps.storage, &proposal)?;
@@ -74,9 +72,11 @@ pub fn try_assembly_vote(
     // Save data for user queries
     UserID::add_assembly_vote(deps.storage, sender.clone(), proposal.clone())?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AssemblyVote {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::AssemblyVote {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_assembly_proposal(
@@ -188,9 +188,11 @@ pub fn try_assembly_proposal(
 
     prop.save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AssemblyProposal {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::AssemblyProposal {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_add_assembly(
@@ -221,9 +223,11 @@ pub fn try_add_assembly(
     }
     .save(deps.storage, &id)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddAssembly {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::AddAssembly {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_set_assembly(
@@ -267,7 +271,9 @@ pub fn try_set_assembly(
 
     assembly.save(deps.storage, &id)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetAssembly {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::SetAssembly {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }

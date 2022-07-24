@@ -4,13 +4,11 @@ use crate::tests::{
     get_proposals,
     gov_generic_proposal,
     gov_msg_proposal,
-    init_governance,
+    init_chain,
 };
-use contract_harness::harness::{governance::Governance, snip20::Snip20};
-use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::{to_binary, Binary, Addr, StdResult};
-use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query};
+use shade_multi_test::multi::{governance::Governance, snip20::Snip20};
 use shade_protocol::{
+    c_std::{to_binary, Addr, Binary, ContractInfo, StdResult, Uint128},
     contract_interfaces::{
         governance,
         governance::{
@@ -22,76 +20,72 @@ use shade_protocol::{
         query_auth,
         snip20,
     },
-    utils::asset::Contract,
+    multi_test::{App, BasicApp},
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
-pub fn init_funding_governance_with_proposal() -> StdResult<(
-    BasicApp,
-    ContractInfo,
-    ContractInfo,
-)> {
-    let mut chain = BasicApp::new(50);
+pub fn init_funding_governance_with_proposal()
+-> StdResult<(App, ContractInfo, ContractInfo, ContractInfo)> {
+    let (mut chain, auth) = init_chain();
 
     // Register snip20
-    let snip20 = chain.register(Box::new(Snip20));
-    let snip20 = chain.instantiate(
-        snip20.id,
-        &snip20::InstantiateMsg {
-            name: "funding_token".to_string(),
-            admin: None,
-            symbol: "FND".to_string(),
-            decimals: 6,
-            initial_balances: Some(vec![
-                snip20::InitialBalance {
-                    address: "alpha".into(),
-                    amount: Uint128::new(10000),
-                },
-                snip20::InitialBalance {
-                    address: "beta".into(),
-                    amount: Uint128::new(10000),
-                },
-                snip20::InitialBalance {
-                    address: "charlie".into(),
-                    amount: Uint128::new(10000),
-                },
-            ]),
-            prng_seed: Default::default(),
-            config: None,
-        }.test_exec("admin", ContractLink {
-            address: "funding_token".into(),
-            code_hash: snip20.code_hash,
-        }),
-    )?.instance;
-
-    // Register governance
-    let auth = init_query_auth(&mut chain)?;
+    let snip20 = snip20::InstantiateMsg {
+        name: "funding_token".to_string(),
+        admin: None,
+        symbol: "FND".to_string(),
+        decimals: 6,
+        initial_balances: Some(vec![
+            snip20::InitialBalance {
+                address: "alpha".into(),
+                amount: Uint128::new(10000),
+            },
+            snip20::InitialBalance {
+                address: "beta".into(),
+                amount: Uint128::new(10000),
+            },
+            snip20::InitialBalance {
+                address: "charlie".into(),
+                amount: Uint128::new(10000),
+            },
+        ]),
+        prng_seed: Default::default(),
+        config: None,
+    }
+    .test_init(
+        Snip20::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "funding_token",
+        &[],
+    )
+    .unwrap();
 
     query_auth::ExecuteMsg::SetViewingKey {
-                key: "password".to_string(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[]
-        )
-        .unwrap();
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
     query_auth::ExecuteMsg::SetViewingKey {
-                key: "password".to_string(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[]
-        )
-        .unwrap();
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     query_auth::ExecuteMsg::SetViewingKey {
-                key: "password".to_string(),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("charlie"), &[]
-        )
-        .unwrap();
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("charlie"), &[])
+    .unwrap();
 
-    let gov = harness::governance::init(&mut chain, &InitMsg {
+    let gov = InstantiateMsg {
         treasury: Addr::unchecked("treasury"),
         query_auth: Contract {
-            address: auth.address,
-            code_hash: auth.code_hash,
+            address: auth.address.clone(),
+            code_hash: auth.code_hash.clone(),
         },
         admin_members: vec![
             Addr::unchecked("alpha"),
@@ -124,107 +118,133 @@ pub fn init_funding_governance_with_proposal() -> StdResult<(
             code_hash: snip20.code_hash.clone(),
         }),
         vote_token: None,
-    })?;
+    }
+    .test_init(
+        Governance::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "governance",
+        &[],
+    )
+    .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-            assembly: Uint128::new(1),
-            title: "Title".to_string(),
-            metadata: "Text only proposal".to_string(),
-            msgs: None,
-            padding: None,
-        }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])?;
+        assembly: Uint128::new(1),
+        title: "Title".to_string(),
+        metadata: "Text only proposal".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
     snip20::ExecuteMsg::SetViewingKey {
-            key: "password".to_string(),
-            padding: None,
-        }.test_exec(&snip20, &mut chain, Addr::unchecked("alpha"), &[])?;
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&snip20, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
     snip20::ExecuteMsg::SetViewingKey {
-            key: "password".to_string(),
-            padding: None,
-        }.test_exec(&snip20, &mut chain, Addr::unchecked("beta"), &[])?;
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&snip20, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     snip20::ExecuteMsg::SetViewingKey {
-            key: "password".to_string(),
-            padding: None,
-        }.test_exec(&snip20, &mut chain, Addr::unchecked("charlie"), &[])?;
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&snip20, &mut chain, Addr::unchecked("charlie"), &[])
+    .unwrap();
 
-    Ok((chain, gov, snip20))
+    Ok((chain, gov, snip20, auth))
 }
 
 #[test]
 fn assembly_to_funding_transition() {
-    let (mut chain, gov, _snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, _snip20, auth) = init_funding_governance_with_proposal().unwrap();
+
     governance::ExecuteMsg::SetProfile {
-                id: Uint128::new(1),
-                profile: UpdateProfile {
-                    name: None,
-                    enabled: None,
-                    disable_assembly: false,
-                    assembly: Some(UpdateVoteProfile {
-                        deadline: Some(1000),
-                        threshold: Some(Count::LiteralCount {
-                            count: Uint128::new(1),
-                        }),
-                        yes_threshold: Some(Count::LiteralCount {
-                            count: Uint128::new(1),
-                        }),
-                        veto_threshold: Some(Count::LiteralCount {
-                            count: Uint128::new(1),
-                        }),
-                    }),
-                    disable_funding: false,
-                    funding: None,
-                    disable_token: false,
-                    token: None,
-                    cancel_deadline: None,
-                },
-                padding: None,
-            }.test_exec(// Sender is self
-                &gov, &mut chain, gov.address.clone(), &[]
-        )
-        .unwrap();
+        id: Uint128::new(1),
+        profile: UpdateProfile {
+            name: None,
+            enabled: None,
+            disable_assembly: false,
+            assembly: Some(UpdateVoteProfile {
+                deadline: Some(1000),
+                threshold: Some(Count::LiteralCount {
+                    count: Uint128::new(1),
+                }),
+                yes_threshold: Some(Count::LiteralCount {
+                    count: Uint128::new(1),
+                }),
+                veto_threshold: Some(Count::LiteralCount {
+                    count: Uint128::new(1),
+                }),
+            }),
+            disable_funding: false,
+            funding: None,
+            disable_token: false,
+            token: None,
+            cancel_deadline: None,
+        },
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &gov,
+        &mut chain,
+        gov.address.clone(),
+        &[],
+    )
+    .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-                assembly: Uint128::new(1),
-                title: "Title".to_string(),
-                metadata: "Text only proposal".to_string(),
-                msgs: None,
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+        assembly: Uint128::new(1),
+        title: "Title".to_string(),
+        metadata: "Text only proposal".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
-                proposal: Uint128::new(1),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+        proposal: Uint128::new(1),
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
-                proposal: Uint128::new(1),
-                vote: Vote {
-                    yes: Uint128::new(1),
-                    no: Uint128::zero(),
-                    no_with_veto: Uint128::zero(),
-                    abstain: Uint128::zero(),
-                },
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+        proposal: Uint128::new(1),
+        vote: Vote {
+            yes: Uint128::new(1),
+            no: Uint128::zero(),
+            no_with_veto: Uint128::zero(),
+            abstain: Uint128::zero(),
+        },
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
-    chain.block_mut().time += 30000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
     governance::ExecuteMsg::Update {
-                proposal: Uint128::new(1),
-                padding: None,
-            }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-        .unwrap();
+        proposal: Uint128::new(1),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
@@ -247,111 +267,137 @@ fn assembly_to_funding_transition() {
 }
 #[test]
 fn fake_funding_token() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, _) = init_funding_governance_with_proposal().unwrap();
 
-    let other = chain.register(Box::new(Snip20));
-    let other = chain
-        .instantiate(
-            other.id,
-            &snip20::InstantiateMsg {
-                name: "funding_token".to_string(),
-                admin: None,
-                symbol: "FND".to_string(),
-                decimals: 6,
-                initial_balances: Some(vec![
-                    snip20::InitialBalance {
-                        address: Addr::unchecked("alpha"),
-                        amount: Uint128::new(10000),
-                    },
-                    snip20::InitialBalance {
-                        address: Addr::unchecked("beta"),
-                        amount: Uint128::new(10000),
-                    },
-                    snip20::InitialBalance {
-                        address: Addr::unchecked("charlie"),
-                        amount: Uint128::new(10000),
-                    },
-                ]),
-                prng_seed: Default::default(),
-                config: None,
-            }.test_exec("admin", ContractLink {
-                address: "other".into(),
-                code_hash: snip20.code_hash.clone(),
-            }),
-        )
-        .unwrap()
-        .instance;
+    let other = snip20::InstantiateMsg {
+        name: "funding_token".to_string(),
+        admin: None,
+        symbol: "FND".to_string(),
+        decimals: 6,
+        initial_balances: Some(vec![
+            snip20::InitialBalance {
+                address: "alpha".into(),
+                amount: Uint128::new(10000),
+            },
+            snip20::InitialBalance {
+                address: "beta".into(),
+                amount: Uint128::new(10000),
+            },
+            snip20::InitialBalance {
+                address: "charlie".into(),
+                amount: Uint128::new(10000),
+            },
+        ]),
+        prng_seed: Default::default(),
+        config: None,
+    }
+    .test_init(
+        Snip20::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "other_snip20",
+        &[],
+    )
+    .unwrap();
 
     governance::ExecuteMsg::SetConfig {
-                treasury: None,
-                funding_token: Some(Contract {
-                    address: other.address.clone(),
-                    code_hash: other.code_hash,
-                }),
-                vote_token: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &gov, &mut chain, gov.address.clone(), &[]
-        )
-        .unwrap();
+        query_auth: None,
+        treasury: None,
+        funding_token: Some(Contract {
+            address: other.address.clone(),
+            code_hash: other.code_hash,
+        }),
+        vote_token: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &gov,
+        &mut chain,
+        gov.address.clone(),
+        &[],
+    )
+    .unwrap();
 
     assert!(
         snip20::ExecuteMsg::Send {
-                    recipient: gov.address,
-                    recipient_code_hash: None,
-                    amount: Uint128::new(100),
-                    msg: None,
-                    memo: None,
-                    padding: None
-                }.test_exec(// Sender is self
-                    &snip20, &mut chain, Addr::unchecked("alpha"), &[])
-            .is_err()
+            recipient: gov.address.into(),
+            recipient_code_hash: None,
+            amount: Uint128::new(100),
+            msg: None,
+            memo: None,
+            padding: None
+        }
+        .test_exec(
+            // Sender is self
+            &snip20,
+            &mut chain,
+            Addr::unchecked("alpha"),
+            &[]
+        )
+        .is_err()
     );
 }
 #[test]
 fn funding_proposal_without_msg() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
     assert!(
         snip20::ExecuteMsg::Send {
-                    recipient: gov.address,
-                    recipient_code_hash: None,
-                    amount: Uint128::new(100),
-                    msg: None,
-                    memo: None,
-                    padding: None
-                }.test_exec(// Sender is self
-                    &snip20, &mut chain, Addr::unchecked("alpha"), &[])
-            .is_err()
+            recipient: gov.address.into(),
+            recipient_code_hash: None,
+            amount: Uint128::new(100),
+            msg: None,
+            memo: None,
+            padding: None
+        }
+        .test_exec(
+            // Sender is self
+            &snip20,
+            &mut chain,
+            Addr::unchecked("alpha"),
+            &[]
+        )
+        .is_err()
     );
 }
 #[test]
 fn funding_proposal() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(100),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &snip20, &mut chain, Addr::unchecked("alpha"), &[],
-        )
-        .unwrap();
+        recipient: gov.address.clone().into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(100),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &snip20,
+        &mut chain,
+        Addr::unchecked("alpha"),
+        &[],
+    )
+    .unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(100),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &snip20, &mut chain, Addr::unchecked("beta"), &[],
-        )
-        .unwrap();
+        recipient: gov.address.clone().into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(100),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &snip20,
+        &mut chain,
+        Addr::unchecked("beta"),
+        &[],
+    )
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -363,67 +409,86 @@ fn funding_proposal() {
 }
 #[test]
 fn funding_proposal_after_deadline() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
-    chain.block_mut().time += 10000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(10000));
 
     assert!(
         snip20::ExecuteMsg::Send {
-                    recipient: gov.address.clone(),
-                    recipient_code_hash: None,
-                    amount: Uint128::new(100),
-                    msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                    memo: None,
-                    padding: None
-                }.test_exec(// Sender is self
-                    &snip20, &mut chain, Addr::unchecked("alpha"), &[])
-            .is_err()
+            recipient: gov.address.into(),
+            recipient_code_hash: None,
+            amount: Uint128::new(100),
+            msg: Some(to_binary(&Uint128::zero()).unwrap()),
+            memo: None,
+            padding: None
+        }
+        .test_exec(
+            // Sender is self
+            &snip20,
+            &mut chain,
+            Addr::unchecked("alpha"),
+            &[]
+        )
+        .is_err()
     )
 }
 #[test]
 fn update_while_funding() {
-    let (mut chain, gov, _snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, _snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
     assert!(
         governance::ExecuteMsg::Update {
-                    proposal: Uint128::zero(),
-                    padding: None
-                }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-            .is_err()
+            proposal: Uint128::zero(),
+            padding: None
+        }
+        .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+        .is_err()
     );
 }
 #[test]
 fn update_when_fully_funded() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(1000),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &snip20, &mut chain, Addr::unchecked("alpha"), &[],
-        )
-        .unwrap();
+        recipient: gov.address.clone().into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(1000),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &snip20,
+        &mut chain,
+        Addr::unchecked("alpha"),
+        &[],
+    )
+    .unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(1000),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &snip20, &mut chain, Addr::unchecked("beta"), &[],
-        )
-        .unwrap();
+        recipient: gov.address.clone().into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(1000),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &snip20,
+        &mut chain,
+        Addr::unchecked("beta"),
+        &[],
+    )
+    .unwrap();
 
     governance::ExecuteMsg::Update {
-            proposal: Uint128::zero(),
-            padding: None,
-        }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[]).unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -435,26 +500,33 @@ fn update_when_fully_funded() {
 }
 #[test]
 fn update_after_failed_funding() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(1000),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &snip20, &mut chain, Addr::unchecked("alpha"), &[],
-        )
-        .unwrap();
+        recipient: gov.address.clone().into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(1000),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &snip20,
+        &mut chain,
+        Addr::unchecked("alpha"),
+        &[],
+    )
+    .unwrap();
 
-    chain.block_mut().time += 10000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(10000));
 
     governance::ExecuteMsg::Update {
-            proposal: Uint128::zero(),
-            padding: None,
-        }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[]).unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -466,66 +538,85 @@ fn update_after_failed_funding() {
 }
 #[test]
 fn claim_when_not_finished() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(1000),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &snip20, &mut chain, Addr::unchecked("alpha"), &[],
-        )
-        .unwrap();
+        recipient: gov.address.into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(1000),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &snip20,
+        &mut chain,
+        Addr::unchecked("alpha"),
+        &[],
+    )
+    .unwrap();
 
     assert!(
         governance::ExecuteMsg::ClaimFunding {
-                    id: Uint128::new(0)
-                }.test_exec(// Sender is self
-                    &snip20, &mut chain, Addr::unchecked("alpha"), &[])
-            .is_err()
+            id: Uint128::new(0)
+        }
+        .test_exec(
+            // Sender is self
+            &snip20,
+            &mut chain,
+            Addr::unchecked("alpha"),
+            &[]
+        )
+        .is_err()
     );
 }
 #[test]
 fn claim_after_failing() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(1000),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &snip20, &mut chain, Addr::unchecked("alpha"), &[],
-        )
-        .unwrap();
+        recipient: gov.address.clone().into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(1000),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &snip20,
+        &mut chain,
+        Addr::unchecked("alpha"),
+        &[],
+    )
+    .unwrap();
 
-    chain.block_mut().time += 10000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(10000));
 
     governance::ExecuteMsg::Update {
-            proposal: Uint128::zero(),
-            padding: None,
-        }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[]).unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     governance::ExecuteMsg::ClaimFunding {
-                id: Uint128::new(0),
-            }.test_exec(// Sender is self
-                &gov, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+        id: Uint128::new(0),
+    }
+    .test_exec(
+        // Sender is self
+        &gov,
+        &mut chain,
+        Addr::unchecked("alpha"),
+        &[],
+    )
+    .unwrap();
 
-    let query: snip20::QueryAnswer = chain
-        .query(
-            snip20.address.clone(),
-            &snip20::QueryMsg::Balance {
-                address: Addr::unchecked("alpha"),
-                key: "password".to_string(),
-            },
-        )
-        .unwrap();
+    let query: snip20::QueryAnswer = snip20::QueryMsg::Balance {
+            address: "alpha".into(),
+            key: "password".to_string(),
+        }.test_query(&gov, &chain).unwrap();
 
     match query {
         snip20::QueryAnswer::Balance { amount } => {
@@ -536,30 +627,43 @@ fn claim_after_failing() {
 }
 #[test]
 fn claim_after_passing() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal().unwrap();
+    let (mut chain, gov, snip20, auth) = init_funding_governance_with_proposal().unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(2000),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &snip20, &mut chain, Addr::unchecked("alpha"), &[],
-        )
-        .unwrap();
+        recipient: gov.address.clone().into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(2000),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &snip20,
+        &mut chain,
+        Addr::unchecked("alpha"),
+        &[],
+    )
+    .unwrap();
 
     governance::ExecuteMsg::Update {
-            proposal: Uint128::zero(),
-            padding: None,
-        }.test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[]).unwrap();
+        proposal: Uint128::zero(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .unwrap();
 
     governance::ExecuteMsg::ClaimFunding {
-                id: Uint128::new(0),
-            }.test_exec(// Sender is self
-                &gov, &mut chain, Addr::unchecked("alpha"), &[])
-        .unwrap();
+        id: Uint128::new(0),
+    }
+    .test_exec(
+        // Sender is self
+        &gov,
+        &mut chain,
+        Addr::unchecked("alpha"),
+        &[],
+    )
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::new(0), Uint128::new(2)).unwrap()[0].clone();
@@ -569,15 +673,10 @@ fn claim_after_passing() {
         (Addr::unchecked("alpha"), Uint128::new(2000))
     );
 
-    let query: snip20::QueryAnswer = chain
-        .query(
-            snip20.address.clone(),
-            &snip20::QueryMsg::Balance {
-                address: Addr::unchecked("alpha"),
-                key: "password".to_string(),
-            },
-        )
-        .unwrap();
+    let query: snip20::QueryAnswer = snip20::QueryMsg::Balance {
+            address: "alpha".into(),
+            key: "password".to_string(),
+        }.test_query(&gov, &chain).unwrap();
 
     match query {
         snip20::QueryAnswer::Balance { amount } => {
@@ -587,53 +686,48 @@ fn claim_after_passing() {
     };
 }
 
-fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
-    BasicApp,
-    ContractInfo,
-    ContractInfo,
-)> {
-    let mut chain = BasicApp::new(50);
+fn init_funding_governance_with_proposal_with_privacy()
+-> StdResult<(App, ContractInfo, ContractInfo, ContractInfo)> {
+    let (mut chain, auth) = init_chain();
 
     // Register snip20
-    let snip20 = chain.register(Box::new(Snip20));
-    let snip20 = chain
-        .instantiate(
-            snip20.id,
-            &snip20::InitMsg {
-                name: "funding_token".to_string(),
-                admin: None,
-                symbol: "FND".to_string(),
-                decimals: 6,
-                initial_balances: Some(vec![
-                    snip20::InitialBalance {
-                        address: Addr::unchecked("alpha"),
-                        amount: Uint128::new(10000),
-                    },
-                    snip20::InitialBalance {
-                        address: Addr::unchecked("beta"),
-                        amount: Uint128::new(10000),
-                    },
-                    snip20::InitialBalance {
-                        address: Addr::unchecked("charlie"),
-                        amount: Uint128::new(10000),
-                    },
-                ]),
-                prng_seed: Default::default(),
-                config: None,
-            }.test_exec("admin", ContractLink {
-                address: "funding_token".into(),
-                code_hash: snip20.code_hash,
-            }),
-        )?
-        .instance;
+    let snip20 = snip20::InstantiateMsg {
+        name: "funding_token".to_string(),
+        admin: None,
+        symbol: "FND".to_string(),
+        decimals: 6,
+        initial_balances: Some(vec![
+            snip20::InitialBalance {
+                address: "alpha".into(),
+                amount: Uint128::new(10000),
+            },
+            snip20::InitialBalance {
+                address: "beta".into(),
+                amount: Uint128::new(10000),
+            },
+            snip20::InitialBalance {
+                address: "charlie".into(),
+                amount: Uint128::new(10000),
+            },
+        ]),
+        prng_seed: Default::default(),
+        config: None,
+    }
+    .test_init(
+        Snip20::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "funding_token",
+        &[],
+    )
+    .unwrap();
 
     // Register governance
-    let auth = init_query_auth(&mut chain)?;
-    let gov = harness::governance::init(&mut chain, &InitMsg {
+    let gov = InstantiateMsg {
         treasury: Addr::unchecked("treasury"),
         query_auth: Contract {
-            address: auth.address,
-            code_hash: auth.code_hash,
+            address: auth.address.clone(),
+            code_hash: auth.code_hash.clone(),
         },
         admin_members: vec![
             Addr::unchecked("alpha"),
@@ -666,34 +760,50 @@ fn init_funding_governance_with_proposal_with_privacy() -> StdResult<(
             code_hash: snip20.code_hash.clone(),
         }),
         vote_token: None,
-    })?;
+    }
+    .test_init(
+        Governance::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "governance",
+        &[],
+    )
+    .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-            assembly: Uint128::new(1),
-            title: "Title".to_string(),
-            metadata: "Text only proposal".to_string(),
-            msgs: None,
-            padding: None,
-        }.test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])?;
+        assembly: Uint128::new(1),
+        title: "Title".to_string(),
+        metadata: "Text only proposal".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
 
-    Ok((chain, gov, snip20))
+    Ok((chain, gov, snip20, auth))
 }
 
 #[test]
 fn funding_privacy() {
-    let (mut chain, gov, snip20) = init_funding_governance_with_proposal_with_privacy().unwrap();
+    let (mut chain, gov, snip20, auth) =
+        init_funding_governance_with_proposal_with_privacy().unwrap();
 
     snip20::ExecuteMsg::Send {
-                recipient: gov.address.clone(),
-                recipient_code_hash: None,
-                amount: Uint128::new(2000),
-                msg: Some(to_binary(&Uint128::zero()).unwrap()),
-                memo: None,
-                padding: None,
-            }.test_exec(// Sender is self
-                &snip20, &mut chain, Addr::unchecked("alpha"), &[],
-        )
-        .unwrap();
+        recipient: gov.address.clone().into(),
+        recipient_code_hash: None,
+        amount: Uint128::new(2000),
+        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        memo: None,
+        padding: None,
+    }
+    .test_exec(
+        // Sender is self
+        &snip20,
+        &mut chain,
+        Addr::unchecked("alpha"),
+        &[],
+    )
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::new(0), Uint128::new(2)).unwrap()[0].clone();

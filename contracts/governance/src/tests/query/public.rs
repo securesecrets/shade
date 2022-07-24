@@ -6,20 +6,18 @@ use crate::tests::{
     get_contract,
     get_profiles,
 };
-use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::StdError;
-use shade_protocol::contract_interfaces::governance;
+use shade_protocol::{
+    c_std::{StdError, Uint128},
+    contract_interfaces::governance,
+};
+use shade_protocol::utils::Query;
 
 #[test]
 fn query_total_assembly_msg() {
     let (chain, gov) = admin_only_governance().unwrap();
 
-    let query: governance::QueryAnswer = chain
-        .query(
-            gov.address.clone(),
-            &governance::QueryMsg::TotalAssemblyMsgs {},
-        )
-        .unwrap();
+    let query: governance::QueryAnswer = governance::QueryMsg::TotalAssemblyMsgs {}
+        .test_query(&gov, &chain).unwrap();
 
     let total = match query {
         governance::QueryAnswer::Total { total } => total,
@@ -59,12 +57,7 @@ fn query_assembly_msg_wrong_index() {
 fn query_total_contracts() {
     let (chain, gov) = admin_only_governance().unwrap();
 
-    let query: governance::QueryAnswer = chain
-        .query(
-            gov.address.clone(),
-            &governance::QueryMsg::TotalContracts {},
-        )
-        .unwrap();
+    let query: governance::QueryAnswer = governance::QueryMsg::TotalContracts {}.test_query(&gov, &chain).unwrap();
 
     let total = match query {
         governance::QueryAnswer::Total { total } => total,
@@ -103,9 +96,7 @@ fn query_contracts_wrong_index() {
 fn query_total_profiles() {
     let (chain, gov) = admin_only_governance().unwrap();
 
-    let query: governance::QueryAnswer = chain
-        .query(gov.address.clone(), &governance::QueryMsg::TotalProfiles {})
-        .unwrap();
+    let query: governance::QueryAnswer = governance::QueryMsg::TotalProfiles {}.test_query(&gov, &chain).unwrap();
 
     let total = match query {
         governance::QueryAnswer::Total { total } => total,
@@ -144,12 +135,7 @@ fn query_profiles_wrong_index() {
 fn query_total_assemblies() {
     let (chain, gov) = admin_only_governance().unwrap();
 
-    let query: governance::QueryAnswer = chain
-        .query(
-            gov.address.clone(),
-            &governance::QueryMsg::TotalAssemblies {},
-        )
-        .unwrap();
+    let query: governance::QueryAnswer = governance::QueryMsg::TotalAssemblies {}.test_query(&gov, &chain).unwrap();
 
     let total = match query {
         governance::QueryAnswer::Total { total } => total,

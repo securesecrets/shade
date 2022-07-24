@@ -22,22 +22,25 @@ use crate::{
     },
     query,
 };
-use shade_protocol::c_std::{Addr, Deps, from_binary, MessageInfo, Uint128};
-use shade_protocol::c_std::{
-    entry_point,
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use shade_protocol::{query_auth, snip20::helpers::register_receive};
 use shade_protocol::{
+    c_std::{
+        entry_point,
+        from_binary,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
@@ -48,14 +51,18 @@ use shade_protocol::{
         QueryMsg,
         MSG_VARIABLE,
     },
+    governance::{AuthQuery, QueryData},
+    query_auth,
+    snip20::helpers::register_receive,
     utils::{
         asset::Contract,
         flexible_msg::FlexibleMsg,
+        pad_handle_result,
+        pad_query_result,
         storage::default::{BucketStorage, SingletonStorage},
+        Query,
     },
 };
-use shade_protocol::governance::{AuthQuery, QueryData};
-use shade_protocol::utils::{pad_handle_result, pad_query_result, Query};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -81,14 +88,14 @@ pub fn instantiate(
         messages.push(register_receive(
             env.contract.code_hash.clone(),
             None,
-            &vote_token
+            &vote_token,
         )?);
     }
     if let Some(funding_token) = msg.funding_token.clone() {
         messages.push(register_receive(
             env.contract.code_hash.clone(),
             None,
-            &funding_token
+            &funding_token,
         )?);
     }
 
@@ -99,8 +106,7 @@ pub fn instantiate(
     ID::set_contract(deps.storage, Uint128::zero())?;
 
     // Setup public profile
-    msg.public_profile
-        .save(deps.storage, &Uint128::zero())?;
+    msg.public_profile.save(deps.storage, &Uint128::zero())?;
 
     if msg.public_profile.funding.is_some() {
         if msg.funding_token.is_none() {
@@ -124,8 +130,7 @@ pub fn instantiate(
     .save(deps.storage, &Uint128::zero())?;
 
     // Setup admin profile
-    msg.admin_profile
-        .save(deps.storage, &Uint128::new(1))?;
+    msg.admin_profile.save(deps.storage, &Uint128::new(1))?;
 
     if msg.admin_profile.funding.is_some() {
         if msg.funding_token.is_none() {
@@ -175,12 +180,7 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     pad_handle_result(
         match msg {
             // State setups
@@ -190,10 +190,20 @@ pub fn execute(
                 vote_token,
                 funding_token,
                 ..
-            } => try_set_config(deps, env, info, query_auth, treasury, vote_token, funding_token),
+            } => try_set_config(
+                deps,
+                env,
+                info,
+                query_auth,
+                treasury,
+                vote_token,
+                funding_token,
+            ),
 
             // TODO: set this, must be discussed with team
-            ExecuteMsg::SetRuntimeState { state, .. } => try_set_runtime_state(deps, env, info, state),
+            ExecuteMsg::SetRuntimeState { state, .. } => {
+                try_set_runtime_state(deps, env, info, state)
+            }
 
             // Proposals
             ExecuteMsg::Proposal {
@@ -278,7 +288,9 @@ pub fn execute(
             // Profiles
             ExecuteMsg::AddProfile { profile, .. } => try_add_profile(deps, env, info, profile),
 
-            ExecuteMsg::SetProfile { id, profile, .. } => try_set_profile(deps, env, info, id, profile),
+            ExecuteMsg::SetProfile { id, profile, .. } => {
+                try_set_profile(deps, env, info, id, profile)
+            }
 
             // Contracts
             ExecuteMsg::AddContract {
@@ -318,11 +330,7 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(
-    deps: Deps,
-    env: Env,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         match msg {
             QueryMsg::TotalProposals {} => to_binary(&query::total_proposals(deps)?),
@@ -356,16 +364,12 @@ pub fn query(
                     user: user.clone(),
                     key,
                 }
-                .query(
-                    &deps.querier,
-                    &authenticator,
-                )?;
+                .query(&deps.querier, &authenticator)?;
 
                 match res {
                     query_auth::QueryAnswer::ValidateViewingKey { is_valid } => {
                         if !is_valid {
                             return Err(StdError::generic_err("Unauthorized"));
-
                         }
                     }
                     _ => return Err(StdError::generic_err("Unauthorized")),
@@ -379,10 +383,7 @@ pub fn query(
                 let authenticator = Config::load(deps.storage)?.query;
                 let _args: QueryData = from_binary(&permit.params.data)?;
                 let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidatePermit { permit }
-                    .query(
-                        &deps.querier,
-                        &authenticator,
-                    )?;
+                    .query(&deps.querier, &authenticator)?;
 
                 let sender: Addr;
 
@@ -403,11 +404,7 @@ pub fn query(
     )
 }
 
-pub fn auth_queries(
-    deps: Deps,
-    msg: AuthQuery,
-    user: Addr,
-) -> StdResult<Binary> {
+pub fn auth_queries(deps: Deps, msg: AuthQuery, user: Addr) -> StdResult<Binary> {
     to_binary(&match msg {
         AuthQuery::Proposals { pagination } => query::user_proposals(deps, user, pagination)?,
         AuthQuery::AssemblyVotes { pagination } => {

@@ -1,16 +1,17 @@
-use shade_protocol::c_std::{MessageInfo, Uint128};
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Env,
-    DepsMut,
-    Response,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Api,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
     contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, HandleAnswer},
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
@@ -47,9 +48,11 @@ pub fn try_add_contract(
     }
     .save(deps.storage, &id)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddContract {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::AddContract {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_set_contract(
@@ -101,9 +104,11 @@ pub fn try_set_contract(
 
     allowed_contract.save(deps.storage, &id)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddContract {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::AddContract {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_add_contract_assemblies(
@@ -139,7 +144,9 @@ pub fn try_add_contract_assemblies(
 
     AllowedContract::save_data(deps.storage, &id, allowed_contract)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddContract {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::AddContract {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }

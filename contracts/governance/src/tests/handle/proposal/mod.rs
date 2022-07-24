@@ -9,15 +9,13 @@ use crate::tests::{
     gov_generic_proposal,
     gov_msg_proposal,
 };
-use shade_protocol::c_std::Uint128;
-use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query};
-use shade_protocol::c_std::{to_binary, Binary, Addr, StdResult};
 use shade_protocol::{
+    c_std::{to_binary, Addr, Binary, StdResult, Uint128},
     contract_interfaces::{
         governance,
         governance::proposal::{ProposalMsg, Status},
     },
-    utils::asset::Contract,
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, Query},
 };
 
 #[test]
@@ -25,13 +23,14 @@ fn trigger_admin_command() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-                assembly: Uint128::new(1),
-                title: "Title".to_string(),
-                metadata: "Proposal metadata".to_string(),
-                msgs: None,
-                padding: None,
-            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
-        .unwrap();
+        assembly: Uint128::new(1),
+        title: "Title".to_string(),
+        metadata: "Proposal metadata".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
 }
 
 #[test]
@@ -40,13 +39,14 @@ fn unauthorized_trigger_admin_command() {
 
     assert!(
         governance::ExecuteMsg::AssemblyProposal {
-                    assembly: Uint128::new(1),
-                    title: "Title".to_string(),
-                    metadata: "Proposal metadata".to_string(),
-                    msgs: None,
-                    padding: None
-                }.test_exec(&gov, &mut chain, Addr::unchecked("random"), &[])
-            .is_err()
+            assembly: Uint128::new(1),
+            title: "Title".to_string(),
+            metadata: "Proposal metadata".to_string(),
+            msgs: None,
+            padding: None
+        }
+        .test_exec(&gov, &mut chain, Addr::unchecked("random"), &[])
+        .is_err()
     );
 }
 
@@ -55,13 +55,14 @@ fn text_only_proposal() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-                assembly: Uint128::new(1),
-                title: "Title".to_string(),
-                metadata: "Text only proposal".to_string(),
-                msgs: None,
-                padding: None,
-            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
-        .unwrap();
+        assembly: Uint128::new(1),
+        title: "Title".to_string(),
+        metadata: "Text only proposal".to_string(),
+        msgs: None,
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -81,10 +82,11 @@ fn text_only_proposal() {
     assert_eq!(prop.funders, None);
 
     governance::ExecuteMsg::Trigger {
-                proposal: Uint128::new(0),
-                padding: None,
-            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
-        .unwrap();
+        proposal: Uint128::new(0),
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -124,10 +126,11 @@ fn msg_proposal() {
     };
 
     governance::ExecuteMsg::Trigger {
-                proposal: Uint128::new(0),
-                padding: None,
-            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
-        .unwrap();
+        proposal: Uint128::new(0),
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -195,10 +198,11 @@ fn multi_msg_proposal() {
     };
 
     governance::ExecuteMsg::Trigger {
-                proposal: Uint128::new(0),
-                padding: None,
-            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
-        .unwrap();
+        proposal: Uint128::new(0),
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
@@ -233,19 +237,21 @@ fn msg_proposal_invalid_msg() {
 
     assert!(
         governance::ExecuteMsg::Trigger {
-                    proposal: Uint128::new(0),
-                    padding: None
-                }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
-            .is_err()
+            proposal: Uint128::new(0),
+            padding: None
+        }
+        .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+        .is_err()
     );
 
-    chain.block_mut().time += 100000;
+    chain.update_block(|block| block.time = block.time.plus_seconds(100000));
 
     governance::ExecuteMsg::Cancel {
-                proposal: Uint128::new(0),
-                padding: None,
-            }.test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
-        .unwrap();
+        proposal: Uint128::new(0),
+        padding: None,
+    }
+    .test_exec(&gov, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
 
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
