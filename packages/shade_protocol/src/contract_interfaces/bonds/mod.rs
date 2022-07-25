@@ -125,9 +125,27 @@ impl HandleCallback for HandleMsg {
 pub enum HandleAnswer {
     UpdateLimitConfig {
         status: ResponseStatus,
+        limit_admin: HumanAddr,
+        shade_admin: Contract,
+        global_issuance_limit: Uint128,
+        global_minimum_bonding_period: u64,
+        global_maximum_discount: Uint128,
+        global_total_issued: Uint128,
+        global_total_claimed: Uint128
     },
     UpdateConfig {
         status: ResponseStatus,
+        oracle: Contract,
+        treasury: HumanAddr,
+        issued_asset: Contract,
+        activated: bool,
+        bond_issuance_limit: Uint128,
+        bonding_period: u64,
+        discount: Uint128,
+        global_min_accepted_issued_price: Uint128,
+        global_err_issued_price: Uint128,
+        airdrop: Option<Contract>,
+        query_auth: Contract
     },
     Deposit {
         status: ResponseStatus,

@@ -30,7 +30,7 @@ use crate::contract::RESPONSE_BLOCK_SIZE;
 use crate::state::{
     account_r, account_w, allocated_allowance_r, allocated_allowance_w, allowance_key_r,
     allowance_key_w, bond_opportunity_r, bond_opportunity_w, deposit_assets_r,
-    deposit_assets_w, config_r, config_w, global_total_claimed_w, global_total_issued_r,
+    deposit_assets_w, config_r, config_w, global_total_claimed_w, global_total_claimed_r, global_total_issued_r,
     global_total_issued_w, issued_asset_r,
 };
 
@@ -84,11 +84,20 @@ pub fn try_update_limit_config<S: Storage, A: Api, Q: Querier>(
         }
     }
 
+    let updated_config = config_r(&deps.storage).load()?;
+
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateLimitConfig {
             status: ResponseStatus::Success,
+            limit_admin: updated_config.limit_admin,
+            shade_admin: updated_config.shade_admin,
+            global_issuance_limit: updated_config.global_issuance_limit,
+            global_minimum_bonding_period: updated_config.global_minimum_bonding_period,
+            global_maximum_discount: updated_config.global_maximum_discount,
+            global_total_issued: global_total_issued_r(&deps.storage).load()?,
+            global_total_claimed: global_total_claimed_r(&deps.storage).load()?
         })?),
     })
 }
@@ -168,11 +177,24 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         Ok(state)
     })?;
 
+    let updated_config = config_r(&deps.storage).load()?;
+
     Ok(HandleResponse {
         messages: vec![],
         log: vec![],
         data: Some(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
+            oracle: updated_config.oracle,
+            treasury: updated_config.treasury,
+            issued_asset: updated_config.issued_asset,
+            activated: updated_config.activated,
+            bond_issuance_limit: updated_config.bond_issuance_limit,
+            bonding_period: updated_config.bonding_period,
+            discount: updated_config.discount,
+            global_min_accepted_issued_price: updated_config.global_min_accepted_issued_price,
+            global_err_issued_price: updated_config.global_err_issued_price,
+            airdrop: updated_config.airdrop,
+            query_auth: updated_config.query_auth,
         })?),
     })
 }
