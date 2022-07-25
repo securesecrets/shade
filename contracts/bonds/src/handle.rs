@@ -203,7 +203,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
     sender: HumanAddr,
-    _from: HumanAddr,
+    from: HumanAddr,
     deposit_amount: Uint128,
     msg: Option<Binary>,
 ) -> StdResult<HandleResponse> {
@@ -325,14 +325,14 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
             // Airdrop task
             if let Some(airdrop) = config.airdrop {
                 let msg = CompleteTask {
-                    address: sender.clone(),
+                    address: from.clone(),
                     padding: None,
                 };
                 messages.push(msg.to_cosmos_msg(airdrop.code_hash, airdrop.address, None)?);
             }
 
             Account {
-                address: sender,
+                address: from,
                 pending_bonds: vec![],
             }
         }
