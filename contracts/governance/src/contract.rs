@@ -63,6 +63,7 @@ use shade_protocol::{
         Query,
     },
 };
+use shade_protocol::c_std::SubMsg;
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -85,18 +86,18 @@ pub fn instantiate(
 
     let mut messages = vec![];
     if let Some(vote_token) = msg.vote_token.clone() {
-        messages.push(register_receive(
+        messages.push(SubMsg::new(register_receive(
             env.contract.code_hash.clone(),
             None,
             &vote_token,
-        )?);
+        )?));
     }
     if let Some(funding_token) = msg.funding_token.clone() {
-        messages.push(register_receive(
+        messages.push(SubMsg::new(register_receive(
             env.contract.code_hash.clone(),
             None,
             &funding_token,
-        )?);
+        )?));
     }
 
     // Setups IDs
@@ -176,7 +177,7 @@ pub fn instantiate(
     }
     .save(deps.storage, &Uint128::zero())?;
 
-    Ok(Response::new())
+    Ok(Response::new().add_submessages(messages))
 }
 
 #[entry_point]

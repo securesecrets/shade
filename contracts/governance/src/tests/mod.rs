@@ -148,7 +148,7 @@ pub fn get_assembly_msgs(
     let query: governance::QueryAnswer = governance::QueryMsg::AssemblyMsgs {
             start,
             end,
-        }.test_query(&gov, &chain).unwrap();
+        }.test_query(&gov, &chain)?;
 
     let msgs = match query {
         governance::QueryAnswer::AssemblyMsgs { msgs } => msgs,
@@ -167,7 +167,7 @@ pub fn get_contract(
     let query: governance::QueryAnswer = governance::QueryMsg::Contracts {
             start,
             end,
-        }.test_query(&gov, &chain).unwrap();
+        }.test_query(&gov, &chain)?;
 
     match query {
         governance::QueryAnswer::Contracts { contracts } => Ok(contracts),
@@ -184,7 +184,7 @@ pub fn get_profiles(
     let query: governance::QueryAnswer = governance::QueryMsg::Profiles {
             start,
             end,
-        }.test_query(&gov, &chain).unwrap();
+        }.test_query(&gov, &chain)?;
 
     match query {
         governance::QueryAnswer::Profiles { profiles } => Ok(profiles),
@@ -201,7 +201,7 @@ pub fn get_assemblies(
     let query: governance::QueryAnswer = governance::QueryMsg::Assemblies {
             start,
             end,
-        }.test_query(&gov, &chain).unwrap();
+        }.test_query(&gov, &chain)?;
 
     match query {
         governance::QueryAnswer::Assemblies { assemblies } => Ok(assemblies),
@@ -218,7 +218,7 @@ pub fn get_proposals(
     let query: governance::QueryAnswer = governance::QueryMsg::Proposals {
             start,
             end,
-        }.test_query(&gov, &chain).unwrap();
+        }.test_query(&gov, &chain)?;
 
     match query {
         governance::QueryAnswer::Proposals { props } => Ok(props),
