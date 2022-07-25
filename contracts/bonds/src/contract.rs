@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use shade_protocol::secret_toolkit::snip20::set_viewing_key_msg;
 
 use shade_protocol::contract_interfaces::{
-    bonds::{Config, HandleMsg, InitMsg, QueryMsg, SnipViewingKey},
+    bonds::{Config, HandleMsg, InitMsg, QueryMsg, SnipViewingKey, errors::{bonding_period_below_minimum_time, bond_discount_above_maximum_rate}},
     snip20::helpers::fetch_snip20,
 };
 
@@ -29,6 +29,20 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
+    if msg.bonding_period < msg.global_minimum_bonding_period {
+        return Err(bonding_period_below_minimum_time(
+            msg.bonding_period,
+            msg.global_minimum_bonding_period,
+        ));
+      }
+
+      if msg.discount > msg.global_maximum_discount {
+        return Err(bond_discount_above_maximum_rate(
+            msg.discount,
+            msg.global_maximum_discount,
+        ));
+      }
+
     let state = Config {
         limit_admin: msg.limit_admin,
         shade_admin: msg.shade_admin,

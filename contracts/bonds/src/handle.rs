@@ -157,9 +157,21 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             state.bond_issuance_limit = bond_issuance_limit;
         }
         if let Some(bonding_period) = bonding_period {
+            if bonding_period < state.global_minimum_bonding_period {
+                return Err(bonding_period_below_minimum_time(
+                    bonding_period,
+                    state.global_minimum_bonding_period,
+                ));
+            }
             state.bonding_period = bonding_period;
         }
         if let Some(discount) = discount {
+            if discount > state.global_maximum_discount {
+                return Err(bond_discount_above_maximum_rate(
+                    discount,
+                    state.global_maximum_discount,
+                ));
+            }
             state.discount = discount;
         }
         if let Some(global_min_accepted_issued_price) = global_min_accepted_issued_price {
