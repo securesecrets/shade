@@ -12,8 +12,6 @@ use crate::c_std::{
 use cosmwasm_schema::{cw_serde};
 use cosmwasm_std::{DepsMut, Env, CosmosMsg};
 use crate::BLOCK_SIZE;
-#[cfg(feature = "ensemble")]
-use fadroma::prelude::ContractLink;
 
 /// Validates an optional address.
 pub fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<Option<Addr>> {
@@ -76,13 +74,6 @@ impl From<ContractInfo> for RawContract {
     }
 }
 
-#[cfg(feature = "ensemble")]
-impl From<ContractLink<Addr>> for RawContract {
-    fn from(item: ContractLink<Addr>) -> Self {
-        RawContract { address: item.address.into(), code_hash: item.code_hash, }
-    }
-}
-
 #[derive(Hash, Eq)]
 #[cw_serde]
 pub struct Contract {
@@ -105,16 +96,6 @@ impl Contract {
 
 impl From<ContractInfo> for Contract {
     fn from(item: ContractInfo) -> Self {
-        Contract {
-            address: item.address,
-            code_hash: item.code_hash,
-        }
-    }
-}
-
-#[cfg(feature = "ensemble")]
-impl From<ContractLink<Addr>> for Contract {
-    fn from(item: ContractLink<Addr>) -> Self {
         Contract {
             address: item.address,
             code_hash: item.code_hash,

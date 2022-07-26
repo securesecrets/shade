@@ -11,7 +11,7 @@ use crate::utils::generic_response::ResponseStatus;
 use crate::utils::storage::plus::ItemStorage;
 #[cfg(feature = "query_auth_impl")]
 use secret_storage_plus::Item;
-use secret_toolkit::crypto::sha_256;
+use crate::utils::crypto::sha_256;
 use crate::utils::asset::Contract;
 
 #[cfg(feature = "query_auth_impl")]

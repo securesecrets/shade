@@ -138,7 +138,7 @@ pub fn list_contracts_by_code(code: String) -> Result<Vec<ListContractCode>> {
     serde_json::from_value(secretcli_run(vec_str_to_vec_string(command), None)?)
 }
 
-fn trim_newline(s: &mut dyn Storagetring) {
+fn trim_newline(s: &mut String) {
     if s.ends_with('\n') {
         s.pop();
         if s.ends_with('\r') {

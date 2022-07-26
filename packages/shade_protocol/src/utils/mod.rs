@@ -7,6 +7,7 @@ pub use callback::*;
 
 pub mod padding;
 pub use padding::*;
+pub mod crypto;
 
 #[cfg(feature = "utils")]
 pub mod asset;
