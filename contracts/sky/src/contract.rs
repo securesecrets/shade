@@ -34,6 +34,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         sscrt_token: msg.sscrt_token.clone(),
         treasury: msg.treasury,
         payback_rate: msg.payback_rate,
+        min_amount: msg.min_amount,
     };
 
     if msg.payback_rate == Decimal::zero() {
@@ -90,6 +91,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             sscrt_token,
             treasury,
             payback_rate,
+            min_amount,
             ..
         } => handle::try_update_config(
             deps,
@@ -100,6 +102,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             sscrt_token,
             treasury,
             payback_rate,
+            min_amount,
         ),
         HandleMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),
         HandleMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, cycle),

@@ -43,6 +43,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     sscrt_token: Option<Contract>,
     treasury: Option<Contract>,
     payback_rate: Option<Decimal>,
+    min_amount: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
     //Admin-only
     let mut config = Config::load(&mut deps.storage)?;
@@ -104,6 +105,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::generic_err("payback_rate cannot be zero"));
         }
         config.payback_rate = payback_rate;
+    }
+    if let Some(min_amount) = min_amount {
+        config.min_amount = min_amount;
     }
     config.save(&mut deps.storage)?;
     Ok(HandleResponse {
@@ -267,6 +271,9 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     index: Uint128,
     payback_addr: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
+    if Config::load(&deps.storage)?.min_amount > amount {
+        return Err(StdError::generic_err("Amount too small"));
+    }
     let mut messages = vec![];
     let mut return_swap_amounts = vec![];
     let mut payback_amount = Uint128::zero();
@@ -382,6 +389,9 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
     env: Env,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
+    if Config::load(&deps.storage)?.min_amount > amount {
+        return Err(StdError::generic_err("Amount too small"));
+    }
     let mut total_profit = Uint128::zero();
     let mut messages = vec![];
     let res = any_cycles_profitable(deps, amount)?; // get profitability data from query
