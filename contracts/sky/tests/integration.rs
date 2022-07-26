@@ -271,6 +271,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
                 },
                 viewing_key: "sky".to_string(),
                 payback_rate: Decimal::percent(30),
+                min_amount: Uint128::new(1000000),
             },
             MockEnv::new("admin", ContractLink {
                 address: HumanAddr("sky".into()),
@@ -319,6 +320,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
                 code_hash: "".to_string(),
             },
             payback_rate: Decimal::percent(30),
+            min_amount: Uint128::new(1000000),
         }),
         _ => assert!(false),
     }
