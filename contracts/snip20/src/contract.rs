@@ -22,6 +22,7 @@ use crate::{
     },
     query,
 };
+use shade_protocol::c_std as cosmwasm_std;
 use shade_protocol::c_std::{from_binary, to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Deps, entry_point};
 use shade_protocol::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
