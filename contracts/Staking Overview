@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2022-07-26T18:40:17.670Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36" etag="s14Fka-m7CX3L3KB6Urj" version="20.2.0" type="github">
+<mxfile host="app.diagrams.net" modified="2022-07-26T18:52:22.914Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36" etag="P_0bh0h1dZR81lLRdxxo" version="20.2.0" type="github">
   <diagram id="hO2woEYLl5W8Jl_3f4gL" name="Page-1">
     <mxGraphModel dx="2288" dy="1281" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
@@ -14,7 +14,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="OEarSlNTJwMwaWrM12Ts-29" value="Claim Rewards" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="OEarSlNTJwMwaWrM12Ts-28">
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-29" value="Claim Rewards/unbonds" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="OEarSlNTJwMwaWrM12Ts-28">
           <mxGeometry x="0.3846" y="2" relative="1" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
@@ -73,7 +73,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="OEarSlNTJwMwaWrM12Ts-41" value="Claim rewards" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="OEarSlNTJwMwaWrM12Ts-40">
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-41" value="Claim rewards/unbonds" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="OEarSlNTJwMwaWrM12Ts-40">
           <mxGeometry x="0.1211" y="3" relative="1" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
