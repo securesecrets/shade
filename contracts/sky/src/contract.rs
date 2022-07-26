@@ -34,6 +34,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         sscrt_token: msg.sscrt_token.clone(),
         treasury: msg.treasury,
         payback_rate: msg.payback_rate,
+        min_amount: msg.min_amount,
     };
 
     if msg.payback_rate == Decimal::zero() {
@@ -90,6 +91,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             sscrt_token,
             treasury,
             payback_rate,
+            min_amount,
             ..
         } => handle::try_update_config(
             deps,
@@ -100,6 +102,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             sscrt_token,
             treasury,
             payback_rate,
+            min_amount,
         ),
         HandleMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),
         HandleMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, cycle),
@@ -107,9 +110,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             handle::try_update_cycle(deps, env, cycle, index)
         }
         HandleMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, index),
-        HandleMsg::ArbCycle { amount, index, .. } => {
-            handle::try_arb_cycle(deps, env, amount, index)
-        }
+        HandleMsg::ArbCycle {
+            amount,
+            index,
+            payback_addr,
+            ..
+        } => handle::try_arb_cycle(deps, env, amount, index, payback_addr),
         HandleMsg::ArbAllCycles { amount, .. } => handle::try_arb_all_cycles(deps, env, amount),
         HandleMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {

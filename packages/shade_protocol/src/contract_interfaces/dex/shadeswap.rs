@@ -41,7 +41,10 @@ pub struct Simulation {
 #[serde(rename_all = "snake_case")]
 pub enum PairQuery {
     PairInfo,
-    GetEstimatedPrice { offer: TokenAmount },
+    GetEstimatedPrice {
+        offer: TokenAmount,
+        exclude_fee: Option<bool>,
+    },
 }
 
 impl Query for PairQuery {
@@ -64,6 +67,11 @@ pub enum TokenType {
 #[serde(rename_all = "snake_case")]
 pub struct TokenPair(pub TokenType, pub TokenType);
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TokenPairSerde {
+    pub token_0: TokenType,
+    pub token_1: TokenType,
+}
 /*
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -79,11 +87,11 @@ pub struct SimulationResponse {
 pub struct PairInfoResponse {
     pub liquidity_token: Contract,
     pub factory: Contract,
-    pub pair: TokenPair,
+    pub pair: TokenPairSerde,
     pub amount_0: Uint128,
     pub amount_1: Uint128,
     pub total_liquidity: Uint128,
-    pub contract_version: u32,
+    pub contract_version: Uint128, //should be u32
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -92,7 +100,7 @@ pub enum QueryMsgResponse {
     GetPairInfo {
         liquidity_token: Contract,
         factory: Contract,
-        pair: TokenPair,
+        pair: TokenPairSerde,
         amount_0: Uint128,
         amount_1: Uint128,
         total_liquidity: Uint128,

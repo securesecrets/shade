@@ -6,7 +6,17 @@ use crate::{
     utils::asset::Contract,
 };
 use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Api, CosmosMsg, Extern, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{
+    to_binary,
+    Api,
+    CosmosMsg,
+    Extern,
+    HumanAddr,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+};
 use schemars::JsonSchema;
 use secret_toolkit::{snip20::send_msg, utils::Query};
 use serde::{Deserialize, Serialize};
@@ -22,11 +32,83 @@ pub struct ArbPair {
 }
 
 impl ArbPair {
+    // Returns pool amounts in a tuple where 0 is the amount for token0
+    pub fn pool_amounts<S: Storage, A: Api, Q: Querier>(
+        self,
+        deps: &Extern<S, A, Q>,
+    ) -> StdResult<(Uint128, Uint128)> {
+        match self.dex {
+            Dex::SecretSwap => {
+                let res = secretswap::PairQuery::Pool {}.query(
+                    &deps.querier,
+                    self.pair_contract.clone().unwrap().code_hash,
+                    self.pair_contract.clone().unwrap().address,
+                )?;
+                match res {
+                    secretswap::PoolResponse { assets, .. } => {
+                        if assets[0].info.token.contract_addr.clone() == self.token0.address.clone()
+                        {
+                            Ok((assets[0].amount, assets[1].amount))
+                        } else {
+                            Ok((assets[1].amount, assets[0].amount))
+                        }
+                    }
+                }
+            }
+            Dex::ShadeSwap => {
+                let res = shadeswap::PairQuery::PairInfo.query(
+                    &deps.querier,
+                    self.pair_contract.clone().unwrap().code_hash,
+                    self.pair_contract.clone().unwrap().address,
+                )?;
+                match res {
+                    shadeswap::PairInfoResponse {
+                        pair,
+                        amount_0,
+                        amount_1,
+                        ..
+                    } => match pair.token_0 {
+                        shadeswap::TokenType::CustomToken { contract_addr, .. } => {
+                            if contract_addr == self.token0.address.clone() {
+                                Ok((amount_0, amount_1))
+                            } else {
+                                Ok((amount_1, amount_0))
+                            }
+                        }
+                        _ => Err(StdError::generic_err("Unexpected")),
+                    },
+                }
+            }
+            Dex::SiennaSwap => {
+                let res = sienna::PairQuery::PairInfo.query(
+                    &deps.querier,
+                    self.pair_contract.clone().unwrap().code_hash,
+                    self.pair_contract.clone().unwrap().address,
+                )?;
+
+                match res {
+                    sienna::PairInfoResponse { pair_info } => match pair_info.pair.token_0 {
+                        sienna::TokenType::CustomToken { contract_addr, .. } => {
+                            if contract_addr == self.token0.address.clone() {
+                                Ok((pair_info.amount_0, pair_info.amount_1))
+                            } else {
+                                Ok((pair_info.amount_1, pair_info.amount_0))
+                            }
+                        }
+                        _ => Err(StdError::generic_err("Unexpected")),
+                    },
+                }
+            }
+            Dex::Mint => Err(StdError::generic_err("Not available")),
+        }
+    }
+
     // Returns the calculated swap result when passed an offer with respect to the dex enum option
     pub fn simulate_swap<S: Storage, A: Api, Q: Querier>(
         self,
         deps: &Extern<S, A, Q>,
         offer: Offer,
+        exclude_fee: Option<bool>,
     ) -> StdResult<Uint128> {
         let mut swap_result = Uint128::zero();
         match self.dex {
@@ -82,6 +164,7 @@ impl ArbPair {
                         },
                         amount: offer.amount,
                     },
+                    exclude_fee,
                 }
                 .query(
                     &deps.querier,
@@ -257,7 +340,7 @@ impl Cycle {
                 return Err(StdError::generic_err("cycle not complete"));
             }
         }
-        let initial_len = hash_vec.clone().len();
+        /*let initial_len = hash_vec.clone().len();
         // Sorting and dedup ing will remove any dublicates and tell us if there's 2 of the same
         // pair contract included in the cycle
         hash_vec.sort();
@@ -266,7 +349,7 @@ impl Cycle {
             return Err(StdError::generic_err(
                 "cycles should include one copy of each pair",
             ));
-        }
+        }*/
         Ok(true)
     }
 }

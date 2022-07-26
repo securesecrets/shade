@@ -43,6 +43,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     sscrt_token: Option<Contract>,
     treasury: Option<Contract>,
     payback_rate: Option<Decimal>,
+    min_amount: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
     //Admin-only
     let mut config = Config::load(&mut deps.storage)?;
@@ -104,6 +105,9 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
             return Err(StdError::generic_err("payback_rate cannot be zero"));
         }
         config.payback_rate = payback_rate;
+    }
+    if let Some(min_amount) = min_amount {
+        config.min_amount = min_amount;
     }
     config.save(&mut deps.storage)?;
     Ok(HandleResponse {
@@ -265,7 +269,11 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     amount: Uint128,
     index: Uint128,
+    payback_addr: Option<HumanAddr>,
 ) -> StdResult<HandleResponse> {
+    if Config::load(&deps.storage)?.min_amount > amount {
+        return Err(StdError::generic_err("Amount too small"));
+    }
     let mut messages = vec![];
     let mut return_swap_amounts = vec![];
     let mut payback_amount = Uint128::zero();
@@ -331,16 +339,29 @@ pub fn try_arb_cycle<S: Storage, A: Api, Q: Querier>(
             payback_amount = profit * Config::load(&deps.storage)?.payback_rate;
 
             // add the payback msg
-            messages.push(send_msg(
-                env.message.sender,
-                c_std::Uint128(payback_amount.u128()),
-                None,
-                None,
-                None,
-                1,
-                cur_asset.code_hash.clone(),
-                cur_asset.address.clone(),
-            )?);
+            if let Some(payback_addr) = payback_addr {
+                messages.push(send_msg(
+                    payback_addr,
+                    c_std::Uint128(payback_amount.u128()),
+                    None,
+                    None,
+                    None,
+                    1,
+                    cur_asset.code_hash.clone(),
+                    cur_asset.address.clone(),
+                )?);
+            } else {
+                messages.push(send_msg(
+                    env.message.sender.clone(),
+                    c_std::Uint128(payback_amount.u128()),
+                    None,
+                    None,
+                    None,
+                    1,
+                    cur_asset.code_hash.clone(),
+                    cur_asset.address.clone(),
+                )?);
+            }
         }
         _ => {}
     }
@@ -368,6 +389,9 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
     env: Env,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
+    if Config::load(&deps.storage)?.min_amount > amount {
+        return Err(StdError::generic_err("Amount too small"));
+    }
     let mut total_profit = Uint128::zero();
     let mut messages = vec![];
     let res = any_cycles_profitable(deps, amount)?; // get profitability data from query
@@ -386,6 +410,7 @@ pub fn try_arb_all_cycles<S: Storage, A: Api, Q: Querier>(
                         sky::HandleMsg::ArbCycle {
                             amount,
                             index: Uint128::from(i as u128),
+                            payback_addr: Some(env.message.sender.clone()),
                             padding: None,
                         }
                         .to_cosmos_msg(

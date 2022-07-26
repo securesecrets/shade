@@ -21,6 +21,7 @@ pub struct Config {
     pub sscrt_token: Contract,
     pub treasury: Contract,
     pub payback_rate: Decimal,
+    pub min_amount: Uint128,
 }
 
 impl ItemStorage for Config {
@@ -61,6 +62,7 @@ pub struct InitMsg {
     pub treasury: Contract,
     pub viewing_key: String,
     pub payback_rate: Decimal,
+    pub min_amount: Uint128,
 }
 
 impl InitCallback for InitMsg {
@@ -77,6 +79,7 @@ pub enum HandleMsg {
         sscrt_token: Option<Contract>,
         treasury: Option<Contract>,
         payback_rate: Option<Decimal>,
+        min_amount: Option<Uint128>,
         padding: Option<String>,
     },
     SetCycles {
@@ -99,6 +102,7 @@ pub enum HandleMsg {
     ArbCycle {
         amount: Uint128,
         index: Uint128,
+        payback_addr: Option<HumanAddr>,
         padding: Option<String>,
     },
     ArbAllCycles {
