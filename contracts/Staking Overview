@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2022-07-26T18:15:07.998Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36" etag="PQusyNT_M2ksssR2-75e" version="20.2.0" type="github">
+<mxfile host="app.diagrams.net" modified="2022-07-26T18:16:00.840Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36" etag="toQXynR9oT2BnM_OtuG-" version="20.2.0" type="github">
   <diagram id="hO2woEYLl5W8Jl_3f4gL" name="Page-1">
-    <mxGraphModel dx="1018" dy="964" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="407" dy="386" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -83,8 +83,19 @@
         <mxCell id="OEarSlNTJwMwaWrM12Ts-8" value="Staking Profiles" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
           <mxGeometry x="140" y="440" width="170" height="30" as="geometry" />
         </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="OEarSlNTJwMwaWrM12Ts-15" target="OEarSlNTJwMwaWrM12Ts-21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-23" value="Vote" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="OEarSlNTJwMwaWrM12Ts-22">
+          <mxGeometry x="0.1667" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
         <mxCell id="OEarSlNTJwMwaWrM12Ts-15" value="Vote Token" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
           <mxGeometry x="570" y="280" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="OEarSlNTJwMwaWrM12Ts-21" value="Governance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="570" y="160" width="120" height="60" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
