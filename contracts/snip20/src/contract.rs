@@ -22,7 +22,6 @@ use crate::{
     },
     query,
 };
-use shade_protocol::c_std as cosmwasm_std;
 use shade_protocol::c_std::{from_binary, to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Deps, entry_point};
 use shade_protocol::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
@@ -39,7 +38,6 @@ use shade_protocol::{
     utils::storage::plus::MapStorage,
 };
 use shade_protocol::contract_interfaces::snip20::errors::{action_disabled, invalid_viewing_key, not_authenticated_msg, permit_revoked, unauthorized_permit};
-
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
