@@ -215,6 +215,7 @@ pub trait Query: Serialize {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "multi-test")]
 /// Trait for making integration with multi-test easier.
 pub trait MultiTestable {

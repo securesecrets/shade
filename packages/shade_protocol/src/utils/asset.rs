@@ -83,7 +83,7 @@ impl From<ContractLink<Addr>> for RawContract {
     }
 }
 
-#[derive(Hash, Eq, Default)]
+#[derive(Hash, Eq)]
 #[cw_serde]
 pub struct Contract {
     pub address: Addr,
