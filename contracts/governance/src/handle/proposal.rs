@@ -103,7 +103,8 @@ pub fn try_trigger(
                     msg: prop_msg.msg.clone(),
                     funds: prop_msg.send.clone(),
                 };
-                messages.push(SubMsg::reply_always(msg, i as u64));
+                // TODO: set reply as always
+                messages.push(SubMsg::new(msg));
             }
         }
     } else {

@@ -1,4 +1,4 @@
-use shade_protocol::c_std::{Api, Binary, CosmosMsg, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary, MessageInfo};
+use shade_protocol::c_std::{Api, Binary, CosmosMsg, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary, MessageInfo, SubMsg};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::Contract;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer, ReceiverHandleMsg};
@@ -79,7 +79,7 @@ pub fn try_batch_transfer(
 #[allow(clippy::too_many_arguments)]
 fn try_add_receiver_api_callback(
     storage: &dyn Storage,
-    messages: &mut Vec<CosmosMsg>,
+    messages: &mut Vec<SubMsg>,
     recipient: Addr,
     recipient_code_hash: Option<String>,
     msg: Option<Binary>,
@@ -95,11 +95,11 @@ fn try_add_receiver_api_callback(
 
     if let Some(hash) = receiver_hash {
         messages.push(
-            ReceiverHandleMsg::new(sender.to_string(), from.to_string(), amount, memo, msg)
+            SubMsg::new(ReceiverHandleMsg::new(sender.to_string(), from.to_string(), amount, memo, msg)
                 .to_cosmos_msg(&Contract{
                     address: recipient,
                     code_hash: hash.0
-                }, vec![])?
+                }, vec![])?)
         );
     }
     Ok(())
@@ -107,7 +107,7 @@ fn try_add_receiver_api_callback(
 
 pub fn try_send_impl(
     storage: &mut dyn Storage,
-    messages: &mut Vec<CosmosMsg>,
+    messages: &mut Vec<SubMsg>,
     sender: &Addr,
     owner: Option<&Addr>,
     recipient: &Addr,
@@ -162,7 +162,11 @@ pub fn try_send(
         &env.block
     )?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Send { status: Success })?))
+    Ok(
+        Response::new()
+            .set_data(to_binary(&HandleAnswer::Send { status: Success })?)
+            .add_submessages(messages)
+    )
 }
 
 pub fn try_batch_send(
@@ -191,5 +195,7 @@ pub fn try_batch_send(
         )?;
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchSend { status: Success })?))
+    Ok(Response::new()
+        .set_data(to_binary(&HandleAnswer::BatchSend { status: Success })?)
+        .add_submessages(messages))
 }

@@ -20,6 +20,7 @@ use shade_protocol::{
         storage::default::SingletonStorage,
     },
 };
+use shade_protocol::c_std::SubMsg;
 
 pub mod assembly;
 pub mod assembly_msg;
@@ -46,20 +47,20 @@ pub fn try_set_config(
     // Vote and funding tokens cannot be set to none after being set
     if let Some(vote_token) = vote_token {
         config.vote_token = Some(vote_token.clone());
-        messages.push(register_receive(
+        messages.push(SubMsg::new(register_receive(
             env.contract.code_hash.clone(),
             None,
             &vote_token,
-        )?);
+        )?));
     }
 
     if let Some(funding_token) = funding_token {
         config.funding_token = Some(funding_token.clone());
-        messages.push(register_receive(
+        messages.push(SubMsg::new(register_receive(
             env.contract.code_hash.clone(),
             None,
             &funding_token,
-        )?);
+        )?));
     }
 
     if let Some(treasury) = treasury {
@@ -74,7 +75,7 @@ pub fn try_set_config(
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::SetConfig {
             status: ResponseStatus::Success,
-        })?),
+        })?).add_submessages(messages),
     )
 }
 

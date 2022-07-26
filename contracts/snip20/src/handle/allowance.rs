@@ -156,7 +156,10 @@ pub fn try_send_from(
         &env.block
     )?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SendFrom { status: Success })?))
+    Ok(Response::new()
+        .set_data(to_binary(&HandleAnswer::SendFrom { status: Success })?)
+        .add_submessages(messages)
+    )
 }
 
 pub fn try_batch_send_from(
@@ -185,5 +188,8 @@ pub fn try_batch_send_from(
         )?;
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::BatchSendFrom { status: Success })?))
+    Ok(Response::new()
+        .set_data(to_binary(&HandleAnswer::BatchSendFrom { status: Success })?)
+        .add_submessages(messages)
+    )
 }

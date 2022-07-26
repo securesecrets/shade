@@ -135,7 +135,7 @@ pub fn init_funding_governance_with_proposal()
         msgs: None,
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
     .unwrap();
 
     snip20::ExecuteMsg::SetViewingKey {
@@ -208,7 +208,7 @@ fn assembly_to_funding_transition() {
         msgs: None,
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
     .unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
@@ -221,7 +221,7 @@ fn assembly_to_funding_transition() {
         },
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
     .unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
@@ -234,7 +234,7 @@ fn assembly_to_funding_transition() {
         },
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
@@ -243,7 +243,7 @@ fn assembly_to_funding_transition() {
         proposal: Uint128::new(1),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
@@ -441,7 +441,7 @@ fn update_while_funding() {
             proposal: Uint128::zero(),
             padding: None
         }
-        .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+        .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
         .is_err()
     );
 }
@@ -487,7 +487,7 @@ fn update_when_fully_funded() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
@@ -525,7 +525,7 @@ fn update_after_failed_funding() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
@@ -598,7 +598,7 @@ fn claim_after_failing() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     governance::ExecuteMsg::ClaimFunding {
@@ -616,7 +616,7 @@ fn claim_after_failing() {
     let query: snip20::QueryAnswer = snip20::QueryMsg::Balance {
             address: "alpha".into(),
             key: "password".to_string(),
-        }.test_query(&gov, &chain).unwrap();
+        }.test_query(&snip20, &chain).unwrap();
 
     match query {
         snip20::QueryAnswer::Balance { amount } => {
@@ -650,7 +650,7 @@ fn claim_after_passing() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     governance::ExecuteMsg::ClaimFunding {
@@ -676,7 +676,7 @@ fn claim_after_passing() {
     let query: snip20::QueryAnswer = snip20::QueryMsg::Balance {
             address: "alpha".into(),
             key: "password".to_string(),
-        }.test_query(&gov, &chain).unwrap();
+        }.test_query(&snip20, &chain).unwrap();
 
     match query {
         snip20::QueryAnswer::Balance { amount } => {
@@ -777,7 +777,7 @@ fn init_funding_governance_with_proposal_with_privacy()
         msgs: None,
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
     .unwrap();
 
     Ok((chain, gov, snip20, auth))

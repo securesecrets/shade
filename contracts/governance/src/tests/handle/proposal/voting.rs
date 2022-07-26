@@ -51,6 +51,24 @@ pub fn init_voting_governance_with_proposal()
     .unwrap();
 
     let stkd_tkn = "staked_token";
+    // Fake init token so it has a valid codehash
+    let stkd_tkn = snip20::InstantiateMsg {
+        name: "token".to_string(),
+        admin: None,
+        symbol: "TKN".to_string(),
+        decimals: 6,
+        initial_balances: None,
+        prng_seed: to_binary("some seed").unwrap(),
+        config: None,
+    }
+        .test_init(
+            Snip20::default(),
+            &mut chain,
+            Addr::unchecked("admin"),
+            "staked_token",
+            &[],
+        )
+        .unwrap();
     // Assume they got 20_000_000 total staked
 
     // Register governance
@@ -115,8 +133,8 @@ pub fn init_voting_governance_with_proposal()
         },
         funding_token: None,
         vote_token: Some(Contract {
-            address: Addr::unchecked(stkd_tkn),
-            code_hash: "code_hash".to_string(),
+            address: stkd_tkn.address.clone(),
+            code_hash: stkd_tkn.code_hash.clone(),
         }),
     }
     .test_init(
@@ -135,10 +153,10 @@ pub fn init_voting_governance_with_proposal()
         msgs: None,
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
     .unwrap();
 
-    Ok((chain, gov, stkd_tkn.to_string(), auth))
+    Ok((chain, gov, stkd_tkn.address.to_string(), auth))
 }
 
 pub fn vote(gov: &ContractInfo, chain: &mut App, stkd: &str, voter: &str, vote: governance::vote::ReceiveBalanceMsg, balance: Uint128) -> AnyResult<AppResponse> {
@@ -191,12 +209,13 @@ fn update_after_deadline() {
 
     chain.update_block(|block| block.time = block.time.plus_seconds(30000));
 
+    // TODO: will crash until i get staking back up
     assert!(
         governance::ExecuteMsg::Update {
             proposal: Uint128::new(0),
             padding: None
         }
-        .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+        .test_exec(&gov, &mut chain, Addr::unchecked("alpha"), &[])
         .is_ok()
     );
 }
@@ -395,7 +414,7 @@ fn vote_passed() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
@@ -442,7 +461,7 @@ fn vote_abstained() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
@@ -483,7 +502,7 @@ fn vote_rejected() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
@@ -524,7 +543,7 @@ fn vote_vetoed() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
@@ -565,7 +584,7 @@ fn vote_no_quorum() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
@@ -709,7 +728,7 @@ fn vote_count() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
@@ -752,7 +771,7 @@ fn vote_count_percentage() {
         proposal: Uint128::zero(),
         padding: None,
     }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
+    .test_exec(&gov, &mut chain, Addr::unchecked("beta"), &[])
     .unwrap();
 
     let prop =
