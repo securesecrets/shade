@@ -85,7 +85,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
                 decimals: 6,
                 initial_balances: Some(vec![snip20::InitialBalance {
                     address: HumanAddr("admin".into()),
-                    amount: Uint128::new(10000000000000), // 10,000,000 SSCRT
+                    amount: Uint128::new(10_000_000_000_000), // 10,000,000 SSCRT
                 }]),
                 prng_seed: to_binary("").ok().unwrap(),
                 config: None,
@@ -110,7 +110,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
                 decimals: 8,
                 initial_balances: Some(vec![snip20::InitialBalance {
                     address: HumanAddr("admin".into()),
-                    amount: Uint128::new(1000000000000000), // 10,000,000 SHD
+                    amount: Uint128::new(1_000_000_000_000_000), // 10,000,000 SHD
                 }]),
                 prng_seed: to_binary("").ok().unwrap(),
                 config: None,
@@ -135,7 +135,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
                 decimals: 6,
                 initial_balances: Some(vec![snip20::InitialBalance {
                     address: HumanAddr("admin".into()),
-                    amount: Uint128::new(10000000000000), // 10,000,000 SILK
+                    amount: Uint128::new(10_000_000_000_000), // 10,000,000 SILK
                 }]),
                 prng_seed: to_binary("").ok().unwrap(),
                 config: None,
@@ -190,7 +190,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
 
     match query_res {
         snip20::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, Uint128::new(10000000000000))
+            assert_eq!(amount, Uint128::new(10_000_000_000_000))
         }
         _ => {
             assert!(false)
@@ -206,7 +206,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
 
     match query_res {
         snip20::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, Uint128::new(1000000000000000))
+            assert_eq!(amount, Uint128::new(1_000_000_000_000_000))
         }
         _ => {
             assert!(false)
@@ -222,7 +222,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
 
     match query_res {
         snip20::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, Uint128::new(10000000000000))
+            assert_eq!(amount, Uint128::new(10_000_000_000_000))
         }
         _ => {
             assert!(false)
@@ -328,7 +328,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: sky.instance.address.clone(),
-                amount: Uint128::new(100000000000000),
+                amount: Uint128::new(100_000_000_000_000),
                 memo: None,
                 padding: None,
             },
@@ -339,7 +339,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: sky.instance.address.clone(),
-                amount: Uint128::new(1000000),
+                amount: Uint128::new(1_000_000),
                 memo: None,
                 padding: None,
             },
@@ -350,7 +350,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: sky.instance.address.clone(),
-                amount: Uint128::new(1000000),
+                amount: Uint128::new(1_000_000),
                 memo: None,
                 padding: None,
             },
@@ -368,9 +368,9 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             silk_bal,
             sscrt_bal,
         } => {
-            assert_eq!(shd_bal, Uint128::new(100000000000000));
-            assert_eq!(silk_bal, Uint128::new(1000000));
-            assert_eq!(sscrt_bal, Uint128::new(1000000));
+            assert_eq!(shd_bal, Uint128::new(100_000_000_000_000));
+            assert_eq!(silk_bal, Uint128::new(1_000_000));
+            assert_eq!(sscrt_bal, Uint128::new(1_000_000));
         }
         _ => assert!(false),
     }
@@ -419,7 +419,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: scrtswp.instance.address.clone(),
-                amount: Uint128::new(10000000000000),
+                amount: Uint128::new(10_000_000_000_000),
                 memo: None,
                 padding: None,
             },
@@ -430,7 +430,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: scrtswp.instance.address.clone(),
-                amount: Uint128::new(1000000000000),
+                amount: Uint128::new(1_000_000_000_000),
                 memo: None,
                 padding: None,
             },
@@ -444,7 +444,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             scrtswp.instance.address.clone(),
             &secretswap::PairQuery::Simulation {
                 offer_asset: secretswap::Asset {
-                    amount: Uint128::new(100000000),
+                    amount: Uint128::new(100_000_000),
                     info: secretswap::AssetInfo {
                         token: secretswap::Token {
                             contract_addr: shd.instance.address.clone(),
@@ -463,15 +463,15 @@ fn test_ensemble_sky(swap_amount: Uint128) {
     assert_eq!(
         swp_result.clone(),
         dex::dex::pool_take_amount(
-            Uint128::new(100000000),
-            Uint128::new(10000000000000),
-            Uint128::new(1000000000000)
+            Uint128::new(100_000_000),
+            Uint128::new(10_000_000_000_000),
+            Uint128::new(1_000_000_000_000)
         )
         .checked_sub(
             dex::dex::pool_take_amount(
-                Uint128::new(100000000),
-                Uint128::new(10000000000000),
-                Uint128::new(1000000000000)
+                Uint128::new(100_000_000),
+                Uint128::new(10_000_000_000_000),
+                Uint128::new(1_000_000_000_000)
             ) * Decimal::percent(1)
         )
         .unwrap()
@@ -492,7 +492,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             &snip20::HandleMsg::Send {
                 recipient: scrtswp.instance.address.clone(),
                 recipient_code_hash: Some(scrtswp.instance.code_hash.clone()),
-                amount: Uint128::new(100000000),
+                amount: Uint128::new(100_000_000),
                 msg: Some(
                     to_binary(&secretswap::CallbackMsg {
                         swap: secretswap::CallbackSwap {
@@ -519,7 +519,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
 
     assert_eq!(
         new_shd_bal,
-        old_shd_bal.checked_sub(Uint128::new(100000000)).unwrap()
+        old_shd_bal.checked_sub(Uint128::new(100_000_000)).unwrap()
     );
     assert_eq!(new_silk_bal, old_silk_bal.checked_add(swp_result).unwrap());
 
@@ -568,7 +568,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: shdswp.instance.address.clone(),
-                amount: Uint128::new(5000000000000),
+                amount: Uint128::new(5_000_000_000_000),
                 memo: None,
                 padding: None,
             },
@@ -579,7 +579,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: shdswp.instance.address.clone(),
-                amount: Uint128::new(1500000000000),
+                amount: Uint128::new(1_500_000_000_000),
                 memo: None,
                 padding: None,
             },
@@ -597,7 +597,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
                         contract_addr: shd.instance.address.clone(),
                         token_code_hash: shd.instance.code_hash.clone(),
                     },
-                    amount: Uint128::new(100000000),
+                    amount: Uint128::new(100_000_000),
                 },
                 exclude_fee: Some(true),
             },
@@ -611,9 +611,9 @@ fn test_ensemble_sky(swap_amount: Uint128) {
     assert_eq!(
         swp_result.clone(),
         dex::dex::pool_take_amount(
-            Uint128::new(100000000),
-            Uint128::new(5000000000000),
-            Uint128::new(1500000000000),
+            Uint128::new(100_000_000),
+            Uint128::new(5_000_000_000_000),
+            Uint128::new(1_500_000_000_000),
         )
     );
 
@@ -632,7 +632,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             &snip20::HandleMsg::Send {
                 recipient: shdswp.instance.address.clone(),
                 recipient_code_hash: Some(shdswp.instance.code_hash.clone()),
-                amount: Uint128::new(100000000),
+                amount: Uint128::new(100_000_000),
                 msg: Some(
                     to_binary(&shadeswap::SwapTokens {
                         to: None,
@@ -660,7 +660,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
 
     assert_eq!(
         new_shd_bal,
-        old_shd_bal.checked_sub(Uint128::new(100000000)).unwrap()
+        old_shd_bal.checked_sub(Uint128::new(100_000_000)).unwrap()
     );
     //assert_eq!(new_silk_bal, old_silk_bal.checked_add(swp_result).unwrap());
 
@@ -703,7 +703,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
             sky.instance.address.clone(),
             &sky::QueryMsg::IsCycleProfitable {
                 index: Uint128::new(0),
-                amount: Uint128::new(100000000),
+                amount: Uint128::new(100_000_000),
             },
         )
         .unwrap();
@@ -722,7 +722,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
     ensemble
         .execute(
             &sky::HandleMsg::ArbCycle {
-                amount: Uint128::new(100000000),
+                amount: Uint128::new(100_000_000),
                 index: Uint128::zero(),
                 payback_addr: None,
                 padding: None,
@@ -826,7 +826,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: scrtswp_new.instance.address.clone(),
-                amount: Uint128::new(50000000000),
+                amount: Uint128::new(50_000_000_000),
                 memo: None,
                 padding: None,
             },
@@ -837,7 +837,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: scrtswp_new.instance.address.clone(),
-                amount: Uint128::new(10000000000),
+                amount: Uint128::new(10_000_000_000),
                 memo: None,
                 padding: None,
             },
@@ -848,7 +848,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: shdswp_new.instance.address.clone(),
-                amount: Uint128::new(5000000000000),
+                amount: Uint128::new(5_000_000_000_000),
                 memo: None,
                 padding: None,
             },
@@ -859,7 +859,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .execute(
             &snip20::HandleMsg::Transfer {
                 recipient: shdswp_new.instance.address.clone(),
-                amount: Uint128::new(150000000000),
+                amount: Uint128::new(150_000_000_000),
                 memo: None,
                 padding: None,
             },
@@ -903,7 +903,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .query(
             sky.instance.address.clone(),
             &sky::QueryMsg::IsCycleProfitable {
-                amount: Uint128::new(1000000000),
+                amount: Uint128::new(1_000_000_000),
                 index: Uint128::new(1),
             },
         )
@@ -922,7 +922,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
         .query(
             sky.instance.address.clone(),
             &sky::QueryMsg::IsAnyCycleProfitable {
-                amount: Uint128::new(1000000000),
+                amount: Uint128::new(1_000_000_000),
             },
         )
         .unwrap();
@@ -963,7 +963,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
     let res = ensemble
         .execute(
             &sky::HandleMsg::ArbAllCycles {
-                amount: Uint128::new(100000000),
+                amount: Uint128::new(100_000_000),
                 padding: None,
             },
             MockEnv::new("admin", sky.instance.clone()),
