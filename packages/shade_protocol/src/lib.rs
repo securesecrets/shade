@@ -14,6 +14,7 @@ pub mod storage {
     pub use cosmwasm_storage::*;
 }
 
+pub use schemars;
 pub use serde;
 pub use thiserror;
 pub use cosmwasm_schema;
