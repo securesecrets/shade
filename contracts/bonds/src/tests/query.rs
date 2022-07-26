@@ -1,3 +1,4 @@
+use shade_oracles::common::Contract;
 use shade_protocol::c_std::{testing::*, Binary, HumanAddr};
 use shade_protocol::fadroma::core::ContractLink;
 use shade_protocol::fadroma::ensemble::ContractEnsemble;
@@ -21,6 +22,26 @@ pub fn query_no_opps(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAdd
             assert_eq!(bond_opportunities, vec![]);
         }
         _ => assert!(false),
+    }
+}
+
+pub fn query_config(
+    chain: &mut ContractEnsemble,
+    bonds: &ContractLink<HumanAddr>,
+    activated: Option<bool>
+) -> () {
+    let query: bonds::QueryAnswer = chain.query(
+        bonds.address.clone(), 
+        &bonds::QueryMsg::Config {  }
+    ).unwrap();
+
+    match query {
+        bonds::QueryAnswer::Config { config } => {
+            if activated.is_some() {
+                assert_eq!(config.activated, activated.unwrap())
+            }
+        }
+        _ => assert!(false)
     }
 }
 
