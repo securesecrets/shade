@@ -599,7 +599,7 @@ fn test_ensemble_sky(swap_amount: Uint128) {
                     },
                     amount: Uint128::new(100000000),
                 },
-                address: Some(sky.instance.address.clone()),
+                exclude_fee: Some(true),
             },
         )
         .unwrap();

@@ -375,7 +375,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<Binary> {
     match msg {
         PairQuery::PairInfo {} => to_binary(&pair_info_r(&deps.storage).load()?),
-        PairQuery::GetEstimatedPrice { offer, address } => {
+        PairQuery::GetEstimatedPrice { offer, exclude_fee } => {
             let mut pair = get_pair_res(deps)?;
             if mock_r(&deps.storage).load()? {
                 pair = pair_info_r(&deps.storage).load()?;
@@ -400,7 +400,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 let return_amount_pre_fee =
                     dex::pool_take_amount(offer.amount, pair.amount_0, pair.amount_1);
                 let fee = return_amount_pre_fee * fee_rate_r(&deps.storage).load()?;
-                if address.clone().unwrap() == whitelist_r(&deps.storage).load()? {
+                if Some(true) == exclude_fee {
                     return_amount = return_amount_pre_fee;
                 } else {
                     return_amount = return_amount_pre_fee.checked_sub(fee)?;
@@ -409,7 +409,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 let return_amount_pre_fee =
                     dex::pool_take_amount(offer.amount, pair.amount_1, pair.amount_0);
                 let fee = return_amount_pre_fee * fee_rate_r(&deps.storage).load()?;
-                if address.unwrap() == whitelist_r(&deps.storage).load()? {
+                if Some(true) == exclude_fee {
                     return_amount = return_amount_pre_fee;
                 } else {
                     return_amount = return_amount_pre_fee.checked_sub(fee)?;

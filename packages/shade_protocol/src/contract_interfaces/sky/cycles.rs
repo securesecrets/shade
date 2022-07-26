@@ -37,7 +37,7 @@ impl ArbPair {
         self,
         deps: &Extern<S, A, Q>,
         offer: Offer,
-        address: Option<HumanAddr>,
+        exclude_fee: Option<bool>,
     ) -> StdResult<Uint128> {
         let mut swap_result = Uint128::zero();
         match self.dex {
@@ -93,7 +93,7 @@ impl ArbPair {
                         },
                         amount: offer.amount,
                     },
-                    address,
+                    exclude_fee,
                 }
                 .query(
                     &deps.querier,

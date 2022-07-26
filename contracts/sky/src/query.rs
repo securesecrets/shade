@@ -110,11 +110,10 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     for arb_pair in cycles[i].pair_addrs.clone() {
         // simulate swap will run a query with respect to which dex or minting that the pair says
         // it is
-        let estimated_return = arb_pair.clone().simulate_swap(
-            &deps,
-            current_offer.clone(),
-            Some(SelfAddr::load(&deps.storage)?.0),
-        )?;
+        let estimated_return =
+            arb_pair
+                .clone()
+                .simulate_swap(&deps, current_offer.clone(), Some(true))?;
         swap_amounts.push(estimated_return.clone());
         // set up the next offer with the other token contract in the pair and the expected return
         // from the last query
@@ -144,6 +143,8 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
             profit: current_offer.amount.checked_sub(amount)?,
         });
     }
+    let mut return_swap_amounts = swap_amounts;
+    let last_offer_amount = current_offer.amount;
 
     // reset these variables in order to check the other way
     swap_amounts = vec![amount];
@@ -155,11 +156,10 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
     // this is a fancy way of iterating through a vec in reverse
     for arb_pair in cycles[i].pair_addrs.clone().iter().rev() {
         // get the estimated return from the simulate swap function
-        let estimated_return = arb_pair.clone().simulate_swap(
-            &deps,
-            current_offer.clone(),
-            Some(SelfAddr::load(&deps.storage)?.0),
-        )?;
+        let estimated_return =
+            arb_pair
+                .clone()
+                .simulate_swap(&deps, current_offer.clone(), Some(true))?;
         swap_amounts.push(estimated_return.clone());
         // set the current offer to the other asset we are swapping into
         if current_offer.asset.code_hash.clone() == arb_pair.token0.code_hash.clone() {
@@ -186,12 +186,17 @@ pub fn cycle_profitability<S: Storage, A: Api, Q: Querier>(
             profit: current_offer.amount.checked_sub(amount)?,
         });
     }
+    if current_offer.amount > last_offer_amount {
+        return_swap_amounts = swap_amounts;
+    } else {
+        cycles[i].pair_addrs.reverse();
+    }
 
     // If both possible directions are unprofitable, return false
     Ok(QueryAnswer::IsCycleProfitable {
         is_profitable: false,
-        direction: cycles[0].clone(),
-        swap_amounts: vec![],
+        direction: cycles[i].clone(),
+        swap_amounts: return_swap_amounts,
         profit: Uint128::zero(),
     })
 }
@@ -217,13 +222,11 @@ pub fn any_cycles_profitable<S: Storage, A: Api, Q: Querier>(
                 swap_amounts,
                 profit,
             } => {
-                if is_profitable {
-                    // push the results to a vec
-                    return_is_profitable.push(is_profitable);
-                    return_directions.push(direction);
-                    return_swap_amounts.push(swap_amounts);
-                    return_profit.push(profit);
-                }
+                // push the results to a vec
+                return_is_profitable.push(is_profitable);
+                return_directions.push(direction);
+                return_swap_amounts.push(swap_amounts);
+                return_profit.push(profit);
             }
             _ => {
                 return Err(StdError::generic_err("Unexpected result"));
