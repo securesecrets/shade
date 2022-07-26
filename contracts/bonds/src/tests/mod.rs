@@ -500,3 +500,23 @@ pub fn increase_allowance(
         .execute(&msg, MockEnv::new("admin", issu.clone()))
         .is_ok());
 }
+
+pub fn set_viewing_key(
+    chain: &mut ContractEnsemble,
+    query_auth: &ContractLink<HumanAddr>
+) -> () {
+    let msg = query_auth::HandleMsg::CreateViewingKey {
+        entropy: "random".to_string(),
+        padding: None,
+    };
+
+    chain
+        .execute(
+            &msg,
+            MockEnv::new(
+                "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq",
+                query_auth.clone(),
+            ),
+        )
+        .unwrap();
+}

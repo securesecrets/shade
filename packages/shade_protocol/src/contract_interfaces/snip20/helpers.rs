@@ -21,6 +21,12 @@ pub fn fetch_snip20<Q: Querier>(contract: &Contract, querier: &Q) -> StdResult<S
             contract.code_hash.clone(),
             contract.address.clone(),
         )?,
-        token_config: Some(token_config_query(querier, 256, contract.code_hash.clone(), contract.address.clone())?),
+        token_config: {
+            let config = token_config_query(querier, 256, contract.code_hash.clone(), contract.address.clone());
+            match config {
+                Err(_) => None,
+                Ok(_) => Some(config.unwrap())
+            }
+        }
     })
 }
