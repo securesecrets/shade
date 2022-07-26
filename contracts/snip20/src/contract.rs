@@ -37,6 +37,7 @@ use shade_protocol::{
     utils::asset::validate_vec,
     utils::storage::plus::MapStorage,
 };
+use cosmwasm_std::Addr;
 use shade_protocol::contract_interfaces::snip20::errors::{action_disabled, invalid_viewing_key, not_authenticated_msg, permit_revoked, unauthorized_permit};
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
