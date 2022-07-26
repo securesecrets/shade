@@ -15,8 +15,8 @@ use crate::state::{
     total_claimed_w,
     validate_address_permit,
 };
-use cosmwasm_math_compat::{Decimal, Uint128};
-use cosmwasm_std::{
+use shade_protocol::math_compat::{Decimal, Uint128};
+use shade_protocol::c_std::{
     from_binary,
     to_binary,
     Api,
@@ -30,9 +30,9 @@ use cosmwasm_std::{
     StdResult,
     Storage,
 };
-use query_authentication::viewing_keys::ViewingKey;
+use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
-use secret_toolkit::snip20::send_msg;
+use shade_protocol::secret_toolkit::snip20::send_msg;
 use shade_protocol::{
     contract_interfaces::airdrop::{
         account::{Account, AccountKey, AddressProofMsg, AddressProofPermit},

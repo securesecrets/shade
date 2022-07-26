@@ -1,9 +1,7 @@
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use cosmwasm_std::{Querier, StdError, StdResult};
+use crate::serde::{Deserialize, Serialize};
+use crate::schemars::JsonSchema;
+use crate::c_std::{Querier, StdResult};
 use secret_toolkit::snip20::{token_config_query, token_info_query, TokenConfig, TokenInfo};
-use secret_toolkit::utils::Query;
-use crate::contract_interfaces::snip20::{QueryAnswer, QueryMsg};
 use crate::utils::asset::Contract;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

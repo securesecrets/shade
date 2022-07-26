@@ -1,7 +1,6 @@
 pub mod contract;
 pub mod handle;
 pub mod query;
-pub mod state;
 
 #[cfg(test)]
 mod test;
@@ -9,7 +8,7 @@ mod test;
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::contract;
-    use cosmwasm_std::{
+    use shade_protocol::c_std::{
         do_handle,
         do_init,
         do_query,

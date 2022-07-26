@@ -1,7 +1,6 @@
-use cosmwasm_std::{
+use shade_protocol::c_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier,
-    StdResult, StdError,
-    Storage, Uint128,
+    StdResult, StdError, Storage, Uint128, HumanAddr,
 };
 
 use shade_protocol::{
@@ -13,12 +12,19 @@ use shade_protocol::{
                 is_supported_asset,
             },
         },
-        dex::shadeswap,
+        //dex::shadeswap,
     },
-    utils::asset::Contract,
+    utils::asset::{Contract, set_allowance},
 };
 
-use secret_toolkit::{
+/*
+use shadeswap_shared::{
+    self as shadeswap,
+    msg::amm_pair,
+};
+*/
+
+use shade_protocol::secret_toolkit::{
     snip20::{register_receive_msg, set_viewing_key_msg},
     utils::Query,
 };
@@ -41,7 +47,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     self_address_w(&mut deps.storage).save(&env.contract.address)?;
     viewing_key_w(&mut deps.storage).save(&msg.viewing_key)?;
 
-    let pair_info: shadeswap::PairInfoResponse = match shadeswap::PairQuery::PairInfo.query(
+    let pair_info: amm_pair::QueryMsgResponse::PairInfoResponse = match amm_pair::QueryMsg::GetPairInfo.query(
         &deps.querier,
         msg.pair.code_hash.clone(),
         msg.pair.address.clone(),
@@ -50,14 +56,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         Err(_) => {
             return Err(StdError::generic_err("Failed to query pair"));
         }
-        /*
-        shadeswap::PairInfoResponse {
-            liquidity_token, factory, pair,
-            amount_0, amount_1,
-            total_liquidity, contract_version,
-        } => {
-        }
-        */
     };
 
     let token_a = match pair_info.pair.0 {
@@ -86,7 +84,18 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         }
     };
 
-    //let reward_token = TODO: query for reward token
+    let staking_info: amm_pair::QueryMsgResponse::StakingContractInfo = amm_pair::QueryMsg::GetStakingContractInfo
+        .query(
+            &deps.querier,
+            msg.pair.code_hash.clone(),
+            msg.pair.address.clone(),
+        )?;
+
+    //TODO need this query
+    let reward_token: Contract = Contract {
+        address: HumanAddr("".into()),
+        code_hash: "".into(),
+    };
 
     let config = Config {
         admin: match msg.admin {
@@ -98,91 +107,63 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         token_a: token_a.clone(),
         token_b: token_b.clone(),
         liquidity_token: pair_info.liquidity_token.clone(),
-        rewards_contract: msg.rewards_contract.clone(),
-        // TODO: query reward token from rewards contract
-        reward_token: None, //msg.reward_token,
+        staking_contract: staking_info.staking_contract.clone(),
+        // TODO: query reward token from staking contract
+        reward_token: None, 
+        //TODO: add this
+        split: None,
     };
-
-    // Init unbondings to 0
-    for asset in vec![
-            token_a.clone(),
-            token_b.clone(),
-            pair_info.liquidity_token.clone(),
-        ] {
-        unbonding_w(&mut deps.storage).save(
-            asset.address.as_str().as_bytes(),
-            &Uint128::zero(),
-        )?;
-    }
-
-    config_w(&mut deps.storage).save(&config.clone())?;
-
-    let mut messages = vec![
-        set_viewing_key_msg(
-            msg.viewing_key.clone(),
-            None,
-            1,
-            config.token_a.code_hash.clone(),
-            config.token_a.address.clone(),
-        )?,
-        register_receive_msg(
-            env.contract_code_hash.clone(),
-            None,
-            256,
-            config.token_a.code_hash.clone(),
-            config.token_a.address.clone(),
-        )?,
-        set_viewing_key_msg(
-            msg.viewing_key.clone(),
-            None,
-            1,
-            config.token_b.code_hash.clone(),
-            config.token_b.address.clone(),
-        )?,
-        register_receive_msg(
-            env.contract_code_hash.clone(),
-            None,
-            256,
-            config.token_b.code_hash.clone(),
-            config.token_b.address.clone(),
-        )?,
-        set_viewing_key_msg(
-            msg.viewing_key.clone(),
-            None,
-            1,
-            pair_info.liquidity_token.code_hash.clone(),
-            pair_info.liquidity_token.address.clone(),
-        )?,
-        register_receive_msg(
-            env.contract_code_hash.clone(),
-            None,
-            256,
-            pair_info.liquidity_token.code_hash.clone(),
-            pair_info.liquidity_token.address.clone(),
-        )?,
+    // TODO verify split contract
+    let mut assets = vec![
+        token_a.clone(), 
+        token_b.clone(),
+        pair_info.liquidity_token.clone(),
     ];
 
-    if let Some(ref reward_token) = config.reward_token {
-
-        if !is_supported_asset(&config.clone(), &reward_token.address) {
-            messages.append(&mut vec![
-                set_viewing_key_msg(
-                    msg.viewing_key.clone(),
-                    None,
-                    1,
-                    reward_token.code_hash.clone(),
-                    reward_token.address.clone(),
-                )?,
-                register_receive_msg(
-                    env.contract_code_hash.clone(),
-                    None,
-                    256,
-                    reward_token.code_hash.clone(),
-                    reward_token.address.clone(),
-                )?,
-            ]);
-        }
+    if let Some(token) = config.reward_token {
+        assets.push(token);
     }
+
+    let mut messages = vec![];
+
+    // Init unbondings & msgs
+    for token in assets {
+        unbonding_w(&mut deps.storage).save(
+            token.address.as_str().as_bytes(),
+            &Uint128::zero(),
+        )?;
+
+        messages.append(&mut vec![
+            set_viewing_key_msg(
+                msg.viewing_key.clone(),
+                None,
+                1,
+                token.code_hash.clone(),
+                token.address.clone(),
+            )?,
+            register_receive_msg(
+                env.contract_code_hash.clone(),
+                None,
+                256,
+                token.code_hash.clone(),
+                token.address.clone(),
+            )?,
+        ]);
+    }
+
+    // Init approvals to max
+    /*
+    for token in vec![token_a, token_b] {
+        set_allowance(&deps, &env, 
+                      config.pair.clone(), 
+                      Uint128(9_000_000_000_000_000_000_000_000),
+                      msg.viewing_key.clone(),
+                      token.clone(),
+                  );
+    }
+    */
+
+    config_w(&mut deps.storage).save(&config.clone())?;
 
     Ok(InitResponse {
         messages,

@@ -1,14 +1,14 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{
-    Api, CanonicalAddr, Coin, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage,
+use crate::c_std::{
+    Coin, HumanAddr, StdError, StdResult, Storage,
 };
-use cosmwasm_math_compat::Uint128;
+use crate::math_compat::Uint128;
 use crate::contract_interfaces::snip20::errors::{legacy_cannot_convert_from_tx, tx_code_invalid_conversion};
 
 #[cfg(feature = "snip20-impl")]
-use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveMapStorage};
+use crate::utils::storage::plus::{ItemStorage, MapStorage};
 #[cfg(feature = "snip20-impl")]
 use secret_storage_plus::{Item, Map};
 
@@ -155,7 +155,7 @@ impl TxCode {
             2 => Ok(Burn),
             3 => Ok(Deposit),
             4 => Ok(Redeem),
-            other => Err(tx_code_invalid_conversion(n)),
+            _ => Err(tx_code_invalid_conversion(n)),
         }
     }
 }
@@ -271,7 +271,7 @@ impl StoredRichTx {
         action: StoredTxAction,
         coins: Coin,
         memo: Option<String>,
-        block: &cosmwasm_std::BlockInfo,
+        block: &crate::c_std::BlockInfo,
     ) -> Self {
         Self {
             id,
@@ -368,31 +368,30 @@ pub fn store_transfer<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &crate::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
-    let tx = StoredRichTx{
+    let tx = StoredRichTx::new(
         id,
-        action: StoredTxAction::transfer(owner.clone(), sender.clone(), receiver.clone()),
+        StoredTxAction::transfer(owner.clone(), sender.clone(), receiver.clone()),
         coins,
         memo,
-        block_time: 0,
-        block_height: 0
-    };
+        block
+    );
 
     // Write to the owners history if it's different from the other two addresses
     if owner != sender && owner != receiver {
-        // cosmwasm_std::debug_print("saving transaction history for owner");
+        // crate::c_std::debug_print("saving transaction history for owner");
         UserTXTotal::append(storage, owner, &tx)?;
     }
     // Write to the sender's history if it's different from the receiver
     if sender != receiver {
-        // cosmwasm_std::debug_print("saving transaction history for sender");
+        // crate::c_std::debug_print("saving transaction history for sender");
         UserTXTotal::append(storage, sender, &tx)?;
     }
     // Always write to the recipient's history
-    // cosmwasm_std::debug_print("saving transaction history for receiver");
+    // crate::c_std::debug_print("saving transaction history for receiver");
     UserTXTotal::append(storage, receiver, &tx)?;
 
     Ok(())
@@ -406,7 +405,7 @@ pub fn store_mint<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &crate::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
@@ -430,7 +429,7 @@ pub fn store_burn<S: Storage>(
     amount: Uint128,
     denom: String,
     memo: Option<String>,
-    block: &cosmwasm_std::BlockInfo,
+    block: &crate::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
@@ -451,7 +450,7 @@ pub fn store_deposit<S: Storage>(
     recipient: &HumanAddr,
     amount: Uint128,
     denom: String,
-    block: &cosmwasm_std::BlockInfo,
+    block: &crate::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };
@@ -469,7 +468,7 @@ pub fn store_redeem<S: Storage>(
     redeemer: &HumanAddr,
     amount: Uint128,
     denom: String,
-    block: &cosmwasm_std::BlockInfo,
+    block: &crate::c_std::BlockInfo,
 ) -> StdResult<()> {
     let id = increment_tx_count(storage)?;
     let coins = Coin { denom, amount: amount.into() };

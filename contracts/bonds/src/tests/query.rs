@@ -8,9 +8,9 @@ use shade_protocol::contract_interfaces::{
     snip20::helpers::Snip20Asset,
 };
 
-use query_authentication::transaction::{PermitSignature, PubKey};
+use shade_protocol::query_authentication::transaction::{PermitSignature, PubKey};
 
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 
 pub fn query_no_opps(chain: &mut ContractEnsemble, bonds: &ContractLink<HumanAddr>) -> () {
     let msg = bonds::QueryMsg::BondOpportunities {};

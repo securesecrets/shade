@@ -1,10 +1,10 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
+use shade_protocol::math_compat::Uint128;
+use shade_protocol::c_std::{
     from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
     Querier, StdError, StdResult, Storage,
 };
 
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, mint_msg, register_receive_msg, send_msg, transfer_from_msg},
     utils::{HandleCallback, Query},
 };

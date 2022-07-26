@@ -1,28 +1,13 @@
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Env,
-    Extern,
-    HandleResponse,
-    HumanAddr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
+    c_std::{to_binary, Api, Env, Extern, HandleResponse, Querier, StdError, StdResult, Storage},
     contract_interfaces::governance::{
         assembly::AssemblyMsg,
         stored_id::ID,
         HandleAnswer,
         MSG_VARIABLE,
     },
-    utils::{
-        flexible_msg::FlexibleMsg,
-        generic_response::ResponseStatus,
-        storage::default::BucketStorage,
-    },
+    math_compat::Uint128,
+    utils::{flexible_msg::FlexibleMsg, generic_response::ResponseStatus},
 };
 
 pub fn try_add_assembly_msg<S: Storage, A: Api, Q: Querier>(

@@ -1,8 +1,8 @@
 use crate::{
     tests::{get_permit, init_contract},
 };
-use cosmwasm_std::{testing::*, HumanAddr};
-use fadroma::ensemble::MockEnv;
+use shade_protocol::c_std::{testing::*, HumanAddr};
+use shade_protocol::fadroma::ensemble::MockEnv;
 use shade_protocol::contract_interfaces::{
     query_auth,
     query_auth::ContractStatus,

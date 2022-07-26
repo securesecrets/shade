@@ -3,6 +3,7 @@ use crate::{tests::{
     query::{query_no_opps, query_opp_parameters},
     set_prices, set_viewing_key
 }, query};
+
 use shade_protocol::math_compat::Uint128;
 use shade_protocol::c_std::HumanAddr;
 use shade_protocol::fadroma::core::ContractLink;

@@ -2,10 +2,10 @@ use crate::{
     contract_interfaces::governance::stored_id::ID,
     utils::{asset::Contract, storage::default::BucketStorage},
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{StdResult, Storage};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::math_compat::Uint128;
+use crate::c_std::{StdResult, Storage};
+use crate::schemars::JsonSchema;
+use crate::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

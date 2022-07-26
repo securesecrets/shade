@@ -8,23 +8,15 @@ use crate::tests::{
     get_proposals,
     gov_generic_proposal,
     gov_msg_proposal,
-    init_governance,
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Binary, HumanAddr, StdResult};
-use fadroma::ensemble::{ContractEnsemble, MockEnv};
-use fadroma::core::ContractLink;
 use shade_protocol::{
+    c_std::{to_binary, HumanAddr},
     contract_interfaces::{
         governance,
-        governance::{
-            profile::{Count, FundProfile, Profile, UpdateProfile, UpdateVoteProfile, VoteProfile},
-            proposal::{ProposalMsg, Status},
-            vote::Vote,
-            InitMsg,
-        },
+        governance::proposal::{ProposalMsg, Status},
     },
-    utils::asset::Contract,
+    fadroma::{core::ContractLink, ensemble::MockEnv},
+    math_compat::Uint128,
 };
 
 #[test]
@@ -171,6 +163,7 @@ fn msg_proposal() {
     let prop =
         get_proposals(&mut chain, &gov, Uint128::zero(), Uint128::new(2)).unwrap()[0].clone();
 
+    assert!(prop.msgs.is_some());
     assert_eq!(prop.status, Status::Success);
 
     let new_assembly =
@@ -218,7 +211,8 @@ fn multi_msg_proposal() {
             .unwrap(),
             send: vec![],
         },
-    ]);
+    ])
+    .unwrap();
 
     let old_assembly =
         get_assemblies(&mut chain, &gov, Uint128::new(1), Uint128::new(2)).unwrap()[0].clone();
@@ -310,7 +304,3 @@ fn msg_proposal_invalid_msg() {
 
     assert_eq!(prop.status, Status::Canceled);
 }
-
-// TODO: Assembly update if assembly setting removed from profile
-// TODO: funding update if funding setting removed from profile
-// TODO: voting update if voting setting removed from profile

@@ -1,7 +1,9 @@
 [package]
-name = "lp_shade_swap"
+name = "mock_adapter"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = [
+  "Jack Swenson <jacksonswenson22@gmail.com>",
+]
 edition = "2018"
 
 exclude = [
@@ -23,19 +25,16 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
-cosmwasm-std = { version = "0.10", package = "secret-cosmwasm-std", features = [
-  "staking",
-] }
-cosmwasm-storage = { version = "0.10", package = "secret-cosmwasm-storage" }
+cosmwasm-std = { version = "0.10.1", package = "secret-cosmwasm-std" }
+#cosmwasm-storage-plus = { version = "0.10", package = "secret-storage-plus" }
+#secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0"}
 cosmwasm-schema = "0.10.1"
 secret-toolkit = { version = "0.2" }
 cosmwasm-math-compat = { path = "../../packages/cosmwasm_math_compat" }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "lp_shade_swap",
-  "treasury",
-  "math",
-  "dex",
+  "adapter",
+  "storage_plus",
 ] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "0.6.3" }
+#secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0" }

@@ -6,14 +6,14 @@ use crate::{
     },
 };
 
-use cosmwasm_math_compat::Uint128;
+use shade_protocol::math_compat::Uint128;
 
-use secret_toolkit::{
+use shade_protocol::secret_toolkit::{
     snip20::{allowance_query, balance_query},
     utils::Query,
 };
 
-use cosmwasm_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{Api, Extern, HumanAddr, Querier, StdResult, Storage};
 use shade_protocol::contract_interfaces::bonds::{
     errors::{permit_revoked, query_auth_bad_response},
     BondOpportunity, QueryAnswer,
