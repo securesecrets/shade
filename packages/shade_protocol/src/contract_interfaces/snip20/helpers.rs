@@ -155,6 +155,22 @@ pub fn token_info(
     }
 }
 
+/// Returns a StdResult<Uint128> from performing a Balance query
+pub fn balance_query(
+    querier: &QuerierWrapper,
+    address: String,
+    key: String,
+    contract: &Contract,
+) -> StdResult<Uint128> {
+    let answer: QueryAnswer =
+        QueryMsg::Balance { address, key }.query(querier, contract)?;
+
+    match answer {
+        QueryAnswer::Balance { amount, ..} => Ok(amount),
+        _ => Err(StdError::generic_err("Invalid Balance Response")) //TODO: better error
+    }
+}
+
 /// TokenConfig response
 #[cw_serde]
 pub struct TokenConfig {

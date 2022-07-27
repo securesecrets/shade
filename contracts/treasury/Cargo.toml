@@ -1,7 +1,7 @@
 [package]
 name = "treasury"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = ["Jackson Swenson <jacksonswenson@securesecrets.com>"]
 edition = "2018"
 
 exclude = [
@@ -25,7 +25,10 @@ debug-print = ["shade-protocol/debug-print"]
 [dependencies]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "treasury",
+  "dao",
   "snip20",
+  "manager",
+  "staking",
 ] }
 schemars = "0.7"
 chrono = "0.4.19"

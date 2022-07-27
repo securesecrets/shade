@@ -1,4 +1,4 @@
-use cosmwasm_std::Deps;
+use cosmwasm_std::{QuerierWrapper};
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
 use crate::c_std::{
     Api,
@@ -20,7 +20,7 @@ use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
 #[cw_serde]
-pub enum SubHandleMsg {
+pub enum SubExecuteMsg {
     // Begin unbonding amount
     Unbond { asset: Addr, amount: Uint128 },
     Claim { asset: Addr },
@@ -28,13 +28,13 @@ pub enum SubHandleMsg {
     Update { asset: Addr },
 }
 
-impl ExecuteCallback for SubHandleMsg {
+impl ExecuteCallback for SubExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    Adapter(SubHandleMsg),
+    Adapter(SubExecuteMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -42,7 +42,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,
@@ -88,14 +88,14 @@ pub enum QueryAnswer {
 }
 
 pub fn claimable_query(
-    deps: Deps,
+    querier: QuerierWrapper,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Claimable {
         asset: asset.clone(),
     })
-    .query(&deps.querier, &adapter)?
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Claimable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -106,14 +106,14 @@ pub fn claimable_query(
 }
 
 pub fn unbonding_query(
-    deps: Deps,
+    querier: QuerierWrapper,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Unbonding {
         asset: asset.clone(),
     })
-    .query(&deps.querier, &adapter)?
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -124,14 +124,14 @@ pub fn unbonding_query(
 }
 
 pub fn unbondable_query(
-    deps: Deps,
+    querier: QuerierWrapper,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Unbondable {
         asset: asset.clone(),
     })
-    .query(&deps.querier, &adapter)?
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -142,14 +142,14 @@ pub fn unbondable_query(
 }
 
 pub fn reserves_query(
-    deps: Deps,
+    querier: QuerierWrapper,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
 
     match QueryMsg::Adapter(SubQueryMsg::Reserves {
         asset: asset.clone(),
-    }).query(&deps.querier, &adapter)? {
+    }).query(&querier, &adapter)? {
         QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
             format!("Failed to query adapter unbondable from {}", adapter.address)
@@ -158,14 +158,14 @@ pub fn reserves_query(
 }
 
 pub fn balance_query(
-    deps: Deps,
+    querier: QuerierWrapper,
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Balance {
         asset: asset.clone(),
     })
-    .query(&deps.querier, &adapter)?
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -176,21 +176,21 @@ pub fn balance_query(
 }
 
 pub fn claim_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(
+    ExecuteMsg::Adapter(SubExecuteMsg::Claim { asset }).to_cosmos_msg(
         &adapter,
         vec![],
     )
 }
 
 pub fn unbond_msg(asset: Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
+    ExecuteMsg::Adapter(SubExecuteMsg::Unbond { asset, amount }).to_cosmos_msg(
         &adapter,
         vec![],
     )
 }
 
 pub fn update_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(
+    ExecuteMsg::Adapter(SubExecuteMsg::Update { asset }).to_cosmos_msg(
         &adapter,
         vec![],
     )

@@ -1,31 +1,28 @@
-use shade_protocol::c_std::{
-
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
+use shade_protocol::{
+    c_std::{
+        to_binary, Api, Binary,
+        Env, DepsMut, Response,
+        Querier, StdError, StdResult,
+        Storage, Uint128, entry_point,
+        MessageInfo,
+        Deps,
+    },
+    contract_interfaces::dao::{
+        treasury::{
+            Config, ExecuteMsg, InstantiateMsg, QueryMsg,
+            storage::*,
+        },
+        adapter,
+    },
 };
-
-use shade_protocol::contract_interfaces::dao::treasury::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
 
 use crate::{
     handle,
     query,
 };
 
-use shade_protocol::contract_interfaces::dao::{
-    adapter,
-    treasury::storage::*,
-};
-
-pub fn init(
+#[entry_point]
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -40,12 +37,13 @@ pub fn init(
     ASSET_LIST.save(deps.storage, &Vec::new())?;
     MANAGERS.save(deps.storage, &Vec::new())?;
 
-    deps.api.debug("Contract was initialized by {}", info.sender);
+    //deps.api.debug("Contract was initialized by {}", info.sender);
 
     Ok(Response::new())
 }
 
-pub fn handle(
+#[entry_point]
+pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -60,25 +58,26 @@ pub fn handle(
             ..
         } => handle::receive(deps, env, info, sender, from, amount, msg),
         ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
-        ExecuteMsg::RegisterAsset { contract, reserves } => {
-            handle::try_register_asset(deps, &env, &contract, reserves)
+        ExecuteMsg::RegisterAsset { contract } => {
+            handle::try_register_asset(deps, &env, info, &contract)
         }
         ExecuteMsg::RegisterManager { mut contract } => {
-            handle::register_manager(deps, &env, &mut contract)
+            handle::register_manager(deps, &env, info, &mut contract)
         }
         ExecuteMsg::Allowance { asset, allowance } => {
-            handle::allowance(deps, &env, asset, allowance)
+            handle::allowance(deps, &env, info, asset, allowance)
         }
         ExecuteMsg::Adapter(adapter) => match adapter {
-            adapter::SubHandleMsg::Update { asset } => handle::rebalance(deps, &env, asset),
-            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),
-            adapter::SubHandleMsg::Unbond { asset, amount } => {
-                handle::unbond(deps, &env, asset, amount)
+            adapter::SubExecuteMsg::Update { asset } => handle::rebalance(deps, &env, asset),
+            adapter::SubExecuteMsg::Claim { asset } => handle::claim(deps, &env, info, asset),
+            adapter::SubExecuteMsg::Unbond { asset, amount } => {
+                handle::unbond(deps, &env, info, asset, amount)
             }
         },
     }
 }
 
+#[entry_point]
 pub fn query(
     deps: Deps,
     msg: QueryMsg,
@@ -87,14 +86,14 @@ pub fn query(
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
         QueryMsg::Allowances { asset } => to_binary(&query::allowances(deps, asset)?),
-        QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(&deps, asset, spender)?),
+        QueryMsg::Allowance { asset, spender } => to_binary(&query::allowance(deps, asset, spender)?),
 
         QueryMsg::Adapter(adapter) => match adapter {
-            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(&deps, asset)?),
-            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(&deps, asset)?),
-            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(&deps, asset)?),
-            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(&deps, asset)?),
-            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(&deps, asset)?),
+            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
+            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
+            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(deps, asset)?),
+            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
+            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(deps, asset)?),
         }
     }
 }

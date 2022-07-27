@@ -1,5 +1,5 @@
 use crate::{
-    contract_interfaces::dao::adapter,
+    contract_interfaces::dao::manager,
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 use crate::c_std::{Binary, Addr, Uint128};
@@ -122,7 +122,7 @@ pub enum ExecuteMsg {
     RemoveHolder {
         holder: Addr,
     },
-    Manager(manager::SubHandleMsg),
+    Manager(manager::SubExecuteMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -130,7 +130,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,
@@ -153,7 +153,7 @@ pub enum HandleAnswer {
     RemoveHolder {
         status: ResponseStatus,
     },
-    Manager(manager::HandleAnswer),
+    Manager(manager::ExecuteAnswer),
 }
 
 #[cw_serde]
