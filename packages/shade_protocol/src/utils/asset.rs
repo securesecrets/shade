@@ -81,6 +81,12 @@ pub struct Contract {
     pub code_hash: String,
 }
 
+impl Default for Contract {
+    fn default() -> Self {
+        Self { address: Addr::unchecked(String::default()), code_hash: Default::default() }
+    }
+}
+
 impl Contract {
     #[allow(clippy::ptr_arg)]
     pub fn new(address: &Addr, code_hash: &String) -> Self {
