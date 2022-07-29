@@ -73,7 +73,7 @@ fn decrease_allowance() {
         },
     ]), None).unwrap();
 
-
+    chain.update_block(|block| block.time = Timestamp::from_seconds(10000));
 
     assert!(ExecuteMsg::IncreaseAllowance {
         spender: "esmail".into(),
