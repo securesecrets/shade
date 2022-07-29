@@ -130,7 +130,7 @@ pub fn scrt_balance(
 pub fn set_allowance(
     deps: DepsMut,
     env: &Env,
-    spender: String,
+    spender: Addr,
     amount: Uint128,
     key: String,
     asset: &Contract,
@@ -143,7 +143,7 @@ pub fn set_allowance(
         Some(cur) => cur,
         None => allowance_query(
                     &deps.querier,
-                    env.contract.address.clone().into_string(),
+                    env.contract.address.clone(),
                     spender.clone(),
                     key,
                     1,
