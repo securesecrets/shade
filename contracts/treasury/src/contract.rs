@@ -7,7 +7,7 @@ use shade_protocol::{
         MessageInfo,
         Deps,
     },
-    contract_interfaces::dao::{
+    dao::{
         treasury::{
             Config, ExecuteMsg, InstantiateMsg, QueryMsg,
             storage::*,
@@ -17,7 +17,7 @@ use shade_protocol::{
 };
 
 use crate::{
-    handle,
+    execute,
     query,
 };
 
@@ -56,22 +56,22 @@ pub fn execute(
             amount,
             msg,
             ..
-        } => handle::receive(deps, env, info, sender, from, amount, msg),
-        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
+        } => execute::receive(deps, env, info, sender, from, amount, msg),
+        ExecuteMsg::UpdateConfig { config } => execute::try_update_config(deps, env, info, config),
         ExecuteMsg::RegisterAsset { contract } => {
-            handle::try_register_asset(deps, &env, info, &contract)
+            execute::try_register_asset(deps, &env, info, &contract)
         }
         ExecuteMsg::RegisterManager { mut contract } => {
-            handle::register_manager(deps, &env, info, &mut contract)
+            execute::register_manager(deps, &env, info, &mut contract)
         }
         ExecuteMsg::Allowance { asset, allowance } => {
-            handle::allowance(deps, &env, info, asset, allowance)
+            execute::allowance(deps, &env, info, asset, allowance)
         }
         ExecuteMsg::Adapter(adapter) => match adapter {
-            adapter::SubExecuteMsg::Update { asset } => handle::rebalance(deps, &env, asset),
-            adapter::SubExecuteMsg::Claim { asset } => handle::claim(deps, &env, info, asset),
+            adapter::SubExecuteMsg::Update { asset } => execute::rebalance(deps, &env, asset),
+            adapter::SubExecuteMsg::Claim { asset } => execute::claim(deps, &env, info, asset),
             adapter::SubExecuteMsg::Unbond { asset, amount } => {
-                handle::unbond(deps, &env, info, asset, amount)
+                execute::unbond(deps, &env, info, asset, amount)
             }
         },
     }
@@ -80,6 +80,7 @@ pub fn execute(
 #[entry_point]
 pub fn query(
     deps: Deps,
+    env: Env,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

@@ -30,6 +30,8 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "manager",
   "staking",
 ] }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
 schemars = "0.7"
 chrono = "0.4.19"
 

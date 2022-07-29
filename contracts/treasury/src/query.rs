@@ -29,7 +29,7 @@ pub fn balance(
         Some(a) => {
             let mut balance = balance_query(
                 &deps.querier,
-                SELF_ADDRESS.load(deps.storage)?.to_string(),
+                SELF_ADDRESS.load(deps.storage)?,
                 VIEWING_KEY.load(deps.storage)?,
                 &a.contract.clone(),
             )?;
@@ -75,7 +75,7 @@ pub fn reserves(
         Some(a) => {
             let mut reserves = balance_query(
                 &deps.querier,
-                self_address.to_string(),
+                self_address,
                 VIEWING_KEY.load(deps.storage)?,
                 &a.contract.clone(),
             )?;
@@ -189,8 +189,8 @@ pub fn allowance(
     if let Some(full_asset) = ASSETS.may_load(deps.storage, asset.clone())? {
         let cur_allowance = allowance_query(
             &deps.querier,
-            self_address.to_string(),
-            spender.clone().to_string(),
+            self_address,
+            spender.clone(),
             key,
             1,
             &full_asset.contract.clone(),

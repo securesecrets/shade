@@ -1,47 +1,53 @@
-use shade_protocol::c_std::{
-    self,
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
-};
 use shade_protocol::{
-    snip20::helpers::{
-        allowance_query,
+    snip20::{
         batch::{SendFromAction, SendAction},
-        balance_query,
-        batch_send_from_msg,
-        batch_send_msg,
-        register_receive,
-        send_msg,
-        set_viewing_key_msg,
-    },
-    contract_interfaces::{
-        dao::{
-            adapter,
-            treasury_manager::{
-                storage::*,
-                Allocation,
-                AllocationMeta,
-                AllocationType,
-                Config,
-                HandleAnswer,
-                Holding,
-                Balance,
-                Status,
-            }
+        helpers::{
+            allowance_query,
+
+            batch_send_from_msg,
+            batch_send_msg,
+
+            balance_query,
+            register_receive,
+            send_msg,
+            set_viewing_key_msg,
         },
-        snip20,
     },
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    dao::{
+        adapter,
+        treasury_manager::{
+            storage::*,
+            Allocation,
+            AllocationMeta,
+            AllocationType,
+            Config,
+            ExecuteAnswer,
+            Holding,
+            Balance,
+            Status,
+        },
+    },
+    snip20,
+    utils::{
+        asset::Contract,
+        generic_response::ResponseStatus,
+    },
+    c_std::{
+        self,
+        MessageInfo,
+        to_binary,
+        Api,
+        Binary,
+        Env,
+        DepsMut,
+        Response,
+        Addr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
 };
 
 use std::collections::HashMap;
@@ -69,13 +75,10 @@ pub fn receive(
     if let Some(adapter) = ALLOCATIONS.load(deps.storage, info.sender.clone())?
         .iter()
         .find(|a| a.contract.address == from) {
-            return Ok(HandleResponse {
-                messages: vec![],
-                log: vec![],
-                data: Some(to_binary(&HandleAnswer::Receive {
+            return Ok(Response::new().set_data(
+                to_binary(&ExecuteAnswer::Receive {
                     status: ResponseStatus::Success,
-                })?),
-            });
+                })?));
         }
 
     // Default to treasury if not sent by a holder
@@ -101,7 +104,7 @@ pub fn receive(
         Ok(holding)
     })?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
             status: ResponseStatus::Success,
         })?))
 }
@@ -120,7 +123,7 @@ pub fn try_update_config(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
             status: ResponseStatus::Success,
         })?))
 }
@@ -128,6 +131,7 @@ pub fn try_update_config(
 pub fn try_register_asset(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     contract: &Contract,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
@@ -147,24 +151,23 @@ pub fn try_register_asset(
 
     ALLOCATIONS.save(deps.storage, contract.address.clone(), &Vec::new())?;
 
-    Ok(Response {
-        messages: vec![
+    Ok(Response::new()
+       .add_messages(
+        vec![
             // Register contract in asset
             register_receive(
                 env.contract.code_hash.clone(),
                 None,
-                contract
+                &contract
             )?,
             // Set viewing key
             set_viewing_key_msg(
                 VIEWING_KEY.load(deps.storage)?,
                 None,
-                256,
-                contract.code_hash.clone(),
-                contract.address.clone(),
+                &contract,
             )?,
-        ],
-        data: Some(to_binary(&HandleAnswer::RegisterAsset {
+        ])
+       .set_data(to_binary(&ExecuteAnswer::RegisterAsset {
             status: ResponseStatus::Success,
         })?))
 }
@@ -172,6 +175,7 @@ pub fn try_register_asset(
 pub fn allocate(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     asset: Addr,
     allocation: Allocation,
 ) -> StdResult<Response> {
@@ -225,7 +229,7 @@ pub fn allocate(
 
     ALLOCATIONS.save(deps.storage, asset.clone(), &apps)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Allocate {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Allocate {
             status: ResponseStatus::Success,
         })?))
 }
@@ -269,7 +273,7 @@ pub fn claim(
 
     let reserves = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?.to_string(),
+        SELF_ADDRESS.load(deps.storage)?,
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;
@@ -317,7 +321,7 @@ pub fn claim(
     // Send claimed funds
     messages.push(
         send_msg(
-            claimer.clone().to_string(),
+            claimer.clone(),
             send_amount,
             None,
             None,
@@ -326,7 +330,7 @@ pub fn claim(
         )?
     );
 
-    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
+    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             amount: reserves + total_claimed,
         })?))
@@ -335,6 +339,7 @@ pub fn claim(
 pub fn update(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     asset: Addr,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
@@ -381,8 +386,8 @@ pub fn update(
     // Available treasury allowance
     let mut allowance = allowance_query(
         &deps.querier,
-        config.treasury.to_string().clone(),
-        env.contract.address.to_string().clone(),
+        config.treasury.clone(),
+        env.contract.address.clone(),
         key.clone(),
         1,
         &full_asset.contract.clone(),
@@ -392,7 +397,7 @@ pub fn update(
     // Available balance
     let mut balance = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?.to_string(),
+        SELF_ADDRESS.load(deps.storage)?,
         key.clone(),
         &full_asset.contract.clone(),
     )?;
@@ -427,7 +432,7 @@ pub fn update(
                     // Fully covered by balance
                     if desired_input <= balance {
                         send_actions.push(SendAction {
-                            recipient: adapter.contract.address.clone(),
+                            recipient: adapter.contract.address.clone().to_string(),
                             recipient_code_hash: Some(adapter.contract.code_hash.clone()),
                             amount: desired_input,
                             msg: None,
@@ -441,7 +446,7 @@ pub fn update(
                     // Send all balance
                     else if !balance.is_zero() {
                         send_actions.push(SendAction {
-                            recipient: adapter.contract.address.clone(),
+                            recipient: adapter.contract.address.clone().to_string(),
                             recipient_code_hash: Some(adapter.contract.code_hash.clone()),
                             amount: balance,
                             msg: None,
@@ -458,8 +463,8 @@ pub fn update(
                         // Fully covered by allowance
                         if desired_input <= allowance {
                             send_from_actions.push(SendFromAction {
-                                owner: config.treasury.clone(),
-                                recipient: adapter.contract.address.clone(),
+                                owner: config.treasury.clone().to_string(),
+                                recipient: adapter.contract.address.clone().to_string(),
                                 recipient_code_hash: Some(adapter.contract.code_hash.clone()),
                                 amount: desired_input,
                                 msg: None,
@@ -473,8 +478,8 @@ pub fn update(
                         // Send all allowance
                         else if !allowance.is_zero() {
                             send_from_actions.push(SendFromAction {
-                                owner: config.treasury.clone(),
-                                recipient: adapter.contract.address.clone(),
+                                owner: config.treasury.clone().to_string(),
+                                recipient: adapter.contract.address.clone().to_string(),
                                 recipient_code_hash: Some(adapter.contract.code_hash.clone()),
                                 amount: allowance,
                                 msg: None,
@@ -530,7 +535,6 @@ pub fn update(
         messages.push(batch_send_msg(
             send_actions,
             None,
-            1,
             &full_asset.contract.clone(),
         )?);
     }
@@ -539,12 +543,11 @@ pub fn update(
         messages.push(batch_send_from_msg(
             send_from_actions,
             None,
-            1,
             &full_asset.contract.clone(),
         )?);
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Update {
+    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Update {
             status: ResponseStatus::Success,
         })?))
 }
@@ -552,6 +555,7 @@ pub fn update(
 pub fn unbond(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
@@ -633,7 +637,7 @@ pub fn unbond(
     // Reserves to be sent immediately
     let mut reserves = balance_query(
         &deps.querier,
-        SELF_ADDRESS.load(deps.storage)?.to_string(),
+        SELF_ADDRESS.load(deps.storage)?,
         VIEWING_KEY.load(deps.storage)?,
         &full_asset.contract.clone(),
     )?;
@@ -654,7 +658,7 @@ pub fn unbond(
         if reserves < unbond_amount {
             messages.push(
                 send_msg(
-                    unbonder.clone().to_string(),
+                    unbonder.clone(),
                     reserves,
                     None,
                     None,
@@ -679,7 +683,7 @@ pub fn unbond(
         else {
             messages.push(
                 send_msg(
-                    unbonder.to_string().clone(),
+                    unbonder.clone(),
                     amount,
                     None,
                     None,
@@ -730,8 +734,8 @@ pub fn unbond(
 
         let allowance = allowance_query(
             &deps.querier,
-            config.treasury.to_string().clone(),
-            env.contract.address.to_string().clone(),
+            config.treasury.clone(),
+            env.contract.address.clone(),
             VIEWING_KEY.load(deps.storage)?,
             1,
             &full_asset.contract.clone(),
@@ -788,7 +792,7 @@ pub fn unbond(
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Unbond {
+    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: unbond_amount,
         })?))
@@ -797,7 +801,7 @@ pub fn unbond(
 pub fn add_holder(
     deps: DepsMut,
     env: &Env,
-    info: &MessageInfo,
+    info: MessageInfo,
     holder: Addr,
 ) -> StdResult<Response> {
 
@@ -819,7 +823,7 @@ pub fn add_holder(
         status: Status::Active,
     })?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddHolder {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AddHolder {
             status: ResponseStatus::Success,
         })?))
 }
@@ -843,7 +847,7 @@ pub fn remove_holder(
         return Err(StdError::generic_err("Not an authorized holder"));
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::RemoveHolder {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RemoveHolder {
             status: ResponseStatus::Success,
         })?))
 }

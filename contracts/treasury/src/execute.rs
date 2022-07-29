@@ -105,7 +105,7 @@ pub fn rebalance(
 
     let token_balance = balance_query(
         &deps.querier,
-        self_address.clone().to_string(),
+        self_address.clone(),
         viewing_key.clone(),
         &full_asset.contract.clone(),
     )?;
@@ -142,8 +142,8 @@ pub fn rebalance(
 
         let allowance = allowance_query(
             &deps.querier,
-            env.contract.address.clone().to_string(),
-            manager.contract.address.clone().to_string(),
+            env.contract.address.clone(),
+            manager.contract.address.clone(),
             viewing_key.clone(),
             1,
             &full_asset.contract.clone(),
@@ -190,8 +190,8 @@ pub fn rebalance(
                     else {
                         cur_allowance = allowance_query(
                             &deps.querier,
-                            env.contract.address.clone().to_string(),
-                            spender.clone().to_string(),
+                            env.contract.address.clone(),
+                            spender.clone(),
                             viewing_key.clone(),
                             1,
                             &full_asset.contract.clone(),
@@ -208,7 +208,7 @@ pub fn rebalance(
                         std::cmp::Ordering::Less => {
                             messages.push(
                                 decrease_allowance_msg(
-                                    spender.clone().to_string(),
+                                    spender.clone(),
                                     cur_allowance - amount,
                                     //TODO impl expiration
                                     None,
@@ -223,7 +223,7 @@ pub fn rebalance(
                         std::cmp::Ordering::Greater => {
                             messages.push(
                                 increase_allowance_msg(
-                                    spender.clone().to_string(),
+                                    spender.clone(),
                                     amount - cur_allowance,
                                     None,
                                     None,
@@ -280,8 +280,8 @@ pub fn rebalance(
 
                 let cur_allowance = allowance_query(
                     &deps.querier,
-                    env.contract.address.clone().to_string(),
-                    spender.clone().to_string(),
+                    env.contract.address.clone(),
+                    spender.clone(),
                     viewing_key.clone(),
                     1,
                     &full_asset.contract.clone(),
@@ -295,7 +295,7 @@ pub fn rebalance(
                         continue;
                     }
                     messages.push(increase_allowance_msg(
-                        spender.clone().to_string(),
+                        spender.clone(),
                         increase,
                         None,
                         None,
@@ -315,7 +315,7 @@ pub fn rebalance(
                     if cur_allowance > Uint128::zero() {
                         if cur_allowance < decrease {
                             messages.push(decrease_allowance_msg(
-                                spender.to_string(),
+                                spender,
                                 cur_allowance,
                                 None,
                                 None,
@@ -326,7 +326,7 @@ pub fn rebalance(
                             decrease = decrease - cur_allowance;
                         } else {
                             messages.push(decrease_allowance_msg(
-                                spender.to_string(),
+                                spender,
                                 decrease,
                                 None,
                                 None,

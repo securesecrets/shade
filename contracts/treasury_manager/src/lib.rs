@@ -2,6 +2,7 @@ pub mod contract;
 pub mod execute;
 pub mod query;
 
+/*
 #[cfg(test)]
 mod test;
 
@@ -46,3 +47,4 @@ mod wasm {
     // Other C externs like cosmwasm_vm_version_1, allocate, deallocate are available
     // automatically because we `use cosmwasm_std`.
 }
+*/

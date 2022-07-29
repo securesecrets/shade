@@ -1,5 +1,7 @@
 use shade_protocol::{
     c_std::{
+        Deps,
+        MessageInfo,
         to_binary,
         Api,
         Binary,
@@ -11,7 +13,7 @@ use shade_protocol::{
         Storage,
         entry_point,
     },
-    contract_interfaces::dao::{
+    dao::{
         manager,
         treasury_manager::{
             storage::*,
@@ -30,8 +32,6 @@ use crate::{
     execute,
     query,
 };
-
-use shade_protocol::contract_interfaces::dao::manager;
 
 #[entry_point]
 pub fn instantiate(
@@ -76,20 +76,20 @@ pub fn execute(
             amount,
             msg,
             ..
-        } => handle::receive(deps, env, info, sender, from, amount, msg),
-        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
-        ExecuteMsg::RegisterAsset { contract } => handle::try_register_asset(deps, &env, &contract),
+        } => execute::receive(deps, env, info, sender, from, amount, msg),
+        ExecuteMsg::UpdateConfig { config } => execute::try_update_config(deps, env, info, config),
+        ExecuteMsg::RegisterAsset { contract } => execute::try_register_asset(deps, &env, info, &contract),
         ExecuteMsg::Allocate { asset, allocation } => {
-            handle::allocate(deps, &env, asset, allocation)
+            execute::allocate(deps, &env, info, asset, allocation)
         },
-        ExecuteMsg::AddHolder { holder } => handle::add_holder(deps, &env, holder),
-        ExecuteMsg::RemoveHolder { holder } => handle::remove_holder(deps, &env, holder),
+        ExecuteMsg::AddHolder { holder } => execute::add_holder(deps, &env, info, holder),
+        ExecuteMsg::RemoveHolder { holder } => execute::remove_holder(deps, &env, info, holder),
         ExecuteMsg::Manager(a) => match a {
             manager::SubExecuteMsg::Unbond { asset, amount } => {
-                handle::unbond(deps, &env, asset, amount)
+                execute::unbond(deps, &env, info, asset, amount)
             }
-            manager::SubExecuteMsg::Claim { asset } => handle::claim(deps, &env, asset),
-            manager::SubExecuteMsg::Update { asset } => handle::update(deps, &env, asset),
+            manager::SubExecuteMsg::Claim { asset } => execute::claim(deps, &env, info, asset),
+            manager::SubExecuteMsg::Update { asset } => execute::update(deps, &env, info, asset),
         },
     }
 }
@@ -97,6 +97,7 @@ pub fn execute(
 #[entry_point]
 pub fn query(
     deps: Deps,
+    env: Env,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

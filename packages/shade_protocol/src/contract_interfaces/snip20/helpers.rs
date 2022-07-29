@@ -5,6 +5,7 @@ use crate::utils::{ExecuteCallback, Query};
 use super::manager::{Allowance, AllowanceResponse};
 use super::{QueryAnswer, QueryMsg, ExecuteMsg};
 use crate::utils::asset::Contract;
+use crate::snip20::batch;
 
 #[cw_serde]
 pub struct Snip20Asset {
@@ -125,6 +126,30 @@ pub fn set_viewing_key_msg(
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::SetViewingKey { key: viewing_key, padding }
         .to_cosmos_msg(contract, vec![])
+}
+
+pub fn batch_send_msg(
+    actions: Vec<batch::SendAction>,
+    padding: Option<String>,
+    contract: &Contract,
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::BatchSend {
+        actions,
+        padding,
+    }
+    .to_cosmos_msg(contract, vec![])
+}
+
+pub fn batch_send_from_msg(
+    actions: Vec<batch::SendFromAction>,
+    padding: Option<String>,
+    contract: &Contract,
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::BatchSendFrom {
+        actions,
+        padding,
+    }
+    .to_cosmos_msg(contract, vec![])
 }
 
 /// TokenInfo response
@@ -304,3 +329,4 @@ pub fn allowance_query(
         _ => Err(StdError::generic_err("Invalid Allowance query response")),
     }
 }
+
