@@ -17,7 +17,7 @@ pub fn fetch_snip20<Q: Querier>(contract: &Contract, querier: &Q) -> StdResult<S
         contract: contract.clone(),
         token_info: token_info_query(
             querier,
-            1,
+            256,
             contract.code_hash.clone(),
             contract.address.clone(),
         )?,
