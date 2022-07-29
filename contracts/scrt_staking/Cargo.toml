@@ -23,14 +23,17 @@ backtraces = ["shade-protocol/backtraces"]
 
 [dependencies]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+  "adapter",
+  "dao",
   "scrt_staking",
   "treasury",
   "math",
+  "storage_plus",
 ] }
 
 
 [dev-dependencies]
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["scrt_staking", "snip20", "snip20" ] }
+#contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["scrt_staking", "snip20", "snip20" ] }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "ensemble",
+  "multi-test",
 ] }

@@ -1,7 +1,16 @@
 use shade_protocol::c_std::{Addr, Storage, Uint128};
-use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use shade_protocol::contract_interfaces::dao::scrt_staking;
+use shade_protocol::dao::scrt_staking;
 
+use shade_protocol::secret_storage_plus::Item;
+
+
+pub const CONFIG: Item<scrt_staking::Config> = Item::new("config");
+pub const SELF_ADDRESS: Item<Addr> = Item::new("self_address");
+pub const VIEWING_KEY: Item<String> = Item::new("self_address");
+pub const UNBONDING: Item<Uint128> = Item::new("unbonding");
+
+
+/*
 pub static CONFIG_KEY: &[u8] = b"config";
 pub static SELF_ADDRESS: &[u8] = b"self_address";
 pub static VIEWING_KEY: &[u8] = b"viewing_key";
@@ -38,3 +47,4 @@ pub fn unbonding_w(storage: &mut dyn Storage) -> Singleton<Uint128> {
 pub fn unbonding_r(storage: &dyn Storage) -> ReadonlySingleton<Uint128> {
     singleton_read(storage, UNBONDING)
 }
+*/

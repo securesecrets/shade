@@ -63,39 +63,6 @@ pub struct Manager {
     pub desired: Uint128,
 }
 
-/*
-#[cw_serde]
-pub struct Balance {
-    pub token: Addr,
-    pub amount: Uint128,
-}
-
-#[cw_serde]
-pub enum Status {
-    Active,
-    Disabled,
-    Closed,
-    Transferred,
-}
-
-//TODO: move accounts to treasury manager
-#[cw_serde]
-pub struct Account {
-    pub balances: Vec<Balance>,
-    pub unbondings: Vec<Balance>,
-    pub claimable: Vec<Balance>,
-    pub status: Status,
-}
-*/
-
-// Flag to be sent with funds
-/*
-#[cw_serde]
-pub struct Flag {
-    pub flag: String,
-}
-*/
-
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin: Option<Addr>,

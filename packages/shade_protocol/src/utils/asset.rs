@@ -7,6 +7,7 @@ use crate::c_std::{
     StdResult,
     Uint128,
     Deps,
+    QuerierWrapper,
     Api, ContractInfo, StdError
 };
 use cosmwasm_schema::{cw_serde};
@@ -111,10 +112,10 @@ impl From<ContractInfo> for Contract {
 
 //TODO:  move away from here
 pub fn scrt_balance(
-    deps: Deps,
+    querier: QuerierWrapper,
     address: Addr,
 ) -> StdResult<Uint128> {
-    let resp: BalanceResponse = deps.querier.query(
+    let resp: BalanceResponse = querier.query(
         &BankQuery::Balance {
             address: address.into(),
             denom: "uscrt".to_string(),

@@ -1,40 +1,40 @@
-use shade_protocol::c_std::{
-
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Querier,
-    StdResult,
-    Storage,
+use shade_protocol::{
+    c_std::{
+        to_binary,
+        Api,
+        Binary,
+        Env,
+        DepsMut,
+        Response,
+        Querier,
+        StdResult,
+        Storage,
+        entry_point,
+    },
+    contract_interfaces::dao::{
+        manager,
+        treasury_manager::{
+            storage::*,
+            Config,
+            ExecuteMsg,
+            InstantiateMsg,
+            QueryMsg,
+            Holding,
+            Status,
+        },
+    }
 };
 
-use shade_protocol::contract_interfaces::dao::treasury_manager::{
-    storage::*,
-    Config,
-    ExecuteMsg,
-    InstantiateMsg,
-    QueryMsg,
-    Holding,
-    Status,
-};
 
 use crate::{
-    handle,
+    execute,
     query,
-    /*
-    state::{
-        asset_list_w, config_w, self_address_w, viewing_key_w,
-        holders_w, holding_w,
-    },
-    */
 };
 
 use shade_protocol::contract_interfaces::dao::manager;
 
-pub fn init(
+#[entry_point]
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -62,7 +62,8 @@ pub fn init(
     Ok(Response::new())
 }
 
-pub fn handle(
+#[entry_point]
+pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -84,15 +85,16 @@ pub fn handle(
         ExecuteMsg::AddHolder { holder } => handle::add_holder(deps, &env, holder),
         ExecuteMsg::RemoveHolder { holder } => handle::remove_holder(deps, &env, holder),
         ExecuteMsg::Manager(a) => match a {
-            manager::SubHandleMsg::Unbond { asset, amount } => {
+            manager::SubExecuteMsg::Unbond { asset, amount } => {
                 handle::unbond(deps, &env, asset, amount)
             }
-            manager::SubHandleMsg::Claim { asset } => handle::claim(deps, &env, asset),
-            manager::SubHandleMsg::Update { asset } => handle::update(deps, &env, asset),
+            manager::SubExecuteMsg::Claim { asset } => handle::claim(deps, &env, asset),
+            manager::SubExecuteMsg::Update { asset } => handle::update(deps, &env, asset),
         },
     }
 }
 
+#[entry_point]
 pub fn query(
     deps: Deps,
     msg: QueryMsg,
@@ -102,16 +104,8 @@ pub fn query(
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
         QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
         QueryMsg::PendingAllowance { asset } => to_binary(&query::pending_allowance(deps, asset)?),
-        QueryMsg::Holders {} => to_binary(&query::holders(deps)),
-        QueryMsg::Holding { holder } => to_binary(&query::holding(deps, holder)),
-
-        /*
-        // For holder specific queries
-        QueryMsg::Balance { asset, holder } => to_binary(&query::balance(deps, asset, Some(holder))?),
-        QueryMsg::Unbonding { asset, holder } => to_binary(&query::unbonding(deps, asset, Some(holder))?),
-        QueryMsg::Unbondable { asset, holder } => to_binary(&query::unbondable(deps, asset, Some(holder))?),
-        QueryMsg::Claimable { asset, holder } => to_binary(&query::claimable(deps, asset, Some(holder))?),
-        */
+        QueryMsg::Holders {} => to_binary(&query::holders(deps)?),
+        QueryMsg::Holding { holder } => to_binary(&query::holding(deps, holder)?),
 
         QueryMsg::Manager(a) => match a {
             manager::SubQueryMsg::Balance { asset, holder } => to_binary(&query::balance(deps, asset, holder)?),

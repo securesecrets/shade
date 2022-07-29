@@ -1,8 +1,8 @@
-use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::secret_toolkit::{
-    snip20::{allowance_query, balance_query},
-};
 use shade_protocol::{
+    c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128},
+    secret_toolkit::{
+        snip20::{allowance_query, balance_query},
+    },
     contract_interfaces::{
         dao::{
             adapter,
@@ -14,19 +14,6 @@ use shade_protocol::{
         },
     },
 };
-
-/*
-use crate::state::{
-    allocations_r,
-    asset_list_r,
-    assets_r,
-    config_r,
-    self_address_r,
-    viewing_key_r,
-    holding_r,
-    holders_r,
-};
-*/
 
 pub fn config(
     deps: Deps,
