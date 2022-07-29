@@ -311,7 +311,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
         None,
         None,
         None,
-        1,
+        RESPONSE_BLOCK_SIZE,
         bond_opportunity.deposit_denom.contract.code_hash.clone(),
         bond_opportunity.deposit_denom.contract.address.clone(),
     )?);
@@ -332,7 +332,7 @@ pub fn try_deposit<S: Storage, A: Api, Q: Querier>(
     };
 
     // Find user account, create if it doesn't exist
-    let mut account = match account_r(&deps.storage).may_load(sender.as_str().as_bytes())? {
+    let mut account = match account_r(&deps.storage).may_load(from.as_str().as_bytes())? {
         None => {
             // Airdrop task
             if let Some(airdrop) = config.airdrop {
@@ -561,7 +561,7 @@ pub fn try_open_bond<S: Storage, A: Api, Q: Querier>(
             config.treasury,
             env.contract.address,
             allowance_key_r(&deps.storage).load()?.to_string(),
-            1,
+            RESPONSE_BLOCK_SIZE,
             config.issued_asset.code_hash,
             config.issued_asset.address,
         )?;
