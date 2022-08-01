@@ -8,6 +8,7 @@ use crate::{
     },
 };
 use cosmwasm_schema::cw_serde;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /*
@@ -119,7 +120,7 @@ pub enum QueryMsgResponse {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TokenAmount {
     pub token: TokenType,

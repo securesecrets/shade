@@ -1,21 +1,43 @@
-use shade_protocol::c_std::{
-    Storage, Api, Querier, DepsMut, Env, StdResult, Response, to_binary,
-    StdError, Addr, CosmosMsg, Binary, WasmMsg
-};
-use shade_protocol::fadroma::scrt::to_cosmos_msg;
-use shade_protocol::c_std::Uint128;
+//use crate::query::trade_profitability;
+use shade_admin::admin;
 use shade_protocol::{
-    utils::{asset::Contract, storage::plus::ItemStorage},
-    contract_interfaces::{
-    sky::sky::{
-        Config, HandleAnswer, self
+    c_std::{
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        CosmosMsg,
+        Decimal,
+        DepsMut,
+        Env,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+        WasmMsg,
     },
-    dex::sienna::{PairQuery, TokenTypeAmount, PairInfoResponse, TokenType, Swap, SwapOffer, CallbackMsg, CallbackSwap},
-    mint::mint::{QueryAnswer, QueryMsg, QueryAnswer::Mint, ExecuteMsg::Receive, self},
-    snip20::helpers::Snip20Asset,
-}};
-use shade_protocol::snip20::helpers::send_msg;
-use crate::{query::trade_profitability};
+    contract_interfaces::{
+        admin::validate_admin,
+        dex::sienna::{
+            CallbackMsg,
+            CallbackSwap,
+            PairInfoResponse,
+            PairQuery,
+            Swap,
+            SwapOffer,
+            TokenType,
+            TokenTypeAmount,
+        },
+        mint::mint::{self, ExecuteMsg::Receive, QueryAnswer, QueryAnswer::Mint, QueryMsg},
+        sky::{self, Config, HandleAnswer},
+        snip20::helpers::Snip20Asset,
+    },
+    fadroma::scrt::to_cosmos_msg,
+    snip20::helpers::send_msg,
+    utils::{asset::Contract, storage::plus::ItemStorage},
+};
 
 pub fn try_update_config(
     deps: DepsMut,
@@ -26,10 +48,10 @@ pub fn try_update_config(
     sscrt_token: Option<Contract>,
     treasury: Option<Contract>,
     payback_rate: Option<Decimal>,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     //Admin-only
     let mut config = Config::load(deps.storage)?;
-    let admin_response: ValidateAdminPermissionResponse =
+    let admin_response: admin::QueryAnswer::ValidateAdminPermissionResponse =
         admin::QueryMsg::ValidateAdminPermission {
             contract_address: SelfAddr::load(deps.storage)?.0.to_string(),
             admin_address: env.message.sender.to_string(),
@@ -43,6 +65,12 @@ pub fn try_update_config(
     if admin_response.error_msg.is_some() {
         return Err(StdError::generic_err("Unauthorized"));
     }
+    validate_admin(
+        &deps.querier,
+        env.contract.address.to_string(),
+        env.transaction.
+        &config.shade_admin,
+    );
 
     let mut messages = vec![];
 

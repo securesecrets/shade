@@ -56,7 +56,7 @@ impl ItemStorage for Cycles {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub struct InitMsg {
+pub struct InstantiateMsg {
     pub shade_admin: Contract,
     pub shd_token: Contract,
     pub silk_token: Contract,
@@ -66,13 +66,13 @@ pub struct InitMsg {
     pub payback_rate: Decimal,
 }
 
-impl InstantiateCallback for InitMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     UpdateConfig {
         shade_admin: Option<Contract>,
         shd_token: Option<Contract>,
@@ -111,7 +111,7 @@ pub enum HandleMsg {
     Adapter(adapter::SubHandleMsg),
 }
 
-impl ExecuteCallback for HandleMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 

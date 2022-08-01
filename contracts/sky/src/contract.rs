@@ -1,15 +1,31 @@
-use shade_protocol::c_std::{
-    to_binary, Api, Binary, Env, DepsMut, Response, Querier,
-    StdError, StdResult, Storage, self,
+use shade_protocol::{
+    c_std::{
+        self,
+        to_binary,
+        Api,
+        Binary,
+        Decimal,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        SubMsg,
+    },
+    snip20::helpers::set_viewing_key_msg,
 };
-use shade_protocol::snip20::helpers::set_viewing_key_msg;
 
-use crate::{
-    handle, query,
-};
+use crate::{handle, query};
 
 use shade_protocol::{
-    contract_interfaces::sky::sky::{Config, InstantiateMsg, ExecuteMsg, QueryMsg, ViewingKeys, SelfAddr},
+    contract_interfaces::{
+        dao::adapter,
+        sky::{Config, Cycles, ExecuteMsg, InstantiateMsg, QueryMsg, SelfAddr, ViewingKeys},
+    },
     utils::storage::plus::ItemStorage,
 };
 
@@ -20,12 +36,6 @@ pub fn init(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let state = Config {
-        admin: match msg.admin{
-            None => info.sender.clone(),
-            Some(admin) => admin,
-        },
-        mint_addr: msg.mint_addr,
-        market_swap_addr: msg.market_swap_addr,
         shade_admin: msg.shade_admin,
         shd_token: msg.shd_token.clone(),
         silk_token: msg.silk_token.clone(),
@@ -42,48 +52,35 @@ pub fn init(
     SelfAddr(env.contract.address).save(deps.storage)?;
     Cycles(vec![]).save(deps.storage)?;
 
-    deps.api.debug("Contract was initialized by {}", info.sender);
+    deps.api
+        .debug(&format!("Contract was initialized by {}", info.sender));
 
     let mut messages = vec![
-        set_viewing_key_msg(
-            msg.viewing_key.clone(),
+        SubMsg::new(set_viewing_key_msg(
+            msg.viewing_key.clone().to_string(),
             None,
-            1,
-            msg.shd_token.code_hash.clone(),
-            msg.shd_token.address.clone(),
-        )?,
-        set_viewing_key_msg(
-            msg.viewing_key.clone(),
+            &msg.shd_token.clone(),
+        )?),
+        SubMsg::new(set_viewing_key_msg(
+            msg.viewing_key.clone().to_string(),
             None,
-            1,
-            msg.silk_token.code_hash.clone(),
-            msg.silk_token.address.clone(),
-        )?,
-        set_viewing_key_msg(
-            msg.viewing_key.clone(),
+            &msg.silk_token.clone(),
+        )?),
+        SubMsg::new(set_viewing_key_msg(
+            msg.viewing_key.clone().to_string(),
             None,
-            1,
-            msg.sscrt_token.code_hash.clone(),
-            msg.sscrt_token.address.clone(),
-        )?,
+            &msg.sscrt_token.clone(),
+        )?),
     ];
 
     ViewingKeys(msg.viewing_key).save(deps.storage)?;
 
-    Ok(Response{
-        messages,
-        log: vec![],
-    })
+    Ok(Response::new().add_submessages(messages))
 }
 
-pub fn handle(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
-        HandleMsg::UpdateConfig {
+        ExecuteMsg::UpdateConfig {
             shade_admin,
             shd_token,
             silk_token,
@@ -101,17 +98,17 @@ pub fn handle(
             treasury,
             payback_rate,
         ),
-        HandleMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),
-        HandleMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, cycle),
-        HandleMsg::UpdateCycle { cycle, index, .. } => {
+        ExecuteMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),
+        ExecuteMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, cycle),
+        ExecuteMsg::UpdateCycle { cycle, index, .. } => {
             handle::try_update_cycle(deps, env, cycle, index)
         }
-        HandleMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, index),
-        HandleMsg::ArbCycle { amount, index, .. } => {
+        ExecuteMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, index),
+        ExecuteMsg::ArbCycle { amount, index, .. } => {
             handle::try_arb_cycle(deps, env, amount, index)
         }
-        HandleMsg::ArbAllCycles { amount, .. } => handle::try_arb_all_cycles(deps, env, amount),
-        HandleMsg::Adapter(adapter) => match adapter {
+        ExecuteMsg::ArbAllCycles { amount, .. } => handle::try_arb_all_cycles(deps, env, amount),
+        ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {
                 handle::try_adapter_unbond(deps, env, asset, Uint128::from(amount.u128()))
             }
@@ -121,10 +118,7 @@ pub fn handle(
     }
 }
 
-pub fn query(
-    deps: Deps,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::Balance {} => to_binary(&query::get_balances(deps)?),
