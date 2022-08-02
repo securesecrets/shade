@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - id: set-dirs
-        run: echo "::set-output name=dir::$(find ./contracts/ -name Cargo.toml | jq -R -s -c 'split("\n")[:-1]')"
+        run: echo "::set-output name=dir::$(find ./contracts -name Cargo.toml | jq -R -s -c 'split("\n")[:-1]')"
 
   build-contracts:
     runs-on: ubuntu-latest
@@ -31,6 +31,8 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
+      - uses: Swatinem/rust-cache@v2
+
       - uses: actions-rs/cargo@v1.0.3
         with:
           command: build
@@ -45,7 +47,7 @@ jobs:
       - id: set-dirs
         run: echo "::set-output name=dir::$(find ./packages/ -name Cargo.toml | jq -R -s -c 'split("\n")[:-1]')"
 
-  build-packages:
+  check-packages:
     runs-on: ubuntu-latest
     needs: [find-packages] # Depends on previous job
     strategy:
@@ -61,25 +63,37 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
+      - uses: Swatinem/rust-cache@v2
+
       - uses: actions-rs/cargo@v1.0.3
         with:
-          command: build
-          args: --release --target wasm32-unknown-unknown --manifest-path=${{matrix.dir}}
-          
-  test-all:
+          command: check
+
+  coverage:
+    name: Collect test coverage
     runs-on: ubuntu-latest
+    # nightly rust might break from time to time
+    continue-on-error: true
+    env:
+      CARGO_TERM_COLOR: always
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: wasm32-unknown-unknown
+          components: llvm-tools-preview
 
-      - uses: actions-rs/cargo@v1.0.3
-        with:
-          command: test
-          args: --manifest-path=Cargo.toml
+      - uses: Swatinem/rust-cache@v2
 
+      - name: Install latest nextest release
+        uses: taiki-e/install-action@nextest
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Collect coverage data
+        run: cargo llvm-cov nextest --lcov --output-path lcov.info
+      # - name: Upload coverage data to codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     files: lcov.info
