@@ -18,11 +18,11 @@ snip20 = ["dep:snip20"]
 #mock_band= ["dep:mock_band"]
 governance = ["dep:governance"]
 snip20_staking = ["dep:spip_stkd_0"]
-# scrt_staking = ["dep:scrt_staking"]
 # bonds = ["dep:bonds"]
  query_auth = ["dep:query_auth"]
-# treasury = ["dep:treasury"]
-# treasury_manager = ["dep:treasury_manager"]
+scrt_staking = ["dep:scrt_staking"]
+treasury = ["dep:treasury"]
+treasury_manager = ["dep:treasury_manager"]
 # shade-oracles = ["dep:shade-oracles"]
 
 [dependencies]
@@ -36,9 +36,9 @@ governance = { version = "0.1.0", path = "../../contracts/governance", optional 
 spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 # bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
-# scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optional = true }
-# treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
-# treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
+scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optional = true }
+treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
+treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "cosmwasm-v1-refactor", optional = true }
 shade-admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "cosmwasm-v1-refactor" }

@@ -1,5 +1,6 @@
 use shade_protocol::{
     c_std::{
+        entry_point,
         Deps,
         to_binary,
         Api,
@@ -31,7 +32,8 @@ use crate::{
     storage::{CONFIG, SELF_ADDRESS, UNBONDING, VIEWING_KEY},
 };
 
-pub fn init(
+#[entry_point]
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -75,7 +77,8 @@ pub fn init(
     Ok(resp)
 }
 
-pub fn handle(
+#[entry_point]
+pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -98,6 +101,7 @@ pub fn handle(
     }
 }
 
+#[entry_point]
 pub fn query(
     deps: Deps,
     env: Env,

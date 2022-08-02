@@ -44,15 +44,6 @@ pub mod snip20_staking {
     multi_derive::implement_multi!(Snip20Staking, spip_stkd_0);
 }
 
-// #[cfg(feature = "scrt_staking")]
-// pub mod scrt_staking {
-//     use crate::multi_derive;
-//     use scrt_staking;
-
-//     pub struct ScrtStaking;
-//     multi_derive::implement_multi!(ScrtStaking, scrt_staking);
-// }
-
 // #[cfg(feature = "bonds")]
 // pub mod bonds {
 //     use crate::multi_derive;
@@ -69,20 +60,20 @@ pub mod query_auth {
     multi_derive::implement_multi!(QueryAuth, query_auth);
 }
 
-// #[cfg(feature = "treasury_manager")]
-// pub mod treasury_manager {
-//     use crate::multi_derive;
-//     use treasury_manager;
+#[cfg(feature = "treasury_manager")]
+pub mod treasury_manager {
+    use treasury_manager;
+    multi_derive::implement_multi!(TreasuryManager, treasury_manager);
+}
 
-//     pub struct TreasuryManager;
-//     multi_derive::implement_multi!(TreasuryManager, treasury_manager);
-// }
+#[cfg(feature = "treasury")]
+pub mod treasury {
+    use treasury;
+    multi_derive::implement_multi!(Treasury, treasury);
+}
 
-// #[cfg(feature = "treasury")]
-// pub mod treasury {
-//     use crate::multi_derive;
-//     use treasury;
-
-//     pub struct Treasury;
-//     multi_derive::implement_multi!(Treasury, treasury);
-// }
+#[cfg(feature = "scrt_staking")]
+pub mod scrt_staking {
+    use scrt_staking;
+    multi_derive::implement_multi!(ScrtStaking, scrt_staking);
+}

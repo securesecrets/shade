@@ -1,5 +1,6 @@
 use shade_protocol::c_std::{
     DepsMut,
+    Deps,
     to_binary,
     Api,
     BalanceResponse,
@@ -126,7 +127,7 @@ pub fn update(
     // Claim Rewards
     let rewards = query::rewards(deps.as_ref())?;
     if !rewards.is_zero() {
-        messages.append(&mut withdraw_rewards(deps)?);
+        messages.append(&mut withdraw_rewards(deps.as_ref())?);
     }
 
     let mut stake_amount = rewards + scrt_balance;
@@ -192,7 +193,7 @@ pub fn unbond(
     let mut messages = vec![];
 
     if !rewards.is_zero() {
-        messages.append(&mut withdraw_rewards(deps)?);
+        messages.append(&mut withdraw_rewards(deps.as_ref())?);
     }
 
     let mut undelegated = vec![];
@@ -290,7 +291,7 @@ pub fn unbond(
 }
 
 pub fn withdraw_rewards(
-    deps: DepsMut,
+    deps: Deps,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = vec![];
     let address = SELF_ADDRESS.load(deps.storage)?;
@@ -361,7 +362,7 @@ pub fn claim(
 
         if !rewards.is_zero() {
             assert!(false, "withdraw rewards");
-            messages.append(&mut withdraw_rewards(deps)?);
+            messages.append(&mut withdraw_rewards(deps.as_ref())?);
         }
 
         if rewards + scrt_balance >= unbond_amount {

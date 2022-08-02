@@ -100,6 +100,7 @@ pub enum ExecuteMsg {
     TransferAccount {
     },
     */
+    //TODO remove, change to treasury only interface
     Adapter(adapter::SubExecuteMsg),
 }
 
