@@ -1,4 +1,4 @@
-#[cfg(feature = "sky-impl")]
+#[cfg(feature = "sky-utils")]
 pub mod cycles;
 
 use crate::{
