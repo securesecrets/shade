@@ -1,18 +1,21 @@
-#[cfg(feature = "sky-impl")]
+#[cfg(feature = "sky-utils")]
 pub mod cycles;
 
 use crate::{
     contract_interfaces::{dao::adapter, sky::cycles::Cycle},
-    utils::{asset::Contract, storage::plus::ItemStorage},
+    utils::{
+        asset::Contract,
+        storage::plus::ItemStorage,
+        ExecuteCallback,
+        InstantiateCallback,
+        Query,
+    },
 };
-use cosmwasm_math_compat::{Decimal, Uint128};
-use cosmwasm_std::Addr;
-use schemars::JsonSchema;
+use cosmwasm_std::{Addr, Decimal, Uint128};
 use secret_storage_plus::Item;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub shade_admin: Contract,
@@ -27,7 +30,7 @@ impl ItemStorage for Config {
     const ITEM: Item<'static, Config> = Item::new("item_config");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct ViewingKeys(pub String);
 
@@ -35,7 +38,7 @@ impl ItemStorage for ViewingKeys {
     const ITEM: Item<'static, ViewingKeys> = Item::new("item_view_keys");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct SelfAddr(pub Addr);
 
@@ -43,7 +46,7 @@ impl ItemStorage for SelfAddr {
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Cycles(pub Vec<Cycle>);
 
@@ -51,9 +54,9 @@ impl ItemStorage for Cycles {
     const ITEM: Item<'static, Cycles> = Item::new("item_cycles");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub struct InitMsg {
+pub struct InstantiateMsg {
     pub shade_admin: Contract,
     pub shd_token: Contract,
     pub silk_token: Contract,
@@ -63,13 +66,13 @@ pub struct InitMsg {
     pub payback_rate: Decimal,
 }
 
-impl InitCallback for InitMsg {
+impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     UpdateConfig {
         shade_admin: Option<Contract>,
         shd_token: Option<Contract>,
@@ -108,11 +111,11 @@ pub enum HandleMsg {
     Adapter(adapter::SubHandleMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
     Init {
@@ -144,7 +147,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetConfig {},
@@ -159,7 +162,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
     Config {

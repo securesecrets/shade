@@ -69,8 +69,8 @@ adapter          = ["interface"]
 snip20           = ["query_auth_impl", "dep:base64"]
 query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
-sky              = ["snip20", "dex"]
-dao              = ["interface"]
+sky              = ["snip20", "dex", "dao"]
+dao              = ["interface", "cosmwasm-std/staking"]
 shade_admin      = ["dep:shade-admin"]
 
 stargate = ["cosmwasm-std/stargate"]
@@ -80,7 +80,7 @@ stargate = ["cosmwasm-std/stargate"]
 governance-impl = ["implementation", "governance"]
 snip20-impl     = ["snip20", "query_auth_impl"]
 query_auth_impl = ["implementation", "query_auth", "dep:base64"]
-sky-impl        = ["implementation", "sky"]
+sky-utils        = ["implementation", "sky"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces

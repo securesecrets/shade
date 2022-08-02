@@ -1,18 +1,15 @@
 use crate::{
-    contract_interfaces::{
-        mint,
-        dex,
-        oracles::band,
-    },
+    c_std::{Addr, Binary, Deps, DepsMut, StdError, StdResult, Uint128},
+    contract_interfaces::{dex, mint, oracles::band},
     utils::{
         asset::Contract,
         price::{normalize_price, translate_price},
+        Query,
     },
 };
-use crate::c_std::{Uint128, Addr, StdResult, StdError, Deps, DepsMut};
-
-use crate::utils::Query;
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /*
 #[cw_serde]
@@ -38,6 +35,11 @@ pub struct Simulation {
     pub offer_asset: Asset,
 }
 */
+#[cw_serde]
+pub struct ContractLink {
+    pub address: Addr,
+    pub code_hash: String,
+}
 
 #[cw_serde]
 pub enum PairQuery {
@@ -83,7 +85,7 @@ pub struct PairInfoResponse {
     pub contract_version: u32,
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsgResponse {
     GetPairInfo {
@@ -125,16 +127,16 @@ pub struct TokenAmount {
     pub amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct SwapTokens {
     pub expected_return: Option<Uint128>,
     pub to: Option<Addr>,
-    pub router_link: Option<ContractLink<Addr>>,
+    pub router_link: Option<ContractLink>,
     pub callback_signature: Option<Binary>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub struct TradeHistory {
     pub price: Uint128,
@@ -154,15 +156,9 @@ pub struct PoolResponse {
 }
 */
 
-pub fn is_pair(
-    deps: DepsMut,
-    pair: Contract,
-) -> StdResult<bool> {
+pub fn is_pair(deps: DepsMut, pair: Contract) -> StdResult<bool> {
     Ok(
-        match (PairQuery::PairInfo).query::<PairInfoResponse>(
-            &deps.querier,
-            &pair
-        ) {
+        match (PairQuery::PairInfo).query::<PairInfoResponse>(&deps.querier, &pair) {
             Ok(_) => true,
             Err(_) => false,
         },
