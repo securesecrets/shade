@@ -52,7 +52,6 @@ fn single_asset_portion_manager_integration(
 
     let mut app = App::default();
 
-
     let admin = Addr::unchecked("admin");
     let user = Addr::unchecked("user");
 
@@ -83,7 +82,6 @@ fn single_asset_portion_manager_integration(
         treasury: Addr::unchecked("treasury".to_string()),
         viewing_key: "viewing_key".to_string(),
     }.test_init(Treasury::default(), &mut app, admin.clone(), "manager", &[]).unwrap();
-
 
     let scrt_staking = scrt_staking::InstantiateMsg {
         admins: None,

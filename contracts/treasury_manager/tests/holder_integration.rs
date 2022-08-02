@@ -1,36 +1,40 @@
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
-    Extern, Addr, StdError,
-    Binary, StdResult, HandleResponse, Env,
-    InitResponse, Uint128,
+    Addr, StdError,
+    Binary, StdResult, Env,
+    Uint128,
 };
 
-use shade_protocol::secret_toolkit::snip20;
+//use shade_protocol::secret_toolkit::snip20;
 
 use shade_protocol::{
-    contract_interfaces::{
-        dao::{
-            treasury_manager,
-            adapter,
-            manager,
-        },
+    snip20,
+    dao::{
+        treasury_manager,
+        adapter,
+        manager,
     },
     utils::{
         asset::Contract,
+        MultiTestable,
+        InstantiateCallback,
+        ExecuteCallback,
+        Query,
     },
-    fadroma::{
-        core::ContractLink,
-        ensemble::{
-           MockEnv, 
-           ContractHarness, ContractEnsemble,
-        },
-    },
+};
+use shade_protocol::multi_test::{ App };
+use shade_multi_test::multi::{
+    treasury_manager::TreasuryManager,
+    snip20::Snip20,
 };
 
+/*
 use contract_harness::harness::{
     treasury_manager::TreasuryManager,
-    snip20_reference_impl::Snip20ReferenceImpl as Snip20,
+    //snip20::Snip20ReferenceImpl as Snip20,
+    snip20::Snip20,
 };
+*/
 
 
 /* No adapters configured
@@ -42,330 +46,254 @@ fn single_asset_holder_no_adapters(
     deposit: Uint128,
 ) {
 
-    let mut ensemble = ContractEnsemble::new(50);
-
-    let reg_manager = ensemble.register(Box::new(TreasuryManager));
-    let reg_snip20 = ensemble.register(Box::new(Snip20));
+    let mut app = App::default();
 
     let viewing_key = "unguessable".to_string();
 
-    let token = ensemble.instantiate(
-        reg_snip20.id,
-        &snip20_reference_impl::msg::InitMsg {
-            name: "token".into(),
-            admin: Some("admin".into()),
-            symbol: "TKN".into(),
-            decimals: 6,
-            initial_balances: Some(vec![
-                snip20_reference_impl::msg::InitialBalance {
-                    address: Addr("holder".into()),
-                    amount: initial,
-                },
-            ]),
-            prng_seed: to_binary("").ok().unwrap(),
-            config: None,
-        },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: Addr("token".into()),
-                code_hash: reg_snip20.code_hash.clone(),
-            }
-        )
-    ).unwrap().instance;
+    let admin = Addr::unchecked("admin");
+    let holder = Addr::unchecked("holder");
+    let treasury = Addr::unchecked("treasury");
 
-    let manager = ensemble.instantiate(
-        reg_manager.id,
-        &treasury_manager::InitMsg {
-            admin: Some(Addr("admin".into())),
-            treasury: Addr("treasury".into()),
-            viewing_key: viewing_key.clone(),
-        },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: Addr("manager".into()),
-                code_hash: reg_manager.code_hash,
-            }
-        )
-    ).unwrap().instance;
+    let token = snip20::InstantiateMsg {
+        name: "token".into(),
+        admin: Some("admin".into()),
+        symbol: "TKN".into(),
+        decimals: 6,
+        initial_balances: Some(vec![
+            snip20::InitialBalance {
+                address: holder.to_string().clone(),
+                amount: initial,
+            },
+        ]),
+        prng_seed: to_binary("").ok().unwrap(),
+        config: None,
+    }.test_init(Snip20::default(), &mut app, admin.clone(), "token", &[]).unwrap();
+
+    let manager = treasury_manager::InstantiateMsg {
+        admin: Some(admin.clone()),
+        treasury: treasury.clone(),
+        viewing_key: viewing_key.clone(),
+    }.test_init(TreasuryManager::default(), &mut app, admin.clone(), "manager", &[]).unwrap();
 
     // set holder viewing key
-    ensemble.execute(
-        &snip20::HandleMsg::SetViewingKey{
-            key: viewing_key.clone(),
-            padding: None,
-        },
-        MockEnv::new(
-            "holder", 
-            token.clone(),
-        ),
-    ).unwrap();
+    snip20::ExecuteMsg::SetViewingKey{
+        key: viewing_key.clone(),
+        padding: None,
+    }.test_exec(&token, &mut app, admin.clone(), &[]);
 
     // Register manager assets
-    ensemble.execute(
-        &treasury_manager::HandleMsg::RegisterAsset {
-            contract: Contract {
-                address: token.address.clone(),
-                code_hash: token.code_hash.clone(),
-            },
+    treasury_manager::ExecuteMsg::RegisterAsset {
+        contract: Contract {
+            address: token.address.clone(),
+            code_hash: token.code_hash.clone(),
         },
-        MockEnv::new(
-            "admin", 
-            manager.clone(),
-        ),
-    ).unwrap();
+    }.test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Add 'holder' as holder
-    ensemble.execute(
-        &treasury_manager::HandleMsg::AddHolder {
-            holder: Addr("holder".into())
-        },
-        MockEnv::new(
-            "admin",
-            manager.clone(),
-        ),
-    ).unwrap();
+    treasury_manager::ExecuteMsg::AddHolder {
+        holder: holder.clone(),
+    }.test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Deposit funds into manager
-    ensemble.execute(
-        &snip20::HandleMsg::Send {
-            recipient: manager.address.clone(),
-            recipient_code_hash: None,
-            amount: deposit,
-            msg: None,
-            memo: None,
-            padding: None,
-        },
-        MockEnv::new(
-            "holder",
-            token.clone(),
-        ),
-    ).unwrap();
+    snip20::ExecuteMsg::Send {
+        recipient: manager.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: deposit,
+        msg: None,
+        memo: None,
+        padding: None,
+    }.test_exec(&token, &mut app, admin.clone(), &[]);
     
     // Balance Checks
 
     // manager reported holder balance
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-                holder: Addr("holder".into()),
-            }
-        )
-    ).unwrap() {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+            holder: holder.clone(),
+        }
+    ).test_query(&manager, &app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond Manager Holder Balance");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // manager reported treasury balance
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Balance {
             asset: token.address.clone(),
-            holder: Addr("treasury".into()),
-        })
-    ).unwrap() {
+            holder: treasury.clone(),
+        }
+    ).test_query(&manager, &app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "Pre-unbond Manager Treasury Balance");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Manager reported total asset balance
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Balance {
             asset: token.address.clone(),
-            holder: Addr("holder".into()),
-        })
-    ).unwrap() {
+            holder: holder.clone(),
+        }
+    ).test_query(&manager, &app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond Manager Total Balance");
         }
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // holder snip20 bal
-    match ensemble.query(
-        token.address.clone(),
-        &snip20_reference_impl::msg::QueryMsg::Balance {
-            address: Addr("holder".into()),
-            key: viewing_key.clone(),
-        }
-    ).unwrap() {
-        snip20::AuthenticatedQueryResponse::Balance { amount } => {
+    match (snip20::QueryMsg::Balance {
+        address: holder.to_string().clone(),
+        key: viewing_key.clone(),
+    }.test_query(&token, &app).unwrap()) {
+        snip20::QueryAnswer::Balance { amount } => {
             assert_eq!(amount.u128(), initial.u128() - deposit.u128(), "Pre-unbond Holder Snip20 balance");
         },
         _ => {
-            assert!(false);
+            panic!("Query failed");
         }
     };
 
     // Unbondable
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
+    match manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Unbondable {
             asset: token.address.clone(),
-            holder: Addr("holder".into()),
-        })
-    ).unwrap() {
+            holder: holder.clone(),
+        }
+    ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond unbondable");
         }
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Reserves
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
+    match manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Reserves {
             asset: token.address.clone(),
-            holder: Addr("holder".into()),
-        })
-    ).unwrap() {
+            holder: holder.clone(),
+        }
+    ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond reserves");
         }
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
-    let unbond_amount = Uint128(deposit.u128() / 2);
+    let unbond_amount = Uint128::new(deposit.u128() / 2);
 
     // unbond from manager
-    ensemble.execute(
-        &manager::HandleMsg::Manager(manager::SubHandleMsg::Unbond {
+    manager::ExecuteMsg::Manager(
+        manager::SubExecuteMsg::Unbond {
             asset: token.address.clone(),
             amount: unbond_amount,
-        }),
-        MockEnv::new(
-            "holder",
-            manager.clone(),
-        ),
-    ).unwrap();
+        }
+    ).test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Unbondable
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
+    match manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Unbondable {
             asset: token.address.clone(),
-            holder: Addr("holder".into()),
-        })
-    ).unwrap() {
-        manager::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond total unbondable");
+            holder: holder.clone(),
         }
-        _ => assert!(false),
+    ).test_query(&manager, &app).unwrap() {
+        manager::QueryAnswer::Unbondable { amount } => {
+            assert_eq!(amount, Uint128::new(deposit.u128() - unbond_amount.u128()), "Post-unbond total unbondable");
+        }
+        _ => panic!("Query failed"),
     };
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Unbondable {
-                asset: token.address.clone(),
-                holder: Addr("holder".into()),
-            }
-        )
-    ).unwrap() {
-        manager::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, Uint128(deposit.u128() - unbond_amount.u128()), "Post-unbond holder unbondable");
+
+    match manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Unbondable {
+            asset: token.address.clone(),
+            holder: holder.clone(),
         }
-        _ => assert!(false),
+    ).test_query(&manager, &app).unwrap() {
+        manager::QueryAnswer::Unbondable { amount } => {
+            assert_eq!(amount, Uint128::new(deposit.u128() - unbond_amount.u128()), "Post-unbond holder unbondable");
+        }
+        _ => panic!("Query failed"),
     };
 
     // Unbonding
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Unbonding {
-                asset: token.address.clone(),
-                holder: Addr("holder".into()),
-            }
-        )
-    ).unwrap() {
+    match manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Unbonding {
+            asset: token.address.clone(),
+            holder: holder.clone(),
+        }
+    ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond total unbonding");
         }
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Unbonding {
-                asset: token.address.clone(),
-                holder: Addr("holder".into()),
-            }
-        )
-    ).unwrap() {
+
+    match manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Unbonding {
+            asset: token.address.clone(),
+            holder: holder.clone(),
+        }
+    ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond Holder Unbonding");
         }
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Claimable (zero as its immediately claimed)
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Claimable {
-                asset: token.address.clone(),
-                holder: Addr("holder".into()),
-            }
-        )
-    ).unwrap() {
+    match manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Claimable {
+            asset: token.address.clone(),
+            holder: holder.clone(),
+        }
+    ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond total claimable");
         }
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Claimable {
-                asset: token.address.clone(),
-                holder: Addr("holder".into()),
-            }
-        )
-    ).unwrap() {
+
+    match manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Claimable {
+            asset: token.address.clone(),
+            holder: holder.clone(),
+        }
+    ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Post-unbond holder claimable"); 
         }
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Manager reflects unbonded
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-                holder: Addr("holder".into()),
-            }
-        ),
-    ).unwrap() {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+            holder: holder.clone(),
+        }
+    ).test_query(&manager, &app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount.u128(), deposit.u128() - unbond_amount.u128());
         }
         _ => {
-            assert!(false);
+            panic!("Query failed");
         }
     };
 
     // user received unbonded
-    match ensemble.query(
-        token.address.clone(),
-        &snip20_reference_impl::msg::QueryMsg::Balance {
-            address: Addr("holder".into()),
-            key: viewing_key.clone(),
-        },
-    ).unwrap() {
-        snip20::AuthenticatedQueryResponse::Balance { amount } => {
+    match (snip20::QueryMsg::Balance {
+        address: holder.to_string().clone(),
+        key: viewing_key.clone(),
+    }.test_query(&token, &app).unwrap()) {
+        snip20::QueryAnswer::Balance { amount } => {
             assert_eq!(amount.u128(), (initial.u128() - deposit.u128()) + unbond_amount.u128(), "Post-claim holder snip20 balance");
         },
         _ => {
-            assert!(false);
+            panic!("Query failed");
         }
     };
 }
@@ -384,8 +312,8 @@ macro_rules! single_asset_holder_no_adapters_tests {
 /*
 single_asset_holder_no_adapters_tests! {
     single_asset_holder_no_adapters_0: (
-        Uint128(100_000_000),
-        Uint128(50_000_000),
+        Uint128::new(100_000_000),
+        Uint128::new(50_000_000),
     ),
 }
 */
