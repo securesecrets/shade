@@ -1,19 +1,16 @@
 use shade_protocol::{
     c_std::{
-        self,
+        entry_point,
         to_binary,
-        Api,
         Binary,
         Decimal,
         Deps,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         SubMsg,
     },
     snip20::helpers::set_viewing_key_msg,
@@ -55,7 +52,7 @@ pub fn init(
     deps.api
         .debug(&format!("Contract was initialized by {}", info.sender));
 
-    let mut messages = vec![
+    let messages = vec![
         SubMsg::new(set_viewing_key_msg(
             msg.viewing_key.clone().to_string(),
             None,
@@ -78,6 +75,7 @@ pub fn init(
     Ok(Response::new().add_submessages(messages))
 }
 
+#[entry_point]
 pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::UpdateConfig {
@@ -91,6 +89,7 @@ pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> St
         } => handle::try_update_config(
             deps,
             env,
+            info,
             shade_admin,
             shd_token,
             silk_token,
@@ -98,19 +97,21 @@ pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> St
             treasury,
             payback_rate,
         ),
-        ExecuteMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, cycles),
-        ExecuteMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, cycle),
+        ExecuteMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, info, cycles),
+        ExecuteMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, info, cycle),
         ExecuteMsg::UpdateCycle { cycle, index, .. } => {
-            handle::try_update_cycle(deps, env, cycle, index)
+            handle::try_update_cycle(deps, env, info, cycle, index)
         }
-        ExecuteMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, index),
+        ExecuteMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, info, index),
         ExecuteMsg::ArbCycle { amount, index, .. } => {
-            handle::try_arb_cycle(deps, env, amount, index)
+            handle::try_arb_cycle(deps, env, info, amount, index)
         }
-        ExecuteMsg::ArbAllCycles { amount, .. } => handle::try_arb_all_cycles(deps, env, amount),
+        ExecuteMsg::ArbAllCycles { amount, .. } => {
+            handle::try_arb_all_cycles(deps, env, info, amount)
+        }
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubHandleMsg::Unbond { asset, amount } => {
-                handle::try_adapter_unbond(deps, env, asset, Uint128::from(amount.u128()))
+                handle::try_adapter_unbond(deps, env, info, asset, amount)
             }
             adapter::SubHandleMsg::Claim { asset } => handle::try_adapter_claim(deps, env, asset),
             adapter::SubHandleMsg::Update { asset } => handle::try_adapter_update(deps, env, asset),
@@ -118,6 +119,7 @@ pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> St
     }
 }
 
+#[entry_point]
 pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),

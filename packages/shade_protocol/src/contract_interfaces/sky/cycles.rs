@@ -10,6 +10,7 @@ use cosmwasm_std::{
     to_binary,
     Api,
     CosmosMsg,
+    Deps,
     DepsMut,
     Querier,
     StdError,
@@ -31,7 +32,7 @@ pub struct ArbPair {
 
 impl ArbPair {
     // Returns the calculated swap result when passed an offer with respect to the dex enum option
-    pub fn simulate_swap(self, deps: DepsMut, offer: Offer) -> StdResult<Uint128> {
+    pub fn simulate_swap(self, deps: Deps, offer: Offer) -> StdResult<Uint128> {
         let mut swap_result = Uint128::zero();
         match self.dex {
             Dex::SecretSwap => {
