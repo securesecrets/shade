@@ -97,7 +97,7 @@ schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0"
 
-shade-admin = { git = "https://github.com/securesecrets/shadeadmin", branch = "cosmwasm-v1-refactor", optional = true }
+shade-admin = { git = "https://github.com/securesecrets/shadeadmin", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 # Testing
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
