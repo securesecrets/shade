@@ -1,5 +1,3 @@
-// TODO: replace with pub use
-
 #[cfg(feature = "storage_plus")]
 pub mod plus;
 
