@@ -24,9 +24,10 @@ default = []
 backtraces = ["shade-protocol/backtraces"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "sky-impl", "adapter", "math"] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "sky-utils", "adapter", "math", "shade_admin"] }
+#shade-admin = { git = "https://github.com/securesecrets/shadeadmin", branch = "cosmwasm-v1-refactor", optional = true }
 schemars = "0.7"
 
 [dev-dependencies]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["ensemble"] }
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness" }
+#contract_harness = { version = "0.1.0", path = "../../packages/contract_harness" }

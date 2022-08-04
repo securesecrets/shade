@@ -106,7 +106,7 @@ impl ID {
 
 #[cw_serde]
 // Used for ease of querying
-// TODO: use u64 instead for faster storage
+// TODO: use u64 instead for cheaper storage
 pub struct UserID(Uint128);
 
 impl NaiveMapStorage<'static> for UserID {}

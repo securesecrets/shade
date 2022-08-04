@@ -26,6 +26,7 @@ fn set_config_msg() {
         initial_balances: None,
         prng_seed: Default::default(),
         config: None,
+        query_auth: None
     }
     .test_init(Snip20::default(), &mut chain, Addr::unchecked("admin"), "snip20", &[])
     .unwrap();
@@ -94,6 +95,7 @@ fn reject_disable_config_tokens() {
         initial_balances: None,
         prng_seed: Default::default(),
         config: None,
+        query_auth: None
     }
     .test_init(Snip20::default(), &mut chain, Addr::unchecked("admin"), "snip20", &[])
     .unwrap();

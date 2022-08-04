@@ -22,7 +22,7 @@ use crate::{
     },
     query,
 };
-use shade_protocol::c_std::{from_binary, to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Deps, entry_point};
+use shade_protocol::c_std::{Addr, from_binary, to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Deps, entry_point};
 use shade_protocol::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
     contract_interfaces::snip20::{
@@ -37,8 +37,14 @@ use shade_protocol::{
     utils::asset::validate_vec,
     utils::storage::plus::MapStorage,
 };
-use cosmwasm_std::Addr;
 use shade_protocol::contract_interfaces::snip20::errors::{action_disabled, invalid_viewing_key, not_authenticated_msg, permit_revoked, unauthorized_permit};
+use shade_protocol::query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication};
+use shade_protocol::snip20::errors::permit_not_found;
+use shade_protocol::snip20::manager::QueryAuth;
+use shade_protocol::snip20::PermitParams;
+use shade_protocol::utils::storage::plus::ItemStorage;
+use crate::handle::try_update_query_auth;
+
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
@@ -216,6 +222,9 @@ pub fn execute(
                 let address = deps.api.addr_validate(address.as_str())?;
                 try_change_admin(deps, env, info, address)
             },
+            ExecuteMsg::UpdateQueryAuth { auth } => {
+                try_update_query_auth(deps, env, info, auth)
+            },
             ExecuteMsg::SetContractStatus { level, .. } => try_set_contract_status(deps, env, info, level),
 
             ExecuteMsg::RevokePermit { permit_name, .. } => {
@@ -235,26 +244,58 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             QueryMsg::ExchangeRate {} => query::exchange_rate(deps)?,
             QueryMsg::Minters {} => query::minters(deps)?,
 
-            QueryMsg::WithPermit { permit, query } => {
-                // Validate permit and get account
-                let account = permit.validate(deps.api, None)?.as_addr(None)?;
+            QueryMsg::WithPermit { permit, auth_permit, query } => {
+                // Verify which authentication setting is set
+                let account: Addr;
+                let params: PermitParams;
 
-                // Check that permit is not revoked
-                if PermitKey::may_load(
-                    deps.storage,
-                    (account.clone(), permit.params.permit_name.clone()),
-                )?
-                .is_some()
-                {
-                    return Err(permit_revoked(permit.params.permit_name));
-                }
+                match QueryAuth::may_load(deps.storage)? {
+                    None => {
+                        if let Some(permit) = permit {
+                            // Validate permit and get account
+                            account = permit.validate(deps.api, None)?.as_addr(None)?;
+
+                            // Check that permit is not revoked
+                            if PermitKey::may_load(
+                                deps.storage,
+                                (account.clone(), permit.params.permit_name.clone()),
+                            )?.is_some() {
+                                return Err(permit_revoked(permit.params.permit_name));
+                            }
+
+                            params = permit.params;
+                        }
+                        else {
+                            return Err(permit_not_found());
+                        }
+                    }
+                    Some(authenticator) => {
+                        if let Some(permit) = auth_permit {
+                            let res: PermitAuthentication<PermitParams> = authenticate_permit(
+                                permit,
+                                &deps.querier,
+                                authenticator.0
+                            )?;
+
+                            if res.revoked {
+                                return Err(permit_revoked(res.data.permit_name));
+                            }
+
+                            account = res.sender;
+                            params = res.data;
+                        }
+                        else {
+                            return Err(permit_not_found());
+                        }
+                    }
+                };
 
                 match query {
                     QueryWithPermit::Allowance { owner, spender, .. } => {
                         let owner = deps.api.addr_validate(&owner)?;
                         let spender = deps.api.addr_validate(&spender)?;
 
-                        if !permit.params.contains(Permission::Allowance) {
+                        if !params.contains(Permission::Allowance) {
                             return Err(unauthorized_permit(Permission::Allowance));
                         }
 
@@ -265,14 +306,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                         query::allowance(deps, owner, spender)?
                     }
                     QueryWithPermit::Balance {} => {
-                        if !permit.params.contains(Permission::Balance) {
+                        if !params.contains(Permission::Balance) {
                             return Err(unauthorized_permit(Permission::Balance));
                         }
 
                         query::balance(deps, account.clone())?
                     }
                     QueryWithPermit::TransferHistory { page, page_size } => {
-                        if !permit.params.contains(Permission::History) {
+                        if !params.contains(Permission::History) {
                             return Err(unauthorized_permit(Permission::History));
                         }
 
@@ -284,7 +325,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                         )?
                     }
                     QueryWithPermit::TransactionHistory { page, page_size } => {
-                        if !permit.params.contains(Permission::History) {
+                        if !params.contains(Permission::History) {
                             return Err(unauthorized_permit(Permission::History));
                         }
 
@@ -306,8 +347,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 } => {
                     let owner = deps.api.addr_validate(&owner)?;
                     let spender = deps.api.addr_validate(&spender)?;
-                    if Key::verify(deps.storage, owner.clone(), key.clone())?
-                        || Key::verify(deps.storage, spender.clone(), key)?
+                    if try_authenticate_vk(&deps, owner.clone(), key.clone())?
+                        || try_authenticate_vk(&deps, spender.clone(), key)?
                     {
                         query::allowance(deps, owner, spender)?
                     } else {
@@ -316,7 +357,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 }
                 QueryMsg::Balance { address, key } => {
                     let address = deps.api.addr_validate(&address)?;
-                    if Key::verify(deps.storage, address.clone(), key.clone())? {
+                    if try_authenticate_vk(&deps, address.clone(), key.clone())? {
                         query::balance(deps, address.clone())?
                     } else {
                         return Err(invalid_viewing_key());
@@ -329,7 +370,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     page_size,
                 } => {
                     let address = deps.api.addr_validate(&address)?;
-                    if Key::verify(deps.storage, address.clone(), key.clone())? {
+                    if try_authenticate_vk(&deps, address.clone(), key.clone())? {
                         query::transfer_history(
                             deps,
                             address.clone(),
@@ -347,7 +388,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     page_size,
                 } => {
                     let address = deps.api.addr_validate(&address)?;
-                    if Key::verify(deps.storage, address.clone(), key.clone())? {
+                    if try_authenticate_vk(&deps, address.clone(), key.clone())? {
                         query::transaction_history(
                             deps,
                             address.clone(),
@@ -363,4 +404,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }),
         RESPONSE_BLOCK_SIZE,
     )
+}
+
+fn try_authenticate_vk(deps: &Deps, address: Addr, key: String) -> StdResult<bool> {
+    match QueryAuth::may_load(deps.storage)? {
+        None => {
+            Key::verify(deps.storage, address, key)
+        }
+        Some(authenticator) => {
+            authenticate_vk(address, key, &deps.querier, &authenticator.0)
+        }
+    }
 }

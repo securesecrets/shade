@@ -14,7 +14,7 @@ pub enum QueryMsg {
     #[returns(PermissionsResponse)]
     GetPermissions { user: String },
     #[returns(ValidateAdminPermissionResponse)]
-    ValidateAdminPermission { contract: String, user: String },
+    ValidateAdminPermission { permission: String, user: String },
 }
 
 impl Query for QueryMsg {
@@ -23,17 +23,17 @@ impl Query for QueryMsg {
 
 pub fn validate_admin(
     querier: &QuerierWrapper,
-    contract: String,
+    permission: String,
     user: String,
     admin_auth: &Contract,
 ) -> StdResult<()> {
     let admin_resp: StdResult<ValidateAdminPermissionResponse> = QueryMsg::ValidateAdminPermission {
-        contract,
+        permission,
         user,
     }.query(querier, admin_auth);
 
     match admin_resp {
-        Ok(resp) => match resp.is_admin {
+        Ok(resp) => match resp.has_permission {
             true => Ok(()),
             false => Err(StdError::generic_err("Unexpected response.")),
         },
