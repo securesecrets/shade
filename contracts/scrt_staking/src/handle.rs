@@ -101,8 +101,8 @@ pub fn try_update_config(
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
-            status: ResponseStatus::Success,
-        })?))
+        status: ResponseStatus::Success,
+    })?))
 }
 
 /* Claim rewards and restake, hold enough for pending unbondings
