@@ -13,7 +13,6 @@ use shade_protocol::{
     contract_interfaces::{
         dao::{
             treasury::{
-                storage::*,
                 Allowance, Config, ExecuteAnswer,
                 Manager, 
             },
@@ -27,6 +26,8 @@ use shade_protocol::{
         generic_response::ResponseStatus,
     },
 };
+
+use crate::storage::*;
 
 use chrono::prelude::*;
 use std::collections::HashMap;

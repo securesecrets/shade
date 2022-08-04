@@ -4,10 +4,12 @@ use shade_protocol::{
     contract_interfaces::{
         dao::{
             manager, 
-            treasury::{self, storage::*},
+            treasury,
         },
     },
 };
+
+use crate::storage::*;
 
 pub fn config(
     deps: Deps,

@@ -16,7 +16,6 @@ use shade_protocol::{
     dao::{
         manager,
         treasury_manager::{
-            storage::*,
             Config,
             ExecuteMsg,
             InstantiateMsg,
@@ -31,6 +30,7 @@ use shade_protocol::{
 use crate::{
     execute,
     query,
+    storage::*,
 };
 
 #[entry_point]

@@ -16,7 +16,6 @@ use shade_protocol::{
     dao::{
         adapter,
         treasury_manager::{
-            storage::*,
             Allocation,
             AllocationMeta,
             AllocationType,
@@ -52,6 +51,7 @@ use shade_protocol::{
 
 use std::collections::HashMap;
 
+use crate::storage::*;
 
 pub fn receive(
     deps: DepsMut,

@@ -152,8 +152,8 @@ pub fn update(
     }
 
     Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Update {
-            status: ResponseStatus::Success,
-        })?))
+        status: ResponseStatus::Success,
+    })?))
 }
 
 pub fn unbond(

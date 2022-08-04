@@ -30,10 +30,10 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "math",
   "storage_plus",
 ] }
-
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 
 [dev-dependencies]
-#contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = ["scrt_staking", "snip20", "snip20" ] }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "multi-test",
+shade-multi-test = { path = "../../packages/multi_test", features = [ 
+  "scrt_staking", 
+  "snip20" 
 ] }

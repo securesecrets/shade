@@ -28,14 +28,6 @@ use shade_multi_test::multi::{
     snip20::Snip20,
 };
 
-/*
-use contract_harness::harness::{
-    treasury_manager::TreasuryManager,
-    //snip20::Snip20ReferenceImpl as Snip20,
-    snip20::Snip20,
-};
-*/
-
 
 /* No adapters configured
  * All assets will sit on manager unused as "reserves"

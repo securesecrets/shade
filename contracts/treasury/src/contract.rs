@@ -10,7 +10,6 @@ use shade_protocol::{
     dao::{
         treasury::{
             Config, ExecuteMsg, InstantiateMsg, QueryMsg,
-            storage::*,
         },
         adapter,
     },
@@ -19,6 +18,7 @@ use shade_protocol::{
 use crate::{
     execute,
     query,
+    storage::*,
 };
 
 #[entry_point]

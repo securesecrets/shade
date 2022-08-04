@@ -7,12 +7,11 @@ use shade_protocol::{
     dao::{
         adapter,
         manager,
-        treasury_manager::{
-            self,
-            storage::*,
-        },
+        treasury_manager,
     },
 };
+
+use crate::storage::*;
 
 pub fn config(
     deps: Deps,

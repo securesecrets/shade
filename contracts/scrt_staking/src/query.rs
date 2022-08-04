@@ -49,7 +49,9 @@ pub fn rewards(deps: Deps) -> StdResult<Uint128> {
             }
         }
         else {
-            return Err(StdError::generic_err(format!("No delegation to {} but it was in storage", d.validator)));
+            return Err(StdError::generic_err(
+                format!("No delegation to {} but it was in storage", d.validator)
+            ));
         }
 
     }
