@@ -2,16 +2,25 @@ use crate::{
     contract_interfaces::{
         dex::{dex::Dex, secretswap, shadeswap, sienna},
         mint::mint,
+        snip20::helpers::send_msg,
     },
-    utils::asset::Contract,
+    utils::{asset::Contract, Query},
 };
-use cosmwasm_math_compat::Uint128;
-use cosmwasm_std::{to_binary, Api, CosmosMsg, Extern, Querier, StdError, StdResult, Storage};
-use schemars::JsonSchema;
-use secret_toolkit::{snip20::send_msg, utils::Query};
+use cosmwasm_std::{
+    to_binary,
+    Api,
+    CosmosMsg,
+    Deps,
+    DepsMut,
+    Querier,
+    StdError,
+    StdResult,
+    Storage,
+    Uint128,
+};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct ArbPair {
     pub pair_contract: Option<Contract>,
@@ -23,11 +32,7 @@ pub struct ArbPair {
 
 impl ArbPair {
     // Returns the calculated swap result when passed an offer with respect to the dex enum option
-    pub fn simulate_swap(
-        self,
-        deps: DepsMut,
-        offer: Offer,
-    ) -> StdResult<Uint128> {
+    pub fn simulate_swap(self, deps: Deps, offer: Offer) -> StdResult<Uint128> {
         let mut swap_result = Uint128::zero();
         match self.dex {
             Dex::SecretSwap => {
@@ -43,11 +48,7 @@ impl ArbPair {
                         },
                     },
                 }
-                .query(
-                    &deps.querier,
-                    self.pair_contract.clone().unwrap().code_hash,
-                    self.pair_contract.clone().unwrap().address,
-                )?;
+                .query(&deps.querier, &self.pair_contract.clone().unwrap())?;
                 match res {
                     secretswap::SimulationResponse { return_amount, .. } => {
                         swap_result = return_amount
@@ -64,11 +65,7 @@ impl ArbPair {
                         amount: offer.amount,
                     },
                 }
-                .query(
-                    &deps.querier,
-                    self.pair_contract.clone().unwrap().code_hash,
-                    self.pair_contract.clone().unwrap().address,
-                )?;
+                .query(&deps.querier, &self.pair_contract.clone().unwrap())?;
                 match res {
                     sienna::SimulationResponse { return_amount, .. } => swap_result = return_amount,
                 }
@@ -83,11 +80,7 @@ impl ArbPair {
                         amount: offer.amount,
                     },
                 }
-                .query(
-                    &deps.querier,
-                    self.pair_contract.clone().unwrap().code_hash,
-                    self.pair_contract.clone().unwrap().address,
-                )?;
+                .query(&deps.querier, &self.pair_contract.clone().unwrap())?;
                 match res {
                     shadeswap::QueryMsgResponse::EstimatedPrice { estimated_price } => {
                         swap_result = estimated_price
@@ -101,11 +94,7 @@ impl ArbPair {
                     offer_asset: offer.asset.address,
                     amount: offer.amount,
                 }
-                .query(
-                    &deps.querier,
-                    mint_contract.code_hash,
-                    mint_contract.address,
-                )?;
+                .query(&deps.querier, &mint_contract)?;
                 match res {
                     mint::QueryAnswer::Mint { amount, .. } => swap_result = amount,
                     _ => {}
@@ -120,32 +109,28 @@ impl ArbPair {
     pub fn to_cosmos_msg(&self, offer: Offer, expected_return: Uint128) -> StdResult<CosmosMsg> {
         match self.dex {
             Dex::SiennaSwap => send_msg(
-                self.pair_contract.clone().unwrap().address.clone(),
-                cosmwasm_std::Uint128(offer.amount.u128()),
+                self.pair_contract.clone().unwrap().address.to_string(),
+                Uint128::new(offer.amount.u128()),
                 Some(to_binary(&sienna::CallbackMsg {
                     swap: sienna::CallbackSwap { expected_return },
                 })?),
                 None,
                 None,
-                1,
-                offer.asset.code_hash,
-                offer.asset.address,
+                &offer.asset,
             ),
             Dex::SecretSwap => send_msg(
-                self.pair_contract.clone().unwrap().address.clone(),
-                cosmwasm_std::Uint128(offer.amount.u128()),
+                self.pair_contract.clone().unwrap().address.to_string(),
+                Uint128::new(offer.amount.u128()),
                 Some(to_binary(&secretswap::CallbackMsg {
                     swap: secretswap::CallbackSwap { expected_return },
                 })?),
                 None,
                 None,
-                1,
-                offer.asset.code_hash,
-                offer.asset.address,
+                &offer.asset,
             ),
             Dex::ShadeSwap => send_msg(
-                self.pair_contract.clone().unwrap().address.clone(),
-                cosmwasm_std::Uint128(offer.amount.u128()),
+                self.pair_contract.clone().unwrap().address.to_string(),
+                Uint128::new(offer.amount.u128()),
                 Some(to_binary(&shadeswap::SwapTokens {
                     expected_return: Some(expected_return),
                     to: None,
@@ -154,23 +139,19 @@ impl ArbPair {
                 })?),
                 None,
                 None,
-                1,
-                offer.asset.code_hash,
-                offer.asset.address,
+                &offer.asset,
             ),
             Dex::Mint => {
                 let mint_contract = self.get_mint_contract(offer.asset.clone())?;
                 send_msg(
-                    mint_contract.address.clone(),
-                    cosmwasm_std::Uint128(offer.amount.u128()),
+                    mint_contract.address.clone().to_string(),
+                    Uint128::new(offer.amount.u128()),
                     Some(to_binary(&mint::MintMsgHook {
                         minimum_expected_amount: expected_return,
                     })?),
                     None,
                     None,
-                    1,
-                    offer.asset.code_hash,
-                    offer.asset.address,
+                    &offer.asset,
                 )
             }
         }
@@ -207,7 +188,7 @@ impl ArbPair {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Cycle {
     pub pair_addrs: Vec<ArbPair>,
@@ -271,14 +252,14 @@ impl Cycle {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct Offer {
     pub asset: Contract,
     pub amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct MintInfo {
     pub mint_contract_shd: Contract,

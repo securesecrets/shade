@@ -40,5 +40,5 @@ query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional 
 # treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
 # treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
-shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "cosmwasm-v1-refactor", optional = true }
-shade-admin = { git = "https://github.com/securesecrets/shadeadmin.git", branch = "cosmwasm-v1-refactor" }
+shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git", optional = true }
+shade-admin = { git = "https://github.com/securesecrets/shadeadmin.git" }
