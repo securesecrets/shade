@@ -6,7 +6,7 @@ use crate::utils::crypto::{Prng, sha_256};
 use cosmwasm_schema::{cw_serde};
 use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{allowance_expired, contract_status_level_invalid, insufficient_allowance, no_funds, not_enough_funds};
-use crate::impl_into_u8;
+use crate::{Contract, impl_into_u8};
 #[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::{ItemStorage, MapStorage, NaiveItemStorage};
 #[cfg(feature = "snip20-impl")]
@@ -37,6 +37,8 @@ impl ContractStatusLevel {
 }
 impl_into_u8!(ContractStatusLevel);
 
+// TODO: group all of these snip20-impl features into its own package
+
 #[cw_serde]
 pub struct ContractStatus(pub u8);
 
@@ -63,6 +65,14 @@ pub struct Admin(pub Addr);
 #[cfg(feature = "snip20-impl")]
 impl ItemStorage for Admin {
     const ITEM: Item<'static, Self> = Item::new("admin-");
+}
+
+#[cw_serde]
+pub struct QueryAuth(pub Contract);
+
+#[cfg(feature = "snip20-impl")]
+impl ItemStorage for QueryAuth {
+    const ITEM: Item<'static, Self> = Item::new("query_auth-");
 }
 
 #[cw_serde]

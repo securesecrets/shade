@@ -21,32 +21,30 @@ use shade_protocol::c_std::{
     Storage,
 };
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
-use shade_protocol::{
-    contract_interfaces::snip20::{
-        batch,
-        manager::{
-            Admin,
-            Balance,
-            CoinInfo,
-            Config,
-            ContractStatusLevel,
-            HashedKey,
-            Key,
-            Minters,
-            PermitKey,
-            RandSeed,
-            ReceiverHash,
-            TotalSupply,
-        },
-        transaction_history::{store_deposit, store_mint, store_redeem},
-        HandleAnswer,
+use shade_protocol::{Contract, contract_interfaces::snip20::{
+    batch,
+    manager::{
+        Admin,
+        Balance,
+        CoinInfo,
+        Config,
+        ContractStatusLevel,
+        HashedKey,
+        Key,
+        Minters,
+        PermitKey,
+        RandSeed,
+        ReceiverHash,
+        TotalSupply,
     },
-    utils::{
-        generic_response::ResponseStatus::Success,
-        storage::plus::{ItemStorage, MapStorage},
-    },
-};
+    transaction_history::{store_deposit, store_mint, store_redeem},
+    HandleAnswer,
+}, utils::{
+    generic_response::ResponseStatus::Success,
+    storage::plus::{ItemStorage, MapStorage},
+}};
 use shade_protocol::contract_interfaces::snip20::errors::{deposit_disabled, no_tokens_received, not_admin, not_enough_tokens, redeem_disabled, unsupported_token};
+use shade_protocol::snip20::manager::QueryAuth;
 
 pub fn try_redeem(
     deps: DepsMut,
@@ -138,6 +136,26 @@ pub fn try_change_admin(
     Admin(address).save(deps.storage)?;
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?))
+}
+
+pub fn try_update_query_auth(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    auth: Option<Contract>,
+) -> StdResult<Response> {
+    if info.sender != Admin::load(deps.storage)?.0 {
+        return Err(not_admin());
+    }
+
+    if let Some(auth) = auth {
+        QueryAuth(auth).save(deps.storage)?;
+    }
+    else {
+        QueryAuth::remove(deps.storage);
+    }
+
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateQueryAuth { status: Success })?))
 }
 
 pub fn try_set_contract_status(

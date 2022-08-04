@@ -40,6 +40,7 @@ pub fn init_voting_governance_with_proposal()
         ]),
         prng_seed: to_binary("some seed").unwrap(),
         config: None,
+        query_auth: None
     }
     .test_init(
         Snip20::default(),
@@ -60,6 +61,7 @@ pub fn init_voting_governance_with_proposal()
         initial_balances: None,
         prng_seed: to_binary("some seed").unwrap(),
         config: None,
+        query_auth: None
     }
         .test_init(
             Snip20::default(),

@@ -64,6 +64,7 @@ use shade_protocol::{
     },
 };
 use shade_protocol::c_std::SubMsg;
+use shade_protocol::query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication};
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
@@ -361,19 +362,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             QueryMsg::WithVK { user, key, query } => {
                 // Query VK info
                 let authenticator = Config::load(deps.storage)?.query;
-                let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidateViewingKey {
-                    user: user.clone(),
-                    key,
-                }
-                .query(&deps.querier, &authenticator)?;
-
-                match res {
-                    query_auth::QueryAnswer::ValidateViewingKey { is_valid } => {
-                        if !is_valid {
-                            return Err(StdError::generic_err("Unauthorized"));
-                        }
-                    }
-                    _ => return Err(StdError::generic_err("Unauthorized")),
+                if !authenticate_vk(user.clone(), key, &deps.querier, &authenticator)? {
+                    return Err(StdError::generic_err("Unauthorized"));
                 }
 
                 auth_queries(deps, query, user)
@@ -382,23 +372,17 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             QueryMsg::WithPermit { permit, query } => {
                 // Query Permit info
                 let authenticator = Config::load(deps.storage)?.query;
-                let _args: QueryData = from_binary(&permit.params.data)?;
-                let res: query_auth::QueryAnswer = query_auth::QueryMsg::ValidatePermit { permit }
-                    .query(&deps.querier, &authenticator)?;
+                let res: PermitAuthentication<QueryData> = authenticate_permit(
+                    permit,
+                    &deps.querier,
+                    authenticator
+                )?;
 
-                let sender: Addr;
-
-                match res {
-                    query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => {
-                        sender = user;
-                        if is_revoked {
-                            return Err(StdError::generic_err("Unauthorized"));
-                        }
-                    }
-                    _ => return Err(StdError::generic_err("Unauthorized")),
+                if res.revoked {
+                    return Err(StdError::generic_err("Unauthorized"));
                 }
 
-                auth_queries(deps, query, sender)
+                auth_queries(deps, query, res.sender)
             }
         },
         RESPONSE_BLOCK_SIZE,

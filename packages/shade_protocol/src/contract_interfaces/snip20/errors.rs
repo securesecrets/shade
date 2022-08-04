@@ -24,6 +24,7 @@ pub enum Error {
     // Auth errors
     NotAdmin,
     PermitRevoked,
+    PermitNotFound,
     UnauthorisedPermit,
     InvalidViewingKey,
 
@@ -64,6 +65,7 @@ impl CodeType for Error {
             Error::NotAdmin => build_string("Only admin is allowed to do this action", context),
             Error::PermitRevoked => build_string("Permit key {} is revoked", context),
             Error::UnauthorisedPermit => build_string("Permit lacks the required authorisation, expecting {}", context),
+            Error::PermitNotFound => build_string("No permit was included in this query.", context),
             Error::InvalidViewingKey => build_string("Viewing key is invalid", context),
             Error::TransfersDisabled => build_string("Transfers are disabled", context),
             Error::MintingDisabled => build_string("Minting is disabled", context),
@@ -115,6 +117,10 @@ pub fn not_admin() -> StdError {
 
 pub fn permit_revoked(key: String) -> StdError {
     DetailedError::from_code(TARGET, Error::PermitRevoked, vec![&key]).to_error()
+}
+
+pub fn permit_not_found() -> StdError {
+    DetailedError::from_code(TARGET, Error::PermitNotFound, vec![]).to_error()
 }
 
 pub fn unauthorized_permit(auth: Permission) -> StdError {

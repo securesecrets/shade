@@ -1,5 +1,6 @@
 #[cfg(feature = "query_auth_impl")]
 pub mod auth;
+pub mod helpers;
 
 use crate::c_std::{Binary, Addr};
 
