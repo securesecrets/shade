@@ -13,11 +13,14 @@ use crate::utils::crypto::sha_256;
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 use crate::c_std::Uint128;
+use crate::Contract;
 use crate::contract_interfaces::snip20::errors::{invalid_decimals, invalid_name_format, invalid_symbol_format};
 use crate::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, ContractStatusLevel, Minters, RandSeed, TotalSupply};
 use crate::contract_interfaces::snip20::transaction_history::{RichTx, Tx};
+use crate::contract_interfaces::query_auth::QueryPermit as AuthQueryPermit;
 #[cfg(feature = "snip20-impl")]
 use crate::contract_interfaces::snip20::transaction_history::store_mint;
+use crate::snip20::manager::QueryAuth;
 use crate::utils::generic_response::ResponseStatus;
 #[cfg(feature = "snip20-impl")]
 use crate::utils::storage::plus::ItemStorage;
@@ -39,6 +42,7 @@ pub struct InstantiateMsg {
     pub initial_balances: Option<Vec<InitialBalance>>,
     pub prng_seed: Binary,
     pub config: Option<InitConfig>,
+    pub query_auth: Option<Contract>
 }
 
 fn is_valid_name(name: &str) -> bool {
@@ -112,6 +116,10 @@ impl InstantiateMsg {
         ContractStatusLevel::NormalRun.save(storage)?;
 
         Minters(vec![]).save(storage)?;
+
+        if let Some(query_auth) = self.query_auth.clone() {
+            QueryAuth(query_auth).save(storage)?;
+        }
 
         Ok(())
     }
@@ -323,6 +331,10 @@ pub enum ExecuteMsg {
         level: ContractStatusLevel,
         padding: Option<String>,
     },
+    // Updated the auth setting
+    UpdateQueryAuth {
+        auth: Option<Contract>
+    },
 
     // Permit
     RevokePermit {
@@ -462,6 +474,9 @@ pub enum HandleAnswer {
     SetContractStatus {
         status: ResponseStatus,
     },
+    UpdateQueryAuth {
+        status: ResponseStatus,
+    },
 
     // Permit
     RevokePermit {
@@ -531,7 +546,9 @@ pub enum QueryMsg {
     },
     Minters {},
     WithPermit {
-        permit: QueryPermit,
+        permit: Option<QueryPermit>,
+        // Extra parameter because of snip20s standards
+        auth_permit: Option<AuthQueryPermit>,
         query: QueryWithPermit,
     },
 }

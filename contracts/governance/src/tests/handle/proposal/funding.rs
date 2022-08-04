@@ -50,6 +50,7 @@ pub fn init_funding_governance_with_proposal()
         ]),
         prng_seed: Default::default(),
         config: None,
+        query_auth: None
     }
     .test_init(
         Snip20::default(),
@@ -290,6 +291,7 @@ fn fake_funding_token() {
         ]),
         prng_seed: Default::default(),
         config: None,
+        query_auth: None
     }
     .test_init(
         Snip20::default(),
@@ -712,6 +714,7 @@ fn init_funding_governance_with_proposal_with_privacy()
         ]),
         prng_seed: Default::default(),
         config: None,
+        query_auth: None
     }
     .test_init(
         Snip20::default(),

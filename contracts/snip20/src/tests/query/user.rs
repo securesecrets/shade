@@ -1,8 +1,9 @@
 use shade_protocol::c_std::{Coin, Addr, Uint128};
 use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitialBalance, QueryAnswer, QueryMsg};
 use shade_protocol::contract_interfaces::snip20::transaction_history::{RichTx, TxAction};
+use shade_protocol::query_auth;
 use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
-use crate::tests::{create_vk, init_snip20_with_config};
+use crate::tests::{create_vk, init_snip20_with_auth, init_snip20_with_config};
 
 #[test]
 fn allowance_vk() {
@@ -20,6 +21,42 @@ fn allowance_vk() {
         padding: None
     }.test_exec(&snip, &mut chain, saul.clone(), &[]).unwrap();
     
+    let answer: QueryAnswer = QueryMsg::Allowance {
+        owner: saul.clone().into(),
+        spender: goodman.clone().into(),
+        key: "password".into()
+    }.test_query(&snip, &chain).unwrap();
+
+    match answer {
+        QueryAnswer::Allowance { spender, owner, allowance, expiration} => {
+            assert_eq!(owner, saul);
+            assert_eq!(spender, goodman);
+            assert_eq!(allowance, Uint128::new(100));
+            assert_eq!(expiration, None);
+        },
+        _ => assert!(false)
+    }
+}
+
+#[test]
+fn allowance_auth_vk() {
+    let (mut chain, snip, auth) = init_snip20_with_auth(None, None, true).unwrap();
+
+    let saul = Addr::unchecked("saul");
+    let goodman = Addr::unchecked("goodman");
+
+    query_auth::ExecuteMsg::SetViewingKey {
+        key: "password".into(),
+        padding: None,
+    }.test_exec(&auth.unwrap(), &mut chain, saul.clone(), &[]).unwrap();
+
+    ExecuteMsg::IncreaseAllowance {
+        spender: goodman.clone().into_string(),
+        amount: Uint128::new(100),
+        expiration: None,
+        padding: None
+    }.test_exec(&snip, &mut chain, saul.clone(), &[]).unwrap();
+
     let answer: QueryAnswer = QueryMsg::Allowance {
         owner: saul.clone().into(),
         spender: goodman.clone().into(),
@@ -56,8 +93,6 @@ fn balance_vk() {
         _ => assert!(false)
     }
 }
-
-// y
 
 #[test]
 fn transaction_history() {
