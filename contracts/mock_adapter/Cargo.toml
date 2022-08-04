@@ -28,7 +28,10 @@ debug-print = ["shade-protocol/debug-print"]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "adapter",
   "storage_plus",
+  "dao",
+  "snip20",
 ] }
-schemars = "0.7"
-serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-#secret-storage-plus = { git = "https://github.com/securesecrets/secret-storage-plus", tag = "v1.0.0" }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
+schemars = "0.8.9"

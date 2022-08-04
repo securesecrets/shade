@@ -1,42 +1,32 @@
-use cosmwasm_std::{
-    to_binary,
-    Api,
-    Binary,
-    Addr,
-    Uint128,
-    Env,
-    Extern,
-    HandleResponse,
-    InitResponse,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 
-use secret_toolkit::snip20::{send_msg, balance_query, set_viewing_key_msg, register_receive_msg};
-use serde::{Deserialize, Serialize};
 use shade_protocol::{
     contract_interfaces::dao::adapter,
+    snip20::helpers::{send_msg, balance_query, set_viewing_key_msg, register_receive},
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
         storage::plus::Item,
+        ExecuteCallback, InstantiateCallback, Query,
     },
-    schemars::JsonSchema,
+    c_std::{
+        to_binary, Api, Binary, Addr,
+        Uint128, Env, Response,
+        Querier, StdError, StdResult,
+        Storage, entry_point, Deps, DepsMut,
+        MessageInfo,
+    },
 };
+use cosmwasm_schema::cw_serde;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Config {
     pub owner: Addr,
     pub unbond_blocks: Uint128,
     pub token: Contract,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+#[cw_serde]
+pub enum ExecuteMsg {
     Receive {
         sender: Addr,
         from: Addr,
@@ -46,18 +36,16 @@ pub enum HandleMsg {
     },
     //RegisterAsset { token: Contract },
     //CompleteUnbond { token: Addr, amount: Uint128 },
-    Adapter(adapter::SubHandleMsg),
+    Adapter(adapter::SubExecuteMsg),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Config,
     Adapter(adapter::SubQueryMsg),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config { config: Config },
     Adapter(adapter::SubQueryMsg),
@@ -73,54 +61,52 @@ const REWARDS: Item<Uint128> = Item::new("rewards");
 // (amount, block)
 const UNBONDINGS: Item<Vec<(Uint128, Uint128)>> = Item::new("unbondings");
 
-pub fn init(
-    deps: &mut Extern<S, A, Q>,
+#[entry_point]
+pub fn instantiate(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     msg: Config,
-) -> StdResult<InitResponse> {
+) -> StdResult<Response> {
 
     CONFIG.save(deps.storage, &msg)?;
     ADDRESS.save(deps.storage, &env.contract.address)?;
     UNBONDINGS.save(deps.storage, &Vec::new())?;
-    BLOCK.save(deps.storage, &Uint128(env.block.height as u128))?;
+    BLOCK.save(deps.storage, &Uint128::new(env.block.height as u128))?;
 
-    Ok(InitResponse {
-        messages: vec![
-            //TODO
+    Ok(Response::new()
+        .add_messages(vec![
             set_viewing_key_msg(
                 viewing_key.to_string(),
                 None,
-                256,
-                msg.token.code_hash.clone(),
-                msg.token.address.clone(),
+                &msg.token.clone(),
             )?,
-            register_receive_msg(
-                env.contract_code_hash.clone(),
+            register_receive(
+                env.contract.code_hash.clone(),
                 None,
-                256,
-                msg.token.code_hash.clone(),
-                msg.token.address.clone(),
+                &msg.token.clone(),
             )?,
-        ],
-        log: vec![],
-    })
+        ])
+    )
 }
 
-pub fn handle(
-    deps: &mut Extern<S, A, Q>,
+#[entry_point]
+pub fn execute(
+    deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
-) -> StdResult<HandleResponse> {
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> StdResult<Response> {
 
     let config = CONFIG.load(deps.storage)?;
-    BLOCK.save(deps.storage, &Uint128(env.block.height as u128))?;
+    BLOCK.save(deps.storage, &Uint128::new(env.block.height as u128))?;
 
     match msg {
-        HandleMsg::Receive {
+        ExecuteMsg::Receive {
             sender, from, amount,
             memo, msg,
         } => {
-            if env.message.sender != config.token.address {
+            if info.sender != config.token.address {
                 return Err(StdError::generic_err("Unrecognized Asset"));
             }
 
@@ -129,20 +115,10 @@ pub fn handle(
                 // add rewards
             }
             */
-            Ok(HandleResponse {
-                messages: vec![],
-                log: vec![],
-                data: None,
-                /*
-                Some(to_binary(&adapter::HandleAnswer::Unbond {
-                    status: ResponseStatus::Success,
-                    amount,
-                })?),
-                */
-            })
+            Ok(Response::new())
         },
-        HandleMsg::Adapter(adapter) => match adapter {
-            adapter::SubHandleMsg::Unbond { asset, amount } => {
+        ExecuteMsg::Adapter(adapter) => match adapter {
+            adapter::SubExecuteMsg::Unbond { asset, amount } => {
                 if asset != config.token.address {
                     return Err(StdError::generic_err("Unrecognized Asset"));
                 }
@@ -151,16 +127,13 @@ pub fn handle(
                     &deps.querier,
                     ADDRESS.load(deps.storage)?,
                     viewing_key.to_string(),
-                    1,
-                    config.token.code_hash.clone(),
-                    config.token.address.clone(),
-                )?
-                .amount;
+                    &config.token.clone(),
+                )?;
 
                 let mut unbondings = UNBONDINGS.load(deps.storage)?;
-                let total_unbondings = Uint128(unbondings.iter().map(|(amount, _)| amount.u128()).sum());
+                let total_unbondings = Uint128::new(unbondings.iter().map(|(amount, _)| amount.u128()).sum());
 
-                let available = (balance - total_unbondings)?;
+                let available = balance - total_unbondings;
 
                 if available < amount || amount.is_zero() {
                     return Err(StdError::generic_err(format!("Cannot unbond {}, available is {}", amount, available)));
@@ -175,25 +148,22 @@ pub fn handle(
                         None,
                         None,
                         None,
-                        1,
-                        config.token.code_hash.clone(),
-                        config.token.address.clone(),
+                        &config.token.clone(),
                     )?);
                 }
                 else {
-                    unbondings.push((amount, Uint128(env.block.height as u128)));
+                    unbondings.push((amount, Uint128::new(env.block.height as u128)));
                 }
 
-                Ok(HandleResponse {
-                    messages,
-                    log: vec![],
-                    data: Some(to_binary(&adapter::HandleAnswer::Unbond {
+                Ok(Response::new()
+                    .add_messages(messages)
+                    .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
                         status: ResponseStatus::Success,
                         amount,
                     })?),
-                })
+                )
             },
-            adapter::SubHandleMsg::Claim { asset } => {
+            adapter::SubExecuteMsg::Claim { asset } => {
                 let mut unbonding = UNBONDINGS.load(deps.storage)?;
                 let mut remaining = vec![];
                 let mut claimed = Uint128::zero();
@@ -207,34 +177,38 @@ pub fn handle(
                     }
                 }
                 let mut messages = vec![
-                    //send_msg(),
+                    send_msg(
+                        config.owner.clone(),
+                        claimed,
+                        None,
+                        None,
+                        None,
+                        &config.token.clone(),
+                    )?,
                 ];
 
-                Ok(HandleResponse {
-                    messages,
-                    log: vec![],
-                    data: Some(to_binary(&adapter::HandleAnswer::Claim {
+                Ok(Response::new()
+                    .add_messages(messages)
+                    .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
                         status: ResponseStatus::Success,
                         amount: claimed,
-                    })?),
-                })
+                    })?)
+                )
             },
-            adapter::SubHandleMsg::Update { asset } => {
-                Ok(HandleResponse {
-                    messages: vec![],
-                    log: vec![],
-                    data: Some(to_binary(&adapter::HandleAnswer::Update {
-                        status: ResponseStatus::Success,
-                    })?),
-                })
+            adapter::SubExecuteMsg::Update { asset } => {
+                Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Update {
+                    status: ResponseStatus::Success,
+                })?))
             },
         }
     }
 }
 
 
+#[entry_point]
 pub fn query(
     deps: Deps,
+    env: Env,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
 
@@ -249,25 +223,22 @@ pub fn query(
                     &deps.querier,
                     ADDRESS.load(deps.storage)?,
                     viewing_key.to_string(),
-                    1,
-                    config.token.code_hash.clone(),
-                    config.token.address.clone(),
-                )?
-                .amount;
-                let unbonding = Uint128(UNBONDINGS.load(deps.storage)?
+                    &config.token.clone(),
+                )?;
+                let unbonding = Uint128::new(UNBONDINGS.load(deps.storage)?
                     .iter()
                     .map(|(amount, _)| amount.u128())
                     .sum());
 
-                adapter::QueryAnswer::Balance { amount: (balance - unbonding)? }
+                adapter::QueryAnswer::Balance { amount: balance - unbonding }
             },
             adapter::SubQueryMsg::Unbonding { asset } => {
                 let last_block = BLOCK.load(deps.storage)?;
                 adapter::QueryAnswer::Unbonding { 
-                    amount: Uint128(UNBONDINGS.load(deps.storage)?
+                    amount: Uint128::new(UNBONDINGS.load(deps.storage)?
                         .into_iter()
                         .map(|(amount, block)| {
-                            if Uint128(last_block.u128() - block.u128()) >= config.unbond_blocks {
+                            if Uint128::new(last_block.u128() - block.u128()) >= config.unbond_blocks {
                                 0u128
                             }
                             else {
@@ -280,10 +251,10 @@ pub fn query(
             adapter::SubQueryMsg::Claimable { asset } => {
                 let last_block = BLOCK.load(deps.storage)?;
                 adapter::QueryAnswer::Claimable { 
-                    amount: Uint128(UNBONDINGS.load(deps.storage)?
+                    amount: Uint128::new(UNBONDINGS.load(deps.storage)?
                         .into_iter()
                         .map(|(amount, block)| {
-                            if Uint128(last_block.u128() - block.u128()) >= config.unbond_blocks {
+                            if Uint128::new(last_block.u128() - block.u128()) >= config.unbond_blocks {
                                 amount.u128()
                             }
                             else {
@@ -295,22 +266,19 @@ pub fn query(
             },
             adapter::SubQueryMsg::Unbondable { asset } => {
                 let unbondings = UNBONDINGS.load(deps.storage)?;
-                let sum = Uint128(unbondings.iter().map(|(amount, _)| amount.u128()).sum());
+                let sum = Uint128::new(unbondings.iter().map(|(amount, _)| amount.u128()).sum());
                 let balance = balance_query(
                     &deps.querier,
                     ADDRESS.load(deps.storage)?,
                     viewing_key.to_string(),
-                    1,
-                    config.token.code_hash.clone(),
-                    config.token.address.clone(),
-                )?
-                .amount;
+                    &config.token.clone(),
+                )?;
 
-                adapter::QueryAnswer::Unbondable { amount: (balance - sum)? }
+                adapter::QueryAnswer::Unbondable { amount: balance - sum }
             },
             adapter::SubQueryMsg::Reserves { asset } => {
                 let mut reserves = Uint128::zero();
-                let unbondings = Uint128(UNBONDINGS.load(deps.storage)?.iter()
+                let unbondings = Uint128::new(UNBONDINGS.load(deps.storage)?.iter()
                     .map(|(amount, _)| amount.u128())
                     .sum());
 
@@ -319,12 +287,9 @@ pub fn query(
                         &deps.querier,
                         ADDRESS.load(deps.storage)?,
                         viewing_key.to_string(),
-                        1,
-                        config.token.code_hash.clone(),
-                        config.token.address.clone(),
-                    )?
-                    .amount;
-                    reserves = (reserves - unbondings)?;
+                        &config.token.clone(),
+                    )?;
+                    reserves = reserves - unbondings;
                 }
 
                 adapter::QueryAnswer::Reserves { amount: reserves }
