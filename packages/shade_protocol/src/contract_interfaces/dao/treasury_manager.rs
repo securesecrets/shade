@@ -7,24 +7,6 @@ use crate::c_std::{Binary, Addr, Uint128};
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
-pub mod storage {
-    use secret_storage_plus::{Map, Item};
-    use cosmwasm_std::Addr;
-    use crate::contract_interfaces::snip20::helpers::Snip20Asset;
-
-    pub const CONFIG: Item<super::Config> = Item::new("config");
-    pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
-    pub const SELF_ADDRESS: Item<Addr> = Item::new("self_address");
-
-    pub const ASSET_LIST: Item<Vec<Addr>> = Item::new("asset_list");
-    pub const ASSETS: Map<Addr, Snip20Asset> = Map::new("assets");
-
-    pub const ALLOCATIONS: Map<Addr, Vec<super::AllocationMeta>> = Map::new("allocations");
-    pub const HOLDERS: Item<Vec<super::Addr>> = Item::new("holders");
-    pub const HOLDING: Map<Addr, super::Holding> = Map::new("holding");
-    //pub const UNBONDINGS: Map<Addr, Vec<super::Unbonding>> = Map::new("unbondings");
-}
-
 #[cw_serde]
 pub struct Config {
     pub admin: Addr,
