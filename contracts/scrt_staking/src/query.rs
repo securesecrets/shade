@@ -78,10 +78,12 @@ pub fn balance(
             .map(|d| d.amount.amount.u128())
             .sum::<u128>(),
     );
+    println!("delegated balance {}", delegated.clone());
 
     let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
 
     let rewards = rewards(deps)?;
+    println!("rewards balance {}", rewards.clone());
 
     Ok(adapter::QueryAnswer::Balance {
         amount: delegated + rewards + scrt_balance,
@@ -188,8 +190,10 @@ pub fn reserves(
     }
 
     let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
+    println!("scrt: {}", scrt_balance.clone());
 
     let rewards = rewards(deps)?;
+    println!("rewards: {}", rewards.clone());
     //assert!(false, "rewards {}", rewards);
 
     if !scrt_balance.is_zero() {

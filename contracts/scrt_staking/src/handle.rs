@@ -142,6 +142,7 @@ pub fn update(
 
     if stake_amount > Uint128::zero() {
         let validator = choose_validator(deps, env.block.time.seconds())?;
+        println!("delegating {} to {}", stake_amount.clone(), validator.address.clone());
         messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
             validator: validator.address.clone(),
             amount: Coin {
@@ -151,7 +152,9 @@ pub fn update(
         }));
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Update {
+    Ok(Response::new()
+       .add_messages(messages)
+       .set_data(to_binary(&adapter::ExecuteAnswer::Update {
         status: ResponseStatus::Success,
     })?))
 }
@@ -284,7 +287,9 @@ pub fn unbond(
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
+    Ok(Response::new()
+       .add_messages(messages)
+       .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: unbonding,
         })?))
@@ -297,6 +302,7 @@ pub fn withdraw_rewards(
     let address = SELF_ADDRESS.load(deps.storage)?;
 
     for delegation in deps.querier.query_all_delegations(address.clone())? {
+        println!("withdrawing rewards");
         messages.push(CosmosMsg::Distribution(DistributionMsg::WithdrawDelegatorReward {
             validator: delegation.validator,
         }));
@@ -386,7 +392,9 @@ pub fn claim(
     }
 
 
-    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Claim {
+    Ok(Response::new()
+       .add_messages(messages)
+       .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             amount: claim_amount,
         })?))

@@ -21,10 +21,12 @@ use shade_protocol::{
     },
 };
 
-use shade_protocol::multi_test::{ App };
-use shade_multi_test::multi::{
-    scrt_staking::ScrtStaking,
-    snip20::Snip20,
+use shade_protocol::multi_test::{ App, StakingSudo, SudoMsg };
+use shade_multi_test::{
+    multi::{
+        scrt_staking::ScrtStaking,
+        snip20::Snip20,
+    },
 };
 
 
@@ -70,9 +72,7 @@ fn basic_scrt_staking_integration(
     }.test_init(ScrtStaking::default(), &mut app, admin.clone(), "scrt_staking", &[]).unwrap();
     println!("SCRT STAKING ADDR {}", scrt_staking.address);
 
-    app.init_modules(|router, _, storage| {
-        router.staking.add_validator(storage, validator.to_string().clone()).unwrap();
-    });
+    app.sudo(SudoMsg::Staking(StakingSudo::AddValidator { validator: validator.to_string().clone() })).unwrap();
 
     // set admin owner key
     snip20::ExecuteMsg::SetViewingKey{
@@ -135,12 +135,19 @@ fn basic_scrt_staking_integration(
     assert_eq!(cur_rewards, Uint128::zero(), "Rewards Pre-add");
 
     //ensemble.add_rewards(rewards);
+    app.sudo(SudoMsg::Staking(StakingSudo::AddRewards { amount: Coin { amount: rewards, denom: "uscrt".into() } })).unwrap();
+    /*
+    let block = app.block_info();
     app.init_modules(|router, api, storage| {
         router.staking.add_rewards(
+            api,
             storage,
+            router,
+            &block,
             Coin { amount: rewards, denom: "uscrt".into() }, 
         ).unwrap();
     });
+    */
 
     // Rewards
     let cur_rewards: Uint128 = scrt_staking::QueryMsg::Rewards {}.test_query(&scrt_staking, &app).unwrap();
@@ -270,10 +277,7 @@ fn basic_scrt_staking_integration(
         _ => panic!("Query failed"),
     };
 
-    //ensemble.fast_forward_delegation_waits();
-    app.init_modules(|router, api, storage| {
-        router.staking.fast_forward_undelegate(api, storage, router, &app.block_info()).unwrap();
-    });
+    app.sudo(SudoMsg::Staking(StakingSudo::FastForwardUndelegate {})).unwrap();
 
     // Claimable
     match adapter::QueryMsg::Adapter(
@@ -367,8 +371,7 @@ basic_scrt_staking_tests! {
         Uint128::new(50),   // rewards
         Uint128::new(150), // balance
     ),
-
-    basic_scrt_staking_2: (
+    basic_scrt_staking_no_deposit: (
         Uint128::new(0), // deposit
         Uint128::new(1000),   // rewards
         Uint128::new(0), // balance
