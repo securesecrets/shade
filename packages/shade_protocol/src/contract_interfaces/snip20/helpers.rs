@@ -82,7 +82,7 @@ pub fn mint_msg(
     contract: &Contract
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::Mint {
-        recipient: recipient,
+        recipient,
         amount,
         memo,
         padding,
