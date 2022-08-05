@@ -35,6 +35,17 @@ pub fn optional_raw_contract_validate(api: &dyn Api, contract: Option<RawContrac
     Ok(contract)
 }
 
+/// Validates an optional RawContract.
+pub fn optional_validate(api: &dyn Api, contract: Option<RawContract>) -> StdResult<Option<ContractInfo>> {
+    let contract = if let Some(contract) = contract {
+        Some(contract.into_valid(api)?)
+    } else {
+        None
+    };
+
+    Ok(contract)
+}
+
 /// Validates a vector of Strings as Addrs
 pub fn validate_vec(api: &dyn Api, unvalidated_addresses: Vec<String>) -> StdResult<Vec<Addr>> {
     let items: Result<Vec<_>, _> = unvalidated_addresses.iter().map(|f| api.addr_validate(f.as_str())).collect();
@@ -59,6 +70,10 @@ impl RawContract {
     pub fn into_valid(self, api: &dyn Api) -> StdResult<Contract> {
         let valid_addr = api.addr_validate(self.address.as_str())?;
         Ok(Contract::new(&valid_addr, &self.code_hash))
+    }
+    pub fn valid(self, api: &dyn Api) -> StdResult<ContractInfo> {
+        let valid_addr = api.addr_validate(self.address.as_str())?;
+        Ok(ContractInfo { address: valid_addr, code_hash: self.code_hash.clone() })
     }
 }
 
