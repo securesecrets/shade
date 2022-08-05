@@ -1,3 +1,4 @@
+use shade_multi_test::multi::admin::init_admin_auth;
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
     Addr, StdError,
@@ -45,7 +46,7 @@ fn single_asset_holder_no_adapters(
     let admin = Addr::unchecked("admin");
     let holder = Addr::unchecked("holder");
     let treasury = Addr::unchecked("treasury");
-
+    let admin_auth = init_admin_auth(&mut app, &admin);
     let token = snip20::InstantiateMsg {
         name: "token".into(),
         admin: Some("admin".into()),
@@ -59,11 +60,12 @@ fn single_asset_holder_no_adapters(
         ]),
         prng_seed: to_binary("").ok().unwrap(),
         config: None,
+        query_auth: None,
     }.test_init(Snip20::default(), &mut app, admin.clone(), "token", &[]).unwrap();
 
     let manager = treasury_manager::InstantiateMsg {
-        admin: Some(admin.clone()),
-        treasury: treasury.clone(),
+        admin_auth: admin_auth.into(),
+        treasury: treasury.clone().into(),
         viewing_key: viewing_key.clone(),
     }.test_init(TreasuryManager::default(), &mut app, admin.clone(), "manager", &[]).unwrap();
 
@@ -75,15 +77,12 @@ fn single_asset_holder_no_adapters(
 
     // Register manager assets
     treasury_manager::ExecuteMsg::RegisterAsset {
-        contract: Contract {
-            address: token.address.clone(),
-            code_hash: token.code_hash.clone(),
-        },
+        contract: token.clone().into(),
     }.test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Add 'holder' as holder
     treasury_manager::ExecuteMsg::AddHolder {
-        holder: holder.clone(),
+        holder: holder.clone().into(),
     }.test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Deposit funds into manager
@@ -181,7 +180,7 @@ fn single_asset_holder_no_adapters(
     // unbond from manager
     manager::ExecuteMsg::Manager(
         manager::SubExecuteMsg::Unbond {
-            asset: token.address.clone(),
+            asset: token.address.clone().to_string(),
             amount: unbond_amount,
         }
     ).test_exec(&manager, &mut app, admin.clone(), &[]);
@@ -301,11 +300,11 @@ macro_rules! single_asset_holder_no_adapters_tests {
         )*
     }
 }
-/*
-single_asset_holder_no_adapters_tests! {
-    single_asset_holder_no_adapters_0: (
-        Uint128::new(100_000_000),
-        Uint128::new(50_000_000),
-    ),
-}
-*/
+
+// single_asset_holder_no_adapters_tests! {
+//     single_asset_holder_no_adapters_0: (
+//         Uint128::new(100_000_000),
+//         Uint128::new(50_000_000),
+//     ),
+// }
+

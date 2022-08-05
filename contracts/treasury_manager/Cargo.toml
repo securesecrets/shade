@@ -40,5 +40,6 @@ shade-multi-test = { path = "../../packages/multi_test", features = [
   "treasury", 
   "treasury_manager", 
   "scrt_staking", 
-  "snip20" 
+  "snip20",
+  "admin"
 ] }

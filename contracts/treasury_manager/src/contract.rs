@@ -41,17 +41,19 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
 
+    let treasury = deps.api.addr_validate(msg.treasury.as_str())?;
+
     CONFIG.save(deps.storage, &Config {
-        admin: msg.admin.unwrap_or(info.sender.clone()),
-        treasury: msg.treasury.clone(),
+        admin_auth: msg.admin_auth.into_valid(deps.api)?,
+        treasury: treasury.clone(),
     })?;
 
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
     SELF_ADDRESS.save(deps.storage, &env.contract.address)?;
     ASSET_LIST.save(deps.storage, &Vec::new())?;
-    HOLDERS.save(deps.storage, &vec![msg.treasury.clone()])?;
+    HOLDERS.save(deps.storage, &vec![treasury.clone()])?;
     HOLDING.save(deps.storage,
-        msg.treasury,
+        treasury,
         &Holding {
             balances: vec![],
             unbondings: vec![],
