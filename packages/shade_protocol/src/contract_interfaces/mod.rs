@@ -37,3 +37,6 @@ pub mod query_auth;
 
 #[cfg(feature = "shade_admin")]
 pub mod admin;
+
+#[cfg(feature = "shade_oracles")]
+pub mod shade_oracles;

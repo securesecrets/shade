@@ -1,3 +1,4 @@
+use shade_multi_test::multi::admin::init_admin_auth;
 use shade_protocol::c_std::{
     to_binary,
     Addr, Uint128, Coin, Decimal,
@@ -42,7 +43,7 @@ fn basic_scrt_staking_integration(
     let viewing_key = "unguessable".to_string();
     let admin = Addr::unchecked("admin");
     let validator = Addr::unchecked("validator");
-
+    let admin_auth = init_admin_auth(&mut app, &admin);
     let token = snip20::InstantiateMsg {
         name: "secretSCRT".into(),
         admin: Some("admin".into()),
@@ -58,15 +59,13 @@ fn basic_scrt_staking_integration(
             enable_burn: Some(false),
             enable_transfer: Some(true),
         }),
+        query_auth: None,
     }.test_init(Snip20::default(), &mut app, admin.clone(), "token", &[]).unwrap();
 
     let scrt_staking = scrt_staking::InstantiateMsg {
-        admins: None,
-        owner: admin.clone(),
-        sscrt: Contract {
-            address: token.address.clone(),
-            code_hash: token.code_hash.clone(),
-        },
+        admin_auth: admin_auth.into(),
+        owner: admin.clone().into(),
+        sscrt: token.clone().into(),
         validator_bounds: None,
         viewing_key: viewing_key.clone(),
     }.test_init(ScrtStaking::default(), &mut app, admin.clone(), "scrt_staking", &[]).unwrap();
@@ -193,7 +192,7 @@ fn basic_scrt_staking_integration(
     // Update SCRT Staking
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Update {
-            asset: token.address.clone(),
+            asset: token.address.clone().to_string(),
         }
     ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
 
@@ -249,7 +248,7 @@ fn basic_scrt_staking_integration(
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Unbond {
             amount: expected_scrt_staking,
-            asset: token.address.clone(),
+            asset: token.address.clone().to_string(),
         }
     ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
 
@@ -298,7 +297,7 @@ fn basic_scrt_staking_integration(
     // Claim
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Claim {
-            asset: token.address.clone(),
+            asset: token.address.clone().to_string(),
         }
     ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
 

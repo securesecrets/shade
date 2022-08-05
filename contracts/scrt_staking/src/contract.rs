@@ -40,17 +40,9 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
-        admins: match msg.admins {
-            None => vec![info.sender.clone()],
-            Some(mut admins) => {
-                if !admins.contains(&info.sender) {
-                    admins.push(info.sender);
-                }
-                admins
-            }
-        },
-        sscrt: msg.sscrt,
-        owner: msg.owner,
+        admin_auth: msg.admin_auth.into_valid(deps.api)?,
+        sscrt: msg.sscrt.into_valid(deps.api)?,
+        owner: deps.api.addr_validate(msg.owner.as_str())?,
         validator_bounds: msg.validator_bounds,
     };
 

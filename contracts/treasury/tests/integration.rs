@@ -35,6 +35,7 @@ use shade_multi_test::multi::{
     treasury_manager::TreasuryManager,
     scrt_staking::ScrtStaking,
     snip20::Snip20,
+    admin::init_admin_auth,
 };
 
 // Add other adapters here as they come
@@ -54,6 +55,7 @@ fn single_asset_portion_manager_integration(
 
     let admin = Addr::unchecked("admin");
     let user = Addr::unchecked("user");
+    let admin_auth = init_admin_auth(&mut app, &admin);
 
     let token = snip20::InstantiateMsg {
         name: "secretSCRT".into(),
@@ -70,26 +72,24 @@ fn single_asset_portion_manager_integration(
             enable_burn: Some(false),
             enable_transfer: Some(true),
         }),
+        query_auth: None,
     }.test_init(Snip20::default(), &mut app, admin.clone(), "token", &[]).unwrap();
 
     let treasury = treasury::InstantiateMsg {
-        admin: Some(admin.clone()),
+        admin_auth: admin_auth.clone().into(),        
         viewing_key: "viewing_key".to_string(),
     }.test_init(Treasury::default(), &mut app, admin.clone(), "treasury", &[]).unwrap();
 
     let manager = treasury_manager::InstantiateMsg {
-        admin: Some(admin.clone()),
-        treasury: Addr::unchecked("treasury".to_string()),
+        admin_auth: admin_auth.clone().into(),        
+        treasury: "treasury".to_string(),
         viewing_key: "viewing_key".to_string(),
     }.test_init(Treasury::default(), &mut app, admin.clone(), "manager", &[]).unwrap();
 
     let scrt_staking = scrt_staking::InstantiateMsg {
-        admins: None,
-        owner: manager.address.clone(),
-        sscrt: Contract {
-            address: token.address.clone(),
-            code_hash: token.code_hash.clone(),
-        },
+        admin_auth: admin_auth.clone().into(),
+        owner: manager.address.clone().to_string(),
+        sscrt: token.clone().into(),
         validator_bounds: None,
         viewing_key: "viewing_key".to_string(),
     }.test_init(ScrtStaking::default(), &mut app, admin.clone(), "scrt_staking", &[]).unwrap();
@@ -105,31 +105,22 @@ fn single_asset_portion_manager_integration(
 
     // Register treasury assets
     treasury::ExecuteMsg::RegisterAsset {
-        contract: Contract {
-            address: token.address.clone(),
-            code_hash: token.code_hash.clone(),
-        },
+        contract: token.clone().into(),
     }.test_exec(&treasury, &mut app, admin.clone(), &[]);
     
     // Register manager assets
     treasury_manager::ExecuteMsg::RegisterAsset {
-        contract: Contract {
-            address: token.address.clone(),
-            code_hash: token.code_hash.clone(),
-        },
+        contract: token.clone().into(),
     }.test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Register manager w/ treasury
     treasury::ExecuteMsg::RegisterManager {
-        contract: Contract {
-            address: manager.address.clone(),
-            code_hash: manager.code_hash.clone(),
-        },
+        contract: manager.clone().into(),
     }.test_exec(&treasury, &mut app, admin.clone(), &[]);
 
     // treasury allowance to manager
     treasury::ExecuteMsg::Allowance {
-        asset: token.address.clone(),
+        asset: token.address.clone().to_string(),
         allowance: treasury::Allowance::Portion {
             //nick: "Mid-Stakes-Manager".to_string(),
             spender: manager.address.clone(),
@@ -143,7 +134,7 @@ fn single_asset_portion_manager_integration(
 
     // Allocate to scrt_staking from manager
     treasury_manager::ExecuteMsg::Allocate {
-        asset: token.address.clone(),
+        asset: token.address.clone().to_string(),
         allocation: Allocation {
             nick: Some("scrt_staking".to_string()),
             contract: Contract {
@@ -181,7 +172,7 @@ fn single_asset_portion_manager_integration(
     // Update treasury
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Update {
-            asset: token.address.clone(),
+            asset: token.address.clone().to_string(),
         }
     ).test_exec(&treasury, &mut app, admin.clone(), &[]);
 
@@ -199,14 +190,14 @@ fn single_asset_portion_manager_integration(
     // Update manager
     manager::ExecuteMsg::Manager(
         manager::SubExecuteMsg::Update {
-            asset: token.address.clone(),
+            asset: token.address.clone().to_string(),
         }
     ).test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Update SCRT Staking
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Update {
-            asset: token.address.clone(),
+            asset: token.address.clone().to_string(),
         }
     ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]);
 
@@ -275,7 +266,7 @@ fn single_asset_portion_manager_integration(
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Unbond {
             amount: expected_scrt_staking + expected_manager, 
-            asset: token.address.clone(),
+            asset: token.address.clone().to_string(),
         }
     ).test_exec(&treasury, &mut app, admin.clone(), &[]);
 
@@ -373,7 +364,7 @@ fn single_asset_portion_manager_integration(
     // Claim Treasury
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Claim {
-            asset: token.address.clone(),
+            asset: token.address.clone().to_string(),
         }
     ).test_exec(&treasury, &mut app, admin.clone(), &[]);
 

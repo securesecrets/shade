@@ -108,7 +108,7 @@ pub enum ExecuteMsg {
         amount: Uint128,
         padding: Option<String>,
     },
-    Adapter(adapter::SubHandleMsg),
+    Adapter(adapter::SubExecuteMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {

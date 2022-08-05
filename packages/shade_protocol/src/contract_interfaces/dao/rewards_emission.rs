@@ -50,7 +50,7 @@ pub enum ExecuteMsg {
     RegisterAsset {
         asset: Contract,
     },
-    Adapter(adapter::SubHandleMsg),
+    Adapter(adapter::SubExecuteMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {

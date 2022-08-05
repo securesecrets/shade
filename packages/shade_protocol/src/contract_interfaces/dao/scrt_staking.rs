@@ -1,3 +1,4 @@
+use crate::utils::asset::RawContract;
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
 use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
 
@@ -6,9 +7,13 @@ use crate::contract_interfaces::dao::adapter;
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
+/// The permission referenced in the Admin Auth contract to give a user
+/// admin permissions for the Shade Scrt Staking contract
+pub const SHADE_SCRT_STAKING_ADMIN: &str = "SHADE_SCRT_STAKING_ADMIN";
+
 #[cw_serde]
 pub struct Config {
-    pub admins: Vec<Addr>,
+    pub admin_auth: Contract,
     //pub treasury: Addr,
     // This is the contract that will "unbond" funds
     pub owner: Addr,
@@ -26,9 +31,9 @@ pub struct ValidatorBounds {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub admins: Option<Vec<Addr>>,
-    pub owner: Addr,
-    pub sscrt: Contract,
+    pub admin_auth: RawContract,
+    pub owner: String,
+    pub sscrt: RawContract,
     pub validator_bounds: Option<ValidatorBounds>,
     pub viewing_key: String,
 }

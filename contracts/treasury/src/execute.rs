@@ -19,6 +19,7 @@ use shade_protocol::{
             manager,
         },
         snip20,
+        admin::validate_permission, dao::treasury::SHADE_TREASURY_ADMIN,
     },
     utils::{
         asset::{Contract, set_allowance},
@@ -56,9 +57,7 @@ pub fn try_update_config(
 ) -> StdResult<Response> {
     let cur_config = CONFIG.load(deps.storage)?;
 
-    if info.sender != cur_config.admin {
-        return Err(StdError::generic_err("unauthorized"));
-    }
+    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &cur_config.admin_auth)?;
 
     CONFIG.save(deps.storage, &config)?;
 
@@ -86,11 +85,11 @@ pub fn allowance_last_refresh(
 pub fn rebalance(
     deps: DepsMut,
     env: &Env,
-    asset: Addr,
+    asset: String,
 ) -> StdResult<Response> {
     let naive = NaiveDateTime::from_timestamp(env.block.time.seconds() as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-
+    let asset = deps.api.addr_validate(asset.as_str())?;
     let viewing_key = VIEWING_KEY.load(deps.storage)?;
     let self_address = SELF_ADDRESS.load(deps.storage)?;
     let mut messages = vec![];
@@ -274,7 +273,7 @@ pub fn rebalance(
                                             manager.contract.clone()
                                     )? > Uint128::zero() {
                     messages.push(manager::claim_msg(
-                        asset.clone(),
+                        &asset,
                         manager.contract.clone()
                     )?);
                 };
@@ -342,7 +341,7 @@ pub fn rebalance(
                     // Unbond remaining
                     if decrease > Uint128::zero() {
                         messages.push(manager::unbond_msg(
-                            asset.clone(),
+                            &asset,
                             decrease,
                             manager.contract,
                         )?);
@@ -366,9 +365,7 @@ pub fn try_register_asset(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    if info.sender != config.admin {
-        return Err(StdError::generic_err("unauthorized"));
-    }
+    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &config.admin_auth)?;
 
     let mut asset_list = ASSET_LIST.load(deps.storage)?;
     asset_list.push(contract.address.clone());
@@ -418,9 +415,7 @@ pub fn register_manager(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    if info.sender != config.admin {
-        return Err(StdError::generic_err("unauthorized"));
-    }
+    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &config.admin_auth)?;
 
     MANAGERS.update(deps.storage, |mut managers| {
         if managers
@@ -472,17 +467,16 @@ pub fn allowance(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    asset: Addr,
+    asset: String,
     allowance: Allowance,
 ) -> StdResult<Response> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
     let config = CONFIG.load(deps.storage)?;
-
+    let asset = deps.api.addr_validate(asset.as_str())?;
     /* ADMIN ONLY */
-    if info.sender != config.admin {
-        return Err(StdError::generic_err("unauthorized"));
-    }
+    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &config.admin_auth)?;
+
 
     let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
@@ -598,9 +592,10 @@ pub fn claim(
     deps: DepsMut,
     _env: &Env,
     info: MessageInfo,
-    asset: Addr,
+    asset: String,
 ) -> StdResult<Response> {
 
+    let asset = deps.api.addr_validate(asset.as_str())?;
     let managers = MANAGERS.load(deps.storage)?;
     let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
     let self_address = SELF_ADDRESS.load(deps.storage)?;
@@ -613,7 +608,7 @@ pub fn claim(
         let claimable =
             manager::claimable_query(
                 deps.querier,
-                &asset.clone(),
+                &asset,
                 self_address.clone(),
                 manager.contract.clone()
             )?;
@@ -621,7 +616,7 @@ pub fn claim(
         if claimable > Uint128::zero() {
             messages.push(
                 manager::claim_msg(
-                    asset.clone(),
+                    &asset,
                     manager.contract.clone()
                 )?
             );
@@ -639,13 +634,12 @@ pub fn unbond(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    asset: Addr,
+    asset: String,
     amount: Uint128,
 ) -> StdResult<Response> {
 
-    if info.sender != CONFIG.load(deps.storage)?.admin {
-        return Err(StdError::generic_err("Unauthorized"));
-    }
+    let asset = deps.api.addr_validate(asset.as_str())?;
+    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &CONFIG.load(deps.storage)?.admin_auth)?;
 
     let managers = MANAGERS.load(deps.storage)?;
     let self_address = SELF_ADDRESS.load(deps.storage)?;
@@ -662,7 +656,7 @@ pub fn unbond(
                 if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
                     let unbondable = manager::unbondable_query(
                         deps.querier,
-                        &asset.clone(),
+                        &asset,
                         self_address.clone(),
                         manager.contract.clone()
                     )?;
@@ -670,7 +664,7 @@ pub fn unbond(
                     if unbondable > unbond_amount {
                         messages.push(
                             manager::unbond_msg(
-                                asset.clone(),
+                                &asset,
                                 unbond_amount,
                                 manager.contract.clone(),
                             )?
@@ -681,7 +675,7 @@ pub fn unbond(
                     else {
                         messages.push(
                             manager::unbond_msg(
-                                asset.clone(),
+                                &asset,
                                 unbondable,
                                 manager.contract.clone(),
                             )?

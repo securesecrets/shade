@@ -13,7 +13,7 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["utils"]
+default = ["utils", "shade_oracles"]
 
 # Utils
 utils = []
@@ -32,7 +32,6 @@ ensemble = ["dep:fadroma"]
 # When creating a new contract; try to keep all interface (Init, Handle and Query) related content in the `mod.rs` file
 # and move all implementation related content into separate files inside the package.
 # When defining a new interface, first create a feature that imports this:
-#TODO: add admin in here too
 interface = ["utils", "errors"]
 # Like so
 # contract_name = ["interface"]
@@ -41,7 +40,7 @@ interface = ["utils", "errors"]
 # pub mod contract_name;
 
 # For the implementation you need to import this in your feature and prepend the feature name with `_impl`
-implementation = ["storage_plus", "storage"]
+implementation = ["storage_plus", "storage", "shade_admin"]
 # Like so
 # contract_name_impl = ["contract_name", "implementation"]
 
@@ -73,6 +72,7 @@ snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
 shade_admin      = ["dep:shade-admin"]
+shade_oracles    = ["dep:shade-oracles"]
 
 stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]
@@ -99,6 +99,7 @@ serde = { version = "1.0.103", default-features = false, features = ["derive", "
 thiserror = "1.0"
 
 shade-admin = { git = "https://github.com/securesecrets/shadeadmin", optional = true }
+shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 # Testing
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true, features = ["staking"] }

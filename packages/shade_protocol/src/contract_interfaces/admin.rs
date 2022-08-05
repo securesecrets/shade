@@ -1,8 +1,10 @@
-use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
+//! Refers to this https://github.com/securesecrets/shadeadmin
+use cosmwasm_std::{QuerierWrapper, StdError, StdResult, Addr};
 use shade_admin::admin::{ConfigResponse, AdminsResponse, PermissionsResponse, ValidateAdminPermissionResponse};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use crate::Contract;
 use crate::utils::Query;
+
 
 #[cw_serde]
 #[derive(QueryResponses)]
@@ -21,15 +23,16 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-pub fn validate_admin(
+/// Returns an error if the user does not have the passed permission.
+pub fn validate_permission(
     querier: &QuerierWrapper,
-    permission: String,
-    user: String,
+    permission: &str,
+    user: &Addr,
     admin_auth: &Contract,
 ) -> StdResult<()> {
     let admin_resp: StdResult<ValidateAdminPermissionResponse> = QueryMsg::ValidateAdminPermission {
-        permission,
-        user,
+        permission: permission.to_string(),
+        user: user.to_string().clone(),
     }.query(querier, admin_auth);
 
     match admin_resp {

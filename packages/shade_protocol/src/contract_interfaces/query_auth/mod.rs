@@ -15,6 +15,8 @@ use secret_storage_plus::Item;
 use crate::utils::crypto::sha_256;
 use crate::utils::asset::Contract;
 
+pub const SHADE_QUERY_AUTH_ADMIN: &str = "SHADE_QUERY_AUTH_ADMIN";
+
 #[cfg(feature = "query_auth_impl")]
 #[cw_serde]
 pub struct Admin(pub Contract);

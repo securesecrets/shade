@@ -7,23 +7,24 @@ use shade_protocol::{
         ContractStatus,
         HandleAnswer,
         RngSeed,
+        SHADE_QUERY_AUTH_ADMIN,
     },
     utils::{
         generic_response::ResponseStatus::Success,
         storage::plus::{ItemStorage, MapStorage},
     },
 };
-use shade_protocol::admin::validate_admin;
+use shade_protocol::admin::validate_permission;
 
 use shade_protocol::utils::asset::Contract;
 
 fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<()> {
     let contract = Admin::load(deps.storage)?.0;
 
-    validate_admin(
+    validate_permission(
         &deps.querier,
-        env.contract.address.into(),
-        info.sender.clone().into(),
+        SHADE_QUERY_AUTH_ADMIN,
+        &info.sender,
         &contract
     )
 }

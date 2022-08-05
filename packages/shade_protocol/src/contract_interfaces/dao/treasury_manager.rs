@@ -1,15 +1,19 @@
 use crate::{
     contract_interfaces::dao::manager,
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    utils::{asset::{Contract, RawContract}, generic_response::ResponseStatus},
 };
 use crate::c_std::{Binary, Addr, Uint128};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
+/// The permission referenced in the Admin Auth contract to give a user
+/// admin permissions for the Shade Treasury Manager
+pub const SHADE_TREASURY_MANAGER_ADMIN: &str = "SHADE_TREASURY_MANAGER_ADMIN";
+
 #[cw_serde]
 pub struct Config {
-    pub admin: Addr,
+    pub admin_auth: Contract,
     pub treasury: Addr,
 }
 
@@ -70,9 +74,9 @@ pub struct AllocationMeta {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub admin: Option<Addr>,
+    pub admin_auth: RawContract,
     pub viewing_key: String,
-    pub treasury: Addr,
+    pub treasury: String,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -92,17 +96,17 @@ pub enum ExecuteMsg {
         config: Config,
     },
     RegisterAsset {
-        contract: Contract,
+        contract: RawContract,
     },
     Allocate {
-        asset: Addr,
+        asset: String,
         allocation: Allocation,
     },
     AddHolder {
-        holder: Addr,
+        holder: String,
     },
     RemoveHolder {
-        holder: Addr,
+        holder: String,
     },
     Manager(manager::SubExecuteMsg),
 }

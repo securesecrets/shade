@@ -25,10 +25,10 @@ use cosmwasm_schema::cw_serde;
 #[cw_serde]
 pub enum SubExecuteMsg {
     // Begin unbonding amount
-    Unbond { asset: Addr, amount: Uint128 },
-    Claim { asset: Addr },
+    Unbond { asset: String, amount: Uint128 },
+    Claim { asset: String },
     // Maintenance trigger e.g. claim rewards and restake
-    Update { asset: Addr },
+    Update { asset: String },
 }
 
 impl ExecuteCallback for SubExecuteMsg {
@@ -179,22 +179,22 @@ pub fn balance_query(
     }
 }
 
-pub fn claim_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubExecuteMsg::Claim { asset }).to_cosmos_msg(
+pub fn claim_msg(asset: &Addr, adapter: Contract) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Adapter(SubExecuteMsg::Claim { asset: asset.clone().to_string() }).to_cosmos_msg(
         &adapter,
         vec![],
     )
 }
 
-pub fn unbond_msg(asset: Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubExecuteMsg::Unbond { asset, amount }).to_cosmos_msg(
+pub fn unbond_msg(asset: &Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Adapter(SubExecuteMsg::Unbond { asset: asset.clone().to_string(), amount }).to_cosmos_msg(
         &adapter,
         vec![],
     )
 }
 
-pub fn update_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubExecuteMsg::Update { asset }).to_cosmos_msg(
+pub fn update_msg(asset: &Addr, adapter: Contract) -> StdResult<CosmosMsg> {
+    ExecuteMsg::Adapter(SubExecuteMsg::Update { asset: asset.clone().to_string() }).to_cosmos_msg(
         &adapter,
         vec![],
     )

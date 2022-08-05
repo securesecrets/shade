@@ -29,7 +29,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     CONFIG.save(deps.storage, &Config {
-        admin: msg.admin.unwrap_or(info.sender.clone()),
+        admin_auth: msg.admin_auth.into_valid(deps.api)?,
     })?;
 
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;

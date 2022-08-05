@@ -1,3 +1,4 @@
+use crate::utils::asset::RawContract;
 use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStatus};
 
 use crate::contract_interfaces::dao::adapter;
@@ -6,9 +7,13 @@ use crate::c_std::{Binary, Addr, StdResult, Uint128};
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
+/// The permission referenced in the Admin Auth contract to give a user
+/// admin permissions for the Shade Treasury
+pub const SHADE_TREASURY_ADMIN: &str = "SHADE_TREASURY_ADMIN";
+
 #[cw_serde]
 pub struct Config {
-    pub admin: Addr,
+    pub admin_auth: Contract,
 }
 
 /* Examples:
@@ -50,7 +55,7 @@ pub struct Manager {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub admin: Option<Addr>,
+    pub admin_auth: RawContract,
     pub viewing_key: String,
 }
 
@@ -78,7 +83,7 @@ pub enum ExecuteMsg {
     },
     // Setup a new allowance
     Allowance {
-        asset: Addr,
+        asset: String,
         allowance: Allowance,
     },
     /* TODO: Maybe?

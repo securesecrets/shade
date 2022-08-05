@@ -109,7 +109,7 @@ impl ArbPair {
     pub fn to_cosmos_msg(&self, offer: Offer, expected_return: Uint128) -> StdResult<CosmosMsg> {
         match self.dex {
             Dex::SiennaSwap => send_msg(
-                self.pair_contract.clone().unwrap().address.to_string(),
+                self.pair_contract.clone().unwrap().address,
                 Uint128::new(offer.amount.u128()),
                 Some(to_binary(&sienna::CallbackMsg {
                     swap: sienna::CallbackSwap { expected_return },
@@ -119,7 +119,7 @@ impl ArbPair {
                 &offer.asset,
             ),
             Dex::SecretSwap => send_msg(
-                self.pair_contract.clone().unwrap().address.to_string(),
+                self.pair_contract.clone().unwrap().address,
                 Uint128::new(offer.amount.u128()),
                 Some(to_binary(&secretswap::CallbackMsg {
                     swap: secretswap::CallbackSwap { expected_return },
@@ -129,7 +129,7 @@ impl ArbPair {
                 &offer.asset,
             ),
             Dex::ShadeSwap => send_msg(
-                self.pair_contract.clone().unwrap().address.to_string(),
+                self.pair_contract.clone().unwrap().address,
                 Uint128::new(offer.amount.u128()),
                 Some(to_binary(&shadeswap::SwapTokens {
                     expected_return: Some(expected_return),
@@ -144,7 +144,7 @@ impl ArbPair {
             Dex::Mint => {
                 let mint_contract = self.get_mint_contract(offer.asset.clone())?;
                 send_msg(
-                    mint_contract.address.clone().to_string(),
+                    mint_contract.address.clone(),
                     Uint128::new(offer.amount.u128()),
                     Some(to_binary(&mint::MintMsgHook {
                         minimum_expected_amount: expected_return,

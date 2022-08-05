@@ -1,3 +1,4 @@
+use shade_protocol::admin::validate_permission;
 use shade_protocol::c_std::{
     DepsMut,
     Deps,
@@ -22,6 +23,7 @@ use shade_protocol::c_std::{
     DistributionMsg,
 };
 
+use shade_protocol::dao::scrt_staking::SHADE_SCRT_STAKING_ADMIN;
 use shade_protocol::snip20::helpers::{deposit_msg, redeem_msg};
 
 use shade_protocol::{
@@ -93,9 +95,7 @@ pub fn try_update_config(
 ) -> StdResult<Response> {
     let cur_config = CONFIG.load(deps.storage)?;
 
-    if cur_config.admins.contains(&info.sender) {
-        return Err(StdError::generic_err("unauthorized"));
-    }
+    validate_permission(&deps.querier, SHADE_SCRT_STAKING_ADMIN, &info.sender, &cur_config.admin_auth)?;
 
     // Save new info
     CONFIG.save(deps.storage, &config)?;
@@ -112,9 +112,10 @@ pub fn update(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset: Addr,
+    asset: String,
 ) -> StdResult<Response> {
     let mut messages = vec![];
+    let asset = deps.api.addr_validate(asset.as_str())?;
 
     let config = CONFIG.load(deps.storage)?;
 
@@ -163,7 +164,7 @@ pub fn unbond(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset: Addr,
+    asset: String,
     amount: Uint128,
 ) -> StdResult<Response> {
     /* Unbonding to the scrt staking contract
@@ -171,9 +172,11 @@ pub fn unbond(
      * and this contract will take all scrt->sscrt and send
      */
 
+    let asset = deps.api.addr_validate(asset.as_str())?;
     let config = CONFIG.load(deps.storage)?;
 
-    if !config.admins.contains(&info.sender) && config.owner != info.sender {
+    if  validate_permission(&deps.querier, SHADE_SCRT_STAKING_ADMIN, &info.sender, &config.admin_auth).is_err()
+    && config.owner != info.sender {
         return Err(StdError::generic_err("Unauthorized"));
     }
 
@@ -338,10 +341,11 @@ pub fn claim(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset: Addr,
+    asset: String,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
+    let asset = deps.api.addr_validate(asset.as_str())?;
     if asset != config.sscrt.address {
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
