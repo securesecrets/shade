@@ -102,7 +102,7 @@ pub trait ExecuteCallback: Serialize {
     /// * `send_amount` - Optional Uint128 amount of native coin to send with the handle message
     fn to_cosmos_msg(
         &self,
-        contract: &Contract,
+        contract: &(impl Into<Contract> + Clone),
         funds: Vec<Coin>,
     ) -> StdResult<CosmosMsg> {
         let mut msg = to_binary(self)?;
@@ -112,11 +112,12 @@ pub trait ExecuteCallback: Serialize {
         } else {
             Self::BLOCK_SIZE
         };
+        let contract: Contract = contract.clone().into();
         space_pad(&mut msg.0, padding);
         let execute = WasmMsg::Execute {
             msg,
             contract_addr: contract.address.to_string(),
-            code_hash: contract.code_hash.clone(),
+            code_hash: contract.code_hash,
             funds
         };
         Ok(execute.into())
@@ -165,7 +166,7 @@ pub trait Query: Serialize {
     fn query<T: DeserializeOwned>(
         &self,
         querier: &QuerierWrapper,
-        contract: &Contract
+        contract: &(impl Into<Contract> + Clone),
     ) -> StdResult<T> {
         let mut msg = to_binary(self)?;
         // can not have 0 block size
@@ -175,10 +176,11 @@ pub trait Query: Serialize {
             Self::BLOCK_SIZE
         };
         space_pad(&mut msg.0, padding);
+        let contract: Contract = contract.clone().into();
         querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: contract.address.to_string(),
             msg,
-            code_hash: contract.code_hash.clone()
+            code_hash: contract.code_hash
         }))
     }
 

@@ -38,7 +38,7 @@ pub fn optional_raw_contract_validate(api: &dyn Api, contract: Option<RawContrac
 /// Validates an optional RawContract.
 pub fn optional_validate(api: &dyn Api, contract: Option<RawContract>) -> StdResult<Option<ContractInfo>> {
     let contract = if let Some(contract) = contract {
-        Some(contract.into_valid(api)?)
+        Some(contract.valid(api)?)
     } else {
         None
     };
@@ -67,6 +67,8 @@ impl RawContract {
     pub fn new (address: &String, code_hash: &String) -> Self {
         RawContract { address: address.clone(), code_hash: code_hash.clone() }
     }
+    /// Being deprecated in favor of `valid` which turns this into ContractInfo
+    /// instead of a Contract (which we are getting rid of)
     pub fn into_valid(self, api: &dyn Api) -> StdResult<Contract> {
         let valid_addr = api.addr_validate(self.address.as_str())?;
         Ok(Contract::new(&valid_addr, &self.code_hash))
@@ -91,6 +93,8 @@ impl From<ContractInfo> for RawContract {
 
 #[derive(Hash, Eq)]
 #[cw_serde]
+/// In the process of being deprecated for [cosmwasm_std::ContractInfo] so use that
+/// instead when possible.
 pub struct Contract {
     pub address: Addr,
     pub code_hash: String,
