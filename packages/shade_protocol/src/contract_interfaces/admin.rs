@@ -43,3 +43,11 @@ pub fn validate_permission(
         Err(err) => Err(err),
     }
 }
+
+// All permission constants for this repo should go here and be named as such:
+// SHADE_{CONTRACT_NAME}_{ROLE_WITHIN_THAT_CONTRACT}_{ID IF THERES MULTIPLE INSTANCES OF THAT CONTRACT AND WE NEED SEPARATE PERMISSIONS FOR EACH}
+pub const SHADE_SCRT_STAKING_ADMIN: &str = "SHADE_SCRT_STAKING_ADMIN";
+
+pub const SHADE_TREASURY_MANAGER_ADMIN: &str = "SHADE_TREASURY_MANAGER_ADMIN";
+
+pub const SHADE_QUERY_AUTH_ADMIN: &str = "SHADE_QUERY_AUTH_ADMIN";

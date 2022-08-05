@@ -1,5 +1,5 @@
 use shade_protocol::{
-    admin::validate_permission,
+    admin::{SHADE_TREASURY_MANAGER_ADMIN, validate_permission},
     snip20::{
         batch::{SendFromAction, SendAction},
         helpers::{
@@ -24,7 +24,7 @@ use shade_protocol::{
             ExecuteAnswer,
             Holding,
             Balance,
-            Status, SHADE_TREASURY_MANAGER_ADMIN,
+            Status,
         },
     },
     snip20,

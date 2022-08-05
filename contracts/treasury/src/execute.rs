@@ -19,7 +19,7 @@ use shade_protocol::{
             manager,
         },
         snip20,
-        admin::validate_permission, dao::treasury::SHADE_TREASURY_ADMIN,
+        admin::{SHADE_TREASURY_ADMIN, validate_permission},
     },
     utils::{
         asset::{Contract, set_allowance},

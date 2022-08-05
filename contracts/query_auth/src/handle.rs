@@ -7,14 +7,16 @@ use shade_protocol::{
         ContractStatus,
         HandleAnswer,
         RngSeed,
-        SHADE_QUERY_AUTH_ADMIN,
     },
     utils::{
         generic_response::ResponseStatus::Success,
         storage::plus::{ItemStorage, MapStorage},
     },
 };
-use shade_protocol::admin::validate_permission;
+use shade_protocol::admin::{
+    validate_permission,
+    SHADE_QUERY_AUTH_ADMIN,
+};
 
 use shade_protocol::utils::asset::Contract;
 

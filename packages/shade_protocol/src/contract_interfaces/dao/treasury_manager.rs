@@ -7,10 +7,6 @@ use crate::c_std::{Binary, Addr, Uint128};
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
-/// The permission referenced in the Admin Auth contract to give a user
-/// admin permissions for the Shade Treasury Manager
-pub const SHADE_TREASURY_MANAGER_ADMIN: &str = "SHADE_TREASURY_MANAGER_ADMIN";
-
 #[cw_serde]
 pub struct Config {
     pub admin_auth: Contract,

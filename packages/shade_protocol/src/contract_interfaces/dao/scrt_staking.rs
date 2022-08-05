@@ -7,10 +7,6 @@ use crate::contract_interfaces::dao::adapter;
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
-/// The permission referenced in the Admin Auth contract to give a user
-/// admin permissions for the Shade Scrt Staking contract
-pub const SHADE_SCRT_STAKING_ADMIN: &str = "SHADE_SCRT_STAKING_ADMIN";
-
 #[cw_serde]
 pub struct Config {
     pub admin_auth: Contract,

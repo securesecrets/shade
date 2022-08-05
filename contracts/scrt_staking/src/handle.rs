@@ -1,4 +1,4 @@
-use shade_protocol::admin::validate_permission;
+use shade_protocol::admin::{SHADE_SCRT_STAKING_ADMIN, validate_permission};
 use shade_protocol::c_std::{
     DepsMut,
     Deps,
@@ -23,7 +23,6 @@ use shade_protocol::c_std::{
     DistributionMsg,
 };
 
-use shade_protocol::dao::scrt_staking::SHADE_SCRT_STAKING_ADMIN;
 use shade_protocol::snip20::helpers::{deposit_msg, redeem_msg};
 
 use shade_protocol::{
