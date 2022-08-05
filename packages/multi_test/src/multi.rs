@@ -9,6 +9,12 @@ pub mod snip20 {
     multi_derive::implement_multi!(Snip20, snip20);
 }
 
+#[cfg(feature = "liability_mint")]
+pub mod liability_mint {
+    use liability_mint;
+    multi_derive::implement_multi!(LiabilityMint, liability_mint);
+}
+
 // #[cfg(feature = "mint")]
 // pub mod mint {
 //     use mint;
