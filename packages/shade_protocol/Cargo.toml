@@ -98,7 +98,7 @@ thiserror = "1.0"
 
 shade-admin = { git = "https://github.com/securesecrets/shadeadmin", optional = true }
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop", optional = true }
-secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", branch = "bincode2", optional = true }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 # Testing
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 anyhow = { version = "1", optional = true }
