@@ -92,13 +92,13 @@ cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret"
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
 
-
 schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0"
 
 shade-admin = { git = "https://github.com/securesecrets/shadeadmin", optional = true }
-secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop", optional = true }
+secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", branch = "bincode2", optional = true }
 # Testing
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 anyhow = { version = "1", optional = true }
