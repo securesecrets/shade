@@ -6,6 +6,7 @@ use crate::{
     },
     utils::{asset::Contract, Query},
 };
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary,
     Api,
@@ -18,10 +19,8 @@ use cosmwasm_std::{
     Storage,
     Uint128,
 };
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ArbPair {
     pub pair_contract: Option<Contract>,
     pub mint_info: Option<MintInfo>,
@@ -264,8 +263,7 @@ impl ArbPair {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Cycle {
     pub pair_addrs: Vec<ArbPair>,
     pub start_addr: Contract,
@@ -328,15 +326,13 @@ impl Cycle {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Offer {
     pub asset: Contract,
     pub amount: Uint128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct MintInfo {
     pub mint_contract_shd: Contract,
     pub mint_contract_silk: Contract,

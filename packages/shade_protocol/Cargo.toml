@@ -72,6 +72,7 @@ snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
 shade_admin      = ["dep:shade-admin"]
+peg_stability    = ["sky-utils"]
 
 stargate = ["cosmwasm-std/stargate"]
 
