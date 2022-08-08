@@ -21,7 +21,7 @@ use shade_protocol::{
     utils::storage::plus::{GenericItemStorage, ItemStorage},
 };
 
-pub fn init(
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -48,7 +48,7 @@ pub fn init(
 }
 
 #[entry_point]
-pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::UpdateConfig {
             shd_admin,

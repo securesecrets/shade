@@ -1,4 +1,4 @@
-//use shade_oracles::{common::OraclePrice, router::QueryMsg};
+use shade_oracles::{common::OraclePrice, router::QueryMsg};
 use shade_protocol::{
     c_std::{Deps, StdError, StdResult, Uint128},
     contract_interfaces::{
