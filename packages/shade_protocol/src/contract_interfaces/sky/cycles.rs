@@ -26,11 +26,86 @@ pub struct ArbPair {
     pub pair_contract: Option<Contract>,
     pub mint_info: Option<MintInfo>,
     pub token0: Contract,
+    pub token0_decimals: Uint128,
+    pub token0_amount: Option<Uint128>,
     pub token1: Contract,
+    pub token1_decimals: Uint128,
+    pub token1_amount: Option<Uint128>,
     pub dex: Dex,
 }
 
 impl ArbPair {
+    // Returns pool amounts in a tuple where 0 is the amount for token0
+    pub fn pool_amounts(&mut self, deps: Deps) -> StdResult<(Uint128, Uint128)> {
+        match self.dex {
+            Dex::SecretSwap => {
+                let res = secretswap::PairQuery::Pool {}
+                    .query(&deps.querier, &self.pair_contract.clone().unwrap())?;
+                match res {
+                    secretswap::PoolResponse { assets, .. } => {
+                        if assets[0].info.token.contract_addr.clone() == self.token0.address.clone()
+                        {
+                            self.token0_amount = Some(assets[0].amount);
+                            self.token1_amount = Some(assets[1].amount);
+                            Ok((assets[0].amount, assets[1].amount))
+                        } else {
+                            self.token0_amount = Some(assets[1].amount);
+                            self.token1_amount = Some(assets[0].amount);
+                            Ok((assets[1].amount, assets[0].amount))
+                        }
+                    }
+                }
+            }
+            Dex::ShadeSwap => {
+                let res = shadeswap::PairQuery::PairInfo
+                    .query(&deps.querier, &self.pair_contract.clone().unwrap())?;
+                match res {
+                    shadeswap::PairInfoResponse {
+                        pair,
+                        amount_0,
+                        amount_1,
+                        ..
+                    } => match pair.token_0 {
+                        shadeswap::TokenType::CustomToken { contract_addr, .. } => {
+                            if contract_addr == self.token0.address.clone() {
+                                self.token0_amount = Some(amount_0);
+                                self.token1_amount = Some(amount_1);
+                                Ok((amount_0, amount_1))
+                            } else {
+                                self.token0_amount = Some(amount_1);
+                                self.token1_amount = Some(amount_0);
+                                Ok((amount_1, amount_0))
+                            }
+                        }
+                        _ => Err(StdError::generic_err("Unexpected")),
+                    },
+                }
+            }
+            Dex::SiennaSwap => {
+                let res = sienna::PairQuery::PairInfo
+                    .query(&deps.querier, &self.pair_contract.clone().unwrap())?;
+
+                match res {
+                    sienna::PairInfoResponse { pair_info } => match pair_info.pair.token_0 {
+                        sienna::TokenType::CustomToken { contract_addr, .. } => {
+                            if contract_addr == self.token0.address.clone() {
+                                self.token0_amount = Some(pair_info.amount_0);
+                                self.token1_amount = Some(pair_info.amount_1);
+                                Ok((pair_info.amount_0, pair_info.amount_1))
+                            } else {
+                                self.token0_amount = Some(pair_info.amount_1);
+                                self.token1_amount = Some(pair_info.amount_0);
+                                Ok((pair_info.amount_1, pair_info.amount_0))
+                            }
+                        }
+                        _ => Err(StdError::generic_err("Unexpected")),
+                    },
+                }
+            }
+            Dex::Mint => Err(StdError::generic_err("Not available")),
+        }
+    }
+
     // Returns the calculated swap result when passed an offer with respect to the dex enum option
     pub fn simulate_swap(self, deps: Deps, offer: Offer) -> StdResult<Uint128> {
         let mut swap_result = Uint128::zero();
