@@ -64,8 +64,8 @@ pub enum TokenType {
 
 #[cw_serde]
 pub struct TokenPair {
-    token_0: TokenType,
-    token_1: TokenType,
+    pub token_0: TokenType,
+    pub token_1: TokenType,
 }
 
 /*
