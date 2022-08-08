@@ -1,4 +1,4 @@
-use shade_oracles::{common::OraclePrice, router::QueryMsg};
+use shade_oracles::{common::OraclePrice, interfaces::router};
 use shade_protocol::{
     c_std::{Deps, StdError, StdResult, Uint128},
     contract_interfaces::{
@@ -7,8 +7,8 @@ use shade_protocol::{
     },
     cosmwasm_schema::cw_serde,
     utils::{
+        callback::Query,
         storage::plus::{GenericItemStorage, ItemStorage},
-        Query,
     },
 };
 
@@ -53,19 +53,20 @@ pub fn calculate_profit(deps: Deps) -> StdResult<CalculateRes> {
     if config.pairs.len() < 1 {
         return Err(StdError::generic_err("Must have pairs saved"));
     }
-    /*let res: Vec<OraclePrice> = QueryMsg::GetPrices {
+    let res: Vec<OraclePrice> = router::QueryMsg::GetPrices {
         keys: config.symbols,
     }
-    .query(&deps.querier, &config.oracle)?;
+    .query(&deps.querier, &config.oracle)?
+    .prices;
     let prices = vec![
         Uint128::new(res[0].data.rate.u128()),
         Uint128::new(res[1].data.rate.u128()),
-    ];*/
-    let prices = vec![Uint128::zero(), Uint128::zero()];
-    let max_swap_amount = Uint128::zero();
-    let index = 0usize;
+    ];
+    //let prices = vec![Uint128::zero(), Uint128::zero()];
+    let mut max_swap_amount = Uint128::zero();
+    let mut index = 0usize;
     for (i, pair) in config.pairs.iter().enumerate() {
-        pair.pool_info(deps)?;
+        pair.clone().pool_amounts(deps)?;
         let temp = calculate_swap_amount()?;
         if temp > max_swap_amount {
             max_swap_amount = temp;
