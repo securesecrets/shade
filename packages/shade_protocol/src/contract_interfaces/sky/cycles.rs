@@ -37,6 +37,7 @@ pub struct ArbPair {
 impl ArbPair {
     // Returns pool amounts in a tuple where 0 is the amount for token0
     pub fn pool_amounts(&mut self, deps: Deps) -> StdResult<(Uint128, Uint128)> {
+        self.validate_pair()?
         match self.dex {
             Dex::SecretSwap => {
                 let res = secretswap::PairQuery::Pool {}
@@ -249,14 +250,14 @@ impl ArbPair {
     pub fn validate_pair(&self) -> StdResult<bool> {
         match self.dex {
             Dex::Mint => {
-                self.clone()
-                    .mint_info
-                    .expect("Mint arb pairs must include mint info");
+                if self.mint_info == None {
+                    return Err(StdError::generic_err("Dex mint must include mint_info"));
+                }
             }
             _ => {
-                self.clone()
-                    .pair_contract
-                    .expect("Dex pairs must include pair contract");
+                if self.pair_contract == None {
+                    return Err(StdError::generic_err("Dex pairs must include pair contract"));
+                }
             }
         }
         Ok(true)
