@@ -3,6 +3,7 @@ use shade_protocol::{
     c_std::{Deps, StdError, StdResult, Uint128},
     contract_interfaces::{
         peg_stability::{CalculateRes, Config, QueryAnswer, ViewingKey},
+        sky::cycles::Offer,
         snip20,
     },
     cosmwasm_schema::cw_serde,
@@ -43,8 +44,10 @@ pub fn get_pairs(deps: Deps) -> StdResult<QueryAnswer> {
 }
 
 pub fn profitable(deps: Deps) -> StdResult<QueryAnswer> {
+    let res: CalculateRes = calculate_profit(deps)?;
     Ok(QueryAnswer::Profitable {
-        profit: Uint128::zero(),
+        profit: res.profit,
+        payback: res.payback,
     })
 }
 
@@ -53,7 +56,7 @@ pub fn calculate_profit(deps: Deps) -> StdResult<CalculateRes> {
     if config.pairs.len() < 1 {
         return Err(StdError::generic_err("Must have pairs saved"));
     }
-    let res: Vec<OraclePrice> = router::QueryMsg::GetPrices {
+    /*let res: Vec<OraclePrice> = router::QueryMsg::GetPrices {
         keys: config.symbols,
     }
     .query(&deps.querier, &config.oracle)?
@@ -61,8 +64,8 @@ pub fn calculate_profit(deps: Deps) -> StdResult<CalculateRes> {
     let prices = vec![
         Uint128::new(res[0].data.rate.u128()),
         Uint128::new(res[1].data.rate.u128()),
-    ];
-    //let prices = vec![Uint128::zero(), Uint128::zero()];
+    ];*/
+    let prices = vec![Uint128::zero(), Uint128::zero()];
     let mut max_swap_amount = Uint128::zero();
     let mut index = 0usize;
     for (i, pair) in config.pairs.iter().enumerate() {
@@ -73,7 +76,27 @@ pub fn calculate_profit(deps: Deps) -> StdResult<CalculateRes> {
             index = i;
         }
     }
-    Ok(CalculateRes {})
+    let initial_value = max_swap_amount * prices[0];
+    let offer = Offer {
+        asset: config.snip20,
+        amount: max_swap_amount,
+    };
+    let swap_res = config.pairs[index].clone().simulate_swap(deps, offer)?;
+    let after_swap = swap_res * prices[1];
+    if after_swap > initial_value {
+        return Ok(CalculateRes {
+            profit: after_swap - initial_value,
+            payback: (after_swap - initial_value) * config.payback,
+            swap_amount: max_swap_amount,
+            min_expected: swap_res,
+        });
+    }
+    Ok(CalculateRes {
+        profit: Uint128::zero(),
+        payback: Uint128::zero(),
+        swap_amount: Uint128::zero(),
+        min_expected: Uint128::zero(),
+    })
 }
 
 fn calculate_swap_amount() -> StdResult<Uint128> {

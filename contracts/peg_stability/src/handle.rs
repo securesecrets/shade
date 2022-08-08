@@ -1,7 +1,11 @@
 use shade_protocol::{
-    c_std::{DepsMut, Env, MessageInfo, Response, StdResult, Uint128},
-    contract_interfaces::{peg_stability::ExecuteAnswer, sky::cycles::ArbPair},
-    utils::asset::Contract,
+    admin::validate_admin,
+    c_std::{Decimal, DepsMut, Env, MessageInfo, Response, StdResult, Uint128},
+    contract_interfaces::{
+        peg_stability::{Config, ExecuteAnswer},
+        sky::cycles::ArbPair,
+    },
+    utils::{asset::Contract, storage::plus::ItemStorage},
 };
 pub fn try_update_config(
     deps: DepsMut,
@@ -11,8 +15,16 @@ pub fn try_update_config(
     snip20: Option<Contract>,
     treasury: Option<Contract>,
     oracle: Option<Contract>,
-    symbols: Option<Vec<String>>,
+    payback: Option<Decimal>,
 ) -> StdResult<Response> {
+    //Admin-only
+    let mut config = Config::load(deps.storage)?;
+    validate_admin(
+        &deps.querier,
+        env.contract.address.to_string(),
+        info.sender.to_string(),
+        &config.shd_admin,
+    )?;
     Ok(Response::new())
 }
 

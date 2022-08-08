@@ -33,7 +33,8 @@ pub fn instantiate(
         pairs: vec![],
         oracle: msg.oracle.clone(),
         treasury: msg.treasury.clone(),
-        symbols: vec![msg.symbol.clone()],
+        symbols: vec![],
+        payback: msg.payback,
         self_addr: env.contract.address.clone(),
     };
     config.save(deps.storage)?;
@@ -55,10 +56,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             snip20,
             oracle,
             treasury,
-            symbols,
+            payback,
             ..
         } => handle::try_update_config(
-            deps, env, info, shd_admin, snip20, oracle, treasury, symbols,
+            deps, env, info, shd_admin, snip20, oracle, treasury, payback,
         ),
         ExecuteMsg::SetPairs { pairs, symbol, .. } => {
             handle::try_set_pairs(deps, env, info, pairs, symbol)

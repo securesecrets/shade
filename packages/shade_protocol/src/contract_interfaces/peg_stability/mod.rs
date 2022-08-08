@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 use secret_storage_plus::Item;
 
 #[cw_serde]
@@ -20,6 +20,7 @@ pub struct Config {
     pub oracle: Contract,
     pub treasury: Contract,
     pub symbols: Vec<String>,
+    pub payback: Decimal,
     pub self_addr: Addr,
 }
 
@@ -40,7 +41,7 @@ pub struct InstantiateMsg {
     pub snip20: Contract,
     pub oracle: Contract,
     pub treasury: Contract,
-    pub symbol: String,
+    pub payback: Decimal,
     pub viewing_key: String,
 }
 
@@ -56,6 +57,7 @@ pub enum ExecuteMsg {
         oracle: Option<Contract>,
         treasury: Option<Contract>,
         symbols: Option<Vec<String>>,
+        payback: Option<Decimal>,
         padding: Option<String>,
     },
     SetPairs {
@@ -88,13 +90,34 @@ impl ExecuteCallback for ExecuteMsg {
 
 #[cw_serde]
 pub enum ExecuteAnswer {
-    Init { status: bool },
-    UpdateConfig { config: Config, status: bool },
-    SetPairs { pairs: Vec<ArbPair>, status: bool },
-    AppendPairs { pairs: Vec<ArbPair>, status: bool },
-    UpdatePair { pairs: Vec<ArbPair>, status: bool },
-    RemovePair { pairs: Vec<ArbPair>, status: bool },
-    Swap { profit: Uint128, status: bool },
+    Init {
+        status: bool,
+    },
+    UpdateConfig {
+        config: Config,
+        status: bool,
+    },
+    SetPairs {
+        pairs: Vec<ArbPair>,
+        status: bool,
+    },
+    AppendPairs {
+        pairs: Vec<ArbPair>,
+        status: bool,
+    },
+    UpdatePair {
+        pairs: Vec<ArbPair>,
+        status: bool,
+    },
+    RemovePair {
+        pairs: Vec<ArbPair>,
+        status: bool,
+    },
+    Swap {
+        profit: Uint128,
+        payback: Decimal,
+        status: bool,
+    },
 }
 
 #[cw_serde]
@@ -114,8 +137,13 @@ pub enum QueryAnswer {
     Config { config: Config },
     Balance { snip20_bal: Uint128 },
     GetPairs { pairs: Vec<ArbPair> },
-    Profitable { profit: Uint128 },
+    Profitable { profit: Uint128, payback: Uint128 },
 }
 
 #[cw_serde]
-pub struct CalculateRes {}
+pub struct CalculateRes {
+    pub profit: Uint128,
+    pub payback: Uint128,
+    pub swap_amount: Uint128,
+    pub min_expected: Uint128,
+}
