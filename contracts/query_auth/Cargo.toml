@@ -30,8 +30,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 schemars = "0.7"
 
 [dev-dependencies]
-contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "query_auth", "admin" ] }
+shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "query_auth", "admin"  ] }
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "query_auth_impl",
-  "ensemble"
 ] }

@@ -1,13 +1,29 @@
-use crate::Contract;
-use crate::serde::{de::DeserializeOwned, Serialize};
-use crate::c_std::{to_binary, Coin, CosmosMsg, Addr, QueryRequest, StdResult, Uint128, WasmMsg, WasmQuery, SubMsg, ReplyOn, QuerierWrapper, ContractInfo, Empty};
+use super::space_pad;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "multi-test")]
 use crate::multi_test::{App, AppResponse, Contract as MultiContract, Executor};
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "multi-test")]
 use crate::AnyResult;
-use super::space_pad;
+use crate::{
+    c_std::{
+        to_binary,
+        Addr,
+        Coin,
+        ContractInfo,
+        CosmosMsg,
+        Empty,
+        QuerierWrapper,
+        QueryRequest,
+        ReplyOn,
+        StdResult,
+        SubMsg,
+        WasmMsg,
+        WasmQuery,
+    },
+    serde::{de::DeserializeOwned, Serialize},
+    Contract,
+};
 
 /// A trait marking types that define the instantiation message of a contract
 ///
@@ -49,7 +65,7 @@ pub trait InstantiateCallback: Serialize {
             code_hash,
             msg,
             label,
-            funds
+            funds,
         };
         Ok(init.into())
     }
@@ -76,8 +92,7 @@ pub trait InstantiateCallback: Serialize {
         send_funds: &[Coin],
     ) -> AnyResult<ContractInfo> {
         let stored_code = router.store_code(testable.contract());
-        router
-            .instantiate_contract(stored_code, sender, &self, send_funds, label, None)
+        router.instantiate_contract(stored_code, sender, &self, send_funds, label, None)
     }
 }
 
@@ -118,7 +133,7 @@ pub trait ExecuteCallback: Serialize {
             msg,
             contract_addr: contract.address.to_string(),
             code_hash: contract.code_hash,
-            funds
+            funds,
         };
         Ok(execute.into())
     }
@@ -130,7 +145,7 @@ pub trait ExecuteCallback: Serialize {
     /// # Arguments
     ///
     /// * `contract` - ContractInfo of an existing contract on the multi-test App
-    /// * `router` - a mutable reference to the multi-test App 
+    /// * `router` - a mutable reference to the multi-test App
     /// * `sender` - the user executing this message in the test env
     /// * `send_funds` - any funds transferred with this exec
     #[cfg(not(target_arch = "wasm32"))]
@@ -141,7 +156,10 @@ pub trait ExecuteCallback: Serialize {
         router: &mut App,
         sender: Addr,
         send_funds: &[Coin],
-    ) -> AnyResult<AppResponse> where Self: Serialize + std::fmt::Debug  {
+    ) -> AnyResult<AppResponse>
+    where
+        Self: Serialize + std::fmt::Debug,
+    {
         router.execute_contract(sender, &contract, &self, send_funds)
     }
 }
@@ -180,7 +198,7 @@ pub trait Query: Serialize {
         querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: contract.address.to_string(),
             msg,
-            code_hash: contract.code_hash
+            code_hash: contract.code_hash,
         }))
     }
 
@@ -194,11 +212,7 @@ pub trait Query: Serialize {
     /// * `router` - a reference to the multi-test App   
     #[cfg(not(target_arch = "wasm32"))]
     #[cfg(feature = "multi-test")]
-    fn test_query<T: DeserializeOwned>(
-        &self, 
-        info: &ContractInfo, 
-        router: &App
-    ) -> StdResult<T> {
+    fn test_query<T: DeserializeOwned>(&self, info: &ContractInfo, router: &App) -> StdResult<T> {
         let mut msg = to_binary(self)?;
         // can not have 0 block size
         let padding = if Self::BLOCK_SIZE == 0 {
@@ -207,13 +221,11 @@ pub trait Query: Serialize {
             Self::BLOCK_SIZE
         };
         space_pad(&mut msg.0, padding);
-        router
-            .wrap()
-            .query(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: info.address.to_string(),
-                msg,
-                code_hash: info.code_hash.clone()
-            }))
+        router.wrap().query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: info.address.to_string(),
+            msg,
+            code_hash: info.code_hash.clone(),
+        }))
     }
 }
 
@@ -267,18 +279,16 @@ mod tests {
         let amount = vec![Coin::new(1234, "uscrt")];
         let contract = Contract::new(&address, &hash);
 
-        let cosmos_message: CosmosMsg = FooHandle::Var1 { f1: 1, f2: 2 }.to_cosmos_msg(
-            &contract,
-            amount.clone(),
-        )?;
+        let cosmos_message: CosmosMsg =
+            FooHandle::Var1 { f1: 1, f2: 2 }.to_cosmos_msg(&contract, amount.clone())?;
 
         match cosmos_message {
             CosmosMsg::Wasm(WasmMsg::Execute {
-                                contract_addr,
-                                code_hash,
-                                msg,
-                                funds,
-                            }) => {
+                contract_addr,
+                code_hash,
+                msg,
+                funds,
+            }) => {
                 assert_eq!(contract_addr, address);
                 assert_eq!(code_hash, hash);
                 let mut expected_msg = r#"{"Var1":{"f1":1,"f2":2}}"#.as_bytes().to_vec();
@@ -299,17 +309,21 @@ mod tests {
         let hash = "asdf".to_string();
         let amount = vec![Coin::new(1234, "uscrt")];
 
-        let cosmos_message: CosmosMsg =
-            FooInit { f1: 1, f2: 2 }.to_cosmos_msg(lbl.clone(), id, hash.clone(), amount.clone())?;
+        let cosmos_message: CosmosMsg = FooInit { f1: 1, f2: 2 }.to_cosmos_msg(
+            lbl.clone(),
+            id,
+            hash.clone(),
+            amount.clone(),
+        )?;
 
         match cosmos_message {
             CosmosMsg::Wasm(WasmMsg::Instantiate {
-                                code_id,
-                                msg,
-                                code_hash,
-                                funds,
-                                label,
-                            }) => {
+                code_id,
+                msg,
+                code_hash,
+                funds,
+                label,
+            }) => {
                 assert_eq!(code_id, id);
                 let mut expected_msg = r#"{"f1":1,"f2":2}"#.as_bytes().to_vec();
                 space_pad(&mut expected_msg, 256);
@@ -335,7 +349,11 @@ mod tests {
         struct MyMockQuerier {}
 
         impl Querier for MyMockQuerier {
-            fn raw_query(&self, request: &[u8]) -> cosmwasm_std::SystemResult<cosmwasm_std::ContractResult<cosmwasm_std::Binary>> {
+            fn raw_query(
+                &self,
+                request: &[u8],
+            ) -> cosmwasm_std::SystemResult<cosmwasm_std::ContractResult<cosmwasm_std::Binary>>
+            {
                 let mut expected_msg = r#"{"Query1":{"f1":1,"f2":2}}"#.as_bytes().to_vec();
                 space_pad(&mut expected_msg, 256);
                 let expected_request: QueryRequest<FooQuery> =
@@ -346,7 +364,9 @@ mod tests {
                     });
                 let test_req: &[u8] = &to_vec(&expected_request).unwrap();
                 assert_eq!(request, test_req);
-                cosmwasm_std::SystemResult::Ok(cosmwasm_std::ContractResult::Ok(to_binary(&QueryResponse { bar1: 1, bar2: 2 }).unwrap()))
+                cosmwasm_std::SystemResult::Ok(cosmwasm_std::ContractResult::Ok(
+                    to_binary(&QueryResponse { bar1: 1, bar2: 2 }).unwrap(),
+                ))
             }
         }
 

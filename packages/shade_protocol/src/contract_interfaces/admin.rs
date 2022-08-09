@@ -1,8 +1,12 @@
-use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
-use shade_admin::admin::{ConfigResponse, AdminsResponse, PermissionsResponse, ValidateAdminPermissionResponse};
+use crate::{utils::Query, Contract};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use crate::Contract;
-use crate::utils::Query;
+use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
+use shade_admin::admin::{
+    AdminsResponse,
+    ConfigResponse,
+    PermissionsResponse,
+    ValidateAdminPermissionResponse,
+};
 
 #[cw_serde]
 #[derive(QueryResponses)]
@@ -14,23 +18,31 @@ pub enum QueryMsg {
     #[returns(PermissionsResponse)]
     GetPermissions { user: String },
     #[returns(ValidateAdminPermissionResponse)]
-    ValidateAdminPermission { permission: String, user: String },
+    ValidateAdminPermission {
+        permission: String,
+        user: String,
+        contract: String,
+    },
 }
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-pub fn validate_admin(
+pub fn validate_admin<T: Into<String>>(
     querier: &QuerierWrapper,
-    permission: String,
-    user: String,
+    permission: AdminPermissions,
+    user: T,
+    contract: T,
     admin_auth: &Contract,
 ) -> StdResult<()> {
-    let admin_resp: StdResult<ValidateAdminPermissionResponse> = QueryMsg::ValidateAdminPermission {
-        permission,
-        user,
-    }.query(querier, admin_auth);
+    let admin_resp: StdResult<ValidateAdminPermissionResponse> =
+        QueryMsg::ValidateAdminPermission {
+            permission: permission.into_string(),
+            user: user.into(),
+            contract: contract.into(),
+        }
+        .query(querier, admin_auth);
 
     match admin_resp {
         Ok(resp) => match resp.has_permission {
@@ -38,5 +50,26 @@ pub fn validate_admin(
             false => Err(StdError::generic_err("Unexpected response.")),
         },
         Err(err) => Err(err),
+    }
+}
+
+pub enum AdminPermissions {
+    QueryAuthAdmin,
+    ScrtStakingAdmin,
+    TreasuryManager,
+    TreasuryAdmin,
+}
+
+// NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
+
+impl AdminPermissions {
+    pub fn into_string(self) -> String {
+        match self {
+            AdminPermissions::QueryAuthAdmin => "SHADE_QUERY_AUTH_ADMIN",
+            AdminPermissions::ScrtStakingAdmin => "SHADE_SCRT_STAKING_ADMIN",
+            AdminPermissions::TreasuryManager => "SHADE_TREASURY_MANAGER",
+            AdminPermissions::TreasuryAdmin => "SHADE_TREASURY_ADMIN",
+        }
+        .to_string()
     }
 }
