@@ -41,8 +41,8 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive {
-        sender: Addr,
-        from: Addr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -61,7 +61,7 @@ impl ExecuteCallback for ExecuteMsg {
 pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: Addr,
+        address: String,
     },
     UpdateConfig {
         status: ResponseStatus,

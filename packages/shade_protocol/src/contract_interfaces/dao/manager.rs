@@ -49,7 +49,7 @@ impl ExecuteCallback for ExecuteMsg {
 pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: Addr,
+        address: String,
     },
     Unbond {
         status: ResponseStatus,
@@ -66,11 +66,11 @@ pub enum ExecuteAnswer {
 
 #[cw_serde]
 pub enum SubQueryMsg {
-    Balance { asset: Addr, holder: Addr, },
-    Unbonding { asset: Addr, holder: Addr, },
-    Claimable { asset: Addr, holder: Addr,  },
-    Unbondable { asset: Addr, holder: Addr, },
-    Reserves { asset: Addr, holder: Addr, },
+    Balance { asset: String, holder: String, },
+    Unbonding { asset: String, holder: String, },
+    Claimable { asset: String, holder: String,  },
+    Unbondable { asset: String, holder: String, },
+    Reserves { asset: String, holder: String, },
 }
 
 #[cw_serde]
@@ -98,8 +98,8 @@ pub fn claimable_query(
     manager: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Manager(SubQueryMsg::Claimable {
-        asset: asset.clone(),
-        holder: holder.clone(),
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
     .query(&querier, &manager)?)
     {
@@ -118,8 +118,8 @@ pub fn unbonding_query(
     manager: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Manager(SubQueryMsg::Unbonding {
-        asset: asset.clone(),
-        holder: holder.clone(),
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
     .query(&querier, &manager)?)
     {
@@ -138,8 +138,8 @@ pub fn unbondable_query(
     manager: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Manager(SubQueryMsg::Unbondable {
-        asset: asset.clone(),
-        holder: holder.clone(),
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
     .query(&querier, &manager)?)
     {
@@ -159,8 +159,8 @@ pub fn reserves_query(
 ) -> StdResult<Uint128> {
 
     match (QueryMsg::Manager(SubQueryMsg::Reserves {
-        asset: asset.clone(),
-        holder: holder.clone(),
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     }).query(&querier, &manager)?) {
         QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
@@ -176,8 +176,8 @@ pub fn balance_query(
     manager: Contract,
 ) -> StdResult<Uint128> {
     match (QueryMsg::Manager(SubQueryMsg::Balance {
-        asset: asset.clone(),
-        holder: holder.clone(),
+        asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
     .query(&querier, &manager)?)
     {
@@ -190,21 +190,21 @@ pub fn balance_query(
 }
 
 pub fn claim_msg(asset: &Addr, manager: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Manager(SubExecuteMsg::Claim { asset: asset.clone().to_string() }).to_cosmos_msg(
+    ExecuteMsg::Manager(SubExecuteMsg::Claim { asset: asset.to_string().clone() }).to_cosmos_msg(
         &manager,
         vec![],
     )
 }
 
 pub fn unbond_msg(asset: &Addr, amount: Uint128, manager: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Manager(SubExecuteMsg::Unbond { asset: asset.clone().to_string(), amount }).to_cosmos_msg(
+    ExecuteMsg::Manager(SubExecuteMsg::Unbond { asset: asset.to_string().clone(), amount }).to_cosmos_msg(
         &manager,
         vec![],
     )
 }
 
 pub fn update_msg(asset: &Addr, manager: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Manager(SubExecuteMsg::Update { asset: asset.clone().to_string() }).to_cosmos_msg(
+    ExecuteMsg::Manager(SubExecuteMsg::Update { asset: asset.to_string().clone() }).to_cosmos_msg(
         &manager,
         vec![],
     )

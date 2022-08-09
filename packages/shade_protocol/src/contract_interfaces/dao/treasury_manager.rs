@@ -82,8 +82,8 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive {
-        sender: Addr,
-        from: Addr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -115,7 +115,7 @@ impl ExecuteCallback for ExecuteMsg {
 pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: Addr,
+        address: String,
     },
     Receive {
         status: ResponseStatus,
@@ -142,16 +142,10 @@ pub enum ExecuteAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Allocations { asset: Addr },
-    PendingAllowance { asset: Addr },
+    Allocations { asset: String },
+    PendingAllowance { asset: String },
     Holders { },
-    Holding { holder: Addr },
-    /*
-    Balance { asset: Addr, holder: Addr },
-    Unbonding { asset: Addr, holder: Addr },
-    Unbondable { asset: Addr, holder: Addr },
-    Claimable { asset: Addr, holder: Addr },
-    */
+    Holding { holder: String },
     Manager(manager::SubQueryMsg),
 }
 

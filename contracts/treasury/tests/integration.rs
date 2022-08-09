@@ -120,7 +120,7 @@ fn single_asset_portion_manager_integration(
 
     // treasury allowance to manager
     treasury::ExecuteMsg::Allowance {
-        asset: token.address.clone().to_string(),
+        asset: token.address.to_string().clone().to_string(),
         allowance: treasury::Allowance::Portion {
             //nick: "Mid-Stakes-Manager".to_string(),
             spender: manager.address.clone(),
@@ -134,7 +134,7 @@ fn single_asset_portion_manager_integration(
 
     // Allocate to scrt_staking from manager
     treasury_manager::ExecuteMsg::Allocate {
-        asset: token.address.clone().to_string(),
+        asset: token.address.to_string().clone().to_string(),
         allocation: Allocation {
             nick: Some("scrt_staking".to_string()),
             contract: Contract {
@@ -172,14 +172,14 @@ fn single_asset_portion_manager_integration(
     // Update treasury
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Update {
-            asset: token.address.clone().to_string(),
+            asset: token.address.to_string().clone().to_string(),
         }
     ).test_exec(&treasury, &mut app, admin.clone(), &[]);
 
     // Check treasury allowance to manager
     match (treasury::QueryMsg::Allowance {
-        asset: token.address.clone(),
-        spender: manager.address.clone(),
+        asset: token.address.to_string().clone(),
+        spender: manager.address.to_string().clone(),
     }.test_query(&treasury, &app).unwrap()) {
         treasury::QueryAnswer::Allowance { amount } => {
             assert_eq!(amount, expected_allowance, "Treasury->Manager Allowance");
@@ -190,21 +190,21 @@ fn single_asset_portion_manager_integration(
     // Update manager
     manager::ExecuteMsg::Manager(
         manager::SubExecuteMsg::Update {
-            asset: token.address.clone().to_string(),
+            asset: token.address.to_string().clone().to_string(),
         }
     ).test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Update SCRT Staking
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Update {
-            asset: token.address.clone().to_string(),
+            asset: token.address.to_string().clone().to_string(),
         }
     ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]);
 
     // Treasury reserves check
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&treasury, &app).unwrap()) {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -216,8 +216,8 @@ fn single_asset_portion_manager_integration(
     // Manager reserves
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
-            holder: treasury.address.clone(),
+            asset: token.address.to_string().clone(),
+            holder: treasury.address.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap()) {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -229,7 +229,7 @@ fn single_asset_portion_manager_integration(
     // Scrt Staking reserves should be 0 (all staked)
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap()) {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -241,7 +241,7 @@ fn single_asset_portion_manager_integration(
     // Scrt Staking balance check
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap()) {
         adapter::QueryAnswer::Balance { amount } => {
@@ -253,7 +253,7 @@ fn single_asset_portion_manager_integration(
     // Treasury unbondable check
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Unbondable {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&treasury, &mut app).unwrap()) {
         adapter::QueryAnswer::Unbondable { amount } => {
@@ -266,14 +266,14 @@ fn single_asset_portion_manager_integration(
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Unbond {
             amount: expected_scrt_staking + expected_manager, 
-            asset: token.address.clone().to_string(),
+            asset: token.address.to_string().clone().to_string(),
         }
     ).test_exec(&treasury, &mut app, admin.clone(), &[]);
 
     // scrt staking unbonding
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Unbonding {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Unbonding { amount } => {
@@ -285,7 +285,7 @@ fn single_asset_portion_manager_integration(
     // scrt staking claimable
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Claimable { amount } => {
@@ -297,8 +297,8 @@ fn single_asset_portion_manager_integration(
     // Manager Claimable
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
-            holder: treasury.address.clone(),
+            asset: token.address.to_string().clone(),
+            holder: treasury.address.to_string().clone(),
         }
     ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Claimable { amount } => {
@@ -310,8 +310,8 @@ fn single_asset_portion_manager_integration(
     // Manager Unbonding  
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Unbonding {
-            asset: token.address.clone(),
-            holder: treasury.address.clone(),
+            asset: token.address.to_string().clone(),
+            holder: treasury.address.to_string().clone(),
         }
     ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Unbonding { amount } => {
@@ -325,7 +325,7 @@ fn single_asset_portion_manager_integration(
     // scrt staking unbonding
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Unbonding {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Unbonding { amount } => {
@@ -337,7 +337,7 @@ fn single_asset_portion_manager_integration(
     // scrt staking claimable
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Claimable { amount } => {
@@ -351,7 +351,7 @@ fn single_asset_portion_manager_integration(
     ensemble.execute(
         &manager::ExecuteMsg::Manager(
             manager::SubExecuteMsg::Claim {
-                asset: token.address.clone(),
+                asset: token.address.to_string().clone(),
             }
         ),
         MockEnv::new(
@@ -364,14 +364,14 @@ fn single_asset_portion_manager_integration(
     // Claim Treasury
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Claim {
-            asset: token.address.clone().to_string(),
+            asset: token.address.to_string().clone().to_string(),
         }
     ).test_exec(&treasury, &mut app, admin.clone(), &[]);
 
     // Treasury reserves check
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&treasury, &mut app)).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -383,10 +383,10 @@ fn single_asset_portion_manager_integration(
     /*
     // Treasury balance check
     match ensemble.query(
-        treasury.address.clone(),
+        treasury.address.to_string().clone(),
         &adapter::QueryMsg::Adapter(
             adapter::SubQueryMsg::Balance {
-                asset: token.address.clone(),
+                asset: token.address.to_string().clone(),
             }
         )
     ).unwrap() {
@@ -400,7 +400,7 @@ fn single_asset_portion_manager_integration(
     // Scrt Staking reserves
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -412,7 +412,7 @@ fn single_asset_portion_manager_integration(
     // Scrt Staking balance
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Balance { amount } => {
@@ -424,8 +424,8 @@ fn single_asset_portion_manager_integration(
     // Manager unbonding check
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Unbonding {
-            asset: token.address.clone(),
-            holder: treasury.address.clone(),
+            asset: token.address.to_string().clone(),
+            holder: treasury.address.to_string().clone(),
         }
     ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Unbonding { amount } => {
@@ -437,8 +437,8 @@ fn single_asset_portion_manager_integration(
     // Manager balance check
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-            holder: treasury.address.clone(),
+            asset: token.address.to_string().clone(),
+            holder: treasury.address.to_string().clone(),
         }
     ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
@@ -450,8 +450,8 @@ fn single_asset_portion_manager_integration(
     // Manager reserves check
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
-            holder: treasury.address.clone(),
+            asset: token.address.to_string().clone(),
+            holder: treasury.address.to_string().clone(),
         }
     ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Reserves { amount } => {
@@ -463,7 +463,7 @@ fn single_asset_portion_manager_integration(
     // Treasury reserves check
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&treasury, &mut app).unwrap()) {
         adapter::QueryAnswer::Balance { amount } => {
@@ -475,7 +475,7 @@ fn single_asset_portion_manager_integration(
     // Treasury balance check
     match (adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&treasury, &mut app).unwrap()) {
         adapter::QueryAnswer::Balance { amount } => {

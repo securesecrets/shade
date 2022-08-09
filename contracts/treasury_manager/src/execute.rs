@@ -29,7 +29,7 @@ use shade_protocol::{
     },
     snip20,
     utils::{
-        asset::{Contract, RawContract},
+        asset::{Contract},
         generic_response::ResponseStatus,
     },
     c_std::{
@@ -131,13 +131,13 @@ pub fn try_register_asset(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    contract: &RawContract,
+    contract: &Contract,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     validate_permission(&deps.querier, SHADE_TREASURY_MANAGER_ADMIN, &info.sender, &config.admin_auth)?;
 
-    let contract = contract.clone().into_valid(deps.api)?;
+    //let contract = contract.clone().into_valid(deps.api)?;
 
     ASSET_LIST.update(deps.storage, |mut list| -> StdResult<Vec<Addr>> {
         list.push(contract.address.clone());
@@ -175,7 +175,7 @@ pub fn allocate(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
     allocation: Allocation,
 ) -> StdResult<Response> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
@@ -185,7 +185,7 @@ pub fn allocate(
     /* ADMIN ONLY */
     validate_permission(&deps.querier, SHADE_TREASURY_MANAGER_ADMIN, &info.sender, &config.admin_auth)?;
 
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
 
     let mut apps = ALLOCATIONS.may_load(deps.storage, asset.clone())?
         .unwrap_or_default();
@@ -237,10 +237,10 @@ pub fn claim(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
 ) -> StdResult<Response> {
 
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
 
     if !ASSET_LIST.load(deps.storage)?.contains(&asset.clone()) {
         return Err(StdError::generic_err("Unrecognized asset"));
@@ -341,11 +341,11 @@ pub fn update(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
     let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
     let mut allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
@@ -558,12 +558,12 @@ pub fn unbond(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
 
     let config = CONFIG.load(deps.storage)?;
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
     let mut unbonder = info.sender.clone();
 
     // admin unbonds on behalf of treasury
@@ -804,13 +804,12 @@ pub fn add_holder(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    holder: String,
+    holder: Addr,
 ) -> StdResult<Response> {
-
 
     validate_permission(&deps.querier, SHADE_TREASURY_MANAGER_ADMIN, &info.sender, &CONFIG.load(deps.storage)?.admin_auth)?;
 
-    let holder = deps.api.addr_validate(holder.as_str())?;
+    //let holder = deps.api.addr_validate(holder.as_str())?;
 
     HOLDERS.update(deps.storage, |mut h| {
         if h.contains(&holder.clone()) {
@@ -835,13 +834,13 @@ pub fn remove_holder(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    holder: String,
+    holder: Addr,
 ) -> StdResult<Response> {
     // TODO: unbond all or move all funds to treasury?
     // Should probably disallow fully deleting holders, just freeze/transfer
     validate_permission(&deps.querier, SHADE_TREASURY_MANAGER_ADMIN, &info.sender, &CONFIG.load(deps.storage)?.admin_auth)?;
 
-    let holder = deps.api.addr_validate(holder.as_str())?;
+    //let holder = deps.api.addr_validate(holder.as_str())?;
 
     if let Some(mut holding) = HOLDING.may_load(deps.storage, holder.clone())? {
         holding.status = Status::Closed;

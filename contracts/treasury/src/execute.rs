@@ -85,11 +85,11 @@ pub fn allowance_last_refresh(
 pub fn rebalance(
     deps: DepsMut,
     env: &Env,
-    asset: String,
+    asset: Addr,
 ) -> StdResult<Response> {
     let naive = NaiveDateTime::from_timestamp(env.block.time.seconds() as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
     let viewing_key = VIEWING_KEY.load(deps.storage)?;
     let self_address = SELF_ADDRESS.load(deps.storage)?;
     let mut messages = vec![];
@@ -467,13 +467,13 @@ pub fn allowance(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
     allowance: Allowance,
 ) -> StdResult<Response> {
     static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
 
     let config = CONFIG.load(deps.storage)?;
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
     /* ADMIN ONLY */
     validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &config.admin_auth)?;
 
@@ -592,10 +592,10 @@ pub fn claim(
     deps: DepsMut,
     _env: &Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
 ) -> StdResult<Response> {
 
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
     let managers = MANAGERS.load(deps.storage)?;
     let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
     let self_address = SELF_ADDRESS.load(deps.storage)?;
@@ -634,11 +634,11 @@ pub fn unbond(
     deps: DepsMut,
     env: &Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
 
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
     validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &CONFIG.load(deps.storage)?.admin_auth)?;
 
     let managers = MANAGERS.load(deps.storage)?;

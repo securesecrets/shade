@@ -111,10 +111,10 @@ pub fn update(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
 ) -> StdResult<Response> {
     let mut messages = vec![];
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
 
     let config = CONFIG.load(deps.storage)?;
 
@@ -163,7 +163,7 @@ pub fn unbond(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
     /* Unbonding to the scrt staking contract
@@ -171,7 +171,7 @@ pub fn unbond(
      * and this contract will take all scrt->sscrt and send
      */
 
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
     let config = CONFIG.load(deps.storage)?;
 
     if  validate_permission(&deps.querier, SHADE_SCRT_STAKING_ADMIN, &info.sender, &config.admin_auth).is_err()
@@ -340,11 +340,11 @@ pub fn claim(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset: String,
+    asset: Addr,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    let asset = deps.api.addr_validate(asset.as_str())?;
+    //let asset = deps.api.addr_validate(asset.as_str())?;
     if asset != config.sscrt.address {
         return Err(StdError::generic_err("Unrecognized Asset"));
     }

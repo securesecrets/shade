@@ -66,8 +66,8 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive {
-        sender: Addr,
-        from: Addr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -76,10 +76,10 @@ pub enum ExecuteMsg {
         config: Config,
     },
     RegisterAsset {
-        contract: Contract,
+        contract: RawContract,
     },
     RegisterManager {
-        contract: Contract,
+        contract: RawContract,
     },
     // Setup a new allowance
     Allowance {
@@ -102,7 +102,7 @@ impl ExecuteCallback for ExecuteMsg {
 pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: Addr,
+        address: String,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -130,12 +130,12 @@ pub enum QueryMsg {
     Assets {},
     // List of recurring allowances configured
     Allowances {
-        asset: Addr,
+        asset: String,
     },
     // List of actual current amounts
     Allowance {
-        asset: Addr,
-        spender: Addr,
+        asset: String,
+        spender: String,
     },
     /*
     AccountHolders { },
@@ -157,6 +157,4 @@ pub enum QueryAnswer {
     Allowances { allowances: Vec<Allowance> },
     CurrentAllowances { allowances: Vec<Allowance> },
     Allowance { amount: Uint128 },
-    //Accounts { accounts: Vec<Addr> },
-    //Account { account: Account },
 }

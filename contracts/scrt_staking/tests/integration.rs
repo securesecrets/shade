@@ -108,7 +108,7 @@ fn basic_scrt_staking_integration(
     // reserves should be 0 (all staked)
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -120,7 +120,7 @@ fn basic_scrt_staking_integration(
     // Balance
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
@@ -160,7 +160,7 @@ fn basic_scrt_staking_integration(
     // reserves should be rewards
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -176,7 +176,7 @@ fn basic_scrt_staking_integration(
     // Balance
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
@@ -192,14 +192,14 @@ fn basic_scrt_staking_integration(
     // Update SCRT Staking
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Update {
-            asset: token.address.clone().to_string(),
+            asset: token.address.to_string().clone().to_string(),
         }
     ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
 
     // reserves/rewards should be staked
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -211,7 +211,7 @@ fn basic_scrt_staking_integration(
     // Balance
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
@@ -223,7 +223,7 @@ fn basic_scrt_staking_integration(
     // Claimable
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
@@ -235,7 +235,7 @@ fn basic_scrt_staking_integration(
     // Unbondable
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Unbondable {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Unbondable { amount } => {
@@ -248,14 +248,14 @@ fn basic_scrt_staking_integration(
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Unbond {
             amount: expected_scrt_staking,
-            asset: token.address.clone().to_string(),
+            asset: token.address.to_string().clone().to_string(),
         }
     ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
 
     // Unbonding 
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Unbonding {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Unbonding { amount } => {
@@ -267,7 +267,7 @@ fn basic_scrt_staking_integration(
     // Claimable
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
@@ -281,7 +281,7 @@ fn basic_scrt_staking_integration(
     // Claimable
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
@@ -297,14 +297,14 @@ fn basic_scrt_staking_integration(
     // Claim
     adapter::ExecuteMsg::Adapter(
         adapter::SubExecuteMsg::Claim {
-            asset: token.address.clone().to_string(),
+            asset: token.address.to_string().clone().to_string(),
         }
     ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
 
     // Reserves
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -316,7 +316,7 @@ fn basic_scrt_staking_integration(
     // Balance
     match adapter::QueryMsg::Adapter(
         adapter::SubQueryMsg::Balance {
-            asset: token.address.clone(),
+            asset: token.address.to_string().clone(),
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {

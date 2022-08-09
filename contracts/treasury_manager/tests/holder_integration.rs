@@ -47,6 +47,7 @@ fn single_asset_holder_no_adapters(
     let holder = Addr::unchecked("holder");
     let treasury = Addr::unchecked("treasury");
     let admin_auth = init_admin_auth(&mut app, &admin);
+
     let token = snip20::InstantiateMsg {
         name: "token".into(),
         admin: Some("admin".into()),
@@ -73,17 +74,17 @@ fn single_asset_holder_no_adapters(
     snip20::ExecuteMsg::SetViewingKey{
         key: viewing_key.clone(),
         padding: None,
-    }.test_exec(&token, &mut app, admin.clone(), &[]);
+    }.test_exec(&token, &mut app, admin.clone(), &[]).unwrap();
 
     // Register manager assets
     treasury_manager::ExecuteMsg::RegisterAsset {
         contract: token.clone().into(),
-    }.test_exec(&manager, &mut app, admin.clone(), &[]);
+    }.test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
 
     // Add 'holder' as holder
     treasury_manager::ExecuteMsg::AddHolder {
-        holder: holder.clone().into(),
-    }.test_exec(&manager, &mut app, admin.clone(), &[]);
+        holder: holder.to_string().clone().into(),
+    }.test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
 
     // Deposit funds into manager
     snip20::ExecuteMsg::Send {
@@ -93,15 +94,15 @@ fn single_asset_holder_no_adapters(
         msg: None,
         memo: None,
         padding: None,
-    }.test_exec(&token, &mut app, admin.clone(), &[]);
+    }.test_exec(&token, &mut app, admin.clone(), &[]).unwrap();
     
     // Balance Checks
 
     // manager reported holder balance
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
@@ -113,8 +114,8 @@ fn single_asset_holder_no_adapters(
     // manager reported treasury balance
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-            holder: treasury.clone(),
+            asset: token.address.to_string().clone(),
+            holder: treasury.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
@@ -126,8 +127,8 @@ fn single_asset_holder_no_adapters(
     // Manager reported total asset balance
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
@@ -152,8 +153,8 @@ fn single_asset_holder_no_adapters(
     // Unbondable
     match manager::QueryMsg::Manager(
         manager::SubQueryMsg::Unbondable {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
@@ -165,8 +166,8 @@ fn single_asset_holder_no_adapters(
     // Reserves
     match manager::QueryMsg::Manager(
         manager::SubQueryMsg::Reserves {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Reserves { amount } => {
@@ -180,7 +181,7 @@ fn single_asset_holder_no_adapters(
     // unbond from manager
     manager::ExecuteMsg::Manager(
         manager::SubExecuteMsg::Unbond {
-            asset: token.address.clone().to_string(),
+            asset: token.address.to_string().clone().to_string(),
             amount: unbond_amount,
         }
     ).test_exec(&manager, &mut app, admin.clone(), &[]);
@@ -188,8 +189,8 @@ fn single_asset_holder_no_adapters(
     // Unbondable
     match manager::QueryMsg::Manager(
         manager::SubQueryMsg::Unbondable {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
@@ -200,8 +201,8 @@ fn single_asset_holder_no_adapters(
 
     match manager::QueryMsg::Manager(
         manager::SubQueryMsg::Unbondable {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
@@ -213,8 +214,8 @@ fn single_asset_holder_no_adapters(
     // Unbonding
     match manager::QueryMsg::Manager(
         manager::SubQueryMsg::Unbonding {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbonding { amount } => {
@@ -225,8 +226,8 @@ fn single_asset_holder_no_adapters(
 
     match manager::QueryMsg::Manager(
         manager::SubQueryMsg::Unbonding {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbonding { amount } => {
@@ -238,8 +239,8 @@ fn single_asset_holder_no_adapters(
     // Claimable (zero as its immediately claimed)
     match manager::QueryMsg::Manager(
         manager::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Claimable { amount } => {
@@ -250,8 +251,8 @@ fn single_asset_holder_no_adapters(
 
     match manager::QueryMsg::Manager(
         manager::SubQueryMsg::Claimable {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Claimable { amount } => {
@@ -263,8 +264,8 @@ fn single_asset_holder_no_adapters(
     // Manager reflects unbonded
     match (manager::QueryMsg::Manager(
         manager::SubQueryMsg::Balance {
-            asset: token.address.clone(),
-            holder: holder.clone(),
+            asset: token.address.to_string().clone(),
+            holder: holder.to_string().clone(),
         }
     ).test_query(&manager, &app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
