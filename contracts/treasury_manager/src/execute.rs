@@ -64,11 +64,6 @@ pub fn receive(
     msg: Option<Binary>,
 ) -> StdResult<Response> {
 
-    /* TODO
-     * All assets received from a "holder" will be credited to their account
-     * All other assets from all other addresses will be credited to the treasury (default account)
-     */
-
     let config = CONFIG.load(deps.storage)?;
     let asset = ASSETS.load(deps.storage, info.sender.clone())?;
 
@@ -426,13 +421,99 @@ pub fn update(
     let _total_unbond = Uint128::zero();
 
     let mut allowance_used = Uint128::zero();
-    // TODO: implement to use pending balance as well
     let mut balance_used = Uint128::zero();
 
     for adapter in allocations.clone() {
         match adapter.alloc_type {
             AllocationType::Amount => {
-                //TODO Implement
+                let desired_amount = adapter.amount;
+                let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
+                if adapter.balance < desired_amount {
+                    let mut desired_input = desired_amount - adapter.balance;
+                    if desired_input <= threshold {
+                        continue;
+                    }
+
+                    // Fully covered by balance
+                    if desired_input <= balance {
+                        send_actions.push(SendAction {
+                            recipient: adapter.contract.address.clone().to_string(),
+                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                            amount: desired_input,
+                            msg: None,
+                            memo: None,
+                        });
+
+                        balance = balance - desired_input;
+                        balance_used += desired_input;
+                        desired_input = Uint128::zero();
+                    }
+                    // Send all balance
+                    else if !balance.is_zero() {
+                        send_actions.push(SendAction {
+                            recipient: adapter.contract.address.clone().to_string(),
+                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                            amount: balance,
+                            msg: None,
+                            memo: None,
+                        });
+
+                        balance = Uint128::zero();
+                        balance_used += balance;
+                        desired_input = desired_input - balance;
+                        break;
+                    }
+
+                    if !allowance.is_zero() {
+                        // Fully covered by allowance
+                        if desired_input <= allowance {
+                            //panic!("SEND FROM 1 {} {}", desired_input, adapter.nick.unwrap());
+                            send_from_actions.push(SendFromAction {
+                                owner: config.treasury.clone().to_string(),
+                                recipient: adapter.contract.address.clone().to_string(),
+                                recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                                amount: desired_input,
+                                msg: None,
+                                memo: None,
+                            });
+
+                            allowance = allowance - desired_input;
+                            allowance_used += desired_input;
+                            desired_input = Uint128::zero();
+                        }
+                        // Send all allowance
+                        else if !allowance.is_zero() {
+                            //panic!("SEND FROM 2 {} {}", allowance, adapter.nick.unwrap());
+                            send_from_actions.push(SendFromAction {
+                                owner: config.treasury.clone().to_string(),
+                                recipient: adapter.contract.address.clone().to_string(),
+                                recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                                amount: allowance,
+                                msg: None,
+                                memo: None,
+                            });
+
+                            allowance = Uint128::zero();
+                            allowance_used += allowance;
+                            desired_input = desired_input - allowance;
+                            break;
+                        }
+                    }
+                }
+                else if adapter.balance > desired_amount {
+                    let mut desired_output = adapter.balance - desired_amount;
+                    if desired_output <= threshold {
+                        continue;
+                    }
+                    messages.push(
+                        adapter::unbond_msg(
+                            &asset,
+                            desired_output,
+                            adapter.contract.clone()
+                        )?
+                    );
+                }
+
             }
             AllocationType::Portion => {
                 let desired_amount = adapter.amount.multiply_ratio(total, 10u128.pow(18));
@@ -776,7 +857,30 @@ pub fn unbond(
 
             match allocations[i].alloc_type {
                 AllocationType::Amount => {
-                    //TODO: unbond back to desired amount
+                    let unbondable = adapter::unbondable_query(deps.querier,
+                                          &asset,
+                                          allocations[i].contract.clone())?;
+
+                    if unbond_amount > unbondable {
+                        messages.push(
+                            adapter::unbond_msg(
+                                &asset,
+                                unbondable,
+                                allocations[i].contract.clone()
+                            )?
+                        );
+                        unbond_amount = unbond_amount - unbondable;
+                    }
+                    else {
+                        messages.push(
+                            adapter::unbond_msg(
+                                &asset,
+                                unbond_amount, 
+                                allocations[i].contract.clone()
+                            )?
+                        );
+                        unbond_amount = Uint128::zero()
+                    }
                 }
                 AllocationType::Portion => {
                     /*

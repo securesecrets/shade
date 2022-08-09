@@ -256,7 +256,7 @@ fn single_holder_scrt_staking_adapter(
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, Uint128::new(deposit.u128() - unbond_amount.u128()), "Post-unbond scrt staking unbondable");
+            assert_eq!(amount, deposit - unbond_amount, "Post-unbond scrt staking unbondable");
         }
         _ => assert!(false),
     };
@@ -269,7 +269,7 @@ fn single_holder_scrt_staking_adapter(
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, Uint128::new(deposit.u128() - unbond_amount.u128()), "Post-unbond manager unbondable");
+            assert_eq!(amount, deposit - unbond_amount, "Post-unbond manager unbondable");
         }
         _ => assert!(false),
     };
@@ -377,12 +377,24 @@ macro_rules! single_holder_scrt_staking_adapter_tests {
 }
 
 single_holder_scrt_staking_adapter_tests! {
-    single_holder_scrt_staking_0: (
+    single_holder_scrt_staking_portion: (
         // 100
         Uint128::new(100_000_000),
         // % 50 alloc
         AllocationType::Portion,
         Uint128::new(5u128 * 10u128.pow(17)),
+        // 50/50
+        Uint128::new(50_000_000),
+        Uint128::new(50_000_000),
+        // unbond 75
+        Uint128::new(75_000_000),
+    ),
+    single_holder_scrt_staking_amount: (
+        // 100
+        Uint128::new(100_000_000),
+        // % 50 alloc
+        AllocationType::Amount,
+        Uint128::new(50_000_000),
         // 50/50
         Uint128::new(50_000_000),
         Uint128::new(50_000_000),
