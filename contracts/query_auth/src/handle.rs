@@ -35,7 +35,8 @@ fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<()> {
     validate_admin(
         &deps.querier,
         AdminPermissions::QueryAuthAdmin,
-        info.sender.clone().into(),
+        info.sender.clone(),
+        env.contract.address,
         &contract,
     )
 }

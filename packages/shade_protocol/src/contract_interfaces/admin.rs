@@ -1,40 +1,28 @@
-use crate::{utils::Query, Contract};
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use crate::Contract;
 use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
-use shade_admin::admin::{
-    AdminsResponse,
-    ConfigResponse,
-    PermissionsResponse,
-    ValidateAdminPermissionResponse,
+use shade_admin::{
+    admin::{
+        AdminsResponse,
+        ConfigResponse,
+        PermissionsResponse,
+        QueryMsg,
+        ValidateAdminPermissionResponse,
+    },
+    Query,
 };
 
-#[cw_serde]
-#[derive(QueryResponses)]
-pub enum QueryMsg {
-    #[returns(ConfigResponse)]
-    GetConfig {},
-    #[returns(AdminsResponse)]
-    GetAdmins {},
-    #[returns(PermissionsResponse)]
-    GetPermissions { user: String },
-    #[returns(ValidateAdminPermissionResponse)]
-    ValidateAdminPermission { permission: String, user: String },
-}
-
-impl Query for QueryMsg {
-    const BLOCK_SIZE: usize = 256;
-}
-
-pub fn validate_admin(
+pub fn validate_admin<T: Into<String>>(
     querier: &QuerierWrapper,
     permission: AdminPermissions,
-    user: String,
+    user: T,
+    contract: T,
     admin_auth: &Contract,
 ) -> StdResult<()> {
     let admin_resp: StdResult<ValidateAdminPermissionResponse> =
         QueryMsg::ValidateAdminPermission {
             permission: permission.into_string(),
-            user,
+            user: user.into(),
+            contract: contract.into(),
         }
         .query(querier, admin_auth);
 
