@@ -11,13 +11,13 @@ members = [
   "contracts/airdrop",
 
   # Protocol contracts
-  #"contracts/snip20",
-  #"contracts/governance",
-  #"contracts/bonds",
-  #"contracts/mint",
-  #"contracts/mint_router",
-  #"contracts/oracle",
-  #"contracts/sky",
+  "contracts/snip20",
+  "contracts/governance",
+  "contracts/bonds",
+  "contracts/mint",
+  "contracts/mint_router",
+  "contracts/oracle",
+  "contracts/sky",
   "contracts/query_auth",
 
   # DAO
@@ -29,12 +29,12 @@ members = [
   #"contracts/rewards_emission",
   #"contracts/lp_shade_swap",
 
-  #"contracts/snip20_staking",
+  "contracts/snip20_staking",
   
   # Mock contracts
-  #"contracts/mock_band",
-  #"contracts/mock_secretswap_pair",
-  #"contracts/mock_sienna_pair",
+  "contracts/mock_band",
+  "contracts/mock_secretswap_pair",
+  "contracts/mock_sienna_pair",
   "contracts/mock_adapter",
 
   # Tools
