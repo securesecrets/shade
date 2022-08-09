@@ -15,7 +15,7 @@ use shade_protocol::{
     },
     contract_interfaces::{
         dao::adapter,
-        peg_stability::{Config, ExecuteMsg, InstantiateMsg, QueryMsg, ViewingKey},
+        peg_stability::{Config, ExecuteAnswer, ExecuteMsg, InstantiateMsg, QueryMsg, ViewingKey},
     },
     snip20::helpers::set_viewing_key_msg,
     utils::storage::plus::{GenericItemStorage, ItemStorage},
@@ -36,16 +36,17 @@ pub fn instantiate(
         symbols: vec![],
         payback: msg.payback,
         self_addr: env.contract.address.clone(),
+        dump_contract: msg.dump_contract,
     };
     config.save(deps.storage)?;
     ViewingKey::save(deps.storage, &msg.viewing_key.clone())?;
-    Ok(
-        Response::new().add_submessage(SubMsg::new(set_viewing_key_msg(
+    Ok(Response::new()
+        .add_submessage(SubMsg::new(set_viewing_key_msg(
             msg.viewing_key.to_string(),
             None,
             &msg.snip20,
-        )?)),
-    )
+        )?))
+        .set_data(to_binary(&ExecuteAnswer::Init { status: true })?))
 }
 
 #[entry_point]
@@ -57,19 +58,21 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             oracle,
             treasury,
             payback,
+            dump_contract,
             ..
         } => handle::try_update_config(
-            deps, env, info, shd_admin, snip20, oracle, treasury, payback,
+            deps,
+            env,
+            info,
+            shd_admin,
+            snip20,
+            oracle,
+            treasury,
+            payback,
+            dump_contract,
         ),
-        ExecuteMsg::SetPairs { pairs, symbol, .. } => {
-            handle::try_set_pairs(deps, env, info, pairs, symbol)
-        }
-        ExecuteMsg::AppendPairs { pairs, symbol, .. } => {
-            handle::try_append_pairs(deps, env, info, pairs, symbol)
-        }
-        ExecuteMsg::UpdatePair { pair, index, .. } => {
-            handle::try_update_pair(deps, env, info, pair, index)
-        }
+        ExecuteMsg::SetPairs { pairs, .. } => handle::try_set_pairs(deps, env, info, pairs),
+        ExecuteMsg::AppendPairs { pairs, .. } => handle::try_append_pairs(deps, env, info, pairs),
         ExecuteMsg::RemovePair { index, .. } => handle::try_remove_pair(deps, env, info, index),
         ExecuteMsg::Swap { .. } => handle::try_swap(deps, env, info),
     }

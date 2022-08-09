@@ -1,5 +1,5 @@
 use crate::{
-    contract_interfaces::sky::cycles::ArbPair,
+    contract_interfaces::sky::cycles::{ArbPair, Offer},
     utils::{
         asset::Contract,
         storage::plus::{GenericItemStorage, ItemStorage},
@@ -22,6 +22,7 @@ pub struct Config {
     pub symbols: Vec<String>,
     pub payback: Decimal,
     pub self_addr: Addr,
+    pub dump_contract: Contract,
 }
 
 impl ItemStorage for Config {
@@ -43,6 +44,7 @@ pub struct InstantiateMsg {
     pub treasury: Contract,
     pub payback: Decimal,
     pub viewing_key: String,
+    pub dump_contract: Contract,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -58,6 +60,7 @@ pub enum ExecuteMsg {
         treasury: Option<Contract>,
         symbols: Option<Vec<String>>,
         payback: Option<Decimal>,
+        dump_contract: Option<Contract>,
         padding: Option<String>,
     },
     SetPairs {
@@ -68,11 +71,6 @@ pub enum ExecuteMsg {
     AppendPairs {
         pairs: Vec<ArbPair>,
         symbol: Option<String>,
-        padding: Option<String>,
-    },
-    UpdatePair {
-        pair: ArbPair,
-        index: Uint128,
         padding: Option<String>,
     },
     RemovePair {
@@ -105,17 +103,13 @@ pub enum ExecuteAnswer {
         pairs: Vec<ArbPair>,
         status: bool,
     },
-    UpdatePair {
-        pairs: Vec<ArbPair>,
-        status: bool,
-    },
     RemovePair {
         pairs: Vec<ArbPair>,
         status: bool,
     },
     Swap {
         profit: Uint128,
-        payback: Decimal,
+        payback: Uint128,
         status: bool,
     },
 }
@@ -144,6 +138,8 @@ pub enum QueryAnswer {
 pub struct CalculateRes {
     pub profit: Uint128,
     pub payback: Uint128,
-    pub swap_amount: Uint128,
+    pub index: usize,
+    pub config: Config,
+    pub offer: Offer,
     pub min_expected: Uint128,
 }
