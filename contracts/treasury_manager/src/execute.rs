@@ -424,196 +424,99 @@ pub fn update(
     let mut balance_used = Uint128::zero();
 
     for adapter in allocations.clone() {
-        match adapter.alloc_type {
-            AllocationType::Amount => {
-                let desired_amount = adapter.amount;
-                let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
-                if adapter.balance < desired_amount {
-                    let mut desired_input = desired_amount - adapter.balance;
-                    if desired_input <= threshold {
-                        continue;
-                    }
-
-                    // Fully covered by balance
-                    if desired_input <= balance {
-                        send_actions.push(SendAction {
-                            recipient: adapter.contract.address.clone().to_string(),
-                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                            amount: desired_input,
-                            msg: None,
-                            memo: None,
-                        });
-
-                        balance = balance - desired_input;
-                        balance_used += desired_input;
-                        desired_input = Uint128::zero();
-                    }
-                    // Send all balance
-                    else if !balance.is_zero() {
-                        send_actions.push(SendAction {
-                            recipient: adapter.contract.address.clone().to_string(),
-                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                            amount: balance,
-                            msg: None,
-                            memo: None,
-                        });
-
-                        balance = Uint128::zero();
-                        balance_used += balance;
-                        desired_input = desired_input - balance;
-                        break;
-                    }
-
-                    if !allowance.is_zero() {
-                        // Fully covered by allowance
-                        if desired_input <= allowance {
-                            //panic!("SEND FROM 1 {} {}", desired_input, adapter.nick.unwrap());
-                            send_from_actions.push(SendFromAction {
-                                owner: config.treasury.clone().to_string(),
-                                recipient: adapter.contract.address.clone().to_string(),
-                                recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                                amount: desired_input,
-                                msg: None,
-                                memo: None,
-                            });
-
-                            allowance = allowance - desired_input;
-                            allowance_used += desired_input;
-                            desired_input = Uint128::zero();
-                        }
-                        // Send all allowance
-                        else if !allowance.is_zero() {
-                            //panic!("SEND FROM 2 {} {}", allowance, adapter.nick.unwrap());
-                            send_from_actions.push(SendFromAction {
-                                owner: config.treasury.clone().to_string(),
-                                recipient: adapter.contract.address.clone().to_string(),
-                                recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                                amount: allowance,
-                                msg: None,
-                                memo: None,
-                            });
-
-                            allowance = Uint128::zero();
-                            allowance_used += allowance;
-                            desired_input = desired_input - allowance;
-                            break;
-                        }
-                    }
-                }
-                else if adapter.balance > desired_amount {
-                    let mut desired_output = adapter.balance - desired_amount;
-                    if desired_output <= threshold {
-                        continue;
-                    }
-                    messages.push(
-                        adapter::unbond_msg(
-                            &asset,
-                            desired_output,
-                            adapter.contract.clone()
-                        )?
-                    );
-                }
-
-            }
-            AllocationType::Portion => {
-                let desired_amount = adapter.amount.multiply_ratio(total, 10u128.pow(18));
-                let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
-
-                // Under funded
-                if adapter.balance < desired_amount {
-
-                    let mut desired_input = desired_amount - adapter.balance;
-
-                    // Check tolerance threshold
-                    if desired_input <= threshold {
-                        continue;
-                    }
-
-                    // Fully covered by balance
-                    if desired_input <= balance {
-                        send_actions.push(SendAction {
-                            recipient: adapter.contract.address.clone().to_string(),
-                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                            amount: desired_input,
-                            msg: None,
-                            memo: None,
-                        });
-
-                        balance = balance - desired_input;
-                        balance_used += desired_input;
-                        desired_input = Uint128::zero();
-                    }
-                    // Send all balance
-                    else if !balance.is_zero() {
-                        send_actions.push(SendAction {
-                            recipient: adapter.contract.address.clone().to_string(),
-                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                            amount: balance,
-                            msg: None,
-                            memo: None,
-                        });
-
-                        balance = Uint128::zero();
-                        balance_used += balance;
-                        desired_input = desired_input - balance;
-                        break;
-                    }
-
-                    if !allowance.is_zero() {
-                        // Fully covered by allowance
-                        if desired_input <= allowance {
-                            //panic!("SEND FROM 1 {} {}", desired_input, adapter.nick.unwrap());
-                            send_from_actions.push(SendFromAction {
-                                owner: config.treasury.clone().to_string(),
-                                recipient: adapter.contract.address.clone().to_string(),
-                                recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                                amount: desired_input,
-                                msg: None,
-                                memo: None,
-                            });
-
-                            allowance = allowance - desired_input;
-                            allowance_used += desired_input;
-                            desired_input = Uint128::zero();
-                        }
-                        // Send all allowance
-                        else if !allowance.is_zero() {
-                            //panic!("SEND FROM 2 {} {}", allowance, adapter.nick.unwrap());
-                            send_from_actions.push(SendFromAction {
-                                owner: config.treasury.clone().to_string(),
-                                recipient: adapter.contract.address.clone().to_string(),
-                                recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                                amount: allowance,
-                                msg: None,
-                                memo: None,
-                            });
-
-                            allowance = Uint128::zero();
-                            allowance_used += allowance;
-                            desired_input = desired_input - allowance;
-                            break;
-                        }
-                    }
-                }
-                // Over funded
-                else if adapter.balance > desired_amount {
-
-                    let mut desired_output = adapter.balance - desired_amount;
-
-                    if desired_output < threshold {
-                        continue;
-                    }
-
-                    messages.push(
-                        adapter::unbond_msg(
-                            &asset,
-                            desired_output,
-                            adapter.contract.clone()
-                        )?
-                    );
-                }
-            }
+        let desired_amount = match adapter.alloc_type {
+            AllocationType::Amount => adapter.amount, 
+            AllocationType::Portion => adapter.amount.multiply_ratio(total, 10u128.pow(18)),
         };
+        let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
+
+        // Under Funded -- send balance then allowance
+        if adapter.balance < desired_amount {
+            let mut desired_input = desired_amount - adapter.balance;
+            if desired_input <= threshold {
+                continue;
+            }
+
+            // Fully covered by balance
+            if desired_input <= balance {
+                send_actions.push(SendAction {
+                    recipient: adapter.contract.address.clone().to_string(),
+                    recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                    amount: desired_input,
+                    msg: None,
+                    memo: None,
+                });
+
+                balance = balance - desired_input;
+                balance_used += desired_input;
+                desired_input = Uint128::zero();
+            }
+            // Send all balance
+            else if !balance.is_zero() {
+                send_actions.push(SendAction {
+                    recipient: adapter.contract.address.clone().to_string(),
+                    recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                    amount: balance,
+                    msg: None,
+                    memo: None,
+                });
+
+                balance = Uint128::zero();
+                balance_used += balance;
+                desired_input = desired_input - balance;
+                break;
+            }
+
+            if !allowance.is_zero() {
+                // Fully covered by allowance
+                if desired_input <= allowance {
+                    //panic!("SEND FROM 1 {} {}", desired_input, adapter.nick.unwrap());
+                    send_from_actions.push(SendFromAction {
+                        owner: config.treasury.clone().to_string(),
+                        recipient: adapter.contract.address.clone().to_string(),
+                        recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                        amount: desired_input,
+                        msg: None,
+                        memo: None,
+                    });
+
+                    allowance = allowance - desired_input;
+                    allowance_used += desired_input;
+                    desired_input = Uint128::zero();
+                }
+                // Send all allowance
+                else if !allowance.is_zero() {
+                    //panic!("SEND FROM 2 {} {}", allowance, adapter.nick.unwrap());
+                    send_from_actions.push(SendFromAction {
+                        owner: config.treasury.clone().to_string(),
+                        recipient: adapter.contract.address.clone().to_string(),
+                        recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                        amount: allowance,
+                        msg: None,
+                        memo: None,
+                    });
+
+                    allowance = Uint128::zero();
+                    allowance_used += allowance;
+                    desired_input = desired_input - allowance;
+                    break;
+                }
+            }
+        }
+        // Over funded -- unbond
+        else if adapter.balance > desired_amount {
+            let mut desired_output = adapter.balance - desired_amount;
+            if desired_output <= threshold {
+                continue;
+            }
+            messages.push(
+                adapter::unbond_msg(
+                    &asset,
+                    desired_output,
+                    adapter.contract.clone()
+                )?
+            );
+        }
     }
 
     // Credit treasury balance with allowance used
