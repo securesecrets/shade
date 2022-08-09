@@ -55,8 +55,10 @@ pub fn init_contract() -> StdResult<(App, ContractInfo)> {
             RegistryAction::RegisterAdmin {
                 user: "admin".to_string(),
             },
-            RegistryAction::GrantAccess {
-                permissions: vec![AdminPermissions::QueryAuthAdmin.into_string()],
+            RegistryAction::SetPermissions {
+                permissions: vec![(auth.address.to_string(), vec![
+                    AdminPermissions::QueryAuthAdmin.into_string(),
+                ])],
                 user: "admin".to_string(),
             },
         ],
