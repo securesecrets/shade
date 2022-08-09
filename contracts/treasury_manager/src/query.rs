@@ -199,21 +199,29 @@ pub fn unbondable(
         };
         */
 
-        let mut balance = Uint128::zero();
-        let mut unbonding = Uint128::zero();
+        let mut holder_balance = Uint128::zero();
+        let mut holder_unbonding = Uint128::zero();
 
-        match HOLDING.may_load(deps.storage, holder)? {
+        match HOLDING.may_load(deps.storage, holder.clone())? {
             Some(h) => {
                 if let Some(u) = h.unbondings.iter().find(|u| u.token == asset.clone()) {
-                    unbonding += u.amount;
+                    holder_unbonding += u.amount;
                 }
                 if let Some(b) = h.balances.iter().find(|b| b.token == asset.clone()) {
-                    balance += b.amount;
+                    holder_balance += b.amount;
                 }
             }
             None => {
                 return Err(StdError::generic_err("Invalid holder"));
             }
+        }
+
+        println!("HERE balance {}, unbonding {}", holder_balance, holder_unbonding);
+
+        if holder_balance.is_zero() {
+            return Ok(manager::QueryAnswer::Unbondable {
+                amount: holder_balance,
+            });
         }
 
         let mut unbondable = balance_query(
@@ -234,6 +242,13 @@ pub fn unbondable(
                                   &asset, alloc.contract.clone())?;
         }
 
+        //println!("{} manager unbondable {} balance {} unbonding {}", holder, unbondable, holder_balance);
+
+        if unbondable > holder_balance {
+            println!("unbondable > balance {}", holder_balance);
+            unbondable = holder_balance;
+        }
+
         return Ok(manager::QueryAnswer::Unbondable {
             amount: unbondable,
         });
@@ -251,14 +266,21 @@ pub fn balance(
     match ASSETS.may_load(deps.storage, asset)? {
         Some(asset) => {
 
-            let holding = HOLDING.load(deps.storage, holder)?;
+            let holding = HOLDING.load(deps.storage, holder.clone())?;
+            let balance = match holding.balances.iter().find(|u| u.token == asset.contract.address) {
+                Some(b) => b.amount,
+                None => {
+                    return Err(StdError::generic_err("HOLDER NOT FOUND"));
+                    Uint128::zero()
+                },
+            };
 
-            Ok(manager::QueryAnswer::Balance {
-                amount: match holding.balances.iter().find(|u| u.token == asset.contract.address) {
-                    Some(b) => b.amount,
-                    None => Uint128::zero(),
-                }
-            })
+            let config = CONFIG.load(deps.storage)?;
+            if holder == config.treasury {
+                println!("TRESAURY MANAGER BAL {}", balance);
+            }
+
+            Ok(manager::QueryAnswer::Balance { amount: balance })
 
         },
         None => Err(StdError::generic_err("Not a registered asset"))

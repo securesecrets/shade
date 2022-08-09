@@ -376,11 +376,11 @@ pub fn update(
 
     // Withold holder unbondings
     for h in HOLDERS.load(deps.storage)? {
-        let holder = HOLDING.load(deps.storage, h)?;
-        if let Some(u) = holder.unbondings.iter().find(|u| u.token == asset) {
+        let holding = HOLDING.load(deps.storage, h)?;
+        if let Some(u) = holding.unbondings.iter().find(|u| u.token == asset) {
             holder_unbonding += u.amount;
         }
-        if let Some(b) = holder.balances.iter().find(|u| u.token == asset) {
+        if let Some(b) = holding.balances.iter().find(|u| u.token == asset) {
             holder_principal += b.amount;
         }
     }
@@ -415,7 +415,17 @@ pub fn update(
 
     //panic!("holder principal {}", holder_principal);
     if total > holder_principal {
-        panic!("Gainzz {}", total - holder_principal);
+        println!("Gainzz {}", total - holder_principal);
+        // credit gains to treasury
+        let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
+        if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
+            holding.balances[i].amount += total - holder_principal;
+        }
+        HOLDING.save(deps.storage, config.treasury.clone(), &holding);
+    }
+    else if total < holder_principal {
+        //TODO losses
+        todo!("losses");
     }
 
     let _total_unbond = Uint128::zero();
@@ -764,7 +774,9 @@ pub fn unbond(
                                           &asset,
                                           allocations[i].contract.clone())?;
 
+                    println!("unbonding {} from unbondable {}", unbond_amount, unbondable);
                     if unbond_amount > unbondable {
+                        println!("unbonding 1 {} from unbondable {}", unbondable, unbondable);
                         messages.push(
                             adapter::unbond_msg(
                                 &asset,
@@ -775,6 +787,7 @@ pub fn unbond(
                         unbond_amount = unbond_amount - unbondable;
                     }
                     else {
+                        println!("unbond 2 {} from unbondable {}", unbondable, unbondable);
                         messages.push(
                             adapter::unbond_msg(
                                 &asset,
@@ -786,7 +799,7 @@ pub fn unbond(
                     }
                 }
                 AllocationType::Portion => {
-                    /*
+                    /* TODO should prioritize higher reserves
                     let _desired_amount = total.multiply_ratio(
                         allocations[i].amount, 10u128.pow(18)
                     );

@@ -203,20 +203,26 @@ pub fn unbond(
 
     let mut undelegated = vec![];
 
-    let mut unbonding = amount + UNBONDING.load(deps.storage)?;
+    let prev_unbonding = UNBONDING.load(deps.storage)?;
 
-    let total = scrt_balance + rewards + delegated;
-    let mut reserves = scrt_balance + rewards;
+    let mut total = delegated; //scrt_balance + rewards + delegated;
+    if prev_unbonding < scrt_balance + delegated {
+        total += scrt_balance + delegated - prev_unbonding;
+    }
 
-    if total < unbonding {
+    if total < amount {
         return Err(StdError::generic_err(
             format!("Total Unbond amount {} greater than delegated {}; rew {}, bal {}",
-                    unbonding + amount, delegated, rewards, scrt_balance)
+                    amount, delegated, rewards, scrt_balance)
         ));
     }
 
+    let mut unbonding = amount;// + UNBONDING.load(deps.storage)?;
+    let mut reserves = scrt_balance + rewards;
+
     // Send full unbonding
     if unbonding < reserves {
+        println!("UNBOND SENDING ALL UNBONDING");
         messages.append(&mut wrap_and_send(unbonding, 
                                            config.owner, 
                                            config.sscrt, 
@@ -225,6 +231,7 @@ pub fn unbond(
     }
     // Send all reserves
     else if !reserves.is_zero(){
+        println!("UNBOND SENDING ALL RESERVES");
         messages.append(&mut wrap_and_send(reserves, 
                                            config.owner, 
                                            config.sscrt, 
@@ -232,7 +239,8 @@ pub fn unbond(
         unbonding = unbonding - reserves;
     }
 
-    UNBONDING.save(deps.storage, &unbonding)?;
+    //println!("save unbonding {}", unbonding);
+    UNBONDING.save(deps.storage, &(prev_unbonding + unbonding))?;
 
     while !unbonding.is_zero() {
 
@@ -382,6 +390,7 @@ pub fn claim(
     }
 
     if !claim_amount.is_zero() {
+        println!("CLAIM AMOUNT {}", claim_amount);
         messages.append(&mut wrap_and_send(
             claim_amount,
             config.owner,
@@ -391,6 +400,7 @@ pub fn claim(
 
         //assert!(false, "u - claim_amount: {} - {}", unbond_amount, claim_amount);
         let u = UNBONDING.load(deps.storage)?;
+        println!("reduce unbonding {}", claim_amount);
         UNBONDING.save(deps.storage, &(u - claim_amount))?;
     }
 

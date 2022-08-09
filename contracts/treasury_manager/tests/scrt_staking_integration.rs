@@ -47,8 +47,10 @@ fn single_holder_scrt_staking_adapter(
     deposit: Uint128,
     alloc_type: AllocationType,
     alloc_amount: Uint128,
-    expected_manager: Uint128,
+    rewards: Uint128,
     expected_scrt_staking: Uint128,
+    expected_manager_holder: Uint128,
+    expected_manager_treasury: Uint128,
     unbond_amount: Uint128,
 ) {
 
@@ -101,6 +103,11 @@ fn single_holder_scrt_staking_adapter(
         padding: None,
     }.test_exec(&token, &mut app, holder.clone(), &[]).unwrap();
 
+    snip20::ExecuteMsg::SetViewingKey{
+        key: viewing_key.clone(),
+        padding: None,
+    }.test_exec(&token, &mut app, treasury.clone(), &[]).unwrap();
+
     // Register manager assets
     treasury_manager::ExecuteMsg::RegisterAsset {
         contract: token.clone().into(),
@@ -151,7 +158,6 @@ fn single_holder_scrt_staking_adapter(
     }.test_exec(&token, &mut app, holder.clone(), &[]).unwrap();
 
     // Update manager
-    println!("update manager");
     manager::ExecuteMsg::Manager(
         manager::SubExecuteMsg::Update {
             asset: token.address.to_string().clone(),
@@ -222,7 +228,7 @@ fn single_holder_scrt_staking_adapter(
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Reserves { amount } => {
             reserves = amount;
-            assert_eq!(amount, expected_manager, "Pre-unbond reserves");
+            assert_eq!(amount, expected_manager_holder, "Pre-unbond reserves");
         }
         _ => assert!(false),
     };
@@ -240,9 +246,26 @@ fn single_holder_scrt_staking_adapter(
         _ => assert!(false),
     };
 
+    // Add Rewards
+    app.sudo(SudoMsg::Staking(StakingSudo::AddRewards { amount: Coin { amount: rewards, denom: "uscrt".into() } })).unwrap();
+
+    // Update scrt staking to claim & restake rewards
+    adapter::ExecuteMsg::Adapter(
+        adapter::SubExecuteMsg::Update {
+            asset: token.address.to_string().clone(),
+        }
+    ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
+
+    // Update manager to detect & rebalance after gainz
+    manager::ExecuteMsg::Manager(
+        manager::SubExecuteMsg::Update {
+            asset: token.address.to_string().clone(),
+        }
+    ).test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
+
     // holder unbond from manager
-    //println!("unbond amount {}", unbond_amount);
-    let _ = manager::ExecuteMsg::Manager(
+    println!("manager unbond {}", unbond_amount);
+    manager::ExecuteMsg::Manager(
         manager::SubExecuteMsg::Unbond {
             asset: token.address.to_string().clone(),
             amount: unbond_amount,
@@ -269,7 +292,7 @@ fn single_holder_scrt_staking_adapter(
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, deposit - unbond_amount, "Post-unbond manager unbondable");
+            assert_eq!(amount, deposit - unbond_amount, "Post-unbond manager holder unbondable");
         }
         _ => assert!(false),
     };
@@ -309,7 +332,7 @@ fn single_holder_scrt_staking_adapter(
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, unbond_amount - reserves, "Post-fastforward scrt staking claimable");
+            assert_eq!(amount, unbond_amount - reserves + rewards, "Post-fastforward scrt staking claimable");
         }
         _ => assert!(false),
     };
@@ -334,7 +357,7 @@ fn single_holder_scrt_staking_adapter(
         }
     ).test_exec(&manager, &mut app, holder.clone(), &[]).unwrap();
 
-    // Manager
+    // Manager Holder Balance
     match manager::QueryMsg::Manager(
         manager::SubQueryMsg::Balance {
             asset: token.address.to_string().clone(),
@@ -342,11 +365,24 @@ fn single_holder_scrt_staking_adapter(
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount.u128(), deposit.u128() - unbond_amount.u128());
+            assert_eq!(amount, deposit - unbond_amount);
         }
         _ => {
             assert!(false);
         }
+    };
+
+    // Manager Treasury Balance
+    match manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Balance {
+            asset: token.address.to_string().clone(),
+            holder: treasury.to_string().clone(),
+        }
+    ).test_query(&manager, &app).unwrap() {
+        manager::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, expected_manager_treasury);
+        },
+        _ => assert!(false),
     };
 
     // user received unbonded
@@ -361,6 +397,19 @@ fn single_holder_scrt_staking_adapter(
             assert!(false);
         }
     };
+
+    /*
+    // treasury received gainz
+    match (snip20::QueryMsg::Balance {
+        address: treasury.to_string().clone(),
+        key: viewing_key.clone(),
+    }).test_query(&token, &app).unwrap() {
+        snip20::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, expected_manager_treasury, "treasury snip20 balance");
+        },
+        _ => assert!(false),
+    };
+    */
 }
 
 macro_rules! single_holder_scrt_staking_adapter_tests {
@@ -368,9 +417,9 @@ macro_rules! single_holder_scrt_staking_adapter_tests {
         $(
             #[test]
             fn $name() {
-                let (deposit, alloc_type, alloc_amount, 
-                     expected_scrt_staking, expected_manager, unbond_amount) = $value;
-                single_holder_scrt_staking_adapter(deposit, alloc_type, alloc_amount, expected_scrt_staking, expected_manager, unbond_amount);
+                let (deposit, alloc_type, alloc_amount, rewards,
+                     expected_scrt_staking, expected_manager_holder, expected_manager_treasury, unbond_amount) = $value;
+                single_holder_scrt_staking_adapter(deposit, alloc_type, alloc_amount, rewards, expected_scrt_staking, expected_manager_holder, expected_manager_treasury, unbond_amount);
             }
         )*
     }
@@ -383,21 +432,42 @@ single_holder_scrt_staking_adapter_tests! {
         // % 50 alloc
         AllocationType::Portion,
         Uint128::new(5u128 * 10u128.pow(17)),
+        // 0 rewards
+        Uint128::zero(),
         // 50/50
         Uint128::new(50_000_000),
         Uint128::new(50_000_000),
+        Uint128::zero(),
         // unbond 75
         Uint128::new(75_000_000),
     ),
     single_holder_scrt_staking_amount: (
         // 100
         Uint128::new(100_000_000),
-        // % 50 alloc
+        // 50 alloc
         AllocationType::Amount,
         Uint128::new(50_000_000),
+        // 0 rewards
+        Uint128::zero(),
         // 50/50
         Uint128::new(50_000_000),
         Uint128::new(50_000_000),
+        Uint128::zero(),
+        // unbond 75
+        Uint128::new(75_000_000),
+    ),
+    single_holder_scrt_staking_amount_rewards: (
+        // 100
+        Uint128::new(100_000_000),
+        // 50 alloc
+        AllocationType::Amount,
+        Uint128::new(50_000_000),
+        // 0 rewards
+        Uint128::new(100_000_000),
+        // 50/50
+        Uint128::new(50_000_000),
+        Uint128::new(50_000_000),
+        Uint128::new(100_000_000),
         // unbond 75
         Uint128::new(75_000_000),
     ),

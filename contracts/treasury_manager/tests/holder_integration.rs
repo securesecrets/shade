@@ -184,7 +184,7 @@ fn single_asset_holder_no_adapters(
             asset: token.address.to_string().clone().to_string(),
             amount: unbond_amount,
         }
-    ).test_exec(&manager, &mut app, admin.clone(), &[]);
+    ).test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
 
     // Unbondable
     match manager::QueryMsg::Manager(
