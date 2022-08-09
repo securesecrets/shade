@@ -282,7 +282,7 @@ fn single_holder_scrt_staking_adapter(
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Unbonding { amount } => {
-            assert_eq!(amount, Uint128::new(unbond_amount.u128() - reserves.u128()), "Post-unbond manager unbonding");
+            assert_eq!(amount, unbond_amount - reserves, "Post-unbond manager unbonding");
         }
         _ => assert!(false),
     };
@@ -322,7 +322,7 @@ fn single_holder_scrt_staking_adapter(
         }
     ).test_query(&manager, &app).unwrap() {
         manager::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, Uint128::new(unbond_amount.u128() - reserves.u128()), "Post-fastforward manager claimable");
+            assert_eq!(amount, unbond_amount - reserves, "Post-fastforward manager claimable");
         }
         _ => assert!(false),
     };
