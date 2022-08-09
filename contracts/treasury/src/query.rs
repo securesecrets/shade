@@ -199,7 +199,7 @@ pub fn allowance(
         )?;
 
         return Ok(treasury::QueryAnswer::Allowance {
-            amount: cur_allowance.amount,
+            amount: cur_allowance.allowance,
         });
     }
 

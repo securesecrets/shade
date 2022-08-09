@@ -40,7 +40,7 @@ pub fn pending_allowance(
         VIEWING_KEY.load(deps.storage)?,
         1,
         &full_asset.contract.clone(),
-    )?.amount;
+    )?.allowance;
 
     Ok(treasury_manager::QueryAnswer::PendingAllowance {
         amount: allowance,

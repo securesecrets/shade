@@ -148,7 +148,7 @@ pub fn rebalance(
             1,
             &full_asset.contract.clone(),
         )?
-        .amount;
+        .allowance;
 
         manager_data.insert(manager.contract.address, (balance, allowance));
     }
@@ -195,7 +195,7 @@ pub fn rebalance(
                             viewing_key.clone(),
                             1,
                             &full_asset.contract.clone(),
-                        )?.amount;
+                        )?.allowance;
 
                         // hasn't been accounted for by manager data
                         amount_total += cur_allowance;
@@ -286,7 +286,7 @@ pub fn rebalance(
                     1,
                     &full_asset.contract.clone(),
                 )?
-                .amount;
+                .allowance;
 
                 // UnderFunded
                 if cur_allowance + manager.balance < desired_amount {

@@ -51,7 +51,7 @@ pub fn receive(
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
-    deps.api.debug(format!("Received {}", amount).as_str());
+    //panic!("scrt staking Received {}", amount);
 
     let config = CONFIG.load(deps.storage)?;
 

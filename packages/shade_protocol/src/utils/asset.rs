@@ -148,7 +148,7 @@ pub fn set_allowance(
                     key,
                     1,
                     asset,
-                )?.amount,
+                )?.allowance,
     };
 
     match amount.cmp(&allowance) {

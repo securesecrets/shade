@@ -26,7 +26,12 @@ use shade_protocol::{
     },
 };
 
-use shade_protocol::multi_test::{ App };
+use shade_protocol::multi_test::{ 
+    App,
+    SudoMsg,
+    StakingSudo,
+    BankSudo,
+};
 use shade_multi_test::multi::{
     treasury_manager::TreasuryManager,
     snip20::Snip20,
@@ -77,7 +82,7 @@ fn single_holder_scrt_staking_adapter(
     }.test_init(Snip20::default(), &mut app, admin.clone(), "token", &[]).unwrap();
 
     let manager = treasury_manager::InstantiateMsg {
-        admin_auth: admin_auth.into(),
+        admin_auth: admin_auth.clone().into(),
         treasury: treasury.clone().into(),
         viewing_key: viewing_key.clone(),
     }.test_init(TreasuryManager::default(), &mut app, admin.clone(), "manager", &[]).unwrap();
@@ -89,11 +94,12 @@ fn single_holder_scrt_staking_adapter(
         validator_bounds: None,
         viewing_key: viewing_key.clone(),
     }.test_init(ScrtStaking::default(), &mut app, admin.clone(), "scrt_staking", &[]).unwrap();
+    println!("scrt staking {}", scrt_staking.address.clone());
 
     snip20::ExecuteMsg::SetViewingKey{
         key: viewing_key.clone(),
         padding: None,
-    }.test_exec(&token, &mut app, admin.clone(), &[]).unwrap();
+    }.test_exec(&token, &mut app, holder.clone(), &[]).unwrap();
 
     // Register manager assets
     treasury_manager::ExecuteMsg::RegisterAsset {
@@ -123,7 +129,7 @@ fn single_holder_scrt_staking_adapter(
     let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
     app.sudo(SudoMsg::Bank(BankSudo::Mint { 
         to_address: holder.to_string().clone(),
-        amount: vec![deposit_coin],
+        amount: vec![deposit_coin.clone()],
     })).unwrap();
 
     assert!(deposit_coin.amount > Uint128::zero());
@@ -134,6 +140,7 @@ fn single_holder_scrt_staking_adapter(
     }.test_exec(&token, &mut app, holder.clone(), &[deposit_coin]).unwrap();
 
     // Deposit funds into manager
+    println!("deposit to manager");
     snip20::ExecuteMsg::Send {
         recipient: manager.address.to_string().clone(),
         recipient_code_hash: None,
@@ -144,6 +151,7 @@ fn single_holder_scrt_staking_adapter(
     }.test_exec(&token, &mut app, holder.clone(), &[]).unwrap();
 
     // Update manager
+    println!("update manager");
     manager::ExecuteMsg::Manager(
         manager::SubExecuteMsg::Update {
             asset: token.address.to_string().clone(),
@@ -233,12 +241,13 @@ fn single_holder_scrt_staking_adapter(
     };
 
     // holder unbond from manager
-    manager::ExecuteMsg::Manager(
+    //println!("unbond amount {}", unbond_amount);
+    let _ = manager::ExecuteMsg::Manager(
         manager::SubExecuteMsg::Unbond {
             asset: token.address.to_string().clone(),
             amount: unbond_amount,
         }
-    ).test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
+    ).test_exec(&manager, &mut app, holder.clone(), &[]).unwrap();
 
     // scrt staking Unbondable
     match adapter::QueryMsg::Adapter(
@@ -300,7 +309,7 @@ fn single_holder_scrt_staking_adapter(
         }
     ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, Uint128::new(unbond_amount.u128() - reserves.u128()), "Post-fastforward scrt staking claimable");
+            assert_eq!(amount, unbond_amount - reserves, "Post-fastforward scrt staking claimable");
         }
         _ => assert!(false),
     };
@@ -323,7 +332,7 @@ fn single_holder_scrt_staking_adapter(
         manager::SubExecuteMsg::Claim {
             asset: token.address.to_string().clone(),
         }
-    ).test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
+    ).test_exec(&manager, &mut app, holder.clone(), &[]).unwrap();
 
     // Manager
     match manager::QueryMsg::Manager(

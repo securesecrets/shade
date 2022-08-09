@@ -118,6 +118,7 @@ pub fn try_send_impl(
     denom: String,
     block: &shade_protocol::c_std::BlockInfo
 ) -> StdResult<()> {
+    println!("snip20 send {} to {}", sender.clone(), recipient.clone());
 
     try_transfer_impl(storage, &sender, owner, &recipient, amount, memo.clone(), denom, block)?;
     try_add_receiver_api_callback(
@@ -179,7 +180,9 @@ pub fn try_batch_send(
     let sender = info.sender;
     let denom = CoinInfo::load(deps.storage)?.symbol;
 
+    println!("batch send actions {}", actions.len());
     for action in actions {
+        println!("batch send_impl {} to {}", sender.clone(), action.recipient);
         try_send_impl(
             deps.storage,
             &mut messages,

@@ -331,7 +331,9 @@ pub fn claim(
         )?
     );
 
-    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Claim {
+    Ok(Response::new()
+       .add_messages(messages)
+       .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             amount: reserves + total_claimed,
         })?))
@@ -345,7 +347,6 @@ pub fn update(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    //let asset = deps.api.addr_validate(asset.as_str())?;
     let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
     let mut allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
@@ -356,7 +357,14 @@ pub fn update(
 
     for i in 0..allocations.len() {
         match allocations[i].alloc_type {
-            AllocationType::Amount => amount_total += allocations[i].balance,
+            AllocationType::Amount => {
+                allocations[i].balance = adapter::balance_query(
+                    deps.querier,
+                    &full_asset.contract.address,
+                    allocations[i].contract.clone(),
+                )?;
+                amount_total += allocations[i].balance
+            },
             AllocationType::Portion => {
                 allocations[i].balance = adapter::balance_query(
                     deps.querier,
@@ -368,13 +376,17 @@ pub fn update(
         };
     }
 
-    let mut unbonding = Uint128::zero();
+    let mut holder_unbonding = Uint128::zero();
+    let mut holder_principal = Uint128::zero();
 
-    // Withold pending unbondings
+    // Withold holder unbondings
     for h in HOLDERS.load(deps.storage)? {
         let holder = HOLDING.load(deps.storage, h)?;
         if let Some(u) = holder.unbondings.iter().find(|u| u.token == asset) {
-            unbonding += u.amount;
+            holder_unbonding += u.amount;
+        }
+        if let Some(b) = holder.balances.iter().find(|u| u.token == asset) {
+            holder_principal += b.amount;
         }
     }
 
@@ -394,7 +406,7 @@ pub fn update(
         1,
         &full_asset.contract.clone(),
     )?
-    .amount;
+    .allowance;
 
     // Available balance
     let mut balance = balance_query(
@@ -404,7 +416,12 @@ pub fn update(
         &full_asset.contract.clone(),
     )?;
 
-    let total = (portion_total + allowance + balance) - unbonding;
+    let total = (amount_total + portion_total + allowance + balance) - holder_unbonding;
+
+    //panic!("holder principal {}", holder_principal);
+    if total > holder_principal {
+        panic!("Gainzz {}", total - holder_principal);
+    }
 
     let _total_unbond = Uint128::zero();
 
@@ -464,6 +481,7 @@ pub fn update(
                     if !allowance.is_zero() {
                         // Fully covered by allowance
                         if desired_input <= allowance {
+                            //panic!("SEND FROM 1 {} {}", desired_input, adapter.nick.unwrap());
                             send_from_actions.push(SendFromAction {
                                 owner: config.treasury.clone().to_string(),
                                 recipient: adapter.contract.address.clone().to_string(),
@@ -479,6 +497,7 @@ pub fn update(
                         }
                         // Send all allowance
                         else if !allowance.is_zero() {
+                            //panic!("SEND FROM 2 {} {}", allowance, adapter.nick.unwrap());
                             send_from_actions.push(SendFromAction {
                                 owner: config.treasury.clone().to_string(),
                                 recipient: adapter.contract.address.clone().to_string(),
@@ -549,9 +568,11 @@ pub fn update(
         )?);
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Update {
+    Ok(Response::new()
+       .add_messages(messages)
+       .set_data(to_binary(&adapter::ExecuteAnswer::Update {
             status: ResponseStatus::Success,
-        })?))
+    })?))
 }
 
 pub fn unbond(
@@ -591,7 +612,6 @@ pub fn unbond(
                 ));
             }
         };
-
 
         // Check balance exceeds unbond amount
         if holding.balances[balance_i].amount < amount {
@@ -741,7 +761,7 @@ pub fn unbond(
             VIEWING_KEY.load(deps.storage)?,
             1,
             &full_asset.contract.clone(),
-        )?.amount;
+        )?.allowance;
 
         let total = portion_total + allowance;
 
@@ -794,7 +814,9 @@ pub fn unbond(
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
+    Ok(Response::new()
+       .add_messages(messages)
+       .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: unbond_amount,
         })?))
