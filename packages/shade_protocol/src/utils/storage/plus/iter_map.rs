@@ -136,7 +136,7 @@ where
         Ok(id.item)
     }
 
-    pub fn remove(&self, store: &mut dyn Storage, key: K) -> StdResult<()> {
+    pub fn pop(&self, store: &mut dyn Storage, key: K) -> StdResult<()> {
         let id = match self.id_storage.may_load(store, key.clone())? {
             None => return Err(StdError::generic_err("Iter map is empty")),
             Some(id) => id,
@@ -292,7 +292,16 @@ mod tests {
     fn pop() {
         let mut storage = MockStorage::new();
 
-        generate(10, &mut storage);
+        let iter: IterMap<String, Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
+
+        for i in 0..10 {
+            iter.push(&mut storage, "TESTING".to_string(), &Uint64::new(i as u64))
+                .unwrap();
+        }
+
+        iter.pop(&mut storage, "TESTING".to_string()).unwrap();
+
+        assert_eq!(9, iter.size(&storage, "TESTING".to_string()).unwrap());
     }
 
     #[test]
