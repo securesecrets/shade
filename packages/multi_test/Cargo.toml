@@ -24,6 +24,7 @@ snip20_staking = ["dep:spip_stkd_0"]
 # treasury = ["dep:treasury"]
 # treasury_manager = ["dep:treasury_manager"]
 # shade-oracles = ["dep:shade-oracles"]
+peg_stability = ["dep:peg_stability"]
 
 [dependencies]
 multi-derive = { path = "../multi_derive" }
@@ -42,3 +43,4 @@ query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional 
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git", optional = true }
 shade-admin = { git = "https://github.com/securesecrets/shadeadmin.git" }
+peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
