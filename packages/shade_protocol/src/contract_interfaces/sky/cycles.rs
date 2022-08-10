@@ -7,16 +7,7 @@ use crate::{
     utils::{asset::Contract, Query},
 };
 use cosmwasm_std::{
-    to_binary,
-    Api,
-    CosmosMsg,
-    Deps,
-    DepsMut,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
+    to_binary, Api, CosmosMsg, Deps, DepsMut, Querier, StdError, StdResult, Storage, Uint128,
 };
 use serde::{Deserialize, Serialize};
 
@@ -37,7 +28,7 @@ pub struct ArbPair {
 impl ArbPair {
     // Returns pool amounts in a tuple where 0 is the amount for token0
     pub fn pool_amounts(&mut self, deps: Deps) -> StdResult<(Uint128, Uint128)> {
-        self.validate_pair()?
+        self.validate_pair()?;
         match self.dex {
             Dex::SecretSwap => {
                 let res = secretswap::PairQuery::Pool {}
@@ -256,7 +247,9 @@ impl ArbPair {
             }
             _ => {
                 if self.pair_contract == None {
-                    return Err(StdError::generic_err("Dex pairs must include pair contract"));
+                    return Err(StdError::generic_err(
+                        "Dex pairs must include pair contract",
+                    ));
                 }
             }
         }

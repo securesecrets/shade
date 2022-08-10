@@ -1,3 +1,4 @@
+use crate::c_std::{Addr, Deps, DepsMut, StdError, StdResult, Uint128};
 use crate::{
     contract_interfaces::{dex::dex, mint::mint, oracles::band},
     utils::{
@@ -5,10 +6,9 @@ use crate::{
         price::{normalize_price, translate_price},
     },
 };
-use crate::c_std::{Addr, StdError, StdResult, Deps, DepsMut, Uint128};
 
 use crate::utils::Query;
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Token {
@@ -78,15 +78,9 @@ pub struct CallbackSwap {
     pub expected_return: Uint128,
 }
 
-pub fn is_pair(
-    deps: DepsMut,
-    pair: Contract,
-) -> StdResult<bool> {
+pub fn is_pair(deps: DepsMut, pair: Contract) -> StdResult<bool> {
     Ok(
-        match (PairQuery::Pair {}).query::<PairResponse>(
-            &deps.querier,
-            &pair
-        ) {
+        match (PairQuery::Pair {}).query::<PairResponse>(&deps.querier, &pair) {
             Ok(_) => true,
             Err(_) => false,
         },
@@ -111,11 +105,7 @@ pub fn price(
     ))
 }
 
-pub fn amount_per_scrt(
-    deps: &Deps,
-    pair: dex::TradingPair,
-    sscrt: Contract,
-) -> StdResult<Uint128> {
+pub fn amount_per_scrt(deps: &Deps, pair: dex::TradingPair, sscrt: Contract) -> StdResult<Uint128> {
     let response: SimulationResponse = PairQuery::Simulation {
         offer_asset: Asset {
             amount: Uint128::new(1_000_000), // 1 sSCRT (6 decimals)
@@ -128,22 +118,13 @@ pub fn amount_per_scrt(
             },
         },
     }
-    .query(
-        &deps.querier,
-        &pair.contract
-    )?;
+    .query(&deps.querier, &pair.contract)?;
 
     Ok(response.return_amount)
 }
 
-pub fn pool_cp(
-    deps: &Deps,
-    pair: dex::TradingPair,
-) -> StdResult<Uint128> {
-    let pool: PoolResponse = PairQuery::Pool {}.query(
-        &deps.querier,
-        &pair.contract
-    )?;
+pub fn pool_cp(deps: &Deps, pair: dex::TradingPair) -> StdResult<Uint128> {
+    let pool: PoolResponse = PairQuery::Pool {}.query(&deps.querier, &pair.contract)?;
 
     // Constant Product
     Ok(Uint128::new(

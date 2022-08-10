@@ -2,10 +2,11 @@
 members = [
   # Packages
   "packages/shade_protocol",
-  "packages/secretcli",
-  "packages/contract_harness",
+  #"packages/secretcli",
+  #"packages/contract_harness",
   "packages/multi_test",
   "packages/multi_derive",
+  "packages/network_integration",
 
   # Network setups
   "contracts/airdrop",
@@ -14,9 +15,9 @@ members = [
   "contracts/snip20",
   "contracts/governance",
   "contracts/bonds",
-  "contracts/mint",
-  "contracts/mint_router",
-  "contracts/oracle",
+  #"contracts/mint",
+  #"contracts/mint_router",
+  #"contracts/oracle",
   "contracts/sky",
   "contracts/query_auth",
 
@@ -29,7 +30,7 @@ members = [
   "contracts/rewards_emission",
   #"contracts/lp_shade_swap",
 
-  "contracts/snip20_staking",
+  #"contracts/snip20_staking",
   
   # Mock contracts
   "contracts/mock_band",
@@ -39,8 +40,6 @@ members = [
 
   # Tools
   "tools/doc2book",
-
-  #"packages/network_integration"
 ]
 
 exclude = ["packages/network_integration"]
