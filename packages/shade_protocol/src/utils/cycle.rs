@@ -72,3 +72,58 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
         Cycle::Yearly { years } => now.year_ce().1 - last_refresh.year_ce().1 >= years.u128() as u32,
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    #[test]
+    fn test_exceeds_cycle(
+        last_refresh: String,
+        now: String,
+        cycle: Cycle,
+        exceeds: bool,
+    ) {
+        let last_refresh = parse_utc_datetime(&last_refresh);
+        let now = parse_utc_datitem(&now);
+        assert_eq!(exceeds_cycle(&now, &last_refresh, &cycle), exceeds);
+    }
+}
+
+macro_rules! exceeds_cycle_tests {
+    ($($name:ident: $value:expr,)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let (start, now, cycle, exceeds) = $value;
+                test_exceeds_cycle(start, now, cycle, exceeds);
+            }
+        )*
+    }
+}
+
+exceeds_cycle_tests! {
+    daily_cycle_1day: (
+        "2019-10-12T07:20:50.52Z",
+        "2019-10-13T07:20:50.52Z",
+        Cycle::Daily,
+        true,
+    ),
+    daily_cycle_1y: (
+        "2019-10-12T07:20:50.51Z",
+        "2020-10-12T07:20:50.51Z",
+        Cycle::Daily,
+        false,
+    ),
+    daily_cycle_23h: (
+        "2019-10-12T07:20:50.52Z",
+        "2019-10-13T06:20:50.52Z",
+        Cycle::Daily,
+        false,
+    ),
+    daily_cycle_1s_short: (
+        "2019-10-12T07:20:50.51Z",
+        "2019-10-13T07:20:49.51Z",
+        Cycle::Daily,
+        false,
+    ),
+}

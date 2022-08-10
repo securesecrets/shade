@@ -6,7 +6,8 @@ use shade_oracles::{
 use cosmwasm_std::{StdResult, QuerierWrapper};
 use crate::{
     Contract,
-    utils::{Query}, BLOCK_SIZE,
+    BLOCK_SIZE,
+    utils::{Query},
 };
 use std::collections::HashMap;
 

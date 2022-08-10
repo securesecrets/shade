@@ -44,6 +44,30 @@ pub fn send_msg(
         vec![]
     )?)
 }
+/// Returns a StdResult<CosmosMsg> used to execute Send
+#[allow(clippy::too_many_arguments)]
+pub fn send_from_msg(
+    owner: Addr,
+    recipient: Addr,
+    amount: Uint128,
+    msg: Option<Binary>,
+    memo: Option<String>,
+    padding: Option<String>,
+    contract: &Contract,
+) -> StdResult<CosmosMsg> {
+    Ok(ExecuteMsg::SendFrom {
+        owner: owner.to_string(),
+        recipient: recipient.to_string(),
+        recipient_code_hash: None,
+        amount,
+        msg,
+        memo,
+        padding
+    }.to_cosmos_msg(
+        contract,
+        vec![]
+    )?)
+}
 
 /// Returns a StdResult<CosmosMsg> used to execute Redeem
 pub fn redeem_msg(

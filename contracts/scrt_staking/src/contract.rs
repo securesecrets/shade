@@ -27,7 +27,7 @@ use shade_protocol::{
 };
 
 use crate::{
-    handle,
+    execute,
     query,
     storage::{CONFIG, SELF_ADDRESS, UNBONDING, VIEWING_KEY},
 };
@@ -86,23 +86,23 @@ pub fn execute(
         } => {
             let sender = deps.api.addr_validate(&sender)?;
             let from = deps.api.addr_validate(&from)?;
-            handle::receive(deps, env, info, sender, from, amount, msg)
+            execute::receive(deps, env, info, sender, from, amount, msg)
         },
         ExecuteMsg::UpdateConfig { config } => {
-            handle::try_update_config(deps, env, info, config)
+            execute::try_update_config(deps, env, info, config)
         },
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubExecuteMsg::Unbond { asset, amount } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                handle::unbond(deps, env, info, asset, amount)
+                execute::unbond(deps, env, info, asset, amount)
             },
             adapter::SubExecuteMsg::Claim { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                handle::claim(deps, env, info, asset)
+                execute::claim(deps, env, info, asset)
             },
             adapter::SubExecuteMsg::Update { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                handle::update(deps, env, info, asset)
+                execute::update(deps, env, info, asset)
             },
         },
     }
