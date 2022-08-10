@@ -1,28 +1,22 @@
 use shade_protocol::{
     c_std::{
-        self, to_binary, Api, Binary,
-        CosmosMsg, Env, DepsMut, Deps, Response,
-        Addr, Querier, StdError, StdResult,
-        Storage, Uint128, MessageInfo,
-    },
-    snip20::helpers::{
-        allowance_query, balance_query,
-        decrease_allowance_msg, increase_allowance_msg,
-        register_receive, set_viewing_key_msg,
+        self, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Querier,
+        Response, StdError, StdResult, Storage, Uint128,
     },
     contract_interfaces::{
+        admin::{validate_admin, AdminPermissions},
         dao::{
-            treasury::{
-                Allowance, Config, ExecuteAnswer,
-                Manager, 
-            },
             manager,
+            treasury::{Allowance, Config, ExecuteAnswer, Manager},
         },
         snip20,
-        admin::{SHADE_TREASURY_ADMIN, validate_permission},
+    },
+    snip20::helpers::{
+        allowance_query, balance_query, decrease_allowance_msg, increase_allowance_msg,
+        register_receive, set_viewing_key_msg,
     },
     utils::{
-        asset::{Contract, set_allowance},
+        asset::{set_allowance, Contract},
         cycle::{exceeds_cycle, parse_utc_datetime},
         generic_response::ResponseStatus,
     },
@@ -45,8 +39,8 @@ pub fn receive(
     let key = sender.as_str().as_bytes();
 
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
-            status: ResponseStatus::Success,
-        })?))
+        status: ResponseStatus::Success,
+    })?))
 }
 
 pub fn try_update_config(
@@ -57,13 +51,21 @@ pub fn try_update_config(
 ) -> StdResult<Response> {
     let cur_config = CONFIG.load(deps.storage)?;
 
-    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &cur_config.admin_auth)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::TreasuryAdmin,
+        &info.sender,
+        &env.contract.address,
+        &cur_config.admin_auth,
+    )?;
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
-        status: ResponseStatus::Success,
-    })?))
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
+            status: ResponseStatus::Success,
+        })?),
+    )
 }
 
 pub fn allowance_last_refresh(
@@ -82,11 +84,7 @@ pub fn allowance_last_refresh(
         .map_err(|_| StdError::generic_err(format!("Failed to parse datetime {}", rfc3339)))
 }
 
-pub fn rebalance(
-    deps: DepsMut,
-    env: &Env,
-    asset: Addr,
-) -> StdResult<Response> {
+pub fn rebalance(deps: DepsMut, env: &Env, asset: Addr) -> StdResult<Response> {
     let naive = NaiveDateTime::from_timestamp(env.block.time.seconds() as i64, 0);
     let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
     //let asset = deps.api.addr_validate(asset.as_str())?;
@@ -120,7 +118,6 @@ pub fn rebalance(
     }
     */
 
-
     let managers = MANAGERS.load(deps.storage)?;
 
     // manager_addr: (balance, allowance)
@@ -131,7 +128,6 @@ pub fn rebalance(
 
     // Fetch balances & allowances
     for manager in managers.clone() {
-
         let balance = manager::balance_query(
             deps.querier,
             &full_asset.contract.address.clone(),
@@ -159,14 +155,10 @@ pub fn rebalance(
     MANAGERS.save(deps.storage, &managers)?;
     //let _config = CONFIG.load(deps.storage)?;
 
-    let (
-        amount_allowances,
-        portion_allowances
-    ): (Vec<Allowance>, Vec<Allowance>) = allowances
-        .into_iter()
-        .partition(|a| match a {
+    let (amount_allowances, portion_allowances): (Vec<Allowance>, Vec<Allowance>) =
+        allowances.into_iter().partition(|a| match a {
             Allowance::Amount { .. } => true,
-            Allowance::Portion { .. } => false
+            Allowance::Portion { .. } => false,
         });
 
     for allowance in amount_allowances {
@@ -182,12 +174,10 @@ pub fn rebalance(
 
                 // Refresh allowance if cycle is exceeded
                 if exceeds_cycle(&datetime, &now, cycle) {
-
                     let mut cur_allowance = Uint128::zero();
                     if let Some(m) = manager_data.get(&spender) {
                         cur_allowance = m.1;
-                    }
-                    else {
+                    } else {
                         cur_allowance = allowance_query(
                             &deps.querier,
                             env.contract.address.clone(),
@@ -195,7 +185,8 @@ pub fn rebalance(
                             viewing_key.clone(),
                             1,
                             &full_asset.contract.clone(),
-                        )?.allowance;
+                        )?
+                        .allowance;
 
                         // hasn't been accounted for by manager data
                         amount_total += cur_allowance;
@@ -206,34 +197,30 @@ pub fn rebalance(
                     match amount.cmp(&cur_allowance) {
                         // Decrease Allowance
                         std::cmp::Ordering::Less => {
-                            messages.push(
-                                decrease_allowance_msg(
-                                    spender.clone(),
-                                    cur_allowance - amount,
-                                    //TODO impl expiration
-                                    None,
-                                    None,
-                                    1,
-                                    &full_asset.contract.clone(),
-                                    vec![],
-                                )?
-                            );
-                        },
+                            messages.push(decrease_allowance_msg(
+                                spender.clone(),
+                                cur_allowance - amount,
+                                //TODO impl expiration
+                                None,
+                                None,
+                                1,
+                                &full_asset.contract.clone(),
+                                vec![],
+                            )?);
+                        }
                         // Increase Allowance
                         std::cmp::Ordering::Greater => {
-                            messages.push(
-                                increase_allowance_msg(
-                                    spender.clone(),
-                                    amount - cur_allowance,
-                                    None,
-                                    None,
-                                    1,
-                                    &full_asset.contract.clone(),
-                                    vec![],
-                                )?
-                            );
-                        },
-                        _ => {},
+                            messages.push(increase_allowance_msg(
+                                spender.clone(),
+                                amount - cur_allowance,
+                                None,
+                                None,
+                                1,
+                                &full_asset.contract.clone(),
+                                vec![],
+                            )?);
+                        }
+                        _ => {}
                     }
                 }
             }
@@ -267,15 +254,14 @@ pub fn rebalance(
                  *  - update could do an manager.update on all "children"
                  *  - rebalance can be unique as its not needed as an manager
                  */
-                if manager::claimable_query(deps.querier,
-                                            &asset, 
-                                            self_address.clone(),
-                                            manager.contract.clone()
-                                    )? > Uint128::zero() {
-                    messages.push(manager::claim_msg(
-                        &asset,
-                        manager.contract.clone()
-                    )?);
+                if manager::claimable_query(
+                    deps.querier,
+                    &asset,
+                    self_address.clone(),
+                    manager.contract.clone(),
+                )? > Uint128::zero()
+                {
+                    messages.push(manager::claim_msg(&asset, manager.contract.clone())?);
                 };
 
                 let cur_allowance = allowance_query(
@@ -340,21 +326,19 @@ pub fn rebalance(
 
                     // Unbond remaining
                     if decrease > Uint128::zero() {
-                        messages.push(manager::unbond_msg(
-                            &asset,
-                            decrease,
-                            manager.contract,
-                        )?);
+                        messages.push(manager::unbond_msg(&asset, decrease, manager.contract)?);
                     }
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Rebalance {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::Rebalance {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_register_asset(
@@ -365,7 +349,13 @@ pub fn try_register_asset(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &config.admin_auth)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::TreasuryAdmin,
+        &info.sender,
+        &env.contract.address,
+        &config.admin_auth,
+    )?;
 
     let mut asset_list = ASSET_LIST.load(deps.storage)?;
     asset_list.push(contract.address.clone());
@@ -377,34 +367,26 @@ pub fn try_register_asset(
     })?;
     */
 
-    ASSETS.save(deps.storage,
-                contract.address.clone(),
-                &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
+    ASSETS.save(
+        deps.storage,
+        contract.address.clone(),
+        &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
     )?;
 
     ALLOWANCES.save(deps.storage, contract.address.clone(), &Vec::new())?;
 
     Ok(Response::new()
-       .add_message(
+        .add_message(
             // Register contract in asset
-            register_receive(
-                env.contract.code_hash.clone(),
-                None,
-                contract
-            )?
+            register_receive(env.contract.code_hash.clone(), None, contract)?,
         )
-       .add_message(
+        .add_message(
             // Set viewing key
-            set_viewing_key_msg(
-                VIEWING_KEY.load(deps.storage)?,
-                None,
-                &contract.clone(),
-            )?
+            set_viewing_key_msg(VIEWING_KEY.load(deps.storage)?, None, &contract.clone())?,
         )
         .set_data(to_binary(&ExecuteAnswer::RegisterAsset {
             status: ResponseStatus::Success,
-        })?)
-    )
+        })?))
 }
 
 pub fn register_manager(
@@ -415,7 +397,13 @@ pub fn register_manager(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &config.admin_auth)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::TreasuryAdmin,
+        &info.sender,
+        &env.contract.address,
+        &config.admin_auth,
+    )?;
 
     MANAGERS.update(deps.storage, |mut managers| {
         if managers
@@ -434,9 +422,11 @@ pub fn register_manager(
         Ok(managers)
     })?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RegisterAsset {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterAsset {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 // extract contract address if any
@@ -475,8 +465,13 @@ pub fn allowance(
     let config = CONFIG.load(deps.storage)?;
     //let asset = deps.api.addr_validate(asset.as_str())?;
     /* ADMIN ONLY */
-    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &config.admin_auth)?;
-
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::TreasuryAdmin,
+        &info.sender,
+        &env.contract.address,
+        &config.admin_auth,
+    )?;
 
     let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
@@ -502,7 +497,8 @@ pub fn allowance(
         _ => {}
     };
 
-    let mut apps = ALLOWANCES.may_load(deps.storage, asset.clone())?
+    let mut apps = ALLOWANCES
+        .may_load(deps.storage, asset.clone())?
         .unwrap_or_default();
 
     let allow_address = allowance_address(&allowance);
@@ -583,18 +579,14 @@ pub fn allowance(
     )?,
     */
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Allowance {
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::Allowance {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
-pub fn claim(
-    deps: DepsMut,
-    _env: &Env,
-    info: MessageInfo,
-    asset: Addr,
-) -> StdResult<Response> {
-
+pub fn claim(deps: DepsMut, _env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
     //let asset = deps.api.addr_validate(asset.as_str())?;
     let managers = MANAGERS.load(deps.storage)?;
     let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
@@ -605,29 +597,25 @@ pub fn claim(
     let mut claimed = Uint128::zero();
 
     for manager in managers {
-        let claimable =
-            manager::claimable_query(
-                deps.querier,
-                &asset,
-                self_address.clone(),
-                manager.contract.clone()
-            )?;
+        let claimable = manager::claimable_query(
+            deps.querier,
+            &asset,
+            self_address.clone(),
+            manager.contract.clone(),
+        )?;
 
         if claimable > Uint128::zero() {
-            messages.push(
-                manager::claim_msg(
-                    &asset,
-                    manager.contract.clone()
-                )?
-            );
+            messages.push(manager::claim_msg(&asset, manager.contract.clone())?);
             claimed += claimable;
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&manager::ExecuteAnswer::Claim {
+    Ok(
+        Response::new().set_data(to_binary(&manager::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             amount: claimed,
-    })?))
+        })?),
+    )
 }
 
 pub fn unbond(
@@ -637,9 +625,14 @@ pub fn unbond(
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
-
     //let asset = deps.api.addr_validate(asset.as_str())?;
-    validate_permission(&deps.querier, SHADE_TREASURY_ADMIN, &info.sender, &CONFIG.load(deps.storage)?.admin_auth)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::TreasuryAdmin,
+        &info.sender,
+        &env.contract.address,
+        &CONFIG.load(deps.storage)?.admin_auth,
+    )?;
 
     let managers = MANAGERS.load(deps.storage)?;
     let self_address = SELF_ADDRESS.load(deps.storage)?;
@@ -658,28 +651,23 @@ pub fn unbond(
                         deps.querier,
                         &asset,
                         self_address.clone(),
-                        manager.contract.clone()
+                        manager.contract.clone(),
                     )?;
 
                     if unbondable > unbond_amount {
-                        messages.push(
-                            manager::unbond_msg(
-                                &asset,
-                                unbond_amount,
-                                manager.contract.clone(),
-                            )?
-                        );
+                        messages.push(manager::unbond_msg(
+                            &asset,
+                            unbond_amount,
+                            manager.contract.clone(),
+                        )?);
                         unbond_amount = Uint128::zero();
                         unbonded = unbond_amount;
-                    }
-                    else {
-                        messages.push(
-                            manager::unbond_msg(
-                                &asset,
-                                unbondable,
-                                manager.contract.clone(),
-                            )?
-                        );
+                    } else {
+                        messages.push(manager::unbond_msg(
+                            &asset,
+                            unbondable,
+                            manager.contract.clone(),
+                        )?);
                         unbond_amount = unbond_amount - unbondable;
                         unbonded = unbonded + unbondable;
                     }
@@ -701,8 +689,10 @@ pub fn unbond(
         )));
     }
 
-    Ok(Response::new().set_data(to_binary(&manager::ExecuteAnswer::Unbond {
+    Ok(
+        Response::new().set_data(to_binary(&manager::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount,
-    })?))
+        })?),
+    )
 }

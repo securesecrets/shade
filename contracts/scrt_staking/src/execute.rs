@@ -1,26 +1,8 @@
-use shade_protocol::admin::{SHADE_SCRT_STAKING_ADMIN, validate_permission};
+use shade_protocol::admin::{validate_admin, AdminPermissions};
 use shade_protocol::c_std::{
-    DepsMut,
-    Deps,
-    to_binary,
-    Api,
-    BalanceResponse,
-    BankQuery,
-    Binary,
-    Coin,
-    CosmosMsg,
-    Env,
-    Response,
-    Addr,
-    Querier,
-    StakingMsg,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
-    Validator,
-    MessageInfo,
-    DistributionMsg,
+    to_binary, Addr, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Deps, DepsMut,
+    DistributionMsg, Env, MessageInfo, Querier, Response, StakingMsg, StdError, StdResult, Storage,
+    Uint128, Validator,
 };
 
 use shade_protocol::snip20::helpers::{deposit_msg, redeem_msg};
@@ -62,12 +44,7 @@ pub fn receive(
     let validator = choose_validator(deps, env.block.time.seconds())?;
 
     let messages = vec![
-        redeem_msg(
-            amount,
-            None,
-            None,
-            &config.sscrt,
-        )?,
+        redeem_msg(amount, None, None, &config.sscrt)?,
         CosmosMsg::Staking(StakingMsg::Delegate {
             validator: validator.address.clone(),
             amount: Coin {
@@ -77,12 +54,13 @@ pub fn receive(
         }),
     ];
 
-    let resp = Response::new()
-        .add_messages(messages)
-        .set_data(to_binary(&ExecuteAnswer::Receive {
-            status: ResponseStatus::Success,
-            validator,
-        })?);
+    let resp =
+        Response::new()
+            .add_messages(messages)
+            .set_data(to_binary(&ExecuteAnswer::Receive {
+                status: ResponseStatus::Success,
+                validator,
+            })?);
     Ok(resp)
 }
 
@@ -94,25 +72,28 @@ pub fn try_update_config(
 ) -> StdResult<Response> {
     let cur_config = CONFIG.load(deps.storage)?;
 
-    validate_permission(&deps.querier, SHADE_SCRT_STAKING_ADMIN, &info.sender, &cur_config.admin_auth)?;
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::ScrtStakingAdmin,
+        &info.sender,
+        &env.contract.address,
+        &cur_config.admin_auth,
+    )?;
 
     // Save new info
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
-        status: ResponseStatus::Success,
-    })?))
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
+            status: ResponseStatus::Success,
+        })?),
+    )
 }
 
 /* Claim rewards and restake, hold enough for pending unbondings
  * Send reserves unbonded funds to treasury
  */
-pub fn update(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    asset: Addr,
-) -> StdResult<Response> {
+pub fn update(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let mut messages = vec![];
     //let asset = deps.api.addr_validate(asset.as_str())?;
 
@@ -142,7 +123,11 @@ pub fn update(
 
     if stake_amount > Uint128::zero() {
         let validator = choose_validator(deps, env.block.time.seconds())?;
-        println!("delegating {} to {}", stake_amount.clone(), validator.address.clone());
+        println!(
+            "delegating {} to {}",
+            stake_amount.clone(),
+            validator.address.clone()
+        );
         messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
             validator: validator.address.clone(),
             amount: Coin {
@@ -152,11 +137,11 @@ pub fn update(
         }));
     }
 
-    Ok(Response::new()
-       .add_messages(messages)
-       .set_data(to_binary(&adapter::ExecuteAnswer::Update {
-        status: ResponseStatus::Success,
-    })?))
+    Ok(Response::new().add_messages(messages).set_data(to_binary(
+        &adapter::ExecuteAnswer::Update {
+            status: ResponseStatus::Success,
+        },
+    )?))
 }
 
 pub fn unbond(
@@ -174,8 +159,16 @@ pub fn unbond(
     //let asset = deps.api.addr_validate(asset.as_str())?;
     let config = CONFIG.load(deps.storage)?;
 
-    if  validate_permission(&deps.querier, SHADE_SCRT_STAKING_ADMIN, &info.sender, &config.admin_auth).is_err()
-    && config.owner != info.sender {
+    if validate_admin(
+        &deps.querier,
+        AdminPermissions::ScrtStakingAdmin,
+        &info.sender,
+        &env.contract.address,
+        &config.admin_auth,
+    )
+    .is_err()
+        && config.owner != info.sender
+    {
         return Err(StdError::generic_err("Unauthorized"));
     }
 
@@ -211,31 +204,35 @@ pub fn unbond(
     }
 
     if total < amount {
-        return Err(StdError::generic_err(
-            format!("Total Unbond amount {} greater than delegated {}; rew {}, bal {}",
-                    amount, delegated, rewards, scrt_balance)
-        ));
+        return Err(StdError::generic_err(format!(
+            "Total Unbond amount {} greater than delegated {}; rew {}, bal {}",
+            amount, delegated, rewards, scrt_balance
+        )));
     }
 
-    let mut unbonding = amount;// + UNBONDING.load(deps.storage)?;
+    let mut unbonding = amount; // + UNBONDING.load(deps.storage)?;
     let mut reserves = scrt_balance + rewards;
 
     // Send full unbonding
     if unbonding < reserves {
         println!("UNBOND SENDING ALL UNBONDING");
-        messages.append(&mut wrap_and_send(unbonding, 
-                                           config.owner, 
-                                           config.sscrt, 
-                                           None)?);
+        messages.append(&mut wrap_and_send(
+            unbonding,
+            config.owner,
+            config.sscrt,
+            None,
+        )?);
         unbonding = Uint128::zero();
     }
     // Send all reserves
-    else if !reserves.is_zero(){
+    else if !reserves.is_zero() {
         println!("UNBOND SENDING ALL RESERVES");
-        messages.append(&mut wrap_and_send(reserves, 
-                                           config.owner, 
-                                           config.sscrt, 
-                                           None)?);
+        messages.append(&mut wrap_and_send(
+            reserves,
+            config.owner,
+            config.sscrt,
+            None,
+        )?);
         unbonding = unbonding - reserves;
     }
 
@@ -243,7 +240,6 @@ pub fn unbond(
     UNBONDING.save(deps.storage, &(prev_unbonding + unbonding))?;
 
     while !unbonding.is_zero() {
-
         // Unbond from largest validator first
         let max_delegation = delegations.iter().max_by_key(|d| {
             if undelegated.contains(&d.validator) {
@@ -267,28 +263,19 @@ pub fn unbond(
 
                 // This delegation isn't enough to fully unbond
                 if delegation.amount.amount.clone() < unbonding {
-                    messages.push(
-                        CosmosMsg::Staking(
-                            StakingMsg::Undelegate {
-                                validator: delegation.validator.clone(),
-                                amount: delegation.amount.clone(),
-                            }
-                        )
-                    );
+                    messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
+                        validator: delegation.validator.clone(),
+                        amount: delegation.amount.clone(),
+                    }));
                     unbonding = unbonding - delegation.amount.amount.clone();
-                }
-                else {
-                    messages.push(
-                        CosmosMsg::Staking(
-                            StakingMsg::Undelegate {
-                                validator: delegation.validator.clone(),
-                                amount: Coin {
-                                    denom: delegation.amount.denom.clone(),
-                                    amount: unbonding,
-                                }
-                            }
-                        )
-                    );
+                } else {
+                    messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
+                        validator: delegation.validator.clone(),
+                        amount: Coin {
+                            denom: delegation.amount.denom.clone(),
+                            amount: unbonding,
+                        },
+                    }));
                     unbonding = Uint128::zero();
                 }
 
@@ -297,25 +284,25 @@ pub fn unbond(
         }
     }
 
-    Ok(Response::new()
-       .add_messages(messages)
-       .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
+    Ok(Response::new().add_messages(messages).set_data(to_binary(
+        &adapter::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: unbonding,
-        })?))
+        },
+    )?))
 }
 
-pub fn withdraw_rewards(
-    deps: Deps,
-) -> StdResult<Vec<CosmosMsg>> {
+pub fn withdraw_rewards(deps: Deps) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = vec![];
     let address = SELF_ADDRESS.load(deps.storage)?;
 
     for delegation in deps.querier.query_all_delegations(address.clone())? {
         println!("withdrawing rewards");
-        messages.push(CosmosMsg::Distribution(DistributionMsg::WithdrawDelegatorReward {
-            validator: delegation.validator,
-        }));
+        messages.push(CosmosMsg::Distribution(
+            DistributionMsg::WithdrawDelegatorReward {
+                validator: delegation.validator,
+            },
+        ));
     }
 
     Ok(messages)
@@ -344,12 +331,7 @@ pub fn unwrap_and_stake(
 /* Claims completed unbondings, wraps them,
  * and returns them to treasury
  */
-pub fn claim(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    asset: Addr,
-) -> StdResult<Response> {
+pub fn claim(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     //let asset = deps.api.addr_validate(asset.as_str())?;
@@ -404,19 +386,15 @@ pub fn claim(
         UNBONDING.save(deps.storage, &(u - claim_amount))?;
     }
 
-
-    Ok(Response::new()
-       .add_messages(messages)
-       .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
+    Ok(Response::new().add_messages(messages).set_data(to_binary(
+        &adapter::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             amount: claim_amount,
-        })?))
+        },
+    )?))
 }
 
-pub fn choose_validator(
-    deps: DepsMut,
-    seed: u64,
-) -> StdResult<Validator> {
+pub fn choose_validator(deps: DepsMut, seed: u64) -> StdResult<Validator> {
     let mut validators = deps.querier.query_all_validators()?;
 
     // filter down to viable candidates

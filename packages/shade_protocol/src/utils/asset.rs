@@ -2,7 +2,8 @@ use std::vec;
 
 use crate::{
     c_std::{
-        Addr, Api, BalanceResponse, BankQuery, ContractInfo, Deps, StdError, StdResult, Uint128,
+        Addr, Api, BalanceResponse, BankQuery, ContractInfo, Deps, QuerierWrapper, StdError,
+        StdResult, Uint128,
     },
     BLOCK_SIZE,
 };
@@ -153,8 +154,8 @@ impl From<ContractInfo> for Contract {
 }
 
 //TODO:  move away from here
-pub fn scrt_balance(deps: Deps, address: Addr) -> StdResult<Uint128> {
-    let resp: BalanceResponse = deps.querier.query(
+pub fn scrt_balance(querier: QuerierWrapper, address: Addr) -> StdResult<Uint128> {
+    let resp: BalanceResponse = querier.query(
         &BankQuery::Balance {
             address: address.into(),
             denom: "uscrt".to_string(),
