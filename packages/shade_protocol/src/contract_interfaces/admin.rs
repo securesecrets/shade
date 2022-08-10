@@ -1,10 +1,9 @@
-//! Refers to this https://github.com/securesecrets/shadeadmin
-use cosmwasm_std::{QuerierWrapper, StdError, StdResult, Addr};
-use shade_admin::admin::{ConfigResponse, AdminsResponse, PermissionsResponse, ValidateAdminPermissionResponse};
+use crate::{utils::Query, Contract};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use crate::Contract;
-use crate::utils::Query;
-
+use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
+use shade_admin::admin::{
+    AdminsResponse, ConfigResponse, PermissionsResponse, ValidateAdminPermissionResponse,
+};
 
 #[cw_serde]
 #[derive(QueryResponses)]
@@ -16,24 +15,31 @@ pub enum QueryMsg {
     #[returns(PermissionsResponse)]
     GetPermissions { user: String },
     #[returns(ValidateAdminPermissionResponse)]
-    ValidateAdminPermission { permission: String, user: String },
+    ValidateAdminPermission {
+        permission: String,
+        user: String,
+        contract: String,
+    },
 }
 
 impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-/// Returns an error if the user does not have the passed permission.
-pub fn validate_permission(
+pub fn validate_admin<T: Into<String>>(
     querier: &QuerierWrapper,
-    permission: &str,
-    user: &Addr,
+    permission: AdminPermissions,
+    user: T,
+    contract: T,
     admin_auth: &Contract,
 ) -> StdResult<()> {
-    let admin_resp: StdResult<ValidateAdminPermissionResponse> = QueryMsg::ValidateAdminPermission {
-        permission: permission.to_string(),
-        user: user.to_string().clone(),
-    }.query(querier, admin_auth);
+    let admin_resp: StdResult<ValidateAdminPermissionResponse> =
+        QueryMsg::ValidateAdminPermission {
+            permission: permission.into_string(),
+            user: user.into(),
+            contract: contract.into(),
+        }
+        .query(querier, admin_auth);
 
     match admin_resp {
         Ok(resp) => match resp.has_permission {
@@ -44,11 +50,23 @@ pub fn validate_permission(
     }
 }
 
-// All permission constants for this repo should go here and be named as such:
-// SHADE_{CONTRACT_NAME}_{ROLE_WITHIN_THAT_CONTRACT}_{ID IF THERES MULTIPLE INSTANCES OF THAT CONTRACT AND WE NEED SEPARATE PERMISSIONS FOR EACH}
-pub const SHADE_SCRT_STAKING_ADMIN: &str = "SHADE_SCRT_STAKING_ADMIN";
+pub enum AdminPermissions {
+    QueryAuthAdmin,
+    ScrtStakingAdmin,
+    TreasuryManager,
+    TreasuryAdmin,
+}
 
-pub const SHADE_TREASURY_MANAGER_ADMIN: &str = "SHADE_TREASURY_MANAGER_ADMIN";
-pub const SHADE_TREASURY_ADMIN: &str = "SHADE_TREASURY_ADMIN";
+// NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
 
-pub const SHADE_QUERY_AUTH_ADMIN: &str = "SHADE_QUERY_AUTH_ADMIN";
+impl AdminPermissions {
+    pub fn into_string(self) -> String {
+        match self {
+            AdminPermissions::QueryAuthAdmin => "SHADE_QUERY_AUTH_ADMIN",
+            AdminPermissions::ScrtStakingAdmin => "SHADE_SCRT_STAKING_ADMIN",
+            AdminPermissions::TreasuryManager => "SHADE_TREASURY_MANAGER",
+            AdminPermissions::TreasuryAdmin => "SHADE_TREASURY_ADMIN",
+        }
+        .to_string()
+    }
+}
