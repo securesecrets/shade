@@ -1,4 +1,4 @@
-#[test]
+/*#[test]
 pub fn update_config_err_1() {
     assert!(true);
 }
@@ -56,4 +56,4 @@ pub fn remove_pair_success() {
 #[test]
 pub fn swap_success() {
     assert!(true);
-}
+}*/

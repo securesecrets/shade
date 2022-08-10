@@ -107,7 +107,7 @@ pub fn init_snip20(
     (chain, snip20)
 }
 
-#[test]
+/*#[test]
 pub fn test_test() {
     assert!(true);
-}
+}*/

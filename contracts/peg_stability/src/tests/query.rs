@@ -1,4 +1,4 @@
-#[test]
+/*#[test]
 pub fn get_config() {
     assert!(true);
 }
@@ -26,4 +26,4 @@ pub fn profitable_err_2() {
 #[test]
 pub fn profitable() {
     assert!(true);
-}
+}*/
