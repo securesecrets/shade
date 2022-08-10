@@ -173,7 +173,6 @@ where
     }
 }
 
-// Make struct IterMapIndexable and implement the cool stuff there
 pub struct IndexableIterMap<'a, K, T, N, Ser>
 where
     T: Serialize + DeserializeOwned,
