@@ -32,6 +32,6 @@ schemars = "0.7"
 
 [dev-dependencies]
 shade_admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0" }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["snip20_staking", "multi-test", "shade_admin"] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["snip20_staking", "multi-test", "admin"] }
 serde_json = { version = "1.0.67" }
 shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "governance", "snip20", "query_auth", "admin"  ] }
