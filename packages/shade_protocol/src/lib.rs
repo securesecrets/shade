@@ -14,12 +14,12 @@ pub mod storage {
     pub use cosmwasm_storage::*;
 }
 
-pub use schemars;
-pub use serde;
-pub use thiserror;
 pub use cosmwasm_schema;
+pub use schemars;
 #[cfg(feature = "storage_plus")]
 pub use secret_storage_plus;
+pub use serde;
+pub use thiserror;
 
 #[cfg(feature = "query_auth_lib")]
 pub use query_authentication;
