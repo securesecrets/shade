@@ -99,15 +99,6 @@ fn single_asset_portion_manager_integration(
     )
     .unwrap();
 
-    /*
-    ensemble.add_validator(Validator {
-        address: Addr("validator".into()),
-        commission: Decimal::zero(),
-        max_commission: Decimal::one(),
-        max_change_rate: Decimal::one(),
-    });
-    */
-
     // Register treasury assets
     treasury::ExecuteMsg::RegisterAsset {
         contract: token.clone().into(),
