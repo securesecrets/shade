@@ -1,5 +1,4 @@
 use cosmwasm_std::Deps;
-
 use crate::shared::{STATUS, SUPER, PERMISSIONS, is_valid_permission};
 
 /// Checks if the user has the requested permission. Permissions are case sensitive.
@@ -35,7 +34,7 @@ pub fn query_validate_permission(
                 }
             }
             // If user has been registered, there should be an empty vector there.
-            None => return Err(AdminAuthError::UnregisteredAdmin { user: valid_user }),
+            None => return Err(unregistered_admin ( valid_user.to_string() ).to_err()),
         }
     }
     Ok(ValidateAdminPermissionResponse { has_permission })

@@ -21,9 +21,7 @@ default = []
 
 [dependencies]
 # Needs to be in contract dependency in order for build to work
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-#shade-admin = { path = "../../packages/shade_admin", features = ["core"] }
-# secret-toolkit = { version = "0.2", features = ["permit"] }
+shade-protocol = { path = "../../packages/shade_protocol", features = ["admin"] }
 
 [dev-dependencies]
 rstest = "0.15"
