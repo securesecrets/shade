@@ -1,6 +1,6 @@
 use crate::query::calculate_profit;
 use shade_protocol::{
-    admin::validate_admin,
+    admin::{validate_admin, AdminPermissions},
     c_std::{
         to_binary,
         Decimal,
@@ -24,8 +24,6 @@ use shade_protocol::{
     },
 };
 
-const admin_permission: &str = "STABILITY_CONTRACT_ADMIN";
-
 pub fn try_update_config(
     deps: DepsMut,
     env: Env,
@@ -41,8 +39,9 @@ pub fn try_update_config(
     let mut config = Config::load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        env.contract.address.to_string(),
+        AdminPermissions::StabilityAdmin,
         info.sender.to_string(),
+        env.contract.address.to_string(),
         &config.admin_auth,
     )?;
     let mut messages = vec![];
@@ -89,8 +88,9 @@ pub fn try_set_pairs(
     let mut config = Config::load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        env.contract.address.to_string(),
+        AdminPermissions::StabilityAdmin,
         info.sender.to_string(),
+        env.contract.address.to_string(),
         &config.admin_auth,
     )?;
     if pairs.is_empty() {
@@ -142,8 +142,9 @@ pub fn try_append_pairs(
     //Admin-only
     validate_admin(
         &deps.querier,
-        env.contract.address.to_string(),
+        AdminPermissions::StabilityAdmin,
         info.sender.to_string(),
+        env.contract.address.to_string(),
         &config.admin_auth,
     )?;
     let other_asset;
@@ -183,8 +184,9 @@ pub fn try_remove_pair(
     let mut config = Config::load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        env.contract.address.to_string(),
+        AdminPermissions::StabilityAdmin,
         info.sender.to_string(),
+        env.contract.address.to_string(),
         &config.admin_auth,
     )?;
     if config.pairs.len() == 0 {

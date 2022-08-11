@@ -58,6 +58,7 @@ pub enum AdminPermissions {
     ScrtStakingAdmin,
     TreasuryManager,
     TreasuryAdmin,
+    StabilityAdmin,
 }
 
 // NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
@@ -69,6 +70,7 @@ impl AdminPermissions {
             AdminPermissions::ScrtStakingAdmin => "SHADE_SCRT_STAKING_ADMIN",
             AdminPermissions::TreasuryManager => "SHADE_TREASURY_MANAGER",
             AdminPermissions::TreasuryAdmin => "SHADE_TREASURY_ADMIN",
+            AdminPermissions::StabilityAdmin => "SHADE_STABILITY_ADMIN",
         }
         .to_string()
     }
