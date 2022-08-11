@@ -37,6 +37,3 @@ pub use anyhow::Result as AnyResult;
 // Expose contract in root since its so used
 #[cfg(feature = "utils")]
 pub use utils::asset::Contract;
-
-#[cfg(feature = "admin")]
-pub use shade_admin;

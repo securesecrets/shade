@@ -1,3 +1,10 @@
+use crate::{
+    admin::{QueryMsg, ValidateAdminPermissionResponse},
+    utils::Query,
+    Contract,
+};
+use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
+
 // TODO: move relevant stuff from admin.rs over to here and delete that file
 pub fn validate_admin<T: Into<String>>(
     querier: &QuerierWrapper,
@@ -10,7 +17,6 @@ pub fn validate_admin<T: Into<String>>(
         QueryMsg::ValidateAdminPermission {
             permission: permission.into_string(),
             user: user.into(),
-            contract: contract.into(),
         }
         .query(querier, admin_auth);
 

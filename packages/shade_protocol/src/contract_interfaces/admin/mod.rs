@@ -1,9 +1,12 @@
-use cosmwasm_std::StdResult;
+use crate::{
+    admin::errors::{is_shutdown, is_under_maintenance},
+    utils::{ExecuteCallback, InstantiateCallback, Query},
+};
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Addr, StdResult};
 
 pub mod errors;
 pub mod helpers;
-
-pub type AdminAuthResult<T> = StdResult;
 
 #[cw_serde]
 pub enum AdminAuthStatus {
@@ -14,17 +17,17 @@ pub enum AdminAuthStatus {
 
 impl AdminAuthStatus {
     // Throws an error if status is under maintenance
-    pub fn not_under_maintenance(&self) -> AdminAuthResult<&Self> {
+    pub fn not_under_maintenance(&self) -> StdResult<&Self> {
         if self.eq(&AdminAuthStatus::Maintenance) {
-            return Err(AdminAuthError::IsUnderMaintenance);
+            return Err(is_under_maintenance());
         }
         Ok(self)
     }
 
     // Throws an error if status is shutdown
-    pub fn not_shutdown(&self) -> AdminAuthResult<&Self> {
+    pub fn not_shutdown(&self) -> StdResult<&Self> {
         if self.eq(&AdminAuthStatus::Shutdown) {
-            return Err(AdminAuthError::IsShutdown);
+            return Err(is_shutdown());
         }
         Ok(self)
     }
