@@ -1,5 +1,6 @@
-use cosmwasm_std::{DepsMut, Response, Storage, Api, Addr, StdResult};
-
+use shade_protocol::admin::errors::{no_permission, unregistered_admin};
+use shade_protocol::c_std::{DepsMut, Response, Storage, Api, Addr, StdResult};
+use shade_protocol::admin::{RegistryAction, AdminAuthStatus};
 use crate::shared::{STATUS, ADMINS, PERMISSIONS, SUPER, validate_permissions};
 
 /// Performs one registry update. Cannot be run during a shutdown.
@@ -7,7 +8,7 @@ pub fn try_update_registry(
     store: &mut dyn Storage,
     api: &dyn Api,
     action: RegistryAction,
-) -> AdminAuthResult<Response> {
+) -> StdResult<Response> {
     STATUS.load(store)?.not_shutdown()?;
     let mut admins = ADMINS.load(store)?;
     resolve_registry_action(store, &mut admins, api, action)?;
@@ -19,7 +20,7 @@ pub fn try_update_registry(
 pub fn try_update_registry_bulk(
     deps: DepsMut,
     actions: Vec<RegistryAction>,
-) -> AdminAuthResult<Response> {
+) -> StdResult<Response> {
     STATUS.load(deps.storage)?.not_shutdown()?;
     let mut admins = ADMINS.load(deps.storage)?;
     for action in actions {
@@ -29,13 +30,13 @@ pub fn try_update_registry_bulk(
     Ok(Response::default())
 }
 
-pub fn try_transfer_super(deps: DepsMut, new_super: String) -> AdminAuthResult<Response> {
+pub fn try_transfer_super(deps: DepsMut, new_super: String) -> StdResult<Response> {
     let valid_super = deps.api.addr_validate(new_super.as_str())?;
     // If you're trying to transfer the super permissions to someone who hasn't been registered as an admin,
     // it won't work. This is a safeguard.
     let mut admins = ADMINS.load(deps.storage)?;
     if !admins.contains(&valid_super) {
-        return Err(AdminAuthError::UnregisteredAdmin { user: valid_super });
+        return Err(unregistered_admin(valid_super.as_str()));
     } else {
         // Update the super and remove them from the admin list.
         SUPER.save(deps.storage, &valid_super)?;
@@ -45,7 +46,7 @@ pub fn try_transfer_super(deps: DepsMut, new_super: String) -> AdminAuthResult<R
     Ok(Response::default())
 }
 
-pub fn try_self_destruct(deps: DepsMut) -> AdminAuthResult<Response> {
+pub fn try_self_destruct(deps: DepsMut) -> StdResult<Response> {
     STATUS.load(deps.storage)?.not_shutdown()?;
     // Clear permissions
     let admins = ADMINS.load(deps.storage)?;
@@ -59,7 +60,7 @@ pub fn try_self_destruct(deps: DepsMut) -> AdminAuthResult<Response> {
     Ok(Response::default())
 }
 
-pub fn try_toggle_status(deps: DepsMut, new_status: AdminAuthStatus) -> AdminAuthResult<Response> {
+pub fn try_toggle_status(deps: DepsMut, new_status: AdminAuthStatus) -> StdResult<Response> {
     STATUS.update(deps.storage, |_| -> StdResult<_> { Ok(new_status) })?;
     Ok(Response::default())
 }
@@ -69,7 +70,7 @@ fn resolve_registry_action(
     admins: &mut Vec<Addr>,
     api: &dyn Api,
     action: RegistryAction,
-) -> AdminAuthResult<()> {
+) -> StdResult<()> {
     match action {
         RegistryAction::RegisterAdmin { user } => register_admin(store, admins, api, user),
         RegistryAction::GrantAccess { permissions, user } => {
@@ -88,7 +89,7 @@ fn register_admin(
     admins: &mut Vec<Addr>,
     api: &dyn Api,
     user: String,
-) -> AdminAuthResult<()> {
+) -> StdResult<()> {
     let user_addr = api.addr_validate(user.as_str())?;
     if !admins.contains(&user_addr) {
         // Create an empty permissions for them and add their address to the registered array.
@@ -103,7 +104,7 @@ fn delete_admin(
     admins: &mut Vec<Addr>,
     api: &dyn Api,
     user: String,
-) -> AdminAuthResult<()> {
+) -> StdResult<()> {
     let user_addr = api.addr_validate(user.as_str())?;
     if admins.contains(&user_addr) {
         // Delete admin from list.
@@ -120,18 +121,18 @@ fn grant_access(
     admins: &[Addr],
     mut permissions: Vec<String>,
     user: String,
-) -> AdminAuthResult<()> {
+) -> StdResult<()> {
     let user = api.addr_validate(user.as_str())?;
     validate_permissions(permissions.as_slice())?;
     verify_registered(admins, &user)?;
-    PERMISSIONS.update(store, &user, |old_perms| -> AdminAuthResult<_> {
+    PERMISSIONS.update(store, &user, |old_perms| -> StdResult<_> {
         match old_perms {
             Some(mut old_perms) => {
                 permissions.retain(|c| !old_perms.contains(c));
                 old_perms.append(&mut permissions);
                 Ok(old_perms)
             }
-            None => Err(AdminAuthError::NoPermissions { user: user.clone() }),
+            None => Err(no_permission(user.as_str())),
         }
     })?;
     Ok(())
@@ -143,25 +144,25 @@ fn revoke_access(
     admins: &[Addr],
     permissions: Vec<String>,
     user: String,
-) -> AdminAuthResult<()> {
+) -> StdResult<()> {
     let user = api.addr_validate(user.as_str())?;
     validate_permissions(permissions.as_slice())?;
     verify_registered(admins, &user)?;
-    PERMISSIONS.update(store, &user, |old_perms| -> AdminAuthResult<_> {
+    PERMISSIONS.update(store, &user, |old_perms| -> StdResult<_> {
         match old_perms {
             Some(mut old_perms) => {
                 old_perms.retain(|c| !permissions.contains(c));
                 Ok(old_perms)
             }
-            None => Err(AdminAuthError::NoPermissions { user: user.clone() }),
+            None => Err(no_permission(user.as_str())),
         }
     })?;
     Ok(())
 }
 
-fn verify_registered(admins: &[Addr], user: &Addr) -> AdminAuthResult<()> {
+fn verify_registered(admins: &[Addr], user: &Addr) -> StdResult<()> {
     if !admins.contains(user) {
-        return Err(AdminAuthError::UnregisteredAdmin { user: user.clone() });
+        return Err(no_permission(user.as_str()));
     }
     Ok(())
 }

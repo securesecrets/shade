@@ -1,12 +1,14 @@
-use cosmwasm_std::Deps;
+use shade_protocol::c_std::{Deps, StdResult};
 use crate::shared::{STATUS, SUPER, PERMISSIONS, is_valid_permission};
+use shade_protocol::admin::{ValidateAdminPermissionResponse, PermissionsResponse};
+use shade_protocol::admin::errors::{unregistered_admin, unauthorized_admin};
 
 /// Checks if the user has the requested permission. Permissions are case sensitive.
 pub fn query_validate_permission(
     deps: Deps,
     permission: String,
     user: String,
-) -> AdminAuthResult<ValidateAdminPermissionResponse> {
+) -> StdResult<ValidateAdminPermissionResponse> {
     STATUS
         .load(deps.storage)?
         .not_shutdown()?
@@ -27,14 +29,14 @@ pub fn query_validate_permission(
                 if permissions.iter().any(|perm| permission.eq(perm)) {
                     has_permission = true;
                 } else {
-                    return Err(AdminAuthError::UnauthorizedAdmin {
-                        user: valid_user,
-                        permission,
-                    });
+                    return Err(unauthorized_admin(
+                        valid_user.as_str(),
+                        permission.as_str(),
+                    ));
                 }
             }
             // If user has been registered, there should be an empty vector there.
-            None => return Err(unregistered_admin ( valid_user.to_string() ).to_err()),
+            None => return Err(unregistered_admin(valid_user.as_str())),
         }
     }
     Ok(ValidateAdminPermissionResponse { has_permission })

@@ -1,16 +1,17 @@
-use cosmwasm_std::{
+use shade_protocol::admin::errors::unauthorized_super;
+use shade_protocol::c_std::{
     entry_point, to_binary, Addr, Api, Deps, DepsMut, Env, MessageInfo, QueryResponse, Response,
     StdResult, Storage,
 };
-use shade_admin::admin::{
-    AdminAuthError, AdminAuthResult, AdminAuthStatus, AdminsResponse, ConfigResponse, ExecuteMsg,
+use shade_protocol::admin::{
+    AdminAuthStatus, AdminsResponse, ConfigResponse, ExecuteMsg,
     InstantiateMsg, PermissionsResponse, QueryMsg, RegistryAction, ValidateAdminPermissionResponse,
 };
-use shade_admin::storage::{Item, Map};
 
 use crate::execute::{try_update_registry, try_update_registry_bulk, try_transfer_super, try_self_destruct, try_toggle_status};
 use crate::query::query_validate_permission;
 use crate::shared::{SUPER, ADMINS, STATUS, PERMISSIONS};
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -38,7 +39,7 @@ pub fn execute(
     _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> AdminAuthResult<Response> {
+) -> StdResult<Response> {
     // Only the super user can execute anything on this contract.
     is_super(deps.storage, &info.sender)?;
     // Super user is assumed to have been verified by this point.
@@ -53,19 +54,17 @@ pub fn execute(
     }
 }
 
-fn is_super(storage: &dyn Storage, address: &Addr) -> AdminAuthResult<()> {
+fn is_super(storage: &dyn Storage, address: &Addr) -> StdResult<()> {
     let super_admin = SUPER.load(storage)?;
     if super_admin == *address {
         Ok(())
     } else {
-        Err(AdminAuthError::UnauthorizedSuper {
-            expected_super_admin: super_admin,
-        })
+        Err(unauthorized_super(super_admin.as_str()))
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> AdminAuthResult<QueryResponse> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<QueryResponse> {
     match msg {
         QueryMsg::GetConfig {} => Ok(to_binary(&ConfigResponse {
             super_admin: SUPER.load(deps.storage)?,
