@@ -1,12 +1,15 @@
-use shade_protocol::math_compat::Uint128;
 use shade_protocol::c_std::{
     to_binary, Api, Binary, Env, Extern, HandleResponse, InitResponse, Querier, StdResult, Storage,
 };
+use shade_protocol::math_compat::Uint128;
 
 use shade_protocol::secret_toolkit::snip20::set_viewing_key_msg;
 
 use shade_protocol::contract_interfaces::{
-    bonds::{Config, HandleMsg, InitMsg, QueryMsg, SnipViewingKey, errors::{bonding_period_below_minimum_time, bond_discount_above_maximum_rate}},
+    bonds::{
+        errors::{bond_discount_above_maximum_rate, bonding_period_below_minimum_time},
+        Config, HandleMsg, InitMsg, QueryMsg, SnipViewingKey,
+    },
     snip20::helpers::fetch_snip20,
 };
 
@@ -16,8 +19,8 @@ use crate::{
     handle::{self, register_receive},
     query,
     state::{
-        allocated_allowance_w, allowance_key_w, deposit_assets_w, config_w,
-        global_total_claimed_w, global_total_issued_w, issued_asset_w,
+        allocated_allowance_w, allowance_key_w, config_w, deposit_assets_w, global_total_claimed_w,
+        global_total_issued_w, issued_asset_w,
     },
 };
 
@@ -34,14 +37,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             msg.bonding_period,
             msg.global_minimum_bonding_period,
         ));
-      }
+    }
 
-      if msg.discount > msg.global_maximum_discount {
+    if msg.discount > msg.global_maximum_discount {
         return Err(bond_discount_above_maximum_rate(
             msg.discount,
             msg.global_maximum_discount,
         ));
-      }
+    }
 
     let state = Config {
         limit_admin: msg.limit_admin,
@@ -177,9 +180,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 err_deposit_price,
                 minting_bond,
             ),
-            HandleMsg::CloseBond {
-                deposit_asset, ..
-            } => handle::try_close_bond(deps, env, deposit_asset),
+            HandleMsg::CloseBond { deposit_asset, .. } => {
+                handle::try_close_bond(deps, env, deposit_asset)
+            }
             HandleMsg::Receive {
                 sender,
                 from,
