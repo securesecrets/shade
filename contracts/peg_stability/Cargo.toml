@@ -24,7 +24,7 @@ default = []
 backtraces = ["shade-protocol/backtraces"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["peg_stability", "sky-utils", "adapter", "shade_admin"] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["peg_stability", "shade_admin"] }
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", branch="develop"}
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 #shade-admin = { git = "https://github.com/securesecrets/shadeadmin", branch = "cosmwasm-v1-refactor", optional = true }

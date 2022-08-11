@@ -16,9 +16,10 @@ use shade_protocol::{
         peg_stability::{CalculateRes, Config, ExecuteAnswer, ViewingKey},
         sky::cycles::ArbPair,
     },
-    snip20::helpers::{fetch_snip20, send_msg, set_viewing_key_msg, TokenInfo},
+    snip20::helpers::{send_msg, set_viewing_key_msg, token_info, TokenInfo},
     utils::{
         asset::Contract,
+        generic_response::ResponseStatus,
         storage::plus::{GenericItemStorage, ItemStorage},
     },
 };
@@ -27,7 +28,7 @@ pub fn try_update_config(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    shd_admin: Option<Contract>,
+    admin_auth: Option<Contract>,
     snip20: Option<Contract>,
     treasury: Option<Contract>,
     oracle: Option<Contract>,
@@ -40,11 +41,11 @@ pub fn try_update_config(
         &deps.querier,
         env.contract.address.to_string(),
         info.sender.to_string(),
-        &config.shd_admin,
+        &config.admin_auth,
     )?;
     let mut messages = vec![];
-    if let Some(shd_admin) = shd_admin {
-        config.shd_admin = shd_admin;
+    if let Some(admin_auth) = admin_auth {
+        config.admin_auth = admin_auth;
     }
     if let Some(snip20) = snip20 {
         if !(config.pairs.len() == 0) {
@@ -72,7 +73,7 @@ pub fn try_update_config(
         .add_messages(messages)
         .set_data(to_binary(&ExecuteAnswer::UpdateConfig {
             config,
-            status: true,
+            status: ResponseStatus::Success,
         })?))
 }
 
@@ -88,19 +89,19 @@ pub fn try_set_pairs(
         &deps.querier,
         env.contract.address.to_string(),
         info.sender.to_string(),
-        &config.shd_admin,
+        &config.admin_auth,
     )?;
     if pairs.is_empty() {
         return Err(StdError::generic_err("Must pass at least one pair"));
     }
-    let res0: TokenInfo = fetch_snip20(&pairs[0].token0, &deps.querier)?.token_info;
-    let res1: TokenInfo = fetch_snip20(&pairs[0].token1, &deps.querier)?.token_info;
+    let token0_info: TokenInfo = token_info(&deps.querier, &pairs[0].token0)?;
+    let token1_info: TokenInfo = token_info(&deps.querier, &pairs[0].token1)?;
     let other_asset;
     if config.snip20 == pairs[0].token0 {
-        config.symbols = vec![res0.symbol, res1.symbol];
+        config.symbols = vec![token0_info.symbol, token1_info.symbol];
         other_asset = pairs[0].token1.clone();
     } else {
-        config.symbols = vec![res1.symbol, res0.symbol];
+        config.symbols = vec![token1_info.symbol, token0_info.symbol];
         other_asset = pairs[0].token0.clone();
     }
     for pair in pairs.clone() {
@@ -119,7 +120,7 @@ pub fn try_set_pairs(
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::SetPairs {
             pairs: config.pairs,
-            status: true,
+            status: ResponseStatus::Success,
         })?),
     )
 }
@@ -131,9 +132,9 @@ pub fn try_append_pairs(
     pairs: Vec<ArbPair>,
 ) -> StdResult<Response> {
     let mut config = Config::load(deps.storage)?;
-    if config.pairs.len() == 0 {
+    if config.pairs.is_empty() {
         return Ok(try_set_pairs(deps, env, info, pairs)?);
-    } else if pairs.len() < 1 {
+    } else if pairs.is_empty() {
         return Err(StdError::generic_err("Must pass at least 1 pair"));
     }
     //Admin-only
@@ -141,7 +142,7 @@ pub fn try_append_pairs(
         &deps.querier,
         env.contract.address.to_string(),
         info.sender.to_string(),
-        &config.shd_admin,
+        &config.admin_auth,
     )?;
     let other_asset;
     if config.snip20 == config.pairs[0].token0 {
@@ -165,7 +166,7 @@ pub fn try_append_pairs(
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::AppendPairs {
             pairs: config.pairs,
-            status: true,
+            status: ResponseStatus::Success,
         })?),
     )
 }
@@ -174,7 +175,7 @@ pub fn try_remove_pair(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    index: Uint128,
+    pair_address: String,
 ) -> StdResult<Response> {
     //Admin-only
     let mut config = Config::load(deps.storage)?;
@@ -182,21 +183,32 @@ pub fn try_remove_pair(
         &deps.querier,
         env.contract.address.to_string(),
         info.sender.to_string(),
-        &config.shd_admin,
+        &config.admin_auth,
     )?;
-    let i = index.u128() as usize;
     if config.pairs.len() == 0 {
         return Err(StdError::generic_err("No pairs to remove"));
     }
-    if i >= config.pairs.len() {
-        return Err(StdError::generic_err("Index out of bounds"));
+    for (i, pair) in config.pairs.iter().enumerate() {
+        match pair.pair_contract.clone() {
+            Some(contract) => {
+                if contract.address == pair_address {
+                    config.pairs.remove(i);
+                    config.save(deps.storage)?;
+                    return Ok(
+                        Response::new().set_data(to_binary(&ExecuteAnswer::RemovePair {
+                            pairs: config.pairs,
+                            status: ResponseStatus::Success,
+                        })?),
+                    );
+                }
+            }
+            None => continue,
+        }
     }
-    config.pairs.remove(i);
-    config.save(deps.storage)?;
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::RemovePair {
             pairs: config.pairs,
-            status: true,
+            status: ResponseStatus::Failure,
         })?),
     )
 }
@@ -233,6 +245,6 @@ pub fn try_swap(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         .set_data(to_binary(&ExecuteAnswer::Swap {
             profit: res.profit,
             payback: res.payback,
-            status: true,
+            status: ResponseStatus::Success,
         })?))
 }

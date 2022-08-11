@@ -2,6 +2,7 @@ use crate::{
     contract_interfaces::sky::cycles::{ArbPair, Offer},
     utils::{
         asset::Contract,
+        generic_response::ResponseStatus,
         storage::plus::{GenericItemStorage, ItemStorage},
         ExecuteCallback,
         InstantiateCallback,
@@ -14,7 +15,7 @@ use secret_storage_plus::Item;
 
 #[cw_serde]
 pub struct Config {
-    pub shd_admin: Contract,
+    pub admin_auth: Contract,
     pub snip20: Contract,
     pub pairs: Vec<ArbPair>,
     pub oracle: Contract,
@@ -38,7 +39,7 @@ impl GenericItemStorage<String> for ViewingKey {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub shd_admin: Contract,
+    pub admin_auth: Contract,
     pub snip20: Contract,
     pub oracle: Contract,
     pub treasury: Contract,
@@ -54,7 +55,7 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     UpdateConfig {
-        shd_admin: Option<Contract>,
+        admin_auth: Option<Contract>,
         snip20: Option<Contract>,
         oracle: Option<Contract>,
         treasury: Option<Contract>,
@@ -74,7 +75,7 @@ pub enum ExecuteMsg {
         padding: Option<String>,
     },
     RemovePair {
-        index: Uint128,
+        pair_address: String,
         padding: Option<String>,
     },
     Swap {
@@ -89,28 +90,28 @@ impl ExecuteCallback for ExecuteMsg {
 #[cw_serde]
 pub enum ExecuteAnswer {
     Init {
-        status: bool,
+        status: ResponseStatus,
     },
     UpdateConfig {
         config: Config,
-        status: bool,
+        status: ResponseStatus,
     },
     SetPairs {
         pairs: Vec<ArbPair>,
-        status: bool,
+        status: ResponseStatus,
     },
     AppendPairs {
         pairs: Vec<ArbPair>,
-        status: bool,
+        status: ResponseStatus,
     },
     RemovePair {
         pairs: Vec<ArbPair>,
-        status: bool,
+        status: ResponseStatus,
     },
     Swap {
         profit: Uint128,
         payback: Uint128,
-        status: bool,
+        status: ResponseStatus,
     },
 }
 

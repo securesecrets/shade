@@ -33,9 +33,7 @@ pub fn get_balance(deps: Deps) -> StdResult<QueryAnswer> {
 
     match res {
         snip20::QueryAnswer::Balance { amount } => Ok(QueryAnswer::Balance { snip20_bal: amount }),
-        _ => Ok(QueryAnswer::Balance {
-            snip20_bal: Uint128::zero(),
-        }),
+        _ => Err(StdError::generic_err("snip20 bal query failed")),
     }
 }
 
@@ -67,7 +65,7 @@ pub fn calculate_profit(deps: Deps) -> StdResult<CalculateRes> {
         Uint128::new(res[0].data.rate.u128()),
         Uint128::new(res[1].data.rate.u128()),
     ];*/
-    let prices = vec![Uint128::zero(), Uint128::zero()];
+    let prices = vec![Uint128::zero(); 2];
     let mut max_swap_amount = Uint128::zero();
     let mut index = 0usize;
     let snip20_dec;
@@ -155,8 +153,8 @@ fn calculate_swap_amount(
     let nom = Uint256::from(pricebuy.isqrt())
         * Uint256::from(poolbuy.isqrt())
         * Uint256::from(poolsell.isqrt());
-    let denom = Uint256::from(pricesell.isqrt());
-    let right = nom / denom;
+    let denominator = Uint256::from(pricesell.isqrt());
+    let right = nom / denominator;
     let res = right.checked_sub(Uint256::from(poolsell));
     match res {
         Ok(amount) => match Uint128::try_from(amount) {

@@ -18,7 +18,10 @@ use shade_protocol::{
         peg_stability::{Config, ExecuteAnswer, ExecuteMsg, InstantiateMsg, QueryMsg, ViewingKey},
     },
     snip20::helpers::set_viewing_key_msg,
-    utils::storage::plus::{GenericItemStorage, ItemStorage},
+    utils::{
+        generic_response::ResponseStatus,
+        storage::plus::{GenericItemStorage, ItemStorage},
+    },
 };
 
 pub fn instantiate(
@@ -28,7 +31,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
-        shd_admin: msg.shd_admin.clone(),
+        admin_auth: msg.admin_auth.clone(),
         snip20: msg.snip20.clone(),
         pairs: vec![],
         oracle: msg.oracle.clone(),
@@ -41,19 +44,21 @@ pub fn instantiate(
     config.save(deps.storage)?;
     ViewingKey::save(deps.storage, &msg.viewing_key.clone())?;
     Ok(Response::new()
-        .add_submessage(SubMsg::new(set_viewing_key_msg(
+        .add_message(set_viewing_key_msg(
             msg.viewing_key.to_string(),
             None,
             &msg.snip20,
-        )?))
-        .set_data(to_binary(&ExecuteAnswer::Init { status: true })?))
+        )?)
+        .set_data(to_binary(&ExecuteAnswer::Init {
+            status: ResponseStatus::Success,
+        })?))
 }
 
 #[entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::UpdateConfig {
-            shd_admin,
+            admin_auth,
             snip20,
             oracle,
             treasury,
@@ -64,7 +69,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             deps,
             env,
             info,
-            shd_admin,
+            admin_auth,
             snip20,
             oracle,
             treasury,
@@ -73,7 +78,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ),
         ExecuteMsg::SetPairs { pairs, .. } => handle::try_set_pairs(deps, env, info, pairs),
         ExecuteMsg::AppendPairs { pairs, .. } => handle::try_append_pairs(deps, env, info, pairs),
-        ExecuteMsg::RemovePair { index, .. } => handle::try_remove_pair(deps, env, info, index),
+        ExecuteMsg::RemovePair { pair_address, .. } => {
+            handle::try_remove_pair(deps, env, info, pair_address)
+        }
         ExecuteMsg::Swap { .. } => handle::try_swap(deps, env, info),
     }
 }
