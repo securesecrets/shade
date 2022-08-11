@@ -24,6 +24,8 @@ use shade_protocol::{
     },
 };
 
+const admin_permission: &str = "STABILITY_CONTRACT_ADMIN";
+
 pub fn try_update_config(
     deps: DepsMut,
     env: Env,
