@@ -32,5 +32,5 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 ] }
 
 [dev-dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "multi-test", "shade_admin" ] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "multi-test", "admin" ] }
 shade-multi-test = { path = "../../packages/multi_test", features = [ "snip20", "query_auth", "admin" ] }
