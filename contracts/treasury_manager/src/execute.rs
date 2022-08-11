@@ -119,8 +119,6 @@ pub fn try_register_asset(
         &config.admin_auth,
     )?;
 
-    //let contract = contract.clone().into_valid(deps.api)?;
-
     ASSET_LIST.update(deps.storage, |mut list| -> StdResult<Vec<Addr>> {
         list.push(contract.address.clone());
         Ok(list)
@@ -409,7 +407,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
             holding.balances[i].amount += total - holder_principal;
         }
-        HOLDING.save(deps.storage, config.treasury.clone(), &holding);
+        HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
     } else if total < holder_principal {
         //TODO losses
         todo!("losses");

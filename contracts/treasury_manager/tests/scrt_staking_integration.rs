@@ -1,43 +1,20 @@
 use shade_protocol::{
+    c_std::{to_binary, Addr, Coin, Decimal, Uint128, Validator},
     contract_interfaces::{
         dao::{
-            treasury_manager::{
-                self,
-                Allocation,
-                AllocationType,
-            },
-            scrt_staking,
-            adapter,
-            manager,
+            adapter, manager, scrt_staking,
+            treasury_manager::{self, Allocation, AllocationType},
         },
         snip20,
     },
-    utils::{
-        asset::Contract,
-        MultiTestable,
-        InstantiateCallback,
-        ExecuteCallback,
-        Query,
-    },
-    c_std::{
-        to_binary, Addr, Uint128,
-        Decimal, Validator,
-        Coin,
-    },
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
-use shade_protocol::multi_test::{ 
-    App,
-    SudoMsg,
-    StakingSudo,
-    BankSudo,
-};
-use shade_multi_test::multi::{
-    treasury_manager::TreasuryManager,
-    snip20::Snip20,
-    scrt_staking::ScrtStaking,
-};
 use shade_multi_test::multi::admin::init_admin_auth;
+use shade_multi_test::multi::{
+    scrt_staking::ScrtStaking, snip20::Snip20, treasury_manager::TreasuryManager,
+};
+use shade_protocol::multi_test::{App, BankSudo, StakingSudo, SudoMsg};
 
 /* No adapters configured
  * All assets will sit on manager unused as "reserves"
@@ -53,7 +30,6 @@ fn single_holder_scrt_staking_adapter(
     expected_manager_treasury: Uint128,
     unbond_amount: Uint128,
 ) {
-
     let mut app = App::default();
     let viewing_key = "unguessable".to_string();
 
@@ -61,9 +37,12 @@ fn single_holder_scrt_staking_adapter(
     let holder = Addr::unchecked("holder");
     let treasury = Addr::unchecked("treasury");
     let validator = Addr::unchecked("validator");
-    let admin_auth = init_admin_auth(&mut app, &admin);
+    let admin_auth = init_admin_auth(&mut app, &admin, None);
 
-    app.sudo(SudoMsg::Staking(StakingSudo::AddValidator { validator: validator.to_string().clone() })).unwrap();
+    app.sudo(SudoMsg::Staking(StakingSudo::AddValidator {
+        validator: validator.to_string().clone(),
+    }))
+    .unwrap();
 
     let token = snip20::InstantiateMsg {
         name: "secretSCRT".into(),
@@ -81,13 +60,23 @@ fn single_holder_scrt_staking_adapter(
             enable_burn: Some(false),
             enable_transfer: Some(true),
         }),
-    }.test_init(Snip20::default(), &mut app, admin.clone(), "token", &[]).unwrap();
+    }
+    .test_init(Snip20::default(), &mut app, admin.clone(), "token", &[])
+    .unwrap();
 
     let manager = treasury_manager::InstantiateMsg {
         admin_auth: admin_auth.clone().into(),
         treasury: treasury.clone().into(),
         viewing_key: viewing_key.clone(),
-    }.test_init(TreasuryManager::default(), &mut app, admin.clone(), "manager", &[]).unwrap();
+    }
+    .test_init(
+        TreasuryManager::default(),
+        &mut app,
+        admin.clone(),
+        "manager",
+        &[],
+    )
+    .unwrap();
 
     let scrt_staking = scrt_staking::InstantiateMsg {
         admin_auth: admin_auth.into(),
@@ -95,28 +84,44 @@ fn single_holder_scrt_staking_adapter(
         sscrt: token.clone().into(),
         validator_bounds: None,
         viewing_key: viewing_key.clone(),
-    }.test_init(ScrtStaking::default(), &mut app, admin.clone(), "scrt_staking", &[]).unwrap();
+    }
+    .test_init(
+        ScrtStaking::default(),
+        &mut app,
+        admin.clone(),
+        "scrt_staking",
+        &[],
+    )
+    .unwrap();
     println!("scrt staking {}", scrt_staking.address.clone());
 
-    snip20::ExecuteMsg::SetViewingKey{
+    snip20::ExecuteMsg::SetViewingKey {
         key: viewing_key.clone(),
         padding: None,
-    }.test_exec(&token, &mut app, holder.clone(), &[]).unwrap();
+    }
+    .test_exec(&token, &mut app, holder.clone(), &[])
+    .unwrap();
 
-    snip20::ExecuteMsg::SetViewingKey{
+    snip20::ExecuteMsg::SetViewingKey {
         key: viewing_key.clone(),
         padding: None,
-    }.test_exec(&token, &mut app, treasury.clone(), &[]).unwrap();
+    }
+    .test_exec(&token, &mut app, treasury.clone(), &[])
+    .unwrap();
 
     // Register manager assets
     treasury_manager::ExecuteMsg::RegisterAsset {
         contract: token.clone().into(),
-    }.test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
+    }
+    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Add 'holder' as holder
     treasury_manager::ExecuteMsg::AddHolder {
         holder: holder.to_string().clone().into(),
-    }.test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
+    }
+    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Allocate to scrt_staking from manager
     treasury_manager::ExecuteMsg::Allocate {
@@ -127,24 +132,30 @@ fn single_holder_scrt_staking_adapter(
                 address: scrt_staking.address.clone(),
                 code_hash: scrt_staking.code_hash.clone(),
             },
-            alloc_type: alloc_type,
+            alloc_type,
             amount: alloc_amount,
             tolerance: Uint128::zero(),
-        }
-    }.test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
+        },
+    }
+    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .unwrap();
 
-    let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-    app.sudo(SudoMsg::Bank(BankSudo::Mint { 
+    let deposit_coin = Coin {
+        denom: "uscrt".into(),
+        amount: deposit,
+    };
+    app.sudo(SudoMsg::Bank(BankSudo::Mint {
         to_address: holder.to_string().clone(),
         amount: vec![deposit_coin.clone()],
-    })).unwrap();
+    }))
+    .unwrap();
 
     assert!(deposit_coin.amount > Uint128::zero());
 
     // Wrap L1
-    &snip20::ExecuteMsg::Deposit {
-        padding: None,
-    }.test_exec(&token, &mut app, holder.clone(), &[deposit_coin]).unwrap();
+    &snip20::ExecuteMsg::Deposit { padding: None }
+        .test_exec(&token, &mut app, holder.clone(), &[deposit_coin])
+        .unwrap();
 
     // Deposit funds into manager
     println!("deposit to manager");
@@ -155,62 +166,75 @@ fn single_holder_scrt_staking_adapter(
         msg: None,
         memo: None,
         padding: None,
-    }.test_exec(&token, &mut app, holder.clone(), &[]).unwrap();
+    }
+    .test_exec(&token, &mut app, holder.clone(), &[])
+    .unwrap();
 
     // Update manager
-    manager::ExecuteMsg::Manager(
-        manager::SubExecuteMsg::Update {
-            asset: token.address.to_string().clone(),
-        }
-    ).test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
-    
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
+        asset: token.address.to_string().clone(),
+    })
+    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .unwrap();
+
     // Balance Checks
 
     // manager reported holder balance
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Balance {
-            asset: token.address.to_string().clone(),
-            holder: holder.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond Manager Holder Balance");
-        },
+        }
         _ => assert!(false),
     };
 
     // manager reported treasury balance
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Balance {
-            asset: token.address.to_string().clone(),
-            holder: treasury.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+        holder: treasury.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Pre-unbond Manager Treasury Balance");
-        },
+            assert_eq!(
+                amount,
+                Uint128::zero(),
+                "Pre-unbond Manager Treasury Balance"
+            );
+        }
         _ => assert!(false),
     };
 
     // scrt staking balance
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Balance {
-            asset: token.address.to_string().clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&scrt_staking, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Pre-unbond scrt staking balance");
-        },
+            assert_eq!(
+                amount, expected_scrt_staking,
+                "Pre-unbond scrt staking balance"
+            );
+        }
         _ => assert!(false),
     };
 
     // manager unbondable
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Unbondable {
-            asset: token.address.to_string().clone(),
-            holder: holder.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
+        asset: token.address.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond unbondable");
         }
@@ -220,12 +244,13 @@ fn single_holder_scrt_staking_adapter(
     let mut reserves = Uint128::zero();
 
     // Reserves
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Reserves {
-            asset: token.address.to_string().clone(),
-            holder: holder.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
+        asset: token.address.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Reserves { amount } => {
             reserves = amount;
             assert_eq!(amount, expected_manager_holder, "Pre-unbond reserves");
@@ -234,12 +259,13 @@ fn single_holder_scrt_staking_adapter(
     };
 
     // Claimable
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Claimable {
-            asset: token.address.to_string().clone(),
-            holder: holder.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Claimable {
+        asset: token.address.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Pre-unbond claimable");
         }
@@ -247,123 +273,157 @@ fn single_holder_scrt_staking_adapter(
     };
 
     // Add Rewards
-    app.sudo(SudoMsg::Staking(StakingSudo::AddRewards { amount: Coin { amount: rewards, denom: "uscrt".into() } })).unwrap();
+    app.sudo(SudoMsg::Staking(StakingSudo::AddRewards {
+        amount: Coin {
+            amount: rewards,
+            denom: "uscrt".into(),
+        },
+    }))
+    .unwrap();
 
     // Update scrt staking to claim & restake rewards
-    adapter::ExecuteMsg::Adapter(
-        adapter::SubExecuteMsg::Update {
-            asset: token.address.to_string().clone(),
-        }
-    ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
+    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+        asset: token.address.to_string().clone(),
+    })
+    .test_exec(&scrt_staking, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Update manager to detect & rebalance after gainz
-    manager::ExecuteMsg::Manager(
-        manager::SubExecuteMsg::Update {
-            asset: token.address.to_string().clone(),
-        }
-    ).test_exec(&manager, &mut app, admin.clone(), &[]).unwrap();
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
+        asset: token.address.to_string().clone(),
+    })
+    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // holder unbond from manager
     println!("manager unbond {}", unbond_amount);
-    manager::ExecuteMsg::Manager(
-        manager::SubExecuteMsg::Unbond {
-            asset: token.address.to_string().clone(),
-            amount: unbond_amount,
-        }
-    ).test_exec(&manager, &mut app, holder.clone(), &[]).unwrap();
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Unbond {
+        asset: token.address.to_string().clone(),
+        amount: unbond_amount,
+    })
+    .test_exec(&manager, &mut app, holder.clone(), &[])
+    .unwrap();
 
     // scrt staking Unbondable
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Unbondable {
-            asset: token.address.to_string().clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&scrt_staking, &app)
+    .unwrap()
+    {
         adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, deposit - unbond_amount, "Post-unbond scrt staking unbondable");
+            assert_eq!(
+                amount,
+                deposit - unbond_amount,
+                "Post-unbond scrt staking unbondable"
+            );
         }
         _ => assert!(false),
     };
 
     // manager Unbondable
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Unbondable {
-            asset: token.address.to_string().clone(),
-            holder: holder.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
+        asset: token.address.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, deposit - unbond_amount, "Post-unbond manager holder unbondable");
+            assert_eq!(
+                amount,
+                deposit - unbond_amount,
+                "Post-unbond manager holder unbondable"
+            );
         }
         _ => assert!(false),
     };
 
     // Unbonding
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Unbonding {
-            asset: token.address.to_string().clone(),
-            holder: holder.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Unbonding {
+        asset: token.address.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Unbonding { amount } => {
-            assert_eq!(amount, unbond_amount - reserves, "Post-unbond manager unbonding");
+            assert_eq!(
+                amount,
+                unbond_amount - reserves,
+                "Post-unbond manager unbonding"
+            );
         }
         _ => assert!(false),
     };
 
     // Manager Claimable
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Claimable {
-            asset: token.address.to_string().clone(),
-            holder: holder.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Claimable {
+        asset: token.address.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Pre-fastforward manager claimable");
         }
         _ => assert!(false),
     };
 
-    app.sudo(SudoMsg::Staking(StakingSudo::FastForwardUndelegate {})).unwrap();
+    app.sudo(SudoMsg::Staking(StakingSudo::FastForwardUndelegate {}))
+        .unwrap();
 
     // Scrt Staking Claimable
-    match adapter::QueryMsg::Adapter(
-        adapter::SubQueryMsg::Claimable {
-            asset: token.address.to_string().clone(),
-        }
-    ).test_query(&scrt_staking, &app).unwrap() {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&scrt_staking, &app)
+    .unwrap()
+    {
         adapter::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, unbond_amount - reserves + rewards, "Post-fastforward scrt staking claimable");
+            assert_eq!(
+                amount,
+                unbond_amount - reserves + rewards,
+                "Post-fastforward scrt staking claimable"
+            );
         }
         _ => assert!(false),
     };
 
     // Manager Claimable
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Claimable {
-            asset: token.address.to_string().clone(),
-            holder: holder.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Claimable {
+        asset: token.address.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, unbond_amount - reserves, "Post-fastforward manager claimable");
+            assert_eq!(
+                amount,
+                unbond_amount - reserves,
+                "Post-fastforward manager claimable"
+            );
         }
         _ => assert!(false),
     };
 
     // Claim
-    manager::ExecuteMsg::Manager(
-        manager::SubExecuteMsg::Claim {
-            asset: token.address.to_string().clone(),
-        }
-    ).test_exec(&manager, &mut app, holder.clone(), &[]).unwrap();
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Claim {
+        asset: token.address.to_string().clone(),
+    })
+    .test_exec(&manager, &mut app, holder.clone(), &[])
+    .unwrap();
 
     // Manager Holder Balance
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Balance {
-            asset: token.address.to_string().clone(),
-            holder: holder.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+        holder: holder.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit - unbond_amount);
         }
@@ -373,15 +433,16 @@ fn single_holder_scrt_staking_adapter(
     };
 
     // Manager Treasury Balance
-    match manager::QueryMsg::Manager(
-        manager::SubQueryMsg::Balance {
-            asset: token.address.to_string().clone(),
-            holder: treasury.to_string().clone(),
-        }
-    ).test_query(&manager, &app).unwrap() {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+        holder: treasury.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap()
+    {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, expected_manager_treasury);
-        },
+        }
         _ => assert!(false),
     };
 
@@ -389,10 +450,17 @@ fn single_holder_scrt_staking_adapter(
     match (snip20::QueryMsg::Balance {
         address: holder.to_string().clone(),
         key: viewing_key.clone(),
-    }).test_query(&token, &app).unwrap() {
+    })
+    .test_query(&token, &app)
+    .unwrap()
+    {
         snip20::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount.u128(), unbond_amount.u128(), "Post-claim holder snip20 balance");
-        },
+            assert_eq!(
+                amount.u128(),
+                unbond_amount.u128(),
+                "Post-claim holder snip20 balance"
+            );
+        }
         _ => {
             assert!(false);
         }

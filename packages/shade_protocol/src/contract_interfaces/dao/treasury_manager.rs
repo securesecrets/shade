@@ -1,11 +1,14 @@
+use crate::c_std::{Addr, Binary, Uint128};
 use crate::{
     contract_interfaces::dao::manager,
-    utils::{asset::{Contract, RawContract}, generic_response::ResponseStatus},
+    utils::{
+        asset::{Contract, RawContract},
+        generic_response::ResponseStatus,
+    },
 };
-use crate::c_std::{Binary, Addr, Uint128};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Config {
@@ -144,7 +147,7 @@ pub enum QueryMsg {
     Assets {},
     Allocations { asset: String },
     PendingAllowance { asset: String },
-    Holders { },
+    Holders {},
     Holding { holder: String },
     Manager(manager::SubQueryMsg),
 }
@@ -160,6 +163,6 @@ pub enum QueryAnswer {
     Allocations { allocations: Vec<AllocationMeta> },
     PendingAllowance { amount: Uint128 },
     Holders { holders: Vec<Addr> },
-    Holding { holding: Holding},
+    Holding { holding: Holding },
     Manager(manager::QueryAnswer),
 }
