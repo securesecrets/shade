@@ -90,7 +90,7 @@ where
         Ok(id.item)
     }
 
-    pub fn pop(&self, store: &mut dyn Storage) -> StdResult<()> {
+    pub fn remove(&self, store: &mut dyn Storage) -> StdResult<()> {
         let id = match self.id_storage.may_load(store)? {
             None => return Err(StdError::generic_err("Iter map is empty")),
             Some(id) => id,
@@ -104,8 +104,26 @@ where
         Ok(())
     }
 
+    pub fn pop(&self, store: &mut dyn Storage) -> StdResult<T> {
+        let id = match self.id_storage.may_load(store)? {
+            None => return Err(StdError::generic_err("Iter map is empty")),
+            Some(id) => id,
+        };
+
+        let item = self.storage.load(store, id.to_bytes()?)?;
+        self.storage.remove(store, id.to_bytes()?);
+
+        let new_id = IterKey::new(id.item - N::one());
+        self.id_storage.save(store, &new_id)?;
+
+        Ok(item)
+    }
+
     pub fn size(&'a self, store: &dyn Storage) -> StdResult<N> {
-        Ok(self.id_storage.load(store)?.item + N::one())
+        Ok(match self.id_storage.may_load(store)? {
+            None => N::zero(),
+            Some(i) => i.item + N::one(),
+        })
     }
 
     pub fn iter_from(
@@ -234,10 +252,34 @@ mod tests {
     }
 
     #[test]
+    fn remove() {
+        let mut storage = MockStorage::new();
+
+        let iter: IterItem<Uint64, u64> = IterItem::new_override("TEST", "SIZE-TEST");
+
+        for i in 0..10 {
+            iter.push(&mut storage, &Uint64::new(i as u64)).unwrap();
+        }
+
+        let item = iter.remove(&mut storage).unwrap();
+
+        assert_eq!(9, iter.size(&storage).unwrap());
+    }
+
+    #[test]
     fn pop() {
         let mut storage = MockStorage::new();
 
-        generate(10, &mut storage);
+        let iter: IterItem<Uint64, u64> = IterItem::new_override("TEST", "SIZE-TEST");
+
+        for i in 0..10 {
+            iter.push(&mut storage, &Uint64::new(i as u64)).unwrap();
+        }
+
+        let item = iter.pop(&mut storage).unwrap();
+
+        assert_eq!(item, Uint64::new(9));
+        assert_eq!(9, iter.size(&storage).unwrap());
     }
 
     #[test]

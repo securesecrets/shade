@@ -136,7 +136,7 @@ where
         Ok(id.item)
     }
 
-    pub fn pop(&self, store: &mut dyn Storage, key: K) -> StdResult<()> {
+    pub fn remove(&self, store: &mut dyn Storage, key: K) -> StdResult<()> {
         let id = match self.id_storage.may_load(store, key.clone())? {
             None => return Err(StdError::generic_err("Iter map is empty")),
             Some(id) => id,
@@ -150,8 +150,26 @@ where
         Ok(())
     }
 
+    pub fn pop(&self, store: &mut dyn Storage, key: K) -> StdResult<T> {
+        let id = match self.id_storage.may_load(store, key.clone())? {
+            None => return Err(StdError::generic_err("Iter map is empty")),
+            Some(id) => id,
+        };
+
+        let item = self.storage.load(store, (key.clone(), id.to_bytes()?))?;
+        self.storage.remove(store, (key.clone(), id.to_bytes()?));
+
+        let new_id = IterKey::new(id.item - N::one());
+        self.id_storage.save(store, key, &new_id)?;
+
+        Ok(item)
+    }
+
     pub fn size(&'a self, store: &dyn Storage, key: K) -> StdResult<N> {
-        Ok(self.id_storage.load(store, key)?.item + N::one())
+        Ok(match self.id_storage.may_load(store, key)? {
+            None => N::zero(),
+            Some(i) => i.item + N::one(),
+        })
     }
 
     pub fn iter_from(
@@ -284,11 +302,21 @@ mod tests {
     fn push() {
         let mut storage = MockStorage::new();
 
-        generate(10, &mut storage);
+        let iter: IterMap<String, Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
+
+        for i in 0..10 {
+            iter.push(&mut storage, "TESTING".to_string(), &Uint64::new(i as u64))
+                .unwrap();
+        }
+
+        let item = iter.pop(&mut storage, "TESTING".to_string()).unwrap();
+
+        assert_eq!(item, Uint64::new(9));
+        assert_eq!(9, iter.size(&storage, "TESTING".to_string()).unwrap());
     }
 
     #[test]
-    fn pop() {
+    fn remove() {
         let mut storage = MockStorage::new();
 
         let iter: IterMap<String, Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
@@ -298,7 +326,7 @@ mod tests {
                 .unwrap();
         }
 
-        iter.pop(&mut storage, "TESTING".to_string()).unwrap();
+        iter.remove(&mut storage, "TESTING".to_string()).unwrap();
 
         assert_eq!(9, iter.size(&storage, "TESTING".to_string()).unwrap());
     }
