@@ -188,7 +188,7 @@ pub fn try_remove_pair(
     if config.pairs.len() == 0 {
         return Err(StdError::generic_err("No pairs to remove"));
     }
-    if i > config.pairs.len() - 1 {
+    if i >= config.pairs.len() {
         return Err(StdError::generic_err("Index out of bounds"));
     }
     config.pairs.remove(i);
