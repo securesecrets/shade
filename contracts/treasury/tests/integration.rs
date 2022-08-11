@@ -7,11 +7,14 @@ use shade_protocol::{
     contract_interfaces::{
         dao::{
             adapter, manager, scrt_staking, treasury,
+            treasury::{Allowance, AllowanceType},
             treasury_manager::{self, Allocation, AllocationType},
         },
         snip20,
     },
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{
+        asset::Contract, cycle::Cycle, ExecuteCallback, InstantiateCallback, MultiTestable, Query,
+    },
 };
 
 use shade_multi_test::multi::{
@@ -36,7 +39,7 @@ fn single_asset_portion_manager_integration(
 
     let admin = Addr::unchecked("admin");
     let user = Addr::unchecked("user");
-    let admin_auth = init_admin_auth(&mut app, &admin);
+    let admin_auth = init_admin_auth(&mut app, &admin, None);
 
     let token = snip20::InstantiateMsg {
         name: "secretSCRT".into(),
@@ -61,6 +64,7 @@ fn single_asset_portion_manager_integration(
     let treasury = treasury::InstantiateMsg {
         admin_auth: admin_auth.clone().into(),
         viewing_key: "viewing_key".to_string(),
+        multisig: admin.to_string().clone(),
     }
     .test_init(
         Treasury::default(),
@@ -125,12 +129,12 @@ fn single_asset_portion_manager_integration(
     // treasury allowance to manager
     treasury::ExecuteMsg::Allowance {
         asset: token.address.to_string().clone().to_string(),
-        allowance: treasury::Allowance::Portion {
+        allowance: treasury::Allowance {
             //nick: "Mid-Stakes-Manager".to_string(),
             spender: manager.address.clone(),
-            portion: allowance,
-            // to be removed
-            last_refresh: "".to_string(),
+            allowance_type: AllowanceType::Portion,
+            cycle: Cycle::Constant,
+            amount: allowance,
             // 100% (adapter balance will 2x before unbond)
             tolerance: Uint128::new(10u128.pow(18)),
         },

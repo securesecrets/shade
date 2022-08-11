@@ -337,21 +337,14 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     let mut portion_total = Uint128::zero();
 
     for i in 0..allocations.len() {
+        allocations[i].balance = adapter::balance_query(
+            deps.querier,
+            &full_asset.contract.address,
+            allocations[i].contract.clone(),
+        )?;
         match allocations[i].alloc_type {
-            AllocationType::Amount => {
-                allocations[i].balance = adapter::balance_query(
-                    deps.querier,
-                    &full_asset.contract.address,
-                    allocations[i].contract.clone(),
-                )?;
-                amount_total += allocations[i].balance
-            }
+            AllocationType::Amount => amount_total += allocations[i].balance,
             AllocationType::Portion => {
-                allocations[i].balance = adapter::balance_query(
-                    deps.querier,
-                    &full_asset.contract.address,
-                    allocations[i].contract.clone(),
-                )?;
                 portion_total += allocations[i].balance;
             }
         };

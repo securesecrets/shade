@@ -2,9 +2,11 @@ use crate::{utils::Query, Contract};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
 use shade_admin::admin::{
-    AdminsResponse, ConfigResponse, PermissionsResponse, ValidateAdminPermissionResponse,
+    AdminsResponse,
+    ConfigResponse,
+    PermissionsResponse,
+    ValidateAdminPermissionResponse,
 };
-use std::{fmt, write};
 
 #[cw_serde]
 #[derive(QueryResponses)]
