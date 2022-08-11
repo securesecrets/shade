@@ -28,6 +28,7 @@ multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
 ensemble = ["dep:fadroma"]
 
 # Implementing new contracts:
+# Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
 # When creating a new contract; try to keep all interface (Init, Handle and Query) related content in the `mod.rs` file
 # and move all implementation related content into separate files inside the package.
@@ -71,7 +72,7 @@ query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
-admin            = []
+admin            = ["interface"]
 
 stargate = ["cosmwasm-std/stargate"]
 
