@@ -90,7 +90,7 @@ pub fn try_set_pairs(
         info.sender.to_string(),
         &config.shd_admin,
     )?;
-    if pairs.len() < 1 {
+    if pairs.is_empty() {
         return Err(StdError::generic_err("Must pass at least one pair"));
     }
     let res0: TokenInfo = fetch_snip20(&pairs[0].token0, &deps.querier)?.token_info;
