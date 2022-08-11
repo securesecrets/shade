@@ -110,29 +110,3 @@ pub struct AdminsResponse {
 pub struct ValidateAdminPermissionResponse {
     pub has_permission: bool,
 }
-
-#[derive(Error, Debug, PartialEq)]
-pub enum AdminAuthError {
-    #[error("{0}")]
-    // let thiserror implement From<StdError> for you
-    Std(#[from] StdError),
-    // this is whatever we want
-    #[error("Registry error: {user} has not been registered as an admin.")]
-    UnregisteredAdmin { user: Addr },
-    #[error("Permission denied: {user} does not have this permission - {permission}.")]
-    UnauthorizedAdmin { user: Addr, permission: String },
-    #[error("Permission denied: {expected_super_admin} is not the authorized super admin.")]
-    UnauthorizedSuper { expected_super_admin: Addr },
-    #[error("Registry error: there are no permissions for this {user}.")]
-    NoPermissions { user: Addr },
-    #[error(
-        "Contract is currently shutdown. It must be turned on for any changes to be made or any permissions to be validated."
-    )]
-    IsShutdown,
-    #[error(
-        "Contract is under maintenance. Only registry updates may be made. Consumers cannot validate permissions at this time."
-    )]
-    IsUnderMaintenance,
-    #[error("{permission} must be > 10 characters and only contains 0-9, A-Z, and underscores.")]
-    InvalidPermissionFormat { permission: String },
-}

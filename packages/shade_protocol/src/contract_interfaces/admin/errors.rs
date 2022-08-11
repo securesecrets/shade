@@ -34,3 +34,34 @@ impl CodeType for Error {
         )
     }
 }
+
+const ADMIN_TARGET: &str = "airdrop";
+
+pub fn unregistered_admin(address: String) -> StdError {
+    DetailedError::from_code(ADMIN_TARGET, Error::UnregisteredAdmin, vec![address]).to_error()
+}
+
+pub fn unauthorized_admin(address: String, permission: String) -> StdError {
+    DetailedError::from_code(ADMIN_TARGET, Error::UnauthorizedAdmin, vec![
+        address, permission,
+    ])
+    .to_error()
+}
+pub fn unauthorized_super(super_admin: String) -> StdError {
+    DetailedError::from_code(ADMIN_TARGET, Error::UnauthorizedSuper, vec![super_admin]).to_error()
+}
+pub fn no_permission(user: String) -> StdError {
+    DetailedError::from_code(ADMIN_TARGET, Error::NoPermissions, vec![user]).to_error()
+}
+pub fn is_shutdown() -> StdError {
+    DetailedError::from_code(ADMIN_TARGET, Error::IsShutdown, vec![]).to_error()
+}
+pub fn is_under_maintenance() -> StdError {
+    DetailedError::from_code(ADMIN_TARGET, Error::IsUnderMaintenance, vec![]).to_error()
+}
+pub fn invalid_permission_format(permission: String) -> StdError {
+    DetailedError::from_code(ADMIN_TARGET, Error::InvalidPermissionFormat, vec![
+        permission,
+    ])
+    .to_error()
+}
