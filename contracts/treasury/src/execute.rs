@@ -400,9 +400,11 @@ pub fn try_register_asset(
         &config.admin_auth,
     )?;
 
-    let mut asset_list = ASSET_LIST.load(deps.storage)?;
+    ASSET_LIST.push(deps.storage, &contract.address.clone())?;
+    /*
     asset_list.push(contract.address.clone());
     ASSET_LIST.save(deps.storage, &asset_list)?;
+    */
 
     ASSET.save(
         deps.storage,

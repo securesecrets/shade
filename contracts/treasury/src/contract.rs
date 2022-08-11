@@ -28,7 +28,6 @@ pub fn instantiate(
 
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
     SELF_ADDRESS.save(deps.storage, &env.contract.address)?;
-    ASSET_LIST.save(deps.storage, &Vec::new())?;
     RUN_LEVEL.save(deps.storage, &RunLevel::Normal)?;
 
     Ok(Response::new())

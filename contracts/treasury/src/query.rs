@@ -158,7 +158,7 @@ pub fn allowance(deps: Deps, asset: Addr, spender: Addr) -> StdResult<treasury::
 
 pub fn assets(deps: Deps) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Assets {
-        assets: ASSET_LIST.load(deps.storage)?,
+        assets: ASSET_LIST.iter(deps.storage).collect(),
     })
 }
 
