@@ -4,7 +4,7 @@ use std::collections::HashMap;
 #[derive(Eq, PartialEq, Hash)]
 pub enum SupportedContracts {
     AdminAuth,
-    Snip20,
+    Snip20(String),
     Treasury,
     TreasuryManager,
     ScrtStaking,

@@ -1,6 +1,9 @@
-use super::super::multi::snip20::Snip20;
+use crate::{
+    interfaces::utils::{DeployedContracts, SupportedContracts},
+    multi::snip20::Snip20,
+};
 use shade_protocol::{
-    c_std::{Addr, Binary, Uint128},
+    c_std::{Addr, Binary, Coin, Uint128},
     contract_interfaces::snip20,
     multi_test::App,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
@@ -9,16 +12,17 @@ use shade_protocol::{
 pub fn init(
     chain: &mut App,
     sender: &str,
+    contracts: &mut DeployedContracts,
     name: String,
     symbol: String,
     decimals: u8,
     config: Option<snip20::InitConfig>,
-) -> Contract {
-    Contract::from(
+) {
+    let snip20 = Contract::from(
         snip20::InstantiateMsg {
             name,
             admin: Some(sender.into()),
-            symbol,
+            symbol: symbol.clone(),
             decimals,
             initial_balances: Some(vec![snip20::InitialBalance {
                 address: sender.into(),
@@ -36,15 +40,36 @@ pub fn init(
             &[],
         )
         .unwrap(),
-    )
+    );
+    contracts.insert(SupportedContracts::Snip20(symbol), snip20);
+}
+
+pub fn deposit(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    coins: &Vec<Coin>,
+) {
+    snip20::ExecuteMsg::Deposit { padding: None }.test_exec(
+        &contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        coins,
+    );
 }
 
 pub fn send(
     chain: &mut App,
-    snip20: Contract,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
     recipient: String,
     amount: Uint128,
-    sender: &str,
     msg: Option<Binary>,
 ) {
     snip20::ExecuteMsg::Send {
@@ -55,6 +80,14 @@ pub fn send(
         padding: None,
         recipient_code_hash: None,
     }
-    .test_exec(&snip20.into(), chain, Addr::unchecked(sender), &[])
-    .unwrap();
+    .test_exec(
+        &contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    );
 }

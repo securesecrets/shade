@@ -1,46 +1,76 @@
 use crate::{
-    interfaces::{snip20, treasury_manager},
+    interfaces::{
+        snip20,
+        treasury,
+        treasury_manager,
+        utils::{DeployedContracts, SupportedContracts},
+    },
     multi::scrt_staking::ScrtStaking,
 };
-use shade_admin_multi_test::multi::admin::init_admin_auth;
+use shade_admin_multi_test::multi::helpers::init_admin_auth;
 use shade_protocol::{
+    c_std::Addr,
     contract_interfaces::dao::scrt_staking,
     multi_test::App,
-    utils::asset::Contract,
+    utils::{asset::Contract, InstantiateCallback, MultiTestable},
 };
 
 pub fn init(
     chain: &mut App,
-    sender: &srt,
+    sender: &str,
+    contracts: &mut DeployedContracts,
     validator_bounds: Option<scrt_staking::ValidatorBounds>,
-    admin_auth: Option<Contract>,
-    treasury: Option<Contract>,
-    manager: Option<Contract>,
-    sscrt: Option<Contract>,
-) -> HashMap<utils::Contracts, Contract> {
-    let admin_auth = match admin_auth {
-        Some(admin) => admin,
-        None => Contract::from(init_admin_auth(chain, Addr::unchecked(sender), None)),
+) {
+    let treasury_manager = match contracts.get(&SupportedContracts::TreasuryManager) {
+        Some(manager) => manager.clone(),
+        None => {
+            treasury_manager::init(chain, sender, contracts);
+            contracts
+                .get(&SupportedContracts::TreasuryManager)
+                .unwrap()
+                .clone()
+        }
     };
-    let manager = match manager {
-        Some(manager) => manager,
-        None => treasury_manager::init(chain, sender, admin_auth, treasury),
+    let treasury = match contracts.get(&SupportedContracts::Treasury) {
+        Some(treasury) => treasury.clone(),
+        None => {
+            treasury::init(chain, sender, contracts);
+            contracts
+                .get(&SupportedContracts::Treasury)
+                .unwrap()
+                .clone()
+        }
     };
-    let sscrt = match sscrt {
-        Some(sscrt) => sscrt,
-        None => snip20::init(
-            chain,
-            sender,
-            "secretSecret".to_string(),
-            "SSCRT".to_string(),
-            6,
-            None,
-        ),
+    let admin_auth = match contracts.get(&SupportedContracts::AdminAuth) {
+        Some(admin) => admin.clone(),
+        None => {
+            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender)));
+            contracts.insert(SupportedContracts::AdminAuth, contract.clone());
+            contract
+        }
     };
-    Contract::from(
+    let sscrt = match contracts.get(&SupportedContracts::Snip20("SSCRT".to_string())) {
+        Some(snip20) => snip20.clone(),
+        None => {
+            snip20::init(
+                chain,
+                sender,
+                contracts,
+                "secretSCRT".to_string(),
+                "SSCRT".to_string(),
+                6,
+                None,
+            );
+            contracts
+                .get(&SupportedContracts::Snip20("SSCRT".to_string()))
+                .unwrap()
+                .clone()
+        }
+    };
+    let scrt_staking = Contract::from(
         scrt_staking::InstantiateMsg {
             admin_auth: admin_auth.into(),
-            owner: manager.address.into(),
+            owner: treasury_manager.address.into(),
             sscrt: sscrt.into(),
             validator_bounds,
             viewing_key: "veiwing_key".into(),
@@ -48,10 +78,11 @@ pub fn init(
         .test_init(
             ScrtStaking::default(),
             chain,
-            sender.to_string(),
+            Addr::unchecked(sender),
             "scrt_staking",
             &[],
         )
         .unwrap(),
-    )
+    );
+    contracts.insert(SupportedContracts::ScrtStaking, scrt_staking);
 }

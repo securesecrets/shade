@@ -2,8 +2,16 @@ use std::vec;
 
 use crate::{
     c_std::{
-        Addr, Api, BalanceResponse, BankQuery, ContractInfo, Deps, QuerierWrapper, StdError,
-        StdResult, Uint128,
+        Addr,
+        Api,
+        BalanceResponse,
+        BankQuery,
+        ContractInfo,
+        Deps,
+        QuerierWrapper,
+        StdError,
+        StdResult,
+        Uint128,
     },
     BLOCK_SIZE,
 };
@@ -149,6 +157,15 @@ impl From<ContractInfo> for Contract {
         Contract {
             address: item.address,
             code_hash: item.code_hash,
+        }
+    }
+}
+
+impl Into<ContractInfo> for Contract {
+    fn into(self) -> ContractInfo {
+        ContractInfo {
+            address: self.address,
+            code_hash: self.code_hash,
         }
     }
 }
