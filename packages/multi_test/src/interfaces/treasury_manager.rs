@@ -1,19 +1,21 @@
 use crate::{
     interfaces::{
+        snip20,
         treasury,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::treasury_manager::TreasuryManager,
+    multi::{mock_adapter::MockAdapter, treasury_manager::TreasuryManager},
 };
+use mock_adapter;
 use shade_admin_multi_test::multi::helpers::init_admin_auth;
 use shade_protocol::{
     c_std::{Addr, Uint128},
-    contract_interfaces::dao::treasury_manager,
+    contract_interfaces::dao::{treasury::AllowanceType, treasury_manager},
     multi_test::App,
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
+    utils::{self, asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
 };
 
-pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
+pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts, id: u8) {
     /*let admin_auth = match admin_auth {
         Some(admin) => admin,
         None => Contract::from(init_admin_auth(chain, Addr::unchecked(sender), None)),
@@ -35,7 +37,7 @@ pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
     let admin_auth = match contracts.get(&SupportedContracts::AdminAuth) {
         Some(admin) => admin.clone(),
         None => {
-            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender)));
+            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender), None));
             contracts.insert(SupportedContracts::AdminAuth, contract.clone());
             contract
         }
@@ -55,7 +57,7 @@ pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
         )
         .unwrap(),
     );
-    contracts.insert(SupportedContracts::TreasuryManager, treasury_manager);
+    contracts.insert(SupportedContracts::TreasuryManager(id), treasury_manager);
 }
 
 pub fn register_asset(

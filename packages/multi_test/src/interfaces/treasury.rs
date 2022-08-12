@@ -23,7 +23,7 @@ pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
     let admin = match contracts.get(&SupportedContracts::AdminAuth) {
         Some(admin) => admin.clone(),
         None => {
-            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender)));
+            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender), None));
             contracts.insert(SupportedContracts::AdminAuth, contract.clone());
             contract
         }
@@ -71,10 +71,15 @@ pub fn register_asset(
     );
 }
 
-pub fn register_manager(chain: &mut App, sender: &str, contracts: &DeployedContracts) {
+pub fn register_manager(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    manager_id: u8,
+) {
     treasury::ExecuteMsg::RegisterManager {
         contract: contracts
-            .get(&SupportedContracts::TreasuryManager)
+            .get(&SupportedContracts::TreasuryManager(manager_id))
             .unwrap()
             .clone()
             .into(),
@@ -96,6 +101,7 @@ pub fn allowance(
     sender: &str,
     contracts: &DeployedContracts,
     snip20_symbol: String,
+    manager_id: u8,
     allowance_type: treasury::AllowanceType,
     cycle: Cycle,
     amount: Uint128,
@@ -110,7 +116,7 @@ pub fn allowance(
             .to_string(),
         allowance: treasury::Allowance {
             spender: contracts
-                .get(&SupportedContracts::TreasuryManager)
+                .get(&SupportedContracts::TreasuryManager(manager_id))
                 .unwrap()
                 .clone()
                 .address,
