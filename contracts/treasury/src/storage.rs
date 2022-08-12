@@ -1,11 +1,13 @@
 use shade_protocol::{
     c_std::Addr,
-    dao::treasury::{Allowance, AllowanceMeta, Config, RunLevel},
+    dao::treasury::{Allowance, AllowanceMeta, Config, Metric, RunLevel},
     secret_storage_plus::{Item, Map},
     snip20::helpers::Snip20Asset,
     utils::asset::Contract,
     utils::storage::plus::iter_item::IterItem,
 };
+
+use chrono::*;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
@@ -18,3 +20,10 @@ pub const MANAGER: Map<Addr, Contract> = Map::new("managers");
 pub const ALLOWANCES: Map<Addr, Vec<AllowanceMeta>> = Map::new("allowances");
 
 pub const RUN_LEVEL: Item<RunLevel> = Item::new("runlevel");
+
+pub fn metric_key(datetime: DateTime<Utc>) -> String {
+    datetime.format("%Y-%m-%d").to_string()
+}
+
+// { <YY/MM/DD>: <metric> }
+pub const METRICS: Map<String, Vec<Metric>> = Map::new("metrics");
