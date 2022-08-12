@@ -1,8 +1,13 @@
-use crate::utils::asset::RawContract;
-use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStatus};
+use crate::utils::{
+    asset::{Contract, RawContract},
+    cycle::Cycle,
+    generic_response::ResponseStatus,
+};
 
-use crate::c_std::{Addr, Binary, StdResult, Uint128};
-use crate::contract_interfaces::dao::adapter;
+use crate::{
+    c_std::{Addr, Binary, StdResult, Uint128},
+    contract_interfaces::dao::adapter,
+};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::cw_serde;
@@ -38,6 +43,7 @@ pub enum Action {
     ManagerUnbond,
     ManagerClaim,
     FundsReceived,
+    SendFunds,
 }
 
 #[cw_serde]
@@ -165,6 +171,7 @@ pub enum QueryMsg {
     // Current allowance to spender
     Allowance { asset: String, spender: String },
     RunLevel,
+    Metrics { date: String },
     /*
     Balance { asset: String },
     Reserves { asset: String },
@@ -183,4 +190,5 @@ pub enum QueryAnswer {
     Allowances { allowances: Vec<AllowanceMeta> },
     Allowance { amount: Uint128 },
     RunLevel { run_level: RunLevel },
+    Metrics { metrics: Vec<Metric> },
 }

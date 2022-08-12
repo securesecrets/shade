@@ -1,7 +1,19 @@
 use shade_protocol::{
     c_std::{
-        entry_point, to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Querier, Response,
-        StdError, StdResult, Storage, Uint128,
+        entry_point,
+        to_binary,
+        Api,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
     },
     dao::{
         adapter,
@@ -18,13 +30,10 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    CONFIG.save(
-        deps.storage,
-        &Config {
-            admin_auth: msg.admin_auth.into_valid(deps.api)?,
-            multisig: deps.api.addr_validate(&msg.multisig)?,
-        },
-    )?;
+    CONFIG.save(deps.storage, &Config {
+        admin_auth: msg.admin_auth.into_valid(deps.api)?,
+        multisig: deps.api.addr_validate(&msg.multisig)?,
+    })?;
 
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
     SELF_ADDRESS.save(deps.storage, &env.contract.address)?;
@@ -100,6 +109,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::RunLevel => to_binary(&QueryAnswer::RunLevel {
             run_level: RUN_LEVEL.load(deps.storage)?,
+        }),
+        //TODO: parse string & format manually to accept all valid date formats
+        QueryMsg::Metrics { date } => to_binary(&QueryAnswer::Metrics {
+            metrics: METRICS.may_load(deps.storage, date)?.unwrap_or(vec![]),
         }),
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => {

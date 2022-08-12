@@ -258,7 +258,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                                 vec![],
                             )?);
                             metrics.push(Metric {
-                                action: Action::DecreaseAllowance,
+                                action: Action::IncreaseAllowance,
                                 context: Context::Update,
                                 timestamp: env.block.time.seconds(),
                                 token: asset.clone(),
@@ -334,6 +334,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                             amount: cur_allowance,
                             user: allowance.spender.clone(),
                         });
+                        decrease -= cur_allowance;
 
                         // Unbond remaining
                         if decrease > Uint128::zero() {
@@ -394,6 +395,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
 
 pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let mut messages = vec![];
+    let mut metrics = vec![];
 
     let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
     let full_asset = ASSET.load(deps.storage, asset.clone())?;
@@ -410,7 +412,17 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
                 m.clone(),
             )?;
 
-            messages.push(manager::unbond_msg(&asset, unbondable, m.clone())?);
+            if !unbondable.is_zero() {
+                messages.push(manager::unbond_msg(&asset, unbondable, m.clone())?);
+                metrics.push(Metric {
+                    action: Action::ManagerUnbond,
+                    context: Context::Migration,
+                    timestamp: env.block.time.seconds(),
+                    token: asset.clone(),
+                    amount: unbondable,
+                    user: m.address.clone(),
+                });
+            }
             let claimable = manager::claimable_query(
                 deps.querier,
                 &asset,
@@ -419,10 +431,19 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
             )?;
 
             if !claimable.is_zero() {
-                claimed += claimable;
                 messages.push(manager::claim_msg(&asset, m.clone())?);
+                metrics.push(Metric {
+                    action: Action::ManagerClaim,
+                    context: Context::Migration,
+                    timestamp: env.block.time.seconds(),
+                    token: asset.clone(),
+                    amount: claimable,
+                    user: m.address.clone(),
+                });
+                claimed += claimable;
             }
         }
+
         let cur_allowance = allowance_query(
             &deps.querier,
             env.contract.address.clone(),
@@ -443,6 +464,14 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
                 &full_asset.contract.clone(),
                 vec![],
             )?);
+            metrics.push(Metric {
+                action: Action::DecreaseAllowance,
+                context: Context::Migration,
+                timestamp: env.block.time.seconds(),
+                token: asset.clone(),
+                amount: cur_allowance,
+                user: allowance.spender.clone(),
+            });
         }
     }
 
@@ -453,20 +482,26 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
         &full_asset.contract.clone(),
     )?;
 
-    todo!("need to send tokens to multisig");
-
     if !(balance + claimed).is_zero() {
         let config = CONFIG.load(deps.storage)?;
 
         //TODO: send to super admin from admin_auth
         messages.push(send_msg(
-            config.multisig, //unbonder.clone(),
+            config.multisig.clone(),
             balance + claimed,
             None,
             None,
             None,
             &full_asset.contract.clone(),
         )?);
+        metrics.push(Metric {
+            action: Action::SendFunds,
+            context: Context::Migration,
+            timestamp: env.block.time.seconds(),
+            token: asset.clone(),
+            amount: balance + claimed,
+            user: config.multisig.clone(),
+        });
     }
 
     Ok(Response::new()
