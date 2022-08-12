@@ -1,27 +1,51 @@
 use shade_protocol::c_std::{
-    coins, from_binary, to_binary, Addr, Binary, Coin, Decimal, Env, StdError, StdResult, Uint128,
+    coins,
+    from_binary,
+    to_binary,
+    Addr,
+    Binary,
+    Coin,
+    Decimal,
+    Env,
+    StdError,
+    StdResult,
+    Uint128,
     Validator,
 };
 
 use shade_protocol::{
     contract_interfaces::{
         dao::{
-            adapter, manager, scrt_staking, treasury,
+            adapter,
+            manager,
+            scrt_staking,
+            treasury,
             treasury::{Allowance, AllowanceType},
             treasury_manager::{self, Allocation, AllocationType},
         },
         snip20,
     },
     utils::{
-        asset::Contract, cycle::Cycle, ExecuteCallback, InstantiateCallback, MultiTestable, Query,
+        asset::Contract,
+        cycle::{utc_from_timestamp, Cycle},
+        ExecuteCallback,
+        InstantiateCallback,
+        MultiTestable,
+        Query,
     },
 };
 
 use shade_multi_test::multi::{
-    admin::init_admin_auth, scrt_staking::ScrtStaking, snip20::Snip20, treasury::Treasury,
+    admin::init_admin_auth,
+    scrt_staking::ScrtStaking,
+    snip20::Snip20,
+    treasury::Treasury,
     treasury_manager::TreasuryManager,
 };
 use shade_protocol::multi_test::App;
+
+use ::treasury::storage::metric_key;
+use serde_json;
 
 // Add other adapters here as they come
 fn single_asset_portion_manager_integration(
@@ -66,21 +90,22 @@ fn single_asset_portion_manager_integration(
         viewing_key: "viewing_key".to_string(),
         multisig: admin.to_string().clone(),
     }
-    .test_init(
-        Treasury::default(),
-        &mut app,
-        admin.clone(),
-        "treasury",
-        &[],
-    )
+    .test_init(Treasury::default(), &mut app, admin.clone(), "treasury", &[
+    ])
     .unwrap();
 
     let manager = treasury_manager::InstantiateMsg {
         admin_auth: admin_auth.clone().into(),
-        treasury: "treasury".to_string(),
+        treasury: treasury.address.to_string(),
         viewing_key: "viewing_key".to_string(),
     }
-    .test_init(Treasury::default(), &mut app, admin.clone(), "manager", &[])
+    .test_init(
+        TreasuryManager::default(),
+        &mut app,
+        admin.clone(),
+        "manager",
+        &[],
+    )
     .unwrap();
 
     let scrt_staking = scrt_staking::InstantiateMsg {
@@ -103,23 +128,26 @@ fn single_asset_portion_manager_integration(
     treasury::ExecuteMsg::RegisterAsset {
         contract: token.clone().into(),
     }
-    .test_exec(&treasury, &mut app, admin.clone(), &[]);
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Register manager assets
     treasury_manager::ExecuteMsg::RegisterAsset {
         contract: token.clone().into(),
     }
-    .test_exec(&manager, &mut app, admin.clone(), &[]);
+    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Register manager w/ treasury
     treasury::ExecuteMsg::RegisterManager {
         contract: manager.clone().into(),
     }
-    .test_exec(&treasury, &mut app, admin.clone(), &[]);
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // treasury allowance to manager
     treasury::ExecuteMsg::Allowance {
-        asset: token.address.to_string().clone().to_string(),
+        asset: token.address.to_string().clone(),
         allowance: treasury::Allowance {
             //nick: "Mid-Stakes-Manager".to_string(),
             spender: manager.address.clone(),
@@ -127,14 +155,15 @@ fn single_asset_portion_manager_integration(
             cycle: Cycle::Constant,
             amount: allowance,
             // 100% (adapter balance will 2x before unbond)
-            tolerance: Uint128::new(10u128.pow(18)),
+            tolerance: Uint128::zero(),
         },
     }
-    .test_exec(&treasury, &mut app, admin.clone(), &[]);
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Allocate to scrt_staking from manager
     treasury_manager::ExecuteMsg::Allocate {
-        asset: token.address.to_string().clone().to_string(),
+        asset: token.address.to_string().clone(),
         allocation: Allocation {
             nick: Some("scrt_staking".to_string()),
             contract: Contract {
@@ -146,7 +175,8 @@ fn single_asset_portion_manager_integration(
             tolerance: Uint128::zero(),
         },
     }
-    .test_exec(&manager, &mut app, admin.clone(), &[]);
+    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .unwrap();
 
     let deposit_coin = Coin {
         denom: "uscrt".into(),
@@ -162,12 +192,9 @@ fn single_asset_portion_manager_integration(
     assert!(deposit_coin.amount > Uint128::zero());
 
     // Wrap L1
-    snip20::ExecuteMsg::Deposit { padding: None }.test_exec(
-        &token,
-        &mut app,
-        admin.clone(),
-        &vec![deposit_coin],
-    );
+    snip20::ExecuteMsg::Deposit { padding: None }
+        .test_exec(&token, &mut app, admin.clone(), &vec![deposit_coin])
+        .unwrap();
 
     // Deposit funds into treasury
     snip20::ExecuteMsg::Send {
@@ -178,13 +205,30 @@ fn single_asset_portion_manager_integration(
         memo: None,
         padding: None,
     }
-    .test_exec(&token, &mut app, admin.clone(), &[]);
+    .test_exec(&token, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Update treasury
+    println!("UPDATE TREASURY");
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
-        asset: token.address.to_string().clone().to_string(),
+        asset: token.address.to_string().clone(),
     })
-    .test_exec(&treasury, &mut app, admin.clone(), &[]);
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
+
+    // Check Metrics
+    match (treasury::QueryMsg::Metrics {
+        date: metric_key(utc_from_timestamp(app.block_info().time)),
+    }
+    .test_query(&treasury, &app)
+    .unwrap())
+    {
+        treasury::QueryAnswer::Metrics { metrics } => {
+            println!("{}", serde_json::to_string(&metrics).unwrap());
+            assert!(metrics.len() != 0, "Treasury Metrics");
+        }
+        _ => panic!("query failed"),
+    };
 
     // Check treasury allowance to manager
     match (treasury::QueryMsg::Allowance {
@@ -202,15 +246,17 @@ fn single_asset_portion_manager_integration(
 
     // Update manager
     manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
-        asset: token.address.to_string().clone().to_string(),
+        asset: token.address.to_string().clone(),
     })
-    .test_exec(&manager, &mut app, admin.clone(), &[]);
+    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Update SCRT Staking
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
-        asset: token.address.to_string().clone().to_string(),
+        asset: token.address.to_string().clone(),
     })
-    .test_exec(&scrt_staking, &mut app, admin.clone(), &[]);
+    .test_exec(&scrt_staking, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Treasury reserves check
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
@@ -285,9 +331,10 @@ fn single_asset_portion_manager_integration(
     // Unbond all w/ treasury
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
         amount: expected_scrt_staking + expected_manager,
-        asset: token.address.to_string().clone().to_string(),
+        asset: token.address.to_string().clone(),
     })
-    .test_exec(&treasury, &mut app, admin.clone(), &[]);
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // scrt staking unbonding
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
@@ -405,9 +452,10 @@ fn single_asset_portion_manager_integration(
 
     // Claim Treasury
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
-        asset: token.address.to_string().clone().to_string(),
+        asset: token.address.to_string().clone(),
     })
-    .test_exec(&treasury, &mut app, admin.clone(), &[]);
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
 
     // Treasury reserves check
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
@@ -565,7 +613,6 @@ macro_rules! single_asset_portion_manager_tests {
     }
 }
 
-/*
 single_asset_portion_manager_tests! {
     single_asset_portion_manager_0: (
         Uint128::new(100), // deposit
@@ -588,4 +635,3 @@ single_asset_portion_manager_tests! {
         Uint128::new(45), // scrt_staking 90
     ),
 }
-*/

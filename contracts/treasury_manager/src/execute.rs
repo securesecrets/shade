@@ -1,13 +1,31 @@
 use shade_protocol::{
     admin::{validate_admin, AdminPermissions},
     c_std::{
-        self, to_binary, Addr, Api, Binary, DepsMut, Env, MessageInfo, Querier, Response, StdError,
-        StdResult, Storage, Uint128,
+        self,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
     },
     dao::{
         adapter,
         treasury_manager::{
-            Allocation, AllocationMeta, AllocationType, Balance, Config, ExecuteAnswer, Holding,
+            Allocation,
+            AllocationMeta,
+            AllocationType,
+            Balance,
+            Config,
+            ExecuteAnswer,
+            Holding,
             Status,
         },
     },
@@ -15,8 +33,13 @@ use shade_protocol::{
     snip20::{
         batch::{SendAction, SendFromAction},
         helpers::{
-            allowance_query, balance_query, batch_send_from_msg, batch_send_msg, register_receive,
-            send_msg, set_viewing_key_msg,
+            allowance_query,
+            balance_query,
+            batch_send_from_msg,
+            batch_send_msg,
+            register_receive,
+            send_msg,
+            set_viewing_key_msg,
         },
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
@@ -390,11 +413,12 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         &full_asset.contract.clone(),
     )?;
 
-    let total = (amount_total + portion_total + allowance + balance) - holder_unbonding;
+    let total = (amount_total + portion_total + balance) - holder_unbonding;
 
     //panic!("holder principal {}", holder_principal);
     if total > holder_principal {
         println!("Gainzz {}", total - holder_principal);
+        println!("Principal: {}", holder_principal);
         // credit gains to treasury
         let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
         if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
@@ -840,15 +864,11 @@ pub fn add_holder(
         Ok(h)
     })?;
 
-    HOLDING.save(
-        deps.storage,
-        holder,
-        &Holding {
-            balances: Vec::new(),
-            unbondings: Vec::new(),
-            status: Status::Active,
-        },
-    )?;
+    HOLDING.save(deps.storage, holder, &Holding {
+        balances: Vec::new(),
+        unbondings: Vec::new(),
+        status: Status::Active,
+    })?;
 
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::AddHolder {

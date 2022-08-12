@@ -224,15 +224,12 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
                 .find(|u| u.token == asset.contract.address)
             {
                 Some(b) => b.amount,
-                None => {
-                    return Err(StdError::generic_err("HOLDER NOT FOUND"));
-                    Uint128::zero()
-                }
+                None => Uint128::zero(),
             };
 
             let config = CONFIG.load(deps.storage)?;
             if holder == config.treasury {
-                println!("TRESAURY MANAGER BAL {}", balance);
+                println!("TREASURY MANAGER BAL {}", balance);
             }
 
             Ok(manager::QueryAnswer::Balance { amount: balance })

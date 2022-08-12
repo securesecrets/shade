@@ -112,12 +112,19 @@ pub fn try_update_config(
 }
 
 pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+    println!("UPDATE");
     match RUN_LEVEL.load(deps.storage)? {
-        RunLevel::Migrating => migrate(deps, env, info, asset),
+        RunLevel::Migrating => {
+            println!("MIGRATING");
+            migrate(deps, env, info, asset)
+        }
         RunLevel::Deactivated => {
             return Err(StdError::generic_err("Contract Deactivated"));
         }
-        RunLevel::Normal => rebalance(deps, env, info, asset),
+        RunLevel::Normal => {
+            println!("REBALANCING");
+            rebalance(deps, env, info, asset)
+        }
     }
 }
 
@@ -173,17 +180,22 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         )?
         .allowance;
 
+        println!("metadata {}: {}, {}", a.spender.clone(), balance, allowance);
         metadata.insert(a.spender.clone(), (balance, allowance));
 
         match a.allowance_type {
             AllowanceType::Amount => {
-                amount_total += balance + allowance;
+                //TODO this will fail when over funded
+                amount_total += a.amount - balance + allowance;
+                //amount_total += balance + allowance;
             }
             AllowanceType::Portion => {
                 portion_total += balance + allowance;
             }
         }
     }
+
+    portion_total += token_balance - amount_total;
 
     let mut messages = vec![];
     let mut metrics = vec![];
@@ -272,7 +284,8 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             }
             AllowanceType::Portion => {
                 let desired_amount = portion_total.multiply_ratio(allowance.amount, 10u128.pow(18));
-                let threshold = desired_amount.multiply_ratio(allowance.tolerance, 10u128.pow(18));
+                let threshold =
+                    desired_amount.multiply_ratio(allowance.tolerance.clone(), 10u128.pow(18));
 
                 /* NOTE: remove claiming if rebalance tx becomes too heavy
                  * alternatives:
@@ -282,14 +295,24 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                  */
 
                 let (balance, cur_allowance) = metadata[&allowance.spender];
+                println!(
+                    "PORTION bal: {}, all: {} desired: {}",
+                    balance, cur_allowance, desired_amount
+                );
                 let total = balance + cur_allowance;
 
                 // UnderFunded
                 if total < desired_amount {
                     let increase = desired_amount - total;
+                    println!("UNDERFUNDED PORTION {}", increase);
                     if increase <= threshold {
+                        println!(
+                            "DIDNT EXCEED THRESHOLD {} TOLERANGE {}",
+                            threshold, allowance.tolerance
+                        );
                         continue;
                     }
+                    println!("INC PORTION {}", increase);
                     messages.push(increase_allowance_msg(
                         allowance.spender.clone(),
                         increase,
@@ -385,6 +408,15 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             }
         }
     }
+
+    let key = metric_key(utc_now(env));
+    let mut cur_metrics = METRICS
+        .may_load(deps.storage, key.clone())?
+        .unwrap_or(vec![]);
+    cur_metrics.append(&mut metrics);
+    METRICS.save(deps.storage, key, &cur_metrics)?;
+
+    println!("MESSAGES {}", messages.len());
 
     Ok(Response::new()
         .add_messages(messages)
@@ -503,6 +535,13 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
             user: config.multisig.clone(),
         });
     }
+
+    let key = metric_key(utc_now(env));
+    let mut cur_metrics = METRICS
+        .may_load(deps.storage, key.clone())?
+        .unwrap_or(vec![]);
+    cur_metrics.append(&mut metrics);
+    METRICS.save(deps.storage, key, &cur_metrics)?;
 
     Ok(Response::new()
         .add_messages(messages)
