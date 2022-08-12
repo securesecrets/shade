@@ -39,6 +39,36 @@ fn test_is_valid_permission(#[case] permission: String, #[case] is_valid: bool) 
     }
 }
 
+// #[rstest]
+// #[case(AdminAuthStatus::Active, vec![true])]
+// fn test_status(#[case] status: AdminAuthStatus, #[case] expect_success: Vec<bool>) {
+//         //init
+//         let mut deps = mock_dependencies();
+//         let env = mock_env();
+//         let msg_info = mock_info("admin", &[]);
+//         let init_msg = InstantiateMsg {
+//             super_admin: Some("admin".into())
+//         };
+//         instantiate(deps.as_mut().branch(), env.clone(), msg_info.clone(), init_msg).unwrap();
+
+//         //set state
+//         test_execute(deps.as_mut().branch(), env.clone(), msg_info.clone(), ExecuteMsg::ToggleStatus { new_status: status } ).unwrap();
+        
+//         let action = RegistryAction::RegisterAdmin { user: "test".to_string() };
+//         let result = execute(deps.as_mut().branch(), env.clone(), msg_info.clone(), ExecuteMsg::UpdateRegistry { action: action.clone() });
+//         assert_eq!(&result.is_ok(), expect_success.get(i).unwrap());
+
+//         let actions = vec![action.clone()];
+//         let result = execute(deps.as_mut().branch(), env.clone(), msg_info.clone(), ExecuteMsg::UpdateRegistryBulk { actions });
+//         assert_eq!(&result.is_ok(), expect_success.get(i).unwrap());
+        
+//         let result = execute(deps.as_mut().branch(), env.clone(), msg_info.clone(), ExecuteMsg::TransferSuper { new_super: "super".to_string() } );
+//         assert_eq!(&result.is_ok(), expect_success.get(i).unwrap());
+
+//         let result = execute(deps.as_mut().branch(), env.clone(), msg_info.clone(), ExecuteMsg::UpdateRegistry { action });
+//         assert_eq!(&result.is_ok(), expect_success.get(i).unwrap());
+// }
+
 #[rstest]
 #[case(vec!["test", "blah"], vec!["test", "blah"], vec![false, false])]
 #[case(vec!["test", "blah", "aaaa", "bbbb", "cccc"], vec!["test", "bbbb"], vec![false, true, true, false, true])]
@@ -85,7 +115,7 @@ fn test_admin(
     }
 
     //read admins
-    let reesponse: AdminsResponse = QueryMsg::GetAdmins {}
+    let response: AdminsResponse = QueryMsg::GetAdmins {}
         .test_query(&admin_contract, &chain)
         .unwrap();
     let admin_list = response.admins;
