@@ -2,13 +2,11 @@ use cosmwasm_std::{to_binary, StdError, StdResult, Storage, Uint128};
 use secret_storage_plus::{Item, Json, Key, KeyDeserialize, Map, Prefixer, PrimaryKey, Serde};
 use serde::{
     de::{self, DeserializeOwned},
-    ser,
-    Deserialize,
-    Serialize,
+    ser, Deserialize, Serialize,
 };
 use std::{
     marker::PhantomData,
-    ops::{Add, AddAssign, Index, Sub, SubAssign},
+    ops::{Add, AddAssign, Index, Sub},
 };
 
 pub trait Increment {
@@ -244,17 +242,11 @@ mod tests {
     use crate::utils::storage::plus::iter_map::IterMap;
     use cosmwasm_std::{
         testing::{MockApi, MockQuerier, MockStorage},
-        Addr,
-        CustomQuery,
-        OwnedDeps,
-        Storage,
-        Uint64,
+        Addr, CustomQuery, OwnedDeps, Storage, Uint64,
     };
     use serde::{
         de::{self, DeserializeOwned},
-        ser,
-        Deserialize,
-        Serialize,
+        ser, Deserialize, Serialize,
     };
     use std::marker::PhantomData;
 

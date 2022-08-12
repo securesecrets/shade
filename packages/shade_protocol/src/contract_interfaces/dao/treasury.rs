@@ -9,7 +9,7 @@ use cosmwasm_schema::cw_serde;
 
 /// The permission referenced in the Admin Auth contract to give a user
 /// admin permissions for the Shade Treasury
-pub const SHADE_TREASURY_ADMIN: &str = "SHADE_TREASURY_ADMIN";
+//pub const SHADE_TREASURY_ADMIN: &str = "SHADE_TREASURY_ADMIN";
 
 #[cw_serde]
 pub struct Config {
@@ -17,19 +17,37 @@ pub struct Config {
     pub multisig: Addr,
 }
 
-/* Examples:
- * Constant-Portion -> Finance manager
- * Constant-Amount -> Rewards, pre-set manually adjusted
- * Monthly-Portion -> Rewards, self-scaling
- * Monthly-Amount -> Governance grant or Committee funding
- *
- * Once-Portion -> Disallowed
- */
 #[cw_serde]
 pub enum RunLevel {
     Normal,
     Deactivated,
     Migrating,
+}
+
+#[cw_serde]
+pub enum Context {
+    Receive,
+    Update,
+    Migration,
+}
+
+#[cw_serde]
+pub enum Action {
+    IncreaseAllowance,
+    DecreaseAllowance,
+    ManagerUnbond,
+    ManagerClaim,
+    FundsReceived,
+}
+
+#[cw_serde]
+pub struct Metric {
+    pub action: Action,
+    pub context: Context,
+    pub timestamp: u64,
+    pub token: Addr,
+    pub amount: Uint128,
+    pub user: Addr,
 }
 
 #[cw_serde]
