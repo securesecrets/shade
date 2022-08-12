@@ -1,22 +1,48 @@
 use shade_protocol::{
     c_std::{
-        self, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Querier,
-        Response, StdError, StdResult, Storage, Uint128,
+        self,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        CosmosMsg,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
     },
     contract_interfaces::{
         admin::{validate_admin, AdminPermissions},
         dao::{
             manager,
             treasury::{
-                Action, Allowance, AllowanceMeta, AllowanceType, Config, Context, ExecuteAnswer,
-                Metric, RunLevel,
+                Action,
+                Allowance,
+                AllowanceMeta,
+                AllowanceType,
+                Config,
+                Context,
+                ExecuteAnswer,
+                Metric,
+                RunLevel,
             },
         },
         snip20,
     },
     snip20::helpers::{
-        allowance_query, balance_query, decrease_allowance_msg, increase_allowance_msg,
-        register_receive, send_msg, set_viewing_key_msg,
+        allowance_query,
+        balance_query,
+        decrease_allowance_msg,
+        increase_allowance_msg,
+        register_receive,
+        send_msg,
+        set_viewing_key_msg,
     },
     utils::{
         asset::{set_allowance, Contract},
@@ -121,7 +147,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
 
     // Total for "portion" allowances
     let mut portion_total = Uint128::zero(); //(token_balance + out_balance) - amount_total;
-                                             //let mut portion_allowance = Uint128::zero();
+    //let mut portion_allowance = Uint128::zero();
 
     // { spender: (balance, allowance) }
     let mut metadata: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
