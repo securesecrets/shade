@@ -42,7 +42,7 @@ impl CodeType for Error {
     }
 }
 
-const ADMIN_TARGET: &str = "airdrop";
+const ADMIN_TARGET: &str = "admin";
 
 pub fn unregistered_admin(address: &str) -> StdError {
     DetailedError::from_code(ADMIN_TARGET, Error::UnregisteredAdmin, vec![address]).to_error()

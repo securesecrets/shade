@@ -1,6 +1,7 @@
 #[cfg(feature = "admin")]
 pub mod admin {
-    pub use shade_admin_multi_test::multi::AdminAuth;
+    pub use admin;
+    multi_derive::implement_multi!(Admin, admin);
 }
 
 #[cfg(feature = "snip20")]

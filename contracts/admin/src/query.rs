@@ -1,7 +1,12 @@
-use shade_protocol::c_std::{Deps, StdResult};
-use crate::shared::{STATUS, SUPER, PERMISSIONS, is_valid_permission};
-use shade_protocol::admin::{ValidateAdminPermissionResponse, PermissionsResponse};
-use shade_protocol::admin::errors::{unregistered_admin, unauthorized_admin};
+use crate::shared::{is_valid_permission, PERMISSIONS, STATUS, SUPER};
+use shade_protocol::{
+    admin::{
+        errors::{unauthorized_admin, unregistered_admin},
+        PermissionsResponse,
+        ValidateAdminPermissionResponse,
+    },
+    c_std::{Deps, StdResult},
+};
 
 /// Checks if the user has the requested permission. Permissions are case sensitive.
 pub fn query_validate_permission(
@@ -29,10 +34,7 @@ pub fn query_validate_permission(
                 if permissions.iter().any(|perm| permission.eq(perm)) {
                     has_permission = true;
                 } else {
-                    return Err(unauthorized_admin(
-                        valid_user.as_str(),
-                        permission.as_str(),
-                    ));
+                    has_permission = false;
                 }
             }
             // If user has been registered, there should be an empty vector there.
@@ -41,4 +43,3 @@ pub fn query_validate_permission(
     }
     Ok(ValidateAdminPermissionResponse { has_permission })
 }
-
