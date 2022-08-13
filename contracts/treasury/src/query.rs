@@ -31,7 +31,7 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     )?;
 
     for allowance in allowances {
-        if let Some(m) = MANAGER.may_load(deps.storage, asset.clone())? {
+        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
             balance +=
                 manager::balance_query(deps.querier, &asset.clone(), self_address.clone(), m)?;
         }
@@ -60,7 +60,7 @@ pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     )?;
 
     for allowance in allowances {
-        if let Some(m) = MANAGER.may_load(deps.storage, asset.clone())? {
+        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
             reserves +=
                 manager::reserves_query(deps.querier, &asset.clone(), self_address.clone(), m)?;
         }
@@ -82,7 +82,7 @@ pub fn unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     };
 
     for allowance in allowances {
-        if let Some(m) = MANAGER.may_load(deps.storage, asset.clone())? {
+        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
             unbonding += manager::unbonding_query(deps.querier, &asset, self_address.clone(), m)?;
         }
     }
@@ -95,15 +95,18 @@ pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let self_address = SELF_ADDRESS.load(deps.storage)?;
     let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
 
+    /*
     let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
             return Err(StdError::generic_err("Unrecognized Asset"));
         }
     };
+    */
 
     for allowance in allowances {
-        if let Some(m) = MANAGER.may_load(deps.storage, asset.clone())? {
+        println!("ALLOWANCE");
+        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender.clone())? {
             unbondable += manager::unbondable_query(deps.querier, &asset, self_address.clone(), m)?;
         }
     }
@@ -124,7 +127,7 @@ pub fn claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let mut claimable = Uint128::zero();
 
     for allowance in allowances {
-        if let Some(m) = MANAGER.may_load(deps.storage, asset.clone())? {
+        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
             claimable += manager::claimable_query(deps.querier, &asset, self_address.clone(), m)?;
         }
     }

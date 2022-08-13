@@ -319,7 +319,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
         }
     }
 
-    let mut send_amount = Uint128::zero();
+    let send_amount;
 
     if holding.unbondings[unbonding_i].amount > reserves + total_claimed {
         send_amount = reserves + total_claimed;
@@ -349,6 +349,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
 }
 
 pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+    println!("MANAGER UPDATE");
     let config = CONFIG.load(deps.storage)?;
 
     let full_asset = ASSETS.load(deps.storage, asset.clone())?;
@@ -413,21 +414,29 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         &full_asset.contract.clone(),
     )?;
 
-    let total = (amount_total + portion_total + balance) - holder_unbonding;
+    let out_total = (amount_total + portion_total + balance) - holder_unbonding;
+    let total = out_total + allowance;
 
     //panic!("holder principal {}", holder_principal);
-    if total > holder_principal {
-        println!("Gainzz {}", total - holder_principal);
+    if out_total > holder_principal {
+        println!("Gainzz {}", out_total - holder_principal);
         println!("Principal: {}", holder_principal);
         // credit gains to treasury
         let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
         if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
-            holding.balances[i].amount += total - holder_principal;
+            holding.balances[i].amount += out_total - holder_principal;
         }
         HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
-    } else if total < holder_principal {
+    } else if out_total < holder_principal {
         //TODO losses
-        todo!("losses");
+        println!("LOSS {}", holder_principal - out_total);
+        println!("Principal: {}", holder_principal);
+        // credit gains to treasury
+        let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
+        if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
+            holding.balances[i].amount -= holder_principal - out_total;
+        }
+        HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
     }
 
     let _total_unbond = Uint128::zero();
@@ -436,21 +445,40 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     let mut balance_used = Uint128::zero();
 
     for adapter in allocations.clone() {
+        println!("ADAPTER REBALANCE {}", adapter.nick.unwrap());
         let desired_amount = match adapter.alloc_type {
             AllocationType::Amount => adapter.amount,
             AllocationType::Portion => adapter.amount.multiply_ratio(total, 10u128.pow(18)),
         };
         let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
 
+        /*
+        let adapter_balance = adapter::balance_query(
+            deps.querier,
+            &full_asset.contract.address,
+            adapter.contract.clone(),
+        )?;
+        */
+        println!(
+            "ADAPTER UNDERFUNDED? {} < {}",
+            adapter.balance, desired_amount
+        );
+
         // Under Funded -- send balance then allowance
         if adapter.balance < desired_amount {
+            println!(
+                "ADAPTER UNDERFUNDED {} < {}",
+                adapter.balance, desired_amount
+            );
             let mut desired_input = desired_amount - adapter.balance;
             if desired_input <= threshold {
+                println!("WITHIN THRESHOLD {} {}", desired_input, threshold);
                 continue;
             }
 
             // Fully covered by balance
-            if desired_input <= balance {
+            if desired_input < balance {
+                println!("DESIRED INPUT SEND");
                 send_actions.push(SendAction {
                     recipient: adapter.contract.address.clone().to_string(),
                     recipient_code_hash: Some(adapter.contract.code_hash.clone()),
@@ -465,6 +493,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             }
             // Send all balance
             else if !balance.is_zero() {
+                println!("DESIRED INPUT SEND");
                 send_actions.push(SendAction {
                     recipient: adapter.contract.address.clone().to_string(),
                     recipient_code_hash: Some(adapter.contract.code_hash.clone()),
@@ -475,14 +504,14 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
                 balance = Uint128::zero();
                 balance_used += balance;
-                desired_input = desired_input - balance;
+                //desired_input = desired_input - balance;
                 break;
             }
 
             if !allowance.is_zero() {
                 // Fully covered by allowance
-                if desired_input <= allowance {
-                    //panic!("SEND FROM 1 {} {}", desired_input, adapter.nick.unwrap());
+                if desired_input < allowance {
+                    println!("DESIRED INPUT ALLOWANCE SEND");
                     send_from_actions.push(SendFromAction {
                         owner: config.treasury.clone().to_string(),
                         recipient: adapter.contract.address.clone().to_string(),
@@ -492,13 +521,12 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                         memo: None,
                     });
 
-                    allowance = allowance - desired_input;
                     allowance_used += desired_input;
-                    desired_input = Uint128::zero();
+                    allowance = allowance - desired_input;
                 }
                 // Send all allowance
                 else if !allowance.is_zero() {
-                    //panic!("SEND FROM 2 {} {}", allowance, adapter.nick.unwrap());
+                    println!("ALLOWANCE ALLOWANCE SEND");
                     send_from_actions.push(SendFromAction {
                         owner: config.treasury.clone().to_string(),
                         recipient: adapter.contract.address.clone().to_string(),
@@ -508,16 +536,15 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                         memo: None,
                     });
 
-                    allowance = Uint128::zero();
                     allowance_used += allowance;
-                    desired_input = desired_input - allowance;
+                    //allowance = Uint128::zero();
                     break;
                 }
             }
         }
         // Over funded -- unbond
         else if adapter.balance > desired_amount {
-            let mut desired_output = adapter.balance - desired_amount;
+            let desired_output = adapter.balance - desired_amount;
             if desired_output <= threshold {
                 continue;
             }
@@ -530,20 +557,27 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     }
 
     // Credit treasury balance with allowance used
-    HOLDING.update(deps.storage, config.treasury, |h| -> StdResult<Holding> {
-        let mut holding = h.unwrap();
-        if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
-            holding.balances[i].amount = holding.balances[i].amount + allowance_used;
-        } else {
-            holding.balances.push(Balance {
-                token: asset,
-                amount: allowance_used,
-            });
-        }
-        Ok(holding)
-    })?;
+    let mut treasury_holding = HOLDING.load(deps.storage, config.treasury.clone())?;
+    println!("Treasury Holding");
+
+    if let Some(i) = treasury_holding
+        .balances
+        .iter()
+        .position(|u| u.token == asset)
+    {
+        println!("Credit Treasury {}", allowance_used);
+        treasury_holding.balances[i].amount = treasury_holding.balances[i].amount + allowance_used;
+    } else {
+        println!("Credit Treasury {}", allowance_used);
+        treasury_holding.balances.push(Balance {
+            token: asset,
+            amount: allowance_used,
+        });
+    }
+    HOLDING.save(deps.storage, config.treasury, &treasury_holding)?;
 
     if !send_actions.is_empty() {
+        println!("SEND ACTIONS {}", send_actions.len());
         messages.push(batch_send_msg(
             send_actions,
             None,
@@ -552,6 +586,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     }
 
     if !send_from_actions.is_empty() {
+        println!("SEND FROM ACTIONS {}", send_from_actions.len());
         messages.push(batch_send_from_msg(
             send_from_actions,
             None,

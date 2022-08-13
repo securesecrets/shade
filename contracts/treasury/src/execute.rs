@@ -160,7 +160,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
     let mut metadata: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
 
     for a in allowances.clone() {
-        let balance = match MANAGER.may_load(deps.storage, a.spender.clone())? {
+        let manager_balance = match MANAGER.may_load(deps.storage, a.spender.clone())? {
             Some(m) => manager::balance_query(
                 deps.querier,
                 &asset.clone(),
@@ -180,22 +180,28 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         )?
         .allowance;
 
-        println!("metadata {}: {}, {}", a.spender.clone(), balance, allowance);
-        metadata.insert(a.spender.clone(), (balance, allowance));
+        println!(
+            "metadata {}: {}, {}",
+            a.spender.clone(),
+            manager_balance,
+            allowance
+        );
+        metadata.insert(a.spender.clone(), (manager_balance, allowance));
 
         match a.allowance_type {
             AllowanceType::Amount => {
                 //TODO this will fail when over funded
-                amount_total += a.amount - balance + allowance;
-                //amount_total += balance + allowance;
+                amount_total += manager_balance + allowance;
+                // account for potential additions (on refill)
+                if a.amount > manager_balance + allowance {
+                    amount_total += a.amount - (manager_balance + allowance);
+                }
             }
-            AllowanceType::Portion => {
-                portion_total += balance + allowance;
-            }
+            AllowanceType::Portion => {}
         }
     }
 
-    portion_total += token_balance - amount_total;
+    portion_total = token_balance - amount_total;
 
     let mut messages = vec![];
     let mut metrics = vec![];
@@ -712,7 +718,7 @@ pub fn claim(deps: DepsMut, _env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             )?;
             claimed += claimable;
 
-            if claimable.is_zero() {
+            if !claimable.is_zero() {
                 messages.push(manager::claim_msg(&asset, m.clone())?);
             }
         }
@@ -778,10 +784,10 @@ pub fn unbond(
         )));
     }
 
-    Ok(
-        Response::new().set_data(to_binary(&manager::ExecuteAnswer::Unbond {
+    Ok(Response::new().add_messages(messages).set_data(to_binary(
+        &manager::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount,
-        })?),
-    )
+        },
+    )?))
 }

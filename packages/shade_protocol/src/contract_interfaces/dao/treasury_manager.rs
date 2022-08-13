@@ -1,5 +1,5 @@
-use crate::c_std::{Addr, Binary, Uint128};
 use crate::{
+    c_std::{Addr, Binary, Uint128},
     contract_interfaces::dao::manager,
     utils::{
         asset::{Contract, RawContract},
