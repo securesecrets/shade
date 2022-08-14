@@ -1,14 +1,13 @@
 use shade_protocol::c_std::{
     Api,
+    Deps,
     BalanceResponse,
     BankQuery,
     Delegation,
-    DistQuery,
     DepsMut,
     FullDelegation,
     Addr,
     Querier,
-    RewardsResponse,
     StdError,
     StdResult,
     Storage,
@@ -23,38 +22,28 @@ use shade_protocol::{
 use shade_protocol::snip20::helpers::{allowance_query, balance_query};
 use shade_protocol::contract_interfaces::dao::adapter;
 
-use crate::state::{asset_r, assets_r, config_r, self_address_r, viewing_key_r};
+use crate::storage::*;
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
-        config: config_r(deps.storage).load()?,
+        config: CONFIG.load(deps.storage)?,
     })
 }
 
+/*
 pub fn pending_allowance(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<QueryAnswer> {
-    let full_asset = match asset_r(deps.storage).may_load(asset.as_str().as_bytes())? {
-        Some(a) => a,
-        None => {
-            return Err(StdError::generic_err(format!(
-                "Unrecognized Asset {}",
-                asset
-            )));
-        }
-    };
-
-    let config = config_r(deps.storage).load()?;
+    let token = TOKEN.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     let allowance = allowance_query(
         &deps.querier,
         config.treasury,
-        self_address_r(deps.storage).load()?,
-        viewing_key_r(deps.storage).load()?,
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
+        SELF_ADDRESS.load(deps.storage)?,
+        VIEWING_KEY.load(deps.storage)?,
+        &token.contract.clone(),
     )?
     .allowance;
 
@@ -65,25 +54,16 @@ pub fn balance(
     deps: Deps,
     asset: Addr,
 ) -> StdResult<adapter::QueryAnswer> {
-    let full_asset = match asset_r(deps.storage).may_load(asset.as_str().as_bytes())? {
-        Some(a) => a,
-        None => {
-            return Err(StdError::generic_err(format!(
-                "Unrecognized Asset {}",
-                asset
-            )));
-        }
-    };
+    let token = TOKEN.may_load(deps.storage)?;
 
     let balance = balance_query(
         &deps.querier,
-        self_address_r(deps.storage).load()?,
-        viewing_key_r(deps.storage).load()?,
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
+        SELF_ADDRESS.load(deps.storage)?,
+        VIEWING_KEY.load(deps.storage)?,
+        &token.contract.clone(),
     )?
     .amount;
 
     Ok(adapter::QueryAnswer::Balance { amount: balance })
 }
+*/

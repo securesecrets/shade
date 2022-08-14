@@ -2,7 +2,7 @@ use cosmwasm_std::{Coin, SubMsg};
 use cosmwasm_schema::{cw_serde};
 use crate::c_std::{StdError, StdResult, Addr, Uint128, Binary, CosmosMsg, QuerierWrapper};
 use crate::utils::{ExecuteCallback, Query};
-use super::manager::{Allowance, AllowanceResponse};
+use super::manager::{Allowance};
 use super::{QueryAnswer, QueryMsg, ExecuteMsg};
 use crate::utils::asset::Contract;
 use crate::snip20::batch;
@@ -33,6 +33,30 @@ pub fn send_msg(
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     Ok(ExecuteMsg::Send {
+        recipient: recipient.to_string(),
+        recipient_code_hash: None,
+        amount,
+        msg,
+        memo,
+        padding
+    }.to_cosmos_msg(
+        contract,
+        vec![]
+    )?)
+}
+/// Returns a StdResult<CosmosMsg> used to execute Send
+#[allow(clippy::too_many_arguments)]
+pub fn send_from_msg(
+    owner: Addr,
+    recipient: Addr,
+    amount: Uint128,
+    msg: Option<Binary>,
+    memo: Option<String>,
+    padding: Option<String>,
+    contract: &Contract,
+) -> StdResult<CosmosMsg> {
+    Ok(ExecuteMsg::SendFrom {
+        owner: owner.to_string(),
         recipient: recipient.to_string(),
         recipient_code_hash: None,
         amount,
@@ -287,6 +311,14 @@ pub fn decrease_allowance_msg(
     .to_cosmos_msg(contract, funds)
 }
 
+#[cw_serde]
+pub struct AllowanceResponse {
+    pub spender: Addr,
+    pub owner: Addr,
+    pub allowance: Uint128,
+    pub expiration: Option<u64>,
+}
+
 /// Returns a StdResult<Allowance> from performing Allowance query
 ///
 /// # Arguments
@@ -323,7 +355,7 @@ pub fn allowance_query(
             spender,
             owner,
             expiration,
-            amount: todo!(),
+            allowance,
         }),
         QueryAnswer::ViewingKeyError { .. } => Err(StdError::generic_err("Unauthorized")),
         _ => Err(StdError::generic_err("Invalid Allowance query response")),

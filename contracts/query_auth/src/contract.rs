@@ -1,7 +1,20 @@
 use crate::{handle, query};
-use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Binary, Deps, entry_point};
-use shade_protocol::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
+    c_std::{
+        entry_point,
+        to_binary,
+        Api,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::query_auth::{
         Admin,
         ContractStatus,
@@ -10,7 +23,7 @@ use shade_protocol::{
         QueryMsg,
         RngSeed,
     },
-    utils::storage::plus::ItemStorage,
+    utils::{pad_handle_result, pad_query_result, storage::plus::ItemStorage},
 };
 
 // Used to pad up responses for better privacy.
@@ -23,8 +36,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    Admin(msg.admin_auth)
-    .save(deps.storage)?;
+    Admin(msg.admin_auth).save(deps.storage)?;
 
     RngSeed::new(msg.prng_seed).save(deps.storage)?;
 
@@ -34,12 +46,7 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     // Check what msgs are allowed
     let status = ContractStatus::load(deps.storage)?;
     match status {
@@ -61,7 +68,9 @@ pub fn execute(
         ContractStatus::DisableAll => match msg {
             ExecuteMsg::CreateViewingKey { .. }
             | ExecuteMsg::SetViewingKey { .. }
-            | ExecuteMsg::BlockPermitKey { .. } => return Err(StdError::generic_err("unauthorized")),
+            | ExecuteMsg::BlockPermitKey { .. } => {
+                return Err(StdError::generic_err("unauthorized"));
+            }
             _ => {}
         },
     }
@@ -69,12 +78,18 @@ pub fn execute(
     pad_handle_result(
         match msg {
             ExecuteMsg::SetAdminAuth { admin, .. } => handle::try_set_admin(deps, env, info, admin),
-            ExecuteMsg::SetRunState { state, .. } => handle::try_set_run_state(deps, env, info, state),
-            ExecuteMsg::SetViewingKey { key, .. } => handle::try_set_viewing_key(deps, env, info, key),
+            ExecuteMsg::SetRunState { state, .. } => {
+                handle::try_set_run_state(deps, env, info, state)
+            }
+            ExecuteMsg::SetViewingKey { key, .. } => {
+                handle::try_set_viewing_key(deps, env, info, key)
+            }
             ExecuteMsg::CreateViewingKey { entropy, .. } => {
                 handle::try_create_viewing_key(deps, env, info, entropy)
             }
-            ExecuteMsg::BlockPermitKey { key, .. } => handle::try_block_permit_key(deps, env, info, key),
+            ExecuteMsg::BlockPermitKey { key, .. } => {
+                handle::try_block_permit_key(deps, env, info, key)
+            }
         },
         RESPONSE_BLOCK_SIZE,
     )

@@ -78,20 +78,41 @@ pub fn execute(
             amount,
             msg,
             ..
-        } => execute::receive(deps, env, info, sender, from, amount, msg),
+        } => {
+            let sender = deps.api.addr_validate(&sender)?;
+            let from = deps.api.addr_validate(&from)?;
+            execute::receive(deps, env, info, sender, from, amount, msg)
+        },
         ExecuteMsg::UpdateConfig { config } => execute::try_update_config(deps, env, info, config),
-        ExecuteMsg::RegisterAsset { contract } => execute::try_register_asset(deps, &env, info, &contract),
+        ExecuteMsg::RegisterAsset { contract } => {
+            let contract = contract.into_valid(deps.api)?;
+            execute::try_register_asset(deps, &env, info, &contract)
+        },
         ExecuteMsg::Allocate { asset, allocation } => {
+            let asset = deps.api.addr_validate(&asset)?;
             execute::allocate(deps, &env, info, asset, allocation)
         },
-        ExecuteMsg::AddHolder { holder } => execute::add_holder(deps, &env, info, holder),
-        ExecuteMsg::RemoveHolder { holder } => execute::remove_holder(deps, &env, info, holder),
+        ExecuteMsg::AddHolder { holder } => {
+            let holder = deps.api.addr_validate(&holder)?;
+            execute::add_holder(deps, &env, info, holder)
+        },
+        ExecuteMsg::RemoveHolder { holder } => {
+            let holder = deps.api.addr_validate(&holder)?;
+            execute::remove_holder(deps, &env, info, holder)
+        },
         ExecuteMsg::Manager(a) => match a {
             manager::SubExecuteMsg::Unbond { asset, amount } => {
+                let asset = deps.api.addr_validate(&asset)?;
                 execute::unbond(deps, &env, info, asset, amount)
-            }
-            manager::SubExecuteMsg::Claim { asset } => execute::claim(deps, &env, info, asset),
-            manager::SubExecuteMsg::Update { asset } => execute::update(deps, &env, info, asset),
+            },
+            manager::SubExecuteMsg::Claim { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                execute::claim(deps, &env, info, asset)
+            },
+            manager::SubExecuteMsg::Update { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                execute::update(deps, &env, info, asset)
+            },
         },
     }
 }
@@ -105,17 +126,46 @@ pub fn query(
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
-        QueryMsg::Allocations { asset } => to_binary(&query::allocations(deps, asset)?),
-        QueryMsg::PendingAllowance { asset } => to_binary(&query::pending_allowance(deps, asset)?),
+        QueryMsg::Allocations { asset } => {
+            let asset = deps.api.addr_validate(&asset)?;
+            to_binary(&query::allocations(deps, asset)?)
+        },
+        QueryMsg::PendingAllowance { asset } => {
+            let asset = deps.api.addr_validate(&asset)?;
+            to_binary(&query::pending_allowance(deps, asset)?)
+        },
         QueryMsg::Holders {} => to_binary(&query::holders(deps)?),
-        QueryMsg::Holding { holder } => to_binary(&query::holding(deps, holder)?),
+        QueryMsg::Holding { holder } => {
+            let holder = deps.api.addr_validate(&holder)?;
+            to_binary(&query::holding(deps, holder)?)
+        },
 
         QueryMsg::Manager(a) => match a {
-            manager::SubQueryMsg::Balance { asset, holder } => to_binary(&query::balance(deps, asset, holder)?),
-            manager::SubQueryMsg::Unbonding { asset, holder } => to_binary(&query::unbonding(deps, asset, holder)?),
-            manager::SubQueryMsg::Unbondable { asset, holder } => to_binary(&query::unbondable(deps, asset, holder)?),
-            manager::SubQueryMsg::Claimable { asset, holder } => to_binary(&query::claimable(deps, asset, holder)?),
-            manager::SubQueryMsg::Reserves { asset, holder } => to_binary(&query::reserves(deps, asset, holder)?),
+            manager::SubQueryMsg::Balance { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::balance(deps, asset, holder)?)
+            },
+            manager::SubQueryMsg::Unbonding { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::unbonding(deps, asset, holder)?)
+            },
+            manager::SubQueryMsg::Unbondable { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::unbondable(deps, asset, holder)?)
+            },
+            manager::SubQueryMsg::Claimable { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::claimable(deps, asset, holder)?)
+            },
+            manager::SubQueryMsg::Reserves { asset, holder } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                let holder = deps.api.addr_validate(&holder)?;
+                to_binary(&query::reserves(deps, asset, holder)?)
+            },
         }
     }
 }

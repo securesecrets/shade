@@ -32,6 +32,5 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 ] }
 
 [dev-dependencies]
-shade_admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0" }
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "multi-test" ] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "multi-test", "shade_admin" ] }
 shade-multi-test = { path = "../../packages/multi_test", features = [ "snip20", "query_auth", "admin" ] }

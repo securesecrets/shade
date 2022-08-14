@@ -1,60 +1,52 @@
 use shade_protocol::c_std::{
-
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
+    entry_point, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Querier, Response,
+    StdError, StdResult, Storage, Uint128,
 };
 
 use shade_protocol::contract_interfaces::dao::rewards_emission::{
-    Config,
-    ExecuteMsg,
-    InstantiateMsg,
-    QueryMsg,
+    Config, ExecuteMsg, InstantiateMsg, QueryMsg,
 };
 
-use shade_protocol::snip20::helpers::{register_receive, set_viewing_key_msg};
-use shade_protocol::contract_interfaces::dao::adapter;
+use shade_protocol::snip20::helpers::{fetch_snip20, register_receive, set_viewing_key_msg};
+//use shade_protocol::contract_interfaces::dao::adapter;
 
-use crate::{
-    handle,
-    query,
-    state::{config_w, self_address_w, viewing_key_r, viewing_key_w},
-};
+use crate::{execute, query, storage::*};
 
-pub fn init(
+#[entry_point]
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    let mut config = msg.config;
+    let mut admins: Vec<Addr> = msg.admins
+        .iter()
+        //TODO change unwrap
+        .map(|a| deps.api.addr_validate(&a).ok().unwrap())
+        .collect();
 
-    if !config.admins.contains(&info.sender) {
-        config.admins.push(info.sender);
+    if !admins.contains(&info.sender) {
+        admins.push(info.sender);
     }
 
-    config_w(deps.storage).save(&config)?;
+    let mut config = Config {
+        admins,
+        treasury: deps.api.addr_validate(&msg.treasury)?,
+    };
 
-    self_address_w(deps.storage).save(&env.contract.address)?;
-    viewing_key_w(deps.storage).save(&msg.viewing_key)?;
+    CONFIG.save(deps.storage, &config)?;
+    SELF_ADDRESS.save(deps.storage, &env.contract.address)?;
+    VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
+    TOKEN.save(
+        deps.storage,
+        &fetch_snip20(&msg.token.into_valid(deps.api)?, &deps.querier)?,
+    );
 
     Ok(Response::new())
 }
 
-pub fn handle(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+#[entry_point]
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Receive {
             sender,
@@ -62,53 +54,32 @@ pub fn handle(
             amount,
             msg,
             ..
-        } => handle::receive(deps, env, info, sender, from, amount, msg),
-        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
-        ExecuteMsg::RegisterAsset { asset } => handle::register_asset(deps, env, info, &asset),
-        ExecuteMsg::RefillRewards { rewards } => handle::refill_rewards(deps, env, info, rewards),
-
-        ExecuteMsg::Adapter(adapter) => match adapter {
-            // Maybe should return an Ok still?
-            adapter::SubHandleMsg::Unbond { asset, amount } => {
-                Err(StdError::generic_err("Cannot unbond from rewards"))
-            }
-            // If error on unbond, also error on claim
-            adapter::SubHandleMsg::Claim { asset } => handle::claim(deps, env, info, asset),
-            adapter::SubHandleMsg::Update { asset } => handle::update(deps, env, info, asset),
-        },
+        } => execute::receive(deps, env, info, sender, from, amount, msg),
+        ExecuteMsg::UpdateConfig { config } => execute::try_update_config(deps, env, info, config),
+        ExecuteMsg::RegisterRewards {
+            token,
+            distributor,
+            amount,
+            cycle,
+            expiration,
+        } => execute::register_rewards(
+            deps,
+            env,
+            info,
+            token,
+            distributor,
+            amount,
+            cycle,
+            expiration,
+        ),
+        ExecuteMsg::RefillRewards {} => execute::refill_rewards(deps, env, info),
     }
 }
 
-pub fn query(
-    deps: Deps,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+#[entry_point]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
-        QueryMsg::PendingAllowance { asset } => to_binary(&query::pending_allowance(deps, asset)?),
-        QueryMsg::Adapter(adapter) => match adapter {
-            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
-            // Unbonding disabled
-            adapter::SubQueryMsg::Claimable { asset } => {
-                to_binary(&adapter::QueryAnswer::Claimable {
-                    amount: Uint128::zero(),
-                })
-            }
-            adapter::SubQueryMsg::Unbonding { asset } => {
-                to_binary(&adapter::QueryAnswer::Unbonding {
-                    amount: Uint128::zero(),
-                })
-            }
-            adapter::SubQueryMsg::Unbondable { asset } => {
-                to_binary(&adapter::QueryAnswer::Unbondable {
-                    amount: Uint128::zero(),
-                })
-            }
-            adapter::SubQueryMsg::Reserves { asset } => {
-                to_binary(&adapter::QueryAnswer::Reserves {
-                    amount: Uint128::zero(),
-                })
-            }
-        },
+        //QueryMsg::PendingAllowance { asset } => to_binary(&query::pending_allowance(deps, asset)?),
     }
 }

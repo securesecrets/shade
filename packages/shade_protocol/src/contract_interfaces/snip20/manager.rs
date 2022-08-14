@@ -258,14 +258,6 @@ impl ItemStorage for Minters {
 }
 
 #[cw_serde]
-pub struct AllowanceResponse {
-    pub spender: Addr,
-    pub owner: Addr,
-    pub amount: Uint128,
-    pub expiration: Option<u64>,
-}
-
-#[cw_serde]
 pub struct Allowance {
     pub amount: Uint128,
     pub expiration: Option<u64>,

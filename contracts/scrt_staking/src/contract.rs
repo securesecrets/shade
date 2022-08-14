@@ -27,7 +27,7 @@ use shade_protocol::{
 };
 
 use crate::{
-    handle,
+    execute,
     query,
     storage::{CONFIG, SELF_ADDRESS, UNBONDING, VIEWING_KEY},
 };
@@ -83,12 +83,27 @@ pub fn execute(
             amount,
             msg,
             ..
-        } => handle::receive(deps, env, info, sender, from, amount, msg),
-        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
+        } => {
+            let sender = deps.api.addr_validate(&sender)?;
+            let from = deps.api.addr_validate(&from)?;
+            execute::receive(deps, env, info, sender, from, amount, msg)
+        },
+        ExecuteMsg::UpdateConfig { config } => {
+            execute::try_update_config(deps, env, info, config)
+        },
         ExecuteMsg::Adapter(adapter) => match adapter {
-            adapter::SubExecuteMsg::Unbond { asset, amount } => handle::unbond(deps, env, info, asset, amount),
-            adapter::SubExecuteMsg::Claim { asset } => handle::claim(deps, env, info, asset),
-            adapter::SubExecuteMsg::Update { asset } => handle::update(deps, env, info, asset),
+            adapter::SubExecuteMsg::Unbond { asset, amount } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                execute::unbond(deps, env, info, asset, amount)
+            },
+            adapter::SubExecuteMsg::Claim { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                execute::claim(deps, env, info, asset)
+            },
+            adapter::SubExecuteMsg::Update { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                execute::update(deps, env, info, asset)
+            },
         },
     }
 }
@@ -104,11 +119,26 @@ pub fn query(
         QueryMsg::Delegations {} => to_binary(&query::delegations(deps)?),
         QueryMsg::Rewards {} => to_binary(&query::rewards(deps)?),
         QueryMsg::Adapter(adapter) => match adapter {
-            adapter::SubQueryMsg::Balance { asset } => to_binary(&query::balance(deps, asset)?),
-            adapter::SubQueryMsg::Claimable { asset } => to_binary(&query::claimable(deps, asset)?),
-            adapter::SubQueryMsg::Unbonding { asset } => to_binary(&query::unbonding(deps, asset)?),
-            adapter::SubQueryMsg::Unbondable { asset } => to_binary(&query::unbondable(deps, asset)?),
-            adapter::SubQueryMsg::Reserves { asset } => to_binary(&query::reserves(deps, asset)?),
+            adapter::SubQueryMsg::Balance { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                to_binary(&query::balance(deps, asset)?)
+            },
+            adapter::SubQueryMsg::Claimable { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                to_binary(&query::claimable(deps, asset)?)
+            },
+            adapter::SubQueryMsg::Unbonding { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                to_binary(&query::unbonding(deps, asset)?)
+            },
+            adapter::SubQueryMsg::Unbondable { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                to_binary(&query::unbondable(deps, asset)?)
+            },
+            adapter::SubQueryMsg::Reserves { asset } => {
+                let asset = deps.api.addr_validate(&asset)?;
+                to_binary(&query::reserves(deps, asset)?)
+            },
         }
     }
 }

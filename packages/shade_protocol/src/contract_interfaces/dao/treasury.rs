@@ -1,61 +1,84 @@
 use crate::utils::asset::RawContract;
 use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStatus};
 
+use crate::c_std::{Addr, Binary, StdResult, Uint128};
 use crate::contract_interfaces::dao::adapter;
-use crate::c_std::{Binary, Addr, StdResult, Uint128};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 /// The permission referenced in the Admin Auth contract to give a user
 /// admin permissions for the Shade Treasury
-pub const SHADE_TREASURY_ADMIN: &str = "SHADE_TREASURY_ADMIN";
+//pub const SHADE_TREASURY_ADMIN: &str = "SHADE_TREASURY_ADMIN";
 
 #[cw_serde]
 pub struct Config {
     pub admin_auth: Contract,
+    pub multisig: Addr,
 }
 
-/* Examples:
- * Constant-Portion -> Finance manager
- * Constant-Amount -> Rewards, pre-set manually adjusted
- * Monthly-Portion -> Rewards, self-scaling
- * Monthly-Amount -> Governance grant or Committee funding
- *
- * Once-Portion -> Disallowed
- */
 #[cw_serde]
-pub enum Allowance {
-    // Monthly refresh, not counted in rebalance
-    Amount {
-        //nick: Option<String>,
-        spender: Addr,
-        // Unlike others, this is a direct number of uTKN to allow monthly
-        cycle: Cycle,
-        amount: Uint128,
-        last_refresh: String,
-    },
-    Portion {
-        //nick: Option<String>,
-        spender: Addr,
-        portion: Uint128,
-        //TODO: This needs to be omitted from the handle msg
-        last_refresh: String,
-        tolerance: Uint128,
-    },
+pub enum RunLevel {
+    Normal,
+    Deactivated,
+    Migrating,
 }
 
-//TODO rename to Adapter
 #[cw_serde]
-pub struct Manager {
-    pub contract: Contract,
-    pub balance: Uint128,
-    pub desired: Uint128,
+pub enum Context {
+    Receive,
+    Update,
+    Migration,
+}
+
+#[cw_serde]
+pub enum Action {
+    IncreaseAllowance,
+    DecreaseAllowance,
+    ManagerUnbond,
+    ManagerClaim,
+    FundsReceived,
+}
+
+#[cw_serde]
+pub struct Metric {
+    pub action: Action,
+    pub context: Context,
+    pub timestamp: u64,
+    pub token: Addr,
+    pub amount: Uint128,
+    pub user: Addr,
+}
+
+#[cw_serde]
+pub enum AllowanceType {
+    Amount,
+    Portion,
+}
+
+#[cw_serde]
+pub struct Allowance {
+    pub spender: Addr,
+    pub allowance_type: AllowanceType,
+    pub cycle: Cycle,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
+}
+
+#[cw_serde]
+pub struct AllowanceMeta {
+    pub spender: Addr,
+    pub allowance_type: AllowanceType,
+    pub cycle: Cycle,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
+    pub last_refresh: String,
 }
 
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin_auth: RawContract,
+    pub multisig: String,
     pub viewing_key: String,
 }
 
@@ -66,8 +89,8 @@ impl InstantiateCallback for InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive {
-        sender: Addr,
-        from: Addr,
+        sender: String,
+        from: String,
         amount: Uint128,
         memo: Option<Binary>,
         msg: Option<Binary>,
@@ -76,20 +99,23 @@ pub enum ExecuteMsg {
         config: Config,
     },
     RegisterAsset {
-        contract: Contract,
+        contract: RawContract,
     },
     RegisterManager {
-        contract: Contract,
+        contract: RawContract,
     },
     // Setup a new allowance
     Allowance {
         asset: String,
         allowance: Allowance,
     },
-    /* TODO: Maybe?
-    TransferAccount {
+    Update {
+        asset: String,
     },
-    */
+    SetRunLevel {
+        run_level: RunLevel,
+    },
+
     //TODO remove, change to treasury only interface
     Adapter(adapter::SubExecuteMsg),
 }
@@ -102,7 +128,7 @@ impl ExecuteCallback for ExecuteMsg {
 pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
-        address: Addr,
+        address: String,
     },
     UpdateConfig {
         status: ResponseStatus,
@@ -119,8 +145,14 @@ pub enum ExecuteAnswer {
     Rebalance {
         status: ResponseStatus,
     },
+    Migration {
+        status: ResponseStatus,
+    },
     Unbond {
         status: ResponseStatus,
+    },
+    RunLevel {
+        run_level: RunLevel,
     },
 }
 
@@ -129,19 +161,13 @@ pub enum QueryMsg {
     Config {},
     Assets {},
     // List of recurring allowances configured
-    Allowances {
-        asset: Addr,
-    },
-    // List of actual current amounts
-    Allowance {
-        asset: Addr,
-        spender: Addr,
-    },
+    Allowances { asset: String },
+    // Current allowance to spender
+    Allowance { asset: String, spender: String },
+    RunLevel,
     /*
-    AccountHolders { },
-    Account { 
-        holder: Addr,
-    },
+    Balance { asset: String },
+    Reserves { asset: String },
     */
     Adapter(adapter::SubQueryMsg),
 }
@@ -154,9 +180,7 @@ impl Query for QueryMsg {
 pub enum QueryAnswer {
     Config { config: Config },
     Assets { assets: Vec<Addr> },
-    Allowances { allowances: Vec<Allowance> },
-    CurrentAllowances { allowances: Vec<Allowance> },
+    Allowances { allowances: Vec<AllowanceMeta> },
     Allowance { amount: Uint128 },
-    //Accounts { accounts: Vec<Addr> },
-    //Account { account: Account },
+    RunLevel { run_level: RunLevel },
 }

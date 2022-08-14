@@ -14,9 +14,10 @@ use shade_protocol::{
         Storage, Uint128,
         DistributionMsg,
     },
+    snip20::helpers::balance_query,
 };
 
-use crate::storage::{CONFIG, SELF_ADDRESS, UNBONDING};
+use crate::storage::*;
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
@@ -78,12 +79,10 @@ pub fn balance(
             .map(|d| d.amount.amount.u128())
             .sum::<u128>(),
     );
-    println!("delegated balance {}", delegated.clone());
 
     let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
 
     let rewards = rewards(deps)?;
-    println!("rewards balance {}", rewards.clone());
 
     Ok(adapter::QueryAnswer::Balance {
         amount: delegated + rewards + scrt_balance,
@@ -157,19 +156,25 @@ pub fn unbondable(
      *    Once the unbonding funds are here they will show, making it difficult to present
      *    unbondable funds that arent being currently unbonded
      */
-    let unbondable = match balance(deps, asset)? {
-        adapter::QueryAnswer::Balance { amount } => amount,
-        _ => {
-            return Err(StdError::generic_err("Failed to query balance"));
-        }
-    };
+    let delegated = Uint128::new(
+        delegations(deps)?
+            .into_iter()
+            .map(|d| d.amount.amount.u128())
+            .sum::<u128>(),
+    );
 
-    /*
-    let unbonding = unbonding_r(deps.storage).load()?;
-    if !unbonding.is_zero() {
-        panic!("unbondable {}, unbonding {}", unbondable, unbonding);
+    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
+    let rewards = rewards(deps)?;
+
+    let unbonding = UNBONDING.load(deps.storage)?;
+
+    let mut unbondable = delegated;
+
+    if unbonding < scrt_balance + rewards {
+        unbondable += scrt_balance + rewards - unbonding;
     }
-    */
+
+    println!("UNBONDABLE {}, UNBONDING {}", unbondable, unbonding);
 
     /*TODO: Query current unbondings
      * u >= 7 = 0
@@ -190,11 +195,8 @@ pub fn reserves(
     }
 
     let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
-    println!("scrt: {}", scrt_balance.clone());
 
     let rewards = rewards(deps)?;
-    println!("rewards: {}", rewards.clone());
-    //assert!(false, "rewards {}", rewards);
 
     if !scrt_balance.is_zero() {
         assert!(false, "scrt bal {}", scrt_balance);

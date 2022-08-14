@@ -65,11 +65,11 @@ pub enum ExecuteAnswer {
 
 #[cw_serde]
 pub enum SubQueryMsg {
-    Balance { asset: Addr },
-    Unbonding { asset: Addr },
-    Claimable { asset: Addr },
-    Unbondable { asset: Addr },
-    Reserves { asset: Addr },
+    Balance { asset: String },
+    Unbonding { asset: String },
+    Claimable { asset: String },
+    Unbondable { asset: String },
+    Reserves { asset: String },
 }
 
 #[cw_serde]
@@ -96,7 +96,7 @@ pub fn claimable_query(
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Claimable {
-        asset: asset.clone(),
+        asset: asset.to_string().clone(),
     })
     .query(&querier, &adapter)?
     {
@@ -114,7 +114,7 @@ pub fn unbonding_query(
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Unbonding {
-        asset: asset.clone(),
+        asset: asset.to_string().clone(),
     })
     .query(&querier, &adapter)?
     {
@@ -132,7 +132,7 @@ pub fn unbondable_query(
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Unbondable {
-        asset: asset.clone(),
+        asset: asset.to_string().clone(),
     })
     .query(&querier, &adapter)?
     {
@@ -151,7 +151,7 @@ pub fn reserves_query(
 ) -> StdResult<Uint128> {
 
     match QueryMsg::Adapter(SubQueryMsg::Reserves {
-        asset: asset.clone(),
+        asset: asset.to_string().clone(),
     }).query(&querier, &adapter)? {
         QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -167,7 +167,7 @@ pub fn balance_query(
     adapter: Contract,
 ) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Balance {
-        asset: asset.clone(),
+        asset: asset.to_string().clone(),
     })
     .query(&querier, &adapter)?
     {
@@ -180,21 +180,21 @@ pub fn balance_query(
 }
 
 pub fn claim_msg(asset: &Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubExecuteMsg::Claim { asset: asset.clone().to_string() }).to_cosmos_msg(
+    ExecuteMsg::Adapter(SubExecuteMsg::Claim { asset: asset.to_string().clone() }).to_cosmos_msg(
         &adapter,
         vec![],
     )
 }
 
 pub fn unbond_msg(asset: &Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubExecuteMsg::Unbond { asset: asset.clone().to_string(), amount }).to_cosmos_msg(
+    ExecuteMsg::Adapter(SubExecuteMsg::Unbond { asset: asset.to_string().clone(), amount }).to_cosmos_msg(
         &adapter,
         vec![],
     )
 }
 
 pub fn update_msg(asset: &Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubExecuteMsg::Update { asset: asset.clone().to_string() }).to_cosmos_msg(
+    ExecuteMsg::Adapter(SubExecuteMsg::Update { asset: asset.to_string().clone() }).to_cosmos_msg(
         &adapter,
         vec![],
     )

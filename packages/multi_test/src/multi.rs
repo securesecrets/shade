@@ -1,7 +1,7 @@
 #[cfg(feature = "admin")]
 pub mod admin {
-    pub use shade_admin_multi_test::multi::AdminAuth;
     pub use shade_admin_multi_test::multi::helpers::init_admin_auth;
+    pub use shade_admin_multi_test::multi::AdminAuth;
 }
 
 #[cfg(feature = "snip20")]
