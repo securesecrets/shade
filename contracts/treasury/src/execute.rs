@@ -98,7 +98,6 @@ pub fn try_update_config(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &cur_config.admin_auth,
     )?;
 
@@ -489,7 +488,6 @@ pub fn set_run_level(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -510,7 +508,6 @@ pub fn try_register_asset(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -554,7 +551,6 @@ pub fn register_manager(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -584,7 +580,6 @@ pub fn allowance(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -663,7 +658,6 @@ pub fn unbond(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &CONFIG.load(deps.storage)?.admin_auth,
     )?;
 

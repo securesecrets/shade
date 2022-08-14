@@ -76,7 +76,6 @@ pub fn try_update_config(
         &deps.querier,
         AdminPermissions::ScrtStakingAdmin,
         &info.sender,
-        &env.contract.address,
         &cur_config.admin_auth,
     )?;
 
@@ -163,7 +162,6 @@ pub fn unbond(
         &deps.querier,
         AdminPermissions::ScrtStakingAdmin,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )
     .is_err()

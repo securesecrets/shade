@@ -21,7 +21,6 @@ pub enum QueryMsg {
     ValidateAdminPermission {
         permission: String,
         user: String,
-        contract: String,
     },
 }
 
@@ -33,14 +32,12 @@ pub fn validate_admin<T: Into<String>>(
     querier: &QuerierWrapper,
     permission: AdminPermissions,
     user: T,
-    contract: T,
     admin_auth: &Contract,
 ) -> StdResult<()> {
     let admin_resp: StdResult<ValidateAdminPermissionResponse> =
         QueryMsg::ValidateAdminPermission {
             permission: permission.into_string(),
             user: user.into(),
-            contract: contract.into(),
         }
         .query(querier, admin_auth);
 
