@@ -1,8 +1,6 @@
 use crate::{
-    contract::{execute, instantiate, query},
     shared::is_valid_permission,
 };
-use cosmwasm_std::testing::mock_info;
 use rstest::*;
 use shade_multi_test::multi::admin::Admin;
 use shade_protocol::{
