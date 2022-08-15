@@ -95,6 +95,9 @@ where
         self.all.save(storage, key, &all)
     }
 
+    /* This will move all "recents" into the time based storage
+     * This should likely be called at the end of execution that adds items
+     */
     fn flush(&self, storage: &mut dyn Storage) -> StdResult<()> {
         for seconds in self.recent.load(storage)? {
             let mut items = self.all.load(storage, seconds)?;
