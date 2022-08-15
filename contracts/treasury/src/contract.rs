@@ -1,7 +1,19 @@
 use shade_protocol::{
     c_std::{
-        entry_point, to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Querier, Response,
-        StdError, StdResult, Storage, Uint128,
+        entry_point,
+        to_binary,
+        Api,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
     },
     dao::{
         adapter,
@@ -18,13 +30,10 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    CONFIG.save(
-        deps.storage,
-        &Config {
-            admin_auth: msg.admin_auth.into_valid(deps.api)?,
-            multisig: deps.api.addr_validate(&msg.multisig)?,
-        },
-    )?;
+    CONFIG.save(deps.storage, &Config {
+        admin_auth: msg.admin_auth.into_valid(deps.api)?,
+        multisig: deps.api.addr_validate(&msg.multisig)?,
+    })?;
 
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
     SELF_ADDRESS.save(deps.storage, &env.contract.address)?;
@@ -70,7 +79,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubExecuteMsg::Update { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                execute::rebalance(deps, &env, info, asset)
+                execute::update(deps, &env, info, asset)
             }
             adapter::SubExecuteMsg::Claim { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
