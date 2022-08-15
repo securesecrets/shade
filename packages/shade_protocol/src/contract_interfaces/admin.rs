@@ -1,12 +1,34 @@
 use crate::{utils::Query, Contract};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
-use shade_admin::admin::{
-    AdminsResponse,
-    ConfigResponse,
-    PermissionsResponse,
-    ValidateAdminPermissionResponse,
-};
+use cosmwasm_std::{QuerierWrapper, StdError, StdResult, Addr};
+
+#[cw_serde]
+pub enum AdminAuthStatus {
+    Active,
+    Maintenance,
+    Shutdown,
+}
+
+#[cw_serde]
+pub struct ConfigResponse {
+    pub super_admin: Addr,
+    pub status: AdminAuthStatus,
+}
+
+#[cw_serde]
+pub struct PermissionsResponse {
+    pub permissions: Vec<String>,
+}
+
+#[cw_serde]
+pub struct AdminsResponse {
+    pub admins: Vec<Addr>,
+}
+
+#[cw_serde]
+pub struct ValidateAdminPermissionResponse {
+    pub has_permission: bool,
+}
 
 #[cw_serde]
 #[derive(QueryResponses)]

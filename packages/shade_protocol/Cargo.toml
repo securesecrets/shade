@@ -71,7 +71,8 @@ query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
-shade_admin      = ["dep:shade-admin"]
+shade_admin      = ["dep:shade-admin", "admin"]
+admin            = []
 peg_stability    = ["sky-utils", "adapter"]
 
 stargate = ["cosmwasm-std/stargate"]

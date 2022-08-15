@@ -35,7 +35,7 @@ pub mod bonds;
 #[cfg(feature = "query_auth")]
 pub mod query_auth;
 
-#[cfg(feature = "shade_admin")]
+#[cfg(feature = "admin")]
 pub mod admin;
 
 #[cfg(feature = "peg_stability")]

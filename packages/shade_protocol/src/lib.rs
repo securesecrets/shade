@@ -38,5 +38,5 @@ pub use anyhow::Result as AnyResult;
 #[cfg(feature = "utils")]
 pub use utils::asset::Contract;
 
-// #[cfg(feature = "shade_admin")]
-// pub use shade_admin;
+#[cfg(feature = "shade_admin")]
+pub use shade_admin;
