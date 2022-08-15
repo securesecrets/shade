@@ -37,3 +37,6 @@ pub mod query_auth;
 
 #[cfg(feature = "admin")]
 pub mod admin;
+
+#[cfg(feature = "peg_stability")]
+pub mod peg_stability;

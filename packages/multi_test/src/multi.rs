@@ -87,3 +87,9 @@ pub mod query_auth {
 //     pub struct Treasury;
 //     multi_derive::implement_multi!(Treasury, treasury);
 // }
+
+pub mod peg_stability {
+    use peg_stability;
+
+    multi_derive::implement_multi!(PegStability, peg_stability);
+}

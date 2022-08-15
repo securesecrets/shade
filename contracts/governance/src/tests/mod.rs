@@ -2,8 +2,12 @@ pub mod handle;
 pub mod query;
 
 use crate::contract::{execute, instantiate, query};
-use shade_protocol::shade_admin::MultiTestable as AdminTestable;
-use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20, admin::AdminAuth};
+use shade_multi_test::multi::{
+    admin::AdminAuth,
+    governance::Governance,
+    query_auth::QueryAuth,
+    snip20::Snip20,
+};
 use shade_protocol::{
     c_std::{
         from_binary,
@@ -30,6 +34,7 @@ use shade_protocol::{
     multi_test::{App, BasicApp, Executor},
     query_auth,
     serde::Serialize,
+    shade_admin::MultiTestable as AdminTestable,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
@@ -37,14 +42,16 @@ pub fn init_chain() -> (App, ContractInfo) {
     let mut chain = App::default();
 
     let stored_code = chain.store_code(AdminAuth::default().contract());
-    let admin = chain.instantiate_contract(
-        stored_code,
-        Addr::unchecked("admin"),
-        &shade_admin::admin::InitMsg {},
-        &[],
-        "admin",
-        None
-    ).unwrap();
+    let admin = chain
+        .instantiate_contract(
+            stored_code,
+            Addr::unchecked("admin"),
+            &shade_admin::admin::InitMsg {},
+            &[],
+            "admin",
+            None,
+        )
+        .unwrap();
 
     let auth = query_auth::InstantiateMsg {
         admin_auth: Contract {
@@ -145,10 +152,8 @@ pub fn get_assembly_msgs(
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<AssemblyMsg>> {
-    let query: governance::QueryAnswer = governance::QueryMsg::AssemblyMsgs {
-            start,
-            end,
-        }.test_query(&gov, &chain)?;
+    let query: governance::QueryAnswer =
+        governance::QueryMsg::AssemblyMsgs { start, end }.test_query(&gov, &chain)?;
 
     let msgs = match query {
         governance::QueryAnswer::AssemblyMsgs { msgs } => msgs,
@@ -164,10 +169,8 @@ pub fn get_contract(
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<AllowedContract>> {
-    let query: governance::QueryAnswer = governance::QueryMsg::Contracts {
-            start,
-            end,
-        }.test_query(&gov, &chain)?;
+    let query: governance::QueryAnswer =
+        governance::QueryMsg::Contracts { start, end }.test_query(&gov, &chain)?;
 
     match query {
         governance::QueryAnswer::Contracts { contracts } => Ok(contracts),
@@ -181,10 +184,8 @@ pub fn get_profiles(
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<Profile>> {
-    let query: governance::QueryAnswer = governance::QueryMsg::Profiles {
-            start,
-            end,
-        }.test_query(&gov, &chain)?;
+    let query: governance::QueryAnswer =
+        governance::QueryMsg::Profiles { start, end }.test_query(&gov, &chain)?;
 
     match query {
         governance::QueryAnswer::Profiles { profiles } => Ok(profiles),
@@ -198,10 +199,8 @@ pub fn get_assemblies(
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<Assembly>> {
-    let query: governance::QueryAnswer = governance::QueryMsg::Assemblies {
-            start,
-            end,
-        }.test_query(&gov, &chain)?;
+    let query: governance::QueryAnswer =
+        governance::QueryMsg::Assemblies { start, end }.test_query(&gov, &chain)?;
 
     match query {
         governance::QueryAnswer::Assemblies { assemblies } => Ok(assemblies),
@@ -215,10 +214,8 @@ pub fn get_proposals(
     start: Uint128,
     end: Uint128,
 ) -> StdResult<Vec<Proposal>> {
-    let query: governance::QueryAnswer = governance::QueryMsg::Proposals {
-            start,
-            end,
-        }.test_query(&gov, &chain)?;
+    let query: governance::QueryAnswer =
+        governance::QueryMsg::Proposals { start, end }.test_query(&gov, &chain)?;
 
     match query {
         governance::QueryAnswer::Proposals { props } => Ok(props),
@@ -227,7 +224,9 @@ pub fn get_proposals(
 }
 
 pub fn get_config(chain: &mut App, gov: &ContractInfo) -> StdResult<Config> {
-    let query: governance::QueryAnswer = governance::QueryMsg::Config {}.test_query(&gov, &chain).unwrap();
+    let query: governance::QueryAnswer = governance::QueryMsg::Config {}
+        .test_query(&gov, &chain)
+        .unwrap();
 
     match query {
         governance::QueryAnswer::Config { config } => Ok(config),

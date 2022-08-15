@@ -160,6 +160,15 @@ impl From<ContractInfo> for Contract {
     }
 }
 
+impl Into<ContractInfo> for Contract {
+    fn into(self) -> ContractInfo {
+        ContractInfo {
+            address: self.address,
+            code_hash: self.code_hash,
+        }
+    }
+}
+
 //TODO:  move away from here
 pub fn scrt_balance(deps: Deps, address: Addr) -> StdResult<Uint128> {
     let resp: BalanceResponse = deps.querier.query(
