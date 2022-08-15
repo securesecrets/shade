@@ -10,7 +10,6 @@ pub fn validate_admin<T: Into<String>>(
     querier: &QuerierWrapper,
     permission: AdminPermissions,
     user: T,
-    contract: T,
     admin_auth: &Contract,
 ) -> StdResult<()> {
     let admin_resp: StdResult<ValidateAdminPermissionResponse> =

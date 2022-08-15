@@ -1,5 +1,5 @@
 use shade_protocol::{
-    admin::{validate_admin, AdminPermissions},
+    admin::{AdminPermissions, helpers::validate_admin},
     c_std::{
         to_binary,
         Api,
@@ -36,7 +36,6 @@ fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<()> {
         &deps.querier,
         AdminPermissions::QueryAuthAdmin,
         info.sender.clone(),
-        env.contract.address,
         &contract,
     )
 }
