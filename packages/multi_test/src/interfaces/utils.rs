@@ -1,7 +1,7 @@
 use shade_protocol::utils::asset::Contract;
 use std::collections::HashMap;
 
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub enum SupportedContracts {
     AdminAuth,
     Snip20(String),

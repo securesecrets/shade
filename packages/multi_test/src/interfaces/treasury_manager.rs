@@ -9,10 +9,10 @@ use crate::{
 use mock_adapter;
 use shade_admin_multi_test::multi::helpers::init_admin_auth;
 use shade_protocol::{
-    c_std::{Addr, Uint128},
-    contract_interfaces::dao::{treasury::AllowanceType, treasury_manager},
+    c_std::{Addr, StdError, StdResult, Uint128},
+    contract_interfaces::dao::{manager, treasury::AllowanceType, treasury_manager},
     multi_test::App,
-    utils::{self, asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
+    utils::{self, asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts, id: u8) {
@@ -37,7 +37,7 @@ pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts, id
     let admin_auth = match contracts.get(&SupportedContracts::AdminAuth) {
         Some(admin) => admin.clone(),
         None => {
-            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender), None));
+            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender)));
             contracts.insert(SupportedContracts::AdminAuth, contract.clone());
             contract
         }
@@ -82,7 +82,8 @@ pub fn register_asset(
         chain,
         Addr::unchecked(sender),
         &[],
-    );
+    )
+    .unwrap();
 }
 
 pub fn allocate(
@@ -121,4 +122,220 @@ pub fn allocate(
         Addr::unchecked(sender),
         &[],
     );
+}
+
+pub fn claimable_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+    holder: SupportedContracts,
+) -> StdResult<Uint128> {
+    match treasury_manager::QueryMsg::Manager(manager::SubQueryMsg::Claimable {
+        holder: contracts.get(&holder).unwrap().address.to_string(),
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )? {
+        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Claimable { amount }) => {
+            Ok(amount)
+        }
+        _ => Err(StdError::generic_err(format!(
+            "Failed to.test_query treasury_manager claimable",
+        ))),
+    }
+}
+
+pub fn unbonding_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+    holder: SupportedContracts,
+) -> StdResult<Uint128> {
+    match treasury_manager::QueryMsg::Manager(manager::SubQueryMsg::Unbonding {
+        holder: contracts.get(&holder).unwrap().address.to_string(),
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )? {
+        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Unbonding { amount }) => {
+            Ok(amount)
+        }
+        _ => Err(StdError::generic_err(
+            "Failed to.test_query treasury_manager unbonding",
+        )),
+    }
+}
+
+pub fn unbondable_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+    holder: SupportedContracts,
+) -> StdResult<Uint128> {
+    match treasury_manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
+        holder: contracts.get(&holder).unwrap().address.to_string(),
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )? {
+        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Unbondable { amount }) => {
+            Ok(amount)
+        }
+        _ => Err(StdError::generic_err(
+            "Failed to.test_query treasury_manager unbondable",
+        )),
+    }
+}
+
+pub fn reserves_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+    holder: SupportedContracts,
+) -> StdResult<Uint128> {
+    match treasury_manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
+        holder: contracts.get(&holder).unwrap().address.to_string(),
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )? {
+        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Reserves { amount }) => {
+            Ok(amount)
+        }
+        _ => Err(StdError::generic_err(
+            "Failed to.test_query treasury_manager unbondable",
+        )),
+    }
+}
+
+pub fn balance_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+    holder: SupportedContracts,
+) -> StdResult<Uint128> {
+    match treasury_manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+        holder: contracts.get(&holder).unwrap().address.to_string(),
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )? {
+        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Balance { amount }) => {
+            Ok(amount)
+        }
+        _ => Err(StdError::generic_err(
+            "Failed to.test_query treasury_manager balance",
+        )),
+    }
+}
+
+pub fn claim_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+) {
+    treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Claim {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    })
+    .test_exec(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )
+    .unwrap();
+}
+
+pub fn update_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+) {
+    treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    })
+    .test_exec(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )
+    .unwrap();
 }

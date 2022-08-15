@@ -26,7 +26,7 @@ pub fn dao_int_test(
         &mut contracts,
         7,
         7,
-        Uint128::new(100),
+        Uint128::new(1000000),
         AllowanceType::Portion,
         Cycle::Constant,
         allow_amount,

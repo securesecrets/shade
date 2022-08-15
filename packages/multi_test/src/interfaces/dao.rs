@@ -43,6 +43,7 @@ pub fn init_dao(
         6,
         None,
     );
+    treasury::register_asset(chain, sender, contracts, "SSCRT".to_string());
     snip20::send(
         chain,
         sender,
@@ -57,7 +58,17 @@ pub fn init_dao(
         treasury_start_bal,
         None,
     );
-    treasury::register_asset(chain, sender, contracts, "SSCRT".to_string());
+    println!(
+        "{}",
+        balance_query(
+            &chain,
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::Treasury
+        )
+        .unwrap()
+        .u128()
+    );
     for i in 0..num_managers {
         treasury_manager::init(chain, sender, contracts, i);
         treasury::register_manager(chain, sender, contracts, i);
@@ -115,9 +126,10 @@ pub fn init_dao(
         contracts,
         "SSCRT".to_string(),
         SupportedContracts::Treasury,
-    );
+    )
+    .unwrap();
     for i in 0..num_managers {
-        update_exec(
+        treasury_manager::update_exec(
             chain,
             sender,
             contracts,
@@ -146,11 +158,12 @@ pub fn system_balance(
         if contracts.get(&SupportedContracts::TreasuryManager(i)) == None {
             break;
         } else {
-            manager_tuple.0 = reserves_query(
+            manager_tuple.0 = treasury_manager::reserves_query(
                 chain,
                 contracts,
                 snip20_symbol.clone(),
                 SupportedContracts::TreasuryManager(i),
+                SupportedContracts::Treasury,
             )
             .unwrap();
             while true {
@@ -302,8 +315,8 @@ pub fn claim_exec(
     contracts: &DeployedContracts,
     snip20_symbol: String,
     adapter_contract: SupportedContracts,
-) {
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+) -> StdResult<()> {
+    let res = adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol))
             .unwrap()
@@ -316,8 +329,11 @@ pub fn claim_exec(
         chain,
         Addr::unchecked(sender),
         &[],
-    )
-    .unwrap();
+    );
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
 
 pub fn update_exec(
@@ -326,8 +342,21 @@ pub fn update_exec(
     contracts: &DeployedContracts,
     snip20_symbol: String,
     adapter_contract: SupportedContracts,
-) {
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+) -> StdResult<()> {
+    println!(
+        "{}",
+        contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.clone()))
+            .unwrap()
+            .clone()
+            .address
+            .to_string()
+    );
+    println!(
+        "{:?}",
+        contracts.get(&adapter_contract.clone()).unwrap().clone()
+    );
+    let res = adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol))
             .unwrap()
@@ -340,6 +369,9 @@ pub fn update_exec(
         chain,
         Addr::unchecked(sender),
         &[],
-    )
-    .unwrap();
+    );
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }
