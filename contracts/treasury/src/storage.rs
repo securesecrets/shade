@@ -3,8 +3,10 @@ use shade_protocol::{
     dao::treasury::{Allowance, AllowanceMeta, Config, Metric, RunLevel},
     secret_storage_plus::{Item, Map},
     snip20::helpers::Snip20Asset,
-    utils::asset::Contract,
-    utils::storage::plus::iter_item::IterItem,
+    utils::{
+        asset::Contract,
+        storage::plus::{iter_item::IterItem, period_storage::PeriodStorage},
+    },
 };
 
 use chrono::*;
@@ -26,4 +28,5 @@ pub fn metric_key(datetime: DateTime<Utc>) -> String {
 }
 
 // { <YY/MM/DD>: <metric> }
-pub const METRICS: Map<String, Vec<Metric>> = Map::new("metrics");
+pub const METRICS: PeriodStorage<Metric> =
+    PeriodStorage::new("metrics-all", "metrics-recent", "metrics-timed");

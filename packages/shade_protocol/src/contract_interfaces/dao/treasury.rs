@@ -12,6 +12,8 @@ use crate::{
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::cw_serde;
 
+use crate::utils::storage::plus::period_storage::Period;
+
 /// The permission referenced in the Admin Auth contract to give a user
 /// admin permissions for the Shade Treasury
 //pub const SHADE_TREASURY_ADMIN: &str = "SHADE_TREASURY_ADMIN";
@@ -167,11 +169,19 @@ pub enum QueryMsg {
     Config {},
     Assets {},
     // List of recurring allowances configured
-    Allowances { asset: String },
+    Allowances {
+        asset: String,
+    },
     // Current allowance to spender
-    Allowance { asset: String, spender: String },
+    Allowance {
+        asset: String,
+        spender: String,
+    },
     RunLevel,
-    Metrics { date: String },
+    Metrics {
+        date: Option<String>,
+        period: Period,
+    },
     /*
     Balance { asset: String },
     Reserves { asset: String },

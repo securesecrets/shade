@@ -48,6 +48,7 @@ use shade_protocol::{
         asset::{set_allowance, Contract},
         cycle::{exceeds_cycle, parse_utc_datetime, utc_from_seconds, utc_from_timestamp, utc_now},
         generic_response::ResponseStatus,
+        storage::plus::period_storage::PeriodStorage,
     },
 };
 
@@ -66,20 +67,17 @@ pub fn receive(
     msg: Option<Binary>,
 ) -> StdResult<Response> {
     let metric_key = metric_key(utc_now(&env));
-    let mut metrics = METRICS
-        .may_load(deps.storage, metric_key.clone())?
-        .unwrap_or(vec![]);
 
-    metrics.push(Metric {
+    METRICS.push(deps.storage, env.block.time, Metric {
         action: Action::FundsReceived,
         context: Context::Receive,
         timestamp: env.block.time.seconds(),
         token: info.sender,
         amount,
         user: sender,
-    });
+    })?;
 
-    METRICS.save(deps.storage, metric_key, &metrics)?;
+    METRICS.flush(deps.storage)?;
 
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
         status: ResponseStatus::Success,
@@ -129,7 +127,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 }
 
 pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
-    println!("HERE REBALANCE");
     let viewing_key = VIEWING_KEY.load(deps.storage)?;
     let self_address = SELF_ADDRESS.load(deps.storage)?;
 
@@ -416,12 +413,8 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         }
     }
 
-    let key = metric_key(utc_now(env));
-    let mut cur_metrics = METRICS
-        .may_load(deps.storage, key.clone())?
-        .unwrap_or(vec![]);
-    cur_metrics.append(&mut metrics);
-    METRICS.save(deps.storage, key, &cur_metrics)?;
+    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
+    METRICS.flush(deps.storage)?;
 
     println!("MESSAGES {}", messages.len());
 
@@ -543,12 +536,8 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
         });
     }
 
-    let key = metric_key(utc_now(env));
-    let mut cur_metrics = METRICS
-        .may_load(deps.storage, key.clone())?
-        .unwrap_or(vec![]);
-    cur_metrics.append(&mut metrics);
-    METRICS.save(deps.storage, key, &cur_metrics)?;
+    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
+    METRICS.flush(deps.storage)?;
 
     Ok(Response::new()
         .add_messages(messages)

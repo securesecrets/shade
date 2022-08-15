@@ -28,6 +28,7 @@ use shade_protocol::{
     utils::{
         asset::Contract,
         cycle::{utc_from_timestamp, Cycle},
+        storage::plus::period_storage::Period,
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -64,7 +65,7 @@ fn single_asset_manager_scrt_staking_integration(
     let admin = Addr::unchecked("admin");
     let user = Addr::unchecked("user");
     let validator = Addr::unchecked("validator");
-    let admin_auth = init_admin_auth(&mut app, &admin, None);
+    let admin_auth = init_admin_auth(&mut app, &admin);
 
     let viewing_key = "viewing_key".to_string();
 
@@ -613,7 +614,8 @@ fn single_asset_manager_scrt_staking_integration(
 
     // Check Metrics
     match (treasury::QueryMsg::Metrics {
-        date: metric_key(utc_from_timestamp(app.block_info().time)),
+        date: None, //Some(utc_from_timestamp(app.block_info().time).to_rfc3339()),
+        period: Period::Hour,
     }
     .test_query(&treasury, &app)
     .unwrap())

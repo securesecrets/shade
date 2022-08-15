@@ -19,6 +19,7 @@ use shade_protocol::{
         adapter,
         treasury::{Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, RunLevel},
     },
+    utils::cycle::parse_utc_datetime,
 };
 
 use crate::{execute, query, storage::*};
@@ -112,9 +113,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             run_level: RUN_LEVEL.load(deps.storage)?,
         }),
         //TODO: parse string & format manually to accept all valid date formats
-        QueryMsg::Metrics { date } => to_binary(&QueryAnswer::Metrics {
-            metrics: METRICS.may_load(deps.storage, date)?.unwrap_or(vec![]),
-        }),
+        QueryMsg::Metrics { date, period } => {
+            let key = match date {
+                Some(d) => parse_utc_datetime(&d)?.timestamp() as u64,
+                None => env.block.time.seconds(),
+            };
+            to_binary(&QueryAnswer::Metrics {
+                metrics: METRICS.load_period(deps.storage, key, period)?,
+            })
+        }
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;

@@ -1,14 +1,22 @@
 use shade_multi_test::multi::admin::init_admin_auth;
 use shade_protocol::c_std::{
-    coins, from_binary, to_binary, Addr, Binary, Env, StdError, StdResult, Uint128,
+    coins,
+    from_binary,
+    to_binary,
+    Addr,
+    Binary,
+    Env,
+    StdError,
+    StdResult,
+    Uint128,
 };
 
 //use shade_protocol::secret_toolkit::snip20;
 
 use shade_multi_test::multi::{snip20::Snip20, treasury_manager::TreasuryManager};
-use shade_protocol::multi_test::App;
 use shade_protocol::{
     dao::{adapter, manager, treasury_manager},
+    multi_test::App,
     snip20,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
@@ -25,7 +33,7 @@ fn single_asset_holder_no_adapters(initial: Uint128, deposit: Uint128) {
     let admin = Addr::unchecked("admin");
     let holder = Addr::unchecked("holder");
     let treasury = Addr::unchecked("treasury");
-    let admin_auth = init_admin_auth(&mut app, &admin, None);
+    let admin_auth = init_admin_auth(&mut app, &admin);
 
     let token = snip20::InstantiateMsg {
         name: "token".into(),

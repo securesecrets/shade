@@ -23,7 +23,7 @@ pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
     let admin = match contracts.get(&SupportedContracts::AdminAuth) {
         Some(admin) => admin.clone(),
         None => {
-            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender), None));
+            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender)));
             contracts.insert(SupportedContracts::AdminAuth, contract.clone());
             contract
         }

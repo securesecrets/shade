@@ -1,13 +1,20 @@
 use crate::{
     c_std::{StdError, StdResult, Storage, Timestamp},
+    cosmwasm_schema::cw_serde,
     serde::{de::DeserializeOwned, Serialize},
     utils::cycle::*,
 };
 use chrono::prelude::*;
 pub use secret_storage_plus::{Item, Json, Map, PrimaryKey, Serde};
 
-use super::iter_item::IterItem;
+//use super::iter_item::IterItem;
 
+use const_format::{concatcp, formatcp};
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
+
+#[cw_serde]
+#[derive(EnumIter)]
 pub enum Period {
     Hour,
     Day,
@@ -35,9 +42,7 @@ where
      * right-most data is truncated to categorize by higher order
      * e.g. month format is "%Y-%m"
      */
-    hour: Map<'a, String, Vec<T>, Ser>,
-    day: Map<'a, String, Vec<T>, Ser>,
-    month: Map<'a, String, Vec<T>, Ser>,
+    timed: Map<'a, String, Vec<T>, Ser>,
 }
 
 impl<'a, T, Ser> PeriodStorage<'a, T, Ser>
@@ -45,28 +50,32 @@ where
     T: Serialize + DeserializeOwned,
     Ser: Serde,
 {
-    fn load(&self, storage: &dyn Storage, ts: Timestamp) -> StdResult<Vec<T>> {
-        self.all.load(storage, ts.seconds())
-    }
-
-    fn load_period(
-        &self,
-        storage: &dyn Storage,
-        ts: Timestamp,
-        period: Period,
-    ) -> StdResult<Vec<T>> {
-        match period {
-            Period::Hour => self.hour.load(storage, map_key(ts.seconds(), period)),
-            Period::Day => self.day.load(storage, map_key(ts.seconds(), period)),
-            Period::Month => self.month.load(storage, map_key(ts.seconds(), period)),
+    pub const fn new(all: &'a str, recent: &'a str, timed: &'a str) -> Self {
+        PeriodStorage {
+            all: Map::new(all),
+            recent: Item::new(recent),
+            timed: Map::new(timed),
         }
     }
 
-    fn may_load(&self, storage: &dyn Storage, ts: Timestamp) -> StdResult<Vec<T>> {
+    pub fn load(&self, storage: &dyn Storage, ts: Timestamp) -> StdResult<Vec<T>> {
+        self.all.load(storage, ts.seconds())
+    }
+
+    pub fn load_period(
+        &self,
+        storage: &dyn Storage,
+        seconds: u64,
+        period: Period,
+    ) -> StdResult<Vec<T>> {
+        self.timed.load(storage, map_key(seconds, period))
+    }
+
+    pub fn may_load(&self, storage: &dyn Storage, ts: Timestamp) -> StdResult<Vec<T>> {
         Ok(self.all.may_load(storage, ts.seconds())?.unwrap_or(vec![]))
     }
 
-    fn push(&self, storage: &mut dyn Storage, ts: Timestamp, item: T) -> StdResult<()> {
+    pub fn push(&self, storage: &mut dyn Storage, ts: Timestamp, item: T) -> StdResult<()> {
         let key = ts.seconds();
         let mut recent = self.recent.may_load(storage)?.unwrap_or(vec![]);
         if !recent.contains(&key) {
@@ -78,7 +87,7 @@ where
         self.all.save(storage, key, &all)
     }
 
-    fn append(
+    pub fn append(
         &self,
         storage: &mut dyn Storage,
         ts: Timestamp,
@@ -98,24 +107,16 @@ where
     /* This will move all "recents" into the time based storage
      * This should likely be called at the end of execution that adds items
      */
-    fn flush(&self, storage: &mut dyn Storage) -> StdResult<()> {
+    pub fn flush(&self, storage: &mut dyn Storage) -> StdResult<()> {
         for seconds in self.recent.load(storage)? {
             let mut items = self.all.load(storage, seconds)?;
 
-            let k = map_key(seconds, Period::Hour);
-            let mut cur_items = self.hour.load(storage, k.clone())?;
-            cur_items.append(&mut items);
-            self.hour.save(storage, k, &cur_items)?;
-
-            let k = map_key(seconds, Period::Day);
-            let mut cur_items = self.day.load(storage, k.clone())?;
-            cur_items.append(&mut items);
-            self.day.save(storage, k, &cur_items)?;
-
-            let k = map_key(seconds, Period::Month);
-            let mut cur_items = self.month.load(storage, k.clone())?;
-            cur_items.append(&mut items);
-            self.month.save(storage, k, &cur_items)?;
+            for period in Period::iter() {
+                let k = map_key(seconds, period);
+                let mut cur_items = self.timed.load(storage, k.clone())?;
+                cur_items.append(&mut items);
+                self.timed.save(storage, k, &cur_items)?;
+            }
         }
         self.recent.save(storage, &vec![])
     }

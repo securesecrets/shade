@@ -117,3 +117,9 @@ subtle = { version = "2.2.3", default-features = false }
 sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
+
+# for EnumIter
+strum = "0.24"
+strum_macros = "0.24"
+const_format = "0.2.26"
+#strum = { version = "0.24", features = ["derive"] }

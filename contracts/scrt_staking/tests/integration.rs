@@ -23,7 +23,7 @@ fn basic_scrt_staking_integration(
     let viewing_key = "unguessable".to_string();
     let admin = Addr::unchecked("admin");
     let validator = Addr::unchecked("validator");
-    let admin_auth = init_admin_auth(&mut app, &admin, None);
+    let admin_auth = init_admin_auth(&mut app, &admin);
     let token = snip20::InstantiateMsg {
         name: "secretSCRT".into(),
         admin: Some("admin".into()),
