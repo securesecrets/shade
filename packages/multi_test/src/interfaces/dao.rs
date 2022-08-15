@@ -8,14 +8,14 @@ use crate::{
     multi::mock_adapter::MockAdapter,
 };
 use shade_protocol::{
-    c_std::{Addr, Uint128},
+    c_std::{Addr, StdError, StdResult, Uint128},
     contract_interfaces::dao::{
         adapter,
         treasury::AllowanceType,
         treasury_manager::AllocationType,
     },
     multi_test::App,
-    utils::{self, asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
+    utils::{self, asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 pub fn init_dao(
@@ -47,7 +47,7 @@ pub fn init_dao(
         chain,
         sender,
         contracts,
-        "secretSCRT".to_string(),
+        "SSCRT".to_string(),
         contracts
             .get(&SupportedContracts::Treasury)
             .unwrap()
@@ -109,7 +109,7 @@ pub fn init_dao(
             );
         }
     }
-    update(
+    update_exec(
         chain,
         sender,
         contracts,
@@ -117,7 +117,7 @@ pub fn init_dao(
         SupportedContracts::Treasury,
     );
     for i in 0..num_managers {
-        update(
+        update_exec(
             chain,
             sender,
             contracts,
@@ -127,7 +127,200 @@ pub fn init_dao(
     }
 }
 
-pub fn update(
+pub fn system_balance(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+) -> (Uint128, Vec<(Uint128, Vec<Uint128>)>) {
+    let mut ret_struct = (Uint128::zero(), vec![]);
+    ret_struct.0 = reserves_query(
+        chain,
+        contracts,
+        snip20_symbol.clone(),
+        SupportedContracts::Treasury,
+    )
+    .unwrap();
+    let (mut i, mut j) = (0, 0);
+    while true {
+        let mut manager_tuple = (Uint128::zero(), vec![]);
+        if contracts.get(&SupportedContracts::TreasuryManager(i)) == None {
+            break;
+        } else {
+            manager_tuple.0 = reserves_query(
+                chain,
+                contracts,
+                snip20_symbol.clone(),
+                SupportedContracts::TreasuryManager(i),
+            )
+            .unwrap();
+            while true {
+                if contracts.get(&SupportedContracts::MockAdapter(j)) == None {
+                    break;
+                } else {
+                    manager_tuple.1.push(
+                        reserves_query(
+                            chain,
+                            contracts,
+                            snip20_symbol.clone(),
+                            SupportedContracts::MockAdapter(j),
+                        )
+                        .unwrap(),
+                    );
+                }
+                j += 1;
+            }
+        }
+        ret_struct.1.push(manager_tuple);
+        i += 1;
+    }
+    ret_struct
+}
+
+pub fn claimable_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    adapter_contract: SupportedContracts,
+) -> StdResult<Uint128> {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts.get(&adapter_contract).unwrap().clone().into(),
+        &chain,
+    )? {
+        adapter::QueryAnswer::Claimable { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(format!(
+            "Failed to.test_query adapter claimable",
+        ))),
+    }
+}
+
+pub fn unbonding_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    adapter_contract: SupportedContracts,
+) -> StdResult<Uint128> {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts.get(&adapter_contract).unwrap().clone().into(),
+        &chain,
+    )? {
+        adapter::QueryAnswer::Unbonding { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(
+            "Failed to.test_query adapter unbonding",
+        )),
+    }
+}
+
+pub fn unbondable_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    adapter_contract: SupportedContracts,
+) -> StdResult<Uint128> {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts.get(&adapter_contract).unwrap().clone().into(),
+        &chain,
+    )? {
+        adapter::QueryAnswer::Unbondable { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(
+            "Failed to.test_query adapter unbondable",
+        )),
+    }
+}
+
+pub fn reserves_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    adapter_contract: SupportedContracts,
+) -> StdResult<Uint128> {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts.get(&adapter_contract).unwrap().clone().into(),
+        &chain,
+    )? {
+        adapter::QueryAnswer::Reserves { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(
+            "Failed to.test_query adapter unbondable",
+        )),
+    }
+}
+
+pub fn balance_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    adapter_contract: SupportedContracts,
+) -> StdResult<Uint128> {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .address
+            .to_string(),
+    })
+    .test_query(
+        &contracts.get(&adapter_contract).unwrap().clone().into(),
+        &chain,
+    )? {
+        adapter::QueryAnswer::Balance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(
+            "Failed to.test_query adapter balance",
+        )),
+    }
+}
+
+pub fn claim_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    adapter_contract: SupportedContracts,
+) {
+    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    })
+    .test_exec(
+        &contracts.get(&adapter_contract).unwrap().clone().into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )
+    .unwrap();
+}
+
+pub fn update_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
@@ -147,5 +340,6 @@ pub fn update(
         chain,
         Addr::unchecked(sender),
         &[],
-    );
+    )
+    .unwrap();
 }
