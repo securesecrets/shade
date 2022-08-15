@@ -20,7 +20,7 @@ use shade_protocol::{
             manager,
             scrt_staking,
             treasury,
-            treasury::{Allowance, AllowanceType},
+            treasury::{Allowance, AllowanceType, RunLevel},
             treasury_manager::{self, Allocation, AllocationType},
         },
         snip20,
@@ -48,7 +48,7 @@ use ::treasury::storage::metric_key;
 use serde_json;
 
 // Add other adapters here as they come
-fn single_asset_portion_manager_integration(
+fn single_asset_manager_scrt_staking_integration(
     deposit: Uint128,
     allowance: Uint128,
     expected_allowance: Uint128,
@@ -65,6 +65,8 @@ fn single_asset_portion_manager_integration(
     let user = Addr::unchecked("user");
     let validator = Addr::unchecked("validator");
     let admin_auth = init_admin_auth(&mut app, &admin, None);
+
+    let viewing_key = "viewing_key".to_string();
 
     let token = snip20::InstantiateMsg {
         name: "secretSCRT".into(),
@@ -88,7 +90,7 @@ fn single_asset_portion_manager_integration(
 
     let treasury = treasury::InstantiateMsg {
         admin_auth: admin_auth.clone().into(),
-        viewing_key: "viewing_key".to_string(),
+        viewing_key: viewing_key.clone(),
         multisig: admin.to_string().clone(),
     }
     .test_init(Treasury::default(), &mut app, admin.clone(), "treasury", &[
@@ -98,7 +100,7 @@ fn single_asset_portion_manager_integration(
     let manager = treasury_manager::InstantiateMsg {
         admin_auth: admin_auth.clone().into(),
         treasury: treasury.address.to_string(),
-        viewing_key: "viewing_key".to_string(),
+        viewing_key: viewing_key.clone(),
     }
     .test_init(
         TreasuryManager::default(),
@@ -114,7 +116,7 @@ fn single_asset_portion_manager_integration(
         owner: manager.address.clone().to_string(),
         sscrt: token.clone().into(),
         validator_bounds: None,
-        viewing_key: "viewing_key".to_string(),
+        viewing_key: viewing_key.clone(),
     }
     .test_init(
         ScrtStaking::default(),
@@ -128,6 +130,14 @@ fn single_asset_portion_manager_integration(
     app.sudo(SudoMsg::Staking(StakingSudo::AddValidator {
         validator: validator.to_string().clone(),
     }))
+    .unwrap();
+
+    // Set admin viewing key
+    snip20::ExecuteMsg::SetViewingKey {
+        key: viewing_key.clone(),
+        padding: None,
+    }
+    .test_exec(&token, &mut app, admin.clone(), &[])
     .unwrap();
 
     // Register treasury assets
@@ -222,6 +232,7 @@ fn single_asset_portion_manager_integration(
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
+    /*
     // Check Metrics
     match (treasury::QueryMsg::Metrics {
         date: metric_key(utc_from_timestamp(app.block_info().time)),
@@ -237,6 +248,7 @@ fn single_asset_portion_manager_integration(
         }
         _ => panic!("query failed"),
     };
+    */
 
     // Check treasury allowance to manager
     match (treasury::QueryMsg::Allowance {
@@ -583,9 +595,52 @@ fn single_asset_portion_manager_integration(
         }
         _ => assert!(false),
     };
+
+    // Migration
+    println!("Setting migration runlevel");
+    treasury::ExecuteMsg::SetRunLevel {
+        run_level: RunLevel::Migrating,
+    }
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
+
+    //Update
+    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+        asset: token.address.to_string().clone(),
+    })
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
+
+    // Check Metrics
+    match (treasury::QueryMsg::Metrics {
+        date: metric_key(utc_from_timestamp(app.block_info().time)),
+    }
+    .test_query(&treasury, &app)
+    .unwrap())
+    {
+        treasury::QueryAnswer::Metrics { metrics } => {
+            for m in metrics.clone() {
+                println!("{}", serde_json::to_string(&m).unwrap());
+            }
+        }
+        _ => panic!("query failed"),
+    };
+
+    match (snip20::QueryMsg::Balance {
+        address: admin.to_string().clone(),
+        key: viewing_key.clone(),
+    })
+    .test_query(&token, &app)
+    .unwrap()
+    {
+        snip20::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, deposit, "post-migration full unbond");
+        }
+        _ => {}
+    };
 }
 
-macro_rules! single_asset_portion_manager_tests {
+macro_rules! single_asset_manager_scrt_staking_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
@@ -601,7 +656,7 @@ macro_rules! single_asset_portion_manager_tests {
                     expected_manager,
                     expected_scrt_staking,
                 ) = $value;
-                single_asset_portion_manager_integration(
+                single_asset_manager_scrt_staking_integration(
                     deposit,
                     allowance,
                     expected_allowance,
@@ -616,7 +671,7 @@ macro_rules! single_asset_portion_manager_tests {
     }
 }
 
-single_asset_portion_manager_tests! {
+single_asset_manager_scrt_staking_tests! {
     single_asset_portion_manager_0: (
         Uint128::new(100), // deposit
         Uint128::new(9 * 10u128.pow(17)), // manager allowance 90%
@@ -627,7 +682,6 @@ single_asset_portion_manager_tests! {
         Uint128::new(0), // manager 0
         Uint128::new(90), // scrt_staking 90
     ),
-    /*
     single_asset_portion_manager_1: (
         Uint128::new(100), // deposit
         Uint128::new(9 * 10u128.pow(17)), // manager allowance 90%
@@ -638,5 +692,4 @@ single_asset_portion_manager_tests! {
         Uint128::new(0), // manager 0
         Uint128::new(45), // scrt_staking 90
     ),
-    */
 }

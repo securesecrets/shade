@@ -61,7 +61,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             let contract = contract.into_valid(deps.api)?;
             execute::try_register_asset(deps, &env, info, &contract)
         }
-        ExecuteMsg::RegisterManager { mut contract } => {
+        ExecuteMsg::RegisterManager { contract } => {
             let mut contract = contract.into_valid(deps.api)?;
             execute::register_manager(deps, &env, info, &mut contract)
         }
@@ -70,6 +70,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             execute::allowance(deps, &env, info, asset, allowance)
         }
         ExecuteMsg::Update { asset } => {
+            println!("UPDATE MSG");
             let asset = deps.api.addr_validate(&asset)?;
             execute::update(deps, &env, info, asset)
         }
@@ -79,7 +80,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubExecuteMsg::Update { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                execute::rebalance(deps, &env, info, asset)
+                execute::update(deps, &env, info, asset)
             }
             adapter::SubExecuteMsg::Claim { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;

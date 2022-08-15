@@ -32,7 +32,7 @@ pub enum RunLevel {
 #[cw_serde]
 pub enum Context {
     Receive,
-    Update,
+    Rebalance,
     Migration,
 }
 

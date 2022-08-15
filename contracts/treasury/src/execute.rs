@@ -129,6 +129,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 }
 
 pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+    println!("HERE REBALANCE");
     let viewing_key = VIEWING_KEY.load(deps.storage)?;
     let self_address = SELF_ADDRESS.load(deps.storage)?;
 
@@ -222,7 +223,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                 messages.push(manager::claim_msg(&asset.clone(), m.clone())?);
                 metrics.push(Metric {
                     action: Action::ManagerClaim,
-                    context: Context::Update,
+                    context: Context::Rebalance,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
                     amount: claimable,
@@ -257,7 +258,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                             )?);
                             metrics.push(Metric {
                                 action: Action::DecreaseAllowance,
-                                context: Context::Update,
+                                context: Context::Rebalance,
                                 timestamp: env.block.time.seconds(),
                                 token: asset.clone(),
                                 amount: cur_allowance - allowance.amount,
@@ -277,7 +278,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                             )?);
                             metrics.push(Metric {
                                 action: Action::IncreaseAllowance,
-                                context: Context::Update,
+                                context: Context::Rebalance,
                                 timestamp: env.block.time.seconds(),
                                 token: asset.clone(),
                                 amount: allowance.amount - cur_allowance,
@@ -330,7 +331,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                     )?);
                     metrics.push(Metric {
                         action: Action::IncreaseAllowance,
-                        context: Context::Update,
+                        context: Context::Rebalance,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
                         amount: increase,
@@ -357,7 +358,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                         )?);
                         metrics.push(Metric {
                             action: Action::DecreaseAllowance,
-                            context: Context::Update,
+                            context: Context::Rebalance,
                             timestamp: env.block.time.seconds(),
                             token: asset.clone(),
                             amount: cur_allowance,
@@ -376,7 +377,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                                     )?);
                                     metrics.push(Metric {
                                         action: Action::ManagerUnbond,
-                                        context: Context::Update,
+                                        context: Context::Rebalance,
                                         timestamp: env.block.time.seconds(),
                                         token: asset.clone(),
                                         amount: decrease,
@@ -403,7 +404,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                         )?);
                         metrics.push(Metric {
                             action: Action::DecreaseAllowance,
-                            context: Context::Update,
+                            context: Context::Rebalance,
                             timestamp: env.block.time.seconds(),
                             token: asset.clone(),
                             amount: decrease,
@@ -563,6 +564,8 @@ pub fn set_run_level(
     run_level: RunLevel,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
+
+    println!("Setting Run Level");
 
     // TODO force super-admin
     validate_admin(
