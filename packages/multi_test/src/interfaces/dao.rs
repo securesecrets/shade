@@ -71,6 +71,7 @@ pub fn init_dao(
     );
     for i in 0..num_managers {
         treasury_manager::init(chain, sender, contracts, i);
+        treasury_manager::register_asset(chain, "admin", contracts, "SSCRT".to_string());
         treasury::register_manager(chain, sender, contracts, i);
         treasury::allowance(
             chain,
@@ -120,14 +121,7 @@ pub fn init_dao(
             );
         }
     }
-    update_exec(
-        chain,
-        sender,
-        contracts,
-        "SSCRT".to_string(),
-        SupportedContracts::Treasury,
-    )
-    .unwrap();
+    treasury::update_exec(chain, sender, contracts, "SSCRT".to_string()).unwrap();
     for i in 0..num_managers {
         treasury_manager::update_exec(
             chain,
@@ -351,10 +345,6 @@ pub fn update_exec(
             .clone()
             .address
             .to_string()
-    );
-    println!(
-        "{:?}",
-        contracts.get(&adapter_contract.clone()).unwrap().clone()
     );
     let res = adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
         asset: contracts

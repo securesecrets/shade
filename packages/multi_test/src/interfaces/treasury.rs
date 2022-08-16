@@ -4,7 +4,7 @@ use crate::{
 };
 use shade_admin_multi_test::multi::helpers::init_admin_auth;
 use shade_protocol::{
-    c_std::{Addr, Uint128},
+    c_std::{Addr, StdError, StdResult, Uint128},
     contract_interfaces::dao::treasury,
     multi_test::App,
     utils::{asset::Contract, cycle::Cycle, ExecuteCallback, InstantiateCallback, MultiTestable},
@@ -139,4 +139,43 @@ pub fn allowance(
         &[],
     )
     .unwrap();
+}
+
+pub fn update_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+) -> StdResult<()> {
+    println!(
+        "{}",
+        contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.clone()))
+            .unwrap()
+            .clone()
+            .address
+            .to_string()
+    );
+    let res = treasury::ExecuteMsg::Update {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    }
+    .test_exec(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    );
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
 }

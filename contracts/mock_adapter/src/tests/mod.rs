@@ -24,8 +24,8 @@ pub fn dao_int_test(
         &mut app,
         "admin",
         &mut contracts,
-        7,
-        7,
+        1,
+        1,
         Uint128::new(1000000),
         AllowanceType::Portion,
         Cycle::Constant,
@@ -73,9 +73,9 @@ macro_rules! dao_tests {
 
 dao_tests! {
     dao_test_0:(
-        Uint128::new(9 * 10u128.pow(17)),
+        Uint128::new(1 * 10u128.pow(17)),
         Uint128::new(90),
-        Uint128::new(1 * 10u128.pow(18)),
+        Uint128::new(1 * 10u128.pow(17)),
         Uint128::new(10),
         Uint128::new(0),
         Uint128::new(90),
