@@ -1,6 +1,6 @@
 use crate::utils::storage::plus::iter_map::{Increment, IndexableIterMap, IterKey, IterMap};
 use cosmwasm_std::{to_binary, StdError, StdResult, Storage, Uint128};
-use secret_storage_plus::{Item, Json, Key, KeyDeserialize, Map, Prefixer, PrimaryKey, Serde};
+use secret_storage_plus::{Item, Key, KeyDeserialize, Map, Prefixer, PrimaryKey};
 use serde::{
     de::{self, DeserializeOwned},
     ser,
@@ -12,7 +12,7 @@ use std::{
     ops::{Add, AddAssign, Index, Sub, SubAssign},
 };
 
-pub struct IterItem<'a, T, N, Ser = Json>
+pub struct IterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -22,16 +22,14 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     storage: Map<'a, Vec<u8>, T>,
     id_storage: Item<'a, IterKey<N>>,
-    serialization_type: PhantomData<*const Ser>,
 }
 
 const PREFIX: &str = "iter-map-size-namespace-";
 
-impl<'a, T, N, Ser> IterItem<'a, T, N, Ser>
+impl<'a, T, N> IterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -41,7 +39,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     // TODO: gotta figure this out
     // pub const fn new(namespace: &'a str) -> Self {
@@ -52,12 +49,11 @@ where
         IterItem {
             storage: Map::new(namespace),
             id_storage: Item::new(size_namespace),
-            serialization_type: PhantomData,
         }
     }
 }
 
-impl<'a, T, N, Ser> IterItem<'a, T, N, Ser>
+impl<'a, T, N> IterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -67,7 +63,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     pub fn set(&self, store: &mut dyn Storage, id: N, data: &T) -> StdResult<()> {
         self.storage.save(store, IterKey::new(id).to_bytes()?, data)
@@ -130,7 +125,7 @@ where
         &'a self,
         store: &'a dyn Storage,
         start_from: N,
-    ) -> IndexableIterItem<'a, T, N, Ser> {
+    ) -> IndexableIterItem<'a, T, N> {
         IndexableIterItem {
             iter_map: self,
             storage: store,
@@ -138,13 +133,13 @@ where
         }
     }
 
-    pub fn iter(&'a self, store: &'a dyn Storage) -> IndexableIterItem<'a, T, N, Ser> {
+    pub fn iter(&'a self, store: &'a dyn Storage) -> IndexableIterItem<'a, T, N> {
         self.iter_from(store, N::zero())
     }
 }
 
 // Make struct IterMapIndexable and implement the cool stuff there
-pub struct IndexableIterItem<'a, T, N, Ser>
+pub struct IndexableIterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -154,14 +149,13 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
-    iter_map: &'a IterItem<'a, T, N, Ser>,
+    iter_map: &'a IterItem<'a, T, N>,
     storage: &'a dyn Storage,
     index: N,
 }
 
-impl<'a, T, N, Ser> IndexableIterItem<'a, T, N, Ser>
+impl<'a, T, N> IndexableIterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -171,14 +165,13 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     fn next_index(&mut self) {
         self.index += N::one();
     }
 }
 
-impl<'a, T, N, Ser> Iterator for IndexableIterItem<'a, T, N, Ser>
+impl<'a, T, N> Iterator for IndexableIterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -188,7 +181,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     type Item = T;
 
