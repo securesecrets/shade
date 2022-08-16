@@ -41,7 +41,7 @@ fn test_is_valid_permission(#[case] permission: String, #[case] is_valid: bool) 
 #[rstest]
 #[case(AdminAuthStatus::Active, vec![true, true, true, false, true, true, true])]
 #[case(AdminAuthStatus::Maintenance, vec![true, true, true, false, true, true, true])]
-#[case(AdminAuthStatus::Shutdown, vec![false, false, false, false, false, false, false])]
+#[case(AdminAuthStatus::Shutdown, vec![false, false, false, false, false, false, true])]
 fn test_status(#[case] status: AdminAuthStatus, #[case] expect_success: Vec<bool>) {
         //init
         let mut chain: App = App::default();
