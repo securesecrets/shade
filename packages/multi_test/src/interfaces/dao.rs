@@ -126,6 +126,7 @@ pub fn init_dao(
                 tm_allowance_type.clone(),
                 tm_alocation_amount,
                 tm_alocation_tolerance,
+                i,
             );
         }
     }

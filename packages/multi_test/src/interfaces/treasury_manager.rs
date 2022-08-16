@@ -97,6 +97,7 @@ pub fn allocate(
     alloc_type: treasury_manager::AllocationType,
     amount: Uint128,
     tolerance: Uint128,
+    id: u8,
 ) {
     treasury_manager::ExecuteMsg::Allocate {
         asset: contracts
@@ -115,14 +116,15 @@ pub fn allocate(
     }
     .test_exec(
         &contracts
-            .get(&SupportedContracts::Treasury)
+            .get(&SupportedContracts::TreasuryManager(id))
             .unwrap()
             .clone()
             .into(),
         chain,
         Addr::unchecked(sender),
         &[],
-    );
+    )
+    .unwrap();
 }
 
 pub fn claimable_query(
