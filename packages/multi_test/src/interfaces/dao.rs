@@ -69,9 +69,17 @@ pub fn init_dao(
         .unwrap()
         .u128()
     );
+    println!(
+        "snip20 addr {}",
+        contracts
+            .get(&SupportedContracts::Snip20("SSCRT".to_string()))
+            .unwrap()
+            .clone()
+            .address
+    );
     for i in 0..num_managers {
         treasury_manager::init(chain, sender, contracts, i);
-        treasury_manager::register_asset(chain, "admin", contracts, "SSCRT".to_string());
+        treasury_manager::register_asset(chain, "admin", contracts, "SSCRT".to_string(), i);
         treasury::register_manager(chain, sender, contracts, i);
         treasury::allowance(
             chain,
@@ -346,7 +354,11 @@ pub fn update_exec(
             .address
             .to_string()
     );
-    let res = adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+    println!(
+        "{:?}",
+        contracts.get(&adapter_contract.clone()).unwrap().clone()
+    );
+    match adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol))
             .unwrap()
@@ -359,8 +371,7 @@ pub fn update_exec(
         chain,
         Addr::unchecked(sender),
         &[],
-    );
-    match res {
+    ) {
         Ok(_) => Ok(()),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }

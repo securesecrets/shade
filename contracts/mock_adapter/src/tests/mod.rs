@@ -74,7 +74,7 @@ macro_rules! dao_tests {
 dao_tests! {
     dao_test_0:(
         Uint128::new(1 * 10u128.pow(17)),
-        Uint128::new(90),
+        Uint128::new(10),
         Uint128::new(1 * 10u128.pow(17)),
         Uint128::new(10),
         Uint128::new(0),

@@ -65,6 +65,7 @@ pub fn register_asset(
     sender: &str,
     contracts: &DeployedContracts,
     symbol: String,
+    id: u8,
 ) {
     treasury_manager::ExecuteMsg::RegisterAsset {
         contract: contracts
@@ -75,7 +76,7 @@ pub fn register_asset(
     }
     .test_exec(
         &contracts
-            .get(&SupportedContracts::Treasury)
+            .get(&SupportedContracts::TreasuryManager(id))
             .unwrap()
             .clone()
             .into(),
@@ -147,9 +148,7 @@ pub fn claimable_query(
             .into(),
         &chain,
     )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Claimable { amount }) => {
-            Ok(amount)
-        }
+        manager::QueryAnswer::Claimable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
             "Failed to.test_query treasury_manager claimable",
         ))),
@@ -179,9 +178,7 @@ pub fn unbonding_query(
             .into(),
         &chain,
     )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Unbonding { amount }) => {
-            Ok(amount)
-        }
+        manager::QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
             "Failed to.test_query treasury_manager unbonding",
         )),
@@ -211,9 +208,7 @@ pub fn unbondable_query(
             .into(),
         &chain,
     )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Unbondable { amount }) => {
-            Ok(amount)
-        }
+        manager::QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
             "Failed to.test_query treasury_manager unbondable",
         )),
@@ -227,7 +222,8 @@ pub fn reserves_query(
     treasury_manager_contract: SupportedContracts,
     holder: SupportedContracts,
 ) -> StdResult<Uint128> {
-    match treasury_manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
+    println!("manager RESERVES!");
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
         holder: contracts.get(&holder).unwrap().address.to_string(),
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol))
@@ -242,13 +238,17 @@ pub fn reserves_query(
             .clone()
             .into(),
         &chain,
-    )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Reserves { amount }) => {
+    )?) {
+        manager::QueryAnswer::Reserves { amount } => {
+            println!("OK");
             Ok(amount)
         }
-        _ => Err(StdError::generic_err(
-            "Failed to.test_query treasury_manager unbondable",
-        )),
+        _ => {
+            println!("ERR");
+            Err(StdError::generic_err(
+                "Failed to.test_query treasury_manager reserves",
+            ))
+        }
     }
 }
 
@@ -275,9 +275,7 @@ pub fn balance_query(
             .into(),
         &chain,
     )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Balance { amount }) => {
-            Ok(amount)
-        }
+        manager::QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
             "Failed to.test_query treasury_manager balance",
         )),

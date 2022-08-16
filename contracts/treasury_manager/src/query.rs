@@ -217,17 +217,19 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
 pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
     match ASSETS.may_load(deps.storage, asset)? {
         Some(asset) => {
-            let holding = HOLDING.load(deps.storage, holder.clone())?;
+            let holding = match HOLDING.may_load(deps.storage, holder.clone())? {
+                Some(h) => h,
+                None => {
+                    return Err(StdError::generic_err("Invalid Holder"));
+                }
+            };
             let balance = match holding
                 .balances
                 .iter()
                 .find(|u| u.token == asset.contract.address)
             {
                 Some(b) => b.amount,
-                None => {
-                    return Err(StdError::generic_err("HOLDER NOT FOUND"));
-                    Uint128::zero()
-                }
+                None => Uint128::zero(),
             };
 
             let config = CONFIG.load(deps.storage)?;

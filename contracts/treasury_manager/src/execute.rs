@@ -1,13 +1,31 @@
 use shade_protocol::{
     admin::{validate_admin, AdminPermissions},
     c_std::{
-        self, to_binary, Addr, Api, Binary, DepsMut, Env, MessageInfo, Querier, Response, StdError,
-        StdResult, Storage, Uint128,
+        self,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
     },
     dao::{
         adapter,
         treasury_manager::{
-            Allocation, AllocationMeta, AllocationType, Balance, Config, ExecuteAnswer, Holding,
+            Allocation,
+            AllocationMeta,
+            AllocationType,
+            Balance,
+            Config,
+            ExecuteAnswer,
+            Holding,
             Status,
         },
     },
@@ -15,8 +33,13 @@ use shade_protocol::{
     snip20::{
         batch::{SendAction, SendFromAction},
         helpers::{
-            allowance_query, balance_query, batch_send_from_msg, batch_send_msg, register_receive,
-            send_msg, set_viewing_key_msg,
+            allowance_query,
+            balance_query,
+            batch_send_from_msg,
+            batch_send_msg,
+            register_receive,
+            send_msg,
+            set_viewing_key_msg,
         },
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
@@ -751,9 +774,7 @@ pub fn unbond(
                         allocations[i].contract.clone(),
                     )?;
 
-                    println!("unbonding {} from unbondable {}", unbond_amount, unbondable);
                     if unbond_amount > unbondable {
-                        println!("unbonding 1 {} from unbondable {}", unbondable, unbondable);
                         messages.push(adapter::unbond_msg(
                             &asset,
                             unbondable,
@@ -761,7 +782,6 @@ pub fn unbond(
                         )?);
                         unbond_amount = unbond_amount - unbondable;
                     } else {
-                        println!("unbond 2 {} from unbondable {}", unbondable, unbondable);
                         messages.push(adapter::unbond_msg(
                             &asset,
                             unbond_amount,
@@ -834,15 +854,11 @@ pub fn add_holder(
         Ok(h)
     })?;
 
-    HOLDING.save(
-        deps.storage,
-        holder,
-        &Holding {
-            balances: Vec::new(),
-            unbondings: Vec::new(),
-            status: Status::Active,
-        },
-    )?;
+    HOLDING.save(deps.storage, holder, &Holding {
+        balances: Vec::new(),
+        unbondings: Vec::new(),
+        status: Status::Active,
+    })?;
 
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::AddHolder {
