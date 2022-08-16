@@ -89,5 +89,6 @@ pub fn send(
         chain,
         Addr::unchecked(sender),
         &[],
-    );
+    )
+    .unwrap();
 }

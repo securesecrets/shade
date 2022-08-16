@@ -35,3 +35,8 @@ cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret"
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 schemars = "0.8.9"
+
+[dev-dependencies]
+shade-multi-test = { path = "../../packages/multi_test", features = [ 
+  "dao", 
+] }

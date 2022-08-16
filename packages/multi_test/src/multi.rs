@@ -1,7 +1,6 @@
 #[cfg(feature = "admin")]
 pub mod admin {
-    pub use shade_admin_multi_test::multi::helpers::init_admin_auth;
-    pub use shade_admin_multi_test::multi::AdminAuth;
+    pub use shade_admin_multi_test::multi::{helpers::init_admin_auth, AdminAuth};
 }
 
 #[cfg(feature = "snip20")]
@@ -71,6 +70,12 @@ pub mod treasury_manager {
 pub mod treasury {
     use treasury;
     multi_derive::implement_multi!(Treasury, treasury);
+}
+
+#[cfg(feature = "mock_adapter")]
+pub mod mock_adapter {
+    use mock_adapter;
+    multi_derive::implement_multi!(MockAdapter, mock_adapter);
 }
 
 #[cfg(feature = "scrt_staking")]
