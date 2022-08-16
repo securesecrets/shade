@@ -7,7 +7,14 @@ use shade_protocol::{
     c_std::{Addr, StdError, StdResult, Uint128},
     contract_interfaces::dao::treasury,
     multi_test::App,
-    utils::{asset::Contract, cycle::Cycle, ExecuteCallback, InstantiateCallback, MultiTestable},
+    utils::{
+        asset::Contract,
+        cycle::Cycle,
+        ExecuteCallback,
+        InstantiateCallback,
+        MultiTestable,
+        Query,
+    },
 };
 
 pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
@@ -109,6 +116,8 @@ pub fn allowance(
     amount: Uint128,
     tolerance: Uint128,
 ) {
+    println!("ALLOWANCE B: {}", amount.u128());
+    println!("TOLLERANCE: {}", tolerance.u128());
     treasury::ExecuteMsg::Allowance {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol))
@@ -139,6 +148,35 @@ pub fn allowance(
         &[],
     )
     .unwrap();
+}
+
+pub fn allowance_query(
+    chain: &App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    spender: SupportedContracts,
+) -> StdResult<Uint128> {
+    match (treasury::QueryMsg::Allowance {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+        spender: contracts.get(&spender).unwrap().clone().address.to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Allowance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("query failed")),
+    }
 }
 
 pub fn update_exec(

@@ -1,5 +1,6 @@
 use shade_multi_test::interfaces::{
     dao::{init_dao, system_balance},
+    treasury,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
@@ -26,16 +27,29 @@ pub fn dao_int_test(
         &mut contracts,
         1,
         1,
-        Uint128::new(1000000),
+        Uint128::new(1_000_000),
         AllowanceType::Portion,
         Cycle::Constant,
         allow_amount,
-        Uint128::new(10u128.pow(18)),
+        Uint128::zero(),
         AllocationType::Portion,
         alloc_amount,
         Uint128::zero(),
     );
+    //query allowance
+    assert_eq!(
+        expected_allowance,
+        treasury::allowance_query(
+            &app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(0)
+        )
+        .unwrap()
+    );
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    println!("{:?}", bals);
     assert_eq!(bals.0, expected_treasury);
     for manager_tuples in bals.1 {
         assert_eq!(manager_tuples.0, expected_manager);
@@ -74,7 +88,7 @@ macro_rules! dao_tests {
 dao_tests! {
     dao_test_0:(
         Uint128::new(1 * 10u128.pow(17)),
-        Uint128::new(10),
+        Uint128::new(100_000),
         Uint128::new(1 * 10u128.pow(17)),
         Uint128::new(10),
         Uint128::new(0),
