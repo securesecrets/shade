@@ -411,20 +411,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
     let total = (amount_total + portion_total + allowance + balance) - holder_unbonding;
 
-    //panic!("holder principal {}", holder_principal);
-    if total > holder_principal {
-        println!("Gainzz {}", total - holder_principal);
-        // credit gains to treasury
-        let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
-        if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
-            holding.balances[i].amount += total - holder_principal;
-        }
-        HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
-    } else if total < holder_principal {
-        //TODO losses
-        todo!("losses");
-    }
-
     let _total_unbond = Uint128::zero();
 
     let mut allowance_used = Uint128::zero();
@@ -487,8 +473,9 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                         memo: None,
                     });
 
-                    allowance = allowance - desired_input;
+                    println!("allowance used {}", desired_input);
                     allowance_used += desired_input;
+                    allowance = allowance - desired_input;
                     desired_input = Uint128::zero();
                 }
                 // Send all allowance
@@ -503,8 +490,9 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                         memo: None,
                     });
 
-                    allowance = Uint128::zero();
+                    println!("allowance used {}", allowance);
                     allowance_used += allowance;
+                    allowance = Uint128::zero();
                     desired_input = desired_input - allowance;
                     break;
                 }
@@ -517,7 +505,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                 continue;
             }
             messages.push(adapter::unbond_msg(
-                &asset,
+                &asset.clone(),
                 desired_output,
                 adapter.contract.clone(),
             )?);
@@ -525,18 +513,42 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     }
 
     // Credit treasury balance with allowance used
-    HOLDING.update(deps.storage, config.treasury, |h| -> StdResult<Holding> {
-        let mut holding = h.unwrap();
+    HOLDING.update(
+        deps.storage,
+        config.treasury.clone(),
+        |h| -> StdResult<Holding> {
+            let mut holding = h.unwrap();
+            if let Some(i) = holding
+                .balances
+                .iter()
+                .position(|u| u.token == asset.clone())
+            {
+                holding.balances[i].amount = holding.balances[i].amount + allowance_used;
+            } else {
+                holding.balances.push(Balance {
+                    token: asset.clone(),
+                    amount: allowance_used,
+                });
+            }
+            Ok(holding)
+        },
+    )?;
+
+    // Determine Gainz & Losses & credit to treasury
+    holder_principal += allowance_used;
+    println!("");
+    if total > holder_principal {
+        println!("Gainzz {}", total - holder_principal);
+        // credit gains to treasury
+        let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
         if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
-            holding.balances[i].amount = holding.balances[i].amount + allowance_used;
-        } else {
-            holding.balances.push(Balance {
-                token: asset,
-                amount: allowance_used,
-            });
+            holding.balances[i].amount += total - holder_principal;
         }
-        Ok(holding)
-    })?;
+        HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
+    } else if total < holder_principal {
+        //TODO losses
+        todo!("losses");
+    }
 
     if !send_actions.is_empty() {
         messages.push(batch_send_msg(
