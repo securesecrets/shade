@@ -11,12 +11,15 @@ use shade_protocol::{
 };
 
 pub fn dao_int_test(
+    initial_treasury_bal: Uint128,
     allow_amount: Uint128,
     expected_allowance: Uint128,
     alloc_amount: Uint128,
     expected_treasury: Uint128,
     expected_manager: Uint128,
     expected_adapter: Uint128,
+    num_managers: u8,
+    num_adapters: u8,
 ) {
     let mut app = App::default();
     let mut contracts = DeployedContracts::new();
@@ -25,9 +28,9 @@ pub fn dao_int_test(
         &mut app,
         "admin",
         &mut contracts,
-        1,
-        1,
-        Uint128::new(1_000_000),
+        num_managers,
+        num_adapters,
+        initial_treasury_bal,
         AllowanceType::Portion,
         Cycle::Constant,
         allow_amount,
@@ -37,17 +40,19 @@ pub fn dao_int_test(
         Uint128::zero(),
     );
     //query allowance
-    assert_eq!(
-        expected_allowance,
-        treasury::allowance_query(
-            &app,
-            "admin",
-            &contracts,
-            "SSCRT".to_string(),
-            SupportedContracts::TreasuryManager(0)
-        )
-        .unwrap()
-    );
+    for i in 0..num_managers {
+        assert_eq!(
+            expected_allowance,
+            treasury::allowance_query(
+                &app,
+                "admin",
+                &contracts,
+                "SSCRT".to_string(),
+                SupportedContracts::TreasuryManager(i)
+            )
+            .unwrap()
+        );
+    }
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
     println!("{:?}", bals);
     assert_eq!(bals.0, expected_treasury);
@@ -65,20 +70,26 @@ macro_rules! dao_tests {
             #[test]
             fn $name() {
                 let (
+                    initial_treasury_bal,
                     allow_amount,
                     expected_allowance,
                     alloc_amount,
                     expected_treasury,
                     expected_manager,
                     expected_adapter,
+                    num_managers,
+                    num_adapters,
                 ) = $value;
                 dao_int_test(
+                    initial_treasury_bal,
                     allow_amount,
                     expected_allowance,
                     alloc_amount,
                     expected_treasury,
                     expected_manager,
-                    expected_adapter
+                    expected_adapter,
+                    num_managers,
+                    num_adapters,
                 );
             }
         )*
@@ -87,11 +98,25 @@ macro_rules! dao_tests {
 
 dao_tests! {
     dao_test_0:(
+                   Uint128::new(1_000_000),
         Uint128::new(1 * 10u128.pow(17)),
         Uint128::new(100_000),
         Uint128::new(1 * 10u128.pow(17)),
-        Uint128::new(10),
-        Uint128::new(0),
-        Uint128::new(90),
+        Uint128::new(900_000),
+        Uint128::new(90_000),
+        Uint128::new(10_000),
+        1,
+        1,
+    ),
+    dao_test_1:(
+        Uint128::new(1_000_000),
+        Uint128::new(1 * 10u128.pow(17)),
+        Uint128::new(100_000),
+        Uint128::new(1 * 10u128.pow(17)),
+        Uint128::new(800_000),
+        Uint128::new(80_000),
+        Uint128::new(10_000),
+        2,
+        2,
     ),
 }
