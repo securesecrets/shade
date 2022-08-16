@@ -37,7 +37,6 @@ pub fn query_validate_permission(
                     has_permission = false;
                 }
             }
-            // If user has been registered, there should be an empty vector there.
             None => return Err(unregistered_admin(valid_user.as_str())),
         }
     }

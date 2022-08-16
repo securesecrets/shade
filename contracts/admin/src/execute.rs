@@ -47,7 +47,6 @@ pub fn try_transfer_super(deps: DepsMut, new_super: String) -> StdResult<Respons
 }
 
 pub fn try_self_destruct(deps: DepsMut) -> StdResult<Response> {
-    STATUS.load(deps.storage)?.not_shutdown()?;
     // Clear permissions
     let admins = ADMINS.load(deps.storage)?;
     admins
@@ -109,8 +108,8 @@ fn delete_admin(
     if admins.contains(&user_addr) {
         // Delete admin from list.
         admins.retain(|x| x.ne(&user_addr));
-        // Clear their permissions.
-        PERMISSIONS.save(store, &user_addr, &vec![])?;
+        // Delete their permissions.
+        PERMISSIONS.remove(store, &user_addr);
     };
     Ok(())
 }
