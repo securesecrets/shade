@@ -1,24 +1,12 @@
+use shade_protocol::admin::helpers::{validate_admin, AdminPermissions};
 use shade_protocol::{
-    admin::{AdminPermissions, helpers::validate_admin},
     c_std::{
-        to_binary,
-        Api,
-        Deps,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Querier,
-        Response,
-        StdError,
-        StdResult,
+        to_binary, Api, Deps, DepsMut, Env, MessageInfo, Querier, Response, StdError, StdResult,
         Storage,
     },
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
-        Admin,
-        ContractStatus,
-        HandleAnswer,
-        RngSeed,
+        Admin, ContractStatus, HandleAnswer, RngSeed,
     },
     query_authentication::viewing_keys::ViewingKey,
     utils::{
