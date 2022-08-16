@@ -42,7 +42,7 @@ pub fn dao_int_test(
     //query allowance
     for i in 0..num_managers {
         assert_eq!(
-            expected_allowance,
+            expected_manager,
             treasury::allowance_query(
                 &app,
                 "admin",
@@ -50,7 +50,8 @@ pub fn dao_int_test(
                 "SSCRT".to_string(),
                 SupportedContracts::TreasuryManager(i)
             )
-            .unwrap()
+            .unwrap(),
+            "Treasury->Manager Allowance",
         );
     }
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
@@ -98,15 +99,15 @@ macro_rules! dao_tests {
 
 dao_tests! {
     dao_test_0:(
-                   Uint128::new(1_000_000),
-        Uint128::new(1 * 10u128.pow(17)),
-        Uint128::new(100_000),
-        Uint128::new(1 * 10u128.pow(17)),
-        Uint128::new(900_000),
-        Uint128::new(90_000),
-        Uint128::new(10_000),
-        1,
-        1,
+        Uint128::new(1_000_000),          // initial
+        Uint128::new(1 * 10u128.pow(17)), // allowance portion
+        Uint128::new(900_000),            // expected allowance
+        Uint128::new(1 * 10u128.pow(17)), // alloc portion
+        Uint128::new(900_000),            // expected treasury
+        Uint128::new(90_000),             // expected manager
+        Uint128::new(10_000),             // expected adapter
+        1,                                // managers
+        1,                                // adapters per manager
     ),
     dao_test_1:(
         Uint128::new(1_000_000),
