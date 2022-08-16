@@ -53,7 +53,8 @@ pub fn dao_int_test(
                 "SSCRT".to_string(),
                 SupportedContracts::TreasuryManager(i)
             )
-            .unwrap()
+            .unwrap(),
+            "Treasury->Manager Allowance",
         );
     }
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
