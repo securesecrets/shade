@@ -222,7 +222,6 @@ pub fn reserves_query(
     treasury_manager_contract: SupportedContracts,
     holder: SupportedContracts,
 ) -> StdResult<Uint128> {
-    println!("manager RESERVES!");
     match (manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
         holder: contracts.get(&holder).unwrap().address.to_string(),
         asset: contracts
@@ -239,16 +238,10 @@ pub fn reserves_query(
             .into(),
         &chain,
     )?) {
-        manager::QueryAnswer::Reserves { amount } => {
-            println!("OK");
-            Ok(amount)
-        }
-        _ => {
-            println!("ERR");
-            Err(StdError::generic_err(
-                "Failed to.test_query treasury_manager reserves",
-            ))
-        }
+        manager::QueryAnswer::Reserves { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(
+            "Failed to query treasury_manager reserves",
+        )),
     }
 }
 
@@ -277,7 +270,7 @@ pub fn balance_query(
     )? {
         manager::QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
-            "Failed to.test_query treasury_manager balance",
+            "Failed to query treasury_manager balance",
         )),
     }
 }
