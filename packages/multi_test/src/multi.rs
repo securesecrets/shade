@@ -88,6 +88,7 @@ pub mod query_auth {
 //     multi_derive::implement_multi!(Treasury, treasury);
 // }
 
+#[cfg(feature = "peg_stability")]
 pub mod peg_stability {
     use peg_stability;
 

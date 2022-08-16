@@ -1,5 +1,5 @@
 use cosmwasm_std::{to_binary, StdError, StdResult, Storage, Uint128};
-use secret_storage_plus::{Item, Json, Key, KeyDeserialize, Map, Prefixer, PrimaryKey, Serde};
+use secret_storage_plus::{Item, Key, KeyDeserialize, Map, Prefixer, PrimaryKey};
 use serde::{
     de::{self, DeserializeOwned},
     ser,
@@ -52,7 +52,7 @@ where
     }
 }
 
-pub struct IterMap<'a, K, T, N, Ser = Json>
+pub struct IterMap<'a, K, T, N>
 where
     T: Serialize + DeserializeOwned,
     K: PrimaryKey<'a> + Prefixer<'a> + KeyDeserialize,
@@ -63,16 +63,15 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
+
 {
     storage: Map<'a, (K, Vec<u8>), T>,
     id_storage: Map<'a, K, IterKey<N>>,
-    serialization_type: PhantomData<*const Ser>,
 }
 
 const PREFIX: &str = "iter-map-size-namespace-";
 
-impl<'a, K, T, N, Ser> IterMap<'a, K, T, N, Ser>
+impl<'a, K, T, N> IterMap<'a, K, T, N>
 where
     T: Serialize + DeserializeOwned,
     K: PrimaryKey<'a> + Prefixer<'a> + KeyDeserialize,
@@ -83,7 +82,7 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
+
 {
     // TODO: gotta figure this out
     // pub const fn new(namespace: &'a str) -> Self {
@@ -94,12 +93,11 @@ where
         IterMap {
             storage: Map::new(namespace),
             id_storage: Map::new(size_namespace),
-            serialization_type: PhantomData,
         }
     }
 }
 
-impl<'a, K, T, N, Ser> IterMap<'a, K, T, N, Ser>
+impl<'a, K, T, N> IterMap<'a, K, T, N>
 where
     T: Serialize + DeserializeOwned,
     K: PrimaryKey<'a> + Prefixer<'a> + KeyDeserialize,
@@ -110,7 +108,7 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
+
 {
     pub fn set(&self, store: &mut dyn Storage, key: K, id: N, data: &T) -> StdResult<()> {
         self.storage
@@ -177,7 +175,7 @@ where
         store: &'a dyn Storage,
         key: K,
         start_from: N,
-    ) -> IndexableIterMap<'a, K, T, N, Ser> {
+    ) -> IndexableIterMap<'a, K, T, N> {
         IndexableIterMap {
             iter_map: self,
             storage: store,
@@ -186,12 +184,12 @@ where
         }
     }
 
-    pub fn iter(&'a self, store: &'a dyn Storage, key: K) -> IndexableIterMap<'a, K, T, N, Ser> {
+    pub fn iter(&'a self, store: &'a dyn Storage, key: K) -> IndexableIterMap<'a, K, T, N> {
         self.iter_from(store, key, N::zero())
     }
 }
 
-pub struct IndexableIterMap<'a, K, T, N, Ser>
+pub struct IndexableIterMap<'a, K, T, N>
 where
     T: Serialize + DeserializeOwned,
     K: PrimaryKey<'a> + Prefixer<'a> + KeyDeserialize,
@@ -202,15 +200,15 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
+
 {
-    iter_map: &'a IterMap<'a, K, T, N, Ser>,
+    iter_map: &'a IterMap<'a, K, T, N>,
     storage: &'a dyn Storage,
     key: K,
     index: N,
 }
 
-impl<'a, K, T, N, Ser> IndexableIterMap<'a, K, T, N, Ser>
+impl<'a, K, T, N> IndexableIterMap<'a, K, T, N>
 where
     T: Serialize + DeserializeOwned,
     K: PrimaryKey<'a> + Prefixer<'a> + KeyDeserialize,
@@ -221,14 +219,14 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
+
 {
     fn next_index(&mut self) {
         self.index += N::one();
     }
 }
 
-impl<'a, K, T, N, Ser> Iterator for IndexableIterMap<'a, K, T, N, Ser>
+impl<'a, K, T, N> Iterator for IndexableIterMap<'a, K, T, N>
 where
     T: Serialize + DeserializeOwned,
     K: PrimaryKey<'a> + Prefixer<'a> + KeyDeserialize,
@@ -239,7 +237,7 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
+
 {
     type Item = T;
 
