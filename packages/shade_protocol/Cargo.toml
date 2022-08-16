@@ -28,7 +28,6 @@ multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
 ensemble = ["dep:fadroma"]
 
 # Implementing new contracts:
-# Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
 # When creating a new contract; try to keep all interface (Init, Handle and Query) related content in the `mod.rs` file
 # and move all implementation related content into separate files inside the package.
