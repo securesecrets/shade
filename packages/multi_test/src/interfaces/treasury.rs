@@ -83,7 +83,7 @@ pub fn register_manager(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    manager_id: u8,
+    manager_id: usize,
 ) {
     treasury::ExecuteMsg::RegisterManager {
         contract: contracts
@@ -110,7 +110,7 @@ pub fn allowance(
     sender: &str,
     contracts: &DeployedContracts,
     snip20_symbol: String,
-    manager_id: u8,
+    manager_id: usize,
     allowance_type: treasury::AllowanceType,
     cycle: Cycle,
     amount: Uint128,

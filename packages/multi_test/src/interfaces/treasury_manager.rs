@@ -15,7 +15,7 @@ use shade_protocol::{
     utils::{self, asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
-pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts, id: u8) {
+pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts, id: usize) {
     /*let admin_auth = match admin_auth {
         Some(admin) => admin,
         None => Contract::from(init_admin_auth(chain, Addr::unchecked(sender), None)),
@@ -65,7 +65,7 @@ pub fn register_asset(
     sender: &str,
     contracts: &DeployedContracts,
     symbol: String,
-    id: u8,
+    id: usize,
 ) {
     treasury_manager::ExecuteMsg::RegisterAsset {
         contract: contracts
