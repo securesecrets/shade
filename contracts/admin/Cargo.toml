@@ -18,6 +18,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = []
 # for quicker tests, cargo test --lib
+debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
 # Needs to be in contract dependency in order for build to work
