@@ -1,0 +1,31 @@
+error[E0599]: no method named `query_all_delegations` found for type parameter `Q` in the current scope
+   --> contracts/scrt_staking/src/handle.rs:145:40
+    |
+145 |     let mut delegations = deps.querier.query_all_delegations(env.contract.address)?;
+    |                                        ^^^^^^^^^^^^^^^^^^^^^ method not found in `Q`
+
+error[E0599]: no method named `query_all_validators` found for type parameter `Q` in the current scope
+   --> contracts/scrt_staking/src/handle.rs:288:35
+    |
+288 |     let validators = deps.querier.query_all_validators()?;
+    |                                   ^^^^^^^^^^^^^^^^^^^^ help: there is an associated function with a similar name: `query_all_balances`
+
+error[E0599]: no method named `query_all_delegations` found for type parameter `Q` in the current scope
+  --> contracts/scrt_staking/src/query.rs:32:21
+   |
+32 |     Ok(deps.querier.query_all_delegations(address)?)
+   |                     ^^^^^^^^^^^^^^^^^^^^^ method not found in `Q`
+
+error[E0599]: no method named `query_delegation` found for type parameter `Q` in the current scope
+  --> contracts/scrt_staking/src/query.rs:41:21
+   |
+41 |     Ok(deps.querier.query_delegation(validator)?)
+   |                     ^^^^^^^^^^^^^^^^ method not found in `Q`
+
+error: aborting due to 4 previous errors; 9 warnings emitted
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `scrt_staking`
+
+To learn more, run the command again with --verbose.
+make: *** [makefile:21: scrt_staking] Error 101

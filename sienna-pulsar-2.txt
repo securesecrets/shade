@@ -1,0 +1,155 @@
+---
+name:     AMM[v2].Factory
+codeId:   2815
+codeHash: 8fb871768b09a70d5eb1a7864766c257887d973bcd30d85a6976994ed1cb38a5
+address:  secret16kq7tm5esxath43x0m35cer7tyk0khz3v2rcrs
+label:    20220203_161134/AMM[v2].Factory
+initTx:   EBE6B7A2E6A9BACF71CEF7613A83068AB9A6C94759F20F2390E244BA1F0C78CD
+gasUsed:  '33702'
+---
+name:                AMM[v2].SIENNA-SSCRT
+exchange:
+  address:           secret1ud8alctxwgrr8yq2pwgwhmeqeera90kmyct2ha
+token_0:
+  custom_token:
+    contract_addr:   secret12vy64457jysxf3x4hwr64425ztlauq98zchpgt
+    token_code_hash: 46e5bca7904e5247952a831cfe426586f614767ec1485bfb2d78c40ae5bf10c8
+token_1:
+  custom_token:
+    contract_addr:   secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+lp_token:
+  address:           secret1q6ukn526ve0pq2pmcuzdds4zk5dgc4ek0arr02
+  code_hash:         267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+codeId:              2810
+codeHash:            ea6bfaf124b2540765b81d12f3efcd6efe3aeaa4ab498a2331f2e40ad9ea0209
+address:             secret1ud8alctxwgrr8yq2pwgwhmeqeera90kmyct2ha
+
+---------
+
+name:                AMM[v2].SIENNA-SSCRT.LP
+exchange:
+  address:           secret1ud8alctxwgrr8yq2pwgwhmeqeera90kmyct2ha
+token_0:
+  custom_token:
+    contract_addr:   secret12vy64457jysxf3x4hwr64425ztlauq98zchpgt
+    token_code_hash: 46e5bca7904e5247952a831cfe426586f614767ec1485bfb2d78c40ae5bf10c8
+token_1:
+  custom_token:
+    contract_addr:   secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+lp_token:
+  address:           secret1q6ukn526ve0pq2pmcuzdds4zk5dgc4ek0arr02
+  code_hash:         267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+codeId:              2812
+codeHash:            267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+address:             secret1q6ukn526ve0pq2pmcuzdds4zk5dgc4ek0arr02
+---
+name:                AMM[v2].SIENNA-SETH
+exchange:
+  address:           secret170yx548ty6eqaspu3kttfj7u4k96f2vj0klchr
+token_0:
+  custom_token:
+    contract_addr:   secret12vy64457jysxf3x4hwr64425ztlauq98zchpgt
+    token_code_hash: 46e5bca7904e5247952a831cfe426586f614767ec1485bfb2d78c40ae5bf10c8
+token_1:
+  custom_token:
+    contract_addr:   secret1hqrdl6wstt8qzshwc6mrumpjk9338k0lpsefm3
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+lp_token:
+  address:           secret1k3r4lxwnp705vktay8j5n3xlqgsnutcqe6xzpn
+  code_hash:         267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+codeId:              2810
+codeHash:            ea6bfaf124b2540765b81d12f3efcd6efe3aeaa4ab498a2331f2e40ad9ea0209
+address:             secret170yx548ty6eqaspu3kttfj7u4k96f2vj0klchr
+---
+name:                AMM[v2].SIENNA-SETH.LP
+exchange:
+  address:           secret170yx548ty6eqaspu3kttfj7u4k96f2vj0klchr
+token_0:
+  custom_token:
+    contract_addr:   secret12vy64457jysxf3x4hwr64425ztlauq98zchpgt
+    token_code_hash: 46e5bca7904e5247952a831cfe426586f614767ec1485bfb2d78c40ae5bf10c8
+token_1:
+  custom_token:
+    contract_addr:   secret1hqrdl6wstt8qzshwc6mrumpjk9338k0lpsefm3
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+lp_token:
+  address:           secret1k3r4lxwnp705vktay8j5n3xlqgsnutcqe6xzpn
+  code_hash:         267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+codeId:              2812
+codeHash:            267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+address:             secret1k3r4lxwnp705vktay8j5n3xlqgsnutcqe6xzpn
+---
+name:                AMM[v2].SIENNA-SUSDT
+exchange:
+  address:           secret1rdp8yjzda8vc38wehupwa2fg94x92j4ryysese
+token_0:
+  custom_token:
+    contract_addr:   secret12vy64457jysxf3x4hwr64425ztlauq98zchpgt
+    token_code_hash: 46e5bca7904e5247952a831cfe426586f614767ec1485bfb2d78c40ae5bf10c8
+token_1:
+  custom_token:
+    contract_addr:   secret18r5szma8hm93pvx6lwpjwyxruw27e0k57tncfy
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+lp_token:
+  address:           secret1l5cda0l52knc8fpdwxkrt66j4ah68lfr5g68pm
+  code_hash:         267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+codeId:              2810
+codeHash:            ea6bfaf124b2540765b81d12f3efcd6efe3aeaa4ab498a2331f2e40ad9ea0209
+address:             secret1rdp8yjzda8vc38wehupwa2fg94x92j4ryysese
+---
+name:                AMM[v2].SIENNA-SUSDT.LP
+exchange:
+  address:           secret1rdp8yjzda8vc38wehupwa2fg94x92j4ryysese
+token_0:
+  custom_token:
+    contract_addr:   secret12vy64457jysxf3x4hwr64425ztlauq98zchpgt
+    token_code_hash: 46e5bca7904e5247952a831cfe426586f614767ec1485bfb2d78c40ae5bf10c8
+token_1:
+  custom_token:
+    contract_addr:   secret18r5szma8hm93pvx6lwpjwyxruw27e0k57tncfy
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+lp_token:
+  address:           secret1l5cda0l52knc8fpdwxkrt66j4ah68lfr5g68pm
+  code_hash:         267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+codeId:              2812
+codeHash:            267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+address:             secret1l5cda0l52knc8fpdwxkrt66j4ah68lfr5g68pm
+---
+name:                AMM[v2].SSCRT-SUSDT
+exchange:
+  address:           secret15h0k4e73n5j7nq5e3a5s7kyc5kquuamcknn86c
+token_0:
+  custom_token:
+    contract_addr:   secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+token_1:
+  custom_token:
+    contract_addr:   secret18r5szma8hm93pvx6lwpjwyxruw27e0k57tncfy
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+lp_token:
+  address:           secret12qvwuvx7ws6s9jz40dw0tc7dumdw7fvh62q528
+  code_hash:         267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+codeId:              2810
+codeHash:            ea6bfaf124b2540765b81d12f3efcd6efe3aeaa4ab498a2331f2e40ad9ea0209
+address:             secret15h0k4e73n5j7nq5e3a5s7kyc5kquuamcknn86c
+---
+name:                AMM[v2].SSCRT-SUSDT.LP
+exchange:
+  address:           secret15h0k4e73n5j7nq5e3a5s7kyc5kquuamcknn86c
+token_0:
+  custom_token:
+    contract_addr:   secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+token_1:
+  custom_token:
+    contract_addr:   secret18r5szma8hm93pvx6lwpjwyxruw27e0k57tncfy
+    token_code_hash: 9587d60b8e6b078ace12014ceeee089530b9fabcd76535d93666a6c127ad8813
+lp_token:
+  address:           secret12qvwuvx7ws6s9jz40dw0tc7dumdw7fvh62q528
+  code_hash:         267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+codeId:              2812
+codeHash:            267b2b1d48d0acc173677e29c76bb63cd2e368bca7d55e56a16c048a90b6e6f3
+address:             secret12qvwuvx7ws6s9jz40dw0tc7dumdw7fvh62q528
+---

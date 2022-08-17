@@ -167,7 +167,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             )?,
             None => Uint128::zero(),
         };
-        println!("Balance: {}", balance);
+        println!("Balance: {}", manager_balance);
 
         let allowance = allowance_query(
             &deps.querier,
@@ -178,7 +178,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             &full_asset.contract.clone(),
         )?
         .allowance;
-        println!("Allowance: {}", balance);
+        println!("Allowance: {}", allowance);
 
         println!(
             "metadata {}: {}, {}",
