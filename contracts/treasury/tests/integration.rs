@@ -55,6 +55,7 @@ fn single_asset_manager_scrt_staking_integration(
     expected_allowance: Uint128,
     alloc_type: AllocationType,
     alloc_amount: Uint128,
+    rewards: Uint128,
     // expected balances
     expected_treasury: Uint128,
     expected_manager: Uint128,
@@ -332,6 +333,73 @@ fn single_asset_manager_scrt_staking_integration(
         _ => assert!(false),
     };
 
+    // Add Rewards
+    app.sudo(SudoMsg::Staking(StakingSudo::AddRewards {
+        amount: Coin {
+            denom: "uscrt".to_string(),
+            amount: rewards,
+        },
+    }))
+    .unwrap();
+
+    // Update manager
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
+        asset: token.address.to_string().clone(),
+    })
+    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .unwrap();
+
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&scrt_staking, &app)
+    .unwrap())
+    {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(
+                amount,
+                expected_scrt_staking + rewards,
+                "SCRT Staking Balance"
+            );
+        }
+        _ => assert!(false),
+    };
+
+    // Scrt Staking unbondable check
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&scrt_staking, &mut app)
+    .unwrap())
+    {
+        adapter::QueryAnswer::Unbondable { amount } => {
+            assert_eq!(
+                amount,
+                expected_scrt_staking + rewards,
+                "Scrt Staking Unbondable"
+            );
+        }
+        _ => assert!(false),
+    };
+
+    // Manager unbondable check
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
+        asset: token.address.to_string().clone(),
+        holder: treasury.address.to_string().clone(),
+    })
+    .test_query(&manager, &mut app)
+    .unwrap())
+    {
+        manager::QueryAnswer::Unbondable { amount } => {
+            assert_eq!(
+                amount,
+                expected_manager + expected_scrt_staking + rewards,
+                "Manager Unbondable"
+            );
+        }
+        _ => assert!(false),
+    };
+
     // Treasury unbondable check
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
         asset: token.address.to_string().clone(),
@@ -342,7 +410,7 @@ fn single_asset_manager_scrt_staking_integration(
         adapter::QueryAnswer::Unbondable { amount } => {
             assert_eq!(
                 amount,
-                expected_scrt_staking + expected_manager,
+                expected_scrt_staking + expected_manager + rewards,
                 "Treasury Unbondable"
             );
         }
@@ -351,7 +419,7 @@ fn single_asset_manager_scrt_staking_integration(
 
     // Unbond all w/ treasury
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
-        amount: expected_scrt_staking + expected_manager,
+        amount: expected_scrt_staking + expected_manager + rewards,
         asset: token.address.to_string().clone(),
     })
     .test_exec(&treasury, &mut app, admin.clone(), &[])
@@ -399,7 +467,11 @@ fn single_asset_manager_scrt_staking_integration(
     .unwrap())
     {
         manager::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Manager Claimable Pre-fastforward");
+            assert_eq!(
+                amount,
+                expected_manager + rewards,
+                "Manager Claimable Pre-fastforward"
+            );
         }
         _ => assert!(false),
     };
@@ -414,7 +486,8 @@ fn single_asset_manager_scrt_staking_integration(
     {
         manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(
-                amount, expected_scrt_staking,
+                amount,
+                expected_scrt_staking + rewards,
                 "Manager Unbonding Pre-fastforward"
             );
         }
@@ -481,7 +554,7 @@ fn single_asset_manager_scrt_staking_integration(
     .unwrap()
     {
         adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, deposit, "Treasury Reserves Post-Claim");
+            assert_eq!(amount, deposit + rewards, "Treasury Reserves Post-Claim");
         }
         _ => panic!("Bad Reserves Query Response"),
     };
@@ -579,7 +652,7 @@ fn single_asset_manager_scrt_staking_integration(
     .unwrap())
     {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit, "Treasury Balance Post-Unbond");
+            assert_eq!(amount, deposit + rewards, "Treasury Balance Post-Unbond");
         }
         _ => assert!(false),
     };
@@ -592,7 +665,7 @@ fn single_asset_manager_scrt_staking_integration(
     .unwrap())
     {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit, "Treasury Balance Post-Unbond");
+            assert_eq!(amount, deposit + rewards, "Treasury Balance Post-Unbond");
         }
         _ => assert!(false),
     };
@@ -636,7 +709,7 @@ fn single_asset_manager_scrt_staking_integration(
     .unwrap()
     {
         snip20::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit, "post-migration full unbond");
+            assert_eq!(amount, deposit + rewards, "post-migration full unbond");
         }
         _ => {}
     };
@@ -653,6 +726,7 @@ macro_rules! single_asset_manager_scrt_staking_tests {
                     expected_allowance,
                     alloc_type,
                     alloc_amount,
+                    rewards,
                     // expected balances
                     expected_treasury,
                     expected_manager,
@@ -664,6 +738,7 @@ macro_rules! single_asset_manager_scrt_staking_tests {
                     expected_allowance,
                     alloc_type,
                     alloc_amount,
+                    rewards,
                     expected_treasury,
                     expected_manager,
                     expected_scrt_staking
@@ -680,18 +755,22 @@ single_asset_manager_scrt_staking_tests! {
         Uint128::new(90), // expected manager allowance
         AllocationType::Portion,
         Uint128::new(1 * 10u128.pow(18)), // allocate 100%
+        Uint128::new(100), // rewards
         Uint128::new(10), // treasury 10
         Uint128::new(0), // manager 0
         Uint128::new(90), // scrt_staking 90
     ),
+    /*
     single_asset_portion_manager_1: (
         Uint128::new(100), // deposit
         Uint128::new(9 * 10u128.pow(17)), // manager allowance 90%
         Uint128::new(90), // expected manager allowance
         AllocationType::Portion,
         Uint128::new(5 * 10u128.pow(17)), // 50% allocate
+        Uint128::new(100), // rewards
         Uint128::new(55), // treasury 55 (manager won't pull unused allowance
         Uint128::new(0), // manager 0
         Uint128::new(45), // scrt_staking 90
     ),
+    */
 }

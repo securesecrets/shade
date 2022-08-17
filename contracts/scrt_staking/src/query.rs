@@ -162,7 +162,7 @@ pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
 
     let unbonding = UNBONDING.load(deps.storage)?;
 
-    let mut unbondable = delegated + scrt_balance + rewards;
+    let mut unbondable = delegated;
 
     if unbonding < scrt_balance + rewards {
         unbondable += scrt_balance + rewards - unbonding;

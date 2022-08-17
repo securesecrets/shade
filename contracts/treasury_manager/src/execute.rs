@@ -485,7 +485,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                         memo: None,
                     });
 
-                    println!("allowance used {}", desired_input);
+                    println!("1 allowance used {}", desired_input);
                     allowance_used += desired_input;
                     desired_input = Uint128::zero();
                     allowance = allowance - desired_input;
@@ -502,7 +502,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                         memo: None,
                     });
 
-                    println!("allowance used {}", allowance);
+                    println!("2 allowance used {}", allowance);
                     allowance_used += allowance;
                     desired_input = desired_input - allowance;
                     allowance = Uint128::zero();
@@ -549,16 +549,21 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     // Determine Gainz & Losses & credit to treasury
     holder_principal += allowance_used;
     if total - allowance > holder_principal {
-        println!("Gainzz {}", total - holder_principal);
+        println!("Gainzz {}", (total - allowance) - holder_principal);
         // credit gains to treasury
         let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
         if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
-            holding.balances[i].amount += total - holder_principal;
+            holding.balances[i].amount += (total - allowance) - holder_principal;
         }
         HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
-    } else if total < holder_principal {
-        //TODO losses
-        todo!("losses");
+    } else if total - allowance < holder_principal {
+        println!("lossez {}", (total - allowance) - holder_principal);
+        // credit losses to treasury
+        let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
+        if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
+            holding.balances[i].amount -= (total - allowance) - holder_principal;
+        }
+        HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
     }
 
     if !send_actions.is_empty() {

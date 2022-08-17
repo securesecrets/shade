@@ -213,8 +213,8 @@ pub fn unbond(
     let prev_unbonding = UNBONDING.load(deps.storage)?;
 
     let mut total = delegated; //scrt_balance + rewards + delegated;
-    if prev_unbonding < scrt_balance + delegated {
-        total += scrt_balance + delegated - prev_unbonding;
+    if prev_unbonding < scrt_balance + rewards {
+        total += scrt_balance + rewards - prev_unbonding;
     }
 
     if total < amount {
