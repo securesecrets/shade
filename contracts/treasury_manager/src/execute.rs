@@ -113,7 +113,6 @@ pub fn try_update_config(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &env.contract.address,
         &cur_config.admin_auth,
     )?;
 
@@ -138,7 +137,6 @@ pub fn try_register_asset(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -183,7 +181,6 @@ pub fn allocate(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -254,7 +251,6 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &claimer,
-        &env.contract.address,
         &config.admin_auth,
     )
     .is_ok()
@@ -617,7 +613,6 @@ pub fn unbond(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &unbonder,
-        &env.contract.address,
         &config.admin_auth,
     )
     .is_ok()
@@ -885,7 +880,6 @@ pub fn add_holder(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &env.contract.address,
         &CONFIG.load(deps.storage)?.admin_auth,
     )?;
 
@@ -924,7 +918,6 @@ pub fn remove_holder(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &env.contract.address,
         &CONFIG.load(deps.storage)?.admin_auth,
     )?;
 

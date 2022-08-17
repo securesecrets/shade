@@ -96,7 +96,6 @@ pub fn try_update_config(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &cur_config.admin_auth,
     )?;
 
@@ -157,6 +156,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
     // { spender: (balance, allowance) }
     let mut metadata: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
 
+    println!("Building metadata");
     for a in allowances.clone() {
         let manager_balance = match MANAGER.may_load(deps.storage, a.spender.clone())? {
             Some(m) => manager::balance_query(
@@ -167,6 +167,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             )?,
             None => Uint128::zero(),
         };
+        println!("Balance: {}", balance);
 
         let allowance = allowance_query(
             &deps.querier,
@@ -177,6 +178,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             &full_asset.contract.clone(),
         )?
         .allowance;
+        println!("Allowance: {}", balance);
 
         println!(
             "metadata {}: {}, {}",
@@ -204,20 +206,25 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
     let mut messages = vec![];
     let mut metrics = vec![];
 
+    println!("for allowance in allowances");
     for allowance in allowances {
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
         // Claim from managers
         let manager = MANAGER.may_load(deps.storage, allowance.spender.clone())?;
         if let Some(m) = manager.clone() {
+            println!("Claimable query");
             let claimable = manager::claimable_query(
                 deps.querier,
                 &asset.clone(),
                 self_address.clone(),
                 m.clone(),
             )?;
+            println!("Claimable: {}", claimable);
 
             if !claimable.is_zero() {
+                println!("claim msg");
                 messages.push(manager::claim_msg(&asset.clone(), m.clone())?);
+                println!("push metric");
                 metrics.push(Metric {
                     action: Action::ManagerClaim,
                     context: Context::Rebalance,
@@ -231,6 +238,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
 
         let now = utc_now(&env);
 
+        println!("match allowance_type");
         match allowance.allowance_type {
             AllowanceType::Amount => {
                 // Refresh allowance if cycle is exceeded
@@ -561,7 +569,6 @@ pub fn set_run_level(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -582,7 +589,6 @@ pub fn try_register_asset(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -626,7 +632,6 @@ pub fn register_manager(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -656,7 +661,6 @@ pub fn allowance(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &config.admin_auth,
     )?;
 
@@ -683,6 +687,18 @@ pub fn allowance(
         tolerance: allowance.tolerance,
     });
 
+    let portion_sum: u128 = allowances
+        .iter()
+        .filter(|a| a.allowance_type == AllowanceType::Portion)
+        .map(|a| a.amount.u128())
+        .sum();
+
+    if portion_sum > 10u128.pow(18) {
+        return Err(StdError::generic_err(format!(
+            "Total portion allowances cannot exceed %100 ({})",
+            portion_sum
+        )));
+    }
     ALLOWANCES.save(deps.storage, asset, &allowances)?;
 
     Ok(
@@ -735,7 +751,6 @@ pub fn unbond(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &env.contract.address,
         &CONFIG.load(deps.storage)?.admin_auth,
     )?;
 

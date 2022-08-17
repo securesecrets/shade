@@ -6,6 +6,8 @@ pub use treasury::Treasury;*/
 pub mod snip20;
 /*#[cfg(feature = "snip20")]
 pub use super::snip20::Snip20;*/
+#[cfg(feature = "dao")]
+pub mod dao;
 #[cfg(feature = "treasury_manager")]
 pub mod treasury_manager;
 
