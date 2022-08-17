@@ -557,11 +557,11 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         }
         HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
     } else if total - allowance < holder_principal {
-        println!("lossez {}", (total - allowance) - holder_principal);
+        println!("lossez {}", holder_principal - (total - allowance));
         // credit losses to treasury
         let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
         if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
-            holding.balances[i].amount -= (total - allowance) - holder_principal;
+            holding.balances[i].amount -= holder_principal - (total - allowance);
         }
         HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
     }

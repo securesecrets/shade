@@ -59,12 +59,12 @@ pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
         &full_asset.contract.clone(),
     )?;
 
-    for allowance in allowances {
+    /*for allowance in allowances {
         if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
             reserves +=
                 manager::reserves_query(deps.querier, &asset.clone(), self_address.clone(), m)?;
         }
-    }
+    }*/
 
     Ok(adapter::QueryAnswer::Reserves { amount: reserves })
 }

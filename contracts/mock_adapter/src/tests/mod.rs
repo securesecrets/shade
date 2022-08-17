@@ -217,9 +217,18 @@ pub fn dao_int_gains() {
     );
     update_dao(&mut app, "admin", &contracts, "SSCRT", 1).unwrap();
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    println!("{:?}", bals);
     assert_eq!(
         bals,
-        (Uint128::new(55), vec![(Uint128::zero(), vec![
+        (Uint128::new(50), vec![(Uint128::new(5), vec![
+            Uint128::new(50)
+        ])])
+    );
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    assert_eq!(
+        bals,
+        (Uint128::new(50), vec![(Uint128::new(5), vec![
             Uint128::new(50)
         ])])
     );

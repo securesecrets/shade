@@ -136,7 +136,9 @@ pub fn update_dao(
     snip20_symbol: &str,
     num_managers: usize,
 ) -> StdResult<()> {
+    println!("HERE DAO UPDATE 1");
     treasury::update_exec(chain, sender, contracts, snip20_symbol.to_string())?;
+    println!("HERE UPDATE DAO");
     for i in 0..num_managers {
         treasury_manager::update_exec(
             chain,

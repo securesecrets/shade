@@ -319,6 +319,9 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
     println!("portion total {}", portion_total);
 
     for allowance in portions {
+        portion_total += token_balance - amount_total;
+        println!("portion total {}", portion_total);
+        println!("amount_total {}", amount_total);
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
         if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
             println!("portion doesnt exceed cycle");
