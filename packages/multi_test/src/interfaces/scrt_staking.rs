@@ -22,12 +22,12 @@ pub fn init(
     validator_bounds: Option<scrt_staking::ValidatorBounds>,
     manager: usize,
 ) {
-    let treasury_manager = match contracts.get(&SupportedContracts::TreasuryManager(manager)) {
+    let treasury_manager = match contracts.get(&SupportedContracts::TreasuryManager(0)) {
         Some(manager) => manager.clone(),
         None => {
-            treasury_manager::init(chain, sender, contracts, manager);
+            treasury_manager::init(chain, sender, contracts, 0);
             contracts
-                .get(&SupportedContracts::TreasuryManager(manager))
+                .get(&SupportedContracts::TreasuryManager(0))
                 .unwrap()
                 .clone()
         }

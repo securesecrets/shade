@@ -1,5 +1,6 @@
 use shade_multi_test::interfaces::{
-    dao::{init_dao, system_balance},
+    dao::{init_dao, system_balance, update_dao},
+    snip20,
     treasury,
     utils::{DeployedContracts, SupportedContracts},
 };
@@ -33,7 +34,7 @@ pub fn dao_int_test(
         "admin",
         &mut contracts,
         initial_treasury_bal,
-        snip20_symbols,
+        snip20_symbols.clone(),
         allow_type,
         cycle,
         allow_amount,
@@ -42,28 +43,41 @@ pub fn dao_int_test(
         alloc_amount,
         alloc_tolerance,
     );
-    //query allowance
-    for i in 0..num_managers {
-        assert_eq!(
-            expected_allowance[i],
-            treasury::allowance_query(
-                &app,
-                "admin",
-                &contracts,
-                "SSCRT".to_string(),
-                SupportedContracts::TreasuryManager(i)
+    //query assets
+    let assets_query_res = treasury::assets_query(&app, &contracts).unwrap();
+    println!("{:?}", assets_query_res);
+    for (k, snip20_symbol) in snip20_symbols.iter().enumerate() {
+        assert!(
+            assets_query_res.contains(
+                &contracts
+                    .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+                    .unwrap()
+                    .address
             )
-            .unwrap(),
-            "Treasury->Manager Allowance",
         );
-    }
-    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
-    println!("{:?}", bals);
-    assert_eq!(bals.0, expected_treasury);
-    for (i, manager_tuples) in bals.1.iter().enumerate() {
-        assert_eq!(manager_tuples.0, expected_manager[i]);
-        for (j, adapter_bals) in manager_tuples.1.iter().enumerate() {
-            assert_eq!(adapter_bals.clone(), expected_adapter[i][j]);
+        //query allowance
+        for i in 0..num_managers {
+            /*assert_eq!(
+                expected_allowance[i],
+                treasury::allowance_query(
+                    &app,
+                    "admin",
+                    &contracts,
+                    snip20_symbol.to_string(),
+                    SupportedContracts::TreasuryManager(i)
+                )
+                .unwrap(),
+                "Treasury->Manager Allowance",
+            );*/
+        }
+        let bals = system_balance(&app, &contracts, snip20_symbol.to_string());
+        println!("{:?}", bals);
+        assert_eq!(bals.0, expected_treasury);
+        for (i, manager_tuples) in bals.1.iter().enumerate() {
+            assert_eq!(manager_tuples.0, expected_manager[i]);
+            for (j, adapter_bals) in manager_tuples.1.iter().enumerate() {
+                assert_eq!(adapter_bals.clone(), expected_adapter[i][j]);
+            }
         }
     }
 }
@@ -112,27 +126,101 @@ dao_tests! {
     dao_test_0:(
         Uint128::new(1_000_000),
         vec!["SSCRT"],
-        vec![Uint128::new(1 * 10u128.pow(17))],
+        vec![Uint128::new(5 * 10u128.pow(17))],
         vec![AllowanceType::Portion],
         vec![Cycle::Constant],
         vec![Uint128::zero()],
-        vec![Uint128::new(100_000)],
-        vec![vec![Uint128::new(1 * 10u128.pow(17))]],
-        vec![vec![AllocationType::Portion]],
-        vec![vec![Uint128::zero()]],
-        Uint128::new(900_000),
-        vec![Uint128::new(90_000)],
-        vec![vec![Uint128::new(10_000)]],
+        vec![Uint128::new(50_000)],
+        vec![vec![Uint128::new(1 * 10u128.pow(17)), Uint128::new(400_000)]],
+        vec![vec![AllocationType::Portion, AllocationType::Amount]],
+        vec![vec![Uint128::zero(), Uint128::zero()]],
+        Uint128::new(550_000),
+        vec![Uint128::new(0)],
+        vec![vec![Uint128::new(50_000), Uint128::new(400_000)]],
     ),
-    /*dao_test_1:(
-        Uint128::new(1_000_000),
-        Uint128::new(1 * 10u128.pow(17)),
-        Uint128::new(100_000),
-        Uint128::new(1 * 10u128.pow(17)),
-        Uint128::new(800_000),
-        Uint128::new(80_000),
-        Uint128::new(10_000),
-        2,
-        2,
-    ),*/
+    dao_test_1:(
+        Uint128::new(100_000_000),
+        vec!["SSCRT"],
+        vec![Uint128::new(50_000_000), Uint128::new(40_000_000)],
+        vec![AllowanceType::Amount, AllowanceType::Amount],
+        vec![Cycle::Constant, Cycle::Constant],
+        vec![Uint128::zero(), Uint128::zero()],
+        vec![Uint128::new(17_000_000), Uint128::new(16_000_000)],
+        vec![vec![Uint128::new(5 * 10u128.pow(17)), Uint128::new(4_000_000), Uint128::new(4_000_000)], vec![Uint128::new(5 * 10u128.pow(17)), Uint128::new(4_000_000)]],
+        vec![vec![AllocationType::Portion, AllocationType::Amount, AllocationType::Amount],vec![AllocationType::Portion, AllocationType::Amount]],
+        vec![vec![Uint128::zero(), Uint128::zero(), Uint128::zero()],vec![Uint128::zero(), Uint128::zero()]],
+        Uint128::new(43_000_000),
+        vec![Uint128::new(0), Uint128::new(0)],
+        vec![vec![Uint128::new(25_000_000), Uint128::new(4_000_000), Uint128::new(4_000_000)],vec![Uint128::new(20_000_000), Uint128::new(4_000_000)]],
+    ),
+    dao_test_2:(
+        Uint128::new(100),
+        vec!["SSCRT", "SHD"],
+        vec![Uint128::new(5 * 10u128.pow(17))],
+        vec![AllowanceType::Portion],
+        vec![Cycle::Constant],
+        vec![Uint128::zero()],
+        vec![Uint128::new(5), Uint128::new(5)],
+        vec![vec![Uint128::new(1 * 10u128.pow(17)), Uint128::new(40)]],
+        vec![vec![AllocationType::Portion, AllocationType::Amount]],
+        vec![vec![Uint128::zero(), Uint128::zero()]],
+        Uint128::new(55),
+        vec![Uint128::new(0)],
+        vec![vec![Uint128::new(5), Uint128::new(40)]],
+    ),
+}
+
+#[test]
+pub fn dao_int_gains() {
+    let mut app = App::default();
+    let mut contracts = DeployedContracts::new();
+    init_dao(
+        &mut app,
+        "admin",
+        &mut contracts,
+        Uint128::new(100),
+        vec!["SSCRT"],
+        vec![AllowanceType::Amount],
+        vec![Cycle::Constant],
+        vec![Uint128::new(50)], // Allowance amount
+        vec![Uint128::zero()],  // Allowance tolerance
+        vec![vec![AllocationType::Amount]],
+        vec![vec![Uint128::new(50)]],
+        vec![vec![Uint128::zero()]],
+    );
+    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    assert_eq!(
+        bals,
+        (Uint128::new(50), vec![(Uint128::zero(), vec![
+            Uint128::new(50)
+        ])])
+    );
+    snip20::send(
+        &mut app,
+        "admin",
+        &contracts,
+        "SSCRT".to_string(),
+        contracts
+            .get(&SupportedContracts::MockAdapter(0))
+            .unwrap()
+            .address
+            .to_string(),
+        Uint128::new(5),
+        None,
+    );
+    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    assert_eq!(
+        bals,
+        (Uint128::new(50), vec![(Uint128::zero(), vec![
+            Uint128::new(55)
+        ])])
+    );
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 1).unwrap();
+    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    assert_eq!(
+        bals,
+        (Uint128::new(55), vec![(Uint128::zero(), vec![
+            Uint128::new(50)
+        ])])
+    );
 }

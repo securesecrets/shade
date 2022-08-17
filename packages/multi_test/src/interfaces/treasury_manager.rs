@@ -311,8 +311,8 @@ pub fn update_exec(
     contracts: &DeployedContracts,
     snip20_symbol: String,
     treasury_manager_contract: SupportedContracts,
-) {
-    treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
+) -> StdResult<()> {
+    match (treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol))
             .unwrap()
@@ -329,6 +329,8 @@ pub fn update_exec(
         chain,
         Addr::unchecked(sender),
         &[],
-    )
-    .unwrap();
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err("update in treasury manager failed")),
+    }
 }
