@@ -118,8 +118,8 @@ pub fn init_dao(
                     Some(j.to_string()),
                     &SupportedContracts::MockAdapter(j + offset),
                     tm_allowance_type.clone()[i][j].clone(),
-                    tm_alocation_amount[i][j].clone(),
-                    tm_alocation_tolerance[i][j].clone(),
+                    tm_allocation_amount[i][j].clone(),
+                    tm_allocation_tolerance[i][j].clone(),
                     i,
                 );
             }
