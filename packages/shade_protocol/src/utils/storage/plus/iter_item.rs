@@ -90,6 +90,23 @@ where
         Ok(id.item)
     }
 
+    pub fn append(&self, store: &mut dyn Storage, data: &mut Vec<T>) -> StdResult<N> {
+        let mut id = match self.id_storage.may_load(store)? {
+            None => N::zero(),
+            Some(id) => id.item,
+        };
+
+        for d in data {
+            id = id + N::one();
+            self.storage
+                .save(store, IterKey::new(id.clone()).to_bytes()?, &d)?;
+        }
+
+        self.id_storage.save(store, &IterKey::new(id.clone()))?;
+
+        Ok(id)
+    }
+
     pub fn pop(&self, store: &mut dyn Storage) -> StdResult<()> {
         let id = match self.id_storage.may_load(store)? {
             None => return Err(StdError::generic_err("Iter map is empty")),
@@ -102,6 +119,19 @@ where
         self.id_storage.save(store, &new_id)?;
 
         Ok(())
+    }
+
+    pub fn last(&self, store: &mut dyn Storage) -> StdResult<T> {
+        let id = match self.id_storage.may_load(store)? {
+            None => return Err(StdError::generic_err("Iter map is empty")),
+            Some(id) => id,
+        };
+
+        self.storage.load(store, id.to_bytes()?)
+    }
+
+    pub fn clear(&self, store: &mut dyn Storage) -> StdResult<()> {
+        self.id_storage.save(store, &IterKey::new(N::zero()))
     }
 
     pub fn size(&'a self, store: &dyn Storage) -> StdResult<N> {

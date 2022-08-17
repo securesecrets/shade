@@ -19,6 +19,7 @@ use shade_protocol::{
         adapter,
         treasury::{Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, RunLevel},
     },
+    utils::cycle::parse_utc_datetime,
 };
 
 use crate::{execute, query, storage::*};
@@ -61,7 +62,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             let contract = contract.into_valid(deps.api)?;
             execute::try_register_asset(deps, &env, info, &contract)
         }
-        ExecuteMsg::RegisterManager { mut contract } => {
+        ExecuteMsg::RegisterManager { contract } => {
             let mut contract = contract.into_valid(deps.api)?;
             execute::register_manager(deps, &env, info, &mut contract)
         }
@@ -70,6 +71,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             execute::allowance(deps, &env, info, asset, allowance)
         }
         ExecuteMsg::Update { asset } => {
+            println!("UPDATE MSG");
             let asset = deps.api.addr_validate(&asset)?;
             execute::update(deps, &env, info, asset)
         }
@@ -110,6 +112,16 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::RunLevel => to_binary(&QueryAnswer::RunLevel {
             run_level: RUN_LEVEL.load(deps.storage)?,
         }),
+        //TODO: parse string & format manually to accept all valid date formats
+        QueryMsg::Metrics { date, period } => {
+            let key = match date {
+                Some(d) => parse_utc_datetime(&d)?.timestamp() as u64,
+                None => env.block.time.seconds(),
+            };
+            to_binary(&QueryAnswer::Metrics {
+                metrics: METRICS.load_period(deps.storage, key, period)?,
+            })
+        }
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;

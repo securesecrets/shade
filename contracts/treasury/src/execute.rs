@@ -48,6 +48,7 @@ use shade_protocol::{
         asset::{set_allowance, Contract},
         cycle::{exceeds_cycle, parse_utc_datetime, utc_from_seconds, utc_from_timestamp, utc_now},
         generic_response::ResponseStatus,
+        storage::plus::period_storage::PeriodStorage,
     },
 };
 
@@ -66,20 +67,17 @@ pub fn receive(
     msg: Option<Binary>,
 ) -> StdResult<Response> {
     let metric_key = metric_key(utc_now(&env));
-    let mut metrics = METRICS
-        .may_load(deps.storage, metric_key.clone())?
-        .unwrap_or(vec![]);
 
-    metrics.push(Metric {
+    METRICS.push(deps.storage, env.block.time, Metric {
         action: Action::FundsReceived,
         context: Context::Receive,
         timestamp: env.block.time.seconds(),
         token: info.sender,
         amount,
         user: sender,
-    });
+    })?;
 
-    METRICS.save(deps.storage, metric_key, &metrics)?;
+    METRICS.flush(deps.storage)?;
 
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
         status: ResponseStatus::Success,
@@ -111,12 +109,19 @@ pub fn try_update_config(
 }
 
 pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+    println!("UPDATE");
     match RUN_LEVEL.load(deps.storage)? {
-        RunLevel::Migrating => migrate(deps, env, info, asset),
+        RunLevel::Migrating => {
+            println!("MIGRATING");
+            migrate(deps, env, info, asset)
+        }
         RunLevel::Deactivated => {
             return Err(StdError::generic_err("Contract Deactivated"));
         }
-        RunLevel::Normal => rebalance(deps, env, info, asset),
+        RunLevel::Normal => {
+            println!("REBALANCING");
+            rebalance(deps, env, info, asset)
+        }
     }
 }
 
@@ -153,8 +158,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
 
     println!("Building metadata");
     for a in allowances.clone() {
-        println!("Balance query");
-        let balance = match MANAGER.may_load(deps.storage, a.spender.clone())? {
+        let manager_balance = match MANAGER.may_load(deps.storage, a.spender.clone())? {
             Some(m) => manager::balance_query(
                 deps.querier,
                 &asset.clone(),
@@ -176,18 +180,28 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         .allowance;
         println!("Allowance: {}", balance);
 
-        metadata.insert(a.spender.clone(), (balance, allowance));
-        println!("metadata inserted");
+        println!(
+            "metadata {}: {}, {}",
+            a.spender.clone(),
+            manager_balance,
+            allowance
+        );
+        metadata.insert(a.spender.clone(), (manager_balance, allowance));
 
         match a.allowance_type {
             AllowanceType::Amount => {
-                amount_total += balance + allowance;
+                //TODO this will fail when over funded
+                amount_total += manager_balance + allowance;
+                // account for potential additions (on refill)
+                if a.amount > manager_balance + allowance {
+                    amount_total += a.amount - (manager_balance + allowance);
+                }
             }
-            AllowanceType::Portion => {
-                portion_total += balance + allowance;
-            }
+            AllowanceType::Portion => {}
         }
     }
+
+    portion_total = token_balance - amount_total;
 
     let mut messages = vec![];
     let mut metrics = vec![];
@@ -213,7 +227,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                 println!("push metric");
                 metrics.push(Metric {
                     action: Action::ManagerClaim,
-                    context: Context::Update,
+                    context: Context::Rebalance,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
                     amount: claimable,
@@ -249,7 +263,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                             )?);
                             metrics.push(Metric {
                                 action: Action::DecreaseAllowance,
-                                context: Context::Update,
+                                context: Context::Rebalance,
                                 timestamp: env.block.time.seconds(),
                                 token: asset.clone(),
                                 amount: cur_allowance - allowance.amount,
@@ -268,8 +282,8 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                                 vec![],
                             )?);
                             metrics.push(Metric {
-                                action: Action::DecreaseAllowance,
-                                context: Context::Update,
+                                action: Action::IncreaseAllowance,
+                                context: Context::Rebalance,
                                 timestamp: env.block.time.seconds(),
                                 token: asset.clone(),
                                 amount: allowance.amount - cur_allowance,
@@ -282,7 +296,8 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             }
             AllowanceType::Portion => {
                 let desired_amount = portion_total.multiply_ratio(allowance.amount, 10u128.pow(18));
-                let threshold = desired_amount.multiply_ratio(allowance.tolerance, 10u128.pow(18));
+                let threshold =
+                    desired_amount.multiply_ratio(allowance.tolerance.clone(), 10u128.pow(18));
 
                 /* NOTE: remove claiming if rebalance tx becomes too heavy
                  * alternatives:
@@ -292,14 +307,24 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                  */
 
                 let (balance, cur_allowance) = metadata[&allowance.spender];
+                println!(
+                    "PORTION bal: {}, all: {} desired: {}",
+                    balance, cur_allowance, desired_amount
+                );
                 let total = balance + cur_allowance;
 
                 // UnderFunded
                 if total < desired_amount {
                     let increase = desired_amount - total;
+                    println!("UNDERFUNDED PORTION {}", increase);
                     if increase <= threshold {
+                        println!(
+                            "DIDNT EXCEED THRESHOLD {} TOLERANGE {}",
+                            threshold, allowance.tolerance
+                        );
                         continue;
                     }
+                    println!("INC PORTION {}", increase);
                     messages.push(increase_allowance_msg(
                         allowance.spender.clone(),
                         increase,
@@ -311,7 +336,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                     )?);
                     metrics.push(Metric {
                         action: Action::IncreaseAllowance,
-                        context: Context::Update,
+                        context: Context::Rebalance,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
                         amount: increase,
@@ -338,12 +363,13 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                         )?);
                         metrics.push(Metric {
                             action: Action::DecreaseAllowance,
-                            context: Context::Update,
+                            context: Context::Rebalance,
                             timestamp: env.block.time.seconds(),
                             token: asset.clone(),
                             amount: cur_allowance,
                             user: allowance.spender.clone(),
                         });
+                        decrease -= cur_allowance;
 
                         // Unbond remaining
                         if decrease > Uint128::zero() {
@@ -356,7 +382,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                                     )?);
                                     metrics.push(Metric {
                                         action: Action::ManagerUnbond,
-                                        context: Context::Update,
+                                        context: Context::Rebalance,
                                         timestamp: env.block.time.seconds(),
                                         token: asset.clone(),
                                         amount: decrease,
@@ -383,7 +409,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                         )?);
                         metrics.push(Metric {
                             action: Action::DecreaseAllowance,
-                            context: Context::Update,
+                            context: Context::Rebalance,
                             timestamp: env.block.time.seconds(),
                             token: asset.clone(),
                             amount: decrease,
@@ -395,6 +421,11 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         }
     }
 
+    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
+    METRICS.flush(deps.storage)?;
+
+    println!("MESSAGES {}", messages.len());
+
     Ok(Response::new()
         .add_messages(messages)
         .set_data(to_binary(&ExecuteAnswer::Rebalance {
@@ -404,6 +435,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
 
 pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let mut messages = vec![];
+    let mut metrics = vec![];
 
     let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
     let full_asset = ASSET.load(deps.storage, asset.clone())?;
@@ -420,7 +452,17 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
                 m.clone(),
             )?;
 
-            messages.push(manager::unbond_msg(&asset, unbondable, m.clone())?);
+            if !unbondable.is_zero() {
+                messages.push(manager::unbond_msg(&asset, unbondable, m.clone())?);
+                metrics.push(Metric {
+                    action: Action::ManagerUnbond,
+                    context: Context::Migration,
+                    timestamp: env.block.time.seconds(),
+                    token: asset.clone(),
+                    amount: unbondable,
+                    user: m.address.clone(),
+                });
+            }
             let claimable = manager::claimable_query(
                 deps.querier,
                 &asset,
@@ -429,10 +471,19 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
             )?;
 
             if !claimable.is_zero() {
-                claimed += claimable;
                 messages.push(manager::claim_msg(&asset, m.clone())?);
+                metrics.push(Metric {
+                    action: Action::ManagerClaim,
+                    context: Context::Migration,
+                    timestamp: env.block.time.seconds(),
+                    token: asset.clone(),
+                    amount: claimable,
+                    user: m.address.clone(),
+                });
+                claimed += claimable;
             }
         }
+
         let cur_allowance = allowance_query(
             &deps.querier,
             env.contract.address.clone(),
@@ -453,6 +504,14 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
                 &full_asset.contract.clone(),
                 vec![],
             )?);
+            metrics.push(Metric {
+                action: Action::DecreaseAllowance,
+                context: Context::Migration,
+                timestamp: env.block.time.seconds(),
+                token: asset.clone(),
+                amount: cur_allowance,
+                user: allowance.spender.clone(),
+            });
         }
     }
 
@@ -463,21 +522,30 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
         &full_asset.contract.clone(),
     )?;
 
-    todo!("need to send tokens to multisig");
-
     if !(balance + claimed).is_zero() {
         let config = CONFIG.load(deps.storage)?;
 
         //TODO: send to super admin from admin_auth
         messages.push(send_msg(
-            config.multisig, //unbonder.clone(),
+            config.multisig.clone(),
             balance + claimed,
             None,
             None,
             None,
             &full_asset.contract.clone(),
         )?);
+        metrics.push(Metric {
+            action: Action::SendFunds,
+            context: Context::Migration,
+            timestamp: env.block.time.seconds(),
+            token: asset.clone(),
+            amount: balance + claimed,
+            user: config.multisig.clone(),
+        });
     }
+
+    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
+    METRICS.flush(deps.storage)?;
 
     Ok(Response::new()
         .add_messages(messages)
@@ -493,6 +561,8 @@ pub fn set_run_level(
     run_level: RunLevel,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
+
+    println!("Setting Run Level");
 
     // TODO force super-admin
     validate_admin(
@@ -656,7 +726,7 @@ pub fn claim(deps: DepsMut, _env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             )?;
             claimed += claimable;
 
-            if claimable.is_zero() {
+            if !claimable.is_zero() {
                 messages.push(manager::claim_msg(&asset, m.clone())?);
             }
         }
@@ -721,10 +791,10 @@ pub fn unbond(
         )));
     }
 
-    Ok(
-        Response::new().set_data(to_binary(&manager::ExecuteAnswer::Unbond {
+    Ok(Response::new().add_messages(messages).set_data(to_binary(
+        &manager::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount,
-        })?),
-    )
+        },
+    )?))
 }

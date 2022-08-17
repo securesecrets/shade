@@ -1,11 +1,18 @@
-use crate::utils::asset::RawContract;
-use crate::utils::{asset::Contract, cycle::Cycle, generic_response::ResponseStatus};
+use crate::utils::{
+    asset::{Contract, RawContract},
+    cycle::Cycle,
+    generic_response::ResponseStatus,
+};
 
-use crate::c_std::{Addr, Binary, StdResult, Uint128};
-use crate::contract_interfaces::dao::adapter;
+use crate::{
+    c_std::{Addr, Binary, StdResult, Uint128},
+    contract_interfaces::dao::adapter,
+};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::cw_serde;
+
+use crate::utils::storage::plus::period_storage::Period;
 
 /// The permission referenced in the Admin Auth contract to give a user
 /// admin permissions for the Shade Treasury
@@ -27,7 +34,7 @@ pub enum RunLevel {
 #[cw_serde]
 pub enum Context {
     Receive,
-    Update,
+    Rebalance,
     Migration,
 }
 
@@ -38,6 +45,7 @@ pub enum Action {
     ManagerUnbond,
     ManagerClaim,
     FundsReceived,
+    SendFunds,
 }
 
 #[cw_serde]
@@ -161,10 +169,19 @@ pub enum QueryMsg {
     Config {},
     Assets {},
     // List of recurring allowances configured
-    Allowances { asset: String },
+    Allowances {
+        asset: String,
+    },
     // Current allowance to spender
-    Allowance { asset: String, spender: String },
+    Allowance {
+        asset: String,
+        spender: String,
+    },
     RunLevel,
+    Metrics {
+        date: Option<String>,
+        period: Period,
+    },
     /*
     Balance { asset: String },
     Reserves { asset: String },
@@ -183,4 +200,5 @@ pub enum QueryAnswer {
     Allowances { allowances: Vec<AllowanceMeta> },
     Allowance { amount: Uint128 },
     RunLevel { run_level: RunLevel },
+    Metrics { metrics: Vec<Metric> },
 }

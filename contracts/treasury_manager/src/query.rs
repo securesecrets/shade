@@ -140,21 +140,19 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
  * in stalled treasury trying to unbond more than is available
  */
 pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
+    println!("--HERE--");
     if let Some(full_asset) = ASSETS.may_load(deps.storage, asset.clone())? {
-        let config = CONFIG.load(deps.storage)?;
-        let allocations = match ALLOCATIONS.may_load(deps.storage, asset.clone())? {
-            Some(a) => a,
-            None => {
-                return Err(StdError::generic_err("Not an asset"));
-            }
-        };
-
         /*
         let unbonder = match holder {
             Some(h) => h,
             None => config.treasury,
         };
         */
+
+        let config = CONFIG.load(deps.storage)?;
+        if holder == config.treasury {
+            println!("ITS THE TREASURY");
+        }
 
         let mut holder_balance = Uint128::zero();
         let mut holder_unbonding = Uint128::zero();
@@ -166,6 +164,7 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
                 }
                 if let Some(b) = h.balances.iter().find(|b| b.token == asset.clone()) {
                     holder_balance += b.amount;
+                    println!("HOLDER BALANCE {}", b.amount);
                 }
             }
             None => {
@@ -191,17 +190,18 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
             &full_asset.contract.clone(),
         )?;
 
+        let allocations = ALLOCATIONS
+            .may_load(deps.storage, asset.clone())?
+            .unwrap_or(vec![]);
+
+        println!("allocs {}", allocations.len());
         for alloc in allocations {
-            /*
-            if unbondable >= (balance - unbonding)? {
-                unbondable = (balance - unbonding)?;
+            println!("adapter unbondable {}", unbondable);
+            unbondable += adapter::unbondable_query(deps.querier, &asset, alloc.contract)?;
+            if unbondable > holder_balance {
                 break;
             }
-            */
-            unbondable += adapter::unbondable_query(deps.querier, &asset, alloc.contract.clone())?;
         }
-
-        //println!("{} manager unbondable {} balance {} unbonding {}", holder, unbondable, holder_balance);
 
         if unbondable > holder_balance {
             println!("unbondable > balance {}", holder_balance);
@@ -224,15 +224,12 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
                 .find(|u| u.token == asset.contract.address)
             {
                 Some(b) => b.amount,
-                None => {
-                    return Err(StdError::generic_err("HOLDER NOT FOUND"));
-                    Uint128::zero()
-                }
+                None => Uint128::zero(),
             };
 
             let config = CONFIG.load(deps.storage)?;
             if holder == config.treasury {
-                println!("TRESAURY MANAGER BAL {}", balance);
+                println!("TREASURY MANAGER BAL {}", balance);
             }
 
             Ok(manager::QueryAnswer::Balance { amount: balance })

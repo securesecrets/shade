@@ -1,8 +1,28 @@
-use shade_protocol::admin::{validate_admin, AdminPermissions};
-use shade_protocol::c_std::{
-    to_binary, Addr, Api, BalanceResponse, BankQuery, Binary, Coin, CosmosMsg, Deps, DepsMut,
-    DistributionMsg, Env, MessageInfo, Querier, Response, StakingMsg, StdError, StdResult, Storage,
-    Uint128, Validator,
+use shade_protocol::{
+    admin::{validate_admin, AdminPermissions},
+    c_std::{
+        to_binary,
+        Addr,
+        Api,
+        BalanceResponse,
+        BankQuery,
+        Binary,
+        Coin,
+        CosmosMsg,
+        Deps,
+        DepsMut,
+        DistributionMsg,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StakingMsg,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+        Validator,
+    },
 };
 
 use shade_protocol::snip20::helpers::{deposit_msg, redeem_msg};
@@ -43,25 +63,21 @@ pub fn receive(
 
     let validator = choose_validator(deps, env.block.time.seconds())?;
 
-    let messages = vec![
-        redeem_msg(amount, None, None, &config.sscrt)?,
-        CosmosMsg::Staking(StakingMsg::Delegate {
-            validator: validator.address.clone(),
-            amount: Coin {
-                amount,
-                denom: "uscrt".to_string(),
-            },
-        }),
-    ];
-
-    let resp =
-        Response::new()
-            .add_messages(messages)
-            .set_data(to_binary(&ExecuteAnswer::Receive {
-                status: ResponseStatus::Success,
-                validator,
-            })?);
-    Ok(resp)
+    Ok(Response::new()
+        .add_messages(vec![
+            redeem_msg(amount, None, None, &config.sscrt)?,
+            CosmosMsg::Staking(StakingMsg::Delegate {
+                validator: validator.address.clone(),
+                amount: Coin {
+                    amount,
+                    denom: "uscrt".to_string(),
+                },
+            }),
+        ])
+        .set_data(to_binary(&ExecuteAnswer::Receive {
+            status: ResponseStatus::Success,
+            validator,
+        })?))
 }
 
 pub fn try_update_config(
@@ -347,7 +363,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResu
     let mut messages = vec![];
 
     let unbond_amount = UNBONDING.load(deps.storage)?;
-    let mut claim_amount = Uint128::zero();
+    let claim_amount;
 
     let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
 
@@ -358,7 +374,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResu
         let rewards = query::rewards(deps.as_ref())?;
 
         if !rewards.is_zero() {
-            assert!(false, "withdraw rewards");
+            //assert!(false, "withdraw rewards");
             messages.append(&mut withdraw_rewards(deps.as_ref())?);
         }
 

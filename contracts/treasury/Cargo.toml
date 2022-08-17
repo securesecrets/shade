@@ -45,3 +45,5 @@ shade-multi-test = { path = "../../packages/multi_test", features = [
   "snip20",
   "admin",
 ] }
+serde_json = "1.0"
+treasury = { path = "../treasury" }

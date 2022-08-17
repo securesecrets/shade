@@ -2,7 +2,9 @@ use shade_protocol::{
     c_std::{to_binary, Addr, Coin, Decimal, Uint128, Validator},
     contract_interfaces::{
         dao::{
-            adapter, manager, scrt_staking,
+            adapter,
+            manager,
+            scrt_staking,
             treasury_manager::{self, Allocation, AllocationType},
         },
         snip20,
@@ -10,9 +12,11 @@ use shade_protocol::{
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
-use shade_multi_test::multi::admin::init_admin_auth;
 use shade_multi_test::multi::{
-    scrt_staking::ScrtStaking, snip20::Snip20, treasury_manager::TreasuryManager,
+    admin::init_admin_auth,
+    scrt_staking::ScrtStaking,
+    snip20::Snip20,
+    treasury_manager::TreasuryManager,
 };
 use shade_protocol::multi_test::{App, BankSudo, StakingSudo, SudoMsg};
 
@@ -37,7 +41,7 @@ fn single_holder_scrt_staking_adapter(
     let holder = Addr::unchecked("holder");
     let treasury = Addr::unchecked("treasury");
     let validator = Addr::unchecked("validator");
-    let admin_auth = init_admin_auth(&mut app, &admin, None);
+    let admin_auth = init_admin_auth(&mut app, &admin);
 
     app.sudo(SudoMsg::Staking(StakingSudo::AddValidator {
         validator: validator.to_string().clone(),
