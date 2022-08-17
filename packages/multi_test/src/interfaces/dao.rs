@@ -29,8 +29,8 @@ pub fn init_dao(
     allowance_amount: Vec<Uint128>,
     allowance_tolerance: Vec<Uint128>,
     tm_allowance_type: Vec<Vec<AllocationType>>,
-    tm_alocation_amount: Vec<Vec<Uint128>>,
-    tm_alocation_tolerance: Vec<Vec<Uint128>>,
+    tm_allocation_amount: Vec<Vec<Uint128>>,
+    tm_allocation_tolerance: Vec<Vec<Uint128>>,
 ) {
     let num_managers = allowance_amount.len();
     treasury::init(chain, sender, contracts);
@@ -79,7 +79,7 @@ pub fn init_dao(
                 .address
         );
         for i in 0..num_managers {
-            let num_adapters = tm_alocation_amount[i].len();
+            let num_adapters = tm_allocation_amount[i].len();
             treasury_manager::init(chain, sender, contracts, i);
             treasury_manager::register_asset(
                 chain,
@@ -132,8 +132,9 @@ pub fn init_dao(
                     Some(j.to_string()),
                     &SupportedContracts::MockAdapter(j),
                     tm_allowance_type.clone()[i][j].clone(),
-                    tm_alocation_amount[i][j].clone(),
-                    tm_alocation_tolerance[i][j].clone(),
+                    tm_allocation_amount[i][j].clone(),
+                    tm_allocation_tolerance[i][j].clone(),
+                    i,
                 );
             }
         }
