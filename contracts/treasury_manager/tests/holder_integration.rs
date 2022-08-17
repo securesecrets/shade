@@ -70,7 +70,7 @@ fn single_asset_holder_no_adapters(initial: Uint128, deposit: Uint128) {
         key: viewing_key.clone(),
         padding: None,
     }
-    .test_exec(&token, &mut app, admin.clone(), &[])
+    .test_exec(&token, &mut app, holder.clone(), &[])
     .unwrap();
 
     // Register manager assets
@@ -82,7 +82,7 @@ fn single_asset_holder_no_adapters(initial: Uint128, deposit: Uint128) {
 
     // Add 'holder' as holder
     treasury_manager::ExecuteMsg::AddHolder {
-        holder: holder.to_string().clone().into(),
+        holder: holder.to_string().clone(),
     }
     .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
@@ -96,7 +96,7 @@ fn single_asset_holder_no_adapters(initial: Uint128, deposit: Uint128) {
         memo: None,
         padding: None,
     }
-    .test_exec(&token, &mut app, admin.clone(), &[])
+    .test_exec(&token, &mut app, holder.clone(), &[])
     .unwrap();
 
     // Balance Checks
@@ -202,7 +202,7 @@ fn single_asset_holder_no_adapters(initial: Uint128, deposit: Uint128) {
         asset: token.address.to_string().clone().to_string(),
         amount: unbond_amount,
     })
-    .test_exec(&manager, &mut app, admin.clone(), &[])
+    .test_exec(&manager, &mut app, holder.clone(), &[])
     .unwrap();
 
     // Unbondable
@@ -343,9 +343,9 @@ macro_rules! single_asset_holder_no_adapters_tests {
     }
 }
 
-// single_asset_holder_no_adapters_tests! {
-//     single_asset_holder_no_adapters_0: (
-//         Uint128::new(100_000_000),
-//         Uint128::new(50_000_000),
-//     ),
-// }
+single_asset_holder_no_adapters_tests! {
+    single_asset_holder_no_adapters_0: (
+        Uint128::new(100_000_000),
+        Uint128::new(50_000_000),
+    ),
+}

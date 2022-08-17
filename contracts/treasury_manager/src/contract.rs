@@ -64,7 +64,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
         ExecuteMsg::UpdateConfig { config } => execute::try_update_config(deps, env, info, config),
         ExecuteMsg::RegisterAsset { contract } => {
+            println!("into valid");
             let contract = contract.into_valid(deps.api)?;
+            println!("post into valid");
             execute::try_register_asset(deps, &env, info, &contract)
         }
         ExecuteMsg::Allocate { asset, allocation } => {

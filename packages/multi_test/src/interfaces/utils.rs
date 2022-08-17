@@ -6,8 +6,8 @@ pub enum SupportedContracts {
     AdminAuth,
     Snip20(String),
     Treasury,
-    TreasuryManager(u8),
-    MockAdapter(u8),
+    TreasuryManager(usize),
+    MockAdapter(usize),
     ScrtStaking,
 }
 

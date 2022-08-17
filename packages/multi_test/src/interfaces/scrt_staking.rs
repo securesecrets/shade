@@ -20,13 +20,14 @@ pub fn init(
     sender: &str,
     contracts: &mut DeployedContracts,
     validator_bounds: Option<scrt_staking::ValidatorBounds>,
+    manager: usize,
 ) {
-    let treasury_manager = match contracts.get(&SupportedContracts::TreasuryManager) {
+    let treasury_manager = match contracts.get(&SupportedContracts::TreasuryManager(manager)) {
         Some(manager) => manager.clone(),
         None => {
-            treasury_manager::init(chain, sender, contracts);
+            treasury_manager::init(chain, sender, contracts, manager);
             contracts
-                .get(&SupportedContracts::TreasuryManager)
+                .get(&SupportedContracts::TreasuryManager(manager))
                 .unwrap()
                 .clone()
         }
@@ -73,7 +74,7 @@ pub fn init(
             owner: treasury_manager.address.into(),
             sscrt: sscrt.into(),
             validator_bounds,
-            viewing_key: "veiwing_key".into(),
+            viewing_key: "viewing_key".into(),
         }
         .test_init(
             ScrtStaking::default(),

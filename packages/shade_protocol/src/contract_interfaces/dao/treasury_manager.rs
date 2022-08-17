@@ -164,5 +164,4 @@ pub enum QueryAnswer {
     PendingAllowance { amount: Uint128 },
     Holders { holders: Vec<Addr> },
     Holding { holding: Holding },
-    Manager(manager::QueryAnswer),
 }

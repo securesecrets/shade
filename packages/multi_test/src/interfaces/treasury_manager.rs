@@ -15,7 +15,7 @@ use shade_protocol::{
     utils::{self, asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
-pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts, id: u8) {
+pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts, id: usize) {
     /*let admin_auth = match admin_auth {
         Some(admin) => admin,
         None => Contract::from(init_admin_auth(chain, Addr::unchecked(sender), None)),
@@ -65,6 +65,7 @@ pub fn register_asset(
     sender: &str,
     contracts: &DeployedContracts,
     symbol: String,
+    id: usize,
 ) {
     treasury_manager::ExecuteMsg::RegisterAsset {
         contract: contracts
@@ -75,7 +76,7 @@ pub fn register_asset(
     }
     .test_exec(
         &contracts
-            .get(&SupportedContracts::Treasury)
+            .get(&SupportedContracts::TreasuryManager(id))
             .unwrap()
             .clone()
             .into(),
@@ -96,6 +97,7 @@ pub fn allocate(
     alloc_type: treasury_manager::AllocationType,
     amount: Uint128,
     tolerance: Uint128,
+    id: usize,
 ) {
     treasury_manager::ExecuteMsg::Allocate {
         asset: contracts
@@ -114,14 +116,15 @@ pub fn allocate(
     }
     .test_exec(
         &contracts
-            .get(&SupportedContracts::Treasury)
+            .get(&SupportedContracts::TreasuryManager(id))
             .unwrap()
             .clone()
             .into(),
         chain,
         Addr::unchecked(sender),
         &[],
-    );
+    )
+    .unwrap();
 }
 
 pub fn claimable_query(
@@ -147,9 +150,7 @@ pub fn claimable_query(
             .into(),
         &chain,
     )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Claimable { amount }) => {
-            Ok(amount)
-        }
+        manager::QueryAnswer::Claimable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
             "Failed to.test_query treasury_manager claimable",
         ))),
@@ -179,9 +180,7 @@ pub fn unbonding_query(
             .into(),
         &chain,
     )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Unbonding { amount }) => {
-            Ok(amount)
-        }
+        manager::QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
             "Failed to.test_query treasury_manager unbonding",
         )),
@@ -211,9 +210,7 @@ pub fn unbondable_query(
             .into(),
         &chain,
     )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Unbondable { amount }) => {
-            Ok(amount)
-        }
+        manager::QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
             "Failed to.test_query treasury_manager unbondable",
         )),
@@ -227,7 +224,7 @@ pub fn reserves_query(
     treasury_manager_contract: SupportedContracts,
     holder: SupportedContracts,
 ) -> StdResult<Uint128> {
-    match treasury_manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
         holder: contracts.get(&holder).unwrap().address.to_string(),
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol))
@@ -242,12 +239,10 @@ pub fn reserves_query(
             .clone()
             .into(),
         &chain,
-    )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Reserves { amount }) => {
-            Ok(amount)
-        }
+    )?) {
+        manager::QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
-            "Failed to.test_query treasury_manager unbondable",
+            "Failed to query treasury_manager reserves",
         )),
     }
 }
@@ -275,11 +270,9 @@ pub fn balance_query(
             .into(),
         &chain,
     )? {
-        treasury_manager::QueryAnswer::Manager(manager::QueryAnswer::Balance { amount }) => {
-            Ok(amount)
-        }
+        manager::QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
-            "Failed to.test_query treasury_manager balance",
+            "Failed to query treasury_manager balance",
         )),
     }
 }
