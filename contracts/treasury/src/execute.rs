@@ -256,6 +256,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                     println!("THRESHOLD SKIP");
                     continue;
                 }
+                println!("DECREASE ALLOW {}", decrease);
                 messages.push(decrease_allowance_msg(
                     allowance.spender.clone(),
                     decrease,
@@ -283,6 +284,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                     println!("THRESHOLD SKIP");
                     continue;
                 }
+                println!("INCREASE ALLOW {}", increase);
                 messages.push(increase_allowance_msg(
                     allowance.spender.clone(),
                     increase,
@@ -306,12 +308,13 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         }
     }
 
-    let mut portion_total = portion_balance; // + (token_balance - amount_allowance);
+    let mut portion_total = portion_balance + portion_allowance + token_balance - amount_allowance;
+    /*
     if amount_allowance > token_balance {
         portion_total -= amount_allowance - token_balance;
     } else {
-        portion_total += token_balance - amount_allowance;
-    }
+    portion_total += token_balance - amount_allowance;
+    }*/
     println!("amount_balance {}", amount_balance);
     println!("amount_allowance {}", amount_allowance);
     println!("portion_balance {}", portion_balance);
@@ -336,12 +339,12 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
          */
 
         let (balance, cur_allowance) = metadata[&allowance.spender];
-        let total = balance + cur_allowance;
-        println!("TOTAL: {}, DESIRED: {}", total, desired_amount);
+        let allocated = balance + cur_allowance;
+        println!("ALLOCD: {}, DESIRED: {}", allocated, desired_amount);
 
         // UnderFunded
-        if total < desired_amount {
-            let increase = desired_amount - total;
+        if allocated < desired_amount {
+            let increase = desired_amount - allocated;
             if increase <= threshold {
                 println!("THRESHOLD SKIP");
                 continue;
@@ -366,9 +369,9 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             });
         }
         // Overfunded
-        else if total > desired_amount {
-            let mut decrease = total - desired_amount;
-
+        else if allocated > desired_amount {
+            let mut decrease = allocated - desired_amount;
+            println!("DECREASE ALLOWANCE {}", decrease);
             if decrease <= threshold {
                 continue;
             }
@@ -681,6 +684,7 @@ pub fn allowance(
         allowance.allowance_type == AllowanceType::Portion,
     );
     let config = CONFIG.load(deps.storage)?;
+
     /* ADMIN ONLY */
     validate_admin(
         &deps.querier,
@@ -689,18 +693,23 @@ pub fn allowance(
         &config.admin_auth,
     )?;
 
-    let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
-        Some(a) => a,
-        None => {
-            return Err(StdError::generic_err("Not an asset"));
-        }
-    };
+    if ASSET.may_load(deps.storage, asset.clone())?.is_none() {
+        return Err(StdError::generic_err("Not an asset"));
+    }
 
     let mut allowances = ALLOWANCES
         .may_load(deps.storage, asset.clone())?
         .unwrap_or(vec![]);
 
     let last_refresh: DateTime<Utc> = utc_from_seconds(0);
+
+    // Remove other instances of spender
+    if let Some(i) = allowances
+        .iter()
+        .position(|a| a.spender == allowance.spender)
+    {
+        allowances.remove(i);
+    }
 
     allowances.push(AllowanceMeta {
         spender: allowance.spender.clone(),
@@ -714,8 +723,10 @@ pub fn allowance(
 
     let portion_sum: u128 = allowances
         .iter()
-        .filter(|a| a.allowance_type == AllowanceType::Portion)
-        .map(|a| a.amount.u128())
+        .map(|a| match a.allowance_type {
+            AllowanceType::Portion => a.amount.u128(),
+            AllowanceType::Amount => 0u128,
+        })
         .sum();
 
     if portion_sum > 10u128.pow(18) {
@@ -724,6 +735,7 @@ pub fn allowance(
             portion_sum
         )));
     }
+
     ALLOWANCES.save(deps.storage, asset, &allowances)?;
 
     Ok(
