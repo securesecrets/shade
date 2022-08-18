@@ -50,4 +50,6 @@ cosmwasm-math-compat = { version = "0.1.0", path = "../../packages/cosmwasm_math
 
 [dev-dependencies]
 cosmwasm-schema = { version = "0.9.2" }
+
+[target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
 rand = "0.8.4"
