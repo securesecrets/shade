@@ -56,7 +56,7 @@ pub fn dao_int_test(
     );
     //query allowance
     for i in 0..num_managers {
-        /*assert_eq!(
+        assert_eq!(
             expected_allowance[i],
             treasury::allowance_query(
                 &app,
@@ -67,7 +67,7 @@ pub fn dao_int_test(
             )
             .unwrap(),
             "Treasury->Manager Allowance",
-        );*/
+        );
     }
     let bals = system_balance(&app, &contracts, snip20_symbol.to_string());
     println!("{:?}", bals);
@@ -128,13 +128,13 @@ dao_tests! {
         vec![AllowanceType::Portion],
         vec![Cycle::Constant],
         vec![Uint128::zero()],
-        vec![Uint128::new(50_000)],
+        vec![Uint128::new(90_000)],
         vec![vec![Uint128::new(1 * 10u128.pow(17)), Uint128::new(400_000)]],
         vec![vec![AllocationType::Portion, AllocationType::Amount]],
         vec![vec![Uint128::zero(), Uint128::zero()]],
-        Uint128::new(550_000),
+        Uint128::new(590_000),
         vec![Uint128::new(0)],
-        vec![vec![Uint128::new(50_000), Uint128::new(400_000)]],
+        vec![vec![Uint128::new(10_000), Uint128::new(400_000)]],
     ),
     dao_test_1:(
         Uint128::new(100_000_000),
@@ -143,13 +143,13 @@ dao_tests! {
         vec![AllowanceType::Amount, AllowanceType::Amount],
         vec![Cycle::Constant, Cycle::Constant],
         vec![Uint128::zero(), Uint128::zero()],
-        vec![Uint128::new(17_000_000), Uint128::new(16_000_000)],
+        vec![Uint128::new(21_000_000), Uint128::new(18_000_000)],
         vec![vec![Uint128::new(5 * 10u128.pow(17)), Uint128::new(4_000_000), Uint128::new(4_000_000)], vec![Uint128::new(5 * 10u128.pow(17)), Uint128::new(4_000_000)]],
         vec![vec![AllocationType::Portion, AllocationType::Amount, AllocationType::Amount],vec![AllocationType::Portion, AllocationType::Amount]],
         vec![vec![Uint128::zero(), Uint128::zero(), Uint128::zero()],vec![Uint128::zero(), Uint128::zero()]],
-        Uint128::new(43_000_000),
+        Uint128::new(49_000_000),
         vec![Uint128::new(0), Uint128::new(0)],
-        vec![vec![Uint128::new(25_000_000), Uint128::new(4_000_000), Uint128::new(4_000_000)],vec![Uint128::new(20_000_000), Uint128::new(4_000_000)]],
+        vec![vec![Uint128::new(21_000_000), Uint128::new(4_000_000), Uint128::new(4_000_000)],vec![Uint128::new(18_000_000), Uint128::new(4_000_000)]],
     ),
     dao_test_2:(
         Uint128::new(100),
@@ -158,13 +158,13 @@ dao_tests! {
         vec![AllowanceType::Portion],
         vec![Cycle::Constant],
         vec![Uint128::zero()],
-        vec![Uint128::new(5), Uint128::new(5)],
+        vec![Uint128::new(9)],
         vec![vec![Uint128::new(1 * 10u128.pow(17)), Uint128::new(40)]],
         vec![vec![AllocationType::Portion, AllocationType::Amount]],
         vec![vec![Uint128::zero(), Uint128::zero()]],
-        Uint128::new(55),
+        Uint128::new(59),
         vec![Uint128::new(0)],
-        vec![vec![Uint128::new(5), Uint128::new(40)]],
+        vec![vec![Uint128::new(1), Uint128::new(40)]],
     ),
     dao_test_3: (
         Uint128::new(1000),
@@ -178,7 +178,7 @@ dao_tests! {
         vec![AllowanceType::Amount, AllowanceType::Amount, AllowanceType::Portion, AllowanceType::Portion],
         vec![Cycle::Constant; 4],
         vec![Uint128::zero(); 4],
-        vec![Uint128::new(50), Uint128::new(100), Uint128::new(510), Uint128::new(340)],
+        vec![Uint128::new(6), Uint128::new(16), Uint128::new(98), Uint128::new(64)],
         vec![
             vec![Uint128::new(6 * 10u128.pow(17)), Uint128::new(5), Uint128::new(2 * 10u128.pow(17)), Uint128::new(15)];4
         ],
@@ -188,10 +188,10 @@ dao_tests! {
         vec![
             vec![Uint128::zero(); 4]; 4
         ],
-        Uint128::zero(),
-        vec![Uint128::new(6), Uint128::new(16), Uint128::new(98), Uint128::new(64)],
+        Uint128::new(184),
+        vec![Uint128::zero(); 4],
         vec![
-            vec![Uint128::new(38), Uint128::new(5), Uint128::new(6), Uint128::new(15)],
+            vec![Uint128::new(18), Uint128::new(5), Uint128::new(6), Uint128::new(15)],
             vec![Uint128::new(48), Uint128::new(5), Uint128::new(16), Uint128::new(15)],
             vec![Uint128::new(294), Uint128::new(5), Uint128::new(98), Uint128::new(15)],
             vec![Uint128::new(192), Uint128::new(5), Uint128::new(64), Uint128::new(15)],

@@ -426,12 +426,39 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     let mut allowance_used = Uint128::zero();
     let mut balance_used = Uint128::zero();
 
+    if allocations.len() > 1 {
+        allocations.sort_by(|a, b| match a.alloc_type {
+            AllocationType::Amount => match b.alloc_type {
+                AllocationType::Amount => std::cmp::Ordering::Equal,
+                AllocationType::Portion => std::cmp::Ordering::Less,
+            },
+            AllocationType::Portion => match b.alloc_type {
+                AllocationType::Amount => std::cmp::Ordering::Greater,
+                AllocationType::Portion => std::cmp::Ordering::Equal,
+            },
+        });
+        println!("440 allocations {:?}", allocations);
+    }
+    let mut amount_sending_out = Uint128::zero();
     println!("allocs {}", allocations.len());
     for adapter in allocations.clone() {
         println!("ADAPTER REBALANCE {}", adapter.nick.unwrap());
+        println!("445 total {}", total.u128());
+        println!("446 amount_total {}", amount_total);
         let desired_amount = match adapter.alloc_type {
-            AllocationType::Amount => adapter.amount,
-            AllocationType::Portion => adapter.amount.multiply_ratio(total, 10u128.pow(18)),
+            AllocationType::Amount => {
+                amount_sending_out += adapter.amount;
+                adapter.amount
+            }
+            AllocationType::Portion => {
+                if total > amount_sending_out {
+                    adapter
+                        .amount
+                        .multiply_ratio(total - amount_sending_out, 10u128.pow(18))
+                } else {
+                    Uint128::zero()
+                }
+            }
         };
         let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
         println!("437 desired_amount {}", desired_amount);
