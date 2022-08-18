@@ -12,8 +12,6 @@ members = [
   "contracts/snip20",
   "contracts/governance",
   "contracts/bonds",
-  "contracts/mint",
-  "contracts/mint_router",
   "contracts/oracle",
   "contracts/sky",
   "contracts/query_auth",
@@ -22,8 +20,7 @@ members = [
 
   # DAO
   # - Core
-  "contracts/treasury",
-  "contracts/treasury_manager",
+
   # - Adapters
   "contracts/scrt_staking",
   "contracts/rewards_emission",
@@ -42,7 +39,13 @@ members = [
   #"packages/network_integration"
 ]
 
-exclude = ["packages/network_integration"]
+exclude = [
+  "packages/network_integration",
+    "contracts/mint",
+  "contracts/mint_router",
+    "contracts/treasury",
+  "contracts/treasury_manager",
+  ]
 
 [profile.release]
 opt-level = 3

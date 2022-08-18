@@ -39,7 +39,6 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
-chrono = { version = "0.4.19", features = [ "oldtime" ] }
 time = "0.1.44"
 admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0" }
 shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0"}
