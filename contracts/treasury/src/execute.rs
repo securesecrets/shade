@@ -248,10 +248,10 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             .amount
             .multiply_ratio(allowance.tolerance, 10u128.pow(18));
 
-        match allowance.amount.cmp(&cur_allowance) {
+        match allowance.amount.cmp(&(cur_allowance + balance)) {
             // Decrease Allowance
             std::cmp::Ordering::Less => {
-                let decrease = cur_allowance - allowance.amount;
+                let decrease = (cur_allowance + balance) - allowance.amount;
                 if decrease <= threshold {
                     println!("THRESHOLD SKIP");
                     continue;
@@ -278,7 +278,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             }
             // Increase Allowance
             std::cmp::Ordering::Greater => {
-                let increase = allowance.amount - cur_allowance;
+                let increase = allowance.amount - (cur_allowance + balance);
                 if increase <= threshold {
                     println!("THRESHOLD SKIP");
                     continue;
@@ -306,7 +306,12 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         }
     }
 
-    let portion_total = portion_balance + (token_balance - amount_allowance);
+    let mut portion_total = portion_balance; // + (token_balance - amount_allowance);
+    if amount_allowance > token_balance {
+        portion_total -= amount_allowance - token_balance;
+    } else {
+        portion_total += token_balance - amount_allowance;
+    }
     println!("amount_balance {}", amount_balance);
     println!("amount_allowance {}", amount_allowance);
     println!("portion_balance {}", portion_balance);

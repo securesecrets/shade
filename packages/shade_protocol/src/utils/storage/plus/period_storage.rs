@@ -77,27 +77,27 @@ where
 
     pub fn push(&self, storage: &mut dyn Storage, ts: Timestamp, item: T) -> StdResult<()> {
         let key = ts.seconds();
-        println!("getting recent");
+        //println!("getting recent");
         let mut recent = self.recent.may_load(storage)?.unwrap_or(vec![]);
         if !recent.contains(&key) {
-            println!("pushing recent");
+            //println!("pushing recent");
             recent.push(key);
-            println!("saving recent");
+            //println!("saving recent");
             self.recent.save(storage, &recent)?;
         }
-        println!("loading all");
+        //println!("loading all");
         let mut all = self.all.may_load(storage, key)?.unwrap_or(vec![]);
-        println!("pushing all");
+        //println!("pushing all");
         all.push(item);
-        println!("saving all {}", all.len());
+        //println!("saving all {}", all.len());
         self.all.save(storage, key, &all)
     }
 
     /* push + flush */
     pub fn pushf(&self, storage: &mut dyn Storage, ts: Timestamp, item: T) -> StdResult<()> {
-        println!("pushing {}", ts.seconds());
+        //println!("pushing {}", ts.seconds());
         self.push(storage, ts, item)?;
-        println!("flushing");
+        //println!("flushing");
         self.flush(storage)
     }
 
@@ -133,19 +133,19 @@ where
      */
     pub fn flush(&self, storage: &mut dyn Storage) -> StdResult<()> {
         for seconds in self.recent.load(storage)? {
-            println!("loading {} from storage", seconds);
+            //println!("loading {} from storage", seconds);
             let mut items = self.all.load(storage, seconds)?;
-            println!("items found {}", items.len());
+            //println!("items found {}", items.len());
 
             for period in Period::iter() {
                 let k = map_key(seconds, period);
                 let mut cur_items = self.timed.may_load(storage, k.clone())?.unwrap_or(vec![]);
                 cur_items.append(&mut items);
-                println!("storing timed {}", k);
+                //println!("storing timed {}", k);
                 self.timed.save(storage, k, &cur_items)?;
             }
         }
-        println!("saving recent");
+        //println!("saving recent");
         self.recent.save(storage, &vec![])
     }
 }

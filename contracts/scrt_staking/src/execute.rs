@@ -212,23 +212,22 @@ pub fn unbond(
 
     let prev_unbonding = UNBONDING.load(deps.storage)?;
 
-    let mut total = delegated; //scrt_balance + rewards + delegated;
-    if prev_unbonding < scrt_balance + rewards {
-        total += scrt_balance + rewards - prev_unbonding;
-    }
+    let mut total = delegated + scrt_balance + rewards + delegated;
+    total -= prev_unbonding;
 
-    if total < amount {
+    if total - prev_unbonding < amount {
         return Err(StdError::generic_err(format!(
             "Total Unbond amount {} greater than delegated {}; rew {}, bal {}",
             amount, delegated, rewards, scrt_balance
         )));
     }
 
-    let mut unbonding = amount; // + UNBONDING.load(deps.storage)?;
+    let mut unbonding = amount;
+    let mut total_unbonding = amount + prev_unbonding;
     let mut reserves = scrt_balance + rewards;
 
     // Send full unbonding
-    if unbonding < reserves {
+    if total_unbonding <= reserves {
         println!("UNBOND SENDING ALL UNBONDING");
         messages.append(&mut wrap_and_send(
             unbonding,
@@ -236,7 +235,7 @@ pub fn unbond(
             config.sscrt,
             None,
         )?);
-        unbonding = Uint128::zero();
+        total_unbonding = Uint128::zero();
     }
     // Send all reserves
     else if !reserves.is_zero() {
@@ -247,13 +246,13 @@ pub fn unbond(
             config.sscrt,
             None,
         )?);
-        unbonding = unbonding - reserves;
+        total_unbonding -= reserves;
     }
 
-    //println!("save unbonding {}", unbonding);
-    UNBONDING.save(deps.storage, &(prev_unbonding + unbonding))?;
+    println!("save unbonding {}", total_unbonding);
+    UNBONDING.save(deps.storage, &total_unbonding)?;
 
-    while !unbonding.is_zero() {
+    while !total_unbonding.is_zero() {
         // Unbond from largest validator first
         let max_delegation = delegations.iter().max_by_key(|d| {
             if undelegated.contains(&d.validator) {

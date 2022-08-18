@@ -487,8 +487,8 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
                     println!("1 allowance used {}", desired_input);
                     allowance_used += desired_input;
-                    desired_input = Uint128::zero();
                     allowance = allowance - desired_input;
+                    desired_input = Uint128::zero();
                 }
                 // Send all allowance
                 else if !allowance.is_zero() {
@@ -927,35 +927,6 @@ pub fn remove_holder(
         })?),
     )
 }
-
-/*
-pub fn distribute_gain(
-    gain: Uint128,
-    token: String,
-    holders: &mut HashMap<Addr, Holding>,
-) -> StdResult<HashMap<Addr, Holding>> {
-    let ratios = holding_ratios(&mut holders);
-
-    for addr, holder  in holders {
-        let balance = match holder.balances.iter().find(|u| u.token == asset) {
-            Some(b) => b,
-            None => Uint128::zero(),
-        }
-    }
-
-    Ok(holders)
-}
-
-pub fn distribute_loss(
-    loss: Uint128,
-    token: String,
-    holders: mut HashMap<Addr, Holding>,
-) -> StdResult<Vec<Holding>> {
-    let ratios = holding_ratios(&mut holders);
-
-    Ok(holders)
-}
-*/
 
 /* Builds a map of { Addr: <asset_portion * 10^18> }
  */
