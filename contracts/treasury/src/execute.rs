@@ -143,12 +143,12 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
     )?;
 
     // Total for "amount" allowances (govt, assemblies, etc.)
-    let mut amount_total = Uint128::zero();
-    //let mut amount_allowance = Uint128::zero();
+    let mut amount_balance = Uint128::zero();
+    let mut amount_allowance = Uint128::zero();
 
     // Total for "portion" allowances
-    let mut portion_total = Uint128::zero();
-    //let mut portion_allowance = Uint128::zero();
+    let mut portion_balance = Uint128::zero();
+    let mut portion_allowance = Uint128::zero();
 
     // { spender: (balance, allowance) }
     let mut metadata: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
@@ -204,10 +204,12 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
 
         match a.allowance_type {
             AllowanceType::Amount => {
-                amount_total += balance;
+                amount_balance += balance;
+                amount_allowance += allowance;
             }
             AllowanceType::Portion => {
-                portion_total += balance + allowance;
+                portion_balance += balance;
+                portion_allowance += allowance;
             }
         }
     }
@@ -224,6 +226,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         .filter(|a| a.allowance_type == AllowanceType::Amount)
         .collect::<Vec<AllowanceMeta>>();
 
+    //TODO switch to partition
     //let (amount_allowances, portion_allowances) = allowances.iter().partition(|
 
     // Iterate amount allows first to determine portion total
@@ -239,7 +242,8 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             continue;
         }
 
-        let (_, cur_allowance) = metadata[&allowance.spender];
+        let (balance, cur_allowance) = metadata[&allowance.spender];
+
         let threshold = allowance
             .amount
             .multiply_ratio(allowance.tolerance, 10u128.pow(18));
@@ -267,10 +271,10 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                     context: Context::Rebalance,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
-                    amount: cur_allowance - allowance.amount,
+                    amount: decrease,
                     user: allowance.spender.clone(),
                 });
-                amount_total -= decrease;
+                amount_allowance -= decrease;
             }
             // Increase Allowance
             std::cmp::Ordering::Greater => {
@@ -293,18 +297,21 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                     context: Context::Rebalance,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
-                    amount: allowance.amount - cur_allowance,
+                    amount: increase,
                     user: allowance.spender.clone(),
                 });
-                amount_total += increase;
+                amount_allowance += increase;
             }
             _ => {}
         }
     }
 
-    portion_total += token_balance - amount_total;
+    let portion_total = portion_balance + (token_balance - amount_allowance);
+    println!("amount_balance {}", amount_balance);
+    println!("amount_allowance {}", amount_allowance);
+    println!("portion_balance {}", portion_balance);
+    println!("portion_allowance {}", portion_allowance);
     println!("portion total {}", portion_total);
-    println!("amount_total {}", amount_total);
 
     for allowance in portions {
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
@@ -384,7 +391,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                 decrease -= cur_allowance;
 
                 // Unbond remaining
-                if decrease > Uint128::zero() {
+                if !decrease.is_zero() {
                     match MANAGER.may_load(deps.storage, allowance.spender.clone())? {
                         Some(m) => {
                             messages.push(manager::unbond_msg(
