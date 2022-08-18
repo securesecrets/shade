@@ -1,12 +1,15 @@
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{Binary, HumanAddr};
 use network_integration::utils::{
-    generate_label, print_contract, print_header, store_struct, AIRDROP_FILE, GAS, STORE_GAS,
+    print_contract, print_header, store_struct, AIRDROP_FILE, GAS, STORE_GAS,
 };
 use rs_merkle::algorithms::Sha256;
 use rs_merkle::{Hasher, MerkleTree};
 use secretcli::cli_types::NetContract;
-use secretcli::secretcli::{handle, init};
+use secretcli::{
+    secretcli::{handle, init},
+    utils::generate_label,
+};
 use serde::{Deserialize, Serialize};
 use shade_protocol::utils::asset::Contract;
 use shade_protocol::{

@@ -4,7 +4,7 @@ use mock_band::contract::*;
 use network_integration::{
     contract_helpers::minter::get_balance,
     utils::{
-        generate_label, print_contract, print_header, ACCOUNT_KEY, BONDS_FILE, GAS, MOCK_BAND_FILE,
+        print_contract, print_header, ACCOUNT_KEY, BONDS_FILE, GAS, MOCK_BAND_FILE,
         ORACLE_FILE, SNIP20_FILE, STORE_GAS, VIEW_KEY,
     },
 };
@@ -12,6 +12,7 @@ use query_authentication::transaction::PubKey;
 use query_authentication::viewing_keys::ViewingKey;
 use query_authentication::{permit::Permit, transaction::PermitSignature};
 use secretcli::{
+    utils::generate_label,
     cli_types::NetContract,
     secretcli::{account_address, create_permit, handle, init, query, Report},
 };

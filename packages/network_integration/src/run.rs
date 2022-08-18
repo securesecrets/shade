@@ -1,10 +1,10 @@
 use colored::*;
 use cosmwasm_math_compat::Uint128;
 use cosmwasm_std::{to_binary, HumanAddr};
-use rand::{distributions::Alphanumeric, Rng};
 use secretcli::{
     cli_types::NetContract,
     secretcli::{account_address, list_contracts_by_code, TestHandle, TestInit, TestQuery},
+    utils::generate_label,
 };
 use serde::Serialize;
 use serde_json::Result;
@@ -23,14 +23,6 @@ const STORE_GAS: &str = "10000000";
 const GAS: &str = "800000";
 const VIEW_KEY: &str = "password";
 const ACCOUNT_KEY: &str = "a";
-
-fn generate_label(size: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(size)
-        .map(char::from)
-        .collect()
-}
 
 fn main() -> Result<()> {
     let account = account_address(ACCOUNT_KEY)?;

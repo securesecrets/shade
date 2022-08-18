@@ -1,11 +1,14 @@
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use cosmwasm_math_compat as compat;
 use network_integration::utils::{
-    generate_label, print_contract, print_header, SHD_STAKING_FILE, GAS, SNIP20_FILE, STORE_GAS,
+    print_contract, print_header, SHD_STAKING_FILE, GAS, SNIP20_FILE, STORE_GAS,
 };
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleTree};
 use secretcli::cli_types::NetContract;
-use secretcli::secretcli::{account_address, init};
+use secretcli::{
+    secretcli::{account_address, init},
+    utils::generate_label,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use shade_protocol::utils::asset::Contract;

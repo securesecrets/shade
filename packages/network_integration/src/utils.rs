@@ -1,5 +1,4 @@
 use colored::*;
-use rand::{distributions::Alphanumeric, Rng};
 use secretcli::{cli_types::NetContract, secretcli::query};
 use serde::Serialize;
 use shade_protocol::contract_interfaces::mint::mint;
@@ -22,16 +21,6 @@ pub const STORE_GAS: &str = "10000000";
 pub const GAS: &str = "800000";
 pub const VIEW_KEY: &str = "password";
 pub const ACCOUNT_KEY: &str = "a";
-
-
-
-pub fn generate_label(size: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(size)
-        .map(char::from)
-        .collect()
-}
 
 pub fn print_header(header: &str) {
     println!("{}", header.on_blue());

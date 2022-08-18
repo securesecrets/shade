@@ -13,7 +13,7 @@ use network_integration::{
         stake::setup_staker,
     },
     utils::{
-        generate_label, print_contract, print_header, print_vec, print_warning, ACCOUNT_KEY,
+        print_contract, print_header, print_vec, print_warning, ACCOUNT_KEY,
         AIRDROP_FILE, GAS, GOVERNANCE_FILE, MOCK_BAND_FILE, ORACLE_FILE, SNIP20_FILE, STORE_GAS,
         VIEW_KEY,
     },
@@ -25,6 +25,7 @@ use secretcli::cli_types::NetContract;
 use secretcli::secretcli::{
     account_address, create_key_account, create_permit, handle, init, query, Report,
 };
+use secretcli::utils::generate_label;
 use serde::Serialize;
 use serde_json::Result;
 use shade_protocol::contract_interfaces::airdrop::account::{AddressProofPermit, FillerMsg};

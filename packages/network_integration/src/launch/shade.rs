@@ -1,8 +1,11 @@
 use std::{env, fs};
 use cosmwasm_std::{Binary, HumanAddr};
 use serde::{Deserialize, Serialize};
-use network_integration::utils::{GAS, generate_label, print_contract, print_header, SNIP20_FILE, STORE_GAS};
-use secretcli::secretcli::{account_address, init};
+use network_integration::utils::{GAS, print_contract, print_header, SNIP20_FILE, STORE_GAS};
+use secretcli::{
+    secretcli::{account_address, init},
+    utils::generate_label,
+};
 use shade_protocol::contract_interfaces::snip20;
 use shade_protocol::contract_interfaces::snip20::{InitConfig, InitialBalance};
 

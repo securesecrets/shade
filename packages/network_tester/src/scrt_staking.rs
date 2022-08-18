@@ -3,7 +3,9 @@ use serde_json::Result;
 use rand::{distributions::Alphanumeric, Rng};
 use secretcli::{cli_types::NetContract,
                 secretcli::{account_address, TestInit, TestHandle,
-                            TestQuery, list_contracts_by_code}};
+                            TestQuery, list_contracts_by_code}
+                            utils::generate_label,
+                        };
 use shade_protocol::contract_interfaces::{
     snip20::{
         self,
@@ -24,14 +26,6 @@ const STORE_GAS: &str = "10000000";
 const GAS: &str = "800000";
 const VIEW_KEY: &str = "password";
 const ACCOUNT_KEY: &str = "a";
-
-fn generate_label(size: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(size)
-        .map(char::from)
-        .collect()
-}
 
 fn main() -> Result<()> {
     let account = account_address(ACCOUNT_KEY)?;
