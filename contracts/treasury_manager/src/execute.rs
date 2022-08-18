@@ -351,6 +351,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
     let mut allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
+    println!("354 {:?}", allocations[0]);
 
     // Build metadata
     let mut amount_total = Uint128::zero();
@@ -369,6 +370,11 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             }
         };
     }
+    println!(
+        "373 at: {}, pt: {}",
+        amount_total.u128(),
+        portion_total.u128(),
+    );
 
     let mut holder_unbonding = Uint128::zero();
     let mut holder_principal = Uint128::zero();
@@ -401,6 +407,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         &full_asset.contract.clone(),
     )?
     .allowance;
+    println!("410 allowance {}", allowance.u128());
 
     // Available balance
     let mut balance = balance_query(
@@ -409,6 +416,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         key.clone(),
         &full_asset.contract.clone(),
     )?;
+    println!("419 balance {}", balance.u128());
 
     let out_total = (amount_total + portion_total + balance) - holder_unbonding;
     let total = out_total + allowance;
@@ -426,6 +434,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             AllocationType::Portion => adapter.amount.multiply_ratio(total, 10u128.pow(18)),
         };
         let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
+        println!("437 desired_amount {}", desired_amount);
 
         // Under Funded -- send balance then allowance
         if adapter.balance < desired_amount {

@@ -15,6 +15,7 @@ use shade_protocol::{
         StdError,
         StdResult,
         Storage,
+        SubMsg,
         Uint128,
     },
     contract_interfaces::{
@@ -161,6 +162,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
     for a in allowances.clone() {
         let manager = MANAGER.may_load(deps.storage, a.spender.clone())?;
         if let Some(m) = manager.clone() {
+            SubMsg::new(manager::update_msg(&asset.clone(), m.clone())?);
             let claimable = manager::claimable_query(
                 deps.querier,
                 &asset.clone(),
@@ -293,7 +295,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                     vec![],
                 )?);
                 metrics.push(Metric {
-                    action: Action::DecreaseAllowance,
+                    action: Action::IncreaseAllowance,
                     context: Context::Rebalance,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
@@ -318,8 +320,12 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
     println!("portion_allowance {}", portion_allowance);
     println!("portion total {}", portion_total);
 
+    /*if amount_total > token_balance {
+        amount_total = token_balance;
+    }*/
+    portion_total += token_balance - amount_total;
+
     for allowance in portions {
-        portion_total += token_balance - amount_total;
         println!("portion total {}", portion_total);
         println!("amount_total {}", amount_total);
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
