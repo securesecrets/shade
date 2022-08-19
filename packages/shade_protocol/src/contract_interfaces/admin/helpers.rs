@@ -1,39 +1,29 @@
-use crate::{utils::Query, Contract};
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
-use shade_admin::admin::{
-    AdminsResponse,
-    ConfigResponse,
-    PermissionsResponse,
-    ValidateAdminPermissionResponse,
+use crate::{
+    admin::{errors::unauthorized_admin, QueryMsg, ValidateAdminPermissionResponse},
+    utils::Query,
+    Contract,
 };
+use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
 
-#[cw_serde]
-#[derive(QueryResponses)]
-pub enum QueryMsg {
-    #[returns(ConfigResponse)]
-    GetConfig {},
-    #[returns(AdminsResponse)]
-    GetAdmins {},
-    #[returns(PermissionsResponse)]
-    GetPermissions { user: String },
-    #[returns(ValidateAdminPermissionResponse)]
-    ValidateAdminPermission {
-        permission: String,
-        user: String,
-    },
-}
-
-impl Query for QueryMsg {
-    const BLOCK_SIZE: usize = 256;
-}
-
-pub fn validate_admin<T: Into<String>>(
+pub fn validate_admin<T: Into<String> + Clone>(
     querier: &QuerierWrapper,
     permission: AdminPermissions,
     user: T,
     admin_auth: &Contract,
 ) -> StdResult<()> {
+    if admin_is_valid(querier, permission.clone(), user.clone(), admin_auth)? {
+        Ok(())
+    } else {
+        Err(unauthorized_admin(&user.into(), &permission.into_string()))
+    }
+}
+
+pub fn admin_is_valid<T: Into<String>>(
+    querier: &QuerierWrapper,
+    permission: AdminPermissions,
+    user: T,
+    admin_auth: &Contract,
+) -> StdResult<bool> {
     let admin_resp: StdResult<ValidateAdminPermissionResponse> =
         QueryMsg::ValidateAdminPermission {
             permission: permission.into_string(),
@@ -42,19 +32,18 @@ pub fn validate_admin<T: Into<String>>(
         .query(querier, admin_auth);
 
     match admin_resp {
-        Ok(resp) => match resp.has_permission {
-            true => Ok(()),
-            false => Err(StdError::generic_err("Unexpected response.")),
-        },
+        Ok(resp) => Ok(resp.has_permission),
         Err(err) => Err(err),
     }
 }
 
+#[derive(Clone)]
 pub enum AdminPermissions {
     QueryAuthAdmin,
     ScrtStakingAdmin,
     TreasuryManager,
     TreasuryAdmin,
+    StabilityAdmin,
 }
 
 // NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
@@ -66,6 +55,7 @@ impl AdminPermissions {
             AdminPermissions::ScrtStakingAdmin => "SHADE_SCRT_STAKING_ADMIN",
             AdminPermissions::TreasuryManager => "SHADE_TREASURY_MANAGER",
             AdminPermissions::TreasuryAdmin => "SHADE_TREASURY_ADMIN",
+            AdminPermissions::StabilityAdmin => "SHADE_STABILITY_ADMIN",
         }
         .to_string()
     }

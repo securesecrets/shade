@@ -1,5 +1,5 @@
-use crate::c_std::{Addr, Deps, DepsMut, StdError, StdResult, Uint128};
 use crate::{
+    c_std::{Addr, Deps, DepsMut, StdError, StdResult, Uint128},
     contract_interfaces::{dex::dex, mint::mint, oracles::band},
     utils::{
         asset::Contract,
@@ -78,14 +78,17 @@ pub struct CallbackSwap {
     pub expected_return: Uint128,
 }
 
-pub fn is_pair(deps: DepsMut, pair: Contract) -> StdResult<bool> {
+/*pub fn is_pair(
+    deps: DepsMut,
+    pair: Contract,
+) -> StdResult<bool> {
     Ok(
         match (PairQuery::Pair {}).query::<PairResponse>(&deps.querier, &pair) {
             Ok(_) => true,
             Err(_) => false,
         },
     )
-}
+}*/
 
 pub fn price(
     deps: &Deps,

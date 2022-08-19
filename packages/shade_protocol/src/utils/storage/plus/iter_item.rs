@@ -1,6 +1,6 @@
 use crate::utils::storage::plus::iter_map::{Increment, IndexableIterMap, IterKey, IterMap};
 use cosmwasm_std::{to_binary, StdError, StdResult, Storage, Uint128};
-use secret_storage_plus::{Item, Json, Key, KeyDeserialize, Map, Prefixer, PrimaryKey, Serde};
+use secret_storage_plus::{Item, Key, KeyDeserialize, Map, Prefixer, PrimaryKey};
 use serde::{
     de::{self, DeserializeOwned},
     ser,
@@ -12,7 +12,7 @@ use std::{
     ops::{Add, AddAssign, Index, Sub, SubAssign},
 };
 
-pub struct IterItem<'a, T, N, Ser = Json>
+pub struct IterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -22,16 +22,14 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     storage: Map<'a, Vec<u8>, T>,
     id_storage: Item<'a, IterKey<N>>,
-    serialization_type: PhantomData<*const Ser>,
 }
 
 const PREFIX: &str = "iter-map-size-namespace-";
 
-impl<'a, T, N, Ser> IterItem<'a, T, N, Ser>
+impl<'a, T, N> IterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -41,7 +39,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     // TODO: gotta figure this out
     // pub const fn new(namespace: &'a str) -> Self {
@@ -52,12 +49,11 @@ where
         IterItem {
             storage: Map::new(namespace),
             id_storage: Item::new(size_namespace),
-            serialization_type: PhantomData,
         }
     }
 }
 
-impl<'a, T, N, Ser> IterItem<'a, T, N, Ser>
+impl<'a, T, N> IterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -67,7 +63,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     pub fn set(&self, store: &mut dyn Storage, id: N, data: &T) -> StdResult<()> {
         self.storage.save(store, IterKey::new(id).to_bytes()?, data)
@@ -107,7 +102,7 @@ where
         Ok(id)
     }
 
-    pub fn pop(&self, store: &mut dyn Storage) -> StdResult<()> {
+    pub fn remove(&self, store: &mut dyn Storage) -> StdResult<()> {
         let id = match self.id_storage.may_load(store)? {
             None => return Err(StdError::generic_err("Iter map is empty")),
             Some(id) => id,
@@ -121,13 +116,19 @@ where
         Ok(())
     }
 
-    pub fn last(&self, store: &mut dyn Storage) -> StdResult<T> {
+    pub fn pop(&self, store: &mut dyn Storage) -> StdResult<T> {
         let id = match self.id_storage.may_load(store)? {
             None => return Err(StdError::generic_err("Iter map is empty")),
             Some(id) => id,
         };
 
-        self.storage.load(store, id.to_bytes()?)
+        let item = self.storage.load(store, id.to_bytes()?)?;
+        self.storage.remove(store, id.to_bytes()?);
+
+        let new_id = IterKey::new(id.item - N::one());
+        self.id_storage.save(store, &new_id)?;
+
+        Ok(item)
     }
 
     pub fn clear(&self, store: &mut dyn Storage) -> StdResult<()> {
@@ -135,14 +136,17 @@ where
     }
 
     pub fn size(&'a self, store: &dyn Storage) -> StdResult<N> {
-        Ok(self.id_storage.load(store)?.item + N::one())
+        Ok(match self.id_storage.may_load(store)? {
+            None => N::zero(),
+            Some(i) => i.item + N::one(),
+        })
     }
 
     pub fn iter_from(
         &'a self,
         store: &'a dyn Storage,
         start_from: N,
-    ) -> IndexableIterItem<'a, T, N, Ser> {
+    ) -> IndexableIterItem<'a, T, N> {
         IndexableIterItem {
             iter_map: self,
             storage: store,
@@ -150,13 +154,13 @@ where
         }
     }
 
-    pub fn iter(&'a self, store: &'a dyn Storage) -> IndexableIterItem<'a, T, N, Ser> {
+    pub fn iter(&'a self, store: &'a dyn Storage) -> IndexableIterItem<'a, T, N> {
         self.iter_from(store, N::zero())
     }
 }
 
 // Make struct IterMapIndexable and implement the cool stuff there
-pub struct IndexableIterItem<'a, T, N, Ser>
+pub struct IndexableIterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -166,14 +170,13 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
-    iter_map: &'a IterItem<'a, T, N, Ser>,
+    iter_map: &'a IterItem<'a, T, N>,
     storage: &'a dyn Storage,
     index: N,
 }
 
-impl<'a, T, N, Ser> IndexableIterItem<'a, T, N, Ser>
+impl<'a, T, N> IndexableIterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -183,14 +186,13 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     fn next_index(&mut self) {
         self.index += N::one();
     }
 }
 
-impl<'a, T, N, Ser> Iterator for IndexableIterItem<'a, T, N, Ser>
+impl<'a, T, N> Iterator for IndexableIterItem<'a, T, N>
 where
     T: Serialize + DeserializeOwned,
     N: Add<N, Output = N>
@@ -200,7 +202,6 @@ where
         + Serialize
         + DeserializeOwned
         + Clone,
-    Ser: Serde,
 {
     type Item = T;
 
@@ -264,10 +265,34 @@ mod tests {
     }
 
     #[test]
+    fn remove() {
+        let mut storage = MockStorage::new();
+
+        let iter: IterItem<Uint64, u64> = IterItem::new_override("TEST", "SIZE-TEST");
+
+        for i in 0..10 {
+            iter.push(&mut storage, &Uint64::new(i as u64)).unwrap();
+        }
+
+        let item = iter.remove(&mut storage).unwrap();
+
+        assert_eq!(9, iter.size(&storage).unwrap());
+    }
+
+    #[test]
     fn pop() {
         let mut storage = MockStorage::new();
 
-        generate(10, &mut storage);
+        let iter: IterItem<Uint64, u64> = IterItem::new_override("TEST", "SIZE-TEST");
+
+        for i in 0..10 {
+            iter.push(&mut storage, &Uint64::new(i as u64)).unwrap();
+        }
+
+        let item = iter.pop(&mut storage).unwrap();
+
+        assert_eq!(item, Uint64::new(9));
+        assert_eq!(9, iter.size(&storage).unwrap());
     }
 
     #[test]

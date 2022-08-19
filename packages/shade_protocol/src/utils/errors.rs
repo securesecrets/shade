@@ -1,7 +1,7 @@
-use serde::Serialize;
-use schemars::_serde_json::to_string;
 use crate::c_std::StdError;
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
+use schemars::_serde_json::to_string;
+use serde::Serialize;
 
 #[macro_export]
 macro_rules! impl_into_u8 {
@@ -61,12 +61,15 @@ pub trait CodeType: Into<u8> + Clone {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::utils::errors::{build_string, CodeType, DetailedError};
-    use crate::c_std::StdError;
+    use crate::{
+        c_std::StdError,
+        utils::errors::{build_string, CodeType, DetailedError},
+    };
 
-    use cosmwasm_schema::{cw_serde};
+    use cosmwasm_schema::cw_serde;
 
-    #[cw_serde]    #[repr(u8)]
+    #[cw_serde]
+    #[repr(u8)]
     enum TestCode {
         Error1,
         Error2,

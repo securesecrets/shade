@@ -159,14 +159,14 @@ pub struct PoolResponse {
 }
 */
 
-pub fn is_pair(deps: DepsMut, pair: Contract) -> StdResult<bool> {
+/*pub fn is_pair(deps: DepsMut, pair: Contract) -> StdResult<bool> {
     Ok(
         match (PairQuery::PairInfo).query::<PairInfoResponse>(&deps.querier, &pair) {
             Ok(_) => true,
             Err(_) => false,
         },
     )
-}
+}*/
 
 /*
 pub fn price(
