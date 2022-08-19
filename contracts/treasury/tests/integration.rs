@@ -341,6 +341,23 @@ fn single_asset_manager_scrt_staking_integration(
     }))
     .unwrap();
 
+    // Scrt Staking Balance
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&scrt_staking, &app)
+    .unwrap())
+    {
+        adapter::QueryAnswer::Balance { amount } => {
+            println!("L352 scrt bal {}", amount);
+            assert_eq!(
+                amount, post_rewards.2,
+                "SCRT Staking Balance Post-Rewards Pre-update"
+            );
+        }
+        _ => panic!("Query Failed"),
+    };
+
     // Update SCRT Staking
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
         asset: token.address.to_string().clone(),
@@ -364,6 +381,23 @@ fn single_asset_manager_scrt_staking_integration(
 
     app.sudo(SudoMsg::Staking(StakingSudo::FastForwardUndelegate {}))
         .unwrap();
+
+    // Scrt Staking Balance
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&scrt_staking, &app)
+    .unwrap())
+    {
+        adapter::QueryAnswer::Balance { amount } => {
+            println!("IN THE MIDDLE scrt bal {}", amount);
+            assert_eq!(
+                amount, post_rewards.2,
+                "SCRT Staking Balance Post-Rewards Pre-update"
+            );
+        }
+        _ => panic!("Query Failed"),
+    };
 
     // Update SCRT Staking
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
@@ -395,7 +429,10 @@ fn single_asset_manager_scrt_staking_integration(
     {
         adapter::QueryAnswer::Balance { amount } => {
             println!("L397 scrt bal {}", amount);
-            assert_eq!(amount, post_rewards.2, "SCRT Staking Balance Post-Rewards");
+            assert_eq!(
+                amount, post_rewards.2,
+                "SCRT Staking Balance Post-Rewards Post-Update"
+            );
         }
         _ => panic!("Query Failed"),
     };
@@ -826,7 +863,7 @@ single_asset_manager_scrt_staking_tests! {
         Uint128::new(500), // expected manager allowance
         AllocationType::Portion,
         Uint128::new(1 * 10u128.pow(18)), // 100% allocate
-        Uint128::new(100), // rewards
+        Uint128::new(10), // rewards
         (
             Uint128::new(500), // treasury 55 (manager won't pull unused allowance
             Uint128::new(0), // manager 0
@@ -835,7 +872,7 @@ single_asset_manager_scrt_staking_tests! {
         (
             Uint128::new(500),
             Uint128::new(0),
-            Uint128::new(550),
+            Uint128::new(510),
         ),
     ),
 }

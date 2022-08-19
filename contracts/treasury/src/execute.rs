@@ -340,7 +340,10 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
 
         let (balance, cur_allowance) = metadata[&allowance.spender];
         let allocated = balance + cur_allowance;
-        println!("ALLOCD: {}, DESIRED: {}", allocated, desired_amount);
+        println!(
+            "ALLOCD: {}, DESIRED: {} pt / a.amount {} / {}",
+            allocated, desired_amount, portion_total, allowance.amount
+        );
 
         // UnderFunded
         if allocated < desired_amount {

@@ -70,6 +70,8 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
         )));
     }
 
+    println!("DEL {}", delegations(deps)?.len());
+
     let delegated = Uint128::new(
         delegations(deps)?
             .into_iter()

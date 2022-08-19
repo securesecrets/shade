@@ -67,14 +67,16 @@ pub fn receive(
         .iter()
         .find(|a| a.contract.address == from)
     {
+        println!("Manager Recv from Adapter {}", amount);
         return Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
             status: ResponseStatus::Success,
         })?));
     }
 
-    // Default to treasury if not sent by a holder
     let holder = match HOLDERS.load(deps.storage)?.contains(&from) {
         true => from,
+
+        // Default to treasury if not sent by a holder
         false => config.treasury,
     };
 
@@ -103,7 +105,7 @@ pub fn receive(
 
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {

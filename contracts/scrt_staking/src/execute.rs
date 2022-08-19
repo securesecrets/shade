@@ -224,7 +224,7 @@ pub fn unbond(
     // Send full unbonding
     if total_unbonding <= reserves {
         messages.append(&mut wrap_and_send(
-            unbonding,
+            total_unbonding,
             config.owner,
             config.sscrt,
             None,
@@ -267,21 +267,21 @@ pub fn unbond(
                 }
 
                 // This delegation isn't enough to fully unbond
-                if delegation.amount.amount.clone() < unbonding {
+                if delegation.amount.amount.clone() < total_unbonding {
                     messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
                         validator: delegation.validator.clone(),
                         amount: delegation.amount.clone(),
                     }));
-                    unbonding = unbonding - delegation.amount.amount.clone();
+                    total_unbonding = total_unbonding - delegation.amount.amount.clone();
                 } else {
                     messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
                         validator: delegation.validator.clone(),
                         amount: Coin {
                             denom: delegation.amount.denom.clone(),
-                            amount: unbonding,
+                            amount: total_unbonding,
                         },
                     }));
-                    unbonding = Uint128::zero();
+                    total_unbonding = Uint128::zero();
                 }
 
                 undelegated.push(delegation.validator.clone());
