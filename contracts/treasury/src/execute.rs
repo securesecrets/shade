@@ -170,6 +170,8 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                 m.clone(),
             )?;
 
+            println!("173 claimable {}", claimable);
+
             if !claimable.is_zero() {
                 messages.push(manager::claim_msg(&asset.clone(), m.clone())?);
                 metrics.push(Metric {
@@ -308,6 +310,10 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         }
     }
 
+    println!(
+        "311 portion_balance: {} \t amount_allowance: {} \t token_bal: {}",
+        portion_balance, amount_allowance, token_balance
+    );
     let mut portion_total = portion_balance; // + (token_balance - amount_allowance);
     if amount_allowance > token_balance {
         portion_total -= amount_allowance - token_balance;
@@ -704,6 +710,12 @@ pub fn allowance(
         .unwrap_or(vec![]);
 
     let last_refresh: DateTime<Utc> = utc_from_seconds(0);
+
+    for (i, existing_allowance) in allowances.clone().iter().enumerate() {
+        if allowance.spender == existing_allowance.spender {
+            allowances.swap_remove(i);
+        }
+    }
 
     allowances.push(AllowanceMeta {
         spender: allowance.spender.clone(),

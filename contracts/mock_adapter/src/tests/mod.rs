@@ -2,6 +2,7 @@ use shade_multi_test::interfaces::{
     dao::{init_dao, system_balance, update_dao},
     snip20,
     treasury,
+    treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
@@ -35,13 +36,13 @@ pub fn dao_int_test(
         &mut contracts,
         initial_treasury_bal,
         snip20_symbol.clone(),
-        allow_type,
-        cycle,
-        allow_amount,
-        allow_tolerance,
-        alloc_type,
-        alloc_amount,
-        alloc_tolerance,
+        allow_type.clone(),
+        cycle.clone(),
+        allow_amount.clone(),
+        allow_tolerance.clone(),
+        alloc_type.clone(),
+        alloc_amount.clone(),
+        alloc_tolerance.clone(),
     );
     //query assets
     let assets_query_res = treasury::assets_query(&app, &contracts).unwrap();
@@ -69,13 +70,54 @@ pub fn dao_int_test(
             "Treasury->Manager Allowance",
         );
     }
-    let bals = system_balance(&app, &contracts, snip20_symbol.to_string());
+    let mut bals = system_balance(&app, &contracts, snip20_symbol.to_string());
     println!("{:?}", bals);
     assert_eq!(bals.0, expected_treasury);
     for (i, manager_tuples) in bals.1.iter().enumerate() {
         assert_eq!(manager_tuples.0, expected_manager[i]);
         for (j, adapter_bals) in manager_tuples.1.iter().enumerate() {
             assert_eq!(adapter_bals.clone(), expected_adapter[i][j]);
+        }
+    }
+    let mut k = 0;
+    for i in 0..num_managers {
+        treasury::allowance(
+            &mut app,
+            "admin",
+            &contracts,
+            snip20_symbol.to_string(),
+            i,
+            allow_type[i].clone(),
+            cycle[i].clone(),
+            Uint128::zero(),
+            allow_tolerance[i].clone(),
+        );
+        for j in 0..alloc_amount[i].len() {
+            treasury_manager::allocate(
+                &mut app,
+                "admin",
+                &contracts,
+                snip20_symbol.to_string(),
+                Some(j.to_string()),
+                &SupportedContracts::MockAdapter(k),
+                alloc_type[i][j].clone(),
+                Uint128::zero(),
+                alloc_tolerance[i][j].clone(),
+                i,
+            );
+            k += 1;
+        }
+        k += 1;
+    }
+    update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string());
+    bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    println!("{:?}", bals);
+    assert_eq!(bals.0, initial_treasury_bal);
+    for (i, manager_tuples) in bals.1.iter().enumerate() {
+        assert_eq!(manager_tuples.0, Uint128::zero());
+        for (j, adapter_bals) in manager_tuples.1.iter().enumerate() {
+            assert_eq!(adapter_bals.clone(), Uint128::zero());
         }
     }
 }
