@@ -196,7 +196,7 @@ pub fn allocate(
 
     match stale_alloc {
         Some(i) => {
-            apps.remove(i);
+            apps.swap_remove(i);
         }
         None => {}
     };

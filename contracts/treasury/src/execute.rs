@@ -711,11 +711,16 @@ pub fn allowance(
 
     let last_refresh: DateTime<Utc> = utc_from_seconds(0);
 
-    for (i, existing_allowance) in allowances.clone().iter().enumerate() {
-        if allowance.spender == existing_allowance.spender {
+    let stale_alloc = allowances
+        .iter()
+        .position(|a| a.spender == allowance.spender);
+
+    match stale_alloc {
+        Some(i) => {
             allowances.swap_remove(i);
         }
-    }
+        None => {}
+    };
 
     allowances.push(AllowanceMeta {
         spender: allowance.spender.clone(),
