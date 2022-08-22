@@ -19,7 +19,9 @@ members = [
   #"contracts/mint_router",
   #"contracts/oracle",
   "contracts/sky",
+  "contracts/peg_stability",
   "contracts/query_auth",
+  "contracts/admin",
 
   # DAO
   # - Core

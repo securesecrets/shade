@@ -1,6 +1,7 @@
 #[cfg(feature = "admin")]
 pub mod admin {
-    pub use shade_admin_multi_test::multi::{helpers::init_admin_auth, AdminAuth};
+    pub use admin;
+    multi_derive::implement_multi!(Admin, admin);
 }
 
 #[cfg(feature = "snip20")]
@@ -82,4 +83,11 @@ pub mod mock_adapter {
 pub mod scrt_staking {
     use scrt_staking;
     multi_derive::implement_multi!(ScrtStaking, scrt_staking);
+}
+
+#[cfg(feature = "peg_stability")]
+pub mod peg_stability {
+    use peg_stability;
+
+    multi_derive::implement_multi!(PegStability, peg_stability);
 }

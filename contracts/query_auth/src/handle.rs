@@ -1,13 +1,24 @@
-use shade_protocol::admin::{validate_permission, SHADE_QUERY_AUTH_ADMIN};
 use shade_protocol::{
-    admin::{validate_admin, AdminPermissions},
+    admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        to_binary, Api, Deps, DepsMut, Env, MessageInfo, Querier, Response, StdError, StdResult,
+        to_binary,
+        Api,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
         Storage,
     },
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
-        Admin, ContractStatus, HandleAnswer, RngSeed,
+        Admin,
+        ContractStatus,
+        HandleAnswer,
+        RngSeed,
     },
     query_authentication::viewing_keys::ViewingKey,
     utils::{
@@ -25,7 +36,6 @@ fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<()> {
         &deps.querier,
         AdminPermissions::QueryAuthAdmin,
         info.sender.clone(),
-        env.contract.address,
         &contract,
     )
 }
