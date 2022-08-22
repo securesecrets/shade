@@ -105,8 +105,6 @@ shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin" }
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", branch = "bincode2", optional = true }
 # Testing
-#secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true, features = ["staking"] }
-secret-multi-test = { path = "../../../secret-plus-utils/packages/multi-test", optional = true, features = ["staking"] }
 anyhow = { version = "1", optional = true }
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"], optional = true }
 
@@ -122,6 +120,11 @@ sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
 
+<<<<<<< HEAD
 # for EnumIter
 strum = "0.24"
 strum_macros = "0.24"
+=======
+[target.'cfg(not(target_arch="wasm32"))'.dependencies]
+secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
+>>>>>>> origin/cosmwasm_v1_upgrade

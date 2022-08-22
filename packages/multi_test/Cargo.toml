@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-admin = ["dep:admin"]
+admin = ["dep:admin", "shade-protocol/admin"]
 snip20 = ["dep:snip20"]
 #mint = ["dep:mint"]
 #oracle = ["dep:oracle"]
@@ -29,8 +29,6 @@ dao = ["mock_adapter", "treasury", "treasury_manager", "snip20"]
 peg_stability = ["dep:peg_stability"]
 
 [dependencies]
-multi-derive = { path = "../multi_derive" }
-shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 #mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
 #oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
@@ -45,5 +43,9 @@ treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager
 mock_adapter = { version = "0.1.0", path = "../../contracts/mock_adapter", optional = true }
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
-shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git"}
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
+
+[target.'cfg(not(target_arch="wasm32"))'.dependencies]
+shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git", optional = true }
+shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
+multi-derive = { path = "../multi_derive" }
