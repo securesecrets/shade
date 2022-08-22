@@ -4,10 +4,9 @@ use crate::{
         treasury,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::{mock_adapter::MockAdapter, treasury_manager::TreasuryManager},
+    multi::{admin::init_admin_auth, mock_adapter::MockAdapter, treasury_manager::TreasuryManager},
 };
 use mock_adapter;
-use shade_admin_multi_test::multi::helpers::init_admin_auth;
 use shade_protocol::{
     c_std::{Addr, StdError, StdResult, Uint128},
     contract_interfaces::dao::{manager, treasury::AllowanceType, treasury_manager},

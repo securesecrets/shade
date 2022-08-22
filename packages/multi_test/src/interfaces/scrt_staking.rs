@@ -5,9 +5,8 @@ use crate::{
         treasury_manager,
         utils::{DeployedContracts, SupportedContracts},
     },
-    multi::scrt_staking::ScrtStaking,
+    multi::{admin::init_admin_auth, scrt_staking::ScrtStaking},
 };
-use shade_admin_multi_test::multi::helpers::init_admin_auth;
 use shade_protocol::{
     c_std::Addr,
     contract_interfaces::dao::scrt_staking,

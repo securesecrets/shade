@@ -372,11 +372,13 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         "311 portion_balance: {} \t amount_allowance: {} \t token_bal: {}",
         portion_balance, amount_allowance, token_balance
     );
-  
+
+    let mut portion_total = portion_balance + portion_allowance;
+
     if total_balance > portion_total {
         portion_total = total_balance;
     }
-  
+
     println!("amount_balance {}", amount_balance);
     println!("amount_allowance {}", amount_allowance);
     println!("portion_balance {}", portion_balance);
