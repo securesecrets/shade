@@ -45,5 +45,5 @@ treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager
 mock_adapter = { version = "0.1.0", path = "../../contracts/mock_adapter", optional = true }
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
-shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git", optional = true }
+shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git"}
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }

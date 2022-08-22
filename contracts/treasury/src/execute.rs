@@ -19,7 +19,7 @@ use shade_protocol::{
         Uint128,
     },
     contract_interfaces::{
-        admin::{validate_admin, AdminPermissions},
+        admin::helpers::{validate_admin, AdminPermissions},
         dao::{
             manager,
             treasury::{

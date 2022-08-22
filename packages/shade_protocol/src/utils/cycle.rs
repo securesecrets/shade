@@ -21,23 +21,6 @@ pub enum Cycle {
     Seconds { seconds: Uint128 },
 }
 
-#[cw_serde]
-pub enum Period {
-    Once,
-    Constant,
-    /*
-    Block {
-        blocks: Uint128,
-    },
-    */
-    Yearly { years: Uint128 },
-    Monthly { months: Uint128 },
-    Daily { days: Uint128 },
-    Hourly { hours: Uint128 },
-    Minutes { minutes: Uint128 },
-    Seconds { seconds: Uint128 },
-}
-
 pub fn utc_from_seconds(seconds: i64) -> DateTime<Utc> {
     DateTime::from_utc(NaiveDateTime::from_timestamp(seconds, 0), Utc)
 }

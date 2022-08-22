@@ -36,8 +36,8 @@ use shade_protocol::{
     },
 };
 
+use shade_admin_multi_test::multi::helpers::init_admin_auth;
 use shade_multi_test::multi::{
-    admin::init_admin_auth,
     scrt_staking::ScrtStaking,
     snip20::Snip20,
     treasury::Treasury,

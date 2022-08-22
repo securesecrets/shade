@@ -60,3 +60,21 @@ impl AdminPermissions {
         .to_string()
     }
 }
+
+/*
+use shade_protocol::{
+    c_std::{Addr, ContractInfo},
+    contract_interfaces::admin::InstantiateMsg,
+    multi_test::App,
+    utils::InstantiateCallback,
+};
+
+/// Initializes an admin auth contract in multitest with superadmin as the superadmin.
+pub fn init_admin_auth(app: &mut App, superadmin: &Addr) -> ContractInfo {
+    InstantiateMsg {
+        super_admin: Some(superadmin.clone().to_string()),
+    }
+    .test_init(Admin::default(), app, superadmin.clone(), "admin_auth", &[])
+    .unwrap()
+}
+*/

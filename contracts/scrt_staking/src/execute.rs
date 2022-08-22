@@ -1,5 +1,5 @@
 use shade_protocol::{
-    admin::{validate_admin, AdminPermissions},
+    admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
         to_binary,
         Addr,
