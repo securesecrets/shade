@@ -49,6 +49,9 @@ pub enum ExecuteMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
+    GiveMeMoney {
+        amount: Uint128,
+    },
     //RegisterAsset { token: Contract },
     //CompleteUnbond { token: Addr, amount: Uint128 },
     Adapter(adapter::SubExecuteMsg),
@@ -113,6 +116,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             */
             Ok(Response::new())
         }
+        ExecuteMsg::GiveMeMoney { amount } => Ok(Response::new().add_message(send_msg(
+            info.sender,
+            amount,
+            None,
+            None,
+            None,
+            &config.token,
+        )?)),
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubExecuteMsg::Unbond { asset, amount } => {
                 if asset != config.token.address {

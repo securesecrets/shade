@@ -363,6 +363,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             &full_asset.contract.address,
             allocations[i].contract.clone(),
         )?;
+        println!("{}", allocations[i].amount);
         match allocations[i].alloc_type {
             AllocationType::Amount => amount_total += allocations[i].balance,
             AllocationType::Portion => {
@@ -440,11 +441,10 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         println!("440 allocations {:?}", allocations);
     }
     let mut amount_sending_out = Uint128::zero();
-    println!("allocs {}", allocations.len());
     for adapter in allocations.clone() {
         println!("ADAPTER REBALANCE {}", adapter.nick.unwrap());
         println!("445 total {}", total.u128());
-        println!("446 amount_total {}", amount_total);
+        println!("446 adapter.amount {}", adapter.amount);
         let desired_amount = match adapter.alloc_type {
             AllocationType::Amount => {
                 amount_sending_out += adapter.amount;
@@ -477,7 +477,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
             // Fully covered by balance
             if desired_input < balance {
-                println!("DESIRED INPUT SEND");
+                println!("480 DESIRED INPUT SEND {} {}", desired_input, balance);
                 send_actions.push(SendAction {
                     recipient: adapter.contract.address.clone().to_string(),
                     recipient_code_hash: Some(adapter.contract.code_hash.clone()),
@@ -488,7 +488,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
                 balance = balance - desired_input;
                 balance_used += desired_input;
-                desired_input = Uint128::zero();
+                continue;
             }
             // Send all balance
             else if !balance.is_zero() {
@@ -501,13 +501,12 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                     memo: None,
                 });
 
+                desired_input = desired_input - balance;
                 balance = Uint128::zero();
-                balance_used += balance;
-                //desired_input = desired_input - balance;
-                break;
+                //                break;
             }
 
-            println!("allowance.is_zero {}", allowance);
+            println!("allowance.is_zero {}, {}", allowance, desired_input);
             if !allowance.is_zero() {
                 // Fully covered by allowance
                 if desired_input < allowance {
@@ -524,7 +523,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                     println!("1 allowance used {}", desired_input);
                     allowance_used += desired_input;
                     allowance = allowance - desired_input;
-                    desired_input = Uint128::zero();
+                    continue;
                 }
                 // Send all allowance
                 else if !allowance.is_zero() {
@@ -542,7 +541,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                     allowance_used += allowance;
                     desired_input = desired_input - allowance;
                     allowance = Uint128::zero();
-                    break;
+                    //break;
                 }
             }
         }
@@ -586,7 +585,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     holder_principal += allowance_used;
     if total - allowance > holder_principal {
         println!("Gainzz {}", (total - allowance) - holder_principal);
-        // credit gains to treasury
+        // debit gains to treasury
         let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
         if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
             holding.balances[i].amount += (total - allowance) - holder_principal;

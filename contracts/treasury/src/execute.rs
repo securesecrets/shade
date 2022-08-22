@@ -134,7 +134,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         }
     };
 
-    let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
+    let mut allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
 
     let mut token_balance = balance_query(
         &deps.querier,
@@ -158,15 +158,24 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
     let mut metrics = vec![];
 
     let now = utc_now(&env);
+    let mut save_allowances = false;
 
-    for a in allowances.clone() {
+    for (i, a) in allowances.clone().iter().enumerate() {
         let manager = MANAGER.may_load(deps.storage, a.spender.clone())?;
+        let mut claimable = Uint128::zero();
+        let mut unbonding = Uint128::zero();
         if let Some(m) = manager.clone() {
-            SubMsg::new(manager::update_msg(&asset.clone(), m.clone())?);
-            let claimable = manager::claimable_query(
+            claimable = manager::claimable_query(
                 deps.querier,
                 &asset.clone(),
-                self_address.clone(),
+                env.contract.address.clone(),
+                m.clone(),
+            )?;
+
+            unbonding = manager::unbonding_query(
+                deps.querier,
+                &asset.clone(),
+                env.contract.address.clone(),
                 m.clone(),
             )?;
 
@@ -204,6 +213,18 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         )?
         .allowance;
 
+        println!("ALLOWANCE {}", allowance);
+
+        if balance.is_zero()
+            && unbonding.is_zero()
+            && claimable.is_zero()
+            && allowance.is_zero()
+            && a.amount.is_zero()
+        {
+            allowances.swap_remove(i);
+            save_allowances = true;
+        }
+
         metadata.insert(a.spender.clone(), (balance, allowance));
 
         match a.allowance_type {
@@ -216,9 +237,17 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                 portion_allowance += allowance;
             }
         }
+        println!(
+            "218 amount_balance {} amount_allowance {}, poriton_bal {}, portion allow {}",
+            amount_balance, amount_allowance, portion_balance, portion_allowance,
+        );
     }
+    if save_allowances {
+        ALLOWANCES.save(deps.storage, asset.clone(), &allowances)?;
+    }
+    let mut total_balance = token_balance + portion_balance + amount_balance;
 
-    println!("token balance {}", token_balance);
+    println!("token balance {}", total_balance);
     let portions = allowances
         .clone()
         .into_iter()
@@ -236,6 +265,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
     // Iterate amount allows first to determine portion total
     for allowance in amounts {
         println!("AMOUNT ALLOW");
+        total_balance -= allowance.amount;
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
         // Claim from managers
         let manager = MANAGER.may_load(deps.storage, allowance.spender.clone())?;
@@ -247,6 +277,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         }
 
         let (balance, cur_allowance) = metadata[&allowance.spender];
+        println!("bal: {}, cur all: {}", balance, cur_allowance);
 
         let threshold = allowance
             .amount
@@ -255,7 +286,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         match allowance.amount.cmp(&(cur_allowance + balance)) {
             // Decrease Allowance
             std::cmp::Ordering::Less => {
-                let decrease = (cur_allowance + balance) - allowance.amount;
+                let mut decrease = (cur_allowance + balance) - allowance.amount;
                 if decrease <= threshold {
                     println!("THRESHOLD SKIP");
                     continue;
@@ -278,7 +309,32 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                     amount: decrease,
                     user: allowance.spender.clone(),
                 });
-                amount_allowance -= decrease;
+                println!("281, {} {} ", cur_allowance, decrease);
+                if decrease > amount_allowance {
+                    amount_allowance = Uint128::zero();
+                } else {
+                    amount_allowance -= decrease;
+                }
+                if decrease > cur_allowance {
+                    match MANAGER.may_load(deps.storage, allowance.spender)? {
+                        Some(m) => {
+                            messages.push(manager::unbond_msg(
+                                &asset.clone(),
+                                decrease - cur_allowance,
+                                m.clone(),
+                            )?);
+                            metrics.push(Metric {
+                                action: Action::ManagerUnbond,
+                                context: Context::Rebalance,
+                                timestamp: env.block.time.seconds(),
+                                token: asset.clone(),
+                                amount: decrease - cur_allowance,
+                                user: m.address.clone(),
+                            });
+                        }
+                        None => {}
+                    }
+                }
             }
             // Increase Allowance
             std::cmp::Ordering::Greater => {
@@ -319,6 +375,9 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         portion_total -= amount_allowance - token_balance;
     } else {
         portion_total += token_balance - amount_allowance;
+    }
+    if total_balance > portion_total {
+        portion_total = total_balance;
     }
     println!("amount_balance {}", amount_balance);
     println!("amount_allowance {}", amount_allowance);
@@ -698,6 +757,7 @@ pub fn allowance(
         &config.admin_auth,
     )?;
 
+    let viewing_key = VIEWING_KEY.load(deps.storage)?;
     let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
@@ -711,11 +771,11 @@ pub fn allowance(
 
     let last_refresh: DateTime<Utc> = utc_from_seconds(0);
 
-    let stale_alloc = allowances
+    let stale_allow = allowances
         .iter()
         .position(|a| a.spender == allowance.spender);
 
-    match stale_alloc {
+    match stale_allow {
         Some(i) => {
             allowances.swap_remove(i);
         }
@@ -726,7 +786,7 @@ pub fn allowance(
         spender: allowance.spender.clone(),
         amount: allowance.amount,
         cycle: allowance.cycle,
-        allowance_type: allowance.allowance_type,
+        allowance_type: allowance.allowance_type.clone(),
         // "zero/null" datetime
         last_refresh: last_refresh.to_rfc3339(),
         tolerance: allowance.tolerance,
@@ -746,11 +806,25 @@ pub fn allowance(
     }
     ALLOWANCES.save(deps.storage, asset, &allowances)?;
 
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::Allowance {
+    /*let messages = match allowance.allowance_type {
+        AllowanceType::Amount => set_allowance(
+            deps,
+            env,
+            allowance.spender,
+            allowance.amount,
+            viewing_key,
+            &full_asset.contract,
+            None,
+        )?,
+        AllowanceType::Portion => vec![],
+    };*/
+    let messages: Vec<CosmosMsg> = vec![];
+
+    Ok(Response::new()
+        .add_messages(messages)
+        .set_data(to_binary(&ExecuteAnswer::Allowance {
             status: ResponseStatus::Success,
-        })?),
-    )
+        })?))
 }
 
 pub fn claim(deps: DepsMut, _env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {

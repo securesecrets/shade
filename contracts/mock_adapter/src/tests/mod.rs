@@ -213,14 +213,14 @@ dao_tests! {
         "SSCRT",
         vec![
             Uint128::new(50), // Amount - 50
-            Uint128::new(100), // Amount - 100
             Uint128::new(6 * 10u128.pow(17)), // Poriton - 60%
+            Uint128::new(100), // Amount - 100
             Uint128::new(4 * 10u128.pow(17)), // Portion - 40%
         ], // Allowance amount
-        vec![AllowanceType::Amount, AllowanceType::Amount, AllowanceType::Portion, AllowanceType::Portion],
+        vec![AllowanceType::Amount, AllowanceType::Portion, AllowanceType::Amount,  AllowanceType::Portion],
         vec![Cycle::Constant; 4],
         vec![Uint128::zero(); 4],
-        vec![Uint128::new(6), Uint128::new(16), Uint128::new(98), Uint128::new(64)],
+        vec![Uint128::new(6), Uint128::new(98), Uint128::new(16),  Uint128::new(64)],
         vec![
             vec![Uint128::new(6 * 10u128.pow(17)), Uint128::new(5), Uint128::new(2 * 10u128.pow(17)), Uint128::new(15)];4
         ],
@@ -234,14 +234,14 @@ dao_tests! {
         vec![Uint128::zero(); 4],
         vec![
             vec![Uint128::new(18), Uint128::new(5), Uint128::new(6), Uint128::new(15)],
-            vec![Uint128::new(48), Uint128::new(5), Uint128::new(16), Uint128::new(15)],
             vec![Uint128::new(294), Uint128::new(5), Uint128::new(98), Uint128::new(15)],
+            vec![Uint128::new(48), Uint128::new(5), Uint128::new(16), Uint128::new(15)],
             vec![Uint128::new(192), Uint128::new(5), Uint128::new(64), Uint128::new(15)],
         ]
     ),
 }
 
-/*#[test]
+#[test]
 pub fn dao_int_gains() {
     let mut app = App::default();
     let mut contracts = DeployedContracts::new();
@@ -249,75 +249,212 @@ pub fn dao_int_gains() {
         &mut app,
         "admin",
         &mut contracts,
-        Uint128::new(100),
+        Uint128::new(1000),
         "SSCRT",
+        vec![AllowanceType::Portion],
+        vec![Cycle::Constant],
         vec![
-            AllowanceType::Amount,
-            AllowanceType::Portion,
-            AllowanceType::Portion,
-        ],
-        vec![Cycle::Constant, Cycle::Constant, Cycle::Constant],
-        vec![
-            Uint128::new(50),
-            Uint128::new(6 * 10u128.pow(17)),
-            Uint128::new(4 * 10u128.pow(17)),
+            Uint128::new(6 * 10u128.pow(17)), // Poriton - 60%
         ], // Allowance amount
-        vec![Uint128::zero(), Uint128::zero()], // Allowance tolerance
-        vec![vec![AllocationType::Amount, AllocationType::Portion], vec![
+        vec![Uint128::zero()],
+        vec![vec![
             AllocationType::Portion,
+            AllocationType::Amount,
+            AllocationType::Portion,
+            AllocationType::Amount,
         ]],
-        vec![
-            vec![Uint128::new(20), Uint128::new(1 * 10u128.pow(18))],
-            vec![Uint128::new(1 * 10u128.pow(18))],
-        ],
-        vec![
-            vec![Uint128::zero(), Uint128::zero()],
-            vec![Uint128::zero()],
-        ],
+        vec![vec![
+            Uint128::new(6 * 10u128.pow(17)),
+            Uint128::new(5),
+            Uint128::new(2 * 10u128.pow(17)),
+            Uint128::new(15),
+        ]],
+        vec![vec![Uint128::zero(); 4]],
     );
+    let mut expected_bals = (Uint128::new(516), vec![(Uint128::new(0), vec![
+        Uint128::new(348),
+        Uint128::new(5),
+        Uint128::new(116),
+        Uint128::new(15),
+    ])]);
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
-    assert_eq!(
-        bals,
-        (Uint128::new(25), vec![
-            (Uint128::zero(), vec![Uint128::new(20), Uint128::new(30)]),
-            (Uint128::zero(), vec![Uint128::new(25)])
-        ])
-    );
-    snip20::send(
+    assert_eq!(bals, expected_bals.clone());
+    for i in vec![0, 1, 2] {
+        snip20::send(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            contracts
+                .get(&SupportedContracts::MockAdapter(i))
+                .unwrap()
+                .address
+                .to_string(),
+            Uint128::new(100),
+            None,
+        );
+    }
+    // Needs 2 full cycles to reballance fully
+    treasury_manager::update_exec(
         &mut app,
         "admin",
         &contracts,
         "SSCRT".to_string(),
-        contracts
-            .get(&SupportedContracts::MockAdapter(0))
-            .unwrap()
-            .address
-            .to_string(),
-        Uint128::new(5),
-        None,
+        SupportedContracts::TreasuryManager(0),
     );
-    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
-    assert_eq!(
-        bals,
-        (Uint128::new(50), vec![(Uint128::zero(), vec![
-            Uint128::new(55)
-        ])])
-    );
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 1).unwrap();
-    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
-    println!("{:?}", bals);
-    assert_eq!(
-        bals,
-        (Uint128::new(50), vec![(Uint128::new(5), vec![
-            Uint128::new(50)
-        ])])
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+    treasury_manager::update_exec(
+        &mut app,
+        "admin",
+        &contracts,
+        "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
     );
     treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
-    assert_eq!(
-        bals,
-        (Uint128::new(50), vec![(Uint128::new(5), vec![
-            Uint128::new(50)
-        ])])
+    let mut expected_bals = (Uint128::new(520), vec![(Uint128::new(152), vec![
+        Uint128::new(456),
+        Uint128::new(5),
+        Uint128::new(152),
+        Uint128::new(15),
+    ])]);
+    assert_eq!(bals, expected_bals);
+}
+
+#[test]
+pub fn dao_int_gains_4_managers() {
+    let mut app = App::default();
+    let mut contracts = DeployedContracts::new();
+    init_dao(
+        &mut app,
+        "admin",
+        &mut contracts,
+        Uint128::new(1000),
+        "SSCRT",
+        vec![
+            AllowanceType::Amount,
+            AllowanceType::Portion,
+            AllowanceType::Amount,
+            AllowanceType::Portion,
+        ],
+        vec![Cycle::Constant; 4],
+        vec![
+            Uint128::new(50),                 // Amount - 50
+            Uint128::new(6 * 10u128.pow(17)), // Poriton - 60%
+            Uint128::new(100),                // Amount - 100
+            Uint128::new(2 * 10u128.pow(17)), // Portion - 40%
+        ], // Allowance amount
+        vec![Uint128::zero(); 4],
+        vec![
+            vec![
+                AllocationType::Portion,
+                AllocationType::Amount,
+                AllocationType::Portion,
+                AllocationType::Amount
+            ];
+            4
+        ],
+        vec![
+            vec![
+                Uint128::new(6 * 10u128.pow(17)),
+                Uint128::new(5),
+                Uint128::new(2 * 10u128.pow(17)),
+                Uint128::new(15)
+            ];
+            4
+        ],
+        vec![vec![Uint128::zero(); 4]; 4],
     );
-}*/
+    let mut expected_bals = (Uint128::new(320), vec![
+        (Uint128::new(0), vec![
+            Uint128::new(18),
+            Uint128::new(5),
+            Uint128::new(6),
+            Uint128::new(15),
+        ]),
+        (Uint128::new(0), vec![
+            Uint128::new(294),
+            Uint128::new(5),
+            Uint128::new(98),
+            Uint128::new(15),
+        ]),
+        (Uint128::new(0), vec![
+            Uint128::new(48),
+            Uint128::new(5),
+            Uint128::new(16),
+            Uint128::new(15),
+        ]),
+        (Uint128::new(0), vec![
+            Uint128::new(90),
+            Uint128::new(5),
+            Uint128::new(30),
+            Uint128::new(15),
+        ]),
+    ]);
+    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    assert_eq!(bals, expected_bals.clone());
+    for i in vec![0, 1, 2, 3, 5, 7, 10, 12, 16] {
+        snip20::send(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            contracts
+                .get(&SupportedContracts::MockAdapter(i))
+                .unwrap()
+                .address
+                .to_string(),
+            Uint128::new(100),
+            None,
+        );
+    }
+    // Needs 2 full cycles to reballance fully
+    for i in 0..4 {
+        treasury_manager::update_exec(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(i),
+        );
+    }
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+    for i in 0..4 {
+        treasury_manager::update_exec(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(i),
+        );
+    }
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    let mut expected_bals = (Uint128::new(622), vec![
+        (Uint128::new(6), vec![
+            Uint128::new(18),
+            Uint128::new(5),
+            Uint128::new(6),
+            Uint128::new(15),
+        ]),
+        (Uint128::new(0), vec![
+            Uint128::new(618),
+            Uint128::new(5),
+            Uint128::new(206),
+            Uint128::new(15),
+        ]),
+        (Uint128::new(16), vec![
+            Uint128::new(48),
+            Uint128::new(5),
+            Uint128::new(16),
+            Uint128::new(15),
+        ]),
+        (Uint128::new(0), vec![
+            Uint128::new(198),
+            Uint128::new(5),
+            Uint128::new(66),
+            Uint128::new(15),
+        ]),
+    ]);
+    assert_eq!(bals, expected_bals);
+}
