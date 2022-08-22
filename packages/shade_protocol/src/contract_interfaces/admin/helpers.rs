@@ -1,6 +1,5 @@
-use crate::admin::errors::unauthorized_admin;
 use crate::{
-    admin::{QueryMsg, ValidateAdminPermissionResponse},
+    admin::{errors::unauthorized_admin, QueryMsg, ValidateAdminPermissionResponse},
     utils::Query,
     Contract,
 };

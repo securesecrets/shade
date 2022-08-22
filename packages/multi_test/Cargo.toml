@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-admin = ["dep:admin"]
+admin = ["dep:admin", "shade-protocol/admin"]
 snip20 = ["dep:snip20"]
 #mint = ["dep:mint"]
 #oracle = ["dep:oracle"]
