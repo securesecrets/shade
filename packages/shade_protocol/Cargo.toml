@@ -120,11 +120,9 @@ sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
 
-<<<<<<< HEAD
 # for EnumIter
 strum = "0.24"
 strum_macros = "0.24"
-=======
+
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
->>>>>>> origin/cosmwasm_v1_upgrade
