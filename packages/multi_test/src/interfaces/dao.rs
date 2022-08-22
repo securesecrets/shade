@@ -23,7 +23,7 @@ pub fn init_dao(
     sender: &str,
     contracts: &mut DeployedContracts,
     treasury_start_bal: Uint128,
-    snip20_symbols: Vec<&str>,
+    snip20_symbol: &str,
     allowance_type: Vec<AllowanceType>,
     cycle: Vec<utils::cycle::Cycle>,
     allowance_amount: Vec<Uint128>,
@@ -34,121 +34,112 @@ pub fn init_dao(
 ) {
     let num_managers = allowance_amount.len();
     treasury::init(chain, sender, contracts);
-    for (i, snip20_symbol) in snip20_symbols.iter().enumerate() {
-        snip20::init(
-            chain,
-            sender,
-            contracts,
-            format!("snip20_{}", i),
-            snip20_symbol.to_string(),
-            6,
-            None,
-        );
-        treasury::register_asset(chain, sender, contracts, snip20_symbol.to_string());
-        snip20::send(
-            chain,
-            sender,
-            contracts,
-            snip20_symbol.to_string(),
-            contracts
-                .get(&SupportedContracts::Treasury)
-                .unwrap()
-                .clone()
-                .address
-                .to_string(),
-            treasury_start_bal,
-            None,
-        );
-        println!(
-            "{}",
-            balance_query(
-                &chain,
-                &contracts,
-                snip20_symbol.to_string(),
-                SupportedContracts::Treasury
-            )
+    let mut offset = 0;
+    snip20::init(
+        chain,
+        sender,
+        contracts,
+        format!("snip20_1",),
+        snip20_symbol.to_string(),
+        6,
+        None,
+    );
+    treasury::register_asset(chain, sender, contracts, snip20_symbol.to_string());
+    snip20::send(
+        chain,
+        sender,
+        contracts,
+        snip20_symbol.to_string(),
+        contracts
+            .get(&SupportedContracts::Treasury)
             .unwrap()
-            .u128()
+            .clone()
+            .address
+            .to_string(),
+        treasury_start_bal,
+        None,
+    );
+    for i in 0..num_managers {
+        let num_adapters = tm_allocation_amount[i].len();
+        treasury_manager::init(chain, sender, contracts, i);
+        treasury_manager::register_asset(chain, "admin", contracts, snip20_symbol.to_string(), i);
+        treasury::register_manager(chain, sender, contracts, i);
+        treasury::allowance(
+            chain,
+            sender,
+            contracts,
+            snip20_symbol.to_string(),
+            i,
+            allowance_type[i].clone(),
+            cycle[i].clone(),
+            allowance_amount[i].clone(),
+            allowance_tolerance[i].clone(),
         );
-        println!(
-            "snip20 addr {}",
-            contracts
-                .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
-                .unwrap()
-                .clone()
-                .address
-        );
-        for i in 0..num_managers {
-            let num_adapters = tm_allocation_amount[i].len();
-            treasury_manager::init(chain, sender, contracts, i);
-            treasury_manager::register_asset(
-                chain,
-                "admin",
-                contracts,
-                snip20_symbol.to_string(),
-                i,
-            );
-            treasury::register_manager(chain, sender, contracts, i);
-            treasury::allowance(
-                chain,
-                sender,
-                contracts,
-                snip20_symbol.to_string(),
-                i,
-                allowance_type[i].clone(),
-                cycle[i].clone(),
-                allowance_amount[i].clone(),
-                allowance_tolerance[i].clone(),
-            );
-            for j in 0..num_adapters {
-                let mock_adap_contract = Contract::from(
-                    mock_adapter::contract::Config {
-                        owner: contracts
-                            .get(&SupportedContracts::TreasuryManager(i))
-                            .unwrap()
-                            .clone()
-                            .address,
-                        unbond_blocks: Uint128::zero(),
-                        token: contracts
-                            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
-                            .unwrap()
-                            .clone(),
-                    }
-                    .test_init(
-                        MockAdapter::default(),
-                        chain,
-                        Addr::unchecked(sender),
-                        "mock_adapter",
-                        &[],
-                    )
-                    .unwrap(),
-                );
-                contracts.insert(SupportedContracts::MockAdapter(j), mock_adap_contract);
-                treasury_manager::allocate(
+        for j in 0..num_adapters {
+            let mock_adap_contract = Contract::from(
+                mock_adapter::contract::Config {
+                    owner: contracts
+                        .get(&SupportedContracts::TreasuryManager(i))
+                        .unwrap()
+                        .clone()
+                        .address,
+                    unbond_blocks: Uint128::zero(),
+                    token: contracts
+                        .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+                        .unwrap()
+                        .clone(),
+                }
+                .test_init(
+                    MockAdapter::default(),
                     chain,
-                    sender,
-                    contracts,
-                    snip20_symbol.to_string(),
-                    Some(j.to_string()),
-                    &SupportedContracts::MockAdapter(j),
-                    tm_allowance_type.clone()[i][j].clone(),
-                    tm_allocation_amount[i][j].clone(),
-                    tm_allocation_tolerance[i][j].clone(),
-                    i,
-                );
-            }
-        }
-        treasury::update_exec(chain, sender, contracts, snip20_symbol.to_string()).unwrap();
-        for i in 0..num_managers {
-            treasury_manager::update_exec(
+                    Addr::unchecked(sender),
+                    "mock_adapter",
+                    &[],
+                )
+                .unwrap(),
+            );
+            contracts.insert(
+                SupportedContracts::MockAdapter(j + offset),
+                mock_adap_contract,
+            );
+            treasury_manager::allocate(
                 chain,
                 sender,
                 contracts,
                 snip20_symbol.to_string(),
-                SupportedContracts::TreasuryManager(i),
+                Some(j.to_string()),
+                &SupportedContracts::MockAdapter(j + offset),
+                tm_allowance_type.clone()[i][j].clone(),
+                tm_allocation_amount[i][j].clone(),
+                tm_allocation_tolerance[i][j].clone(),
+                i,
             );
         }
+        offset += num_adapters + 1;
     }
+    update_dao(chain, sender, contracts, snip20_symbol, num_managers).unwrap();
+}
+
+pub fn update_dao(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: &str,
+    num_managers: usize,
+) -> StdResult<()> {
+    println!("HERE DAO UPDATE 1");
+    treasury::update_exec(chain, sender, contracts, snip20_symbol.to_string())?;
+    println!("HERE UPDATE DAO");
+    for i in 0..num_managers {
+        treasury_manager::update_exec(
+            chain,
+            sender,
+            contracts,
+            snip20_symbol.to_string(),
+            SupportedContracts::TreasuryManager(i),
+        )?;
+    }
+    Ok(())
 }
 
 pub fn system_balance(
@@ -156,6 +147,7 @@ pub fn system_balance(
     contracts: &DeployedContracts,
     snip20_symbol: String,
 ) -> (Uint128, Vec<(Uint128, Vec<Uint128>)>) {
+    println!("{}", snip20_symbol);
     let mut ret_struct = (Uint128::zero(), vec![]);
     ret_struct.0 = reserves_query(
         chain,
@@ -165,21 +157,29 @@ pub fn system_balance(
     )
     .unwrap();
     let (mut i, mut j) = (0, 0);
+    let mut offset = 0;
     while true {
         let mut manager_tuple = (Uint128::zero(), vec![]);
         if contracts.get(&SupportedContracts::TreasuryManager(i)) == None {
             break;
         } else {
-            manager_tuple.0 = treasury_manager::reserves_query(
+            manager_tuple.0 = match (treasury_manager::reserves_query(
                 chain,
                 contracts,
                 snip20_symbol.clone(),
                 SupportedContracts::TreasuryManager(i),
                 SupportedContracts::Treasury,
-            )
-            .unwrap();
+            )) {
+                Ok(bal) => bal,
+                Err(_) => {
+                    i += 1;
+                    continue;
+                }
+            };
+            j = 0;
             while true {
-                if contracts.get(&SupportedContracts::MockAdapter(j)) == None {
+                if contracts.get(&SupportedContracts::MockAdapter(j + offset)) == None {
+                    offset += j + 1;
                     break;
                 } else {
                     manager_tuple.1.push(
@@ -187,7 +187,7 @@ pub fn system_balance(
                             chain,
                             contracts,
                             snip20_symbol.clone(),
-                            SupportedContracts::MockAdapter(j),
+                            SupportedContracts::MockAdapter(j + offset),
                         )
                         .unwrap(),
                     );

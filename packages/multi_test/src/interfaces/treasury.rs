@@ -179,6 +179,20 @@ pub fn allowance_query(
     }
 }
 
+pub fn assets_query(chain: &App, contracts: &DeployedContracts) -> StdResult<Vec<Addr>> {
+    match (treasury::QueryMsg::Assets {}.test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Assets { assets } => Ok(assets),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
 pub fn update_exec(
     chain: &mut App,
     sender: &str,
