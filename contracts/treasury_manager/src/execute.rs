@@ -517,7 +517,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                     allowance_used += desired_input;
                     allowance = allowance - desired_input;
                     continue;
-
                 }
                 // Send all allowance
                 else if !allowance.is_zero() {
@@ -626,6 +625,7 @@ pub fn unbond(
     let config = CONFIG.load(deps.storage)?;
     //let asset = deps.api.addr_validate(asset.as_str())?;
     let mut unbonder = info.sender.clone();
+    let holders = HOLDERS.load(deps.storage)?;
 
     // admin unbonds on behalf of treasury
     if validate_admin(
@@ -638,15 +638,11 @@ pub fn unbond(
     {
         unbonder = config.treasury.clone();
     }
-
-    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
-
-    let holders = HOLDERS.load(deps.storage)?;
-
-    // Adjust holder balance
-    if !holders.contains(&unbonder.clone()) {
+    // Only a holder can unbond otherwise
+    else if !holders.contains(&unbonder.clone()) {
         return Err(StdError::generic_err("unauthorized"));
     }
+
     let mut holding = HOLDING.load(deps.storage, unbonder.clone())?;
 
     if holding.status != Status::Active {
@@ -709,6 +705,8 @@ pub fn unbond(
             other_unbondings += u.amount;
         }
     }
+
+    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
     // Reserves to be sent immediately
     let mut reserves = balance_query(
