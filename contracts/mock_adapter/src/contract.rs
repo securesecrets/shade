@@ -32,7 +32,7 @@ use shade_protocol::{
 #[cw_serde]
 pub struct Config {
     pub owner: Addr,
-    pub unbond_blocks: Uint128,
+    pub instant: bool,
     pub token: Contract,
 }
 
@@ -52,8 +52,9 @@ pub enum ExecuteMsg {
     GiveMeMoney {
         amount: Uint128,
     },
-    //RegisterAsset { token: Contract },
-    //CompleteUnbond { token: Addr, amount: Uint128 },
+    CompleteUnbonding {
+        amount: Uint128,
+    },
     Adapter(adapter::SubExecuteMsg),
 }
 
@@ -73,18 +74,20 @@ const viewing_key: &str = "jUsTfOrTeStInG";
 
 const CONFIG: Item<Config> = Item::new("config");
 const ADDRESS: Item<Addr> = Item::new("address");
-const BLOCK: Item<Uint128> = Item::new("block");
 const REWARDS: Item<Uint128> = Item::new("rewards");
 
-// (amount, block)
-const UNBONDINGS: Item<Vec<(Uint128, Uint128)>> = Item::new("unbondings");
+const UNBONDING: Item<Uint128> = Item::new("unbonding");
+const CLAIMABLE: Item<Uint128> = Item::new("claimable");
 
 #[entry_point]
 pub fn instantiate(deps: DepsMut, env: Env, info: MessageInfo, msg: Config) -> StdResult<Response> {
     CONFIG.save(deps.storage, &msg)?;
     ADDRESS.save(deps.storage, &env.contract.address)?;
-    UNBONDINGS.save(deps.storage, &Vec::new())?;
-    BLOCK.save(deps.storage, &Uint128::new(env.block.height as u128))?;
+    //BLOCK.save(deps.storage, &Uint128::new(env.block.height as u128))?;
+
+    UNBONDING.save(deps.storage, &Uint128::zero())?;
+    CLAIMABLE.save(deps.storage, &Uint128::zero())?;
+    REWARDS.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::new().add_messages(vec![
         set_viewing_key_msg(viewing_key.to_string(), None, &msg.token.clone())?,
@@ -95,7 +98,7 @@ pub fn instantiate(deps: DepsMut, env: Env, info: MessageInfo, msg: Config) -> S
 #[entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
-    BLOCK.save(deps.storage, &Uint128::new(env.block.height as u128))?;
+    //BLOCK.save(deps.storage, &Uint128::new(env.block.height as u128))?;
 
     match msg {
         ExecuteMsg::Receive {
@@ -108,12 +111,15 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             if info.sender != config.token.address {
                 return Err(StdError::generic_err("Unrecognized Asset"));
             }
+            println!("RECEIVE MOCK ADAPTER");
 
-            /*
-            match from_binary(&msg)? {
-                // add rewards
+            // If sender is not manager, consider rewards
+            if from != config.owner {
+                println!("RECEIVE sender != OWNER {} {}", info.sender, config.owner);
+                let rew = REWARDS.load(deps.storage)?;
+                REWARDS.save(deps.storage, &(rew + amount))?;
             }
-            */
+
             Ok(Response::new())
         }
         ExecuteMsg::GiveMeMoney { amount } => Ok(Response::new().add_message(send_msg(
@@ -124,11 +130,20 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             None,
             &config.token,
         )?)),
+        ExecuteMsg::CompleteUnbonding { amount } => {
+            let unbonding = UNBONDING.load(deps.storage)?;
+            let claimable = CLAIMABLE.load(deps.storage)?;
+
+            UNBONDING.save(deps.storage, &Uint128::zero())?;
+            CLAIMABLE.save(deps.storage, &(claimable + unbonding))?;
+            Ok(Response::new())
+        }
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubExecuteMsg::Unbond { asset, amount } => {
                 if asset != config.token.address {
                     return Err(StdError::generic_err("Unrecognized Asset"));
                 }
+                println!("UNBOND MOCK ADAPTER");
 
                 let balance = balance_query(
                     &deps.querier,
@@ -137,11 +152,12 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     &config.token.clone(),
                 )?;
 
-                let mut unbondings = UNBONDINGS.load(deps.storage)?;
-                let total_unbondings =
-                    Uint128::new(unbondings.iter().map(|(amount, _)| amount.u128()).sum());
+                let rewards = REWARDS.load(deps.storage)?;
 
-                let available = balance - total_unbondings;
+                let mut unbonding = UNBONDING.load(deps.storage)?;
+                let claimable = CLAIMABLE.load(deps.storage)?;
+
+                let available = (balance + rewards) - (unbonding + claimable);
 
                 if available < amount || amount.is_zero() {
                     return Err(StdError::generic_err(format!(
@@ -152,7 +168,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
                 let mut messages = vec![];
 
-                if config.unbond_blocks.is_zero() {
+                if config.instant {
+                    println!("unbond instant");
                     messages.push(send_msg(
                         config.owner.clone(),
                         amount,
@@ -162,8 +179,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                         &config.token.clone(),
                     )?);
                 } else {
-                    unbondings.push((amount, Uint128::new(env.block.height as u128)));
+                    println!("unbond non-instant");
+                    UNBONDING.save(deps.storage, &(unbonding + amount))?;
                 }
+                println!("unbond amount {} bal {}", amount, balance);
 
                 Ok(Response::new().add_messages(messages).set_data(to_binary(
                     &adapter::ExecuteAnswer::Unbond {
@@ -173,38 +192,41 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 )?))
             }
             adapter::SubExecuteMsg::Claim { asset } => {
-                let mut unbonding = UNBONDINGS.load(deps.storage)?;
-                let mut remaining = vec![];
-                let mut claimed = Uint128::zero();
-
-                for u in unbonding {
-                    if env.block.height as u128 - u.1.u128() >= config.unbond_blocks.u128() {
-                        claimed += u.0;
-                    } else {
-                        remaining.push(u);
-                    }
+                if asset != config.token.address {
+                    return Err(StdError::generic_err("Unrecognized Asset"));
                 }
-                let mut messages = vec![send_msg(
-                    config.owner.clone(),
-                    claimed,
-                    None,
-                    None,
-                    None,
-                    &config.token.clone(),
-                )?];
+                println!("CLAIM MOCK ADAPTER");
+                let claimable = CLAIMABLE.load(deps.storage)?;
+                CLAIMABLE.save(deps.storage, &Uint128::zero())?;
 
-                Ok(Response::new().add_messages(messages).set_data(to_binary(
-                    &adapter::ExecuteAnswer::Claim {
+                Ok(Response::new()
+                    .add_message(send_msg(
+                        config.owner.clone(),
+                        claimable,
+                        None,
+                        None,
+                        None,
+                        &config.token.clone(),
+                    )?)
+                    .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
                         status: ResponseStatus::Success,
-                        amount: claimed,
-                    },
-                )?))
+                        amount: claimable,
+                    })?))
             }
-            adapter::SubExecuteMsg::Update { asset } => Ok(Response::new().set_data(to_binary(
-                &adapter::ExecuteAnswer::Update {
-                    status: ResponseStatus::Success,
-                },
-            )?)),
+            adapter::SubExecuteMsg::Update { asset } => {
+                if asset != config.token.address {
+                    return Err(StdError::generic_err("Unrecognized Asset"));
+                }
+                println!("UPDATE MOCK ADAPTER");
+                // 'claim & restake' rewards
+                REWARDS.save(deps.storage, &Uint128::zero())?;
+
+                Ok(
+                    Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Update {
+                        status: ResponseStatus::Success,
+                    })?),
+                )
+            }
         },
     }
 }
@@ -217,99 +239,86 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Config => to_binary(&QueryAnswer::Config { config }),
         QueryMsg::Adapter(adapter) => to_binary(&match adapter {
             adapter::SubQueryMsg::Balance { asset } => {
+                if asset != config.token.address {
+                    return Err(StdError::generic_err("Unrecognized Asset"));
+                }
                 let balance = balance_query(
                     &deps.querier,
                     ADDRESS.load(deps.storage)?,
                     viewing_key.to_string(),
                     &config.token.clone(),
                 )?;
-                let unbonding = Uint128::new(
-                    UNBONDINGS
-                        .load(deps.storage)?
-                        .iter()
-                        .map(|(amount, _)| amount.u128())
-                        .sum(),
-                );
+                let unbonding = UNBONDING.load(deps.storage)?;
+
+                println!("BALANCE MOCK ADAPTER {}", balance - unbonding);
 
                 adapter::QueryAnswer::Balance {
                     amount: balance - unbonding,
                 }
             }
             adapter::SubQueryMsg::Unbonding { asset } => {
-                let last_block = BLOCK.load(deps.storage)?;
+                if asset != config.token.address {
+                    return Err(StdError::generic_err("Unrecognized Asset"));
+                }
+                println!("UNBONDING MOCK ADAPTER");
                 adapter::QueryAnswer::Unbonding {
-                    amount: Uint128::new(
-                        UNBONDINGS
-                            .load(deps.storage)?
-                            .into_iter()
-                            .map(|(amount, block)| {
-                                if Uint128::new(last_block.u128() - block.u128())
-                                    >= config.unbond_blocks
-                                {
-                                    0u128
-                                } else {
-                                    amount.u128()
-                                }
-                            })
-                            .sum(),
-                    ),
+                    amount: UNBONDING.load(deps.storage)?,
                 }
             }
             adapter::SubQueryMsg::Claimable { asset } => {
-                let last_block = BLOCK.load(deps.storage)?;
+                if asset != config.token.address {
+                    return Err(StdError::generic_err("Unrecognized Asset"));
+                }
+                println!("CLAIMABLE MOCK ADAPTER");
                 adapter::QueryAnswer::Claimable {
-                    amount: Uint128::new(
-                        UNBONDINGS
-                            .load(deps.storage)?
-                            .into_iter()
-                            .map(|(amount, block)| {
-                                if Uint128::new(last_block.u128() - block.u128())
-                                    >= config.unbond_blocks
-                                {
-                                    amount.u128()
-                                } else {
-                                    0u128
-                                }
-                            })
-                            .sum(),
-                    ),
+                    amount: CLAIMABLE.load(deps.storage)?,
                 }
             }
             adapter::SubQueryMsg::Unbondable { asset } => {
-                let unbondings = UNBONDINGS.load(deps.storage)?;
-                let sum = Uint128::new(unbondings.iter().map(|(amount, _)| amount.u128()).sum());
+                if asset != config.token.address {
+                    return Err(StdError::generic_err("Unrecognized Asset"));
+                }
+                let unbonding = UNBONDING.load(deps.storage)?;
+                let claimable = CLAIMABLE.load(deps.storage)?;
                 let balance = balance_query(
                     &deps.querier,
                     ADDRESS.load(deps.storage)?,
                     viewing_key.to_string(),
                     &config.token.clone(),
                 )?;
+                //let rewards = REWARDS.load(deps.storage)?;
+
+                println!(
+                    "UNBONDABLE MOCK ADAPTER {}",
+                    balance - (unbonding + claimable)
+                );
 
                 adapter::QueryAnswer::Unbondable {
-                    amount: balance - sum,
+                    amount: balance - (unbonding + claimable),
                 }
             }
             adapter::SubQueryMsg::Reserves { asset } => {
-                let mut reserves = Uint128::zero();
-                let unbondings = Uint128::new(
-                    UNBONDINGS
-                        .load(deps.storage)?
-                        .iter()
-                        .map(|(amount, _)| amount.u128())
-                        .sum(),
-                );
+                if asset != config.token.address {
+                    return Err(StdError::generic_err("Unrecognized Asset"));
+                }
+                println!("RESERVES MOCK ADAPTER");
+                let unbonding = UNBONDING.load(deps.storage)?;
+                let claimable = CLAIMABLE.load(deps.storage)?;
 
-                if config.unbond_blocks.is_zero() {
-                    reserves = balance_query(
+                let reserves = match config.instant {
+                    true => balance_query(
                         &deps.querier,
                         ADDRESS.load(deps.storage)?,
                         viewing_key.to_string(),
                         &config.token.clone(),
-                    )?;
-                    reserves = reserves - unbondings;
-                }
+                    )?,
+                    false => REWARDS.load(deps.storage)?,
+                };
 
-                adapter::QueryAnswer::Reserves { amount: reserves }
+                println!("RESERVES {}", reserves - (unbonding + claimable));
+                adapter::QueryAnswer::Reserves {
+                    amount: reserves - (unbonding + claimable),
+                }
             }
         }),
     }

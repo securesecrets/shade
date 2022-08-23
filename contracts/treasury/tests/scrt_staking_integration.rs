@@ -18,7 +18,7 @@ use shade_protocol::{
         dao::{
             adapter,
             manager,
-            //scrt_staking,
+            scrt_staking,
             treasury,
             treasury::{Allowance, AllowanceType, RunLevel},
             treasury_manager::{self, Allocation, AllocationType},
@@ -38,18 +38,18 @@ use shade_protocol::{
 
 use shade_multi_test::multi::{
     admin::init_admin_auth,
-    //scrt_staking::ScrtStaking,
-    mock_adapter::MockAdapter,
+    scrt_staking::ScrtStaking,
     snip20::Snip20,
     treasury::Treasury,
     treasury_manager::TreasuryManager,
 };
 use shade_protocol::multi_test::{App, BankSudo, StakingSudo, SudoMsg};
 
+use ::treasury::storage::metric_key;
 use serde_json;
 
 // Add other adapters here as they come
-fn single_asset_single_adapter_int(
+fn single_asset_manager_scrt_staking_integration(
     deposit: Uint128,
     allowance: Uint128,
     expected_allowance: Uint128,
@@ -64,7 +64,7 @@ fn single_asset_single_adapter_int(
 
     let admin = Addr::unchecked("admin");
     let user = Addr::unchecked("user");
-    //let validator = Addr::unchecked("validator");
+    let validator = Addr::unchecked("validator");
     let admin_auth = init_admin_auth(&mut app, &admin);
 
     let viewing_key = "viewing_key".to_string();
@@ -112,8 +112,8 @@ fn single_asset_single_adapter_int(
     )
     .unwrap();
 
-    let adapter = mock_adapter::Config {
-        //admin_auth: admin_auth.clone().into(),
+    let scrt_staking = scrt_staking::InstantiateMsg {
+        admin_auth: admin_auth.clone().into(),
         owner: manager.address.clone().to_string(),
         sscrt: token.clone().into(),
         validator_bounds: None,
@@ -806,7 +806,7 @@ fn single_asset_single_adapter_int(
     };
 }
 
-macro_rules! single_asset_single_adapter_tests {
+macro_rules! single_asset_manager_scrt_staking_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
@@ -836,8 +836,8 @@ macro_rules! single_asset_single_adapter_tests {
     }
 }
 
-single_asset_single_adapter_tests! {
-    instant_portion_rewards: (
+single_asset_manager_scrt_staking_tests! {
+    single_asset_portion_manager_0: (
         Uint128::new(100), // deposit
         Uint128::new(1 * 10u128.pow(18)), // manager allowance 100%
         Uint128::new(100), // expected manager allowance
@@ -857,7 +857,7 @@ single_asset_single_adapter_tests! {
             Uint128::new(200), // scrt_staking 90
         ),
     ),
-    bonded_portion_rewards: (
+    single_asset_portion_manager_1: (
         Uint128::new(1000), // deposit
         Uint128::new(5 * 10u128.pow(17)), // %50 manager allowance
         Uint128::new(500), // expected manager allowance
