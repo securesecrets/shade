@@ -1,3 +1,4 @@
+/*
 use shade_protocol::c_std::{
     coins,
     from_binary,
@@ -876,3 +877,4 @@ single_asset_manager_scrt_staking_tests! {
         ),
     ),
 }
+*/

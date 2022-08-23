@@ -52,16 +52,22 @@ pub enum ExecuteMsg {
     GiveMeMoney {
         amount: Uint128,
     },
-    CompleteUnbonding {
-        amount: Uint128,
-    },
+    CompleteUnbonding {},
     Adapter(adapter::SubExecuteMsg),
+}
+
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]
 pub enum QueryMsg {
     Config,
     Adapter(adapter::SubQueryMsg),
+}
+
+impl Query for QueryMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]
@@ -111,13 +117,14 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             if info.sender != config.token.address {
                 return Err(StdError::generic_err("Unrecognized Asset"));
             }
-            println!("RECEIVE MOCK ADAPTER");
 
             // If sender is not manager, consider rewards
             if from != config.owner {
-                println!("RECEIVE sender != OWNER {} {}", info.sender, config.owner);
+                println!("MOCK REWARDS {}", amount);
                 let rew = REWARDS.load(deps.storage)?;
                 REWARDS.save(deps.storage, &(rew + amount))?;
+            } else {
+                println!("DEPOSIT MOCK ADAPTER {}", amount);
             }
 
             Ok(Response::new())
@@ -130,7 +137,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             None,
             &config.token,
         )?)),
-        ExecuteMsg::CompleteUnbonding { amount } => {
+        ExecuteMsg::CompleteUnbonding {} => {
             let unbonding = UNBONDING.load(deps.storage)?;
             let claimable = CLAIMABLE.load(deps.storage)?;
 
@@ -143,7 +150,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 if asset != config.token.address {
                     return Err(StdError::generic_err("Unrecognized Asset"));
                 }
-                println!("UNBOND MOCK ADAPTER");
+                println!("UNBOND MOCK ADAPTER {}", amount);
 
                 let balance = balance_query(
                     &deps.querier,
@@ -152,16 +159,16 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     &config.token.clone(),
                 )?;
 
-                let rewards = REWARDS.load(deps.storage)?;
+                //let rewards = REWARDS.load(deps.storage)?;
 
-                let mut unbonding = UNBONDING.load(deps.storage)?;
+                let unbonding = UNBONDING.load(deps.storage)?;
                 let claimable = CLAIMABLE.load(deps.storage)?;
 
-                let available = (balance + rewards) - (unbonding + claimable);
+                let available = balance - (unbonding + claimable);
 
-                if available < amount || amount.is_zero() {
+                if available < amount {
                     return Err(StdError::generic_err(format!(
-                        "Cannot unbond {}, available is {}",
+                        "Cannot unbond {}, {} available",
                         amount, available
                     )));
                 }
@@ -182,7 +189,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                     println!("unbond non-instant");
                     UNBONDING.save(deps.storage, &(unbonding + amount))?;
                 }
-                println!("unbond amount {} bal {}", amount, balance);
+
+                println!(
+                    "unbond amount {} bal {} avail {} unb {}",
+                    amount, balance, available, unbonding
+                );
 
                 Ok(Response::new().add_messages(messages).set_data(to_binary(
                     &adapter::ExecuteAnswer::Unbond {
@@ -248,13 +259,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     viewing_key.to_string(),
                     &config.token.clone(),
                 )?;
-                let unbonding = UNBONDING.load(deps.storage)?;
 
-                println!("BALANCE MOCK ADAPTER {}", balance - unbonding);
-
-                adapter::QueryAnswer::Balance {
-                    amount: balance - unbonding,
-                }
+                adapter::QueryAnswer::Balance { amount: balance }
             }
             adapter::SubQueryMsg::Unbonding { asset } => {
                 if asset != config.token.address {
@@ -269,7 +275,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 if asset != config.token.address {
                     return Err(StdError::generic_err("Unrecognized Asset"));
                 }
-                println!("CLAIMABLE MOCK ADAPTER");
+
+                let c = CLAIMABLE.load(deps.storage)?;
+                println!("CLAIMABLE MOCK ADAPTER {}", c);
+
                 adapter::QueryAnswer::Claimable {
                     amount: CLAIMABLE.load(deps.storage)?,
                 }
@@ -286,11 +295,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                     viewing_key.to_string(),
                     &config.token.clone(),
                 )?;
-                //let rewards = REWARDS.load(deps.storage)?;
 
                 println!(
-                    "UNBONDABLE MOCK ADAPTER {}",
-                    balance - (unbonding + claimable)
+                    "UNBONDABLE MOCK ADAPTER {}, bal {}, unb {}, claim {}",
+                    balance - (unbonding + claimable),
+                    balance,
+                    unbonding,
+                    claimable,
                 );
 
                 adapter::QueryAnswer::Unbondable {
@@ -301,24 +312,21 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 if asset != config.token.address {
                     return Err(StdError::generic_err("Unrecognized Asset"));
                 }
-                println!("RESERVES MOCK ADAPTER");
-                let unbonding = UNBONDING.load(deps.storage)?;
-                let claimable = CLAIMABLE.load(deps.storage)?;
 
                 let reserves = match config.instant {
-                    true => balance_query(
-                        &deps.querier,
-                        ADDRESS.load(deps.storage)?,
-                        viewing_key.to_string(),
-                        &config.token.clone(),
-                    )?,
+                    true => {
+                        balance_query(
+                            &deps.querier,
+                            ADDRESS.load(deps.storage)?,
+                            viewing_key.to_string(),
+                            &config.token.clone(),
+                        )? - (UNBONDING.load(deps.storage)? + CLAIMABLE.load(deps.storage)?)
+                    }
                     false => REWARDS.load(deps.storage)?,
                 };
 
-                println!("RESERVES {}", reserves - (unbonding + claimable));
-                adapter::QueryAnswer::Reserves {
-                    amount: reserves - (unbonding + claimable),
-                }
+                println!("RESERVES MOCK ADAPTER {}", reserves);
+                adapter::QueryAnswer::Reserves { amount: reserves }
             }
         }),
     }
