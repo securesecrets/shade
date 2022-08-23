@@ -751,8 +751,9 @@ pub fn unbond(
     let mut messages = vec![];
 
     // Send available reserves to unbonder
-    if reserves > Uint128::zero() {
+    if !reserves.is_zero() {
         if reserves < unbond_amount {
+            //TODO: this should include 'reserves' unbonded from adapters
             messages.push(send_msg(
                 unbonder.clone(),
                 reserves,
