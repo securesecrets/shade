@@ -116,6 +116,16 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let holder = deps.api.addr_validate(&holder)?;
             to_binary(&query::holding(deps, holder)?)
         }
+        //TODO: parse string & format manually to accept all valid date formats
+        QueryMsg::Metrics { date, period } => {
+            let key = match date {
+                Some(d) => parse_utc_datetime(&d)?.timestamp() as u64,
+                None => env.block.time.seconds(),
+            };
+            to_binary(&QueryAnswer::Metrics {
+                metrics: METRICS.load_period(deps.storage, key, period)?,
+            })
+        }
 
         QueryMsg::Manager(a) => match a {
             manager::SubQueryMsg::Balance { asset, holder } => {
