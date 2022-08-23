@@ -180,12 +180,13 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
                 break;
             }
         }
-
         if unbondable > holder_balance {
             unbondable = holder_balance;
         }
 
-        return Ok(manager::QueryAnswer::Unbondable { amount: unbondable });
+        return Ok(manager::QueryAnswer::Unbondable {
+            amount: unbondable, //holder_unbonding + holder_balance,
+        });
     }
 
     Err(StdError::generic_err("Not a registered asset"))
@@ -207,15 +208,25 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
             Some(b) => b.amount,
             None => Uint128::zero(),
         };
+        let unbonding = match holding
+            .unbondings
+            .iter()
+            .find(|u| u.token == asset.contract.address)
+        {
+            Some(u) => u.amount,
+            None => Uint128::zero(),
+        };
 
-        let config = CONFIG.load(deps.storage)?;
+        //let config = CONFIG.load(deps.storage)?;
         /*
         if holder == config.treasury {
             println!("TREASURY MANAGER BAL {}", balance);
         }
         */
 
-        Ok(manager::QueryAnswer::Balance { amount: balance })
+        Ok(manager::QueryAnswer::Balance {
+            amount: balance + unbonding,
+        })
     } else {
         return Err(StdError::generic_err("Not a registered asset"));
     }

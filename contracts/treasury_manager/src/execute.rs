@@ -358,18 +358,39 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     let mut amount_total = Uint128::zero();
     let mut portion_total = Uint128::zero();
 
+    let mut metadata: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
+    let mut messages = vec![];
+
     for i in 0..allocations.len() {
-        allocations[i].balance = adapter::balance_query(
+        let claimable =
+            adapter::claimable_query(deps.querier, &asset, allocations[i].contract.clone())?;
+
+        if !claimable.is_zero() {
+            messages.push(adapter::claim_msg(&asset, allocations[i].contract.clone())?);
+        }
+
+        let unbonding =
+            adapter::unbonding_query(deps.querier, &asset, allocations[i].contract.clone())?;
+
+        let balance = adapter::balance_query(
             deps.querier,
             &full_asset.contract.address,
             allocations[i].contract.clone(),
         )?;
+
+        allocations[i].balance = balance;
+
+        metadata.insert(
+            allocations[i].contract.address.clone(),
+            (allocations[i].balance, unbonding),
+        );
+
         println!("{}", allocations[i].amount);
         match allocations[i].alloc_type {
-            AllocationType::Amount => amount_total += allocations[i].balance,
+            AllocationType::Amount => amount_total += balance,
             AllocationType::Portion => {
-                println!("PORTION {}", allocations[i].balance);
-                portion_total += allocations[i].balance;
+                println!("PORTION {}", balance);
+                portion_total += balance;
             }
         };
     }
@@ -396,7 +417,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     // Batch send_from actions
     let mut send_from_actions = vec![];
     let mut send_actions = vec![];
-    let mut messages = vec![];
 
     let key = VIEWING_KEY.load(deps.storage)?;
 
@@ -413,19 +433,19 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     println!("410 allowance {}", allowance.u128());
 
     // Available balance
-    let mut balance = balance_query(
+    let token_balance = balance_query(
         &deps.querier,
         SELF_ADDRESS.load(deps.storage)?,
         key.clone(),
         &full_asset.contract.clone(),
     )?;
-    println!("419 balance {}", balance.u128());
+    println!("419 balance {}", token_balance.u128());
 
+    let total = amount_total + portion_total + token_balance + allowance - holder_unbonding;
     println!(
-        "TOTAL at {} pt {} b {} a {} hu {}",
-        amount_total, portion_total, balance, allowance, holder_unbonding
+        "TOTAL {} at {} pt {} tb {} allow {} hunb {}",
+        total, amount_total, portion_total, token_balance, allowance, holder_unbonding
     );
-    let total = amount_total + portion_total + balance + allowance - holder_unbonding;
 
     let mut allowance_used = Uint128::zero();
     let mut balance_used = Uint128::zero();
@@ -466,15 +486,18 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
         println!("437 desired_amount {}", desired_amount);
 
+        let (adapter_balance, unbonding) = metadata[&adapter.contract.address];
+        let mut available = adapter_balance - unbonding;
+
         // Under Funded -- send balance then allowance
-        if adapter.balance < desired_amount {
-            let mut desired_input = desired_amount - adapter.balance;
+        if available < desired_amount {
+            let mut desired_input = desired_amount - available;
             if desired_input <= threshold {
                 continue;
             }
 
             // Fully covered by balance
-            if desired_input < balance {
+            if desired_input < available {
                 send_actions.push(SendAction {
                     recipient: adapter.contract.address.clone().to_string(),
                     recipient_code_hash: Some(adapter.contract.code_hash.clone()),
@@ -483,22 +506,22 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                     memo: None,
                 });
 
-                balance = balance - desired_input;
+                available = available - desired_input;
                 balance_used += desired_input;
                 continue;
             }
             // Send all balance
-            else if !balance.is_zero() {
+            else if !available.is_zero() {
                 send_actions.push(SendAction {
                     recipient: adapter.contract.address.clone().to_string(),
                     recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                    amount: balance,
+                    amount: available,
                     msg: None,
                     memo: None,
                 });
 
-                desired_input = desired_input - balance;
-                balance = Uint128::zero();
+                desired_input = desired_input - available;
+                available = Uint128::zero();
                 //                break;
             }
 
@@ -537,8 +560,8 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             }
         }
         // Over funded -- unbond
-        else if adapter.balance > desired_amount {
-            let desired_output = adapter.balance - desired_amount;
+        else if available > desired_amount {
+            let desired_output = available - desired_amount;
             if desired_output <= threshold {
                 continue;
             }
@@ -716,6 +739,8 @@ pub fn unbond(
         &full_asset.contract.clone(),
     )?;
 
+    println!("MANAGER UNBOND {} RES {}", amount, reserves);
+
     // Remove pending unbondings from reserves
     if reserves > other_unbondings {
         reserves = reserves - other_unbondings;
@@ -726,8 +751,9 @@ pub fn unbond(
     let mut messages = vec![];
 
     // Send available reserves to unbonder
-    if reserves > Uint128::zero() {
+    if !reserves.is_zero() {
         if reserves < unbond_amount {
+            //TODO: this should include 'reserves' unbonded from adapters
             messages.push(send_msg(
                 unbonder.clone(),
                 reserves,

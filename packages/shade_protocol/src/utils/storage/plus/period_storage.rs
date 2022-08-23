@@ -2,7 +2,7 @@ use crate::{
     c_std::{StdError, StdResult, Storage, Timestamp},
     cosmwasm_schema::cw_serde,
     serde::{de::DeserializeOwned, Serialize},
-    utils::cycle::*,
+    utils::cycle::utc_from_seconds,
 };
 use chrono::prelude::*;
 pub use secret_storage_plus::{Item, Json, Map, PrimaryKey, Serde};
