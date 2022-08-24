@@ -1,3 +1,4 @@
+/*
 use shade_protocol::{
     c_std::{to_binary, Addr, Coin, Decimal, Uint128, Validator},
     contract_interfaces::{
@@ -544,3 +545,4 @@ single_holder_scrt_staking_adapter_tests! {
         Uint128::new(75_000_000),
     ),
 }
+*/
