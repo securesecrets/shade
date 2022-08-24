@@ -1,8 +1,7 @@
 use crate::{
     interfaces::utils::{DeployedContracts, SupportedContracts},
-    multi::treasury::Treasury,
+    multi::{admin::init_admin_auth, treasury::Treasury},
 };
-use shade_admin_multi_test::multi::helpers::init_admin_auth;
 use shade_protocol::{
     c_std::{Addr, StdError, StdResult, Uint128},
     contract_interfaces::dao::treasury,
