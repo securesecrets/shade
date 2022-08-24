@@ -1,5 +1,5 @@
-use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdResult, Storage, Deps};
 use shade_protocol::{
+    c_std::{Addr, Api, Deps, DepsMut, Querier, StdResult, Storage},
     contract_interfaces::query_auth::{
         auth::{Key, PermitKey},
         Admin,
@@ -17,20 +17,13 @@ pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn validate_vk(
-    deps: Deps,
-    user: Addr,
-    key: String,
-) -> StdResult<QueryAnswer> {
+pub fn validate_vk(deps: Deps, user: Addr, key: String) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::ValidateViewingKey {
         is_valid: Key::verify(deps.storage, user, key)?,
     })
 }
 
-pub fn validate_permit(
-    deps: Deps,
-    permit: QueryPermit,
-) -> StdResult<QueryAnswer> {
+pub fn validate_permit(deps: Deps, permit: QueryPermit) -> StdResult<QueryAnswer> {
     let user = permit.validate(deps.api, None)?.as_addr(None)?;
 
     Ok(QueryAnswer::ValidatePermit {

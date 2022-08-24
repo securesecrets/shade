@@ -1,10 +1,9 @@
-use crate::tests::{get_permit, init_contract};
-use shade_protocol::c_std::{from_binary, Addr};
-use shade_protocol::fadroma::ensemble::MockEnv;
+use crate::tests::{get_config, get_permit, init_contract, validate_permit, validate_vk};
 use shade_protocol::{
+    c_std::{from_binary, Addr, StdResult},
     contract_interfaces::{query_auth, query_auth::ContractStatus},
+    utils::{asset::Contract, ExecuteCallback, Query},
 };
-use shade_protocol::utils::asset::Contract;
 
 #[test]
 fn set_admin() {
@@ -13,32 +12,24 @@ fn set_admin() {
     let msg = query_auth::ExecuteMsg::SetAdminAuth {
         admin: Contract {
             address: Addr::unchecked("some_addr"),
-            code_hash: "some_hash".to_string()
+            code_hash: "some_hash".to_string(),
         },
         padding: None,
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("not_admin", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("not_admin"), &[])
             .is_err()
     );
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("admin", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_ok()
     );
 
-    let query: query_auth::QueryAnswer = chain
-        .query(auth.address, &query_auth::QueryMsg::Config {})
-        .unwrap();
-
-    match query {
-        query_auth::QueryAnswer::Config { admin, .. } => {
-            assert_eq!(admin.address, Addr::unchecked("some_addr"));
-        }
-        _ => assert!(false),
+    match get_config(&chain, &auth) {
+        Ok((admin, _)) => assert_eq!(admin.address, Addr::unchecked("some_addr")),
+        Err(_) => assert!(false),
     };
 }
 
@@ -52,26 +43,18 @@ fn set_runstate() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("not_admin", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("not_admin"), &[])
             .is_err()
     );
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("admin", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_ok()
     );
 
-    let query: query_auth::QueryAnswer = chain
-        .query(auth.address, &query_auth::QueryMsg::Config {})
-        .unwrap();
-
-    match query {
-        query_auth::QueryAnswer::Config { state, .. } => {
-            assert_eq!(state, ContractStatus::DisableAll);
-        }
-        _ => assert!(false),
+    match get_config(&chain, &auth) {
+        Ok((_, state)) => assert_eq!(state, ContractStatus::DisableAll),
+        Err(_) => assert!(false),
     };
 }
 
@@ -87,8 +70,7 @@ fn runstate_block_permits() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("admin", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_ok()
     );
 
@@ -98,8 +80,7 @@ fn runstate_block_permits() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("user", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("user"), &[])
             .is_err()
     );
 
@@ -109,8 +90,7 @@ fn runstate_block_permits() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("user", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("user"), &[])
             .is_ok()
     );
 
@@ -120,29 +100,13 @@ fn runstate_block_permits() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("user", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("user"), &[])
             .is_ok()
     );
 
-    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
-        auth.address.clone(),
-        &query_auth::QueryMsg::ValidatePermit {
-            permit: get_permit(),
-        },
-    );
+    assert!(validate_permit(&chain, &auth).is_err());
 
-    assert!(res.is_err());
-
-    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
-        auth.address.clone(),
-        &query_auth::QueryMsg::ValidateViewingKey {
-            user: Addr::unchecked("user"),
-            key: "key".to_string(),
-        },
-    );
-
-    assert!(res.is_ok());
+    assert!(validate_vk(&chain, &auth, "user", "key").is_ok());
 }
 
 #[test]
@@ -157,8 +121,7 @@ fn runstate_block_vks() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("admin", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_ok()
     );
 
@@ -168,8 +131,7 @@ fn runstate_block_vks() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("user", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_ok()
     );
 
@@ -179,8 +141,7 @@ fn runstate_block_vks() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("user", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_err()
     );
 
@@ -190,29 +151,13 @@ fn runstate_block_vks() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("user", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_err()
     );
 
-    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
-        auth.address.clone(),
-        &query_auth::QueryMsg::ValidatePermit {
-            permit: get_permit(),
-        },
-    );
+    assert!(validate_permit(&chain, &auth).is_ok());
 
-    assert!(res.is_ok());
-
-    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
-        auth.address.clone(),
-        &query_auth::QueryMsg::ValidateViewingKey {
-            user: Addr::unchecked("user"),
-            key: "key".to_string(),
-        },
-    );
-
-    assert!(res.is_err());
+    assert!(validate_vk(&chain, &auth, "user", "key").is_err());
 }
 
 #[test]
@@ -227,8 +172,7 @@ fn runstate_block_all() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("admin", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_ok()
     );
 
@@ -238,8 +182,7 @@ fn runstate_block_all() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("user", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_err()
     );
 
@@ -249,8 +192,7 @@ fn runstate_block_all() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("user", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_err()
     );
 
@@ -260,29 +202,13 @@ fn runstate_block_all() {
     };
 
     assert!(
-        chain
-            .execute(&msg, MockEnv::new("user", auth.clone()))
+        &msg.test_exec(&auth, &mut chain, Addr::unchecked("admin"), &[])
             .is_err()
     );
 
-    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
-        auth.address.clone(),
-        &query_auth::QueryMsg::ValidatePermit {
-            permit: get_permit(),
-        },
-    );
+    assert!(validate_permit(&chain, &auth).is_err());
 
-    assert!(res.is_err());
-
-    let res: Result<query_auth::QueryAnswer, shade_protocol::c_std::StdError> = chain.query(
-        auth.address.clone(),
-        &query_auth::QueryMsg::ValidateViewingKey {
-            user: Addr::unchecked("user"),
-            key: "key".to_string(),
-        },
-    );
-
-    assert!(res.is_err());
+    assert!(validate_vk(&chain, &auth, "user", "key").is_err());
 }
 
 #[test]
@@ -290,15 +216,12 @@ fn set_vk() {
     let (mut chain, auth) = init_contract().unwrap();
 
     assert!(
-        chain
-            .execute(
-                &query_auth::ExecuteMsg::SetViewingKey {
-                    key: "password".to_string(),
-                    padding: None
-                },
-                MockEnv::new("user", auth)
-            )
-            .is_ok()
+        query_auth::ExecuteMsg::SetViewingKey {
+            key: "password".to_string(),
+            padding: None
+        }
+        .test_exec(&auth, &mut chain, Addr::unchecked("user"), &[])
+        .is_ok()
     );
 }
 
@@ -306,18 +229,14 @@ fn set_vk() {
 fn create_vk() {
     let (mut chain, auth) = init_contract().unwrap();
 
-    let data = chain
-        .execute(
-            &query_auth::ExecuteMsg::CreateViewingKey {
-                entropy: "randomness".to_string(),
-                padding: None,
-            },
-            MockEnv::new("user", auth.clone()),
-        )
-        .unwrap()
-        .response
-        .data
-        .unwrap();
+    let data = query_auth::ExecuteMsg::CreateViewingKey {
+        entropy: "blah".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("user"), &[])
+    .unwrap()
+    .data
+    .unwrap();
 
     let msg: query_auth::HandleAnswer = from_binary(&data).unwrap();
 
@@ -329,22 +248,7 @@ fn create_vk() {
         }
     };
 
-    let query: query_auth::QueryAnswer = chain
-        .query(
-            auth.address.clone(),
-            &query_auth::QueryMsg::ValidateViewingKey {
-                user: Addr::unchecked("user"),
-                key,
-            },
-        )
-        .unwrap();
-
-    match query {
-        query_auth::QueryAnswer::ValidateViewingKey { is_valid } => {
-            assert!(is_valid);
-        }
-        _ => assert!(false),
-    };
+    assert!(validate_vk(&chain, &auth, "user", &key).unwrap());
 }
 
 #[test]
@@ -357,29 +261,14 @@ fn block_permit_key() {
     };
 
     assert!(
-        chain
-            .execute(
-                &msg,
-                MockEnv::new(
-                    "secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq",
-                    auth.clone()
-                )
-            )
-            .is_ok()
+        msg.test_exec(
+            &auth,
+            &mut chain,
+            Addr::unchecked("secret19rla95xfp22je7hyxv7h0nhm6cwtwahu69zraq"),
+            &[]
+        )
+        .is_ok()
     );
 
-    let permit = get_permit();
-
-    let query: query_auth::QueryAnswer = chain
-        .query(auth.address, &query_auth::QueryMsg::ValidatePermit {
-            permit,
-        })
-        .unwrap();
-
-    match query {
-        query_auth::QueryAnswer::ValidatePermit { user: _, is_revoked } => {
-            assert!(is_revoked);
-        }
-        _ => assert!(false),
-    };
+    assert!(validate_permit(&chain, &auth).unwrap().1);
 }

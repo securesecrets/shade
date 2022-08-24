@@ -1,6 +1,17 @@
 #[cfg(feature = "admin")]
 pub mod admin {
-    pub use shade_admin_multi_test::multi::AdminAuth;
+    pub use admin;
+    use shade_protocol::{admin::InstantiateMsg, multi_test::App, utils::InstantiateCallback};
+    multi_derive::implement_multi!(Admin, admin);
+
+    // Multitest helper
+    pub fn init_admin_auth(app: &mut App, superadmin: &Addr) -> ContractInfo {
+        InstantiateMsg {
+            super_admin: Some(superadmin.clone().to_string()),
+        }
+        .test_init(Admin::default(), app, superadmin.clone(), "admin_auth", &[])
+        .unwrap()
+    }
 }
 
 #[cfg(feature = "snip20")]
@@ -82,4 +93,11 @@ pub mod treasury {
 pub mod scrt_staking {
     use scrt_staking;
     multi_derive::implement_multi!(ScrtStaking, scrt_staking);
+}
+
+#[cfg(feature = "peg_stability")]
+pub mod peg_stability {
+    use peg_stability;
+
+    multi_derive::implement_multi!(PegStability, peg_stability);
 }

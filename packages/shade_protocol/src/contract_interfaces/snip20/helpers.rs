@@ -1,11 +1,13 @@
+use super::{
+    manager::{Allowance, AllowanceResponse},
+    ExecuteMsg, QueryAnswer, QueryMsg,
+};
+use crate::{
+    c_std::{Addr, Binary, CosmosMsg, QuerierWrapper, StdError, StdResult, Uint128},
+    utils::{asset::Contract, ExecuteCallback, Query},
+};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, SubMsg};
-use cosmwasm_schema::{cw_serde};
-use crate::c_std::{StdError, StdResult, Addr, Uint128, Binary, CosmosMsg, QuerierWrapper};
-use crate::utils::{ExecuteCallback, Query};
-use super::manager::{Allowance, AllowanceResponse};
-use super::{QueryAnswer, QueryMsg, ExecuteMsg};
-use crate::utils::asset::Contract;
-use crate::snip20::batch;
 
 #[cw_serde]
 pub struct Snip20Asset {
@@ -20,6 +22,23 @@ pub fn fetch_snip20(contract: &Contract, querier: &QuerierWrapper) -> StdResult<
         token_info: token_info(querier, contract)?,
         token_config: Some(token_config(querier, contract)?),
     })
+}
+
+pub fn balance_query(
+    contract: &Contract,
+    self_addr: String,
+    viewing_key: String,
+    querier: &QuerierWrapper,
+) -> StdResult<Uint128> {
+    let res = QueryMsg::Balance {
+        address: self_addr,
+        key: viewing_key,
+    }
+    .query(querier, contract)?;
+    match res {
+        QueryAnswer::Balance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("Unexpected query response")),
+    }
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Send
@@ -38,11 +57,9 @@ pub fn send_msg(
         amount,
         msg,
         memo,
-        padding
-    }.to_cosmos_msg(
-        contract,
-        vec![]
-    )?)
+        padding,
+    }
+    .to_cosmos_msg(contract, vec![])?)
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Redeem
@@ -50,26 +67,27 @@ pub fn redeem_msg(
     amount: Uint128,
     denom: Option<String>,
     padding: Option<String>,
-    contract: &Contract
+    contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::Redeem {
         amount,
         denom,
         padding,
-    }.to_cosmos_msg(contract, vec![])
+    }
+    .to_cosmos_msg(contract, vec![])
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Deposit
 pub fn deposit_msg(
     amount: Uint128,
     padding: Option<String>,
-    contract: &Contract
+    contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::Deposit { padding }.to_cosmos_msg(
         contract,
         vec![Coin {
             denom: "uscrt".to_string(),
-            amount
+            amount,
         }],
     )
 }
@@ -80,7 +98,7 @@ pub fn mint_msg(
     amount: Uint128,
     memo: Option<String>,
     padding: Option<String>,
-    contract: &Contract
+    contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::Mint {
         recipient: recipient.to_string(),
@@ -88,7 +106,7 @@ pub fn mint_msg(
         memo,
         padding,
     }
-        .to_cosmos_msg(contract, vec![])
+    .to_cosmos_msg(contract, vec![])
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Burn
@@ -96,27 +114,27 @@ pub fn burn_msg(
     amount: Uint128,
     memo: Option<String>,
     padding: Option<String>,
-    contract: &Contract
+    contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::Burn {
         amount,
         memo,
         padding,
     }
-        .to_cosmos_msg(contract, vec![])
+    .to_cosmos_msg(contract, vec![])
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute RegisterReceive
 pub fn register_receive(
     register_hash: String,
     padding: Option<String>,
-    contract: &Contract
+    contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::RegisterReceive {
         code_hash: register_hash,
         padding,
     }
-        .to_cosmos_msg(contract, vec![])
+    .to_cosmos_msg(contract, vec![])
 }
 
 pub fn set_viewing_key_msg(
@@ -124,8 +142,11 @@ pub fn set_viewing_key_msg(
     padding: Option<String>,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    ExecuteMsg::SetViewingKey { key: viewing_key, padding }
-        .to_cosmos_msg(contract, vec![])
+    ExecuteMsg::SetViewingKey {
+        key: viewing_key,
+        padding,
+    }
+    .to_cosmos_msg(contract, vec![])
 }
 
 pub fn batch_send_msg(
@@ -133,11 +154,7 @@ pub fn batch_send_msg(
     padding: Option<String>,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    ExecuteMsg::BatchSend {
-        actions,
-        padding,
-    }
-    .to_cosmos_msg(contract, vec![])
+    ExecuteMsg::BatchSend { actions, padding }.to_cosmos_msg(contract, vec![])
 }
 
 pub fn batch_send_from_msg(
@@ -145,11 +162,7 @@ pub fn batch_send_from_msg(
     padding: Option<String>,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    ExecuteMsg::BatchSendFrom {
-        actions,
-        padding,
-    }
-    .to_cosmos_msg(contract, vec![])
+    ExecuteMsg::BatchSendFrom { actions, padding }.to_cosmos_msg(contract, vec![])
 }
 
 /// TokenInfo response
@@ -162,21 +175,22 @@ pub struct TokenInfo {
     pub total_supply: Option<Uint128>,
 }
 /// Returns a StdResult<TokenInfo> from performing TokenInfo query
-pub fn token_info(
-    querier: &QuerierWrapper,
-    contract: &Contract,
-) -> StdResult<TokenInfo> {
-    let answer: QueryAnswer =
-        QueryMsg::TokenInfo {}.query(querier, contract)?;
+pub fn token_info(querier: &QuerierWrapper, contract: &Contract) -> StdResult<TokenInfo> {
+    let answer: QueryAnswer = QueryMsg::TokenInfo {}.query(querier, contract)?;
 
     match answer {
-        QueryAnswer::TokenInfo { name, symbol, decimals, total_supply } => Ok(TokenInfo {
+        QueryAnswer::TokenInfo {
             name,
             symbol,
             decimals,
-            total_supply
+            total_supply,
+        } => Ok(TokenInfo {
+            name,
+            symbol,
+            decimals,
+            total_supply,
         }),
-        _ => Err(StdError::generic_err("Wrong answer")) //TODO: better error
+        _ => Err(StdError::generic_err("Wrong answer")), //TODO: better error
     }
 }
 
@@ -187,12 +201,15 @@ pub fn balance_query(
     key: String,
     contract: &Contract,
 ) -> StdResult<Uint128> {
-    let answer: QueryAnswer =
-        QueryMsg::Balance { address: address.to_string(), key }.query(querier, contract)?;
+    let answer: QueryAnswer = QueryMsg::Balance {
+        address: address.to_string(),
+        key,
+    }
+    .query(querier, contract)?;
 
     match answer {
-        QueryAnswer::Balance { amount, ..} => Ok(amount),
-        _ => Err(StdError::generic_err("Invalid Balance Response")) //TODO: better error
+        QueryAnswer::Balance { amount, .. } => Ok(amount),
+        _ => Err(StdError::generic_err("Invalid Balance Response")), //TODO: better error
     }
 }
 
@@ -206,26 +223,29 @@ pub struct TokenConfig {
     pub burn_enabled: bool,
     // Optionals only relevant to some snip20a
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub transfer_enabled: Option<bool>
+    pub transfer_enabled: Option<bool>,
 }
 /// Returns a StdResult<TokenConfig> from performing TokenConfig query
-pub fn token_config(
-    querier: &QuerierWrapper,
-    contract: &Contract,
-) -> StdResult<TokenConfig> {
-    let answer: QueryAnswer =
-        QueryMsg::TokenConfig {}.query(querier, contract)?;
+pub fn token_config(querier: &QuerierWrapper, contract: &Contract) -> StdResult<TokenConfig> {
+    let answer: QueryAnswer = QueryMsg::TokenConfig {}.query(querier, contract)?;
 
     match answer {
-        QueryAnswer::TokenConfig { public_total_supply, deposit_enabled, redeem_enabled, mint_enabled, burn_enabled, .. } => Ok(TokenConfig {
+        QueryAnswer::TokenConfig {
             public_total_supply,
             deposit_enabled,
             redeem_enabled,
             mint_enabled,
             burn_enabled,
-            transfer_enabled: None
+            ..
+        } => Ok(TokenConfig {
+            public_total_supply,
+            deposit_enabled,
+            redeem_enabled,
+            mint_enabled,
+            burn_enabled,
+            transfer_enabled: None,
         }),
-        _ => Err(StdError::generic_err("Wrong answer")) //TODO: better error
+        _ => Err(StdError::generic_err("Wrong answer")), //TODO: better error
     }
 }
 
@@ -329,4 +349,3 @@ pub fn allowance_query(
         _ => Err(StdError::generic_err("Invalid Allowance query response")),
     }
 }
-

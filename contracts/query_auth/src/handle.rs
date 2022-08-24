@@ -1,19 +1,19 @@
-use shade_protocol::c_std::{to_binary, Api, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, Deps, MessageInfo};
-use shade_protocol::query_authentication::viewing_keys::ViewingKey;
+use shade_protocol::admin::helpers::{validate_admin, AdminPermissions};
 use shade_protocol::{
+    c_std::{
+        to_binary, Api, Deps, DepsMut, Env, MessageInfo, Querier, Response, StdError, StdResult,
+        Storage,
+    },
     contract_interfaces::query_auth::{
         auth::{HashedKey, Key, PermitKey},
-        Admin,
-        ContractStatus,
-        HandleAnswer,
-        RngSeed,
+        Admin, ContractStatus, HandleAnswer, RngSeed,
     },
+    query_authentication::viewing_keys::ViewingKey,
     utils::{
         generic_response::ResponseStatus::Success,
         storage::plus::{ItemStorage, MapStorage},
     },
 };
-use shade_protocol::admin::validate_admin;
 
 use shade_protocol::utils::asset::Contract;
 
@@ -22,9 +22,9 @@ fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<()> {
 
     validate_admin(
         &deps.querier,
-        env.contract.address.into(),
-        info.sender.clone().into(),
-        &contract
+        AdminPermissions::QueryAuthAdmin,
+        info.sender.clone(),
+        &contract,
     )
 }
 
@@ -87,7 +87,9 @@ pub fn try_block_permit_key(
     key: String,
 ) -> StdResult<Response> {
     PermitKey::revoke(deps.storage, key, info.sender)?;
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::BlockPermitKey {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::BlockPermitKey {
             status: Success,
-        })?))
+        })?),
+    )
 }

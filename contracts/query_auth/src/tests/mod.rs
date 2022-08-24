@@ -1,59 +1,70 @@
 pub mod handle;
 pub mod query;
 
-use contract_harness::harness::{query_auth::QueryAuth, admin::Admin};
-use shade_protocol::c_std::{
-    Binary,
-    Addr,
-    StdResult,
+use shade_multi_test::multi::{admin::AdminAuth, query_auth::QueryAuth};
+use shade_protocol::{
+    admin::AdminPermissions,
+    c_std::{Addr, Binary, ContractInfo, StdError, StdResult},
+    contract_interfaces::query_auth::{self, PermitData, QueryPermit},
+    multi_test::{App, Executor},
+    query_auth::{ContractStatus, ExecuteMsg},
+    query_authentication::transaction::{PermitSignature, PubKey},
+    shade_admin::{
+        self,
+        admin::RegistryAction,
+        ExecuteCallback as AdminExecuteCallback,
+        InstantiateCallback as AdminInstantiate,
+        MultiTestable as AdminTestable,
+    },
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
-use shade_protocol::fadroma::ensemble::{ContractEnsemble, MockEnv};
-use shade_protocol::fadroma::core::ContractLink;
-use shade_protocol::query_authentication::transaction::{PermitSignature, PubKey};
-use shade_protocol::contract_interfaces::{
-    query_auth::{self, PermitData, QueryPermit},
-};
-use shade_protocol::utils::asset::Contract;
 
-pub fn init_contract() -> StdResult<(ContractEnsemble, ContractLink<Addr>)> {
-    let mut chain = ContractEnsemble::new(20);
+pub fn init_contract() -> StdResult<(App, ContractInfo)> {
+    let mut chain = App::default();
 
-    let admin = chain.register(Box::new(Admin));
-    let admin = chain.instantiate(
-        admin.id,
-        &shade_admin::admin::InstantiateMsg{},
-        MockEnv::new("admin", ContractLink {
-            address: "admin_contract".into(),
-            code_hash: admin.code_hash,
-        }),
-    )?.instance;
+    let admin = shade_admin::admin::InstantiateMsg {
+        super_admin: Some("admin".into()),
+    }
+    .test_init(
+        AdminAuth::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "admin_auth",
+        &[],
+    )
+    .unwrap();
 
-    let auth = chain.register(Box::new(QueryAuth));
-    let auth = chain
-        .instantiate(
-            auth.id,
-            &query_auth::InstantiateMsg {
-                admin_auth: Contract {
-                    address: admin.address.clone(),
-                    code_hash: admin.code_hash.clone()
-                },
-                prng_seed: Binary::from("random".as_bytes()),
+    let auth = query_auth::InstantiateMsg {
+        admin_auth: Contract {
+            address: admin.address.clone(),
+            code_hash: admin.code_hash.clone(),
+        },
+        prng_seed: Binary::from("random".as_bytes()),
+    }
+    .test_init(
+        QueryAuth::default(),
+        &mut chain,
+        Addr::unchecked("admin"),
+        "query_auth",
+        &[],
+    )
+    .unwrap();
+
+    shade_admin::admin::ExecuteMsg::UpdateRegistryBulk {
+        actions: vec![
+            RegistryAction::RegisterAdmin {
+                user: "admin".to_string(),
             },
-            MockEnv::new("admin", ContractLink {
-                address: "auth".into(),
-                code_hash: auth.code_hash,
-            }),
-        )?
-        .instance;
-
-    chain.execute(&shade_admin::admin::ExecuteMsg::AddContract {
-        contract_address: auth.address.to_string()
-    }, MockEnv::new("admin", admin.clone()))?;
-
-    chain.execute(&shade_admin::admin::ExecuteMsg::AddAuthorization {
-        contract_address: auth.address.to_string(),
-        admin_address: "admin".to_string()
-    }, MockEnv::new("admin", admin.clone()))?;
+            RegistryAction::GrantAccess {
+                permissions: vec![
+                    AdminPermissions::QueryAuthAdmin.into_string(),
+                ],
+                user: "admin".to_string(),
+            }
+        ],
+    }
+    .test_exec(&admin, &mut chain, Addr::unchecked("admin"), &[])
+    .unwrap();
 
     Ok((chain, auth))
 }
@@ -78,5 +89,40 @@ pub fn get_permit() -> QueryPermit {
         chain_id: Some(String::from("chain")),
         sequence: None,
         memo: None
+    }
+}
+
+pub fn get_config(chain: &App, auth: &ContractInfo) -> StdResult<(Contract, ContractStatus)> {
+    let query: query_auth::QueryAnswer =
+        query_auth::QueryMsg::Config {}.test_query(&auth, &chain)?;
+
+    match query {
+        query_auth::QueryAnswer::Config { admin, state } => Ok((admin, state)),
+        _ => Err(StdError::generic_err("Config not found")),
+    }
+}
+
+pub fn validate_vk(chain: &App, auth: &ContractInfo, user: &str, key: &str) -> StdResult<bool> {
+    let query: query_auth::QueryAnswer = query_auth::QueryMsg::ValidateViewingKey {
+        user: Addr::unchecked(user),
+        key: key.to_string(),
+    }
+    .test_query(&auth, &chain)?;
+
+    match query {
+        query_auth::QueryAnswer::ValidateViewingKey { is_valid } => Ok(is_valid),
+        _ => Err(StdError::generic_err("VK not found")),
+    }
+}
+
+pub fn validate_permit(chain: &App, auth: &ContractInfo) -> StdResult<(Addr, bool)> {
+    let query: query_auth::QueryAnswer = query_auth::QueryMsg::ValidatePermit {
+        permit: get_permit(),
+    }
+    .test_query(&auth, &chain)?;
+
+    match query {
+        query_auth::QueryAnswer::ValidatePermit { user, is_revoked } => Ok((user, is_revoked)),
+        _ => Err(StdError::generic_err("VK not found")),
     }
 }

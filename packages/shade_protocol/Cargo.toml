@@ -73,7 +73,9 @@ query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
-shade_admin      = ["dep:shade-admin"]
+admin            = ["interface"]
+shade_admin      = ["dep:shade-admin", "admin"]
+peg_stability    = ["sky-utils", "adapter"]
 
 stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]
@@ -83,7 +85,8 @@ staking = ["cosmwasm-std/staking"]
 governance-impl = ["implementation", "governance"]
 snip20-impl     = ["snip20", "query_auth_impl"]
 query_auth_impl = ["implementation", "query_auth", "dep:base64"]
-sky-utils        = ["implementation", "sky"]
+sky-utils       = ["implementation", "sky"]
+admin_impl      = ["implementation", "admin"]
 
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
@@ -100,9 +103,9 @@ serde = { version = "1.0.103", default-features = false, features = ["derive", "
 thiserror = "1.0"
 
 shade-admin = { git = "https://github.com/securesecrets/shadeadmin", optional = true }
+shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 # Testing
-secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true, features = ["staking"] }
 anyhow = { version = "1", optional = true }
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"], optional = true }
 
@@ -117,3 +120,6 @@ subtle = { version = "2.2.3", default-features = false }
 sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
+
+[target.'cfg(not(target_arch="wasm32"))'.dependencies]
+secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }

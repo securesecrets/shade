@@ -1,13 +1,13 @@
 use crate::{
+    c_std::{Addr, Deps, DepsMut, StdError, StdResult, Uint128},
     contract_interfaces::{dex::dex, oracles::band},
     utils::{
-        Query,
         asset::Contract,
         price::{normalize_price, translate_price},
+        Query,
     },
 };
-use crate::c_std::{Addr, StdError, StdResult, Deps, DepsMut, Uint128};
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Binary;
 
 #[cw_serde]
@@ -103,7 +103,7 @@ pub struct PairInfoResponse {
     pub pair_info: PairInfo,
 }
 
-pub fn is_pair(
+/*pub fn is_pair(
     deps: DepsMut,
     pair: Contract,
 ) -> StdResult<bool> {
@@ -116,7 +116,7 @@ pub fn is_pair(
             Err(_) => false,
         },
     )
-}
+}*/
 
 pub fn price(
     deps: &Deps,
@@ -137,11 +137,7 @@ pub fn price(
     ))
 }
 
-pub fn amount_per_scrt(
-    deps: &Deps,
-    pair: dex::TradingPair,
-    sscrt: Contract,
-) -> StdResult<Uint128> {
+pub fn amount_per_scrt(deps: &Deps, pair: dex::TradingPair, sscrt: Contract) -> StdResult<Uint128> {
     let response: SimulationResponse = PairQuery::SwapSimulation {
         offer: TokenTypeAmount {
             amount: Uint128::new(1_000_000), // 1 sSCRT (6 decimals)
@@ -151,22 +147,13 @@ pub fn amount_per_scrt(
             },
         },
     }
-    .query(
-        &deps.querier,
-        &pair.contract,
-    )?;
+    .query(&deps.querier, &pair.contract)?;
 
     Ok(response.return_amount)
 }
 
-pub fn pool_cp(
-    deps: &Deps,
-    pair: dex::TradingPair,
-) -> StdResult<Uint128> {
-    let pair_info: PairInfoResponse = PairQuery::PairInfo.query(
-        &deps.querier,
-        &pair.contract
-    )?;
+pub fn pool_cp(deps: &Deps, pair: dex::TradingPair) -> StdResult<Uint128> {
+    let pair_info: PairInfoResponse = PairQuery::PairInfo.query(&deps.querier, &pair.contract)?;
 
     // Constant Product
     Ok(Uint128::new(
