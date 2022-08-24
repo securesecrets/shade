@@ -202,6 +202,56 @@ pub fn system_balance(
     ret_struct
 }
 
+/*pub fn add_or_sub_adapter_tokens(
+    chain: &mut App,
+    sender: &str,
+    is_add: bool,
+    adapter_ids: Vec<usize>,
+    amount_to_add: Uint128,
+    num_managers: usize,
+) -> StdResult<()> {
+    for i in adapter_ids {
+        if is_add {
+            snip20::send(
+                &mut app,
+                sender,
+                &contracts,
+                "SSCRT".to_string(),
+                contracts
+                    .get(&SupportedContracts::MockAdapter(i))
+                    .unwrap()
+                    .address
+                    .to_string(),
+                amount_to_add,
+                None,
+            );
+        } else {
+        }
+    }
+    // Needs 2 full cycles to reballance fully
+    for i in 0..num_managers {
+        treasury_manager::update_exec(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(i),
+        )?;
+    }
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string())?;
+    for i in 0..num_managers {
+        treasury_manager::update_exec(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(i),
+        )?;
+    }
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string())?;
+    Ok(())
+}*/
+
 pub fn claimable_query(
     chain: &App,
     contracts: &DeployedContracts,

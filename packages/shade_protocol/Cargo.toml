@@ -13,7 +13,7 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["utils"]
+default = ["utils", "shade_oracles"]
 
 # Utils
 utils = []
@@ -21,8 +21,8 @@ dao-utils = ["snip20"]
 errors = []
 flexible_msg = []
 math = []
-storage = []
-storage_plus = ["storage", "dep:secret-storage-plus", "dao-utils"]
+storage = ["dao-utils"]
+storage_plus = ["storage", "dep:secret-storage-plus"]
 query_auth_lib = ["dep:query-authentication"]
 multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
 ensemble = ["dep:fadroma"]
@@ -71,6 +71,7 @@ query_auth       = ["interface", "query_auth_lib", "dep:remain"]
 snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
+shade_oracles    = ["dep:shade-oracles"]
 admin            = ["interface"]
 shade_admin      = ["dep:shade-admin", "admin"]
 peg_stability    = ["sky-utils", "adapter"]
@@ -101,7 +102,6 @@ serde = { version = "1.0.103", default-features = false, features = ["derive", "
 thiserror = "1.0"
 
 shade-admin = { git = "https://github.com/securesecrets/shadeadmin", optional = true }
-shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin" }
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", branch = "bincode2", optional = true }
 # Testing
@@ -123,6 +123,7 @@ rand_core = { version = "0.5.1", default-features = false }
 # for EnumIter
 strum = "0.24"
 strum_macros = "0.24"
-
+const_format = "0.2.26"
+#strum = { version = "0.24", features = ["derive"] }
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }

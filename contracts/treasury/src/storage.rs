@@ -23,11 +23,10 @@ pub const ALLOWANCES: Map<Addr, Vec<AllowanceMeta>> = Map::new("allowances");
 
 pub const RUN_LEVEL: Item<RunLevel> = Item::new("runlevel");
 
-/*
 pub fn metric_key(datetime: DateTime<Utc>) -> String {
     datetime.format("%Y-%m-%d").to_string()
 }
-*/
 
+// { <YY/MM/DD>: <metric> }
 pub const METRICS: PeriodStorage<Metric> =
     PeriodStorage::new("metrics-all", "metrics-recent", "metrics-timed");

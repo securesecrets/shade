@@ -131,10 +131,6 @@ where
         Ok(item)
     }
 
-    pub fn clear(&self, store: &mut dyn Storage) -> StdResult<()> {
-        self.id_storage.save(store, &IterKey::new(N::zero()))
-    }
-
     pub fn size(&'a self, store: &dyn Storage) -> StdResult<N> {
         Ok(match self.id_storage.may_load(store)? {
             None => N::zero(),

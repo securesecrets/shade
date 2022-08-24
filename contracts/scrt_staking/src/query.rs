@@ -70,8 +70,6 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
         )));
     }
 
-    println!("DEL {}", delegations(deps)?.len());
-
     let delegated = Uint128::new(
         delegations(deps)?
             .into_iter()
@@ -82,17 +80,6 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
 
     let rewards = rewards(deps)?;
-
-    println!(
-        "scrt staking bal {} rew {} del {}",
-        scrt_balance, rewards, delegated
-    );
-
-    let unbonding = UNBONDING.load(deps.storage)?;
-    let mut balance = delegated;
-    if scrt_balance + rewards > unbonding {
-        balance += (scrt_balance + rewards) - unbonding;
-    }
 
     Ok(adapter::QueryAnswer::Balance {
         amount: delegated + rewards + scrt_balance,
@@ -137,10 +124,17 @@ pub fn unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
 
     let rewards = rewards(deps)?;
     let mut unbonding = UNBONDING.load(deps.storage)?;
+    /*
+    println!(
+        "SCRT UNBONDING bal {} rew {} unb {}",
+        scrt_balance, rewards, unbonding
+    );
+    */
 
     if unbonding >= (scrt_balance + rewards) {
         unbonding -= scrt_balance + rewards;
     } else {
+        println!("unb {} bal {} rew {}", unbonding, scrt_balance, rewards);
         unbonding = Uint128::zero();
     }
     Ok(adapter::QueryAnswer::Unbonding { amount: unbonding })
@@ -167,6 +161,7 @@ pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
             .map(|d| d.amount.amount.u128())
             .sum::<u128>(),
     );
+    println!("SCRT DELEGATED {}", delegated);
 
     let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
     let rewards = rewards(deps)?;
@@ -178,6 +173,8 @@ pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     if unbonding < scrt_balance + rewards {
         unbondable += scrt_balance + rewards - unbonding;
     }
+
+    println!("SCRT UNBONDABLE {}, UNBONDING {}", unbondable, unbonding);
 
     /*TODO: Query current unbondings
      * u >= 7 = 0

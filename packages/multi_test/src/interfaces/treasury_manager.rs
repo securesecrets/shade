@@ -11,15 +11,7 @@ use shade_protocol::{
     c_std::{Addr, StdError, StdResult, Uint128},
     contract_interfaces::dao::{manager, treasury::AllowanceType, treasury_manager},
     multi_test::App,
-    utils::{
-        self,
-        asset::Contract,
-        storage::plus::period_storage::Period,
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
-    },
+    utils::{self, asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts, id: usize) {

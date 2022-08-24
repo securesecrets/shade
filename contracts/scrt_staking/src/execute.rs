@@ -54,7 +54,6 @@ pub fn receive(
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
     //panic!("scrt staking Received {}", amount);
-    println!("SCRT STAKING RECVD {}", amount);
 
     let config = CONFIG.load(deps.storage)?;
 
@@ -139,6 +138,11 @@ pub fn update(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdRes
 
     if stake_amount > Uint128::zero() {
         let validator = choose_validator(deps, env.block.time.seconds())?;
+        println!(
+            "delegating {} to {}",
+            stake_amount.clone(),
+            validator.address.clone()
+        );
         messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
             validator: validator.address.clone(),
             amount: Coin {
@@ -167,6 +171,7 @@ pub fn unbond(
      * and this contract will take all scrt->sscrt and send
      */
 
+    //let asset = deps.api.addr_validate(asset.as_str())?;
     let config = CONFIG.load(deps.storage)?;
 
     if validate_admin(
@@ -223,8 +228,9 @@ pub fn unbond(
 
     // Send full unbonding
     if total_unbonding <= reserves {
+        println!("UNBOND SENDING ALL UNBONDING");
         messages.append(&mut wrap_and_send(
-            total_unbonding,
+            unbonding,
             config.owner,
             config.sscrt,
             None,
@@ -233,6 +239,7 @@ pub fn unbond(
     }
     // Send all reserves
     else if !reserves.is_zero() {
+        println!("UNBOND SENDING ALL RESERVES");
         messages.append(&mut wrap_and_send(
             reserves,
             config.owner,
@@ -242,6 +249,7 @@ pub fn unbond(
         total_unbonding -= reserves;
     }
 
+    println!("save unbonding {}", total_unbonding);
     UNBONDING.save(deps.storage, &total_unbonding)?;
 
     while !total_unbonding.is_zero() {
@@ -267,21 +275,21 @@ pub fn unbond(
                 }
 
                 // This delegation isn't enough to fully unbond
-                if delegation.amount.amount.clone() < total_unbonding {
+                if delegation.amount.amount.clone() < unbonding {
                     messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
                         validator: delegation.validator.clone(),
                         amount: delegation.amount.clone(),
                     }));
-                    total_unbonding = total_unbonding - delegation.amount.amount.clone();
+                    unbonding = unbonding - delegation.amount.amount.clone();
                 } else {
                     messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
                         validator: delegation.validator.clone(),
                         amount: Coin {
                             denom: delegation.amount.denom.clone(),
-                            amount: total_unbonding,
+                            amount: unbonding,
                         },
                     }));
-                    total_unbonding = Uint128::zero();
+                    unbonding = Uint128::zero();
                 }
 
                 undelegated.push(delegation.validator.clone());
@@ -302,6 +310,7 @@ pub fn withdraw_rewards(deps: Deps) -> StdResult<Vec<CosmosMsg>> {
     let address = SELF_ADDRESS.load(deps.storage)?;
 
     for delegation in deps.querier.query_all_delegations(address.clone())? {
+        println!("withdrawing rewards");
         messages.push(CosmosMsg::Distribution(
             DistributionMsg::WithdrawDelegatorReward {
                 validator: delegation.validator,
@@ -376,6 +385,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResu
     }
 
     if !claim_amount.is_zero() {
+        println!("CLAIM AMOUNT {}", claim_amount);
         messages.append(&mut wrap_and_send(
             claim_amount,
             config.owner,
@@ -385,6 +395,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResu
 
         //assert!(false, "u - claim_amount: {} - {}", unbond_amount, claim_amount);
         let u = UNBONDING.load(deps.storage)?;
+        println!("reduce unbonding {}", claim_amount);
         UNBONDING.save(deps.storage, &(u - claim_amount))?;
     }
 

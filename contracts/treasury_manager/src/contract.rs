@@ -1,4 +1,3 @@
-use crate::{execute, query, storage::*};
 use shade_protocol::{
     c_std::{
         entry_point,
@@ -16,18 +15,11 @@ use shade_protocol::{
     },
     dao::{
         manager,
-        treasury_manager::{
-            Config,
-            ExecuteMsg,
-            Holding,
-            InstantiateMsg,
-            QueryAnswer,
-            QueryMsg,
-            Status,
-        },
+        treasury_manager::{Config, ExecuteMsg, Holding, InstantiateMsg, QueryMsg, Status},
     },
-    utils::cycle::parse_utc_datetime,
 };
+
+use crate::{execute, query, storage::*};
 
 #[entry_point]
 pub fn instantiate(
@@ -123,16 +115,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Holding { holder } => {
             let holder = deps.api.addr_validate(&holder)?;
             to_binary(&query::holding(deps, holder)?)
-        }
-        //TODO: parse string & format manually to accept all valid date formats
-        QueryMsg::Metrics { date, period } => {
-            let key = match date {
-                Some(d) => parse_utc_datetime(&d)?.timestamp() as u64,
-                None => env.block.time.seconds(),
-            };
-            to_binary(&QueryAnswer::Metrics {
-                metrics: METRICS.load_period(deps.storage, key, period)?,
-            })
         }
 
         QueryMsg::Manager(a) => match a {

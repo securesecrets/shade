@@ -303,18 +303,28 @@ pub fn dao_int_gains_losses(
         }
     }
     // Needs 2 full cycles to reballance fully
-    for _ in 0..2 {
-        for tm in 0..num_managers {
-            treasury_manager::update_exec(
-                &mut app,
-                "admin",
-                &contracts,
-                "SSCRT".to_string(),
-                SupportedContracts::TreasuryManager(tm),
-            );
-        }
-        treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+    for tm in 0..num_managers {
+        treasury_manager::update_exec(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(tm),
+        );
     }
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    //assert_eq!(bals, expected_in_between_updates, "AFTER FIRST UPDATE");
+    for tm in 0..num_managers {
+        treasury_manager::update_exec(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(tm),
+        );
+    }
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
     assert_eq!(bals, expected_after_updates, "AFTER BOTH UPDATES");
 }

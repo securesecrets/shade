@@ -154,6 +154,18 @@ fn basic_scrt_staking_integration(
         },
     }))
     .unwrap();
+    /*
+    let block = app.block_info();
+    app.init_modules(|router, api, storage| {
+        router.staking.add_rewards(
+            api,
+            storage,
+            router,
+            &block,
+            Coin { amount: rewards, denom: "uscrt".into() },
+        ).unwrap();
+    });
+    */
 
     // Rewards
     let cur_rewards: Uint128 = scrt_staking::QueryMsg::Rewards {}
@@ -398,9 +410,9 @@ basic_scrt_staking_tests! {
         Uint128::new(50),   // rewards
         Uint128::new(150), // balance
     ),
-    basic_scrt_staking_2: (
-        Uint128::new(10), // deposit
-        Uint128::new(1),   // rewards
-        Uint128::new(11), // balance
+    basic_scrt_staking_no_deposit: (
+        Uint128::new(0), // deposit
+        Uint128::new(1000),   // rewards
+        Uint128::new(0), // balance
     ),
 }

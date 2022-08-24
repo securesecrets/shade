@@ -4,47 +4,11 @@ use crate::{
     utils::{
         asset::{Contract, RawContract},
         generic_response::ResponseStatus,
-        storage::plus::period_storage::Period,
-        ExecuteCallback,
-        InstantiateCallback,
-        Query,
     },
 };
+
+use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::cw_serde;
-
-#[cw_serde]
-pub enum Context {
-    Receive,
-    Update,
-    Unbond,
-    Claim,
-    //TODO
-    Holders,
-}
-
-#[cw_serde]
-pub enum Action {
-    Unbond,
-    Claim,
-    FundsReceived,
-    SendFunds,
-    SendFundsFrom,
-    RealizeGains,
-    RealizeLosses,
-    //TODO
-    AddHolder,
-    RemoveHolder,
-}
-
-#[cw_serde]
-pub struct Metric {
-    pub action: Action,
-    pub context: Context,
-    pub timestamp: u64,
-    pub token: Addr,
-    pub amount: Uint128,
-    pub user: Addr,
-}
 
 #[cw_serde]
 pub struct Config {
@@ -181,20 +145,10 @@ pub enum ExecuteAnswer {
 pub enum QueryMsg {
     Config {},
     Assets {},
-    Allocations {
-        asset: String,
-    },
-    PendingAllowance {
-        asset: String,
-    },
+    Allocations { asset: String },
+    PendingAllowance { asset: String },
     Holders {},
-    Holding {
-        holder: String,
-    },
-    Metrics {
-        date: Option<String>,
-        period: Period,
-    },
+    Holding { holder: String },
     Manager(manager::SubQueryMsg),
 }
 
@@ -210,5 +164,4 @@ pub enum QueryAnswer {
     PendingAllowance { amount: Uint128 },
     Holders { holders: Vec<Addr> },
     Holding { holding: Holding },
-    Metrics { metrics: Vec<Metric> },
 }
