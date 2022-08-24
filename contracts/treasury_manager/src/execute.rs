@@ -79,7 +79,6 @@ pub fn receive(
         .iter()
         .find(|a| a.contract.address == from)
     {
-        println!("Manager Recv from Adapter {}", amount);
         return Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
             status: ResponseStatus::Success,
         })?));
@@ -384,7 +383,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
     let mut allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
-    println!("354 {:?}", allocations[0]);
 
     // Build metadata
     let mut amount_total = Uint128::zero();
@@ -410,27 +408,20 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             allocations[i].contract.clone(),
         )?;
 
-        allocations[i].balance = balance;
+        //allocations[i].balance = balance;
 
         metadata.insert(
             allocations[i].contract.address.clone(),
-            (allocations[i].balance, unbonding),
+            (balance, unbonding),
         );
 
-        println!("{}", allocations[i].amount);
         match allocations[i].alloc_type {
             AllocationType::Amount => amount_total += balance,
             AllocationType::Portion => {
-                println!("PORTION {}", balance);
                 portion_total += balance;
             }
         };
     }
-    println!(
-        "373 at: {}, pt: {}",
-        amount_total.u128(),
-        portion_total.u128(),
-    );
 
     let mut holder_unbonding = Uint128::zero();
     let mut holder_principal = Uint128::zero();
@@ -462,7 +453,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         &full_asset.contract.clone(),
     )?
     .allowance;
-    println!("410 allowance {}", allowance.u128());
 
     // Available balance
     let token_balance = balance_query(
@@ -471,13 +461,8 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         key.clone(),
         &full_asset.contract.clone(),
     )?;
-    println!("419 balance {}", token_balance.u128());
 
     let total = amount_total + portion_total + token_balance + allowance - holder_unbonding;
-    println!(
-        "TOTAL {} at {} pt {} tb {} allow {} hunb {}",
-        total, amount_total, portion_total, token_balance, allowance, holder_unbonding
-    );
 
     let mut allowance_used = Uint128::zero();
     let mut balance_used = Uint128::zero();
@@ -492,13 +477,9 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             AllocationType::Portion => std::cmp::Ordering::Equal,
         },
     });
-    println!("440 allocations {:?}", allocations);
 
     let mut amount_sending_out = Uint128::zero();
     for adapter in allocations.clone() {
-        println!("ADAPTER REBALANCE {}", adapter.nick.unwrap());
-        println!("445 total {}", total.u128());
-        println!("446 adapter.amount {}", adapter.amount);
         let desired_amount = match adapter.alloc_type {
             AllocationType::Amount => {
                 amount_sending_out += adapter.amount;
@@ -515,7 +496,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             }
         };
         let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
-        println!("437 desired_amount {}", desired_amount);
 
         let (adapter_balance, unbonding) = metadata[&adapter.contract.address];
         let mut available = adapter_balance - unbonding;
@@ -670,7 +650,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     holder_principal += allowance_used;
     if total - allowance > holder_principal {
         let gains = (total - allowance) - holder_principal;
-        println!("Gainzz {}", gains);
 
         // debit gains to treasury
         let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
@@ -688,7 +667,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
     } else if total - allowance < holder_principal {
         let losses = holder_principal - (total - allowance);
-        println!("lossez {}", losses);
 
         // credit losses to treasury
         let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
@@ -831,8 +809,6 @@ pub fn unbond(
         &full_asset.contract.clone(),
     )?;
 
-    println!("MANAGER UNBOND {} RES {}", amount, reserves);
-
     // Remove pending unbondings from reserves
     if reserves > other_unbondings {
         reserves = reserves - other_unbondings;
@@ -842,10 +818,6 @@ pub fn unbond(
 
     let mut messages = vec![];
 
-    println!(
-        "TREASU:RY MAN UNBOND HERE \t \t unbond amount: {}, reseresves: {}",
-        amount, reserves
-    );
     // Send available reserves to unbonder
     if !reserves.is_zero() {
         if reserves < unbond_amount {
@@ -1022,10 +994,6 @@ pub fn unbond(
     }
 
     if unbond_amount == total_amount_unbonding {
-        println!(
-            "885 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-            unbond_amount, unbond_amounts
-        );
         for (i, meta) in amounts.clone().iter().enumerate() {
             messages.push(adapter::unbond_msg(
                 &full_asset.contract.address.clone(),
@@ -1070,10 +1038,6 @@ pub fn unbond(
                 user: meta.contract.address.clone(),
             })?;
         }
-        println!(
-            "921 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-            unbond_amount, unbond_amounts
-        );
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1083,11 +1047,6 @@ pub fn unbond(
     }
 
     // if portion total > unbond - tot, we know the portion adapters can cover the rest
-    println!(
-        "{} {}",
-        unbond_amount - total_amount_unbonding,
-        portion_total
-    );
     if unbond_amount - total_amount_unbonding < portion_total {
         for (i, meta) in amounts.clone().iter().enumerate() {
             if !unbond_amounts[i].is_zero() {
@@ -1112,7 +1071,6 @@ pub fn unbond(
                 .multiply_ratio(meta.balance, portion_total);
             unbond_amounts.push(unbond_from_portion);
             total_amount_unbonding += unbond_from_portion;
-            println!("unbond from portion: {}", unbond_from_portion);
             if i == portions.len() - 1 && total_amount_unbonding < unbond_amount {
                 messages.push(adapter::unbond_msg(
                     &full_asset.contract.address.clone(),
@@ -1143,10 +1101,6 @@ pub fn unbond(
                 })?;
             }
         }
-        println!(
-            "969 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-            unbond_amount, unbond_amounts
-        );
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1192,10 +1146,6 @@ pub fn unbond(
                     })?;
                 }
             }
-            println!(
-                "914 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-                unbond_amount, unbond_amounts
-            );
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1207,7 +1157,6 @@ pub fn unbond(
             for meta in amounts.clone() {
                 amount_alloc += meta.amount;
             }
-            println!("{} {}", amount_alloc, total_amount_unbonding);
             let mut modified_total_amount_unbonding = total_amount_unbonding;
             for (i, meta) in amounts.iter().enumerate() {
                 unbond_amounts[i] += (unbond_amount - total_amount_unbonding)
@@ -1235,10 +1184,6 @@ pub fn unbond(
                     user: meta.contract.address.clone(),
                 })?;
             }
-            println!(
-                "928 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-                unbond_amount, unbond_amounts
-            );
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,

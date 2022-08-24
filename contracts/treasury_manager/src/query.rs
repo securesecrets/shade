@@ -134,11 +134,6 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
 pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
     if let Some(full_asset) = ASSETS.may_load(deps.storage, asset.clone())? {
         let config = CONFIG.load(deps.storage)?;
-        /*
-        if holder == config.treasury {
-            println!("ITS THE TREASURY");
-        }
-        */
 
         let mut holder_balance = Uint128::zero();
         let mut holder_unbonding = Uint128::zero();
@@ -216,13 +211,6 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
             Some(u) => u.amount,
             None => Uint128::zero(),
         };
-
-        //let config = CONFIG.load(deps.storage)?;
-        /*
-        if holder == config.treasury {
-            println!("TREASURY MANAGER BAL {}", balance);
-        }
-        */
 
         Ok(manager::QueryAnswer::Balance {
             amount: balance + unbonding,

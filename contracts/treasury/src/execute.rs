@@ -164,6 +164,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         let mut claimable = Uint128::zero();
         let mut unbonding = Uint128::zero();
         let mut balance = Uint128::zero();
+
         if let Some(m) = manager.clone() {
             claimable = manager::claimable_query(
                 deps.querier,
@@ -171,8 +172,6 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                 env.contract.address.clone(),
                 m.clone(),
             )?;
-
-            println!("173 claimable {}", claimable);
 
             if !claimable.is_zero() {
                 messages.push(manager::claim_msg(&asset.clone(), m.clone())?);
@@ -199,6 +198,10 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                 env.contract.address.clone(),
                 m.clone(),
             )?;
+            println!(
+                "TR REB MANAGER claimable {}, unb {}, bal {}",
+                claimable, unbonding, balance
+            );
         }
 
         let allowance = allowance_query(
@@ -211,19 +214,18 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         )?
         .allowance;
 
-        println!("ALLOWANCE {}", allowance);
-
         if balance.is_zero()
             && unbonding.is_zero()
             && claimable.is_zero()
             && allowance.is_zero()
             && a.amount.is_zero()
         {
+            //TODO need to sort after this?
             allowances.swap_remove(i);
             save_allowances = true;
         }
 
-        metadata.insert(a.spender.clone(), (balance - (unbonding), allowance));
+        metadata.insert(a.spender.clone(), (balance - unbonding, allowance));
 
         match a.allowance_type {
             AllowanceType::Amount => {
@@ -235,10 +237,6 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                 portion_allowance += allowance;
             }
         }
-        println!(
-            "218 amount_balance {} amount_allowance {}, poriton_bal {}, portion allow {}",
-            amount_balance, amount_allowance, portion_balance, portion_allowance,
-        );
     }
 
     if save_allowances {
@@ -263,11 +261,9 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
 
     // Iterate amount allows first to determine portion total
     for allowance in amounts {
-        println!("AMOUNT ALLOW");
+        println!("AMOUNT ALLOW amount {}", allowance.amount);
         total_balance -= allowance.amount;
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
-        // Claim from managers
-        //let manager = MANAGER.may_load(deps.storage, allowance.spender.clone())?;
 
         // Refresh allowance if cycle is exceeded
         if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
@@ -316,6 +312,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                     amount_allowance -= decrease;
                 }
                 if decrease > cur_allowance {
+                    println!("AMOUNT MAN UNBOND {}", decrease - cur_allowance);
                     match MANAGER.may_load(deps.storage, allowance.spender)? {
                         Some(m) => {
                             messages.push(manager::unbond_msg(
@@ -367,22 +364,17 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         }
     }
 
-    println!(
-        "311 portion_balance: {} \t amount_allowance: {} \t token_bal: {}",
-        portion_balance, amount_allowance, token_balance
-    );
-
-    let mut portion_total = portion_balance + portion_allowance;
+    let mut portion_total = portion_balance;
+    if amount_allowance > token_balance {
+        portion_total -= amount_allowance - token_balance;
+    } else {
+        portion_total += token_balance - amount_allowance;
+    }
 
     if total_balance > portion_total {
         portion_total = total_balance;
     }
-
-    println!("amount_balance {}", amount_balance);
-    println!("amount_allowance {}", amount_allowance);
-    println!("portion_balance {}", portion_balance);
-    println!("portion_allowance {}", portion_allowance);
-    println!("portion total {}", portion_total);
+    println!("STARTING PORTIONS TOTAL {}", portion_total);
 
     for allowance in portions {
         println!("portion total {}", portion_total);
@@ -406,8 +398,8 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
         let allocated = available + cur_allowance;
 
         println!(
-            "ALLOCD: {}, DESIRED: {} pt / a.amount {} / {}",
-            allocated, desired_amount, portion_total, allowance.amount
+            "ALLOCD: {}, CUR_A: {} DESIRED: {} pt / a.amount {} / {}",
+            allocated, cur_allowance, desired_amount, portion_total, allowance.amount
         );
 
         // UnderFunded
