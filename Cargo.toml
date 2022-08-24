@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
   # Packages
   "packages/shade_protocol",
@@ -19,7 +20,9 @@ members = [
   #"contracts/mint_router",
   #"contracts/oracle",
   "contracts/sky",
+  "contracts/peg_stability",
   "contracts/query_auth",
+  "contracts/admin",
 
   # DAO
   # - Core

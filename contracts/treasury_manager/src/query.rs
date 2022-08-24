@@ -93,12 +93,6 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
             return Err(StdError::generic_err("Not an asset"));
         }
     };
-    let allocations = match ALLOCATIONS.may_load(deps.storage, asset.clone())? {
-        Some(a) => a,
-        None => {
-            return Err(StdError::generic_err("Not an asset"));
-        }
-    };
     //TODO claiming needs ordered unbondings so other holders don't get bumped
 
     let mut claimable = balance_query(
@@ -108,30 +102,28 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
         &full_asset.contract.clone(),
     )?;
 
-    /*
-    let _config = config_r(deps.storage).load()?;
-    let _other_unbondings = Uint128::zero();
-    */
+    let allocations = ALLOCATIONS
+        .may_load(deps.storage, asset.clone())?
+        .unwrap_or(vec![]);
 
     for alloc in allocations {
         claimable += adapter::claimable_query(deps.querier, &asset, alloc.contract.clone())?;
     }
 
     //TODO other unbondings
-    match HOLDING.may_load(deps.storage, holder)? {
-        Some(holder) => {
-            let unbonding = match holder.unbondings.iter().find(|u| u.token == asset) {
-                Some(u) => u.amount,
-                None => Uint128::zero(),
-            };
+    if let Some(holder) = HOLDING.may_load(deps.storage, holder)? {
+        let unbonding = match holder.unbondings.iter().find(|u| u.token == asset) {
+            Some(u) => u.amount,
+            None => Uint128::zero(),
+        };
 
-            if claimable > unbonding {
-                Ok(manager::QueryAnswer::Claimable { amount: unbonding })
-            } else {
-                Ok(manager::QueryAnswer::Claimable { amount: claimable })
-            }
+        if claimable > unbonding {
+            Ok(manager::QueryAnswer::Claimable { amount: unbonding })
+        } else {
+            Ok(manager::QueryAnswer::Claimable { amount: claimable })
         }
-        None => Err(StdError::generic_err("Invalid holder")),
+    } else {
+        return Err(StdError::generic_err("Invalid holder"));
     }
 }
 
@@ -140,19 +132,13 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
  * in stalled treasury trying to unbond more than is available
  */
 pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
-    println!("--HERE--");
     if let Some(full_asset) = ASSETS.may_load(deps.storage, asset.clone())? {
-        /*
-        let unbonder = match holder {
-            Some(h) => h,
-            None => config.treasury,
-        };
-        */
-
         let config = CONFIG.load(deps.storage)?;
+        /*
         if holder == config.treasury {
             println!("ITS THE TREASURY");
         }
+        */
 
         let mut holder_balance = Uint128::zero();
         let mut holder_unbonding = Uint128::zero();
@@ -164,18 +150,12 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
                 }
                 if let Some(b) = h.balances.iter().find(|b| b.token == asset.clone()) {
                     holder_balance += b.amount;
-                    println!("HOLDER BALANCE {}", b.amount);
                 }
             }
             None => {
                 return Err(StdError::generic_err("Invalid holder"));
             }
         }
-
-        println!(
-            "HERE balance {}, unbonding {}",
-            holder_balance, holder_unbonding
-        );
 
         if holder_balance.is_zero() {
             return Ok(manager::QueryAnswer::Unbondable {
@@ -194,52 +174,61 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
             .may_load(deps.storage, asset.clone())?
             .unwrap_or(vec![]);
 
-        println!("allocs {}", allocations.len());
         for alloc in allocations {
-            println!("adapter unbondable {}", unbondable);
             unbondable += adapter::unbondable_query(deps.querier, &asset, alloc.contract)?;
             if unbondable > holder_balance {
                 break;
             }
         }
-
         if unbondable > holder_balance {
-            println!("unbondable > balance {}", holder_balance);
             unbondable = holder_balance;
         }
 
-        return Ok(manager::QueryAnswer::Unbondable { amount: unbondable });
+        return Ok(manager::QueryAnswer::Unbondable {
+            amount: unbondable, //holder_unbonding + holder_balance,
+        });
     }
 
     Err(StdError::generic_err("Not a registered asset"))
 }
 
 pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
-    match ASSETS.may_load(deps.storage, asset)? {
-        Some(asset) => {
-            let holding = match HOLDING.may_load(deps.storage, holder.clone())? {
-                Some(h) => h,
-                None => {
-                    return Err(StdError::generic_err("Invalid Holder"));
-                }
-            };
-            let balance = match holding
-                .balances
-                .iter()
-                .find(|u| u.token == asset.contract.address)
-            {
-                Some(b) => b.amount,
-                None => Uint128::zero(),
-            };
-
-            let config = CONFIG.load(deps.storage)?;
-            if holder == config.treasury {
-                println!("TREASURY MANAGER BAL {}", balance);
+    if let Some(asset) = ASSETS.may_load(deps.storage, asset)? {
+        let holding = match HOLDING.may_load(deps.storage, holder.clone())? {
+            Some(h) => h,
+            None => {
+                return Err(StdError::generic_err("Invalid Holder"));
             }
+        };
+        let balance = match holding
+            .balances
+            .iter()
+            .find(|u| u.token == asset.contract.address)
+        {
+            Some(b) => b.amount,
+            None => Uint128::zero(),
+        };
+        let unbonding = match holding
+            .unbondings
+            .iter()
+            .find(|u| u.token == asset.contract.address)
+        {
+            Some(u) => u.amount,
+            None => Uint128::zero(),
+        };
 
-            Ok(manager::QueryAnswer::Balance { amount: balance })
+        //let config = CONFIG.load(deps.storage)?;
+        /*
+        if holder == config.treasury {
+            println!("TREASURY MANAGER BAL {}", balance);
         }
-        None => Err(StdError::generic_err("Not a registered asset")),
+        */
+
+        Ok(manager::QueryAnswer::Balance {
+            amount: balance + unbonding,
+        })
+    } else {
+        return Err(StdError::generic_err("Not a registered asset"));
     }
 }
 

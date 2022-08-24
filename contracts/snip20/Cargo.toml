@@ -31,7 +31,10 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "query_auth",
 ] }
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+schemars = "0.8.9"
+serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 
 [dev-dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "multi-test", "shade_admin" ] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "multi-test", "admin" ] }
 shade-multi-test = { path = "../../packages/multi_test", features = [ "snip20", "query_auth", "admin" ] }

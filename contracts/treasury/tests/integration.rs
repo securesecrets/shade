@@ -18,7 +18,7 @@ use shade_protocol::{
         dao::{
             adapter,
             manager,
-            scrt_staking,
+            //mock_adapter,
             treasury,
             treasury::{Allowance, AllowanceType, RunLevel},
             treasury_manager::{self, Allocation, AllocationType},
@@ -36,20 +36,20 @@ use shade_protocol::{
     },
 };
 
+use mock_adapter;
 use shade_multi_test::multi::{
     admin::init_admin_auth,
-    scrt_staking::ScrtStaking,
+    mock_adapter::MockAdapter,
     snip20::Snip20,
     treasury::Treasury,
     treasury_manager::TreasuryManager,
 };
 use shade_protocol::multi_test::{App, BankSudo, StakingSudo, SudoMsg};
 
-use ::treasury::storage::metric_key;
 use serde_json;
 
 // Add other adapters here as they come
-fn single_asset_manager_scrt_staking_integration(
+fn bonded_adapter_int(
     deposit: Uint128,
     allowance: Uint128,
     expected_allowance: Uint128,
@@ -64,7 +64,7 @@ fn single_asset_manager_scrt_staking_integration(
 
     let admin = Addr::unchecked("admin");
     let user = Addr::unchecked("user");
-    let validator = Addr::unchecked("validator");
+    //let validator = Addr::unchecked("validator");
     let admin_auth = init_admin_auth(&mut app, &admin);
 
     let viewing_key = "viewing_key".to_string();
@@ -112,26 +112,26 @@ fn single_asset_manager_scrt_staking_integration(
     )
     .unwrap();
 
-    let scrt_staking = scrt_staking::InstantiateMsg {
-        admin_auth: admin_auth.clone().into(),
-        owner: manager.address.clone().to_string(),
-        sscrt: token.clone().into(),
-        validator_bounds: None,
-        viewing_key: viewing_key.clone(),
+    let adapter = mock_adapter::contract::Config {
+        owner: manager.address.clone(),
+        instant: false,
+        token: token.clone().into(),
     }
     .test_init(
-        ScrtStaking::default(),
+        MockAdapter::default(),
         &mut app,
         admin.clone(),
-        "scrt_staking",
+        "mock_adapter",
         &[],
     )
     .unwrap();
 
+    /*
     app.sudo(SudoMsg::Staking(StakingSudo::AddValidator {
         validator: validator.to_string().clone(),
     }))
     .unwrap();
+    */
 
     // Set admin viewing key
     snip20::ExecuteMsg::SetViewingKey {
@@ -178,14 +178,14 @@ fn single_asset_manager_scrt_staking_integration(
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Allocate to scrt_staking from manager
+    // Allocate to mock_adapter from manager
     treasury_manager::ExecuteMsg::Allocate {
         asset: token.address.to_string().clone(),
         allocation: Allocation {
-            nick: Some("scrt_staking".to_string()),
+            nick: Some("mock_adapter".to_string()),
             contract: Contract {
-                address: scrt_staking.address.clone(),
-                code_hash: scrt_staking.code_hash.clone(),
+                address: adapter.address.clone(),
+                code_hash: adapter.code_hash.clone(),
             },
             alloc_type,
             amount: alloc_amount,
@@ -195,22 +195,20 @@ fn single_asset_manager_scrt_staking_integration(
     .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
 
-    let deposit_coin = Coin {
+    let init_coin = Coin {
         denom: "uscrt".into(),
-        amount: deposit,
+        amount: deposit + rewards,
     };
     app.init_modules(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &admin.clone(), vec![deposit_coin.clone()])
+            .init_balance(storage, &admin.clone(), vec![init_coin.clone()])
             .unwrap();
     });
 
-    assert!(deposit_coin.amount > Uint128::zero());
-
     // Wrap L1
     snip20::ExecuteMsg::Deposit { padding: None }
-        .test_exec(&token, &mut app, admin.clone(), &vec![deposit_coin])
+        .test_exec(&token, &mut app, admin.clone(), &vec![init_coin])
         .unwrap();
 
     // Deposit funds into treasury
@@ -272,11 +270,11 @@ fn single_asset_manager_scrt_staking_integration(
     .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Update SCRT Staking
+    // Update Adapter
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
         asset: token.address.to_string().clone(),
     })
-    .test_exec(&scrt_staking, &mut app, admin.clone(), &[])
+    .test_exec(&adapter, &mut app, admin.clone(), &[])
     .unwrap();
 
     // Treasury reserves check
@@ -306,77 +304,111 @@ fn single_asset_manager_scrt_staking_integration(
         _ => panic!("Query Failed"),
     };
 
-    // Scrt Staking reserves should be 0 (all staked)
+    // Adapter reserves should be 0 (all staked)
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&adapter, &app)
     .unwrap())
     {
         adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, Uint128::zero(), "SCRT Staking Reserves");
+            assert_eq!(amount, Uint128::zero(), "Bonded Adapter Reserves");
         }
         _ => panic!("Query Failed"),
     };
 
-    // Scrt Staking balance check
+    // Adapter balance check
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&adapter, &app)
     .unwrap())
     {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, pre_rewards.2, "SCRT Staking Balance");
+            assert_eq!(amount, pre_rewards.2, "Adapter Balance");
         }
         _ => panic!("Query Failed"),
     };
 
     // Add Rewards
-    app.sudo(SudoMsg::Staking(StakingSudo::AddRewards {
-        amount: Coin {
-            denom: "uscrt".to_string(),
-            amount: rewards,
-        },
-    }))
+    snip20::ExecuteMsg::Send {
+        recipient: adapter.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: rewards,
+        msg: None,
+        memo: None,
+        padding: None,
+    }
+    .test_exec(&token, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Update manager
-    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
-        asset: token.address.to_string().clone(),
-    })
-    .test_exec(&manager, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // Update treasury
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
-        asset: token.address.to_string().clone(),
-    })
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // Scrt Staking Balance
+    // Adapter Balance
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&adapter, &app)
     .unwrap())
     {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, post_rewards.2, "SCRT Staking Balance");
+            println!("L352 scrt bal {}", amount);
+            assert_eq!(
+                amount,
+                pre_rewards.2 + rewards,
+                "Adapter Balance Post-Rewards Pre-update"
+            );
         }
         _ => panic!("Query Failed"),
     };
 
-    // Scrt Staking unbondable check
+    for _ in 0..5 {
+        // Update Adapter
+        adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+            asset: token.address.to_string().clone(),
+        })
+        .test_exec(&adapter, &mut app, admin.clone(), &[])
+        .unwrap();
+
+        // Update manager
+        manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
+            asset: token.address.to_string().clone(),
+        })
+        .test_exec(&manager, &mut app, admin.clone(), &[])
+        .unwrap();
+
+        // Update treasury
+        adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+            asset: token.address.to_string().clone(),
+        })
+        .test_exec(&treasury, &mut app, admin.clone(), &[])
+        .unwrap();
+    }
+
+    // Adapter Balance
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&adapter, &app)
+    .unwrap())
+    {
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(
+                amount,
+                pre_rewards.2 + rewards,
+                "Adapter Reserves Post-Rewards Post-Update"
+            );
+        }
+        _ => panic!("Query Failed"),
+    };
+
+    // Adapter unbondable check
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &mut app)
+    .test_query(&adapter, &mut app)
     .unwrap())
     {
         adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, post_rewards.2, "Scrt Staking Unbondable");
+            assert_eq!(amount, post_rewards.2, "Adapter Unbondable");
         }
         _ => panic!("Query Failed"),
     };
@@ -409,7 +441,7 @@ fn single_asset_manager_scrt_staking_integration(
         adapter::QueryAnswer::Unbondable { amount } => {
             assert_eq!(
                 amount,
-                pre_rewards.1 + pre_rewards.2 + rewards,
+                post_rewards.1 + post_rewards.2,
                 "Treasury Unbondable"
             );
         }
@@ -424,52 +456,45 @@ fn single_asset_manager_scrt_staking_integration(
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // scrt staking balance
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    // adapter balance
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &mut app)
+    .test_query(&adapter, &mut app)
     .unwrap())
     {
-        adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(
-                amount,
-                Uint128::zero(),
-                "Scrt Staking Balance Pre-fastforward"
-            );
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Adapter Reserves Pre-fastforward");
         }
         _ => panic!("Query Failed"),
     };
 
-    // scrt staking unbonding
+    // adapter unbonding
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &mut app)
+    .test_query(&adapter, &mut app)
     .unwrap())
     {
         adapter::QueryAnswer::Unbonding { amount } => {
             assert_eq!(
-                amount, pre_rewards.2,
-                "Scrt Staking Unbonding Pre-fastforward"
+                amount,
+                pre_rewards.2 + rewards,
+                "Adapter Unbonding Pre-fastforward"
             );
         }
         _ => panic!("Query Failed"),
     };
 
-    // scrt staking claimable
+    // adapter claimable
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &mut app)
+    .test_query(&adapter, &mut app)
     .unwrap())
     {
         adapter::QueryAnswer::Claimable { amount } => {
-            assert_eq!(
-                amount,
-                Uint128::zero(),
-                "Scrt Staking Claimable Pre-fastforward"
-            );
+            assert_eq!(amount, Uint128::zero(), "Adapter Claimable Pre-fastforward");
         }
         _ => panic!("Query Failed"),
     };
@@ -483,7 +508,7 @@ fn single_asset_manager_scrt_staking_integration(
     .unwrap())
     {
         manager::QueryAnswer::Claimable { amount } => {
-            assert_eq!(amount, post_rewards.1, "Manager Claimable Pre-fastforward");
+            assert_eq!(amount, Uint128::zero(), "Manager Claimable Pre-fastforward");
         }
         _ => panic!("Query Failed"),
     };
@@ -497,42 +522,48 @@ fn single_asset_manager_scrt_staking_integration(
     .unwrap())
     {
         manager::QueryAnswer::Unbonding { amount } => {
-            assert_eq!(amount, post_rewards.2, "Manager Unbonding Pre-fastforward");
+            assert_eq!(
+                amount,
+                pre_rewards.2 + rewards,
+                "Manager Unbonding Pre-fastforward"
+            );
         }
         _ => panic!("Query Failed"),
     };
 
-    app.sudo(SudoMsg::Staking(StakingSudo::FastForwardUndelegate {}))
+    mock_adapter::contract::ExecuteMsg::CompleteUnbonding {}
+        .test_exec(&adapter, &mut app, admin.clone(), &[])
         .unwrap();
 
-    // scrt staking unbonding
+    // adapter unbonding
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &mut app)
+    .test_query(&adapter, &mut app)
     .unwrap())
     {
         adapter::QueryAnswer::Unbonding { amount } => {
             assert_eq!(
                 amount,
                 Uint128::zero(),
-                "Scrt Staking Unbonding Post-fastforward"
+                "Adapter Unbonding Post-fastforward"
             );
         }
         _ => panic!("Query Failed"),
     };
 
-    // scrt staking claimable
+    // adapter claimable
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &mut app)
+    .test_query(&adapter, &mut app)
     .unwrap())
     {
         adapter::QueryAnswer::Claimable { amount } => {
             assert_eq!(
-                amount, pre_rewards.2,
-                "Scrt Staking Claimable Post-fastforward"
+                amount,
+                pre_rewards.2 + rewards,
+                "Adapter Claimable Post-fastforward"
             );
         }
         _ => panic!("Query Failed"),
@@ -554,6 +585,7 @@ fn single_asset_manager_scrt_staking_integration(
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
+    /*
     // Treasury reserves check
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
@@ -566,46 +598,59 @@ fn single_asset_manager_scrt_staking_integration(
         }
         _ => panic!("Bad Reserves Query Response"),
     };
+    */
 
     /*
-    // Treasury balance check
-    match ensemble.query(
-        treasury.address.to_string().clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
-                asset: token.address.to_string().clone(),
-            }
-        )
-    ).unwrap() {
-        adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit, "Treasury Balance Post-Unbond");
-        },
+    // Manager balance check
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+        holder: treasury.address.to_string().clone(),
+    })
+    .test_query(&manager, &mut app)
+    .unwrap())
+    {
+        manager::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, deposit + rewards, "Manager Balance Post Claim");
+        }
         _ => panic!("Query Failed"),
     };
     */
 
-    // Scrt Staking reserves
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+    // Adapter balance
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &mut app)
+    .test_query(&adapter, &mut app)
     .unwrap())
     {
-        adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, Uint128::zero(), "SCRT Staking Reserves Post Unbond");
+        adapter::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Adapter Balance Post Claim ");
         }
         _ => panic!("Query Failed"),
     };
 
-    // Scrt Staking balance
+    // Treasury balance check
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &mut app)
+    .test_query(&treasury, &mut app)
     .unwrap())
     {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, Uint128::zero(), "SCRT Staking Balance Post Unbond");
+            assert_eq!(amount, deposit + rewards, "Treasury Balance Post Claim");
+        }
+        _ => panic!("Query Failed"),
+    };
+
+    // Adapter reserves
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&adapter, &mut app)
+    .unwrap())
+    {
+        adapter::QueryAnswer::Reserves { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Adapter Reserves Post Unbond");
         }
         _ => panic!("Query Failed"),
     };
@@ -723,7 +768,7 @@ fn single_asset_manager_scrt_staking_integration(
     };
 }
 
-macro_rules! single_asset_manager_scrt_staking_tests {
+macro_rules! bonded_adapter_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
@@ -738,7 +783,7 @@ macro_rules! single_asset_manager_scrt_staking_tests {
                     pre_rewards,
                     post_rewards,
                 ) = $value;
-                single_asset_manager_scrt_staking_integration(
+                bonded_adapter_int(
                     deposit,
                     allowance,
                     expected_allowance,
@@ -753,8 +798,8 @@ macro_rules! single_asset_manager_scrt_staking_tests {
     }
 }
 
-single_asset_manager_scrt_staking_tests! {
-    single_asset_portion_manager_0: (
+bonded_adapter_tests! {
+    portion_with_rewards_0: (
         Uint128::new(100), // deposit
         Uint128::new(1 * 10u128.pow(18)), // manager allowance 100%
         Uint128::new(100), // expected manager allowance
@@ -765,31 +810,52 @@ single_asset_manager_scrt_staking_tests! {
         (
             Uint128::new(0), // treasury 10
             Uint128::new(0), // manager 0
-            Uint128::new(100), // scrt_staking 90
+            Uint128::new(100), // mock_adapter 90
         ),
         //post-rewards
         (
             Uint128::new(0), // treasury 10
             Uint128::new(0), // manager 0
-            Uint128::new(200), // scrt_staking 90
+            Uint128::new(200), // mock_adapter 90
         ),
     ),
-    single_asset_portion_manager_1: (
-        Uint128::new(100), // deposit
-        Uint128::new(5 * 10u128.pow(17)), // manager allowance
-        Uint128::new(50), // expected manager allowance
+    portion_with_rewards_1: (
+        Uint128::new(1000), // deposit
+        Uint128::new(5 * 10u128.pow(17)), // %50 manager allowance
+        Uint128::new(500), // expected manager allowance
         AllocationType::Portion,
-        Uint128::new(5 * 10u128.pow(17)), // 50% allocate
-        Uint128::new(25), // rewards
+        Uint128::new(1 * 10u128.pow(18)), // 100% allocate
+        Uint128::new(10), // rewards
         (
-            Uint128::new(75), // treasury 55 (manager won't pull unused allowance
+            Uint128::new(500), // treasury 55 (manager won't pull unused allowance
             Uint128::new(0), // manager 0
-            Uint128::new(25), // scrt_staking
+            Uint128::new(500), // mock_adapter
         ),
         (
-            Uint128::new(75),
-            Uint128::new(12),
-            Uint128::new(37),
+            Uint128::new(505),
+            Uint128::new(0),
+            Uint128::new(505),
         ),
     ),
+    /*
+    // TODO: this needs separate test logic bc of update
+    amount_with_rewards_0: (
+        Uint128::new(1_000_000), // deposit
+        Uint128::new(5 * 10u128.pow(17)), // %50 manager allowance
+        Uint128::new(500_000), // expected manager allowance
+        AllocationType::Amount,
+        Uint128::new(500_000), // .5 tkn (all) allocate
+        Uint128::new(500), // rewards
+        (
+            Uint128::new(500_000), // treasury
+            Uint128::new(0), // manager 0
+            Uint128::new(500_000), // mock_adapter
+        ),
+        (
+            Uint128::new(500_250),
+            Uint128::new(250),
+            Uint128::new(500_000),
+        ),
+    ),
+    */
 }

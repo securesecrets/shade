@@ -29,7 +29,6 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "utils",
   "snip20",
   "manager",
-  "staking",
   "storage_plus",
 ] }
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
@@ -47,3 +46,5 @@ shade-multi-test = { path = "../../packages/multi_test", features = [
 ] }
 serde_json = "1.0"
 treasury = { path = "../treasury" }
+shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git"}
+mock_adapter = { path = "../mock_adapter" }
