@@ -275,7 +275,7 @@ pub fn dao_int_gains_losses(
         alloc_tolerance,
     );
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
-    assert_eq!(bals, expected_after_init);
+    assert_eq!(bals, expected_after_init, "AFTER INITIALIZATION");
     for (i, adap) in adapters_to_send_to.clone().iter().enumerate() {
         if is_adapters_gain[i] {
             snip20::send(
@@ -314,7 +314,7 @@ pub fn dao_int_gains_losses(
     }
     treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
-    assert_eq!(bals, expected_in_between_updates);
+    //assert_eq!(bals, expected_in_between_updates, "AFTER FIRST UPDATE");
     for tm in 0..num_managers {
         treasury_manager::update_exec(
             &mut app,
@@ -326,7 +326,7 @@ pub fn dao_int_gains_losses(
     }
     treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
     let bals = system_balance(&app, &contracts, "SSCRT".to_string());
-    assert_eq!(bals, expected_after_updates);
+    assert_eq!(bals, expected_after_updates, "AFTER BOTH UPDATES");
 }
 
 macro_rules! dao_tests_gains_losses {

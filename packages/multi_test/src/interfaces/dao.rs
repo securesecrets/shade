@@ -84,7 +84,7 @@ pub fn init_dao(
                         .unwrap()
                         .clone()
                         .address,
-                    unbond_blocks: Uint128::zero(),
+                    instant: true,
                     token: contracts
                         .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
                         .unwrap()
