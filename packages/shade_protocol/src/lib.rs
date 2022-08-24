@@ -21,6 +21,8 @@ pub use secret_storage_plus;
 pub use serde;
 pub use thiserror;
 
+//pub use shade_oracles;
+
 #[cfg(feature = "query_auth_lib")]
 pub use query_authentication;
 

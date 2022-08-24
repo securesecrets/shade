@@ -1,4 +1,5 @@
 use super::{
+    batch,
     manager::{Allowance, AllowanceResponse},
     ExecuteMsg, QueryAnswer, QueryMsg,
 };
@@ -22,23 +23,6 @@ pub fn fetch_snip20(contract: &Contract, querier: &QuerierWrapper) -> StdResult<
         token_info: token_info(querier, contract)?,
         token_config: Some(token_config(querier, contract)?),
     })
-}
-
-pub fn balance_query(
-    contract: &Contract,
-    self_addr: String,
-    viewing_key: String,
-    querier: &QuerierWrapper,
-) -> StdResult<Uint128> {
-    let res = QueryMsg::Balance {
-        address: self_addr,
-        key: viewing_key,
-    }
-    .query(querier, contract)?;
-    match res {
-        QueryAnswer::Balance { amount } => Ok(amount),
-        _ => Err(StdError::generic_err("Unexpected query response")),
-    }
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Send

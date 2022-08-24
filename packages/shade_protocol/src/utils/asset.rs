@@ -191,7 +191,7 @@ pub fn set_allowance(
         None => {
             allowance_query(
                 &deps.querier,
-                env.contract.address.clone().into_string(),
+                env.contract.address.clone(),
                 spender.clone(),
                 key,
                 1,
