@@ -482,19 +482,18 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     let mut allowance_used = Uint128::zero();
     let mut balance_used = Uint128::zero();
 
+    allocations.sort_by(|a, b| match a.alloc_type {
+        AllocationType::Amount => match b.alloc_type {
+            AllocationType::Amount => std::cmp::Ordering::Equal,
+            AllocationType::Portion => std::cmp::Ordering::Less,
+        },
+        AllocationType::Portion => match b.alloc_type {
+            AllocationType::Amount => std::cmp::Ordering::Greater,
+            AllocationType::Portion => std::cmp::Ordering::Equal,
+        },
+    });
+    println!("440 allocations {:?}", allocations);
 
-      allocations.sort_by(|a, b| match a.alloc_type {
-          AllocationType::Amount => match b.alloc_type {
-              AllocationType::Amount => std::cmp::Ordering::Equal,
-              AllocationType::Portion => std::cmp::Ordering::Less,
-          },
-          AllocationType::Portion => match b.alloc_type {
-              AllocationType::Amount => std::cmp::Ordering::Greater,
-              AllocationType::Portion => std::cmp::Ordering::Equal,
-          },
-      });
-      println!("440 allocations {:?}", allocations);
-  
     let mut amount_sending_out = Uint128::zero();
     for adapter in allocations.clone() {
         println!("ADAPTER REBALANCE {}", adapter.nick.unwrap());
@@ -738,7 +737,6 @@ pub fn unbond(
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
-    println!("ITS THE MANAGER BITCH");
     let config = CONFIG.load(deps.storage)?;
     //let asset = deps.api.addr_validate(asset.as_str())?;
     let mut unbonder = info.sender.clone();
@@ -982,6 +980,14 @@ pub fn unbond(
                 a.balance.clone(),
                 a.contract.clone(),
             )?);
+            METRICS.pushf(deps.storage, env.block.time, Metric {
+                action: Action::Unbond,
+                context: Context::Unbond,
+                timestamp: env.block.time.seconds(),
+                token: asset.clone(),
+                amount: a.balance.clone(),
+                user: a.contract.address.clone(),
+            })?;
         }
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
@@ -1026,6 +1032,14 @@ pub fn unbond(
                 unbond_amounts[i],
                 meta.contract.clone(),
             )?);
+            METRICS.pushf(deps.storage, env.block.time, Metric {
+                action: Action::Unbond,
+                context: Context::Unbond,
+                timestamp: env.block.time.seconds(),
+                token: asset.clone(),
+                amount: unbond_amounts[i],
+                user: meta.contract.address.clone(),
+            })?;
         }
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
@@ -1047,6 +1061,14 @@ pub fn unbond(
                 unbond_amounts[i],
                 meta.contract.clone(),
             )?);
+            METRICS.pushf(deps.storage, env.block.time, Metric {
+                action: Action::Unbond,
+                context: Context::Unbond,
+                timestamp: env.block.time.seconds(),
+                token: asset.clone(),
+                amount: unbond_amounts[i],
+                user: meta.contract.address.clone(),
+            })?;
         }
         println!(
             "921 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
@@ -1074,6 +1096,14 @@ pub fn unbond(
                     unbond_amounts[i],
                     meta.contract.clone(),
                 )?);
+                METRICS.pushf(deps.storage, env.block.time, Metric {
+                    action: Action::Unbond,
+                    context: Context::Unbond,
+                    timestamp: env.block.time.seconds(),
+                    token: asset.clone(),
+                    amount: unbond_amounts[i],
+                    user: meta.contract.address.clone(),
+                })?;
             }
         }
         let amount_adapt_tot_unbonding = total_amount_unbonding;
@@ -1089,12 +1119,28 @@ pub fn unbond(
                     unbond_from_portion + Uint128::new(1),
                     meta.contract.clone(),
                 )?);
+                METRICS.pushf(deps.storage, env.block.time, Metric {
+                    action: Action::Unbond,
+                    context: Context::Unbond,
+                    timestamp: env.block.time.seconds(),
+                    token: asset.clone(),
+                    amount: unbond_from_portion + Uint128::new(1),
+                    user: meta.contract.address.clone(),
+                })?;
             } else if !unbond_from_portion.is_zero() {
                 messages.push(adapter::unbond_msg(
                     &full_asset.contract.address.clone(),
                     unbond_from_portion,
                     meta.contract.clone(),
                 )?);
+                METRICS.pushf(deps.storage, env.block.time, Metric {
+                    action: Action::Unbond,
+                    context: Context::Unbond,
+                    timestamp: env.block.time.seconds(),
+                    token: asset.clone(),
+                    amount: unbond_from_portion,
+                    user: meta.contract.address.clone(),
+                })?;
             }
         }
         println!(
@@ -1116,8 +1162,16 @@ pub fn unbond(
             messages.push(adapter::unbond_msg(
                 &full_asset.contract.address,
                 meta.balance,
-                meta.contract,
+                meta.contract.clone(),
             )?);
+            METRICS.pushf(deps.storage, env.block.time, Metric {
+                action: Action::Unbond,
+                context: Context::Unbond,
+                timestamp: env.block.time.seconds(),
+                token: asset.clone(),
+                amount: meta.balance,
+                user: meta.contract.address.clone(),
+            })?;
             total_amount_unbonding += meta.balance;
         }
         if total_amount_unbonding == unbond_amount {
@@ -1128,6 +1182,14 @@ pub fn unbond(
                         unbond_amounts[i].clone(),
                         meta.contract.clone(),
                     )?);
+                    METRICS.pushf(deps.storage, env.block.time, Metric {
+                        action: Action::Unbond,
+                        context: Context::Unbond,
+                        timestamp: env.block.time.seconds(),
+                        token: asset.clone(),
+                        amount: unbond_amounts[i],
+                        user: meta.contract.address.clone(),
+                    })?;
                 }
             }
             println!(
@@ -1164,6 +1226,14 @@ pub fn unbond(
                     unbond_amounts[i],
                     meta.contract.clone(),
                 )?);
+                METRICS.pushf(deps.storage, env.block.time, Metric {
+                    action: Action::Unbond,
+                    context: Context::Unbond,
+                    timestamp: env.block.time.seconds(),
+                    token: asset.clone(),
+                    amount: unbond_amounts[i],
+                    user: meta.contract.address.clone(),
+                })?;
             }
             println!(
                 "928 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
