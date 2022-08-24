@@ -7,6 +7,7 @@ use crate::{
     },
     multi::mock_adapter::MockAdapter,
 };
+use mock_adapter;
 use shade_protocol::{
     c_std::{Addr, StdError, StdResult, Uint128},
     contract_interfaces::dao::{
@@ -201,6 +202,56 @@ pub fn system_balance(
     ret_struct
 }
 
+/*pub fn add_or_sub_adapter_tokens(
+    chain: &mut App,
+    sender: &str,
+    is_add: bool,
+    adapter_ids: Vec<usize>,
+    amount_to_add: Uint128,
+    num_managers: usize,
+) -> StdResult<()> {
+    for i in adapter_ids {
+        if is_add {
+            snip20::send(
+                &mut app,
+                sender,
+                &contracts,
+                "SSCRT".to_string(),
+                contracts
+                    .get(&SupportedContracts::MockAdapter(i))
+                    .unwrap()
+                    .address
+                    .to_string(),
+                amount_to_add,
+                None,
+            );
+        } else {
+        }
+    }
+    // Needs 2 full cycles to reballance fully
+    for i in 0..num_managers {
+        treasury_manager::update_exec(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(i),
+        )?;
+    }
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string())?;
+    for i in 0..num_managers {
+        treasury_manager::update_exec(
+            &mut app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(i),
+        )?;
+    }
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string())?;
+    Ok(())
+}*/
+
 pub fn claimable_query(
     chain: &App,
     contracts: &DeployedContracts,
@@ -382,6 +433,52 @@ pub fn update_exec(
         Addr::unchecked(sender),
         &[],
     ) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
+}
+
+pub fn unbond_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    amount: Uint128,
+    adapter_contract: SupportedContracts,
+) -> StdResult<()> {
+    match adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+        amount,
+    })
+    .test_exec(
+        &contracts.get(&adapter_contract).unwrap().clone().into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    ) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
+}
+
+pub fn mock_adapter_sub_tokens(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    amount: Uint128,
+    adapter_contract: SupportedContracts,
+) -> StdResult<()> {
+    match (mock_adapter::contract::ExecuteMsg::GiveMeMoney { amount }.test_exec(
+        &contracts.get(&adapter_contract).unwrap().clone().into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
         Ok(_) => Ok(()),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }

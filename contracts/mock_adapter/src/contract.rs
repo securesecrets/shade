@@ -57,6 +57,10 @@ pub enum ExecuteMsg {
     Adapter(adapter::SubExecuteMsg),
 }
 
+impl ExecuteCallback for ExecuteMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
 #[cw_serde]
 pub enum QueryMsg {
     Config,

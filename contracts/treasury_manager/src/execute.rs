@@ -227,6 +227,17 @@ pub fn allocate(
         ));
     }
 
+    apps.sort_by(|a, b| match a.alloc_type {
+        AllocationType::Amount => match b.alloc_type {
+            AllocationType::Amount => std::cmp::Ordering::Equal,
+            AllocationType::Portion => std::cmp::Ordering::Less,
+        },
+        AllocationType::Portion => match b.alloc_type {
+            AllocationType::Amount => std::cmp::Ordering::Greater,
+            AllocationType::Portion => std::cmp::Ordering::Equal,
+        },
+    });
+
     ALLOCATIONS.save(deps.storage, asset.clone(), &apps)?;
 
     Ok(
@@ -427,19 +438,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     let mut allowance_used = Uint128::zero();
     let mut balance_used = Uint128::zero();
 
-    if allocations.len() > 1 {
-        allocations.sort_by(|a, b| match a.alloc_type {
-            AllocationType::Amount => match b.alloc_type {
-                AllocationType::Amount => std::cmp::Ordering::Equal,
-                AllocationType::Portion => std::cmp::Ordering::Less,
-            },
-            AllocationType::Portion => match b.alloc_type {
-                AllocationType::Amount => std::cmp::Ordering::Greater,
-                AllocationType::Portion => std::cmp::Ordering::Equal,
-            },
-        });
-        println!("440 allocations {:?}", allocations);
-    }
     let mut amount_sending_out = Uint128::zero();
     for adapter in allocations.clone() {
         println!("ADAPTER REBALANCE {}", adapter.nick.unwrap());
@@ -547,6 +545,10 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         }
         // Over funded -- unbond
         else if adapter.balance > desired_amount {
+            println!(
+                "OVER FUNDED {} {} {}",
+                threshold, desired_amount, adapter.balance
+            );
             let desired_output = adapter.balance - desired_amount;
             if desired_output <= threshold {
                 continue;
@@ -633,6 +635,7 @@ pub fn unbond(
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
+    println!("ITS THE MANAGER BITCH");
     let config = CONFIG.load(deps.storage)?;
     //let asset = deps.api.addr_validate(asset.as_str())?;
     let mut unbonder = info.sender.clone();
@@ -737,9 +740,14 @@ pub fn unbond(
 
     let mut messages = vec![];
 
+    println!(
+        "TREASU:RY MAN UNBOND HERE \t \t unbond amount: {}, reseresves: {}",
+        amount, reserves
+    );
     // Send available reserves to unbonder
     if reserves > Uint128::zero() {
         if reserves < unbond_amount {
+            // reserves can't cover unbond
             messages.push(send_msg(
                 unbonder.clone(),
                 reserves,
@@ -763,6 +771,7 @@ pub fn unbond(
                 Ok(holding)
             })?;
         } else {
+            // reserves can cover unbond
             messages.push(send_msg(
                 unbonder.clone(),
                 amount,
@@ -771,7 +780,6 @@ pub fn unbond(
                 None,
                 &full_asset.contract.clone(),
             )?);
-            unbond_amount = unbond_amount - amount;
 
             // Reflect sent funds in unbondings
             HOLDING.update(deps.storage, unbonder, |h| {
@@ -785,115 +793,269 @@ pub fn unbond(
                 }
                 Ok(holder)
             })?;
+
+            return Ok(Response::new().add_messages(messages).set_data(to_binary(
+                &adapter::ExecuteAnswer::Unbond {
+                    status: ResponseStatus::Success,
+                    amount,
+                },
+            )?));
         }
     }
 
-    if unbond_amount >= Uint128::zero() {
-        let full_asset = ASSETS.load(deps.storage, asset.clone())?;
+    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
-        let mut allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
+    let mut allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
 
-        // Build metadata
-        let mut amount_total = Uint128::zero();
-        let mut portion_total = Uint128::zero();
+    // Build metadata
+    let mut amount_total = Uint128::zero();
+    let mut portion_total = Uint128::zero();
 
-        // Gather adapter outstanding amounts
-        for i in 0..allocations.len() {
-            allocations[i].balance = adapter::balance_query(
-                deps.querier,
-                &full_asset.contract.address,
-                allocations[i].contract.clone(),
-            )?;
+    // Gather adapter outstanding amounts
+    for i in 0..allocations.len() {
+        allocations[i].balance = adapter::balance_query(
+            deps.querier,
+            &full_asset.contract.address,
+            allocations[i].contract.clone(),
+        )?;
 
-            match allocations[i].alloc_type {
-                AllocationType::Amount => amount_total += allocations[i].balance,
-                AllocationType::Portion => portion_total += allocations[i].balance,
-            };
+        match allocations[i].alloc_type {
+            AllocationType::Amount => amount_total += allocations[i].balance,
+            AllocationType::Portion => portion_total += allocations[i].balance,
+        };
+    }
+
+    /*let allowance = allowance_query(
+        &deps.querier,
+        config.treasury.clone(),
+        env.contract.address.clone(),
+        VIEWING_KEY.load(deps.storage)?,
+        1,
+        &full_asset.contract.clone(),
+    )?
+    .allowance;
+
+    let total = portion_total + allowance;*/
+
+    let mut alloc_meta = vec![];
+    let mut tot_unbond_available = Uint128::zero();
+
+    for allocation in allocations.clone() {
+        let bal = adapter::unbondable_query(deps.querier, &asset, allocation.contract.clone())?;
+
+        alloc_meta.push(AllocationMeta {
+            nick: allocation.nick,
+            contract: allocation.contract,
+            amount: allocation.amount,
+            alloc_type: allocation.alloc_type,
+            balance: bal,
+            tolerance: Uint128::zero(),
+        });
+        tot_unbond_available += bal;
+    }
+
+    if unbond_amount == tot_unbond_available {
+        for a in alloc_meta.clone() {
+            messages.push(adapter::unbond_msg(
+                &full_asset.contract.address.clone(),
+                a.balance.clone(),
+                a.contract.clone(),
+            )?);
         }
+        return Ok(Response::new().add_messages(messages).set_data(to_binary(
+            &adapter::ExecuteAnswer::Unbond {
+                status: ResponseStatus::Success,
+                amount,
+            },
+        )?));
+    }
 
-        let allowance = allowance_query(
-            &deps.querier,
-            config.treasury.clone(),
-            env.contract.address.clone(),
-            VIEWING_KEY.load(deps.storage)?,
-            1,
-            &full_asset.contract.clone(),
-        )?
-        .allowance;
+    let mut total_amount_unbonding = Uint128::zero();
 
-        let total = portion_total + allowance;
+    let mut unbond_amounts = vec![];
 
-        allocations.sort_by(|a, b| a.balance.cmp(&b.balance));
+    let portions = alloc_meta
+        .clone()
+        .into_iter()
+        .filter(|a| a.alloc_type == AllocationType::Portion)
+        .collect::<Vec<AllocationMeta>>();
+    let amounts = alloc_meta
+        .clone()
+        .into_iter()
+        .filter(|a| a.alloc_type == AllocationType::Amount)
+        .collect::<Vec<AllocationMeta>>();
 
-        // Unbond from adapters
-        for i in 0..allocations.len() {
-            if unbond_amount == Uint128::zero() {
-                break;
+    for meta in amounts.clone() {
+        if meta.balance > meta.amount {
+            total_amount_unbonding += meta.balance - meta.amount;
+            unbond_amounts.push(meta.balance - meta.amount);
+        } else {
+            unbond_amounts.push(Uint128::zero())
+        }
+    }
+
+    if unbond_amount == total_amount_unbonding {
+        println!(
+            "885 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
+            unbond_amount, unbond_amounts
+        );
+        for (i, meta) in amounts.clone().iter().enumerate() {
+            messages.push(adapter::unbond_msg(
+                &full_asset.contract.address.clone(),
+                unbond_amounts[i],
+                meta.contract.clone(),
+            )?);
+        }
+        return Ok(Response::new().add_messages(messages).set_data(to_binary(
+            &adapter::ExecuteAnswer::Unbond {
+                status: ResponseStatus::Success,
+                amount,
+            },
+        )?));
+    } else if unbond_amount < total_amount_unbonding {
+        let mut modified_total_amount_unbonding = Uint128::zero();
+        for (i, meta) in amounts.clone().iter().enumerate() {
+            unbond_amounts[i] =
+                unbond_amount.multiply_ratio(unbond_amounts[i], total_amount_unbonding);
+            modified_total_amount_unbonding += unbond_amounts[i];
+            if i == amounts.len() - 1 && modified_total_amount_unbonding < unbond_amount {
+                unbond_amounts[i] += Uint128::new(1);
             }
-
-            match allocations[i].alloc_type {
-                AllocationType::Amount => {
-                    let unbondable = adapter::unbondable_query(
-                        deps.querier,
-                        &asset,
-                        allocations[i].contract.clone(),
-                    )?;
-
-                    if unbond_amount > unbondable {
-                        messages.push(adapter::unbond_msg(
-                            &asset,
-                            unbondable,
-                            allocations[i].contract.clone(),
-                        )?);
-                        unbond_amount = unbond_amount - unbondable;
-                    } else {
-                        messages.push(adapter::unbond_msg(
-                            &asset,
-                            unbond_amount,
-                            allocations[i].contract.clone(),
-                        )?);
-                        unbond_amount = Uint128::zero()
-                    }
-                }
-                AllocationType::Portion => {
-                    /* TODO should prioritize higher reserves
-                    let _desired_amount = total.multiply_ratio(
-                        allocations[i].amount, 10u128.pow(18)
-                    );
-                    */
-
-                    let unbondable = adapter::unbondable_query(
-                        deps.querier,
-                        &asset,
-                        allocations[i].contract.clone(),
-                    )?;
-
-                    if unbond_amount > unbondable {
-                        messages.push(adapter::unbond_msg(
-                            &asset,
-                            unbondable,
-                            allocations[i].contract.clone(),
-                        )?);
-                        unbond_amount = unbond_amount - unbondable;
-                    } else {
-                        messages.push(adapter::unbond_msg(
-                            &asset,
-                            unbond_amount,
-                            allocations[i].contract.clone(),
-                        )?);
-                        unbond_amount = Uint128::zero()
-                    }
-                }
-            };
+            messages.push(adapter::unbond_msg(
+                &full_asset.contract.address.clone(),
+                unbond_amounts[i],
+                meta.contract.clone(),
+            )?);
         }
+        println!(
+            "921 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
+            unbond_amount, unbond_amounts
+        );
+        return Ok(Response::new().add_messages(messages).set_data(to_binary(
+            &adapter::ExecuteAnswer::Unbond {
+                status: ResponseStatus::Success,
+                amount,
+            },
+        )?));
     }
 
-    Ok(Response::new().add_messages(messages).set_data(to_binary(
-        &adapter::ExecuteAnswer::Unbond {
-            status: ResponseStatus::Success,
-            amount: unbond_amount,
-        },
-    )?))
+    // if portion total > unbond - tot, we know the portion adapters can cover the rest
+    println!(
+        "{} {}",
+        unbond_amount - total_amount_unbonding,
+        portion_total
+    );
+    if unbond_amount - total_amount_unbonding < portion_total {
+        for (i, meta) in amounts.clone().iter().enumerate() {
+            if !unbond_amounts[i].is_zero() {
+                messages.push(adapter::unbond_msg(
+                    &full_asset.contract.address.clone(),
+                    unbond_amounts[i],
+                    meta.contract.clone(),
+                )?);
+            }
+        }
+        let amount_adapt_tot_unbonding = total_amount_unbonding;
+        for (i, meta) in portions.clone().iter().enumerate() {
+            let unbond_from_portion = (unbond_amount - amount_adapt_tot_unbonding)
+                .multiply_ratio(meta.balance, portion_total);
+            unbond_amounts.push(unbond_from_portion);
+            total_amount_unbonding += unbond_from_portion;
+            println!("unbond from portion: {}", unbond_from_portion);
+            if i == portions.len() - 1 && total_amount_unbonding < unbond_amount {
+                messages.push(adapter::unbond_msg(
+                    &full_asset.contract.address.clone(),
+                    unbond_from_portion + Uint128::new(1),
+                    meta.contract.clone(),
+                )?);
+            } else if !unbond_from_portion.is_zero() {
+                messages.push(adapter::unbond_msg(
+                    &full_asset.contract.address.clone(),
+                    unbond_from_portion,
+                    meta.contract.clone(),
+                )?);
+            }
+        }
+        println!(
+            "969 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
+            unbond_amount, unbond_amounts
+        );
+        return Ok(Response::new().add_messages(messages).set_data(to_binary(
+            &adapter::ExecuteAnswer::Unbond {
+                status: ResponseStatus::Success,
+                amount,
+            },
+        )?));
+    } else {
+        // Otherwise we need to unbond everything from the portion adapters and go back to the
+        // amount adapters
+        for meta in portions {
+            //TODO Unobond from poriton adapters
+            unbond_amounts.push(meta.balance);
+            messages.push(adapter::unbond_msg(
+                &full_asset.contract.address,
+                meta.balance,
+                meta.contract,
+            )?);
+            total_amount_unbonding += meta.balance;
+        }
+        if total_amount_unbonding == unbond_amount {
+            for (i, meta) in amounts.clone().iter().enumerate() {
+                if !unbond_amounts[i].is_zero() {
+                    messages.push(adapter::unbond_msg(
+                        &full_asset.contract.address,
+                        unbond_amounts[i].clone(),
+                        meta.contract.clone(),
+                    )?);
+                }
+            }
+            println!(
+                "914 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
+                unbond_amount, unbond_amounts
+            );
+            return Ok(Response::new().add_messages(messages).set_data(to_binary(
+                &adapter::ExecuteAnswer::Unbond {
+                    status: ResponseStatus::Success,
+                    amount,
+                },
+            )?));
+        } else {
+            let mut amount_alloc = Uint128::zero();
+            for meta in amounts.clone() {
+                amount_alloc += meta.amount;
+            }
+            println!("{} {}", amount_alloc, total_amount_unbonding);
+            let mut modified_total_amount_unbonding = total_amount_unbonding;
+            for (i, meta) in amounts.iter().enumerate() {
+                unbond_amounts[i] += (unbond_amount - total_amount_unbonding)
+                    .multiply_ratio(meta.amount, amount_alloc);
+
+                modified_total_amount_unbonding += meta.balance;
+                if i == amounts.len() - 1
+                    && modified_total_amount_unbonding < unbond_amount
+                    && unbond_amount - modified_total_amount_unbonding
+                        < meta.balance - unbond_amounts[i]
+                {
+                    unbond_amounts[i] += unbond_amount - total_amount_unbonding;
+                }
+                messages.push(adapter::unbond_msg(
+                    &full_asset.contract.address,
+                    unbond_amounts[i],
+                    meta.contract.clone(),
+                )?);
+            }
+            println!(
+                "928 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
+                unbond_amount, unbond_amounts
+            );
+            return Ok(Response::new().add_messages(messages).set_data(to_binary(
+                &adapter::ExecuteAnswer::Unbond {
+                    status: ResponseStatus::Success,
+                    amount,
+                },
+            )?));
+        }
+    }
 }
 
 pub fn add_holder(

@@ -15,7 +15,6 @@ use shade_protocol::{
         StdError,
         StdResult,
         Storage,
-        SubMsg,
         Uint128,
     },
     contract_interfaces::{
@@ -882,8 +881,10 @@ pub fn unbond(
 
     for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
         if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
+            println!("HERE TERA 884");
             let unbondable =
                 manager::unbondable_query(deps.querier, &asset, self_address.clone(), m.clone())?;
+            println!("HERE TERA 887");
 
             if unbondable > unbond_amount {
                 messages.push(manager::unbond_msg(&asset, unbond_amount, m.clone())?);
