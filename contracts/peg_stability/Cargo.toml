@@ -1,10 +1,10 @@
 [package]
-name = "sky"
+name = "peg_stability"
 version = "0.1.0"
 authors = [
   "jackb7",
 ]
-edition = "2018"
+edition = "2021"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -24,10 +24,15 @@ default = []
 backtraces = ["shade-protocol/backtraces"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["sky", "sky-utils", "adapter", "math", "admin"] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["peg_stability", "shade_admin"] }
+shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", branch="develop"}
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 #shade-admin = { git = "https://github.com/securesecrets/shadeadmin", branch = "cosmwasm-v1-refactor", optional = true }
 schemars = "0.7"
 
 [dev-dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["ensemble"] }
+shade_admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0" }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["multi-test", "shade_admin"] }
+shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "snip20", "peg_stability", "admin"  ] }
+#shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["ensemble"] }
 #contract_harness = { version = "0.1.0", path = "../../packages/contract_harness" }

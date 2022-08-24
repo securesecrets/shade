@@ -49,7 +49,6 @@ pub fn try_update_config(
     let mut config = Config::load(deps.storage)?;
     validate_admin(
         &deps.querier,
-        env.contract.address.to_string(),
         info.sender.to_string(),
         &config.shade_admin,
     )?;
@@ -108,7 +107,6 @@ pub fn try_set_cycles(
     let shade_admin = Config::load(deps.storage)?.shade_admin;
     validate_admin(
         &deps.querier,
-        env.contract.address.to_string(),
         info.sender.to_string(),
         &shade_admin,
     )?;
@@ -138,7 +136,6 @@ pub fn try_append_cycle(
     let shade_admin = Config::load(deps.storage)?.shade_admin;
     validate_admin(
         &deps.querier,
-        env.contract.address.to_string(),
         info.sender.to_string(),
         &shade_admin,
     )?;
@@ -172,7 +169,6 @@ pub fn try_update_cycle(
     let shade_admin = Config::load(deps.storage)?.shade_admin;
     validate_admin(
         &deps.querier,
-        env.contract.address.to_string(),
         info.sender.to_string(),
         &shade_admin,
     )?;
@@ -199,7 +195,6 @@ pub fn try_remove_cycle(
     let shade_admin = Config::load(deps.storage)?.shade_admin;
     validate_admin(
         &deps.querier,
-        env.contract.address.to_string(),
         info.sender.to_string(),
         &shade_admin,
     )?;
