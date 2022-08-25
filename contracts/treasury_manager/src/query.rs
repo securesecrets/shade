@@ -223,6 +223,14 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
                     return Err(StdError::generic_err("Invalid Holder"));
                 }
             };
+            let unbondings = match holding
+                .unbondings
+                .iter()
+                .find(|u| u.token == asset.contract.address)
+            {
+                Some(u) => u.amount,
+                None => Uint128::zero(),
+            };
             let balance = match holding
                 .balances
                 .iter()
@@ -232,6 +240,13 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
                 None => Uint128::zero(),
             };
 
+            let exposed_bal = {
+                if balance > unbondings {
+                    balance - unbondings
+                } else {
+                    balance
+                }
+            };
             let config = CONFIG.load(deps.storage)?;
             if holder == config.treasury {
                 println!("TREASURY MANAGER BAL {}", balance);

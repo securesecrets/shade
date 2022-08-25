@@ -1,5 +1,13 @@
 use shade_multi_test::interfaces::{
-    dao::{init_dao, mock_adapter_sub_tokens, system_balance, unbond_exec, update_dao},
+    dao::{
+        init_dao,
+        mock_adapter_complete_unbonding,
+        mock_adapter_sub_tokens,
+        system_balance_reserves,
+        system_balance_unbondable,
+        unbond_exec,
+        update_dao,
+    },
     snip20,
     treasury,
     treasury_manager,
@@ -23,6 +31,7 @@ pub fn dao_int_test(
     alloc_amount: Vec<Vec<Uint128>>,
     alloc_type: Vec<Vec<AllocationType>>,
     alloc_tolerance: Vec<Vec<Uint128>>,
+    is_instant_unbond: bool,
     expected_treasury: Uint128,
     expected_manager: Vec<Uint128>,
     expected_adapter: Vec<Vec<Uint128>>,
@@ -43,10 +52,10 @@ pub fn dao_int_test(
         alloc_type.clone(),
         alloc_amount.clone(),
         alloc_tolerance.clone(),
+        is_instant_unbond,
     );
     //query assets
     let assets_query_res = treasury::assets_query(&app, &contracts).unwrap();
-    println!("{:?}", assets_query_res);
     assert!(
         assets_query_res.contains(
             &contracts
@@ -70,7 +79,12 @@ pub fn dao_int_test(
             "Treasury->Manager Allowance",
         );
     }
-    let mut bals = system_balance(&app, &contracts, snip20_symbol.to_string());
+    let mut bals;
+    if is_instant_unbond {
+        bals = system_balance_reserves(&app, &contracts, snip20_symbol.to_string());
+    } else {
+        bals = system_balance_unbondable(&app, &contracts, snip20_symbol.to_string());
+    }
     println!("{:?}", bals);
     assert_eq!(bals.0, expected_treasury);
     for (i, manager_tuples) in bals.1.iter().enumerate() {
@@ -109,10 +123,31 @@ pub fn dao_int_test(
         }
         k += 1;
     }
+
     update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);
     treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string());
-    bals = system_balance(&app, &contracts, "SSCRT".to_string());
     println!("{:?}", bals);
+    if !is_instant_unbond {
+        k = 0;
+        for i in 0..num_managers {
+            for j in 0..alloc_amount[i].len() {
+                println!("{}", k);
+                mock_adapter_complete_unbonding(
+                    &mut app,
+                    "admin",
+                    &contracts,
+                    SupportedContracts::MockAdapter(k),
+                )
+                .unwrap();
+                k += 1;
+            }
+            k += 1;
+        }
+        update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);
+        bals = system_balance_unbondable(&app, &contracts, "SSCRT".to_string());
+    } else {
+        bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
+    }
     assert_eq!(bals.0, initial_treasury_bal);
     for (i, manager_tuples) in bals.1.iter().enumerate() {
         assert_eq!(manager_tuples.0, Uint128::zero());
@@ -138,6 +173,7 @@ macro_rules! dao_tests {
                     alloc_amount,
                     alloc_type,
                     alloc_tolerance,
+                    is_instant_unbond,
                     expected_treasury,
                     expected_manager,
                     expected_adapter,
@@ -153,6 +189,7 @@ macro_rules! dao_tests {
                     alloc_amount,
                     alloc_type,
                     alloc_tolerance,
+                    is_instant_unbond,
                     expected_treasury,
                     expected_manager,
                     expected_adapter,
@@ -174,6 +211,7 @@ dao_tests! {
         vec![vec![Uint128::new(1 * 10u128.pow(17)), Uint128::new(400_000)]],
         vec![vec![AllocationType::Portion, AllocationType::Amount]],
         vec![vec![Uint128::zero(), Uint128::zero()]],
+        true,
         Uint128::new(590_000),
         vec![Uint128::new(0)],
         vec![vec![Uint128::new(10_000), Uint128::new(400_000)]],
@@ -189,6 +227,7 @@ dao_tests! {
         vec![vec![Uint128::new(5 * 10u128.pow(17)), Uint128::new(4_000_000), Uint128::new(4_000_000)], vec![Uint128::new(5 * 10u128.pow(17)), Uint128::new(4_000_000)]],
         vec![vec![AllocationType::Portion, AllocationType::Amount, AllocationType::Amount],vec![AllocationType::Portion, AllocationType::Amount]],
         vec![vec![Uint128::zero(), Uint128::zero(), Uint128::zero()],vec![Uint128::zero(), Uint128::zero()]],
+        true,
         Uint128::new(49_000_000),
         vec![Uint128::new(0), Uint128::new(0)],
         vec![vec![Uint128::new(21_000_000), Uint128::new(4_000_000), Uint128::new(4_000_000)],vec![Uint128::new(18_000_000), Uint128::new(4_000_000)]],
@@ -204,6 +243,7 @@ dao_tests! {
         vec![vec![Uint128::new(1 * 10u128.pow(17)), Uint128::new(40)]],
         vec![vec![AllocationType::Portion, AllocationType::Amount]],
         vec![vec![Uint128::zero(), Uint128::zero()]],
+        true,
         Uint128::new(59),
         vec![Uint128::new(0)],
         vec![vec![Uint128::new(1), Uint128::new(40)]],
@@ -230,6 +270,39 @@ dao_tests! {
         vec![
             vec![Uint128::zero(); 4]; 4
         ],
+        true,
+        Uint128::new(184),
+        vec![Uint128::zero(); 4],
+        vec![
+            vec![Uint128::new(18), Uint128::new(5), Uint128::new(6), Uint128::new(15)],
+            vec![Uint128::new(294), Uint128::new(5), Uint128::new(98), Uint128::new(15)],
+            vec![Uint128::new(48), Uint128::new(5), Uint128::new(16), Uint128::new(15)],
+            vec![Uint128::new(192), Uint128::new(5), Uint128::new(64), Uint128::new(15)],
+        ]
+    ),
+    dao_test_adapter_unbonding: (
+        Uint128::new(1000),
+        "SSCRT",
+        vec![
+            Uint128::new(50), // Amount - 50
+            Uint128::new(6 * 10u128.pow(17)), // Poriton - 60%
+            Uint128::new(100), // Amount - 100
+            Uint128::new(4 * 10u128.pow(17)), // Portion - 40%
+        ], // Allowance amount
+        vec![AllowanceType::Amount, AllowanceType::Portion, AllowanceType::Amount,  AllowanceType::Portion],
+        vec![Cycle::Constant; 4],
+        vec![Uint128::zero(); 4],
+        vec![Uint128::new(6), Uint128::new(98), Uint128::new(16),  Uint128::new(64)],
+        vec![
+            vec![Uint128::new(6 * 10u128.pow(17)), Uint128::new(5), Uint128::new(2 * 10u128.pow(17)), Uint128::new(15)];4
+        ],
+        vec![
+            vec![AllocationType::Portion, AllocationType::Amount, AllocationType::Portion, AllocationType::Amount];4
+        ],
+        vec![
+            vec![Uint128::zero(); 4]; 4
+        ],
+        false,
         Uint128::new(184),
         vec![Uint128::zero(); 4],
         vec![
@@ -273,8 +346,9 @@ pub fn dao_int_gains_losses(
         alloc_type,
         alloc_amount,
         alloc_tolerance,
+        true,
     );
-    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    let bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
     assert_eq!(bals, expected_after_init, "AFTER INITIALIZATION");
     for (i, adap) in adapters_to_send_to.clone().iter().enumerate() {
         if is_adapters_gain[i] {
@@ -313,7 +387,7 @@ pub fn dao_int_gains_losses(
         );
     }
     treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
-    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    let bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
     //assert_eq!(bals, expected_in_between_updates, "AFTER FIRST UPDATE");
     for tm in 0..num_managers {
         treasury_manager::update_exec(
@@ -325,7 +399,7 @@ pub fn dao_int_gains_losses(
         );
     }
     treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
-    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    let bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
     assert_eq!(bals, expected_after_updates, "AFTER BOTH UPDATES");
 }
 
@@ -808,8 +882,9 @@ pub fn test_tm_unbond(
             4
         ],
         vec![vec![Uint128::zero(); 4]; 4],
+        true,
     );
-    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    let bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
     assert_eq!(bals, expected_before_unbond);
     match adapter_gain_amount {
         Some(x) => {
@@ -841,7 +916,7 @@ pub fn test_tm_unbond(
     )
     .unwrap();
 
-    let bals = system_balance(&app, &contracts, "SSCRT".to_string());
+    let bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
     assert_eq!(bals, expected_after_unbond);
 }
 
