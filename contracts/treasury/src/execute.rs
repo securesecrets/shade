@@ -174,6 +174,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
                 env.contract.address.clone(),
                 m.clone(),
             )?;
+            println!("CLAIMABLE {}", claimable);
 
             unbonding = manager::unbonding_query(
                 deps.querier,
@@ -190,6 +191,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> St
             )?;
 
             if !claimable.is_zero() {
+                println!("CLAIM MSG HERE");
                 messages.push(manager::claim_msg(&asset.clone(), m.clone())?);
                 metrics.push(Metric {
                     action: Action::ManagerClaim,

@@ -125,6 +125,7 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
                 None => Uint128::zero(),
             };
 
+            println!("CLAIMABLE > UNBONDING {} {}", claimable, unbonding);
             if claimable > unbonding {
                 Ok(manager::QueryAnswer::Claimable { amount: unbonding })
             } else {

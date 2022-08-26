@@ -69,7 +69,6 @@ pub struct AllocationMeta {
     pub amount: Uint128,
     pub tolerance: Uint128,
     pub balance: Uint128,
-    pub unbonding: Uint128,
 }
 
 #[cw_serde]
