@@ -396,14 +396,8 @@ pub fn dao_int_gains_losses(
     treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
     let bals = {
         if is_instant_unbond {
-            system_balance_reserves(&app, &contracts, "SSCRT".to_string())
-        } else {
-            system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
-        }
-    };
-    //assert_eq!(bals, expected_in_between_updates, "AFTER FIRST UPDATE");
-    let bals = {
-        if is_instant_unbond {
+            let sys_bal = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
+            assert_eq!(sys_bal, expected_in_between_updates, "AFTER FIRST UPDATE");
             for tm in 0..num_managers {
                 treasury_manager::update_exec(
                     &mut app,
@@ -416,6 +410,8 @@ pub fn dao_int_gains_losses(
             treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
             system_balance_reserves(&app, &contracts, "SSCRT".to_string())
         } else {
+            let sys_bal = system_balance_unbondable(&app, &contracts, "SSCRT".to_string());
+            //assert_eq!(sys_bal, expected_in_between_updates, "AFTER FIRST UPDATE");
             let mut k = 0;
             for i in 0..num_managers {
                 for j in 0..alloc_amount[i].len() {

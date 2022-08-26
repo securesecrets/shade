@@ -226,6 +226,15 @@ pub fn unbond(
     let mut total_unbonding = amount + prev_unbonding;
     let mut reserves = scrt_balance + rewards;
 
+    if total_unbonding.is_zero() {
+        return Ok(
+            Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
+                status: ResponseStatus::Success,
+                amount: unbonding,
+            })?),
+        );
+    }
+
     // Send full unbonding
     if total_unbonding <= reserves {
         println!("UNBOND SENDING ALL UNBONDING");
@@ -275,13 +284,16 @@ pub fn unbond(
                 }
 
                 // This delegation isn't enough to fully unbond
-                if delegation.amount.amount.clone() < unbonding {
+                if delegation.amount.amount.clone() < unbonding
+                    && !delegation.amount.amount.clone().is_zero()
+                {
                     messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
                         validator: delegation.validator.clone(),
                         amount: delegation.amount.clone(),
                     }));
                     unbonding = unbonding - delegation.amount.amount.clone();
-                } else {
+                    undelegated.push(delegation.validator.clone());
+                } else if !delegation.amount.amount.clone().is_zero() {
                     messages.push(CosmosMsg::Staking(StakingMsg::Undelegate {
                         validator: delegation.validator.clone(),
                         amount: Coin {
@@ -290,9 +302,8 @@ pub fn unbond(
                         },
                     }));
                     unbonding = Uint128::zero();
+                    undelegated.push(delegation.validator.clone());
                 }
-
-                undelegated.push(delegation.validator.clone());
             }
         }
     }

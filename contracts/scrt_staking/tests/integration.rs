@@ -271,6 +271,7 @@ fn basic_scrt_staking_integration(
         _ => panic!("Query failed"),
     };
 
+    println!("SCRT STAKING ADDR {}", scrt_staking.address);
     // Unbond all
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
         amount: expected_scrt_staking,
@@ -278,6 +279,7 @@ fn basic_scrt_staking_integration(
     })
     .test_exec(&scrt_staking, &mut app, admin.clone(), &[])
     .unwrap();
+    println!("SCRT STAKING ADDR {}", scrt_staking.address);
 
     // Unbonding
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
