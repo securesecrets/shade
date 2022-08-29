@@ -2,16 +2,14 @@ use shade_protocol::{
     c_std::{
         entry_point,
         to_binary,
-        Api,
         Binary,
         Deps,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdResult,
-        Storage,
+        Uint128,
     },
     dao::{
         manager,
@@ -33,7 +31,7 @@ use crate::{execute, query, storage::*};
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let treasury = deps.api.addr_validate(msg.treasury.as_str())?;
@@ -52,6 +50,7 @@ pub fn instantiate(
         unbondings: vec![],
         status: Status::Active,
     })?;
+    UNBONDINGS.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::new())
 }
@@ -72,9 +71,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
         ExecuteMsg::UpdateConfig { config } => execute::try_update_config(deps, env, info, config),
         ExecuteMsg::RegisterAsset { contract } => {
-            println!("into valid");
             let contract = contract.into_valid(deps.api)?;
-            println!("post into valid");
             execute::try_register_asset(deps, &env, info, &contract)
         }
         ExecuteMsg::Allocate { asset, allocation } => {
@@ -107,7 +104,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),

@@ -71,7 +71,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             execute::allowance(deps, &env, info, asset, allowance)
         }
         ExecuteMsg::Update { asset } => {
-            println!("UPDATE MSG");
             let asset = deps.api.addr_validate(&asset)?;
             execute::update(deps, &env, info, asset)
         }

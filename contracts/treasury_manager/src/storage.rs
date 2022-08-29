@@ -1,4 +1,3 @@
-use cosmwasm_std::Addr;
 use shade_protocol::{
     dao::treasury_manager::{AllocationMeta, Config, Holding, Metric},
     secret_storage_plus::{Item, Map},
@@ -16,6 +15,7 @@ pub const ASSETS: Map<Addr, Snip20Asset> = Map::new("assets");
 pub const ALLOCATIONS: Map<Addr, Vec<AllocationMeta>> = Map::new("allocations");
 pub const HOLDERS: Item<Vec<Addr>> = Item::new("holders");
 pub const HOLDING: Map<Addr, Holding> = Map::new("holding");
+pub const UNBONDINGS: Item<Uint128> = Item::new("unbondings");
 
 pub const METRICS: PeriodStorage<Metric> =
     PeriodStorage::new("metrics-all", "metrics-recent", "metrics-timed");

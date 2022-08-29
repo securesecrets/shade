@@ -362,11 +362,11 @@ fn bonded_adapter_int(
 
     for _ in 0..5 {
         // Update Adapter
-        adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+        /*adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
             asset: token.address.to_string().clone(),
         })
         .test_exec(&adapter, &mut app, admin.clone(), &[])
-        .unwrap();
+        .unwrap();*/
 
         // Update manager
         manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
@@ -391,6 +391,7 @@ fn bonded_adapter_int(
     .unwrap())
     {
         adapter::QueryAnswer::Balance { amount } => {
+            println!("L394 balance {}", amount);
             assert_eq!(
                 amount,
                 pre_rewards.2 + rewards,

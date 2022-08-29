@@ -209,6 +209,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 println!("CLAIM MOCK ADAPTER");
                 let claimable = CLAIMABLE.load(deps.storage)?;
                 CLAIMABLE.save(deps.storage, &Uint128::zero())?;
+                REWARDS.save(deps.storage, &Uint128::zero())?;
 
                 Ok(Response::new()
                     .add_message(send_msg(
@@ -322,7 +323,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                             &config.token.clone(),
                         )? - (UNBONDING.load(deps.storage)? + CLAIMABLE.load(deps.storage)?)
                     }
-                    false => REWARDS.load(deps.storage)?,
+                    false => {
+                        let rewards = REWARDS.load(deps.storage)?;
+                        let unbonding = UNBONDING.load(deps.storage)?;
+                        if rewards > unbonding {
+                            rewards - unbonding
+                        } else {
+                            Uint128::zero()
+                        }
+                    }
                 };
 
                 println!("RESERVES MOCK ADAPTER {}", reserves);
