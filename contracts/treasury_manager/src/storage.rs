@@ -1,4 +1,5 @@
 use shade_protocol::{
+    c_std::{Addr, Uint128},
     dao::treasury_manager::{AllocationMeta, Config, Holding, Metric},
     secret_storage_plus::{Item, Map},
     snip20::helpers::Snip20Asset,

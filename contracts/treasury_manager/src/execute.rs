@@ -1161,7 +1161,7 @@ pub fn unbond(
             messages.push(adapter::unbond_msg(
                 &full_asset.contract.address,
                 meta.balance,
-                meta.contract,
+                meta.contract.clone(),
             )?);
             METRICS.pushf(deps.storage, env.block.time, Metric {
                 action: Action::Unbond,
@@ -1260,7 +1260,7 @@ pub fn add_holder(
         Ok(h)
     })?;
 
-    HOLDING.save(deps.storage, holder, &Holding {
+    HOLDING.save(deps.storage, holder.clone(), &Holding {
         balances: Vec::new(),
         unbondings: Vec::new(),
         status: Status::Active,
@@ -1271,7 +1271,7 @@ pub fn add_holder(
         timestamp: env.block.time.seconds(),
         token: Addr::unchecked(""),
         amount: Uint128::zero(),
-        user: holder.clone(),
+        user: holder,
     })?;
 
     Ok(
@@ -1296,7 +1296,7 @@ pub fn remove_holder(
 
     if let Some(mut holding) = HOLDING.may_load(deps.storage, holder.clone())? {
         holding.status = Status::Closed;
-        HOLDING.save(deps.storage, holder, &holding)?;
+        HOLDING.save(deps.storage, holder.clone(), &holding)?;
     } else {
         return Err(StdError::generic_err("Not an authorized holder"));
     }
@@ -1307,7 +1307,7 @@ pub fn remove_holder(
         timestamp: env.block.time.seconds(),
         token: Addr::unchecked(""),
         amount: Uint128::zero(),
-        user: holder.clone(),
+        user: holder,
     })?;
 
     Ok(
