@@ -3,9 +3,6 @@ use shade_protocol::{
     c_std::{
         to_binary,
         Addr,
-        Api,
-        BalanceResponse,
-        BankQuery,
         Binary,
         Coin,
         CosmosMsg,
@@ -14,18 +11,16 @@ use shade_protocol::{
         DistributionMsg,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StakingMsg,
         StdError,
         StdResult,
-        Storage,
         Uint128,
         Validator,
     },
 };
 
-use shade_protocol::snip20::helpers::{deposit_msg, redeem_msg};
+use shade_protocol::snip20::helpers::redeem_msg;
 
 use shade_protocol::{
     dao::{
@@ -82,7 +77,7 @@ pub fn receive(
 
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
@@ -108,7 +103,7 @@ pub fn try_update_config(
 /* Claim rewards and restake, hold enough for pending unbondings
  * Send reserves unbonded funds to treasury
  */
-pub fn update(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+pub fn update(deps: DepsMut, env: Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let mut messages = vec![];
     //let asset = deps.api.addr_validate(asset.as_str())?;
 
@@ -156,7 +151,7 @@ pub fn update(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdRes
 
 pub fn unbond(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     asset: Addr,
     amount: Uint128,
@@ -219,7 +214,7 @@ pub fn unbond(
 
     let mut unbonding = amount;
     let mut total_unbonding = amount + prev_unbonding;
-    let mut reserves = scrt_balance + rewards;
+    let reserves = scrt_balance + rewards;
 
     if total_unbonding.is_zero() {
         return Ok(
@@ -346,20 +341,13 @@ pub fn unwrap_and_stake(
 /* Claims completed unbondings, wraps them,
  * and returns them to treasury
  */
-pub fn claim(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+pub fn claim(deps: DepsMut, _env: Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     //let asset = deps.api.addr_validate(asset.as_str())?;
     if asset != config.sscrt.address {
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
-
-    /*
-    // Anyone can probably do this, as it just sends claimable to owner
-    if !config.admins.contains(&env.message.sender) && config.owner != env.message.sender {
-        return Err(StdError::generic_err("Unauthorized"));
-    }
-    */
 
     let mut messages = vec![];
 

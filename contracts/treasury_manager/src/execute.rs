@@ -1,19 +1,15 @@
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        self,
         to_binary,
         Addr,
-        Api,
         Binary,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     dao::{
@@ -51,18 +47,18 @@ use crate::storage::*;
 
 pub fn receive(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     _sender: Addr,
     from: Addr,
     amount: Uint128,
-    msg: Option<Binary>,
+    _msg: Option<Binary>,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
     let asset = ASSETS.load(deps.storage, info.sender.clone())?;
 
     // Do nothing if its an adapter (claimed funds)
-    if let Some(adapter) = ALLOCATIONS
+    if let Some(_) = ALLOCATIONS
         .load(deps.storage, info.sender.clone())?
         .iter()
         .find(|a| a.contract.address == from)
@@ -103,7 +99,7 @@ pub fn receive(
 
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
@@ -167,7 +163,7 @@ pub fn try_register_asset(
 
 pub fn allocate(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: MessageInfo,
     asset: Addr,
     allocation: Allocation,
@@ -183,8 +179,6 @@ pub fn allocate(
         &info.sender,
         &config.admin_auth,
     )?;
-
-    //let asset = deps.api.addr_validate(asset.as_str())?;
 
     let mut apps = ALLOCATIONS
         .may_load(deps.storage, asset.clone())?
@@ -247,13 +241,13 @@ pub fn allocate(
     )
 }
 
-pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
-    //let asset = deps.api.addr_validate(asset.as_str())?;
-
-    if !ASSET_LIST.load(deps.storage)?.contains(&asset.clone()) {
-        return Err(StdError::generic_err("Unrecognized asset"));
-    }
-    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
+pub fn claim(deps: DepsMut, _env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+    let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Unrecognized asset"));
+        }
+    };
 
     let config = CONFIG.load(deps.storage)?;
     let mut claimer = info.sender;
@@ -310,33 +304,6 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
         &full_asset.contract.clone(),
     )?;
 
-    // Claim if more funds are needed
-    /*    if holding.unbondings[unbonding_i].amount > reserves {
-        //assert!(false, "reduce claim_amount {} - {}", unbonding.amount, reserves);
-        let mut claim_amount = holding.unbondings[unbonding_i].amount - reserves;
-
-        for alloc in ALLOCATIONS.load(deps.storage, asset.clone())? {
-            if claim_amount == Uint128::zero() {
-                let claim = adapter::claimable_query(deps.querier, &asset, alloc.contract.clone())?;
-                if claim > Uint128::zero() {
-                    messages.push(adapter::claim_msg(&asset, alloc.contract.clone())?);
-                }
-            }
-
-            let claim = adapter::claimable_query(deps.querier, &asset, alloc.contract.clone())?;
-
-            if claim > Uint128::zero() {
-                messages.push(adapter::claim_msg(&asset, alloc.contract)?);
-                if claim > claim_amount {
-                    claim_amount = Uint128::zero();
-                } else {
-                    claim_amount = claim_amount - claim;
-                }
-                total_claimed += claim + claim_amount;
-            }
-        }
-    }*/
-
     let send_amount;
 
     if holding.unbondings[unbonding_i].amount > reserves + total_claimed {
@@ -366,7 +333,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
     )?))
 }
 
-pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     let full_asset = ASSETS.load(deps.storage, asset.clone())?;
@@ -608,7 +575,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
                     // account for allowance being sent out
                     allowance_used += allowance;
-                    desired_input = desired_input - allowance;
                     allowance = Uint128::zero();
                 }
             }
@@ -700,7 +666,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
 pub fn unbond(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: MessageInfo,
     asset: Addr,
     amount: Uint128,
@@ -909,18 +875,6 @@ pub fn unbond(
         };
     }
 
-    /*let allowance = allowance_query(
-        &deps.querier,
-        config.treasury.clone(),
-        env.contract.address.clone(),
-        VIEWING_KEY.load(deps.storage)?,
-        1,
-        &full_asset.contract.clone(),
-    )?
-    .allowance;
-
-    let total = portion_total + allowance;*/
-
     let mut alloc_meta = vec![];
     let mut tot_unbond_available = Uint128::zero();
     let mut tot_unbonding = Uint128::zero();
@@ -941,12 +895,6 @@ pub fn unbond(
         tot_unbond_available += bal;
         tot_unbonding += unbonding;
     }
-
-    /*if unbond_amount > tot_unbonding {
-        unbond_amount -= tot_unbonding;
-    } else {
-        unbond_amount = Uint128::zero();
-    }*/
 
     if unbond_amount == tot_unbond_available {
         for a in alloc_meta.clone() {
@@ -1163,7 +1111,7 @@ pub fn add_holder(
 
 pub fn remove_holder(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: MessageInfo,
     holder: Addr,
 ) -> StdResult<Response> {
@@ -1190,32 +1138,4 @@ pub fn remove_holder(
             status: ResponseStatus::Success,
         })?),
     )
-}
-
-/* Builds a map of { Addr: <asset_portion * 10^18> }
- */
-pub fn holding_shares(holdings: HashMap<Addr, Holding>, asset: Addr) -> HashMap<Addr, Uint128> {
-    let mut ratios: HashMap<Addr, Uint128> = HashMap::new();
-    let denominator = 10u128.pow(18);
-
-    let total = holdings
-        .iter()
-        .map(
-            |(addr, holding)| match holding.balances.iter().find(|b| b.token == asset) {
-                Some(b) => b.amount.u128(),
-                None => 0u128,
-            },
-        )
-        .sum::<u128>();
-
-    for (addr, holding) in holdings {
-        let balance = match holding.balances.iter().find(|b| b.token == asset) {
-            Some(b) => b.amount,
-            None => Uint128::zero(),
-        };
-
-        ratios.insert(addr, balance.multiply_ratio(10u128.pow(18), total));
-    }
-
-    ratios
 }

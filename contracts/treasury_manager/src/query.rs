@@ -1,5 +1,5 @@
 use shade_protocol::{
-    c_std::{Addr, Api, Deps, Querier, StdError, StdResult, Storage, Uint128},
+    c_std::{Addr, Deps, StdError, StdResult, Uint128},
     dao::{adapter, manager, treasury_manager},
     snip20::helpers::{allowance_query, balance_query},
 };
@@ -34,7 +34,7 @@ pub fn pending_allowance(deps: Deps, asset: Addr) -> StdResult<treasury_manager:
     Ok(treasury_manager::QueryAnswer::PendingAllowance { amount: allowance })
 }
 
-pub fn reserves(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
+pub fn reserves(deps: Deps, asset: Addr, _holder: Addr) -> StdResult<manager::QueryAnswer> {
     if let Some(full_asset) = ASSETS.may_load(deps.storage, asset)? {
         let reserves = balance_query(
             &deps.querier,
@@ -210,14 +210,6 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
                     return Err(StdError::generic_err("Invalid Holder"));
                 }
             };
-            let unbondings = match holding
-                .unbondings
-                .iter()
-                .find(|u| u.token == asset.contract.address)
-            {
-                Some(u) => u.amount,
-                None => Uint128::zero(),
-            };
             let balance = match holding
                 .balances
                 .iter()
@@ -226,15 +218,6 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
                 Some(b) => b.amount,
                 None => Uint128::zero(),
             };
-
-            let exposed_bal = {
-                if balance > unbondings {
-                    balance - unbondings
-                } else {
-                    balance
-                }
-            };
-            let config = CONFIG.load(deps.storage)?;
 
             Ok(manager::QueryAnswer::Balance { amount: balance })
         }
