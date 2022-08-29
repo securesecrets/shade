@@ -1,19 +1,15 @@
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
-        self,
         to_binary,
         Addr,
-        Api,
         Binary,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     dao::{
@@ -51,18 +47,18 @@ use crate::storage::*;
 
 pub fn receive(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     _sender: Addr,
     from: Addr,
     amount: Uint128,
-    msg: Option<Binary>,
+    _msg: Option<Binary>,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
     let asset = ASSETS.load(deps.storage, info.sender.clone())?;
 
     // Do nothing if its an adapter (claimed funds)
-    if let Some(adapter) = ALLOCATIONS
+    if let Some(_) = ALLOCATIONS
         .load(deps.storage, info.sender.clone())?
         .iter()
         .find(|a| a.contract.address == from)
@@ -103,7 +99,7 @@ pub fn receive(
 
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
@@ -167,7 +163,7 @@ pub fn try_register_asset(
 
 pub fn allocate(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: MessageInfo,
     asset: Addr,
     allocation: Allocation,
@@ -183,8 +179,6 @@ pub fn allocate(
         &info.sender,
         &config.admin_auth,
     )?;
-
-    //let asset = deps.api.addr_validate(asset.as_str())?;
 
     let mut apps = ALLOCATIONS
         .may_load(deps.storage, asset.clone())?
@@ -247,13 +241,13 @@ pub fn allocate(
     )
 }
 
-pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
-    //let asset = deps.api.addr_validate(asset.as_str())?;
-
-    if !ASSET_LIST.load(deps.storage)?.contains(&asset.clone()) {
-        return Err(StdError::generic_err("Unrecognized asset"));
-    }
-    let full_asset = ASSETS.load(deps.storage, asset.clone())?;
+pub fn claim(deps: DepsMut, _env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+    let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Unrecognized asset"));
+        }
+    };
 
     let config = CONFIG.load(deps.storage)?;
     let mut claimer = info.sender;
@@ -310,33 +304,6 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
         &full_asset.contract.clone(),
     )?;
 
-    // Claim if more funds are needed
-    /*    if holding.unbondings[unbonding_i].amount > reserves {
-        //assert!(false, "reduce claim_amount {} - {}", unbonding.amount, reserves);
-        let mut claim_amount = holding.unbondings[unbonding_i].amount - reserves;
-
-        for alloc in ALLOCATIONS.load(deps.storage, asset.clone())? {
-            if claim_amount == Uint128::zero() {
-                let claim = adapter::claimable_query(deps.querier, &asset, alloc.contract.clone())?;
-                if claim > Uint128::zero() {
-                    messages.push(adapter::claim_msg(&asset, alloc.contract.clone())?);
-                }
-            }
-
-            let claim = adapter::claimable_query(deps.querier, &asset, alloc.contract.clone())?;
-
-            if claim > Uint128::zero() {
-                messages.push(adapter::claim_msg(&asset, alloc.contract)?);
-                if claim > claim_amount {
-                    claim_amount = Uint128::zero();
-                } else {
-                    claim_amount = claim_amount - claim;
-                }
-                total_claimed += claim + claim_amount;
-            }
-        }
-    }*/
-
     let send_amount;
 
     if holding.unbondings[unbonding_i].amount > reserves + total_claimed {
@@ -366,8 +333,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
     )?))
 }
 
-pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
-    println!("\n\t\t\t\t\tMANAGER UPDATE\n");
+pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     let full_asset = ASSETS.load(deps.storage, asset.clone())?;
@@ -409,7 +375,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
             a.contract.clone(),
         )?;
         if !claimable.is_zero() {
-            println!("TM CLAIMABLE: {}", claimable);
             messages.push(adapter::claim_msg(
                 &full_asset.contract.address.clone(),
                 a.contract.clone(),
@@ -489,13 +454,8 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     // plus it's current snip20 balance
     // We subtract holder_unbonding to ensure that those tokens will be claimable
     let out_total = (amount_total + portion_total + balance) - holder_unbonding;
-    println!(
-        "OUT_TOTAL: {}, HOLDER_UNBONDING: {}, allowance: {}",
-        out_total, holder_unbonding, allowance
-    );
     // This gives us our total allowance from the treasury, used and unused
     let total = out_total + allowance;
-    println!("TOTAL: {}", total);
 
     //setting up vars
     let mut allowance_used = Uint128::zero();
@@ -530,10 +490,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         // in either direction
         let threshold = desired_amount.multiply_ratio(adapter.tolerance, 10u128.pow(18));
 
-        println!(
-            "adap.bal, adap.unbond: {}>{}",
-            adapter.balance, effective_unbonding[i]
-        );
         let effective_balance = {
             if adapter.balance > effective_unbonding[i] {
                 adapter.balance - effective_unbonding[i]
@@ -543,10 +499,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
         };
 
         // Under Funded -- prioritize tm snip20 balance over allowance from treasury
-        println!(
-            "ADAPTER BAL CMP DESIRED_AMOUNT {} >? {}",
-            effective_balance, desired_amount
-        );
         if effective_balance < desired_amount {
             // target send amount to adapter
             let mut desired_input = desired_amount - effective_balance;
@@ -603,7 +555,6 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                         memo: None,
                     });
 
-                    // account for how much treasury allowance we have used
                     allowance_used += desired_input;
                     // this will not overflow due to check in if statement
                     allowance = allowance - desired_input;
@@ -612,7 +563,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
                     // allowance used in the holder's information
                 }
                 // Send all allowance
-                else {
+                else if !allowance.is_zero() {
                     send_from_actions.push(SendFromAction {
                         owner: config.treasury.clone().to_string(),
                         recipient: adapter.contract.address.clone().to_string(),
@@ -624,17 +575,12 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
                     // account for allowance being sent out
                     allowance_used += allowance;
-                    desired_input = desired_input - allowance;
                     allowance = Uint128::zero();
                 }
             }
         }
         // Over funded -- unbond
         else if effective_balance > desired_amount {
-            println!(
-                "EFFECTIVE_BALANCE > DESIRED_AMOUNT {} > {}",
-                effective_balance, desired_amount
-            );
             // balance - target balance will give the amount we need to unbond
             let desired_output = effective_balance - desired_amount;
             // check to see that the threshold has been crossed
@@ -720,7 +666,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
 
 pub fn unbond(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: MessageInfo,
     asset: Addr,
     amount: Uint128,
@@ -781,19 +727,11 @@ pub fn unbond(
             .position(|h| h.token == asset.clone())
         {
             holding.unbondings[u].amount += amount;
-            println!(
-                "\t\t\t\t YOU CAN'T MISS ME {}",
-                holding.unbondings[u].amount
-            );
         } else {
             holding.unbondings.push(Balance {
                 token: asset.clone(),
                 amount,
             });
-            println!(
-                "\t\t\t\t ELSE YOU CAN'T MISS ME {}",
-                holding.unbondings[0].amount
-            );
         }
 
         HOLDING.save(deps.storage, unbonder.clone(), &holding)?;
@@ -809,10 +747,6 @@ pub fn unbond(
 
     let mut unbond_amount = {
         let u = UNBONDINGS.load(deps.storage)?;
-        println!(
-            "790 Manager Unbondings {} total unbonding {}",
-            u, unbonding_tot
-        );
         if u <= unbonding_tot {
             if u <= amount {
                 UNBONDINGS.save(deps.storage, &Uint128::zero())?;
@@ -825,7 +759,6 @@ pub fn unbond(
             amount
         }
     };
-    println!("798 UNBOND AMOUNT {}", unbond_amount);
 
     // get other holders unbonding amount to hold
     let mut other_unbondings = Uint128::zero();
@@ -861,22 +794,6 @@ pub fn unbond(
 
     let mut messages = vec![];
 
-    /*for a in ALLOCATIONS.load(deps.storage, asset.clone())? {
-        if a.unbonding < unbond_amount {
-            unbond_amount -= a.unbonding;
-        } else {
-            unbond_amount = Uint128::zero();
-        }
-    }*/
-
-    println!(
-        "TREASU:RY MAN UNBOND HERE \t \t unbond amount: {}, reseresves: {}",
-        amount, reserves
-    );
-    println!(
-        "TREASU:RY MAN UNBOND HERE \t \t unbond amount: {}, reseresves: {}",
-        unbond_amount, reserves
-    );
     // Send available reserves to unbonder
     if reserves > Uint128::zero() {
         if reserves < unbond_amount {
@@ -958,18 +875,6 @@ pub fn unbond(
         };
     }
 
-    /*let allowance = allowance_query(
-        &deps.querier,
-        config.treasury.clone(),
-        env.contract.address.clone(),
-        VIEWING_KEY.load(deps.storage)?,
-        1,
-        &full_asset.contract.clone(),
-    )?
-    .allowance;
-
-    let total = portion_total + allowance;*/
-
     let mut alloc_meta = vec![];
     let mut tot_unbond_available = Uint128::zero();
     let mut tot_unbonding = Uint128::zero();
@@ -991,12 +896,6 @@ pub fn unbond(
         tot_unbonding += unbonding;
     }
 
-    /*if unbond_amount > tot_unbonding {
-        unbond_amount -= tot_unbonding;
-    } else {
-        unbond_amount = Uint128::zero();
-    }*/
-
     if unbond_amount == tot_unbond_available {
         for a in alloc_meta.clone() {
             messages.push(adapter::unbond_msg(
@@ -1005,10 +904,6 @@ pub fn unbond(
                 a.contract.clone(),
             )?);
         }
-        println!(
-            "UNBOND_AMOUNT: {} == TOT_UNBOND_AVAILABLE: {}",
-            unbond_amount, tot_unbond_available
-        );
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1040,13 +935,8 @@ pub fn unbond(
             unbond_amounts.push(Uint128::zero())
         }
     }
-    println!("UNBOND_AMOUNT:{}", unbond_amount);
 
     if unbond_amount == total_amount_unbonding {
-        println!(
-            "885 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-            unbond_amount, unbond_amounts
-        );
         for (i, meta) in amounts.clone().iter().enumerate() {
             messages.push(adapter::unbond_msg(
                 &full_asset.contract.address.clone(),
@@ -1075,10 +965,6 @@ pub fn unbond(
                 meta.contract.clone(),
             )?);
         }
-        println!(
-            "921 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-            unbond_amount, unbond_amounts
-        );
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1088,11 +974,6 @@ pub fn unbond(
     }
 
     // if portion total > unbond - tot, we know the portion adapters can cover the rest
-    println!(
-        "{} {}",
-        unbond_amount - total_amount_unbonding,
-        portion_total
-    );
     if unbond_amount - total_amount_unbonding < portion_total {
         for (i, meta) in amounts.clone().iter().enumerate() {
             if !unbond_amounts[i].is_zero() {
@@ -1123,10 +1004,6 @@ pub fn unbond(
                 )?);
             }
         }
-        println!(
-            "969 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-            unbond_amount, unbond_amounts
-        );
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1156,10 +1033,6 @@ pub fn unbond(
                     )?);
                 }
             }
-            println!(
-                "914 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-                unbond_amount, unbond_amounts
-            );
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1190,10 +1063,6 @@ pub fn unbond(
                     meta.contract.clone(),
                 )?);
             }
-            println!(
-                "928 UNBOND \t \t unbond_amount: {}, unbond_amounts: {:?}",
-                unbond_amount, unbond_amounts
-            );
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1242,7 +1111,7 @@ pub fn add_holder(
 
 pub fn remove_holder(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: MessageInfo,
     holder: Addr,
 ) -> StdResult<Response> {
@@ -1269,32 +1138,4 @@ pub fn remove_holder(
             status: ResponseStatus::Success,
         })?),
     )
-}
-
-/* Builds a map of { Addr: <asset_portion * 10^18> }
- */
-pub fn holding_shares(holdings: HashMap<Addr, Holding>, asset: Addr) -> HashMap<Addr, Uint128> {
-    let mut ratios: HashMap<Addr, Uint128> = HashMap::new();
-    let denominator = 10u128.pow(18);
-
-    let total = holdings
-        .iter()
-        .map(
-            |(addr, holding)| match holding.balances.iter().find(|b| b.token == asset) {
-                Some(b) => b.amount.u128(),
-                None => 0u128,
-            },
-        )
-        .sum::<u128>();
-
-    for (addr, holding) in holdings {
-        let balance = match holding.balances.iter().find(|b| b.token == asset) {
-            Some(b) => b.amount,
-            None => Uint128::zero(),
-        };
-
-        ratios.insert(addr, balance.multiply_ratio(10u128.pow(18), total));
-    }
-
-    ratios
 }
