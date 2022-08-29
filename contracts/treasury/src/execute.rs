@@ -601,8 +601,7 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
         });
     }
 
-    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
-    METRICS.flush(deps.storage)?;
+    METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
 
     Ok(Response::new()
         .add_messages(messages)
