@@ -324,34 +324,3 @@ pub fn balance_query(
         _ => Err(StdError::generic_err("query failed")),
     }
 }
-
-/*pub fn unbond_exec(
-    chain: &mut App,
-    sender: &str,
-    contracts: &DeployedContracts,
-    snip20_symbol: String,
-    amount: Uint128,
-) -> StdResult<()> {
-    match (treasury::ExecuteMsg::Unbond {
-        asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
-            .unwrap()
-            .clone()
-            .address
-            .to_string(),
-        amount,
-    }
-    .test_exec(
-        &contracts
-            .get(&SupportedContracts::Treasury)
-            .unwrap()
-            .clone()
-            .into(),
-        chain,
-        Addr::unchecked(sender),
-        &[],
-    )) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(StdError::generic_err(e.to_string())),
-    }
-}*/
