@@ -16,4 +16,3 @@ pub const ALLOCATIONS: Map<Addr, Vec<AllocationMeta>> = Map::new("allocations");
 pub const HOLDERS: Item<Vec<Addr>> = Item::new("holders");
 pub const HOLDING: Map<Addr, Holding> = Map::new("holding");
 pub const UNBONDINGS: Item<Uint128> = Item::new("unbondings");
-//pub const UNBONDINGS: Map<Addr, Vec<Unbonding>> = Map::new("unbondings");
