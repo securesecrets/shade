@@ -325,7 +325,7 @@ pub fn balance_query(
     }
 }
 
-pub fn unbond_exec(
+/*pub fn unbond_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
@@ -354,4 +354,4 @@ pub fn unbond_exec(
         Ok(_) => Ok(()),
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }
-}
+}*/

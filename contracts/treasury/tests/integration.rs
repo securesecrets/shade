@@ -1,18 +1,31 @@
-use shade_protocol::c_std::{
-    coins,
-    from_binary,
-    to_binary,
-    Addr,
-    Binary,
-    Coin,
-    Decimal,
-    Env,
-    StdError,
-    StdResult,
-    Uint128,
-    Validator,
+use mock_adapter;
+use shade_multi_test::{
+    interfaces,
+    multi::{
+        admin::init_admin_auth,
+        mock_adapter::MockAdapter,
+        snip20::Snip20,
+        treasury::Treasury,
+        treasury_manager::TreasuryManager,
+    },
 };
-
+use shade_protocol::{
+    c_std::{
+        coins,
+        from_binary,
+        to_binary,
+        Addr,
+        Binary,
+        Coin,
+        Decimal,
+        Env,
+        StdError,
+        StdResult,
+        Uint128,
+        Validator,
+    },
+    multi_test::{App, BankSudo, StakingSudo, SudoMsg},
+};
 use shade_protocol::{
     contract_interfaces::{
         dao::{
@@ -35,16 +48,6 @@ use shade_protocol::{
         Query,
     },
 };
-
-use mock_adapter;
-use shade_multi_test::multi::{
-    admin::init_admin_auth,
-    mock_adapter::MockAdapter,
-    snip20::Snip20,
-    treasury::Treasury,
-    treasury_manager::TreasuryManager,
-};
-use shade_protocol::multi_test::{App, BankSudo, StakingSudo, SudoMsg};
 
 use serde_json;
 
@@ -452,11 +455,11 @@ fn bonded_adapter_int(
     */
 
     // Unbond all w/ treasury
-    treasury::ExecuteMsg::Unbond {
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Unbond {
         amount: post_rewards.1 + post_rewards.2,
         asset: token.address.to_string().clone(),
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    })
+    .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
 
     // adapter balance

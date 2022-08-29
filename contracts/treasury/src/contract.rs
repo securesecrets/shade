@@ -76,11 +76,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
         ExecuteMsg::SetRunLevel { run_level } => {
             execute::set_run_level(deps, &env, info, run_level)
-        }
-        ExecuteMsg::Unbond { asset, amount } => {
-            let asset = deps.api.addr_validate(&asset)?;
-            execute::unbond(deps, &env, info, asset, amount)
-        }
+        } /*ExecuteMsg::Unbond { asset, amount } => {
+              let asset = deps.api.addr_validate(&asset)?;
+              execute::unbond(deps, &env, info, asset, amount)
+          }*/
     }
 }
 

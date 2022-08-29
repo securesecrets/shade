@@ -124,10 +124,6 @@ pub enum ExecuteMsg {
     SetRunLevel {
         run_level: RunLevel,
     },
-    Unbond {
-        asset: String,
-        amount: Uint128,
-    },
 }
 
 impl ExecuteCallback for ExecuteMsg {

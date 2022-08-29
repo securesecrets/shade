@@ -5,7 +5,6 @@ use shade_multi_test::interfaces::{
         mock_adapter_sub_tokens,
         system_balance_reserves,
         system_balance_unbondable,
-        unbond_exec,
         update_dao,
     },
     snip20,
@@ -1347,11 +1346,12 @@ pub fn test_tm_unbond(
         }
         None => {}
     }
-    treasury::unbond_exec(
+    treasury_manager::unbond_exec(
         &mut app,
         "admin",
         &contracts,
         "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
         unbond_amount,
     )
     .unwrap();
