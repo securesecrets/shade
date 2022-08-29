@@ -61,6 +61,7 @@ pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     Ok(adapter::QueryAnswer::Reserves { amount: reserves })
 }
 
+/*
 pub fn unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let self_address = SELF_ADDRESS.load(deps.storage)?;
     let mut unbonding = Uint128::zero();
@@ -113,6 +114,7 @@ pub fn claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
 
     Ok(adapter::QueryAnswer::Claimable { amount: claimable })
 }
+*/
 
 pub fn allowance(deps: Deps, asset: Addr, spender: Addr) -> StdResult<treasury::QueryAnswer> {
     let self_address = SELF_ADDRESS.load(deps.storage)?;

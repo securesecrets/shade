@@ -768,6 +768,7 @@ pub fn allowance(
     )
 }
 
+/*
 pub fn claim(deps: DepsMut, _env: &Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     // TODO iterate manager storage
     let self_address = SELF_ADDRESS.load(deps.storage)?;
@@ -858,3 +859,4 @@ pub fn unbond(
         },
     )?))
 }
+*/

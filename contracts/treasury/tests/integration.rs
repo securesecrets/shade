@@ -224,10 +224,9 @@ fn bonded_adapter_int(
     .unwrap();
 
     // Update treasury
-    println!("UPDATE TREASURY");
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+    treasury::ExecuteMsg::Update {
         asset: token.address.to_string().clone(),
-    })
+    }
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
@@ -278,13 +277,13 @@ fn bonded_adapter_int(
     .unwrap();
 
     // Treasury reserves check
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+    match (treasury::QueryMsg::Reserves {
         asset: token.address.to_string().clone(),
-    })
+    }
     .test_query(&treasury, &app)
     .unwrap())
     {
-        adapter::QueryAnswer::Reserves { amount } => {
+        treasury::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, pre_rewards.0, "Treasury Reserves");
         }
         _ => panic!("Query Failed"),
@@ -298,7 +297,7 @@ fn bonded_adapter_int(
     .test_query(&manager, &app)
     .unwrap())
     {
-        adapter::QueryAnswer::Reserves { amount } => {
+        manager::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, pre_rewards.1, "Manager Reserves");
         }
         _ => panic!("Query Failed"),
@@ -360,14 +359,7 @@ fn bonded_adapter_int(
         _ => panic!("Query Failed"),
     };
 
-    for _ in 0..5 {
-        // Update Adapter
-        /*adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
-            asset: token.address.to_string().clone(),
-        })
-        .test_exec(&adapter, &mut app, admin.clone(), &[])
-        .unwrap();*/
-
+    for _ in 0..2 {
         // Update manager
         manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
             asset: token.address.to_string().clone(),
@@ -376,9 +368,9 @@ fn bonded_adapter_int(
         .unwrap();
 
         // Update treasury
-        adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+        treasury::ExecuteMsg::Update {
             asset: token.address.to_string().clone(),
-        })
+        }
         .test_exec(&treasury, &mut app, admin.clone(), &[])
         .unwrap();
     }
@@ -390,7 +382,7 @@ fn bonded_adapter_int(
     .test_query(&adapter, &app)
     .unwrap())
     {
-        adapter::QueryAnswer::Balance { amount } => {
+        treasury::QueryAnswer::Balance { amount } => {
             println!("L394 balance {}", amount);
             assert_eq!(
                 amount,
@@ -432,29 +424,25 @@ fn bonded_adapter_int(
         _ => panic!("Query Failed"),
     };
 
-    // Treasury unbondable check
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
-        asset: token.address.to_string().clone(),
-    })
-    .test_query(&treasury, &mut app)
-    .unwrap())
-    {
-        adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(
-                amount,
-                post_rewards.1 + post_rewards.2,
-                "Treasury Unbondable"
-            );
-        }
-        _ => panic!("Query Failed"),
-    };
-
-    // Unbond all w/ treasury
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
-        amount: post_rewards.1 + post_rewards.2,
-        asset: token.address.to_string().clone(),
-    })
+    // Treasury Migration
+    treasury::ExecuteMsg::SetRunLevel {
+        run_level: RunLevel::Migrating,
+    }
     .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
+
+    // Treasury Migration Update
+    treasury::ExecuteMsg::Update {
+        asset: token.address.to_string().clone(),
+    }
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
+
+    // Update manager
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
+        asset: token.address.to_string().clone(),
+    })
+    .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
 
     // adapter balance
@@ -570,52 +558,12 @@ fn bonded_adapter_int(
         _ => panic!("Query Failed"),
     };
 
-    /*
     // Claim Treasury Manager
     manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Claim {
         asset: token.address.to_string().clone(),
     })
     .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
-    */
-
-    // Claim Treasury
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
-        asset: token.address.to_string().clone(),
-    })
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    /*
-    // Treasury reserves check
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
-        asset: token.address.to_string().clone(),
-    })
-    .test_query(&treasury, &mut app))
-    .unwrap()
-    {
-        adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, deposit + rewards, "Treasury Reserves Post-Claim");
-        }
-        _ => panic!("Bad Reserves Query Response"),
-    };
-    */
-
-    /*
-    // Manager balance check
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
-        asset: token.address.to_string().clone(),
-        holder: treasury.address.to_string().clone(),
-    })
-    .test_query(&manager, &mut app)
-    .unwrap())
-    {
-        manager::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit + rewards, "Manager Balance Post Claim");
-        }
-        _ => panic!("Query Failed"),
-    };
-    */
 
     // Adapter balance
     match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
@@ -630,14 +578,21 @@ fn bonded_adapter_int(
         _ => panic!("Query Failed"),
     };
 
-    // Treasury balance check
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    // Update treasury
+    treasury::ExecuteMsg::Update {
         asset: token.address.to_string().clone(),
-    })
+    }
+    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .unwrap();
+
+    // Treasury balance check
+    match (treasury::QueryMsg::Balance {
+        asset: token.address.to_string().clone(),
+    }
     .test_query(&treasury, &mut app)
     .unwrap())
     {
-        adapter::QueryAnswer::Balance { amount } => {
+        treasury::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit + rewards, "Treasury Balance Post Claim");
         }
         _ => panic!("Query Failed"),
@@ -724,43 +679,12 @@ fn bonded_adapter_int(
         _ => panic!("Query Failed"),
     };
 
-    // Migration
-    println!("Setting migration runlevel");
-    treasury::ExecuteMsg::SetRunLevel {
-        run_level: RunLevel::Migrating,
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    //Update
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
-        asset: token.address.to_string().clone(),
-    })
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // Check Metrics
-    match (treasury::QueryMsg::Metrics {
-        date: None, //Some(utc_from_timestamp(app.block_info().time).to_rfc3339()),
-        period: Period::Hour,
-    }
-    .test_query(&treasury, &app)
-    .unwrap())
-    {
-        treasury::QueryAnswer::Metrics { metrics } => {
-            for m in metrics.clone() {
-                println!("{}", serde_json::to_string(&m).unwrap());
-            }
-        }
-        _ => panic!("query failed"),
-    };
-
     match (snip20::QueryMsg::Balance {
         address: admin.to_string().clone(),
         key: viewing_key.clone(),
-    })
+    }
     .test_query(&token, &app)
-    .unwrap()
+    .unwrap())
     {
         snip20::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit + rewards, "post-migration full unbond");
