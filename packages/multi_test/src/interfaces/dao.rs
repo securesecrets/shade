@@ -32,6 +32,7 @@ pub fn init_dao(
     tm_allowance_type: Vec<Vec<AllocationType>>,
     tm_allocation_amount: Vec<Vec<Uint128>>,
     tm_allocation_tolerance: Vec<Vec<Uint128>>,
+    is_instant_unbond: bool,
 ) {
     let num_managers = allowance_amount.len();
     treasury::init(chain, sender, contracts);
@@ -84,7 +85,7 @@ pub fn init_dao(
                         .unwrap()
                         .clone()
                         .address,
-                    instant: true,
+                    instant: is_instant_unbond,
                     token: contracts
                         .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
                         .unwrap()
@@ -143,7 +144,7 @@ pub fn update_dao(
     Ok(())
 }
 
-pub fn system_balance(
+pub fn system_balance_reserves(
     chain: &App,
     contracts: &DeployedContracts,
     snip20_symbol: String,
@@ -202,55 +203,64 @@ pub fn system_balance(
     ret_struct
 }
 
-/*pub fn add_or_sub_adapter_tokens(
-    chain: &mut App,
-    sender: &str,
-    is_add: bool,
-    adapter_ids: Vec<usize>,
-    amount_to_add: Uint128,
-    num_managers: usize,
-) -> StdResult<()> {
-    for i in adapter_ids {
-        if is_add {
-            snip20::send(
-                &mut app,
-                sender,
-                &contracts,
-                "SSCRT".to_string(),
-                contracts
-                    .get(&SupportedContracts::MockAdapter(i))
-                    .unwrap()
-                    .address
-                    .to_string(),
-                amount_to_add,
-                None,
-            );
+pub fn system_balance_unbondable(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+) -> (Uint128, Vec<(Uint128, Vec<Uint128>)>) {
+    println!("{}", snip20_symbol);
+    let mut ret_struct = (Uint128::zero(), vec![]);
+    ret_struct.0 = reserves_query(
+        chain,
+        contracts,
+        snip20_symbol.clone(),
+        SupportedContracts::Treasury,
+    )
+    .unwrap();
+    let (mut i, mut j) = (0, 0);
+    let mut offset = 0;
+    while true {
+        let mut manager_tuple = (Uint128::zero(), vec![]);
+        if contracts.get(&SupportedContracts::TreasuryManager(i)) == None {
+            break;
         } else {
+            manager_tuple.0 = match (treasury_manager::reserves_query(
+                chain,
+                contracts,
+                snip20_symbol.clone(),
+                SupportedContracts::TreasuryManager(i),
+                SupportedContracts::Treasury,
+            )) {
+                Ok(bal) => bal,
+                Err(_) => {
+                    i += 1;
+                    continue;
+                }
+            };
+            j = 0;
+            while true {
+                if contracts.get(&SupportedContracts::MockAdapter(j + offset)) == None {
+                    offset += j + 1;
+                    break;
+                } else {
+                    manager_tuple.1.push(
+                        unbondable_query(
+                            chain,
+                            contracts,
+                            snip20_symbol.clone(),
+                            SupportedContracts::MockAdapter(j + offset),
+                        )
+                        .unwrap(),
+                    );
+                }
+                j += 1;
+            }
         }
+        ret_struct.1.push(manager_tuple);
+        i += 1;
     }
-    // Needs 2 full cycles to reballance fully
-    for i in 0..num_managers {
-        treasury_manager::update_exec(
-            &mut app,
-            "admin",
-            &contracts,
-            "SSCRT".to_string(),
-            SupportedContracts::TreasuryManager(i),
-        )?;
-    }
-    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string())?;
-    for i in 0..num_managers {
-        treasury_manager::update_exec(
-            &mut app,
-            "admin",
-            &contracts,
-            "SSCRT".to_string(),
-            SupportedContracts::TreasuryManager(i),
-        )?;
-    }
-    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string())?;
-    Ok(())
-}*/
+    ret_struct
+}
 
 pub fn claimable_query(
     chain: &App,
@@ -474,6 +484,23 @@ pub fn mock_adapter_sub_tokens(
     adapter_contract: SupportedContracts,
 ) -> StdResult<()> {
     match (mock_adapter::contract::ExecuteMsg::GiveMeMoney { amount }.test_exec(
+        &contracts.get(&adapter_contract).unwrap().clone().into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err(e.to_string())),
+    }
+}
+
+pub fn mock_adapter_complete_unbonding(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    adapter_contract: SupportedContracts,
+) -> StdResult<()> {
+    match (mock_adapter::contract::ExecuteMsg::CompleteUnbonding {}.test_exec(
         &contracts.get(&adapter_contract).unwrap().clone().into(),
         chain,
         Addr::unchecked(sender),

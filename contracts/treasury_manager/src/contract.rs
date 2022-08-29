@@ -12,6 +12,7 @@ use shade_protocol::{
         Response,
         StdResult,
         Storage,
+        Uint128,
     },
     dao::{
         manager,
@@ -44,6 +45,7 @@ pub fn instantiate(
         unbondings: vec![],
         status: Status::Active,
     })?;
+    UNBONDINGS.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::new())
 }
