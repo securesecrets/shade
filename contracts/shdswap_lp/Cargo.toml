@@ -1,7 +1,7 @@
 [package]
-name = "lp_shade_swap"
+name = "shdswap_lp"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = ["Jack Swenson <jacksonswenson22@gmail.com>", "Jack Sisson <sissonjack67@gmail.com>"]
 edition = "2018"
 
 exclude = [
