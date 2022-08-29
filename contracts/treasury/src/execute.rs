@@ -60,8 +60,8 @@ pub fn receive(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    sender: Addr,
-    _from: Addr,
+    _sender: Addr,
+    from: Addr,
     amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
@@ -71,7 +71,7 @@ pub fn receive(
         timestamp: env.block.time.seconds(),
         token: info.sender,
         amount,
-        user: sender,
+        user: from,
     })?;
 
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
@@ -601,8 +601,7 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
         });
     }
 
-    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
-    METRICS.flush(deps.storage)?;
+    METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
 
     Ok(Response::new()
         .add_messages(messages)
