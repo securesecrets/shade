@@ -94,6 +94,7 @@ debug-print = [] # TODO: remove this from all cargo configs
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+contract-derive = { version = "0.1.0", path = "../contract_derive" }
 
 schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
