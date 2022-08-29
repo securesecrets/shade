@@ -842,37 +842,3 @@ pub fn unbond(
         },
     )?))
 }
-
-/*
-pub fn claim(deps: DepsMut, _env: &Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
-    // TODO iterate manager storage
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-
-    let mut messages = vec![];
-
-    let mut claimed = Uint128::zero();
-
-    for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
-        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
-            let claimable = manager::claimable_query(
-                deps.querier,
-                &asset.clone(),
-                self_address.clone(),
-                m.clone(),
-            )?;
-            claimed += claimable;
-
-            if !claimable.is_zero() {
-                messages.push(manager::claim_msg(&asset, m.clone())?);
-            }
-        }
-    }
-
-    Ok(Response::new().add_messages(messages).set_data(to_binary(
-        &manager::ExecuteAnswer::Claim {
-            status: ResponseStatus::Success,
-            amount: claimed,
-        },
-    )?))
-}
-*/
