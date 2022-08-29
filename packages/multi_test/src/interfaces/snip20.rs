@@ -3,10 +3,10 @@ use crate::{
     multi::snip20::Snip20,
 };
 use shade_protocol::{
-    c_std::{Addr, Binary, Coin, Uint128},
+    c_std::{Addr, Binary, Coin, StdError, StdResult, Uint128},
     contract_interfaces::snip20,
     multi_test::App,
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 pub fn init(
@@ -63,6 +63,28 @@ pub fn deposit(
     );
 }
 
+pub fn set_viewing_key(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    key: String,
+) -> StdResult<()> {
+    match (snip20::ExecuteMsg::SetViewingKey { key, padding: None }.test_exec(
+        &contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err("SetViewingKey failed")),
+    }
+}
+
 pub fn send(
     chain: &mut App,
     sender: &str,
@@ -91,4 +113,28 @@ pub fn send(
         &[],
     )
     .unwrap();
+}
+
+pub fn balance_query(
+    chain: &App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    key: String,
+) -> StdResult<Uint128> {
+    match (snip20::QueryMsg::Balance {
+        address: sender.to_string(),
+        key,
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        snip20::QueryAnswer::Balance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("SetViewingKey failed")),
+    }
 }
