@@ -12,34 +12,38 @@ use crate::{
     query,
     state::{config_w, decay_claimed_w, total_claimed_w},
 };
-use shade_protocol::c_std::{Deps, MessageInfo, Uint128};
-use shade_protocol::c_std::{
-    entry_point,
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use shade_protocol::utils::{pad_handle_result, pad_query_result};
-use shade_protocol::contract_interfaces::airdrop::{
-    claim_info::RequiredTask,
-    errors::{invalid_dates, invalid_task_percentage},
-    Config,
-    ExecuteMsg,
-    InstantiateMsg,
-    QueryMsg,
+use shade_protocol::{
+    c_std::{
+        shd_entry_point,
+        to_binary,
+        Api,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
+    contract_interfaces::airdrop::{
+        claim_info::RequiredTask,
+        errors::{invalid_dates, invalid_task_percentage},
+        Config,
+        ExecuteMsg,
+        InstantiateMsg,
+        QueryMsg,
+    },
+    utils::{pad_handle_result, pad_query_result},
 };
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -133,13 +137,8 @@ pub fn instantiate(
     Ok(Response::new())
 }
 
-#[entry_point]
-pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+#[shd_entry_point]
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     pad_handle_result(
         match msg {
             ExecuteMsg::UpdateConfig {
@@ -162,13 +161,17 @@ pub fn execute(
                 start_decay,
             ),
             ExecuteMsg::AddTasks { tasks, .. } => try_add_tasks(deps, &env, &info, tasks),
-            ExecuteMsg::CompleteTask { address, .. } => try_complete_task(deps, &env, &info, address),
+            ExecuteMsg::CompleteTask { address, .. } => {
+                try_complete_task(deps, &env, &info, address)
+            }
             ExecuteMsg::Account {
                 addresses,
                 partial_tree,
                 ..
             } => try_account(deps, &env, &info, addresses, partial_tree),
-            ExecuteMsg::DisablePermitKey { key, .. } => try_disable_permit_key(deps, &env, &info, key),
+            ExecuteMsg::DisablePermitKey { key, .. } => {
+                try_disable_permit_key(deps, &env, &info, key)
+            }
             ExecuteMsg::SetViewingKey { key, .. } => try_set_viewing_key(deps, &env, &info, key),
             ExecuteMsg::Claim { .. } => try_claim(deps, &env, &info),
             ExecuteMsg::ClaimDecay { .. } => try_claim_decay(deps, &env, &info),
@@ -177,11 +180,8 @@ pub fn execute(
     )
 }
 
-#[entry_point]
-pub fn query(
-    deps: Deps,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+#[shd_entry_point]
+pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         match msg {
             QueryMsg::Config {} => to_binary(&query::config(deps)?),
