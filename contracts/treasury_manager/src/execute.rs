@@ -497,6 +497,13 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                 adapter.balance
             }
         };
+        balance = {
+            if balance > holder_unbonding {
+                balance - holder_unbonding
+            } else {
+                Uint128::zero()
+            }
+        };
 
         // Under Funded -- prioritize tm snip20 balance over allowance from treasury
         if effective_balance < desired_amount {
@@ -509,6 +516,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
 
             // Fully covered by balance
             if desired_input < balance {
+                println!("Desired inpup {} < bal {}", desired_input, balance);
                 send_actions.push(SendAction {
                     recipient: adapter.contract.address.clone().to_string(),
                     recipient_code_hash: Some(adapter.contract.code_hash.clone()),
@@ -526,6 +534,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
             // Send all snip20 balance since the adapter needs more that the balance can fufill,
             // but balance is not 0
             else if !balance.is_zero() {
+                println!("!bal is zero");
                 send_actions.push(SendAction {
                     recipient: adapter.contract.address.clone().to_string(),
                     recipient_code_hash: Some(adapter.contract.code_hash.clone()),
@@ -546,6 +555,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                 // This will only execute after snip20 balance has been used up
                 // Fully covered by allowance
                 if desired_input < allowance {
+                    println!("desired input < allowance: {}", allowance);
                     send_from_actions.push(SendFromAction {
                         owner: config.treasury.clone().to_string(),
                         recipient: adapter.contract.address.clone().to_string(),

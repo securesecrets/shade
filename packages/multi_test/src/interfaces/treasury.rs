@@ -149,6 +149,48 @@ pub fn allowance(
     .unwrap();
 }
 
+pub fn set_run_level(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    run_level: treasury::RunLevel,
+) -> StdResult<()> {
+    match (treasury::ExecuteMsg::SetRunLevel { run_level }.test_exec(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err("Set run level execute failed")),
+    }
+}
+
+pub fn set_config(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    config: treasury::Config,
+) -> StdResult<()> {
+    match (treasury::ExecuteMsg::UpdateConfig { config }.test_exec(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(StdError::generic_err("Set run level execute failed")),
+    }
+}
+
 pub fn allowance_query(
     chain: &App,
     sender: &str,
