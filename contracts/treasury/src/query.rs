@@ -105,7 +105,6 @@ pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     */
 
     for allowance in allowances {
-        println!("ALLOWANCE");
         if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender.clone())? {
             unbondable += manager::unbondable_query(deps.querier, &asset, self_address.clone(), m)?;
         }

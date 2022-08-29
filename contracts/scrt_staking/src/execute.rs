@@ -138,11 +138,6 @@ pub fn update(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdRes
 
     if stake_amount > Uint128::zero() {
         let validator = choose_validator(deps, env.block.time.seconds())?;
-        println!(
-            "delegating {} to {}",
-            stake_amount.clone(),
-            validator.address.clone()
-        );
         messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
             validator: validator.address.clone(),
             amount: Coin {
@@ -237,7 +232,6 @@ pub fn unbond(
 
     // Send full unbonding
     if total_unbonding <= reserves {
-        println!("UNBOND SENDING ALL UNBONDING");
         messages.append(&mut wrap_and_send(
             unbonding,
             config.owner,
@@ -248,7 +242,6 @@ pub fn unbond(
     }
     // Send all reserves
     else if !reserves.is_zero() {
-        println!("UNBOND SENDING ALL RESERVES");
         messages.append(&mut wrap_and_send(
             reserves,
             config.owner,
@@ -258,7 +251,6 @@ pub fn unbond(
         total_unbonding -= reserves;
     }
 
-    println!("save unbonding {}", total_unbonding);
     UNBONDING.save(deps.storage, &total_unbonding)?;
 
     while !total_unbonding.is_zero() {
@@ -321,7 +313,6 @@ pub fn withdraw_rewards(deps: Deps) -> StdResult<Vec<CosmosMsg>> {
     let address = SELF_ADDRESS.load(deps.storage)?;
 
     for delegation in deps.querier.query_all_delegations(address.clone())? {
-        println!("withdrawing rewards");
         messages.push(CosmosMsg::Distribution(
             DistributionMsg::WithdrawDelegatorReward {
                 validator: delegation.validator,
@@ -396,7 +387,6 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResu
     }
 
     if !claim_amount.is_zero() {
-        println!("CLAIM AMOUNT {}", claim_amount);
         messages.append(&mut wrap_and_send(
             claim_amount,
             config.owner,
@@ -406,7 +396,6 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResu
 
         //assert!(false, "u - claim_amount: {} - {}", unbond_amount, claim_amount);
         let u = UNBONDING.load(deps.storage)?;
-        println!("reduce unbonding {}", claim_amount);
         UNBONDING.save(deps.storage, &(u - claim_amount))?;
     }
 
