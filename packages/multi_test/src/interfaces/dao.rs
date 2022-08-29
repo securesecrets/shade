@@ -151,13 +151,7 @@ pub fn system_balance_reserves(
 ) -> (Uint128, Vec<(Uint128, Vec<Uint128>)>) {
     println!("{}", snip20_symbol);
     let mut ret_struct = (Uint128::zero(), vec![]);
-    ret_struct.0 = reserves_query(
-        chain,
-        contracts,
-        snip20_symbol.clone(),
-        SupportedContracts::Treasury,
-    )
-    .unwrap();
+    ret_struct.0 = treasury::reserves_query(chain, contracts, snip20_symbol.clone()).unwrap();
     let (mut i, mut j) = (0, 0);
     let mut offset = 0;
     while true {
@@ -210,13 +204,7 @@ pub fn system_balance_unbondable(
 ) -> (Uint128, Vec<(Uint128, Vec<Uint128>)>) {
     println!("{}", snip20_symbol);
     let mut ret_struct = (Uint128::zero(), vec![]);
-    ret_struct.0 = reserves_query(
-        chain,
-        contracts,
-        snip20_symbol.clone(),
-        SupportedContracts::Treasury,
-    )
-    .unwrap();
+    ret_struct.0 = treasury::reserves_query(chain, contracts, snip20_symbol.clone()).unwrap();
     let (mut i, mut j) = (0, 0);
     let mut offset = 0;
     while true {

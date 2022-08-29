@@ -41,8 +41,6 @@ use shade_protocol::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
-use std::collections::HashMap;
-
 use crate::storage::*;
 
 pub fn receive(
@@ -597,13 +595,30 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
             if desired_output <= threshold {
                 continue;
             }
-            messages.push(adapter::unbond_msg(
-                &asset.clone(),
-                desired_output,
+            //TODO this is duped from beginning of function
+            let unbondable = adapter::unbondable_query(
+                deps.querier,
+                &full_asset.contract.address,
                 adapter.contract.clone(),
-            )?);
-            let unbondings = UNBONDINGS.load(deps.storage)? + desired_output;
-            UNBONDINGS.save(deps.storage, &unbondings)?;
+            )?;
+            println!("TM unbond from adapter {}", desired_output);
+            if unbondable >= desired_output {
+                messages.push(adapter::unbond_msg(
+                    &asset.clone(),
+                    desired_output,
+                    adapter.contract.clone(),
+                )?);
+                let unbondings = UNBONDINGS.load(deps.storage)? + desired_output;
+                UNBONDINGS.save(deps.storage, &unbondings)?;
+            } else {
+                messages.push(adapter::unbond_msg(
+                    &asset.clone(),
+                    unbondable,
+                    adapter.contract.clone(),
+                )?);
+                let unbondings = UNBONDINGS.load(deps.storage)? + unbondable;
+                UNBONDINGS.save(deps.storage, &unbondings)?;
+            }
         }
     }
 

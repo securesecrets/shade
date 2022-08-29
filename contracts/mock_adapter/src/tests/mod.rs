@@ -1347,13 +1347,12 @@ pub fn test_tm_unbond(
         }
         None => {}
     }
-    unbond_exec(
+    treasury::unbond_exec(
         &mut app,
         "admin",
         &contracts,
         "SSCRT".to_string(),
         unbond_amount,
-        SupportedContracts::Treasury,
     )
     .unwrap();
 

@@ -163,8 +163,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
                 let unbonding = UNBONDING.load(deps.storage)?;
                 let claimable = CLAIMABLE.load(deps.storage)?;
+                let rewards = REWARDS.load(deps.storage)?;
 
-                let available = balance - (unbonding + claimable);
+                let available = (balance + rewards) - (unbonding + claimable);
 
                 if available < amount {
                     return Err(StdError::generic_err(format!(

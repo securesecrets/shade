@@ -36,14 +36,15 @@ pub enum Context {
     Receive,
     Rebalance,
     Migration,
+    Unbond,
 }
 
 #[cw_serde]
 pub enum Action {
     IncreaseAllowance,
     DecreaseAllowance,
-    ManagerUnbond,
-    ManagerClaim,
+    Unbond,
+    Claim,
     FundsReceived,
     SendFunds,
 }
@@ -122,6 +123,10 @@ pub enum ExecuteMsg {
     },
     SetRunLevel {
         run_level: RunLevel,
+    },
+    Unbond {
+        asset: String,
+        amount: Uint128,
     },
 }
 
