@@ -1563,6 +1563,11 @@ pub fn migration_test(is_instant_unbond: bool) {
         update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
         update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
     }
+    println!(
+        "{:?}\n{:?}",
+        system_balance_reserves(&app, &contracts, "SSCRT".to_string()),
+        system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
+    );
     assert_eq!(
         snip20::balance_query(
             &app,
