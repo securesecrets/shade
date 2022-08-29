@@ -25,7 +25,6 @@ storage = []
 storage_plus = ["storage", "dep:secret-storage-plus"]
 query_auth_lib = ["dep:query-authentication"]
 multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
-ensemble = ["dep:fadroma"]
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
@@ -68,11 +67,10 @@ lp_shade_swap    = ["interface"]
 adapter          = ["interface"]
 snip20           = ["query_auth_impl", "dep:base64"]
 query_auth       = ["interface", "query_auth_lib", "dep:remain"]
-snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
+snip20_staking   = ["interface", "implementation"]
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
 admin            = ["interface"]
-shade_admin      = ["dep:shade-admin", "admin"]
 peg_stability    = ["sky-utils", "adapter"]
 
 stargate = ["cosmwasm-std/stargate"]
@@ -99,13 +97,10 @@ schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0"
 
-shade-admin = { git = "https://github.com/securesecrets/shadeadmin", optional = true }
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 # Testing
 anyhow = { version = "1", optional = true }
-fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"], optional = true }
-
 
 # TODO: fix import
 chrono = "0.4.19"

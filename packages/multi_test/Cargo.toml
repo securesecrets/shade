@@ -17,7 +17,7 @@ snip20 = ["dep:snip20"]
 #oracle = ["dep:oracle"]
 #mock_band= ["dep:mock_band"]
 governance = ["dep:governance"]
-snip20_staking = ["dep:spip_stkd_0"]
+# snip20_staking = ["dep:spip_stkd_0"]
 # scrt_staking = ["dep:scrt_staking"]
 # bonds = ["dep:bonds"]
  query_auth = ["dep:query_auth"]
@@ -32,7 +32,7 @@ snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 #oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
 #mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }
 governance = { version = "0.1.0", path = "../../contracts/governance", optional = true }
-spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
+# spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 # bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
 # scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optional = true }
@@ -43,6 +43,5 @@ admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
-shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git", optional = true }
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
 multi-derive = { path = "../multi_derive" }

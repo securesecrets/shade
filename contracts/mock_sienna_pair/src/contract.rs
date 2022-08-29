@@ -1,22 +1,21 @@
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Response,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
-use shade_protocol::c_std::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
     contract_interfaces::dex::{
         dex::pool_take_amount,
         sienna::{
@@ -29,7 +28,8 @@ use shade_protocol::{
             TokenTypeAmount,
         },
     },
-    utils::asset::Contract,
+    storage::{singleton, singleton_read, ReadonlySingleton, Singleton},
+    utils::{asset::Contract, InstantiateCallback},
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -49,11 +49,7 @@ pub fn pair_info_w(storage: &mut dyn Storage) -> Singleton<PairInfo> {
     singleton(storage, PAIR_INFO)
 }
 
-pub fn init(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: InstantiateMsg,
-) -> StdResult<Response> {
+pub fn init(_deps: DepsMut, _env: Env, _msg: InstantiateMsg) -> StdResult<Response> {
     Ok(Response::default())
 }
 
@@ -68,11 +64,7 @@ pub enum ExecuteMsg {
     },
 }
 
-pub fn handle(
-    deps: DepsMut,
-    _env: Env,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::MockPool {
             token_a,
@@ -114,10 +106,7 @@ pub fn handle(
     // TODO: actual swap handle
 }
 
-pub fn query(
-    deps: Deps,
-    msg: PairQuery,
-) -> StdResult<Binary> {
+pub fn query(deps: Deps, msg: PairQuery) -> StdResult<Binary> {
     match msg {
         PairQuery::PairInfo => to_binary(&PairInfoResponse {
             pair_info: pair_info_r(deps.storage).load()?,
