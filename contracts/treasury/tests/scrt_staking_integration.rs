@@ -46,7 +46,6 @@ use shade_multi_test::multi::{
 };
 use shade_protocol::multi_test::{App, BankSudo, StakingSudo, SudoMsg};
 
-use ::treasury::storage::metric_key;
 use serde_json;
 
 // Add other adapters here as they come
@@ -233,24 +232,6 @@ fn single_asset_manager_scrt_staking_integration(
     })
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
-
-    /*
-    // Check Metrics
-    match (treasury::QueryMsg::Metrics {
-        date: metric_key(utc_from_timestamp(app.block_info().time)),
-    }
-    .test_query(&treasury, &app)
-    .unwrap())
-    {
-        treasury::QueryAnswer::Metrics { metrics } => {
-            for m in metrics {
-                println!("{}", serde_json::to_string(&m).unwrap());
-            }
-            //assert!(metrics.len() != 0, "Treasury Metrics");
-        }
-        _ => panic!("query failed"),
-    };
-    */
 
     // Check treasury allowance to manager
     match (treasury::QueryMsg::Allowance {

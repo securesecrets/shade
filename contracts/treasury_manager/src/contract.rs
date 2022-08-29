@@ -13,7 +13,15 @@ use shade_protocol::{
     },
     dao::{
         manager,
-        treasury_manager::{Config, ExecuteMsg, Holding, InstantiateMsg, QueryMsg, Status},
+        treasury_manager::{
+            Config,
+            ExecuteMsg,
+            Holding,
+            InstantiateMsg,
+            QueryAnswer,
+            QueryMsg,
+            Status,
+        },
     },
 };
 
@@ -112,6 +120,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Holding { holder } => {
             let holder = deps.api.addr_validate(&holder)?;
             to_binary(&query::holding(deps, holder)?)
+        }
+        QueryMsg::Metrics { date, period } => {
+            todo!("implement");
         }
 
         QueryMsg::Manager(a) => match a {
