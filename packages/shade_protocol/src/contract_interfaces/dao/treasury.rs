@@ -36,14 +36,15 @@ pub enum Context {
     Receive,
     Rebalance,
     Migration,
+    Unbond,
 }
 
 #[cw_serde]
 pub enum Action {
     IncreaseAllowance,
     DecreaseAllowance,
-    ManagerUnbond,
-    ManagerClaim,
+    Unbond,
+    Claim,
     FundsReceived,
     SendFunds,
 }
@@ -123,9 +124,6 @@ pub enum ExecuteMsg {
     SetRunLevel {
         run_level: RunLevel,
     },
-
-    //TODO remove, change to treasury only interface
-    Adapter(adapter::SubExecuteMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -159,6 +157,9 @@ pub enum ExecuteAnswer {
     Unbond {
         status: ResponseStatus,
     },
+    Update {
+        status: ResponseStatus,
+    },
     RunLevel {
         run_level: RunLevel,
     },
@@ -182,11 +183,12 @@ pub enum QueryMsg {
         date: Option<String>,
         period: Period,
     },
-    /*
-    Balance { asset: String },
-    Reserves { asset: String },
-    */
-    Adapter(adapter::SubQueryMsg),
+    Balance {
+        asset: String,
+    },
+    Reserves {
+        asset: String,
+    },
 }
 
 impl Query for QueryMsg {
@@ -201,4 +203,6 @@ pub enum QueryAnswer {
     Allowance { amount: Uint128 },
     RunLevel { run_level: RunLevel },
     Metrics { metrics: Vec<Metric> },
+    Balance { amount: Uint128 },
+    Reserves { amount: Uint128 },
 }

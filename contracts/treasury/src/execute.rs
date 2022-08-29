@@ -182,7 +182,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
             if !claimable.is_zero() {
                 messages.push(manager::claim_msg(&asset.clone(), m.clone())?);
                 metrics.push(Metric {
-                    action: Action::ManagerClaim,
+                    action: Action::Claim,
                     context: Context::Rebalance,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
@@ -315,7 +315,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
                                 m.clone(),
                             )?);
                             metrics.push(Metric {
-                                action: Action::ManagerUnbond,
+                                action: Action::Unbond,
                                 context: Context::Rebalance,
                                 timestamp: env.block.time.seconds(),
                                 token: asset.clone(),
@@ -442,7 +442,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
                                 m.clone(),
                             )?);
                             metrics.push(Metric {
-                                action: Action::ManagerUnbond,
+                                action: Action::Unbond,
                                 context: Context::Rebalance,
                                 timestamp: env.block.time.seconds(),
                                 token: asset.clone(),
@@ -490,7 +490,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
         })?))
 }
 
-pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let mut messages = vec![];
     let mut metrics = vec![];
 
@@ -512,7 +512,7 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
             if !unbondable.is_zero() {
                 messages.push(manager::unbond_msg(&asset, unbondable, m.clone())?);
                 metrics.push(Metric {
-                    action: Action::ManagerUnbond,
+                    action: Action::Unbond,
                     context: Context::Migration,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
@@ -530,7 +530,7 @@ pub fn migrate(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdR
             if !claimable.is_zero() {
                 messages.push(manager::claim_msg(&asset, m.clone())?);
                 metrics.push(Metric {
-                    action: Action::ManagerClaim,
+                    action: Action::Claim,
                     context: Context::Migration,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
@@ -765,95 +765,4 @@ pub fn allowance(
             status: ResponseStatus::Success,
         })?),
     )
-}
-
-pub fn claim(deps: DepsMut, _env: &Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
-    // TODO iterate manager storage
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-
-    let mut messages = vec![];
-
-    let mut claimed = Uint128::zero();
-
-    for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
-        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
-            let claimable = manager::claimable_query(
-                deps.querier,
-                &asset.clone(),
-                self_address.clone(),
-                m.clone(),
-            )?;
-            claimed += claimable;
-
-            if !claimable.is_zero() {
-                messages.push(manager::claim_msg(&asset, m.clone())?);
-            }
-        }
-    }
-
-    Ok(Response::new().add_messages(messages).set_data(to_binary(
-        &manager::ExecuteAnswer::Claim {
-            status: ResponseStatus::Success,
-            amount: claimed,
-        },
-    )?))
-}
-
-pub fn unbond(
-    deps: DepsMut,
-    _env: &Env,
-    info: MessageInfo,
-    asset: Addr,
-    amount: Uint128,
-) -> StdResult<Response> {
-    validate_admin(
-        &deps.querier,
-        AdminPermissions::TreasuryAdmin,
-        &info.sender,
-        &CONFIG.load(deps.storage)?.admin_auth,
-    )?;
-
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-
-    let mut messages = vec![];
-
-    let mut unbond_amount = amount;
-    let mut unbonded = Uint128::zero();
-
-    for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
-        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
-            let unbondable =
-                manager::unbondable_query(deps.querier, &asset, self_address.clone(), m.clone())?;
-
-            if unbondable > unbond_amount {
-                messages.push(manager::unbond_msg(&asset, unbond_amount, m.clone())?);
-                unbond_amount = Uint128::zero();
-                unbonded = unbond_amount;
-            } else {
-                messages.push(manager::unbond_msg(&asset, unbondable, m)?);
-                unbond_amount = unbond_amount - unbondable;
-                unbonded = unbonded + unbondable;
-            }
-        }
-
-        if unbond_amount == Uint128::zero() {
-            break;
-        }
-    }
-
-    // TODO: Shouldn't be an error, need to log somehow
-    if unbond_amount > Uint128::zero() {
-        return Err(StdError::generic_err(format!(
-            "Failed to fully unbond {}, {} available",
-            amount,
-            amount - unbond_amount
-        )));
-    }
-
-    Ok(Response::new().add_messages(messages).set_data(to_binary(
-        &manager::ExecuteAnswer::Unbond {
-            status: ResponseStatus::Success,
-            amount,
-        },
-    )?))
 }

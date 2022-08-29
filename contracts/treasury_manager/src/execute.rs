@@ -658,21 +658,29 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
             if desired_output <= threshold {
                 continue;
             }
-            messages.push(adapter::unbond_msg(
-                &asset.clone(),
-                desired_output,
+            //TODO this is duped from beginning of function
+            let unbondable = adapter::unbondable_query(
+                deps.querier,
+                &full_asset.contract.address,
                 adapter.contract.clone(),
-            )?);
-            let unbondings = UNBONDINGS.load(deps.storage)? + desired_output;
-            UNBONDINGS.save(deps.storage, &unbondings)?;
-            METRICS.pushf(deps.storage, env.block.time, Metric {
-                action: Action::Unbond,
-                context: Context::Update,
-                timestamp: env.block.time.seconds(),
-                token: asset.clone(),
-                amount: desired_output,
-                user: adapter.contract.address.clone(),
-            })?;
+            )?;
+            if unbondable >= desired_output {
+                messages.push(adapter::unbond_msg(
+                    &asset.clone(),
+                    desired_output,
+                    adapter.contract.clone(),
+                )?);
+                let unbondings = UNBONDINGS.load(deps.storage)? + desired_output;
+                UNBONDINGS.save(deps.storage, &unbondings)?;
+            } else {
+                messages.push(adapter::unbond_msg(
+                    &asset.clone(),
+                    unbondable,
+                    adapter.contract.clone(),
+                )?);
+                let unbondings = UNBONDINGS.load(deps.storage)? + unbondable;
+                UNBONDINGS.save(deps.storage, &unbondings)?;
+            }
         }
     }
 

@@ -77,20 +77,6 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::SetRunLevel { run_level } => {
             execute::set_run_level(deps, &env, info, run_level)
         }
-        ExecuteMsg::Adapter(adapter) => match adapter {
-            adapter::SubExecuteMsg::Update { asset } => {
-                let asset = deps.api.addr_validate(&asset)?;
-                execute::update(deps, &env, info, asset)
-            }
-            adapter::SubExecuteMsg::Claim { asset } => {
-                let asset = deps.api.addr_validate(&asset)?;
-                execute::claim(deps, &env, info, asset)
-            }
-            adapter::SubExecuteMsg::Unbond { asset, amount } => {
-                let asset = deps.api.addr_validate(&asset)?;
-                execute::unbond(deps, &env, info, asset, amount)
-            }
-        },
     }
 }
 
@@ -121,27 +107,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 metrics: METRICS.load_period(deps.storage, key, period)?,
             })
         }
-        QueryMsg::Adapter(adapter) => match adapter {
-            adapter::SubQueryMsg::Balance { asset } => {
-                let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::balance(deps, asset)?)
-            }
-            adapter::SubQueryMsg::Unbonding { asset } => {
-                let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::unbonding(deps, asset)?)
-            }
-            adapter::SubQueryMsg::Unbondable { asset } => {
-                let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::unbondable(deps, asset)?)
-            }
-            adapter::SubQueryMsg::Claimable { asset } => {
-                let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::claimable(deps, asset)?)
-            }
-            adapter::SubQueryMsg::Reserves { asset } => {
-                let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::reserves(deps, asset)?)
-            }
-        },
+        QueryMsg::Balance { asset } => {
+            let asset = deps.api.addr_validate(&asset)?;
+            to_binary(&query::balance(deps, asset)?)
+        }
+        QueryMsg::Reserves { asset } => {
+            let asset = deps.api.addr_validate(&asset)?;
+            to_binary(&query::reserves(deps, asset)?)
+        }
     }
 }

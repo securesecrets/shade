@@ -272,3 +272,55 @@ pub fn update_exec(
         Err(e) => Err(StdError::generic_err(e.to_string())),
     }
 }
+
+pub fn reserves_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+) -> StdResult<Uint128> {
+    match (treasury::QueryMsg::Reserves {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Reserves { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn balance_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+) -> StdResult<Uint128> {
+    match (treasury::QueryMsg::Balance {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Balance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
