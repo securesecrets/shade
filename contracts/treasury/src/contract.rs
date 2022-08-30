@@ -66,6 +66,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             let mut contract = contract.into_valid(deps.api)?;
             execute::register_manager(deps, &env, info, &mut contract)
         }
+        ExecuteMsg::RegisterWrap { denom, contract } => {
+            let contract = contract.into_valid(deps.api)?;
+            execute::register_wrap(deps, &env, info, denom, &contract)
+        }
         ExecuteMsg::Allowance { asset, allowance } => {
             let asset = deps.api.addr_validate(&asset)?;
             execute::allowance(deps, &env, info, asset, allowance)
@@ -77,6 +81,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::SetRunLevel { run_level } => {
             execute::set_run_level(deps, &env, info, run_level)
         }
+        ExecuteMsg::WrapCoins {} => execute::wrap_coins(deps, &env, info),
     }
 }
 
