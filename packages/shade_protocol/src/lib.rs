@@ -7,6 +7,7 @@ pub mod utils;
 
 // Forward important libs to avoid constantly importing them in the cargo crates, could help reduce compile times
 pub mod c_std {
+    pub use contract_derive::shd_entry_point;
     pub use cosmwasm_std::*;
 }
 
