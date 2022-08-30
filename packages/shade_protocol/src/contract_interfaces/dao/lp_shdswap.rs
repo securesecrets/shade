@@ -1,21 +1,19 @@
 use crate::{
+    c_std::{Addr, Binary, Decimal, Delegation, Uint128, Validator},
     contract_interfaces::dao::adapter,
     utils::{
-        asset::Contract, 
-        generic_response::ResponseStatus
+        asset::Contract,
+        generic_response::ResponseStatus,
+        ExecuteCallback,
+        InstantiateCallback,
+        Query,
     },
 };
-use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
-
-
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub enum SplitMethod {
-    Conversion {
-        contract: Contract,
-    },
+    Conversion { contract: Contract },
     //TODO implement
     /*
     Market {
@@ -60,7 +58,7 @@ impl InstantiateCallback for InstantiateMsg {
 pub enum ExecuteMsg {
     /* token_a || token_b
      * - check and provide as much as you can based on balances
-     * 
+     *
      * LP share token
      * - Bond the share token, to be used when unbonding
      */
@@ -77,7 +75,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         config: Config,
     },
-    Adapter(adapter::SubHandleMsg),
+    Adapter(adapter::SubExecuteMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -85,12 +83,16 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,
     },
     UpdateConfig {
+        status: ResponseStatus,
+        config: Config,
+    },
+    RefreshApprovals {
         status: ResponseStatus,
     },
     Receive {
@@ -118,7 +120,7 @@ pub enum QueryAnswer {
 
 /* NOTE
  * 'reward_token' isn't technically supported
- * if it collides with one of the pair tokens 
+ * if it collides with one of the pair tokens
  * it will be treated as such
  * Otherwise it will be sent straight to treasury on claim
  */
@@ -133,16 +135,17 @@ pub fn is_supported_asset(config: &Config, asset: &Addr) -> bool {
         config.token_a.address.clone(),
         config.token_b.address.clone(),
         config.liquidity_token.address.clone(),
-    ].contains(asset)
+    ]
+    .contains(asset)
 }
 
-pub fn get_supported_asset(
-    config: &Config, 
-    asset: &Addr
-) -> Contract {
+pub fn get_supported_asset(config: &Config, asset: &Addr) -> Contract {
     vec![
         config.token_a.clone(),
         config.token_b.clone(),
         config.liquidity_token.clone(),
-    ].into_iter().find(|a| a.address == *asset).unwrap()
+    ]
+    .into_iter()
+    .find(|a| a.address == *asset)
+    .unwrap()
 }

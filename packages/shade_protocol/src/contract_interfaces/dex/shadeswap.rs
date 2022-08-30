@@ -43,7 +43,7 @@ pub struct ContractLink {
 
 #[cw_serde]
 pub enum PairQuery {
-    PairInfo,
+    GetPairInfo {},
     GetEstimatedPrice { offer: TokenAmount },
 }
 

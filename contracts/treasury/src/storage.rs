@@ -1,6 +1,6 @@
 use shade_protocol::{
     c_std::Addr,
-    dao::treasury::{Allowance, AllowanceMeta, Config, Metric, RunLevel},
+    dao::treasury::{AllowanceMeta, Config, Metric, RunLevel},
     secret_storage_plus::{Item, Map},
     snip20::helpers::Snip20Asset,
     utils::{
