@@ -689,10 +689,15 @@ pub fn register_wrap(
         &config.admin_auth,
     )?;
 
-    if ASSET
-        .may_load(deps.storage, contract.address.clone())?
-        .is_none()
-    {
+    if let Some(a) = ASSET.may_load(deps.storage, contract.address.clone())? {
+        if let Some(conf) = a.token_config {
+            if !conf.deposit_enabled {
+                return Err(StdError::generic_err("Asset must have deposit enabled"));
+            }
+        } else {
+            return Err(StdError::generic_err("Asset has no config"));
+        }
+    } else {
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 

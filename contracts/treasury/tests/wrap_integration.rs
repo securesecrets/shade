@@ -168,7 +168,6 @@ macro_rules! wrap_coins_tests {
 }
 
 wrap_coins_tests! {
-    wrap_sscrt: (
-        vec![Coin { denom: "uscrt".into(), amount: Uint128::new(100) }]
-    ),
+    wrap_sscrt: vec![Coin { denom: "uscrt".into(), amount: Uint128::new(100) }],
+    //wrap_other: vec![Coin { denom: "other".into(), amount: Uint128::new(100) }],
 }
