@@ -65,6 +65,11 @@ fn wrap_coins_test(coins: Vec<Coin>) {
 
     let mut tokens = vec![];
 
+    let fail_coin = Coin {
+        denom: "fail".into(),
+        amount: Uint128::new(100),
+    };
+
     for coin in coins.clone() {
         let token = snip20::InstantiateMsg {
             name: coin.denom.clone(),
@@ -127,17 +132,30 @@ fn wrap_coins_test(coins: Vec<Coin>) {
         .unwrap();
     }
 
+    let mut all_coins = coins.clone();
+    all_coins.push(fail_coin.clone());
+
     app.init_modules(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &treasury.address.clone(), coins.clone())
+            .init_balance(storage, &treasury.address.clone(), all_coins.clone())
             .unwrap();
     });
 
     // Wrap
-    treasury::ExecuteMsg::WrapCoins {}
+    let wrap_resp = treasury::ExecuteMsg::WrapCoins {}
         .test_exec(&treasury, &mut app, admin.clone(), &[])
         .unwrap();
+
+    match from_binary(&wrap_resp.data.unwrap()).ok().unwrap() {
+        treasury::ExecuteAnswer::WrapCoins { success, failed } => {
+            assert!(success == coins, "All coins succeed");
+            assert!(failed == vec![fail_coin], "Unconfigured coin fails");
+        }
+        _ => {
+            panic!("WrapCoins bad response");
+        }
+    }
 
     // Treasury Balances
     for (token, coin) in tokens.iter().zip(coins.iter()) {
@@ -150,7 +168,7 @@ fn wrap_coins_test(coins: Vec<Coin>) {
             treasury::QueryAnswer::Balance { amount } => {
                 assert_eq!(amount, coin.amount, "Treasury Balance");
             }
-            _ => panic!("Query Failed"),
+            _ => panic!("Balance query Failed"),
         };
     }
 }
