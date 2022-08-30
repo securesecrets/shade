@@ -12,6 +12,38 @@ pub fn config(deps: Deps) -> StdResult<treasury::QueryAnswer> {
     })
 }
 
+pub fn batch_balance(deps: Deps, assets: Vec<Addr>) -> StdResult<Vec<Uint128>> {
+    let mut balances = vec![];
+    for asset in assets {
+        let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
+            Some(a) => a,
+            None => {
+                return Err(StdError::generic_err("Unrecognized Asset"));
+            }
+        };
+
+        let self_address = SELF_ADDRESS.load(deps.storage)?;
+        let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
+
+        let mut balance = balance_query(
+            &deps.querier,
+            self_address.clone(),
+            VIEWING_KEY.load(deps.storage)?,
+            &full_asset.contract.clone(),
+        )?;
+
+        for allowance in allowances {
+            if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
+                balance +=
+                    manager::balance_query(deps.querier, &asset.clone(), self_address.clone(), m)?;
+            }
+        }
+        balances.push(balance);
+    }
+
+    Ok(balances)
+}
+
 pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let full_asset = match ASSET.may_load(deps.storage, asset.clone())? {
         Some(a) => a,

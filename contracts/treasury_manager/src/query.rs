@@ -210,10 +210,11 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
                     return Err(StdError::generic_err("Invalid Holder"));
                 }
             };
+            // TODO include unbonding so balance is more 'stable'
             let balance = match holding
                 .balances
                 .iter()
-                .find(|u| u.token == asset.contract.address)
+                .find(|b| b.token == asset.contract.address)
             {
                 Some(b) => b.amount,
                 None => Uint128::zero(),

@@ -116,6 +116,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let asset = deps.api.addr_validate(&asset)?;
             to_binary(&query::balance(deps, asset)?)
         }
+        QueryMsg::BatchBalance { assets } => {
+            let mut val_assets = vec![];
+
+            for a in assets {
+                val_assets.push(deps.api.addr_validate(&a)?);
+            }
+
+            to_binary(&query::batch_balance(deps, val_assets)?)
+        }
         QueryMsg::Reserves { asset } => {
             let asset = deps.api.addr_validate(&asset)?;
             to_binary(&query::reserves(deps, asset)?)
