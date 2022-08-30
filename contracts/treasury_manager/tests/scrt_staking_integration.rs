@@ -1,4 +1,4 @@
-
+/*
 use cosmwasm_math_compat as compat;
 
 //use secret_toolkit::snip20;
@@ -502,6 +502,7 @@ macro_rules! single_holder_scrt_staking_adapter_tests {
         )*
     }
 }
+*/
 /*
 single_holder_scrt_staking_adapter_tests! {
     single_holder_scrt_staking_0: (

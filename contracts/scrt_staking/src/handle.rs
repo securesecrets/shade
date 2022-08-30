@@ -1,5 +1,6 @@
-use cosmwasm_std::MessageInfo;
 use shade_protocol::c_std::{
+    DepsMut,
+    Deps,
     to_binary,
     Api,
     BalanceResponse,
@@ -8,7 +9,6 @@ use shade_protocol::c_std::{
     Coin,
     CosmosMsg,
     Env,
-    DepsMut,
     Response,
     Addr,
     Querier,
@@ -18,14 +18,16 @@ use shade_protocol::c_std::{
     Storage,
     Uint128,
     Validator,
+    MessageInfo,
+    DistributionMsg,
 };
 
 use shade_protocol::snip20::helpers::{deposit_msg, redeem_msg};
 
 use shade_protocol::{
-    contract_interfaces::dao::{
+    dao::{
         adapter,
-        scrt_staking::{Config, HandleAnswer, ValidatorBounds},
+        scrt_staking::{Config, ExecuteAnswer, ValidatorBounds},
     },
     utils::{
         asset::{scrt_balance, Contract},
@@ -36,7 +38,7 @@ use shade_protocol::{
 
 use crate::{
     query,
-    state::{config_r, config_w, self_address_r, unbonding_r, unbonding_w},
+    storage::{CONFIG, SELF_ADDRESS, UNBONDING},
 };
 
 pub fn receive(
@@ -50,13 +52,13 @@ pub fn receive(
 ) -> StdResult<Response> {
     deps.api.debug(format!("Received {}", amount).as_str());
 
-    let config = config_r(deps.storage).load()?;
+    let config = CONFIG.load(deps.storage)?;
 
     if info.sender != config.sscrt.address {
         return Err(StdError::generic_err("Only accepts sSCRT"));
     }
 
-    let validator = choose_validator(&deps, env.block.time.seconds())?;
+    let validator = choose_validator(deps, env.block.time.seconds())?;
 
     let messages = vec![
         redeem_msg(
@@ -76,7 +78,7 @@ pub fn receive(
 
     let resp = Response::new()
         .add_messages(messages)
-        .set_data(to_binary(&HandleAnswer::Receive {
+        .set_data(to_binary(&ExecuteAnswer::Receive {
             status: ResponseStatus::Success,
             validator,
         })?);
@@ -89,18 +91,18 @@ pub fn try_update_config(
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
-    let cur_config = config_r(deps.storage).load()?;
+    let cur_config = CONFIG.load(deps.storage)?;
 
     if cur_config.admins.contains(&info.sender) {
         return Err(StdError::generic_err("unauthorized"));
     }
 
     // Save new info
-    config_w(deps.storage).save(&config)?;
+    CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success,
-        })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
+        status: ResponseStatus::Success,
+    })?))
 }
 
 /* Claim rewards and restake, hold enough for pending unbondings
@@ -114,32 +116,33 @@ pub fn update(
 ) -> StdResult<Response> {
     let mut messages = vec![];
 
-    let config = config_r(deps.storage).load()?;
+    let config = CONFIG.load(deps.storage)?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    let scrt_balance = scrt_balance(deps.as_ref(), self_address_r(deps.storage).load()?)?;
+    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
 
     // Claim Rewards
-    let rewards = query::rewards(&deps)?;
+    let rewards = query::rewards(deps.as_ref())?;
     if !rewards.is_zero() {
-        messages.append(&mut withdraw_rewards(deps)?);
+        messages.append(&mut withdraw_rewards(deps.as_ref())?);
     }
 
     let mut stake_amount = rewards + scrt_balance;
-    let unbonding = unbonding_r(deps.storage).load()?;
+    let unbonding = UNBONDING.load(deps.storage)?;
 
     // Don't restake funds that unbonded
     if unbonding < stake_amount {
-        stake_amount = (stake_amount - unbonding)?;
+        stake_amount = stake_amount - unbonding;
     } else {
         stake_amount = Uint128::zero();
     }
 
     if stake_amount > Uint128::zero() {
-        let validator = choose_validator(&deps, env.block.time.seconds())?;
+        let validator = choose_validator(deps, env.block.time.seconds())?;
+        println!("delegating {} to {}", stake_amount.clone(), validator.address.clone());
         messages.push(CosmosMsg::Staking(StakingMsg::Delegate {
             validator: validator.address.clone(),
             amount: Coin {
@@ -149,9 +152,11 @@ pub fn update(
         }));
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Update {
-            status: ResponseStatus::Success,
-        })?))
+    Ok(Response::new()
+       .add_messages(messages)
+       .set_data(to_binary(&adapter::ExecuteAnswer::Update {
+        status: ResponseStatus::Success,
+    })?))
 }
 
 pub fn unbond(
@@ -166,7 +171,7 @@ pub fn unbond(
      * and this contract will take all scrt->sscrt and send
      */
 
-    let config = config_r(deps.storage).load()?;
+    let config = CONFIG.load(deps.storage)?;
 
     if !config.admins.contains(&info.sender) && config.owner != info.sender {
         return Err(StdError::generic_err("Unauthorized"));
@@ -176,8 +181,8 @@ pub fn unbond(
         return Err(StdError::generic_err("Unrecognized Asset"));
     }
 
-    let self_address = self_address_r(deps.storage).load()?;
-    let delegations = query::delegations(&deps)?;
+    let self_address = SELF_ADDRESS.load(deps.storage)?;
+    let delegations = query::delegations(deps.as_ref())?;
 
     let delegated = Uint128::new(
         delegations
@@ -185,18 +190,18 @@ pub fn unbond(
             .map(|d| d.amount.amount.u128())
             .sum::<u128>(),
     );
-    let scrt_balance = scrt_balance(&deps, self_address)?;
-    let rewards = query::rewards(deps)?;
+    let scrt_balance = scrt_balance(deps.querier, self_address)?;
+    let rewards = query::rewards(deps.as_ref())?;
 
     let mut messages = vec![];
 
     if !rewards.is_zero() {
-        messages.append(&mut withdraw_rewards(deps)?);
+        messages.append(&mut withdraw_rewards(deps.as_ref())?);
     }
 
     let mut undelegated = vec![];
 
-    let mut unbonding = amount + unbonding_r(deps.storage).load()?;
+    let mut unbonding = amount + UNBONDING.load(deps.storage)?;
 
     let total = scrt_balance + rewards + delegated;
     let mut reserves = scrt_balance + rewards;
@@ -222,10 +227,10 @@ pub fn unbond(
                                            config.owner, 
                                            config.sscrt, 
                                            None)?);
-        unbonding = (unbonding - reserves)?;
+        unbonding = unbonding - reserves;
     }
 
-    unbonding_w(deps.storage).save(&unbonding)?;
+    UNBONDING.save(deps.storage, &unbonding)?;
 
     while !unbonding.is_zero() {
 
@@ -260,7 +265,7 @@ pub fn unbond(
                             }
                         )
                     );
-                    unbonding = (unbonding - delegation.amount.amount.clone())?;
+                    unbonding = unbonding - delegation.amount.amount.clone();
                 }
                 else {
                     messages.push(
@@ -282,22 +287,24 @@ pub fn unbond(
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Unbond {
+    Ok(Response::new()
+       .add_messages(messages)
+       .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: unbonding,
         })?))
 }
 
 pub fn withdraw_rewards(
-    deps: DepsMut,
+    deps: Deps,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut messages = vec![];
-    let address = self_address_r(deps.storage).load()?;
+    let address = SELF_ADDRESS.load(deps.storage)?;
 
     for delegation in deps.querier.query_all_delegations(address.clone())? {
-        messages.push(CosmosMsg::Staking(StakingMsg::Withdraw {
+        println!("withdrawing rewards");
+        messages.push(CosmosMsg::Distribution(DistributionMsg::WithdrawDelegatorReward {
             validator: delegation.validator,
-            recipient: Some(address.clone()),
         }));
     }
 
@@ -333,7 +340,7 @@ pub fn claim(
     info: MessageInfo,
     asset: Addr,
 ) -> StdResult<Response> {
-    let config = config_r(deps.storage).load()?;
+    let config = CONFIG.load(deps.storage)?;
 
     if asset != config.sscrt.address {
         return Err(StdError::generic_err("Unrecognized Asset"));
@@ -348,20 +355,20 @@ pub fn claim(
 
     let mut messages = vec![];
 
-    let unbond_amount = unbonding_r(deps.storage).load()?;
+    let unbond_amount = UNBONDING.load(deps.storage)?;
     let mut claim_amount = Uint128::zero();
 
-    let scrt_balance = scrt_balance(deps, self_address_r(deps.storage).load()?)?;
+    let scrt_balance = scrt_balance(deps.querier, SELF_ADDRESS.load(deps.storage)?)?;
 
     if scrt_balance >= unbond_amount {
         claim_amount = unbond_amount;
     } else {
         // Claim Rewards
-        let rewards = query::rewards(&deps)?;
+        let rewards = query::rewards(deps.as_ref())?;
 
         if !rewards.is_zero() {
             assert!(false, "withdraw rewards");
-            messages.append(&mut withdraw_rewards(deps)?);
+            messages.append(&mut withdraw_rewards(deps.as_ref())?);
         }
 
         if rewards + scrt_balance >= unbond_amount {
@@ -380,24 +387,27 @@ pub fn claim(
         )?);
 
         //assert!(false, "u - claim_amount: {} - {}", unbond_amount, claim_amount);
-        unbonding_w(deps.storage).update(|u| Ok((u - claim_amount)?))?;
+        let u = UNBONDING.load(deps.storage)?;
+        UNBONDING.save(deps.storage, &(u - claim_amount))?;
     }
 
 
-    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
+    Ok(Response::new()
+       .add_messages(messages)
+       .set_data(to_binary(&adapter::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             amount: claim_amount,
         })?))
 }
 
 pub fn choose_validator(
-    deps: Deps,
+    deps: DepsMut,
     seed: u64,
 ) -> StdResult<Validator> {
-    let mut validators = deps.querier.query_validators()?;
+    let mut validators = deps.querier.query_all_validators()?;
 
     // filter down to viable candidates
-    if let Some(bounds) = (config_r(deps.storage).load()?).validator_bounds {
+    if let Some(bounds) = (CONFIG.load(deps.storage)?).validator_bounds {
         let mut candidates = vec![];
 
         for validator in validators {

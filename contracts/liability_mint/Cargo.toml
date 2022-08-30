@@ -1,7 +1,10 @@
 [package]
-name = "scrt_staking"
+name = "liability_mint"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
+authors = [
+  "Guy Garcia <guysebastiangarcia@gmail.com>",
+  "Jackson Swenson <jacksonswenson22@gmail.com>",
+]
 edition = "2018"
 
 exclude = [
@@ -20,20 +23,18 @@ default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "adapter",
-  "dao",
-  "scrt_staking",
-  "treasury",
-  "math",
-  "storage_plus",
-] }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [ "mint", "liability_mint", "snip20", "storage_plus" ] }
+schemars = "0.7"
+chrono = "0.4.19"
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop" }
 
 [dev-dependencies]
 shade-multi-test = { path = "../../packages/multi_test", features = [ 
-  "scrt_staking", 
+  "liability_mint", 
   "snip20" 
 ] }

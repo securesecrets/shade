@@ -1,41 +1,21 @@
-use shade_protocol::c_std::{
-    self,
-    to_binary,
-    Api,
-    Binary,
-    CosmosMsg,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
-};
 use shade_protocol::{
-    snip20::helpers::{
-        allowance_query,
-        balance_query,
-        decrease_allowance_msg,
-        increase_allowance_msg,
-        register_receive,
-        set_viewing_key_msg,
+    c_std::{
+        self, to_binary, Api, Binary,
+        CosmosMsg, Env, DepsMut, Deps, Response,
+        Addr, Querier, StdError, StdResult,
+        Storage, Uint128, MessageInfo,
     },
-};
-
-use shade_protocol::{
+    snip20::helpers::{
+        allowance_query, balance_query,
+        decrease_allowance_msg, increase_allowance_msg,
+        register_receive, set_viewing_key_msg,
+    },
     contract_interfaces::{
         dao::{
             treasury::{
-                Allowance,
-                Config,
-                HandleAnswer,
-                Manager,
-                storage::*,
+                Allowance, Config, ExecuteAnswer,
+                Manager, 
             },
-            //adapter,
             manager,
         },
         snip20,
@@ -46,6 +26,8 @@ use shade_protocol::{
         generic_response::ResponseStatus,
     },
 };
+
+use crate::storage::*;
 
 use chrono::prelude::*;
 use std::collections::HashMap;
@@ -61,7 +43,7 @@ pub fn receive(
 ) -> StdResult<Response> {
     let key = sender.as_str().as_bytes();
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
             status: ResponseStatus::Success,
         })?))
 }
@@ -80,9 +62,9 @@ pub fn try_update_config(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
-            status: ResponseStatus::Success,
-        })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
+        status: ResponseStatus::Success,
+    })?))
 }
 
 pub fn allowance_last_refresh(
@@ -126,11 +108,8 @@ pub fn rebalance(
         &deps.querier,
         self_address.clone(),
         viewing_key.clone(),
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
-    )?
-    .amount;
+        &full_asset.contract.clone(),
+    )?;
 
     /*
     let unbonding = unbonding_r(deps.storage).load(&asset.as_str().as_bytes())?;
@@ -155,7 +134,7 @@ pub fn rebalance(
     for manager in managers.clone() {
 
         let balance = manager::balance_query(
-            &deps,
+            deps.querier,
             &full_asset.contract.address.clone(),
             self_address.clone(),
             manager.contract.clone(),
@@ -168,10 +147,9 @@ pub fn rebalance(
             manager.contract.address.clone(),
             viewing_key.clone(),
             1,
-            full_asset.contract.code_hash.clone(),
-            full_asset.contract.address.clone(),
+            &full_asset.contract.clone(),
         )?
-        .allowance;
+        .amount;
 
         manager_data.insert(manager.contract.address, (balance, allowance));
     }
@@ -217,9 +195,8 @@ pub fn rebalance(
                             spender.clone(),
                             viewing_key.clone(),
                             1,
-                            full_asset.contract.code_hash.clone(),
-                            full_asset.contract.address.clone(),
-                        )?.allowance;
+                            &full_asset.contract.clone(),
+                        )?.amount;
 
                         // hasn't been accounted for by manager data
                         amount_total += cur_allowance;
@@ -233,12 +210,13 @@ pub fn rebalance(
                             messages.push(
                                 decrease_allowance_msg(
                                     spender.clone(),
-                                    (cur_allowance - amount)?,
+                                    cur_allowance - amount,
+                                    //TODO impl expiration
                                     None,
                                     None,
                                     1,
-                                    full_asset.contract.code_hash.clone(),
-                                    full_asset.contract.address.clone(),
+                                    &full_asset.contract.clone(),
+                                    vec![],
                                 )?
                             );
                         },
@@ -247,12 +225,12 @@ pub fn rebalance(
                             messages.push(
                                 increase_allowance_msg(
                                     spender.clone(),
-                                    (amount - cur_allowance)?,
+                                    amount - cur_allowance,
                                     None,
                                     None,
                                     1,
-                                    full_asset.contract.code_hash.clone(),
-                                    full_asset.contract.address.clone(),
+                                    &full_asset.contract.clone(),
+                                    vec![],
                                 )?
                             );
                         },
@@ -265,7 +243,7 @@ pub fn rebalance(
     }
 
     // Total for "portion" allowances (managers for farming mostly & reallocating)
-    let portion_total = ((token_balance + out_balance) - amount_total)?;
+    let portion_total = (token_balance + out_balance) - amount_total;
 
     for allowance in portion_allowances {
         match allowance {
@@ -290,7 +268,7 @@ pub fn rebalance(
                  *  - update could do an manager.update on all "children"
                  *  - rebalance can be unique as its not needed as an manager
                  */
-                if manager::claimable_query(&deps,
+                if manager::claimable_query(deps.querier,
                                             &asset, 
                                             self_address.clone(),
                                             manager.contract.clone()
@@ -307,30 +285,29 @@ pub fn rebalance(
                     spender.clone(),
                     viewing_key.clone(),
                     1,
-                    full_asset.contract.code_hash.clone(),
-                    full_asset.contract.address.clone(),
+                    &full_asset.contract.clone(),
                 )?
-                .allowance;
+                .amount;
 
                 // UnderFunded
                 if cur_allowance + manager.balance < desired_amount {
-                    let increase = (desired_amount - (manager.balance + cur_allowance))?;
+                    let increase = desired_amount - (manager.balance + cur_allowance);
                     if increase < threshold {
                         continue;
                     }
                     messages.push(increase_allowance_msg(
-                        spender,
+                        spender.clone(),
                         increase,
                         None,
                         None,
                         1,
-                        full_asset.contract.code_hash.clone(),
-                        full_asset.contract.address.clone(),
+                        &full_asset.contract.clone(),
+                        vec![],
                     )?);
                 }
                 // Overfunded
                 else if cur_allowance + manager.balance > desired_amount {
-                    let mut decrease = ((manager.balance + cur_allowance) - desired_amount)?;
+                    let mut decrease = (manager.balance + cur_allowance) - desired_amount;
                     if decrease < threshold {
                         continue;
                     }
@@ -344,10 +321,10 @@ pub fn rebalance(
                                 None,
                                 None,
                                 1,
-                                full_asset.contract.code_hash.clone(),
-                                full_asset.contract.address.clone(),
+                                &full_asset.contract.clone(),
+                                vec![],
                             )?);
-                            decrease = (decrease - cur_allowance)?;
+                            decrease = decrease - cur_allowance;
                         } else {
                             messages.push(decrease_allowance_msg(
                                 spender,
@@ -355,8 +332,8 @@ pub fn rebalance(
                                 None,
                                 None,
                                 1,
-                                full_asset.contract.code_hash.clone(),
-                                full_asset.contract.address.clone(),
+                                &full_asset.contract.clone(),
+                                vec![],
                             )?);
                             decrease = Uint128::zero();
                         }
@@ -376,16 +353,17 @@ pub fn rebalance(
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Rebalance {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Rebalance {
             status: ResponseStatus::Success,
         })?))
 }
 
 pub fn try_register_asset(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     contract: &Contract,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     if info.sender != config.admin {
@@ -409,34 +387,35 @@ pub fn try_register_asset(
 
     ALLOWANCES.save(deps.storage, contract.address.clone(), &Vec::new())?;
 
-    Ok(Response {
-        messages: vec![
+    Ok(Response::new()
+       .add_message(
             // Register contract in asset
             register_receive(
                 env.contract.code_hash.clone(),
                 None,
                 contract
-            )?,
+            )?
+        )
+       .add_message(
             // Set viewing key
             set_viewing_key_msg(
                 VIEWING_KEY.load(deps.storage)?,
                 None,
-                256,
-                contract.code_hash.clone(),
-                contract.address.clone(),
-            )?,
-        ],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterAsset {
+                &contract.clone(),
+            )?
+        )
+        .set_data(to_binary(&ExecuteAnswer::RegisterAsset {
             status: ResponseStatus::Success,
-        })?))
+        })?)
+    )
 }
 
 pub fn register_manager(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     contract: &mut Contract,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     if info.sender != config.admin {
@@ -460,7 +439,7 @@ pub fn register_manager(
         Ok(managers)
     })?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::RegisterAsset {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RegisterAsset {
             status: ResponseStatus::Success,
         })?))
 }
@@ -492,6 +471,7 @@ fn allowance_amount(allowance: &Allowance) -> Uint128 {
 pub fn allowance(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     asset: Addr,
     allowance: Allowance,
 ) -> StdResult<Response> {
@@ -609,16 +589,17 @@ pub fn allowance(
     )?,
     */
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Allowance {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Allowance {
             status: ResponseStatus::Success,
         })?))
 }
 
 pub fn claim(
-    deps: &mut Extern<S, A, Q>,
+    deps: DepsMut,
     _env: &Env,
+    info: MessageInfo,
     asset: Addr,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
 
     let managers = MANAGERS.load(deps.storage)?;
     let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
@@ -631,7 +612,7 @@ pub fn claim(
     for manager in managers {
         let claimable =
             manager::claimable_query(
-                &deps,
+                deps.querier,
                 &asset.clone(),
                 self_address.clone(),
                 manager.contract.clone()
@@ -648,23 +629,21 @@ pub fn claim(
         }
     }
 
-    Ok(HandleResponse {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&manager::HandleAnswer::Claim {
+    Ok(Response::new().set_data(to_binary(&manager::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             amount: claimed,
-        })?))
+    })?))
 }
 
 pub fn unbond(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     asset: Addr,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
+) -> StdResult<Response> {
 
-    if env.message.sender != CONFIG.load(deps.storage)?.admin {
+    if info.sender != CONFIG.load(deps.storage)?.admin {
         return Err(StdError::generic_err("Unauthorized"));
     }
 
@@ -682,7 +661,7 @@ pub fn unbond(
             Allowance::Portion { spender, .. } => {
                 if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
                     let unbondable = manager::unbondable_query(
-                        &deps,
+                        deps.querier,
                         &asset.clone(),
                         self_address.clone(),
                         manager.contract.clone()
@@ -707,7 +686,7 @@ pub fn unbond(
                                 manager.contract.clone(),
                             )?
                         );
-                        unbond_amount = (unbond_amount - unbondable)?;
+                        unbond_amount = unbond_amount - unbondable;
                         unbonded = unbonded + unbondable;
                     }
                 }
@@ -724,15 +703,12 @@ pub fn unbond(
         return Err(StdError::generic_err(format!(
             "Failed to fully unbond {}, {} available",
             amount,
-            (amount - unbond_amount)?
+            amount - unbond_amount
         )));
     }
 
-    Ok(HandleResponse {
-        messages,
-        log: vec![],
-        data: Some(to_binary(&manager::HandleAnswer::Unbond {
+    Ok(Response::new().set_data(to_binary(&manager::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount,
-        })?))
+    })?))
 }

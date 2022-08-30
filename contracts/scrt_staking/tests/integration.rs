@@ -1,4 +1,3 @@
-use shade_protocol::math_compat as compat;
 use shade_protocol::c_std::{
     to_binary,
     Addr, Uint128, Coin, Decimal,
@@ -15,20 +14,19 @@ use shade_protocol::{
     },
     utils::{
         asset::Contract,
-    },
-    fadroma::{
-        core::ContractLink,
-        ensemble::{
-           MockEnv,
-           ContractHarness,
-           ContractEnsemble,
-        },
+        MultiTestable,
+        InstantiateCallback,
+        ExecuteCallback,
+        Query,
     },
 };
 
-use contract_harness::harness::{
-    scrt_staking::ScrtStaking,
-    snip20::Snip20,
+use shade_protocol::multi_test::{ App, StakingSudo, SudoMsg };
+use shade_multi_test::{
+    multi::{
+        scrt_staking::ScrtStaking,
+        snip20::Snip20,
+    },
 };
 
 
@@ -39,166 +37,120 @@ fn basic_scrt_staking_integration(
     expected_scrt_staking: Uint128,
 ) {
 
+    let mut app = App::default();
+
     let viewing_key = "unguessable".to_string();
+    let admin = Addr::unchecked("admin");
+    let validator = Addr::unchecked("validator");
 
-    let mut ensemble = ContractEnsemble::new(50);
+    let token = snip20::InstantiateMsg {
+        name: "secretSCRT".into(),
+        admin: Some("admin".into()),
+        symbol: "SSCRT".into(),
+        decimals: 6,
+        initial_balances: None,
+        prng_seed: to_binary("").ok().unwrap(),
+        config: Some(snip20::InitConfig {
+            public_total_supply: Some(true),
+            enable_deposit: Some(true),
+            enable_redeem: Some(true),
+            enable_mint: Some(false),
+            enable_burn: Some(false),
+            enable_transfer: Some(true),
+        }),
+    }.test_init(Snip20::default(), &mut app, admin.clone(), "token", &[]).unwrap();
 
-    let reg_scrt_staking = ensemble.register(Box::new(ScrtStaking));
-    let reg_snip20 = ensemble.register(Box::new(Snip20));
-
-    let token = ensemble.instantiate(
-        reg_snip20.id,
-        &snip20::InitMsg {
-            name: "secretSCRT".into(),
-            admin: Some("admin".into()),
-            symbol: "SSCRT".into(),
-            decimals: 6,
-            initial_balances: None,
-            prng_seed: to_binary("").ok().unwrap(),
-            config: Some(snip20::InitConfig {
-                public_total_supply: Some(true),
-                enable_deposit: Some(true),
-                enable_redeem: Some(true),
-                enable_mint: Some(false),
-                enable_burn: Some(false),
-                enable_transfer: Some(true),
-            }),
+    let scrt_staking = scrt_staking::InstantiateMsg {
+        admins: None,
+        owner: admin.clone(),
+        sscrt: Contract {
+            address: token.address.clone(),
+            code_hash: token.code_hash.clone(),
         },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: Addr("token".into()),
-                code_hash: reg_snip20.code_hash.clone(),
-            }
-        )
-    ).unwrap().instance;
+        validator_bounds: None,
+        viewing_key: viewing_key.clone(),
+    }.test_init(ScrtStaking::default(), &mut app, admin.clone(), "scrt_staking", &[]).unwrap();
+    println!("SCRT STAKING ADDR {}", scrt_staking.address);
 
-    let scrt_staking = ensemble.instantiate(
-        reg_scrt_staking.id,
-        &scrt_staking::InitMsg {
-            admins: None,
-            owner: Addr("admin".into()),
-            sscrt: Contract {
-                address: token.address.clone(),
-                code_hash: token.code_hash.clone(),
-            },
-            validator_bounds: None,
-            viewing_key: viewing_key.clone(),
-        },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: Addr("scrt_staking".into()),
-                code_hash: reg_scrt_staking.code_hash,
-            }
-        )
-    ).unwrap().instance;
-
-    /*
-    ensemble.add_validator(Validator {
-        address: Addr("validator".into()),
-        commission: Decimal::zero(),
-        max_commission: Decimal::one(),
-        max_change_rate: Decimal::one(),
-    });
-    */
+    app.sudo(SudoMsg::Staking(StakingSudo::AddValidator { validator: validator.to_string().clone() })).unwrap();
 
     // set admin owner key
-    ensemble.execute(
-        &snip20::HandleMsg::SetViewingKey{
-            key: viewing_key.clone(),
-            padding: None,
-        },
-        MockEnv::new(
-            "admin", 
-            token.clone(),
-        ),
-    ).unwrap();
+    snip20::ExecuteMsg::SetViewingKey{
+        key: viewing_key.clone(),
+        padding: None,
+    }.test_exec(&token, &mut app, admin.clone(), &[]).unwrap();
 
     if !deposit.is_zero() {
         let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-        ensemble.add_funds(Addr::unchecked("admin"), vec![deposit_coin.clone()]);
+        app.init_modules(|router, _, storage| {
+            router.bank.init_balance(storage, &admin.clone(), vec![deposit_coin.clone()]).unwrap();
+        });
 
         // Wrap L1 into tokens
-        ensemble.execute(
-            &snip20::HandleMsg::Deposit {
-                padding: None,
-            },
-            MockEnv::new(
-                "admin",
-                token.clone(),
-            ).sent_funds(vec![deposit_coin]),
-        ).unwrap();
-        //assert!(false, "deposit success");
+        snip20::ExecuteMsg::Deposit {
+            padding: None,
+        }.test_exec(&token, &mut app, admin.clone(), &vec![deposit_coin]).unwrap();
 
         // Deposit funds in scrt staking
-        ensemble.execute(
-            &snip20::HandleMsg::Send {
-                recipient: scrt_staking.address.clone(),
-                recipient_code_hash: None,
-                amount: compat::Uint128::new(deposit.u128()),
-                msg: None,
-                memo: None,
-                padding: None,
-            },
-            MockEnv::new(
-                "admin",
-                token.clone(),
-            ),
-        ).unwrap();
+        snip20::ExecuteMsg::Send {
+            recipient: scrt_staking.address.to_string().clone(),
+            recipient_code_hash: None,
+            amount: deposit,
+            msg: None,
+            memo: None,
+            padding: None,
+        }.test_exec(&token, &mut app, admin.clone(), &[]).unwrap();
 
         // Delegations
-        let delegations: Vec<Delegation> = ensemble.query(
-            scrt_staking.address.clone(),
-            &scrt_staking::QueryMsg::Delegations {},
-        ).unwrap();
-        assert!(!delegations.is_empty());
+        let delegations: Vec<Delegation> = scrt_staking::QueryMsg::Delegations {}.test_query(&scrt_staking, &app).unwrap();
+        //assert!(!delegations.is_empty(), "empty delegations! {}", delegations.len());
     }
 
     // reserves should be 0 (all staked)
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "Reserves Pre-Rewards");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Balance
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Balance Pre-Rewards");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Rewards
-    let cur_rewards: Uint128 = ensemble.query(
-        scrt_staking.address.clone(),
-        &scrt_staking::QueryMsg::Rewards {},
-    ).unwrap();
+    let cur_rewards: Uint128 = scrt_staking::QueryMsg::Rewards {}.test_query(&scrt_staking, &app).unwrap();
     assert_eq!(cur_rewards, Uint128::zero(), "Rewards Pre-add");
 
     //ensemble.add_rewards(rewards);
+    app.sudo(SudoMsg::Staking(StakingSudo::AddRewards { amount: Coin { amount: rewards, denom: "uscrt".into() } })).unwrap();
+    /*
+    let block = app.block_info();
+    app.init_modules(|router, api, storage| {
+        router.staking.add_rewards(
+            api,
+            storage,
+            router,
+            &block,
+            Coin { amount: rewards, denom: "uscrt".into() }, 
+        ).unwrap();
+    });
+    */
 
     // Rewards
-    let cur_rewards: Uint128 = ensemble.query(
-        scrt_staking.address.clone(),
-        &scrt_staking::QueryMsg::Rewards {},
-    ).unwrap();
+    let cur_rewards: Uint128 = scrt_staking::QueryMsg::Rewards {}.test_query(&scrt_staking, &app).unwrap();
 
     if deposit.is_zero() {
         assert_eq!(cur_rewards, Uint128::zero(), "Rewards Post-add");
@@ -207,14 +159,11 @@ fn basic_scrt_staking_integration(
     }
 
     // reserves should be rewards
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
             if deposit.is_zero() {
                 assert_eq!(amount, Uint128::zero(), "Reserves Post-Rewards");
@@ -222,18 +171,15 @@ fn basic_scrt_staking_integration(
                 assert_eq!(amount, rewards, "Reserves Post-Rewards");
             }
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Balance
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
             if deposit.is_zero() {
                 assert_eq!(amount, Uint128::zero(), "Balance Post-Rewards");
@@ -241,198 +187,150 @@ fn basic_scrt_staking_integration(
                 assert_eq!(amount, deposit + rewards, "Balance Post-Rewards");
             }
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Update SCRT Staking
-    ensemble.execute(
-        &adapter::HandleMsg::Adapter(
-            adapter::SubHandleMsg::Update {
-                asset: token.address.clone(),
-            }
-        ),
-        MockEnv::new(
-            "admin", 
-            scrt_staking.clone(),
-        ),
-    ).unwrap();
+    adapter::ExecuteMsg::Adapter(
+        adapter::SubExecuteMsg::Update {
+            asset: token.address.clone(),
+        }
+    ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
 
     // reserves/rewards should be staked
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "Reserves Post-Update");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Balance
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, expected_scrt_staking, "Balance Post-Update");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Claimable
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Claimable {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Claimable {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Claimable Pre-Unbond");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Unbondable
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Unbondable {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Unbondable {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, expected_scrt_staking, "Unbondable Pre-Unbond");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Unbond all
-    ensemble.execute(
-        &adapter::HandleMsg::Adapter(
-            adapter::SubHandleMsg::Unbond {
-                amount: expected_scrt_staking,
-                asset: token.address.clone(),
-            }
-        ),
-        MockEnv::new(
-            "admin", 
-            scrt_staking.clone(),
-        ),
-    ).unwrap();
+    adapter::ExecuteMsg::Adapter(
+        adapter::SubExecuteMsg::Unbond {
+            amount: expected_scrt_staking,
+            asset: token.address.clone(),
+        }
+    ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
 
     // Unbonding 
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Unbonding {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Unbonding {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, expected_scrt_staking, "Unbonding Pre fast forward");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Claimable
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Claimable {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Claimable {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Claimable Pre unbond fast forward");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
-    //ensemble.fast_forward_delegation_waits();
+    app.sudo(SudoMsg::Staking(StakingSudo::FastForwardUndelegate {})).unwrap();
 
     // Claimable
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Claimable {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Claimable {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Claimable { amount } => {
             if deposit.is_zero() {
                 assert_eq!(amount, Uint128::zero(), "Claimable post fast forward");
             } else {
-                assert_eq!(amount, deposit + rewards, "Claimable post fast forwardd");
+                assert_eq!(amount, deposit + rewards, "Claimable post fast forward");
             }
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Claim
-    ensemble.execute(
-        &adapter::HandleMsg::Adapter(
-            adapter::SubHandleMsg::Claim {
-                asset: token.address.clone(),
-            }
-        ),
-        MockEnv::new(
-            "admin", 
-            scrt_staking.clone(),
-        ),
-    ).unwrap();
+    adapter::ExecuteMsg::Adapter(
+        adapter::SubExecuteMsg::Claim {
+            asset: token.address.clone(),
+        }
+    ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]).unwrap();
 
     // Reserves
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "Reserves Post Claim");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // Balance
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap() {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "Balance Post Claim");
         },
-        _ => assert!(false),
+        _ => panic!("Query failed"),
     };
 
     // ensure wrapped tokens were returned
-    match ensemble.query(
-        token.address.clone(),
-        &snip20::QueryMsg::Balance {
-            address: Addr("admin".into()),
-            key: viewing_key.clone(),
-        },
-    ).unwrap() {
+    match (snip20::QueryMsg::Balance {
+        address: admin.to_string().clone(),
+        key: viewing_key.clone(),
+    }).test_query(&token, &app).unwrap() {
         snip20::QueryAnswer::Balance { amount } => {
             if deposit.is_zero() {
                 assert_eq!(amount.u128(), 0u128, "Final User balance");
@@ -462,23 +360,20 @@ macro_rules! basic_scrt_staking_tests {
     }
 }
 
-/*
 basic_scrt_staking_tests! {
     basic_scrt_staking_0: (
-        Uint128(100), // deposit
-        Uint128(0),   // rewards
-        Uint128(100), // balance
+        Uint128::new(100), // deposit
+        Uint128::new(0),   // rewards
+        Uint128::new(100), // balance
     ),
     basic_scrt_staking_1: (
-        Uint128(100), // deposit
-        Uint128(50),   // rewards
-        Uint128(150), // balance
+        Uint128::new(100), // deposit
+        Uint128::new(50),   // rewards
+        Uint128::new(150), // balance
     ),
-
-    basic_scrt_staking_2: (
-        Uint128(0), // deposit
-        Uint128(1000),   // rewards
-        Uint128(0), // balance
+    basic_scrt_staking_no_deposit: (
+        Uint128::new(0), // deposit
+        Uint128::new(1000),   // rewards
+        Uint128::new(0), // balance
     ),
 }
-*/

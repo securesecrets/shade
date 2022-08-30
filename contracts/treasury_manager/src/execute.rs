@@ -1,55 +1,57 @@
-use shade_protocol::c_std::{
-    self,
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
-};
 use shade_protocol::{
-    snip20::helpers::{
-        allowance_query,
+    snip20::{
         batch::{SendFromAction, SendAction},
-        balance_query,
-        batch_send_from_msg,
-        batch_send_msg,
-        register_receive,
-        send_msg,
-        set_viewing_key_msg,
-    },
-};
+        helpers::{
+            allowance_query,
 
-use shade_protocol::{
-    contract_interfaces::{
-        dao::{
-            adapter,
-            treasury_manager::{
-                storage::*,
-                Allocation,
-                AllocationMeta,
-                AllocationType,
-                Config,
-                HandleAnswer,
-                Holding,
-                Balance,
-                Status,
-            }
+            batch_send_from_msg,
+            batch_send_msg,
+
+            balance_query,
+            register_receive,
+            send_msg,
+            set_viewing_key_msg,
         },
-        snip20,
     },
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    dao::{
+        adapter,
+        treasury_manager::{
+            Allocation,
+            AllocationMeta,
+            AllocationType,
+            Config,
+            ExecuteAnswer,
+            Holding,
+            Balance,
+            Status,
+        },
+    },
+    snip20,
+    utils::{
+        asset::Contract,
+        generic_response::ResponseStatus,
+    },
+    c_std::{
+        self,
+        MessageInfo,
+        to_binary,
+        Api,
+        Binary,
+        Env,
+        DepsMut,
+        Response,
+        Addr,
+        Querier,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
 };
 
 use std::collections::HashMap;
 
-
+use crate::storage::*;
 
 pub fn receive(
     deps: DepsMut,
@@ -67,19 +69,16 @@ pub fn receive(
      */
 
     let config = CONFIG.load(deps.storage)?;
-    let asset = ASSETS.load(deps.storage, env.message.sender.clone())?;
+    let asset = ASSETS.load(deps.storage, info.sender.clone())?;
 
     // Do nothing if its an adapter (claimed funds)
-    if let Some(adapter) = ALLOCATIONS.load(deps.storage, env.message.sender.clone())?
+    if let Some(adapter) = ALLOCATIONS.load(deps.storage, info.sender.clone())?
         .iter()
         .find(|a| a.contract.address == from) {
-            return Ok(HandleResponse {
-                messages: vec![],
-                log: vec![],
-                data: Some(to_binary(&HandleAnswer::Receive {
+            return Ok(Response::new().set_data(
+                to_binary(&ExecuteAnswer::Receive {
                     status: ResponseStatus::Success,
-                })?),
-            });
+                })?));
         }
 
     // Default to treasury if not sent by a holder
@@ -105,7 +104,7 @@ pub fn receive(
         Ok(holding)
     })?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Receive {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
             status: ResponseStatus::Success,
         })?))
 }
@@ -124,7 +123,7 @@ pub fn try_update_config(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
             status: ResponseStatus::Success,
         })?))
 }
@@ -132,6 +131,7 @@ pub fn try_update_config(
 pub fn try_register_asset(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     contract: &Contract,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
@@ -151,25 +151,23 @@ pub fn try_register_asset(
 
     ALLOCATIONS.save(deps.storage, contract.address.clone(), &Vec::new())?;
 
-    Ok(Response {
-        messages: vec![
+    Ok(Response::new()
+       .add_messages(
+        vec![
             // Register contract in asset
             register_receive(
                 env.contract.code_hash.clone(),
                 None,
-                contract
+                &contract
             )?,
             // Set viewing key
             set_viewing_key_msg(
                 VIEWING_KEY.load(deps.storage)?,
                 None,
-                256,
-                contract.code_hash.clone(),
-                contract.address.clone(),
+                &contract,
             )?,
-        ],
-        log: vec![],
-        data: Some(to_binary(&HandleAnswer::RegisterAsset {
+        ])
+       .set_data(to_binary(&ExecuteAnswer::RegisterAsset {
             status: ResponseStatus::Success,
         })?))
 }
@@ -177,6 +175,7 @@ pub fn try_register_asset(
 pub fn allocate(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     asset: Addr,
     allocation: Allocation,
 ) -> StdResult<Response> {
@@ -230,7 +229,7 @@ pub fn allocate(
 
     ALLOCATIONS.save(deps.storage, asset.clone(), &apps)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Allocate {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Allocate {
             status: ResponseStatus::Success,
         })?))
 }
@@ -238,6 +237,7 @@ pub fn allocate(
 pub fn claim(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     asset: Addr,
 ) -> StdResult<Response> {
 
@@ -247,7 +247,7 @@ pub fn claim(
     let full_asset = ASSETS.load(deps.storage, asset.clone())?;
 
     let config = CONFIG.load(deps.storage)?;
-    let mut claimer = env.message.sender.clone();
+    let mut claimer = info.sender;
 
     if claimer == config.admin {
         //assert!(false, "CLAIMER TREASURY");
@@ -275,10 +275,8 @@ pub fn claim(
         &deps.querier,
         SELF_ADDRESS.load(deps.storage)?,
         VIEWING_KEY.load(deps.storage)?,
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
-    )?.amount;
+        &full_asset.contract.clone(),
+    )?;
 
     let mut messages = vec![];
     let mut total_claimed = Uint128::zero();
@@ -286,14 +284,14 @@ pub fn claim(
     // Claim if more funds are needed
     if holding.unbondings[unbonding_i].amount > reserves {
         //assert!(false, "reduce claim_amount {} - {}", unbonding.amount, reserves);
-        let mut claim_amount = (holding.unbondings[unbonding_i].amount - reserves)?;
+        let mut claim_amount = holding.unbondings[unbonding_i].amount - reserves;
 
         for alloc in ALLOCATIONS.load(deps.storage, asset.clone())? {
             if claim_amount == Uint128::zero() {
                 break;
             }
 
-            let claim = adapter::claimable_query(deps, &asset.clone(), alloc.contract.clone())?;
+            let claim = adapter::claimable_query(deps.querier, &asset.clone(), alloc.contract.clone())?;
 
             if claim > Uint128::zero() {
                 messages.push(adapter::claim_msg(asset.clone(), alloc.contract)?);
@@ -301,7 +299,7 @@ pub fn claim(
                     claim_amount = Uint128::zero();
                 }
                 else {
-                    claim_amount = (claim_amount - claim)?;
+                    claim_amount = claim_amount - claim;
                 }
                 total_claimed += claim;
             }
@@ -317,7 +315,7 @@ pub fn claim(
         send_amount = holding.unbondings[unbonding_i].amount;
     }
     // Adjust unbonding amount
-    holding.unbondings[unbonding_i].amount = (holding.unbondings[unbonding_i].amount - send_amount)?;
+    holding.unbondings[unbonding_i].amount = holding.unbondings[unbonding_i].amount - send_amount;
     HOLDING.save(deps.storage, claimer.clone(), &holding)?;
 
     // Send claimed funds
@@ -328,13 +326,11 @@ pub fn claim(
             None,
             None,
             None,
-            1,
-            full_asset.contract.code_hash.clone(),
-            full_asset.contract.address.clone(),
+            &full_asset.contract.clone(),
         )?
     );
 
-    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
+    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             amount: reserves + total_claimed,
         })?))
@@ -343,6 +339,7 @@ pub fn claim(
 pub fn update(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     asset: Addr,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
@@ -360,7 +357,7 @@ pub fn update(
             AllocationType::Amount => amount_total += allocations[i].balance,
             AllocationType::Portion => {
                 allocations[i].balance = adapter::balance_query(
-                    deps,
+                    deps.querier,
                     &full_asset.contract.address,
                     allocations[i].contract.clone(),
                 )?;
@@ -393,23 +390,19 @@ pub fn update(
         env.contract.address.clone(),
         key.clone(),
         1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
+        &full_asset.contract.clone(),
     )?
-    .allowance;
+    .amount;
 
     // Available balance
     let mut balance = balance_query(
         &deps.querier,
         SELF_ADDRESS.load(deps.storage)?,
         key.clone(),
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
-    )?
-    .amount;
+        &full_asset.contract.clone(),
+    )?;
 
-    let total = ((portion_total + allowance + balance) - unbonding)?;
+    let total = (portion_total + allowance + balance) - unbonding;
 
     let _total_unbond = Uint128::zero();
 
@@ -429,7 +422,7 @@ pub fn update(
                 // Under funded
                 if adapter.balance < desired_amount {
 
-                    let mut desired_input = (desired_amount - adapter.balance)?;
+                    let mut desired_input = desired_amount - adapter.balance;
 
                     // Check tolerance threshold
                     if desired_input <= threshold {
@@ -439,21 +432,21 @@ pub fn update(
                     // Fully covered by balance
                     if desired_input <= balance {
                         send_actions.push(SendAction {
-                            recipient: adapter.contract.address.clone(),
+                            recipient: adapter.contract.address.clone().to_string(),
                             recipient_code_hash: Some(adapter.contract.code_hash.clone()),
                             amount: desired_input,
                             msg: None,
                             memo: None,
                         });
 
-                        balance = (balance - desired_input)?;
+                        balance = balance - desired_input;
                         balance_used += desired_input;
                         desired_input = Uint128::zero();
                     }
                     // Send all balance
                     else if !balance.is_zero() {
                         send_actions.push(SendAction {
-                            recipient: adapter.contract.address.clone(),
+                            recipient: adapter.contract.address.clone().to_string(),
                             recipient_code_hash: Some(adapter.contract.code_hash.clone()),
                             amount: balance,
                             msg: None,
@@ -462,7 +455,7 @@ pub fn update(
 
                         balance = Uint128::zero();
                         balance_used += balance;
-                        desired_input = (desired_input - balance)?;
+                        desired_input = desired_input - balance;
                         break;
                     }
 
@@ -470,23 +463,23 @@ pub fn update(
                         // Fully covered by allowance
                         if desired_input <= allowance {
                             send_from_actions.push(SendFromAction {
-                                owner: config.treasury.clone(),
-                                recipient: adapter.contract.address.clone(),
+                                owner: config.treasury.clone().to_string(),
+                                recipient: adapter.contract.address.clone().to_string(),
                                 recipient_code_hash: Some(adapter.contract.code_hash.clone()),
                                 amount: desired_input,
                                 msg: None,
                                 memo: None,
                             });
 
-                            allowance = (allowance - desired_input)?;
+                            allowance = allowance - desired_input;
                             allowance_used += desired_input;
                             desired_input = Uint128::zero();
                         }
                         // Send all allowance
                         else if !allowance.is_zero() {
                             send_from_actions.push(SendFromAction {
-                                owner: config.treasury.clone(),
-                                recipient: adapter.contract.address.clone(),
+                                owner: config.treasury.clone().to_string(),
+                                recipient: adapter.contract.address.clone().to_string(),
                                 recipient_code_hash: Some(adapter.contract.code_hash.clone()),
                                 amount: allowance,
                                 msg: None,
@@ -495,7 +488,7 @@ pub fn update(
 
                             allowance = Uint128::zero();
                             allowance_used += allowance;
-                            desired_input = (desired_input - allowance)?;
+                            desired_input = desired_input - allowance;
                             break;
                         }
                     }
@@ -503,7 +496,7 @@ pub fn update(
                 // Over funded
                 else if adapter.balance > desired_amount {
 
-                    let mut desired_output = (adapter.balance - desired_amount)?;
+                    let mut desired_output = adapter.balance - desired_amount;
 
                     if desired_output < threshold {
                         continue;
@@ -542,9 +535,7 @@ pub fn update(
         messages.push(batch_send_msg(
             send_actions,
             None,
-            1,
-            full_asset.contract.code_hash.clone(),
-            full_asset.contract.address.clone(),
+            &full_asset.contract.clone(),
         )?);
     }
 
@@ -552,13 +543,11 @@ pub fn update(
         messages.push(batch_send_from_msg(
             send_from_actions,
             None,
-            1,
-            full_asset.contract.code_hash.clone(),
-            full_asset.contract.address.clone(),
+            &full_asset.contract.clone(),
         )?);
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Update {
+    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Update {
             status: ResponseStatus::Success,
         })?))
 }
@@ -566,6 +555,7 @@ pub fn update(
 pub fn unbond(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
@@ -607,7 +597,7 @@ pub fn unbond(
         }
 
         else {
-            holding.balances[balance_i].amount = (holding.balances[balance_i].amount - amount)?;
+            holding.balances[balance_i].amount = holding.balances[balance_i].amount - amount;
         }
 
         // Add unbonding
@@ -649,14 +639,12 @@ pub fn unbond(
         &deps.querier,
         SELF_ADDRESS.load(deps.storage)?,
         VIEWING_KEY.load(deps.storage)?,
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
-    )?.amount;
+        &full_asset.contract.clone(),
+    )?;
 
     // Remove pending unbondings from reserves
     if reserves > other_unbondings {
-        reserves = (reserves - other_unbondings)?;
+        reserves = reserves - other_unbondings;
     }
     else {
         reserves = Uint128::zero();
@@ -675,18 +663,16 @@ pub fn unbond(
                     None,
                     None,
                     None,
-                    1,
-                    full_asset.contract.code_hash.clone(),
-                    full_asset.contract.address.clone(),
+                    &full_asset.contract.clone(),
                 )?
             );
-            unbond_amount = (unbond_amount - reserves)?;
+            unbond_amount = unbond_amount - reserves;
 
             // Reflect sent funds in unbondings
             HOLDING.update(deps.storage, unbonder, |h| -> StdResult<Holding> {
                 let mut holding = h.unwrap();
                 if let Some(i) = holding.unbondings.iter().position(|u| u.token == asset) {
-                    holding.unbondings[i].amount = (holding.unbondings[i].amount - reserves)?;
+                    holding.unbondings[i].amount = holding.unbondings[i].amount - reserves;
                 }
                 else {
                     return Err(StdError::generic_err("Failed to get unbonding, shouldn't happen"));
@@ -702,18 +688,16 @@ pub fn unbond(
                     None,
                     None,
                     None,
-                    1,
-                    full_asset.contract.code_hash.clone(),
-                    full_asset.contract.address.clone(),
+                    &full_asset.contract.clone(),
                 )?
             );
-            unbond_amount = (unbond_amount - amount)?;
+            unbond_amount = unbond_amount - amount;
 
             // Reflect sent funds in unbondings
             HOLDING.update(deps.storage, unbonder, |h| {
                 let mut holder = h.unwrap();
                 if let Some(i) = holder.unbondings.iter().position(|u| u.token == asset) {
-                    holder.unbondings[i].amount = (holder.unbondings[i].amount - amount)?;
+                    holder.unbondings[i].amount = holder.unbondings[i].amount - amount;
                 }
                 else {
                     return Err(StdError::generic_err("Failed to get unbonding, shouldn't happen"));
@@ -737,7 +721,7 @@ pub fn unbond(
         for i in 0..allocations.len() {
 
             allocations[i].balance = adapter::balance_query(
-                deps,
+                deps.querier,
                 &full_asset.contract.address,
                 allocations[i].contract.clone(),
             )?;
@@ -754,9 +738,8 @@ pub fn unbond(
             env.contract.address.clone(),
             VIEWING_KEY.load(deps.storage)?,
             1,
-            full_asset.contract.code_hash.clone(),
-            full_asset.contract.address.clone(),
-        )?.allowance;
+            &full_asset.contract.clone(),
+        )?.amount;
 
         let total = portion_total + allowance;
 
@@ -780,7 +763,7 @@ pub fn unbond(
                     );
                     */
 
-                    let unbondable = adapter::unbondable_query(&deps,
+                    let unbondable = adapter::unbondable_query(deps.querier,
                                           &asset,
                                           allocations[i].contract.clone())?;
 
@@ -792,7 +775,7 @@ pub fn unbond(
                                 allocations[i].contract.clone()
                             )?
                         );
-                        unbond_amount = (unbond_amount - unbondable)?;
+                        unbond_amount = unbond_amount - unbondable;
                     }
                     else {
                         messages.push(
@@ -809,7 +792,7 @@ pub fn unbond(
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&adapter::HandleAnswer::Unbond {
+    Ok(Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: unbond_amount,
         })?))
@@ -818,7 +801,7 @@ pub fn unbond(
 pub fn add_holder(
     deps: DepsMut,
     env: &Env,
-    info: &MessageInfo,
+    info: MessageInfo,
     holder: Addr,
 ) -> StdResult<Response> {
 
@@ -840,7 +823,7 @@ pub fn add_holder(
         status: Status::Active,
     })?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddHolder {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AddHolder {
             status: ResponseStatus::Success,
         })?))
 }
@@ -848,11 +831,12 @@ pub fn add_holder(
 pub fn remove_holder(
     deps: DepsMut,
     env: &Env,
+    info: MessageInfo,
     holder: Addr,
 ) -> StdResult<Response> {
     // TODO: unbond all or move all funds to treasury?
     // Should probably disallow fully deleting holders, just freeze/transfer
-    if env.message.sender != CONFIG.load(deps.storage)?.admin {
+    if info.sender != CONFIG.load(deps.storage)?.admin {
         return Err(StdError::generic_err("Unauthorized"));
     }
 
@@ -863,7 +847,7 @@ pub fn remove_holder(
         return Err(StdError::generic_err("Not an authorized holder"));
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::RemoveHolder {
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RemoveHolder {
             status: ResponseStatus::Success,
         })?))
 }

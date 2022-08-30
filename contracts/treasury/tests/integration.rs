@@ -1,9 +1,8 @@
-use shade_protocol::math_compat as compat;
 use shade_protocol::c_std::{
     coins, from_binary, to_binary,
-    Extern, Addr, StdError,
-    Binary, StdResult, HandleResponse, Env,
-    InitResponse, Uint128,
+    Addr, StdError,
+    Binary, StdResult, Env,
+    Uint128,
     Coin, Decimal,
     Validator,
 };
@@ -22,24 +21,20 @@ use shade_protocol::{
         snip20,
     },
     utils::{
+        MultiTestable,
+        InstantiateCallback,
+        ExecuteCallback,
+        Query,
         asset::Contract,
-    },
-    fadroma::{
-        core::ContractLink,
-        ensemble::{
-           MockEnv,
-           ContractHarness,
-           ContractEnsemble,
-        },
     },
 };
 
-use contract_harness::harness::{
+use shade_protocol::multi_test::{ App };
+use shade_multi_test::multi::{
     treasury::Treasury,
     treasury_manager::TreasuryManager,
     scrt_staking::ScrtStaking,
-    snip20_reference_impl::Snip20ReferenceImpl as Snip20,
-    //snip20::Snip20,
+    snip20::Snip20,
 };
 
 // Add other adapters here as they come
@@ -55,91 +50,49 @@ fn single_asset_portion_manager_integration(
     expected_scrt_staking: Uint128,
 ) {
 
-    let mut ensemble = ContractEnsemble::new(50);
+    let mut app = App::default();
 
-    let reg_treasury = ensemble.register(Box::new(Treasury));
-    let reg_manager = ensemble.register(Box::new(TreasuryManager));
-    let reg_scrt_staking = ensemble.register(Box::new(ScrtStaking));
-    let reg_snip20 = ensemble.register(Box::new(Snip20));
+    let admin = Addr::unchecked("admin");
+    let user = Addr::unchecked("user");
 
-    let token = ensemble.instantiate(
-        reg_snip20.id,
-        &snip20::InitMsg {
-            name: "secretSCRT".into(),
-            admin: Some("admin".into()),
-            symbol: "SSCRT".into(),
-            decimals: 6,
-            initial_balances: None,
-            prng_seed: to_binary("").ok().unwrap(),
-            config: Some(snip20::InitConfig {
-                public_total_supply: Some(true),
-                enable_deposit: Some(true),
-                enable_redeem: Some(true),
-                enable_mint: Some(false),
-                enable_burn: Some(false),
-                enable_transfer: Some(true),
-            }),
+    let token = snip20::InstantiateMsg {
+        name: "secretSCRT".into(),
+        admin: Some("admin".into()),
+        symbol: "SSCRT".into(),
+        decimals: 6,
+        initial_balances: None,
+        prng_seed: to_binary("").ok().unwrap(),
+        config: Some(snip20::InitConfig {
+            public_total_supply: Some(true),
+            enable_deposit: Some(true),
+            enable_redeem: Some(true),
+            enable_mint: Some(false),
+            enable_burn: Some(false),
+            enable_transfer: Some(true),
+        }),
+    }.test_init(Snip20::default(), &mut app, admin.clone(), "token", &[]).unwrap();
+
+    let treasury = treasury::InstantiateMsg {
+        admin: Some(admin.clone()),
+        viewing_key: "viewing_key".to_string(),
+    }.test_init(Treasury::default(), &mut app, admin.clone(), "treasury", &[]).unwrap();
+
+    let manager = treasury_manager::InstantiateMsg {
+        admin: Some(admin.clone()),
+        treasury: Addr::unchecked("treasury".to_string()),
+        viewing_key: "viewing_key".to_string(),
+    }.test_init(Treasury::default(), &mut app, admin.clone(), "manager", &[]).unwrap();
+
+    let scrt_staking = scrt_staking::InstantiateMsg {
+        admins: None,
+        owner: manager.address.clone(),
+        sscrt: Contract {
+            address: token.address.clone(),
+            code_hash: token.code_hash.clone(),
         },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: Addr("token".into()),
-                code_hash: reg_snip20.code_hash.clone(),
-            }
-        )
-    ).unwrap().instance;
-
-    let treasury = ensemble.instantiate(
-        reg_treasury.id,
-        &treasury::InitMsg {
-            admin: Some(Addr("admin".into())),
-            viewing_key: "viewing_key".to_string(),
-        },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: Addr("treasury".into()),
-                code_hash: reg_treasury.code_hash,
-            }
-        )
-    ).unwrap().instance;
-
-    let manager = ensemble.instantiate(
-        reg_manager.id,
-        &treasury_manager::InitMsg {
-            admin: Some(Addr("admin".into())),
-            treasury: Addr("treasury".into()),
-            viewing_key: "viewing_key".to_string(),
-        },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: Addr("manager".into()),
-                code_hash: reg_manager.code_hash,
-            }
-        )
-    ).unwrap().instance;
-
-    let scrt_staking = ensemble.instantiate(
-        reg_scrt_staking.id,
-        &scrt_staking::InitMsg {
-            admins: None,
-            owner: manager.address.clone(),
-            sscrt: Contract {
-                address: token.address.clone(),
-                code_hash: token.code_hash.clone(),
-            },
-            validator_bounds: None,
-            viewing_key: "viewing_key".to_string(),
-        },
-        MockEnv::new(
-            "admin",
-            ContractLink {
-                address: Addr("scrt_staking".into()),
-                code_hash: reg_scrt_staking.code_hash,
-            }
-        )
-    ).unwrap().instance;
+        validator_bounds: None,
+        viewing_key: "viewing_key".to_string(),
+    }.test_init(ScrtStaking::default(), &mut app, admin.clone(), "scrt_staking", &[]).unwrap();
 
     /*
     ensemble.add_validator(Validator {
@@ -151,182 +104,118 @@ fn single_asset_portion_manager_integration(
     */
 
     // Register treasury assets
-    ensemble.execute(
-        &treasury::HandleMsg::RegisterAsset {
-            contract: Contract {
-                address: token.address.clone(),
-                code_hash: token.code_hash.clone(),
-            },
+    treasury::ExecuteMsg::RegisterAsset {
+        contract: Contract {
+            address: token.address.clone(),
+            code_hash: token.code_hash.clone(),
         },
-        MockEnv::new(
-            "admin", 
-            treasury.clone(),
-        ),
-    ).unwrap();
+    }.test_exec(&treasury, &mut app, admin.clone(), &[]);
     
     // Register manager assets
-    ensemble.execute(
-        &treasury_manager::HandleMsg::RegisterAsset {
-            contract: Contract {
-                address: token.address.clone(),
-                code_hash: token.code_hash.clone(),
-            },
+    treasury_manager::ExecuteMsg::RegisterAsset {
+        contract: Contract {
+            address: token.address.clone(),
+            code_hash: token.code_hash.clone(),
         },
-        MockEnv::new(
-            "admin", 
-            manager.clone(),
-        ),
-    ).unwrap();
+    }.test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Register manager w/ treasury
-    ensemble.execute(
-        &treasury::HandleMsg::RegisterManager {
-            contract: Contract {
-                address: manager.address.clone(),
-                code_hash: manager.code_hash.clone(),
-            },
+    treasury::ExecuteMsg::RegisterManager {
+        contract: Contract {
+            address: manager.address.clone(),
+            code_hash: manager.code_hash.clone(),
         },
-        MockEnv::new(
-            "admin", 
-            treasury.clone(),
-        ),
-    ).unwrap();
+    }.test_exec(&treasury, &mut app, admin.clone(), &[]);
 
     // treasury allowance to manager
-    ensemble.execute(
-        &treasury::HandleMsg::Allowance {
-            asset: token.address.clone(),
-            allowance: treasury::Allowance::Portion {
-                //nick: "Mid-Stakes-Manager".to_string(),
-                spender: manager.address.clone(),
-                portion: allowance,
-                // to be removed
-                last_refresh: "".to_string(),
-                // 100% (adapter balance will 2x before unbond)
-                tolerance: Uint128(10u128.pow(18)),
-            },
+    treasury::ExecuteMsg::Allowance {
+        asset: token.address.clone(),
+        allowance: treasury::Allowance::Portion {
+            //nick: "Mid-Stakes-Manager".to_string(),
+            spender: manager.address.clone(),
+            portion: allowance,
+            // to be removed
+            last_refresh: "".to_string(),
+            // 100% (adapter balance will 2x before unbond)
+            tolerance: Uint128::new(10u128.pow(18)),
         },
-        MockEnv::new(
-            "admin", 
-            treasury.clone(),
-        ),
-    ).unwrap();
+    }.test_exec(&treasury, &mut app, admin.clone(), &[]);
 
     // Allocate to scrt_staking from manager
-    ensemble.execute(
-        &treasury_manager::HandleMsg::Allocate {
-            asset: token.address.clone(),
-            allocation: Allocation {
-                nick: Some("scrt_staking".to_string()),
-                contract: Contract {
-                    address: scrt_staking.address.clone(),
-                    code_hash: scrt_staking.code_hash.clone(),
-                },
-                alloc_type: alloc_type,
-                amount: alloc_amount,
-                tolerance: Uint128::zero(),
-            }
-        },
-        MockEnv::new(
-            "admin", 
-            manager.clone(),
-        ),
-    ).unwrap();
+    treasury_manager::ExecuteMsg::Allocate {
+        asset: token.address.clone(),
+        allocation: Allocation {
+            nick: Some("scrt_staking".to_string()),
+            contract: Contract {
+                address: scrt_staking.address.clone(),
+                code_hash: scrt_staking.code_hash.clone(),
+            },
+            alloc_type: alloc_type,
+            amount: alloc_amount,
+            tolerance: Uint128::zero(),
+        }
+    }.test_exec(&manager, &mut app, admin.clone(), &[]);
 
     let deposit_coin = Coin { denom: "uscrt".into(), amount: deposit };
-    ensemble.add_funds(Addr::unchecked("admin"), vec![deposit_coin.clone()]);
+    app.init_modules(|router, _, storage| {
+        router.bank.init_balance(storage, &admin.clone(), vec![deposit_coin.clone()]).unwrap();
+    });
 
     assert!(deposit_coin.amount > Uint128::zero());
 
     // Wrap L1
-    ensemble.execute(
-        &snip20::HandleMsg::Deposit {
-            padding: None,
-        },
-        MockEnv::new(
-            "admin",
-            token.clone(),
-        ).sent_funds(vec![deposit_coin]),
-    ).unwrap();
+    snip20::ExecuteMsg::Deposit {
+        padding: None,
+    }.test_exec(&token, &mut app, admin.clone(), &vec![deposit_coin]);
 
     // Deposit funds into treasury
-    ensemble.execute(
-        &snip20::HandleMsg::Send {
-            recipient: treasury.address.clone(),
-            recipient_code_hash: None,
-            amount: compat::Uint128::new(deposit.u128()),
-            msg: None,
-            memo: None,
-            padding: None,
-        },
-        MockEnv::new(
-            "admin",
-            token.clone(),
-        ),
-    ).unwrap();
+    snip20::ExecuteMsg::Send {
+        recipient: treasury.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: Uint128::new(deposit.u128()),
+        msg: None,
+        memo: None,
+        padding: None,
+    }.test_exec(&token, &mut app, admin.clone(), &[]);
     
     // Update treasury
-    ensemble.execute(
-        &adapter::HandleMsg::Adapter(
-            adapter::SubHandleMsg::Update {
-                asset: token.address.clone(),
-            }
-        ),
-        MockEnv::new(
-            "admin", 
-            treasury.clone(),
-        ),
-    ).unwrap();
+    adapter::ExecuteMsg::Adapter(
+        adapter::SubExecuteMsg::Update {
+            asset: token.address.clone(),
+        }
+    ).test_exec(&treasury, &mut app, admin.clone(), &[]);
 
     // Check treasury allowance to manager
-    match ensemble.query(
-        treasury.address.clone(),
-        &treasury::QueryMsg::Allowance {
-            asset: token.address.clone(),
-            spender: manager.address.clone(),
-        }
-    ).unwrap() {
+    match (treasury::QueryMsg::Allowance {
+        asset: token.address.clone(),
+        spender: manager.address.clone(),
+    }.test_query(&treasury, &app).unwrap()) {
         treasury::QueryAnswer::Allowance { amount } => {
             assert_eq!(amount, expected_allowance, "Treasury->Manager Allowance");
         },
-        _ => assert!(false),
+        _ => panic!("query failed"),
     };
 
     // Update manager
-    ensemble.execute(
-        &manager::HandleMsg::Manager(
-            manager::SubHandleMsg::Update {
-                asset: token.address.clone(),
-            }
-        ),
-        MockEnv::new(
-            "admin", 
-            manager.clone(),
-        ),
-    ).unwrap();
+    manager::ExecuteMsg::Manager(
+        manager::SubExecuteMsg::Update {
+            asset: token.address.clone(),
+        }
+    ).test_exec(&manager, &mut app, admin.clone(), &[]);
 
     // Update SCRT Staking
-    ensemble.execute(
-        &adapter::HandleMsg::Adapter(
-            adapter::SubHandleMsg::Update {
-                asset: token.address.clone(),
-            }
-        ),
-        MockEnv::new(
-            "admin", 
-            scrt_staking.clone(),
-        ),
-    ).unwrap();
+    adapter::ExecuteMsg::Adapter(
+        adapter::SubExecuteMsg::Update {
+            asset: token.address.clone(),
+        }
+    ).test_exec(&scrt_staking, &mut app, admin.clone(), &[]);
 
     // Treasury reserves check
-    match ensemble.query(
-        treasury.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+        }
+    ).test_query(&treasury, &app).unwrap()) {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, expected_treasury, "Treasury Reserves");
         },
@@ -334,15 +223,12 @@ fn single_asset_portion_manager_integration(
     };
 
     // Manager reserves
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-                holder: treasury.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+            holder: treasury.address.clone(),
+        }
+    ).test_query(&manager, &app).unwrap()) {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, expected_manager, "Manager Reserves");
         },
@@ -350,14 +236,11 @@ fn single_asset_portion_manager_integration(
     };
 
     // Scrt Staking reserves should be 0 (all staked)
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap()) {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "SCRT Staking Reserves");
         },
@@ -365,14 +248,11 @@ fn single_asset_portion_manager_integration(
     };
 
     // Scrt Staking balance check
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &app).unwrap()) {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, expected_scrt_staking, "SCRT Staking Balance");
         },
@@ -380,14 +260,11 @@ fn single_asset_portion_manager_integration(
     };
 
     // Treasury unbondable check
-    match ensemble.query(
-        treasury.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Unbondable {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Unbondable {
+            asset: token.address.clone(),
+        }
+    ).test_query(&treasury, &mut app).unwrap()) {
         adapter::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, expected_scrt_staking + expected_manager, "Treasury Unbondable");
         },
@@ -395,28 +272,19 @@ fn single_asset_portion_manager_integration(
     };
 
     // Unbond all w/ treasury
-    ensemble.execute(
-        &adapter::HandleMsg::Adapter(
-            adapter::SubHandleMsg::Unbond {
-                amount: expected_scrt_staking + expected_manager, 
-                asset: token.address.clone(),
-            }
-        ),
-        MockEnv::new(
-            "admin", 
-            treasury.clone(),
-        ),
-    ).unwrap();
+    adapter::ExecuteMsg::Adapter(
+        adapter::SubExecuteMsg::Unbond {
+            amount: expected_scrt_staking + expected_manager, 
+            asset: token.address.clone(),
+        }
+    ).test_exec(&treasury, &mut app, admin.clone(), &[]);
 
     // scrt staking unbonding
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Unbonding {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Unbonding {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, expected_scrt_staking, "Scrt Staking Unbonding Pre-fastforward");
         },
@@ -424,14 +292,11 @@ fn single_asset_portion_manager_integration(
     };
 
     // scrt staking claimable
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Claimable {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Claimable {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Scrt Staking Claimable Pre-fastforward");
         },
@@ -439,15 +304,12 @@ fn single_asset_portion_manager_integration(
     };
 
     // Manager Claimable
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Claimable {
-                asset: token.address.clone(),
-                holder: treasury.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Claimable {
+            asset: token.address.clone(),
+            holder: treasury.address.clone(),
+        }
+    ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Claimable Pre-fastforward");
         },
@@ -455,15 +317,12 @@ fn single_asset_portion_manager_integration(
     };
 
     // Manager Unbonding  
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Unbonding {
-                asset: token.address.clone(),
-                holder: treasury.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Unbonding {
+            asset: token.address.clone(),
+            holder: treasury.address.clone(),
+        }
+    ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, expected_scrt_staking, "Manager Unbonding Pre-fastforward");
         },
@@ -473,14 +332,11 @@ fn single_asset_portion_manager_integration(
     //ensemble.fast_forward_delegation_waits();
 
     // scrt staking unbonding
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Unbonding {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Unbonding {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, Uint128::zero(), "Scrt Staking Unbonding Post-fastforward");
         },
@@ -488,14 +344,11 @@ fn single_asset_portion_manager_integration(
     };
 
     // scrt staking claimable
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Claimable {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Claimable {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, expected_scrt_staking, "Scrt Staking Claimable Post-fastforward");
         },
@@ -505,8 +358,8 @@ fn single_asset_portion_manager_integration(
     /*
     // Claim Treasury Manager
     ensemble.execute(
-        &manager::HandleMsg::Manager(
-            manager::SubHandleMsg::Claim {
+        &manager::ExecuteMsg::Manager(
+            manager::SubExecuteMsg::Claim {
                 asset: token.address.clone(),
             }
         ),
@@ -518,27 +371,18 @@ fn single_asset_portion_manager_integration(
     */
 
     // Claim Treasury
-    ensemble.execute(
-        &adapter::HandleMsg::Adapter(
-            adapter::SubHandleMsg::Claim {
-                asset: token.address.clone(),
-            }
-        ),
-        MockEnv::new(
-            "admin", 
-            treasury.clone(),
-        ),
-    ).unwrap();
+    adapter::ExecuteMsg::Adapter(
+        adapter::SubExecuteMsg::Claim {
+            asset: token.address.clone(),
+        }
+    ).test_exec(&treasury, &mut app, admin.clone(), &[]);
 
     // Treasury reserves check
-    match ensemble.query(
-        treasury.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+        }
+    ).test_query(&treasury, &mut app)).unwrap() {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, deposit, "Treasury Reserves Post-Unbond");
         },
@@ -563,14 +407,11 @@ fn single_asset_portion_manager_integration(
     */
 
     // Scrt Staking reserves
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "SCRT Staking Reserves Post Unbond");
         },
@@ -578,14 +419,11 @@ fn single_asset_portion_manager_integration(
     };
 
     // Scrt Staking balance
-    match ensemble.query(
-        scrt_staking.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+        }
+    ).test_query(&scrt_staking, &mut app).unwrap()) {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "SCRT Staking Balance Post Unbond");
         },
@@ -593,15 +431,12 @@ fn single_asset_portion_manager_integration(
     };
 
     // Manager unbonding check
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Unbonding {
-                asset: token.address.clone(),
-                holder: treasury.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Unbonding {
+            asset: token.address.clone(),
+            holder: treasury.address.clone(),
+        }
+    ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Unbonding Post-Claim");
         },
@@ -609,15 +444,12 @@ fn single_asset_portion_manager_integration(
     };
 
     // Manager balance check
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-                holder: treasury.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+            holder: treasury.address.clone(),
+        }
+    ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Balance Post-Claim");
         },
@@ -625,15 +457,12 @@ fn single_asset_portion_manager_integration(
     };
 
     // Manager reserves check
-    match ensemble.query(
-        manager.address.clone(),
-        &manager::QueryMsg::Manager(
-            manager::SubQueryMsg::Reserves {
-                asset: token.address.clone(),
-                holder: treasury.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (manager::QueryMsg::Manager(
+        manager::SubQueryMsg::Reserves {
+            asset: token.address.clone(),
+            holder: treasury.address.clone(),
+        }
+    ).test_query(&manager, &mut app).unwrap()) {
         manager::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Reserves Post-Unbond");
         },
@@ -641,14 +470,11 @@ fn single_asset_portion_manager_integration(
     };
 
     // Treasury reserves check
-    match ensemble.query(
-        treasury.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+        }
+    ).test_query(&treasury, &mut app).unwrap()) {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Treasury Balance Post-Unbond");
         },
@@ -656,14 +482,11 @@ fn single_asset_portion_manager_integration(
     };
 
     // Treasury balance check
-    match ensemble.query(
-        treasury.address.clone(),
-        &adapter::QueryMsg::Adapter(
-            adapter::SubQueryMsg::Balance {
-                asset: token.address.clone(),
-            }
-        )
-    ).unwrap() {
+    match (adapter::QueryMsg::Adapter(
+        adapter::SubQueryMsg::Balance {
+            asset: token.address.clone(),
+        }
+    ).test_query(&treasury, &mut app).unwrap()) {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Treasury Balance Post-Unbond");
         },
@@ -706,24 +529,24 @@ macro_rules! single_asset_portion_manager_tests {
 /*
 single_asset_portion_manager_tests! {
     single_asset_portion_manager_0: (
-        Uint128(100), // deposit 
-        Uint128(9 * 10u128.pow(17)), // manager allowance 90%
-        Uint128(90), // expected manager allowance
+        Uint128::new(100), // deposit 
+        Uint128::new(9 * 10u128.pow(17)), // manager allowance 90%
+        Uint128::new(90), // expected manager allowance
         AllocationType::Portion,
-        Uint128(1 * 10u128.pow(18)), // allocate 100%
-        Uint128(10), // treasury 10
-        Uint128(0), // manager 0
-        Uint128(90), // scrt_staking 90
+        Uint128::new(1 * 10u128.pow(18)), // allocate 100%
+        Uint128::new(10), // treasury 10
+        Uint128::new(0), // manager 0
+        Uint128::new(90), // scrt_staking 90
     ),
     single_asset_portion_manager_1: (
-        Uint128(100), // deposit 
-        Uint128(9 * 10u128.pow(17)), // manager allowance 90%
-        Uint128(90), // expected manager allowance
+        Uint128::new(100), // deposit 
+        Uint128::new(9 * 10u128.pow(17)), // manager allowance 90%
+        Uint128::new(90), // expected manager allowance
         AllocationType::Portion,
-        Uint128(5 * 10u128.pow(17)), // 50% allocate
-        Uint128(55), // treasury 55 (manager won't pull unused allowance
-        Uint128(0), // manager 0
-        Uint128(45), // scrt_staking 90
+        Uint128::new(5 * 10u128.pow(17)), // 50% allocate
+        Uint128::new(55), // treasury 55 (manager won't pull unused allowance
+        Uint128::new(0), // manager 0
+        Uint128::new(45), // scrt_staking 90
     ),
 }
 */
