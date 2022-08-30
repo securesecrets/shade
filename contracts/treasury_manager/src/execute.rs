@@ -48,7 +48,7 @@ use crate::storage::*;
 
 pub fn receive(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     _sender: Addr,
     from: Addr,
@@ -109,7 +109,7 @@ pub fn receive(
 
 pub fn try_update_config(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
@@ -173,7 +173,7 @@ pub fn try_register_asset(
 
 pub fn allocate(
     deps: DepsMut,
-    _env: &Env,
+    env: &Env,
     info: MessageInfo,
     asset: Addr,
     allocation: Allocation,
@@ -771,7 +771,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
 
 pub fn unbond(
     deps: DepsMut,
-    _env: &Env,
+    env: &Env,
     info: MessageInfo,
     asset: Addr,
     amount: Uint128,
@@ -1301,7 +1301,7 @@ pub fn add_holder(
 
 pub fn remove_holder(
     deps: DepsMut,
-    _env: &Env,
+    env: &Env,
     info: MessageInfo,
     holder: Addr,
 ) -> StdResult<Response> {

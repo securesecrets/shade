@@ -5,7 +5,7 @@ use crate::utils::{
 };
 
 use crate::{
-    c_std::{Addr, Binary, StdResult, Uint128},
+    c_std::{Addr, Binary, Coin, StdResult, Uint128},
     contract_interfaces::dao::adapter,
 };
 
@@ -113,6 +113,11 @@ pub enum ExecuteMsg {
     RegisterManager {
         contract: RawContract,
     },
+    RegisterWrap {
+        denom: String,
+        contract: RawContract,
+    },
+    WrapCoins {},
     // Setup a new allowance
     Allowance {
         asset: String,
@@ -145,6 +150,9 @@ pub enum ExecuteAnswer {
     RegisterAsset {
         status: ResponseStatus,
     },
+    RegisterWrap {
+        status: ResponseStatus,
+    },
     Allowance {
         status: ResponseStatus,
     },
@@ -162,6 +170,10 @@ pub enum ExecuteAnswer {
     },
     RunLevel {
         run_level: RunLevel,
+    },
+    WrapCoins {
+        success: Vec<Coin>,
+        failed: Vec<Coin>,
     },
 }
 

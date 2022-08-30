@@ -5,12 +5,14 @@ use shade_protocol::{
         Addr,
         Api,
         Binary,
+        Coin,
         CosmosMsg,
         Deps,
         DepsMut,
         Env,
         MessageInfo,
         Querier,
+        QuerierWrapper,
         Response,
         StdError,
         StdResult,
@@ -48,6 +50,7 @@ use shade_protocol::{
         asset::Contract,
         cycle::{exceeds_cycle, parse_utc_datetime, utc_from_seconds, utc_now},
         generic_response::ResponseStatus,
+        wrap::wrap_coin,
     },
 };
 
@@ -670,6 +673,43 @@ pub fn try_register_asset(
         })?))
 }
 
+pub fn register_wrap(
+    deps: DepsMut,
+    env: &Env,
+    info: MessageInfo,
+    denom: String,
+    contract: &Contract,
+) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
+
+    validate_admin(
+        &deps.querier,
+        AdminPermissions::TreasuryAdmin,
+        &info.sender,
+        &config.admin_auth,
+    )?;
+
+    if let Some(a) = ASSET.may_load(deps.storage, contract.address.clone())? {
+        if let Some(conf) = a.token_config {
+            if !conf.deposit_enabled {
+                return Err(StdError::generic_err("Asset must have deposit enabled"));
+            }
+        } else {
+            return Err(StdError::generic_err("Asset has no config"));
+        }
+    } else {
+        return Err(StdError::generic_err("Unrecognized Asset"));
+    }
+
+    WRAP.save(deps.storage, denom, &contract.address)?;
+
+    Ok(
+        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterWrap {
+            status: ResponseStatus::Success,
+        })?),
+    )
+}
+
 pub fn register_manager(
     deps: DepsMut,
     _env: &Env,
@@ -765,4 +805,25 @@ pub fn allowance(
             status: ResponseStatus::Success,
         })?),
     )
+}
+
+pub fn wrap_coins(deps: DepsMut, env: &Env, info: MessageInfo) -> StdResult<Response> {
+    let coins = deps.querier.query_all_balances(&env.contract.address)?;
+    let mut messages = vec![];
+    let mut success = vec![];
+    let mut failed = vec![];
+
+    for coin in coins {
+        if let Some(asset) = WRAP.may_load(deps.storage, coin.denom.clone())? {
+            let token = ASSET.load(deps.storage, asset)?;
+            messages.push(wrap_coin(coin.clone(), token.contract)?);
+            success.push(coin);
+        } else {
+            failed.push(coin);
+        }
+    }
+
+    Ok(Response::new()
+        .add_messages(messages)
+        .set_data(to_binary(&ExecuteAnswer::WrapCoins { success, failed })?))
 }
