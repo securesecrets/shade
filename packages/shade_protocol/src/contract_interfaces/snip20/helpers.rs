@@ -1,10 +1,4 @@
-use super::{
-    batch,
-    manager::{Allowance, AllowanceResponse},
-    ExecuteMsg,
-    QueryAnswer,
-    QueryMsg,
-};
+use super::{batch, manager::Allowance, ExecuteMsg, QueryAnswer, QueryMsg};
 use crate::{
     c_std::{Addr, Binary, CosmosMsg, QuerierWrapper, StdError, StdResult, Uint128},
     utils::{asset::Contract, ExecuteCallback, Query},
