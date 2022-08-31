@@ -675,7 +675,7 @@ pub fn try_register_asset(
 
 pub fn register_wrap(
     deps: DepsMut,
-    _env: &Env,
+    env: &Env,
     info: MessageInfo,
     denom: String,
     contract: &Contract,
