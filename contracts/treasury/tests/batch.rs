@@ -52,6 +52,7 @@ use shade_protocol::{
 
 use serde_json;
 
+//TODO test with manager
 // Add other adapters here as they come
 fn batch_balance_test(amounts: Vec<Uint128>) {
     let mut app = App::default();
@@ -59,6 +60,7 @@ fn batch_balance_test(amounts: Vec<Uint128>) {
     let admin = Addr::unchecked("admin");
     let user = Addr::unchecked("user");
     let admin_auth = init_admin_auth(&mut app, &admin);
+    let viewing_key = "veiwing_key".to_string();
 
     let mut tokens = vec![];
 

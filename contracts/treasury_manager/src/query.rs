@@ -108,11 +108,6 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
         &full_asset.contract.clone(),
     )?;
 
-    /*
-    let _config = config_r(deps.storage).load()?;
-    let _other_unbondings = Uint128::zero();
-    */
-
     for alloc in allocations {
         claimable += adapter::claimable_query(deps.querier, &asset, alloc.contract.clone())?;
     }
@@ -229,7 +224,7 @@ pub fn batch_balance(
                     },
                 );
             }
-            None => return Err(StdError::generic_err("Not a registered asset")),
+            None => balances.push(Uint128::zero()),
         };
     }
 
