@@ -201,6 +201,41 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
     Err(StdError::generic_err("Not a registered asset"))
 }
 
+pub fn batch_balance(
+    deps: Deps,
+    assets: Vec<Addr>,
+    holder: Addr,
+) -> StdResult<manager::QueryAnswer> {
+    let holding = match HOLDING.may_load(deps.storage, holder.clone())? {
+        Some(h) => h,
+        None => {
+            return Err(StdError::generic_err("Invalid Holder"));
+        }
+    };
+
+    let mut balances = vec![];
+
+    for asset in assets {
+        match ASSETS.may_load(deps.storage, asset)? {
+            Some(asset) => {
+                balances.push(
+                    match holding
+                        .balances
+                        .iter()
+                        .find(|b| b.token == asset.contract.address)
+                    {
+                        Some(b) => b.amount,
+                        None => Uint128::zero(),
+                    },
+                );
+            }
+            None => return Err(StdError::generic_err("Not a registered asset")),
+        };
+    }
+
+    Ok(manager::QueryAnswer::BatchBalance { amounts: balances })
+}
+
 pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
     match ASSETS.may_load(deps.storage, asset)? {
         Some(asset) => {

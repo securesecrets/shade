@@ -1,13 +1,6 @@
-use mock_adapter;
 use shade_multi_test::{
     interfaces,
-    multi::{
-        admin::init_admin_auth,
-        mock_adapter::MockAdapter,
-        snip20::Snip20,
-        treasury::Treasury,
-        treasury_manager::TreasuryManager,
-    },
+    multi::{admin::init_admin_auth, snip20::Snip20, treasury_manager::TreasuryManager},
 };
 use shade_protocol::{
     c_std::{
@@ -50,36 +43,41 @@ use shade_protocol::{
     },
 };
 
-use serde_json;
-
 // Add other adapters here as they come
-fn batch_balance_test(amounts: Vec<Uint128>) {
+fn batch_balance_test(balances: Vec<Uint128>) {
     let mut app = App::default();
 
     let admin = Addr::unchecked("admin");
     let user = Addr::unchecked("user");
     let admin_auth = init_admin_auth(&mut app, &admin);
 
-    let mut tokens = vec![];
+    let viewing_key = "viewing_key".to_string();
 
-    let treasury = treasury::InstantiateMsg {
+    let manager = treasury_manager::InstantiateMsg {
         admin_auth: admin_auth.clone().into(),
         viewing_key: viewing_key.clone(),
-        multisig: admin.to_string().clone(),
+        treasury: admin.to_string().clone(),
     }
-    .test_init(Treasury::default(), &mut app, admin.clone(), "treasury", &[
-    ])
+    .test_init(
+        TreasuryManager::default(),
+        &mut app,
+        admin.clone(),
+        "treasury",
+        &[],
+    )
     .unwrap();
 
-    for amount in amounts.clone() {
+    let mut tokens = vec![];
+
+    for bal in balances.clone() {
         let token = snip20::InstantiateMsg {
             name: "token".into(),
             admin: Some("admin".into()),
             symbol: "TKN".into(),
             decimals: 6,
             initial_balances: Some(vec![snip20::InitialBalance {
-                address: treasury.address.to_string().clone(),
-                amount,
+                address: admin.to_string().clone(),
+                amount: bal.clone(),
             }]),
             prng_seed: to_binary("").ok().unwrap(),
             config: Some(snip20::InitConfig {
@@ -96,31 +94,50 @@ fn batch_balance_test(amounts: Vec<Uint128>) {
             Snip20::default(),
             &mut app,
             admin.clone(),
-            &amount.to_string(),
+            &bal.to_string(),
             &[],
         )
         .unwrap();
 
-        treasury::ExecuteMsg::RegisterAsset {
+        treasury_manager::ExecuteMsg::RegisterAsset {
             contract: token.clone().into(),
         }
-        .test_exec(&treasury, &mut app, admin.clone(), &[])
+        .test_exec(&manager, &mut app, admin.clone(), &[])
+        .unwrap();
+
+        // Deposit funds as treasury
+        snip20::ExecuteMsg::Send {
+            recipient: manager.address.to_string().clone(),
+            recipient_code_hash: None,
+            amount: bal,
+            msg: None,
+            memo: None,
+            padding: None,
+        }
+        .test_exec(&token, &mut app, admin.clone(), &[])
         .unwrap();
 
         tokens.push(token);
     }
 
     // Treasury Balances
-    let balances: Vec<Uint128> = treasury::QueryMsg::BatchBalance {
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::BatchBalance {
         assets: tokens
             .iter()
             .map(|t| t.address.to_string().clone())
             .collect(),
+        holder: admin.to_string().clone(),
+    })
+    .test_query(&manager, &app)
+    .unwrap())
+    {
+        manager::QueryAnswer::BatchBalance { amounts } => {
+            assert!(amounts == balances, "Reported balances match inputs");
+        }
+        _ => {
+            panic!("Failed to query batch balances");
+        }
     }
-    .test_query(&treasury, &app)
-    .unwrap();
-
-    assert!(balances == amounts, "Reported balances match inputs");
 }
 
 macro_rules! batch_balance_tests {

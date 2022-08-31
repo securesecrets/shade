@@ -675,7 +675,7 @@ pub fn try_register_asset(
 
 pub fn register_wrap(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: MessageInfo,
     denom: String,
     contract: &Contract,
@@ -689,8 +689,11 @@ pub fn register_wrap(
         &config.admin_auth,
     )?;
 
+    // Must be registered
     if let Some(a) = ASSET.may_load(deps.storage, contract.address.clone())? {
+        // Must have a token config (required for deposit)
         if let Some(conf) = a.token_config {
+            // Must have deposit enabled
             if !conf.deposit_enabled {
                 return Err(StdError::generic_err("Asset must have deposit enabled"));
             }

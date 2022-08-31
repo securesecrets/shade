@@ -62,6 +62,7 @@ pub enum ExecuteAnswer {
 
 #[cw_serde]
 pub enum SubQueryMsg {
+    BatchBalance { assets: Vec<String>, holder: String },
     Balance { asset: String, holder: String },
     Unbonding { asset: String, holder: String },
     Claimable { asset: String, holder: String },
@@ -80,6 +81,7 @@ impl Query for QueryMsg {
 
 #[cw_serde]
 pub enum QueryAnswer {
+    BatchBalance { amounts: Vec<Uint128> },
     Balance { amount: Uint128 },
     Unbonding { amount: Uint128 },
     Claimable { amount: Uint128 },
@@ -190,6 +192,34 @@ pub fn balance_query(
             println!("HERERERER");
             return Err(StdError::generic_err(format!(
                 "Failed to query manager balance: {}",
+                e.to_string()
+            )));
+        }
+    }
+}
+
+pub fn batch_balance_query(
+    querier: QuerierWrapper,
+    assets: &Vec<Addr>,
+    holder: Addr,
+    manager: Contract,
+) -> StdResult<Vec<Uint128>> {
+    match (QueryMsg::Manager(SubQueryMsg::BatchBalance {
+        assets: assets.iter().map(|a| a.to_string()).collect(),
+        holder: holder.to_string().clone(),
+    })
+    .query(&querier, &manager))
+    {
+        Ok(resp) => match resp {
+            QueryAnswer::BatchBalance { amounts } => Ok(amounts),
+            _ => Err(StdError::generic_err(format!(
+                "Unexpected response from {} manager batch balance",
+                manager.address
+            ))),
+        },
+        Err(e) => {
+            return Err(StdError::generic_err(format!(
+                "Failed to query manager batch balance: {}",
                 e.to_string()
             )));
         }
