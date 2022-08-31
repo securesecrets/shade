@@ -1,5 +1,5 @@
 pub mod contract;
-pub mod handle;
+pub mod execute;
 pub mod query;
 pub mod storage;
 

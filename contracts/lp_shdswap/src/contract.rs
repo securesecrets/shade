@@ -27,7 +27,7 @@ use shade_protocol::{
     utils::{asset::Contract, Query},
 };
 
-use crate::{handle, query, storage::*};
+use crate::{execute, query, storage::*};
 
 #[entry_point]
 pub fn instantiate(
@@ -152,21 +152,21 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             amount,
             msg,
             ..
-        } => handle::receive(deps, env, info, sender, from, amount, msg),
-        ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
-        ExecuteMsg::RefreshApprovals => handle::refesh_allowances(deps, env, info),
+        } => execute::receive(deps, env, info, sender, from, amount, msg),
+        ExecuteMsg::UpdateConfig { config } => execute::try_update_config(deps, env, info, config),
+        ExecuteMsg::RefreshApprovals => execute::refesh_allowances(deps, env, info),
         ExecuteMsg::Adapter(adapter) => match adapter {
             adapter::SubExecuteMsg::Unbond { asset, amount } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                handle::unbond(deps, env, info, asset, amount)
+                execute::unbond(deps, env, info, asset, amount)
             }
             adapter::SubExecuteMsg::Claim { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                handle::claim(deps, env, info, asset)
+                execute::claim(deps, env, info, asset)
             }
             adapter::SubExecuteMsg::Update { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                handle::update(deps, env, info, asset)
+                execute::update(deps, env, info, asset)
             }
         },
     }
