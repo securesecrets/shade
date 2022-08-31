@@ -30,8 +30,8 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "snip20",
   "manager",
   "storage_plus",
+  "chrono",
 ] }
-chrono = "0.4.19"
 
 [dev-dependencies]
 shade-multi-test = { path = "../../packages/multi_test", features = [ 

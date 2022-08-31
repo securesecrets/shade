@@ -6,7 +6,6 @@ pub mod tests {
         testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
         DepsMut, StdError, Uint128,
     };
-    use mockall_double::double;
     use shade_protocol::mint_router::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg};
 
     use crate::{

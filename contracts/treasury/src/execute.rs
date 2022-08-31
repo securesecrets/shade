@@ -19,6 +19,7 @@ use shade_protocol::{
         Storage,
         Uint128,
     },
+    chrono::prelude::*,
     contract_interfaces::{
         admin::helpers::{validate_admin, AdminPermissions},
         dao::{
@@ -56,7 +57,6 @@ use shade_protocol::{
 
 use crate::storage::*;
 
-use chrono::prelude::*;
 use std::collections::HashMap;
 
 pub fn receive(

@@ -1,37 +1,33 @@
-use chrono::prelude::*;
-use shade_protocol::c_std::{Deps, MessageInfo, QuerierWrapper, Uint128};
-use shade_protocol::c_std::{
-
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    CosmosMsg,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use shade_protocol::{
-    snip20::helpers::{self, burn_msg, mint_msg, send_msg, TokenConfig},
-};
-use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        CosmosMsg,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        QuerierWrapper,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
+    chrono::prelude::*,
     contract_interfaces::{
         mint::mint::{Config, HandleAnswer, Limit, MintMsgHook, SupportedAsset},
         oracles::{band::ReferenceData, oracle::QueryMsg::Price},
         snip20::helpers::Snip20Asset,
     },
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    snip20::helpers::{self, burn_msg, mint_msg, send_msg, token_config, token_info, TokenConfig},
+    utils::{asset::Contract, generic_response::ResponseStatus, Query},
 };
-use std::{cmp::Ordering, convert::TryFrom};
-use std::borrow::BorrowMut;
-use std::fmt::format;
-use shade_protocol::snip20::helpers::{token_config, token_info};
-use shade_protocol::utils::Query;
+use std::{borrow::BorrowMut, cmp::Ordering, convert::TryFrom, fmt::format};
 
 use crate::state::{
     asset_list_w,
@@ -75,20 +71,19 @@ pub fn try_burn(
     }
 
     // Check that sender is a supported snip20 asset
-    let burn_asset =
-        match assets_r(deps.storage).may_load(info.sender.to_string().as_bytes())? {
-            Some(supported_asset) => {
-                deps.api.debug(
-                    &format!("Found Burn Asset: {} {}",
-                    &supported_asset.asset.token_info.symbol,
-                    info.sender.to_string())
-                );
-                supported_asset
-            }
-            None => {
-                return Err(StdError::not_found(info.sender));
-            }
-        };
+    let burn_asset = match assets_r(deps.storage).may_load(info.sender.to_string().as_bytes())? {
+        Some(supported_asset) => {
+            deps.api.debug(&format!(
+                "Found Burn Asset: {} {}",
+                &supported_asset.asset.token_info.symbol,
+                info.sender.to_string()
+            ));
+            supported_asset
+        }
+        None => {
+            return Err(StdError::not_found(info.sender));
+        }
+    };
 
     let mut input_amount = amount;
     let mut messages = vec![];
@@ -105,12 +100,13 @@ pub fn try_burn(
             None,
             None,
             None,
-            &burn_asset.asset.contract
+            &burn_asset.asset.contract,
         )?);
     }
 
     // This will calculate the total mint value
-    let amount_to_mint: Uint128 = mint_amount(deps.as_ref(), input_amount, &burn_asset, &mint_asset)?;
+    let amount_to_mint: Uint128 =
+        mint_amount(deps.as_ref(), input_amount, &burn_asset, &mint_asset)?;
 
     if let Some(limit) = config.limit {
         // Limit Refresh Check
@@ -140,7 +136,7 @@ pub fn try_burn(
             None,
             None,
             None,
-            &burn_asset.asset.contract
+            &burn_asset.asset.contract,
         )?);
 
         burn_amount = input_amount.checked_sub(capture_amount)?;
@@ -154,7 +150,7 @@ pub fn try_burn(
                     burn_amount.into(),
                     None,
                     None,
-                    &burn_asset.asset.contract
+                    &burn_asset.asset.contract,
                 )?);
             } else if let Some(recipient) = config.secondary_burn {
                 messages.push(send_msg(
@@ -163,7 +159,7 @@ pub fn try_burn(
                     None,
                     None,
                     None,
-                    &burn_asset.asset.contract
+                    &burn_asset.asset.contract,
                 )?);
             }
         } else if let Some(recipient) = config.secondary_burn {
@@ -173,17 +169,19 @@ pub fn try_burn(
                 None,
                 None,
                 None,
-                &burn_asset.asset.contract
+                &burn_asset.asset.contract,
             )?);
         }
     }
 
     total_burned_w(deps.storage).update(
         burn_asset.asset.contract.address.to_string().as_bytes(),
-        |burned| -> StdResult<Uint128> { match burned {
-            Some(burned) => Ok(burned + burn_amount),
-            None => Ok(burn_amount),
-        }},
+        |burned| -> StdResult<Uint128> {
+            match burned {
+                Some(burned) => Ok(burned + burn_amount),
+                None => Ok(burn_amount),
+            }
+        },
     )?;
 
     if let Some(message) = msg {
@@ -202,13 +200,13 @@ pub fn try_burn(
         amount_to_mint.into(),
         None,
         None,
-        &mint_asset.contract
+        &mint_asset.contract,
     )?);
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Mint {
-            status: ResponseStatus::Success,
-            amount: amount_to_mint,
-        })?))
+        status: ResponseStatus::Success,
+        amount: amount_to_mint,
+    })?))
 }
 
 pub fn try_limit_refresh(
@@ -228,10 +226,7 @@ pub fn try_limit_refresh(
 
             let native_asset = native_asset_r(storage).load()?;
 
-            let token_info = token_info(
-                querier,
-                &native_asset.contract
-            )?;
+            let token_info = token_info(querier, &native_asset.contract)?;
 
             let supply = match token_info.total_supply {
                 Some(s) => s.into(),
@@ -303,9 +298,11 @@ pub fn try_update_config(
 
     config_w(deps.storage).save(&config)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn try_register_asset(
@@ -330,18 +327,15 @@ pub fn try_register_asset(
     let contract_str = contract.address.to_string();
 
     // Add the new asset
-    let asset_info = token_info(
-        &deps.querier,
-        &contract
-    )?;
+    let asset_info = token_info(&deps.querier, &contract)?;
 
-    let asset_config: Option<TokenConfig> =
-        match token_config(&deps.querier, &contract) {
-            Ok(c) => Option::from(c),
-            Err(_) => None,
-        };
+    let asset_config: Option<TokenConfig> = match token_config(&deps.querier, &contract) {
+        Ok(c) => Option::from(c),
+        Err(_) => None,
+    };
 
-    deps.api.debug(&format!("Registering {}", asset_info.symbol));
+    deps.api
+        .debug(&format!("Registering {}", asset_info.symbol));
     assets_w(deps.storage).save(contract_str.as_bytes(), &SupportedAsset {
         asset: Snip20Asset {
             contract: contract.clone(),
@@ -374,16 +368,14 @@ pub fn try_register_asset(
     // Register contract in asset
     let messages = vec![register_receive(env, contract)?];
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::RegisterAsset {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::RegisterAsset {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
-pub fn try_remove_asset(
-    deps: DepsMut,
-    _env: &Env,
-    address: Addr,
-) -> StdResult<Response> {
+pub fn try_remove_asset(deps: DepsMut, _env: &Env, address: Addr) -> StdResult<Response> {
     let address_str = address.to_string();
 
     // Remove asset from the array
@@ -397,17 +389,15 @@ pub fn try_remove_asset(
 
     // We wont remove the total burned since we want to keep track of all the burned assets
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::RemoveAsset {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::RemoveAsset {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn register_receive(env: &Env, contract: &Contract) -> StdResult<CosmosMsg> {
-    helpers::register_receive(
-        env.contract.code_hash.clone(),
-        None,
-        contract
-    )
+    helpers::register_receive(env.contract.code_hash.clone(), None, contract)
 }
 
 pub fn mint_amount(
@@ -416,12 +406,10 @@ pub fn mint_amount(
     burn_asset: &SupportedAsset,
     mint_asset: &Snip20Asset,
 ) -> StdResult<Uint128> {
-    deps.api.debug(
-        &format!("Burning {} {} for {}",
-        burn_amount,
-        burn_asset.asset.token_info.symbol,
-        mint_asset.token_info.symbol)
-    );
+    deps.api.debug(&format!(
+        "Burning {} {} for {}",
+        burn_amount, burn_asset.asset.token_info.symbol, mint_asset.token_info.symbol
+    ));
 
     let burn_price = oracle(deps, burn_asset.asset.token_info.symbol.clone())?;
     deps.api.debug(&format!("Burn Price: {}", burn_price));
@@ -507,15 +495,9 @@ pub fn calculate_portion(amount: Uint128, portion: Uint128) -> Uint128 {
     amount.multiply_ratio(portion, 10u128.pow(18))
 }
 
-fn oracle(
-    deps: Deps,
-    symbol: String,
-) -> StdResult<Uint128> {
+fn oracle(deps: Deps, symbol: String) -> StdResult<Uint128> {
     let config: Config = config_r(deps.storage).load()?;
-    let answer: ReferenceData = Price { symbol }.query(
-        &deps.querier,
-        &config.oracle
-    )?;
+    let answer: ReferenceData = Price { symbol }.query(&deps.querier, &config.oracle)?;
 
     Ok(Uint128::from(answer.rate))
 }
