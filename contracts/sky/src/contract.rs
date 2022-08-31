@@ -1,3 +1,4 @@
+use crate::{handle, query};
 use shade_protocol::{
     c_std::{
         shd_entry_point,
@@ -13,16 +14,11 @@ use shade_protocol::{
         StdResult,
         SubMsg,
     },
-    snip20::helpers::set_viewing_key_msg,
-};
-
-use crate::{handle, query};
-
-use shade_protocol::{
     contract_interfaces::{
         dao::adapter,
         sky::{Config, Cycles, ExecuteMsg, InstantiateMsg, QueryMsg, SelfAddr, ViewingKeys},
     },
+    snip20::helpers::set_viewing_key_msg,
     utils::storage::plus::ItemStorage,
 };
 
@@ -110,11 +106,13 @@ pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> St
             handle::try_arb_all_cycles(deps, env, info, amount)
         }
         ExecuteMsg::Adapter(adapter) => match adapter {
-            adapter::SubHandleMsg::Unbond { asset, amount } => {
+            adapter::SubExecuteMsg::Unbond { asset, amount } => {
                 handle::try_adapter_unbond(deps, env, info, asset, amount)
             }
-            adapter::SubHandleMsg::Claim { asset } => handle::try_adapter_claim(deps, env, asset),
-            adapter::SubHandleMsg::Update { asset } => handle::try_adapter_update(deps, env, asset),
+            adapter::SubExecuteMsg::Claim { asset } => handle::try_adapter_claim(deps, env, asset),
+            adapter::SubExecuteMsg::Update { asset } => {
+                handle::try_adapter_update(deps, env, asset)
+            }
         },
     }
 }

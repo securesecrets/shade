@@ -1,12 +1,12 @@
 pub mod contract;
-pub mod handle;
+pub mod execute;
 pub mod query;
-pub mod state;
+pub mod storage;
 
 #[cfg(test)]
 mod test;
 
-#[cfg(target_arch = "wasm32")]
+/*#[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::contract;
     use shade_protocol::c_std::{
@@ -41,4 +41,4 @@ mod wasm {
 
     // Other C externs like cosmwasm_vm_version_1, allocate, deallocate are available
     // automatically because we `use cosmwasm_std`.
-}
+}*/

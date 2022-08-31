@@ -16,5 +16,5 @@ pub mod treasury;
 #[cfg(feature = "scrt_staking")]
 pub mod scrt_staking;
 
-#[cfg(feature = "lp_shade_swap")]
-pub mod lp_shade_swap;
+#[cfg(feature = "lp_shdswap")]
+pub mod lp_shdswap;

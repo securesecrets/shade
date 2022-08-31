@@ -45,6 +45,7 @@ mock_adapter = { version = "0.1.0", path = "../../contracts/mock_adapter", optio
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
+shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git", optional = true }
