@@ -17,7 +17,7 @@ members = [
   "contracts/governance",
   "contracts/bonds",
   "contracts/mint",
-  "contracts/liability_mint",
+  #"contracts/liability_mint",
   "contracts/mint_router",
   "contracts/oracle",
   "contracts/sky",
