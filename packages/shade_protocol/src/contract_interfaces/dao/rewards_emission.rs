@@ -1,16 +1,18 @@
 use crate::{
+    c_std::{Addr, Binary, Decimal, Delegation, Uint128, Validator},
     contract_interfaces::dao::adapter,
     utils::{
         asset::{Contract, RawContract},
-        generic_response::ResponseStatus,
         cycle::Cycle,
+        generic_response::ResponseStatus,
     },
 };
-use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
 
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
-use chrono::prelude::*;
+use crate::{
+    chrono::prelude::*,
+    utils::{ExecuteCallback, InstantiateCallback, Query},
+};
+use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Reward {
@@ -53,7 +55,7 @@ pub enum ExecuteMsg {
         memo: Option<Binary>,
         msg: Option<Binary>,
     },
-    RefillRewards { },
+    RefillRewards {},
     RegisterRewards {
         token: Addr, // Just for verification
         distributor: Contract,

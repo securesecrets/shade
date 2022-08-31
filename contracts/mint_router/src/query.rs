@@ -1,11 +1,11 @@
 use crate::state::{asset_path_r, config_r, current_assets_r, final_asset_r, registered_asset_r};
-use chrono::prelude::*;
-use shade_protocol::c_std::Uint128;
-use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage};
-use shade_protocol::{snip20::helpers::token_info_query, utils::Query};
-use shade_protocol::contract_interfaces::mint::{
-    mint,
-    mint_router::{PathNode, QueryAnswer},
+use shade_protocol::{
+    c_std::{Addr, Deps, StdError, StdResult, Uint128},
+    contract_interfaces::mint::{
+        mint,
+        mint_router::{PathNode, QueryAnswer},
+    },
+    utils::Query,
 };
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
@@ -20,11 +20,7 @@ pub fn assets(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn route(
-    deps: Deps,
-    asset: Addr,
-    amount: Uint128,
-) -> StdResult<QueryAnswer> {
+pub fn route(deps: Deps, asset: Addr, amount: Uint128) -> StdResult<QueryAnswer> {
     let mut path = vec![];
     let mut input_asset = registered_asset_r(deps.storage).load(&asset.to_string().as_bytes())?;
     let mut input_amount = amount;

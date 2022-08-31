@@ -1,5 +1,7 @@
-use crate::c_std::{Env, StdError, StdResult, Timestamp, Uint128};
-use chrono::prelude::*;
+use crate::{
+    c_std::{Env, StdError, StdResult, Timestamp, Uint128},
+    chrono::prelude::*,
+};
 
 use cosmwasm_schema::cw_serde;
 use std::convert::TryInto;

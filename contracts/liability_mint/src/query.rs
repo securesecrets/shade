@@ -1,9 +1,9 @@
 use super::execute::debt_limit;
 use crate::storage::*;
-use chrono::prelude::*;
-use shade_protocol::c_std::{Addr, Api, DepsMut, Querier, StdError, StdResult, Storage};
-use shade_protocol::c_std::{Deps, Uint128};
-use shade_protocol::contract_interfaces::mint::liability_mint::QueryAnswer;
+use shade_protocol::{
+    c_std::{Deps, StdResult},
+    contract_interfaces::mint::liability_mint::QueryAnswer,
+};
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::Config {
