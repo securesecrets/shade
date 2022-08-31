@@ -131,6 +131,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 let holder = deps.api.addr_validate(&holder)?;
                 to_binary(&query::balance(deps, asset, holder)?)
             }
+            manager::SubQueryMsg::BatchBalance { assets, holder } => {
+                let mut val_assets = vec![];
+
+                for a in assets {
+                    val_assets.push(deps.api.addr_validate(&a)?);
+                }
+                let holder = deps.api.addr_validate(&holder)?;
+
+                to_binary(&query::batch_balance(deps, val_assets, holder)?)
+            }
             manager::SubQueryMsg::Unbonding { asset, holder } => {
                 let asset = deps.api.addr_validate(&asset)?;
                 let holder = deps.api.addr_validate(&holder)?;

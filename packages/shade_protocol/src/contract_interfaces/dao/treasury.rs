@@ -198,6 +198,9 @@ pub enum QueryMsg {
     Balance {
         asset: String,
     },
+    BatchBalance {
+        assets: Vec<String>,
+    },
     Reserves {
         asset: String,
     },

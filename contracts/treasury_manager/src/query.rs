@@ -108,11 +108,6 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
         &full_asset.contract.clone(),
     )?;
 
-    /*
-    let _config = config_r(deps.storage).load()?;
-    let _other_unbondings = Uint128::zero();
-    */
-
     for alloc in allocations {
         claimable += adapter::claimable_query(deps.querier, &asset, alloc.contract.clone())?;
     }
@@ -201,6 +196,41 @@ pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Q
     Err(StdError::generic_err("Not a registered asset"))
 }
 
+pub fn batch_balance(
+    deps: Deps,
+    assets: Vec<Addr>,
+    holder: Addr,
+) -> StdResult<manager::QueryAnswer> {
+    let holding = match HOLDING.may_load(deps.storage, holder.clone())? {
+        Some(h) => h,
+        None => {
+            return Err(StdError::generic_err("Invalid Holder"));
+        }
+    };
+
+    let mut balances = vec![];
+
+    for asset in assets {
+        match ASSETS.may_load(deps.storage, asset)? {
+            Some(asset) => {
+                balances.push(
+                    match holding
+                        .balances
+                        .iter()
+                        .find(|b| b.token == asset.contract.address)
+                    {
+                        Some(b) => b.amount,
+                        None => Uint128::zero(),
+                    },
+                );
+            }
+            None => balances.push(Uint128::zero()),
+        };
+    }
+
+    Ok(manager::QueryAnswer::BatchBalance { amounts: balances })
+}
+
 pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
     match ASSETS.may_load(deps.storage, asset)? {
         Some(asset) => {
@@ -210,10 +240,11 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
                     return Err(StdError::generic_err("Invalid Holder"));
                 }
             };
+            // TODO include unbonding so balance is more 'stable'
             let balance = match holding
                 .balances
                 .iter()
-                .find(|u| u.token == asset.contract.address)
+                .find(|b| b.token == asset.contract.address)
             {
                 Some(b) => b.amount,
                 None => Uint128::zero(),
