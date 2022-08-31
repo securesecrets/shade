@@ -29,10 +29,10 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "dao",
   "manager",
   "staking",
+  "chrono",
 ]}
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
 schemars = "0.7"
-chrono = "0.4.19"
 
 [dev-dependencies]
 shade-multi-test = { path = "../../packages/multi_test", features = [ 

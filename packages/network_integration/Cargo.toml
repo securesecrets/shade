@@ -35,6 +35,7 @@ shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = [
   "scrt_staking",
   "snip20_staking",
   "treasury",
+  "chrono",
 ] }
 mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }
 secretcli = { version = "0.1.0", path = "../secretcli" }
@@ -47,4 +48,3 @@ query-authentication = { git = "https://github.com/securesecrets/query-authentic
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 rand = { version = "0.8.4" }
-chrono = "0.4.19"
