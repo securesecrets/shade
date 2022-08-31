@@ -57,8 +57,9 @@ airdrop          = ["query_auth", "snip20"]
 bonds            = ["airdrop", "snip20"]
 governance       = ["query_auth", "flexible_msg"]
 mint             = ["snip20"]
+liability_mint   = ["snip20", "adapter", "dao", "shade-oracles"]
 mint_router      = ["snip20"]
-oracles           = ["snip20", "dex"]
+oracles          = ["snip20", "dex"]
 scrt_staking     = ["adapter", "treasury"]
 treasury         = ["adapter", "dao-utils"]
 treasury_manager = ["adapter"]
@@ -96,6 +97,7 @@ debug-print = [] # TODO: remove this from all cargo configs
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+contract-derive = { version = "0.1.0", path = "../contract_derive" }
 
 schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
@@ -106,8 +108,7 @@ shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch 
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", branch = "bincode2", optional = true }
 # Testing
 anyhow = { version = "1", optional = true }
-fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"], optional = true }
-
+fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features = ["ensemble"], optional = true }
 
 # TODO: fix import
 chrono = "0.4.19"

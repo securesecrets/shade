@@ -7,7 +7,7 @@ members = [
   #"packages/contract_harness",
   "packages/multi_test",
   "packages/multi_derive",
-  "packages/network_integration",
+  "packages/contract_derive",
 
   # Network setups
   "contracts/airdrop",
@@ -16,9 +16,10 @@ members = [
   "contracts/snip20",
   "contracts/governance",
   "contracts/bonds",
-  #"contracts/mint",
-  #"contracts/mint_router",
-  #"contracts/oracle",
+  "contracts/mint",
+  "contracts/liability_mint",
+  "contracts/mint_router",
+  "contracts/oracle",
   "contracts/sky",
   "contracts/peg_stability",
   "contracts/query_auth",

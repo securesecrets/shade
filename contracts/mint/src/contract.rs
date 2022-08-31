@@ -1,5 +1,20 @@
-use shade_protocol::c_std::{entry_point, to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdResult, Storage, MessageInfo, Deps};
-use shade_protocol::snip20::helpers::{token_info, token_config};
+use shade_protocol::{
+    c_std::{
+        shd_entry_point,
+        to_binary,
+        Api,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdResult,
+        Storage,
+    },
+    snip20::helpers::{token_config, token_info},
+};
 
 use shade_protocol::contract_interfaces::{
     mint::mint::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -12,7 +27,7 @@ use crate::{
     state::{asset_list_w, asset_peg_w, config_w, limit_w, native_asset_w},
 };
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -33,10 +48,7 @@ pub fn instantiate(
 
     config_w(deps.storage).save(&state)?;
 
-    let token_info = token_info(
-        &deps.querier,
-        &msg.native_asset
-    )?;
+    let token_info = token_info(&deps.querier, &msg.native_asset)?;
 
     let token_config = token_config(&deps.querier, &msg.native_asset)?;
 
@@ -55,18 +67,14 @@ pub fn instantiate(
 
     asset_list_w(deps.storage).save(&vec![])?;
 
-    deps.api.debug(&format!("Contract was initialized by {}", info.sender));
+    deps.api
+        .debug(&format!("Contract was initialized by {}", info.sender));
 
     Ok(Response::new())
 }
 
-#[entry_point]
-pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+#[shd_entry_point]
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::UpdateConfig { config } => handle::try_update_config(deps, env, info, config),
         ExecuteMsg::RegisterAsset {
@@ -86,11 +94,8 @@ pub fn execute(
     }
 }
 
-#[entry_point]
-pub fn query(
-    deps: Deps,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+#[shd_entry_point]
+pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::NativeAsset {} => to_binary(&query::native_asset(deps)?),
         QueryMsg::SupportedAssets {} => to_binary(&query::supported_assets(deps)?),

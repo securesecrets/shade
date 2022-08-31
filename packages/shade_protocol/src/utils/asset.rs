@@ -8,7 +8,6 @@ use crate::{
         BankQuery,
         ContractInfo,
         Deps,
-        QuerierWrapper,
         StdError,
         StdResult,
         Uint128,

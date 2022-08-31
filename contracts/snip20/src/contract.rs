@@ -19,37 +19,59 @@ use crate::{
         try_revoke_permit,
         try_set_contract_status,
         try_set_viewing_key,
+        try_update_query_auth,
     },
     query,
 };
-use shade_protocol::c_std::{Addr, from_binary, to_binary, Api, Binary, Env, DepsMut, Response, Querier, StdError, StdResult, Storage, MessageInfo, Deps, entry_point};
-use shade_protocol::utils::{pad_handle_result, pad_query_result};
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        shd_entry_point,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+    },
     contract_interfaces::snip20::{
+        errors::{
+            action_disabled,
+            invalid_viewing_key,
+            not_authenticated_msg,
+            permit_revoked,
+            unauthorized_permit,
+        },
         manager::{ContractStatusLevel, Key, PermitKey},
-        HandleAnswer,
         ExecuteMsg,
+        HandleAnswer,
         InstantiateMsg,
         Permission,
         QueryMsg,
         QueryWithPermit,
     },
-    utils::asset::validate_vec,
-    utils::storage::plus::MapStorage,
+    query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
+    snip20::{errors::permit_not_found, manager::QueryAuth, PermitParams},
+    utils::{
+        asset::validate_vec,
+        pad_handle_result,
+        pad_query_result,
+        storage::plus::{ItemStorage, MapStorage},
+    },
 };
-use shade_protocol::contract_interfaces::snip20::errors::{action_disabled, invalid_viewing_key, not_authenticated_msg, permit_revoked, unauthorized_permit};
-use shade_protocol::query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication};
-use shade_protocol::snip20::errors::permit_not_found;
-use shade_protocol::snip20::manager::QueryAuth;
-use shade_protocol::snip20::PermitParams;
-use shade_protocol::utils::storage::plus::ItemStorage;
-use crate::handle::try_update_query_auth;
 
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -60,13 +82,8 @@ pub fn instantiate(
     Ok(Response::new())
 }
 
-#[entry_point]
-pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+#[shd_entry_point]
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     // Check if transfers are allowed
     let status = ContractStatusLevel::load(deps.storage)?;
     match status {
@@ -98,7 +115,7 @@ pub fn execute(
             } => {
                 let recipient = deps.api.addr_validate(recipient.as_str())?;
                 try_transfer(deps, env, info, recipient, amount, memo)
-            },
+            }
 
             ExecuteMsg::Send {
                 recipient,
@@ -109,10 +126,21 @@ pub fn execute(
                 ..
             } => {
                 let recipient = deps.api.addr_validate(recipient.as_str())?;
-                try_send(deps, env, info, recipient, recipient_code_hash, amount, memo, msg)
-            },
+                try_send(
+                    deps,
+                    env,
+                    info,
+                    recipient,
+                    recipient_code_hash,
+                    amount,
+                    memo,
+                    msg,
+                )
+            }
 
-            ExecuteMsg::BatchTransfer { actions, .. } => try_batch_transfer(deps, env, info, actions),
+            ExecuteMsg::BatchTransfer { actions, .. } => {
+                try_batch_transfer(deps, env, info, actions)
+            }
 
             ExecuteMsg::BatchSend { actions, .. } => try_batch_send(deps, env, info, actions),
 
@@ -136,7 +164,7 @@ pub fn execute(
             } => {
                 let spender = deps.api.addr_validate(spender.as_str())?;
                 try_increase_allowance(deps, env, info, spender, amount, expiration)
-            },
+            }
             ExecuteMsg::DecreaseAllowance {
                 spender,
                 amount,
@@ -145,7 +173,7 @@ pub fn execute(
             } => {
                 let spender = deps.api.addr_validate(spender.as_str())?;
                 try_decrease_allowance(deps, env, info, spender, amount, expiration)
-            },
+            }
             ExecuteMsg::TransferFrom {
                 owner,
                 recipient,
@@ -156,7 +184,7 @@ pub fn execute(
                 let owner = deps.api.addr_validate(owner.as_str())?;
                 let recipient = deps.api.addr_validate(recipient.as_str())?;
                 try_transfer_from(deps, env, info, owner, recipient, amount, memo)
-            },
+            }
             ExecuteMsg::SendFrom {
                 owner,
                 recipient,
@@ -169,22 +197,24 @@ pub fn execute(
                 let owner = deps.api.addr_validate(owner.as_str())?;
                 let recipient = deps.api.addr_validate(recipient.as_str())?;
                 try_send_from(
-                deps,
-                env,
-                info,
-                owner,
-                recipient,
-                recipient_code_hash,
-                amount,
-                msg,
-                memo,
+                    deps,
+                    env,
+                    info,
+                    owner,
+                    recipient,
+                    recipient_code_hash,
+                    amount,
+                    msg,
+                    memo,
                 )
-            },
+            }
             ExecuteMsg::BatchTransferFrom { actions, .. } => {
                 try_batch_transfer_from(deps, env, info, actions)
             }
 
-            ExecuteMsg::BatchSendFrom { actions, .. } => try_batch_send_from(deps, env, info, actions),
+            ExecuteMsg::BatchSendFrom { actions, .. } => {
+                try_batch_send_from(deps, env, info, actions)
+            }
 
             ExecuteMsg::BurnFrom {
                 owner,
@@ -194,8 +224,10 @@ pub fn execute(
             } => {
                 let owner = deps.api.addr_validate(owner.as_str())?;
                 try_burn_from(deps, env, info, owner, amount, memo)
-            },
-            ExecuteMsg::BatchBurnFrom { actions, .. } => try_batch_burn_from(deps, env, info, actions),
+            }
+            ExecuteMsg::BatchBurnFrom { actions, .. } => {
+                try_batch_burn_from(deps, env, info, actions)
+            }
             ExecuteMsg::Mint {
                 recipient,
                 amount,
@@ -204,28 +236,28 @@ pub fn execute(
             } => {
                 let recipient = deps.api.addr_validate(recipient.as_str())?;
                 try_mint(deps, env, info, recipient, amount, memo)
-            },
+            }
             ExecuteMsg::BatchMint { actions, .. } => try_batch_mint(deps, env, info, actions),
             ExecuteMsg::AddMinters { minters, .. } => {
                 let minters = validate_vec(deps.api, minters)?;
                 try_add_minters(deps, env, info, minters)
-            },
+            }
             ExecuteMsg::RemoveMinters { minters, .. } => {
                 let minters = validate_vec(deps.api, minters)?;
                 try_remove_minters(deps, env, info, minters)
-            },
+            }
             ExecuteMsg::SetMinters { minters, .. } => {
                 let minters = validate_vec(deps.api, minters)?;
                 try_set_minters(deps, env, info, minters)
-            },
+            }
             ExecuteMsg::ChangeAdmin { address, .. } => {
                 let address = deps.api.addr_validate(address.as_str())?;
                 try_change_admin(deps, env, info, address)
-            },
-            ExecuteMsg::UpdateQueryAuth { auth } => {
-                try_update_query_auth(deps, env, info, auth)
-            },
-            ExecuteMsg::SetContractStatus { level, .. } => try_set_contract_status(deps, env, info, level),
+            }
+            ExecuteMsg::UpdateQueryAuth { auth } => try_update_query_auth(deps, env, info, auth),
+            ExecuteMsg::SetContractStatus { level, .. } => {
+                try_set_contract_status(deps, env, info, level)
+            }
 
             ExecuteMsg::RevokePermit { permit_name, .. } => {
                 try_revoke_permit(deps, env, info, permit_name)
@@ -244,7 +276,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             QueryMsg::ExchangeRate {} => query::exchange_rate(deps)?,
             QueryMsg::Minters {} => query::minters(deps)?,
 
-            QueryMsg::WithPermit { permit, auth_permit, query } => {
+            QueryMsg::WithPermit {
+                permit,
+                auth_permit,
+                query,
+            } => {
                 // Verify which authentication setting is set
                 let account: Addr;
                 let params: PermitParams;
@@ -259,23 +295,21 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                             if PermitKey::may_load(
                                 deps.storage,
                                 (account.clone(), permit.params.permit_name.clone()),
-                            )?.is_some() {
+                            )?
+                            .is_some()
+                            {
                                 return Err(permit_revoked(permit.params.permit_name));
                             }
 
                             params = permit.params;
-                        }
-                        else {
+                        } else {
                             return Err(permit_not_found());
                         }
                     }
                     Some(authenticator) => {
                         if let Some(permit) = auth_permit {
-                            let res: PermitAuthentication<PermitParams> = authenticate_permit(
-                                permit,
-                                &deps.querier,
-                                authenticator.0
-                            )?;
+                            let res: PermitAuthentication<PermitParams> =
+                                authenticate_permit(permit, &deps.querier, authenticator.0)?;
 
                             if res.revoked {
                                 return Err(permit_revoked(res.data.permit_name));
@@ -283,8 +317,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
                             account = res.sender;
                             params = res.data;
-                        }
-                        else {
+                        } else {
                             return Err(permit_not_found());
                         }
                     }
@@ -408,11 +441,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 fn try_authenticate_vk(deps: &Deps, address: Addr, key: String) -> StdResult<bool> {
     match QueryAuth::may_load(deps.storage)? {
-        None => {
-            Key::verify(deps.storage, address, key)
-        }
-        Some(authenticator) => {
-            authenticate_vk(address, key, &deps.querier, &authenticator.0)
-        }
+        None => Key::verify(deps.storage, address, key),
+        Some(authenticator) => authenticate_vk(address, key, &deps.querier, &authenticator.0),
     }
 }

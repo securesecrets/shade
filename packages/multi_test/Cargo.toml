@@ -13,23 +13,24 @@ crate-type = ["cdylib", "rlib"]
 default = []
 admin = ["dep:admin", "shade-protocol/admin"]
 snip20 = ["dep:snip20"]
+liability_mint = ["dep:liability_mint"]
 #mint = ["dep:mint"]
 #oracle = ["dep:oracle"]
 #mock_band= ["dep:mock_band"]
 governance = ["dep:governance"]
 snip20_staking = ["dep:spip_stkd_0"]
 # bonds = ["dep:bonds"]
-query_auth = ["dep:query_auth"]
-scrt_staking = ["dep:scrt_staking", "admin", "treasury", "treasury_manager", "snip20"]
 treasury = ["dep:treasury", "admin"]
 treasury_manager = ["dep:treasury_manager", "admin", "treasury", "mock_adapter", "snip20"]
 mock_adapter = ["dep:mock_adapter"]
 dao = ["mock_adapter", "treasury", "treasury_manager", "snip20"]
+query_auth = ["dep:query_auth"]
 # shade-oracles = ["dep:shade-oracles"]
 peg_stability = ["dep:peg_stability"]
 
 [dependencies]
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
+liability_mint = { version = "0.1.0", path = "../../contracts/liability_mint", optional = true }
 #mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
 #oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
 #mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }

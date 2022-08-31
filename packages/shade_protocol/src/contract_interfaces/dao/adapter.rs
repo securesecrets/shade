@@ -1,22 +1,21 @@
-use crate::utils::{
-    asset::Contract,
-    generic_response::ResponseStatus,
-};
-use crate::c_std::{
-    Addr,
-    QuerierWrapper,
-    Api,
-    Binary,
-    CosmosMsg,
-    Decimal,
-    Deps,
-    DepsMut,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-    Uint128,
-    Validator,
+use crate::{
+    c_std::{
+        Addr,
+        Api,
+        Binary,
+        CosmosMsg,
+        Decimal,
+        Deps,
+        DepsMut,
+        Querier,
+        QuerierWrapper,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+        Validator,
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
@@ -149,10 +148,11 @@ pub fn reserves_query(
     asset: &Addr,
     adapter: Contract,
 ) -> StdResult<Uint128> {
-
     match QueryMsg::Adapter(SubQueryMsg::Reserves {
         asset: asset.to_string().clone(),
-    }).query(&querier, &adapter)? {
+    })
+    .query(&querier, &adapter)?
+    {
         QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
             "Failed to query adapter unbondable from {}",
@@ -180,22 +180,23 @@ pub fn balance_query(
 }
 
 pub fn claim_msg(asset: &Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubExecuteMsg::Claim { asset: asset.to_string().clone() }).to_cosmos_msg(
-        &adapter,
-        vec![],
-    )
+    ExecuteMsg::Adapter(SubExecuteMsg::Claim {
+        asset: asset.to_string().clone(),
+    })
+    .to_cosmos_msg(&adapter, vec![])
 }
 
 pub fn unbond_msg(asset: &Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubExecuteMsg::Unbond { asset: asset.to_string().clone(), amount }).to_cosmos_msg(
-        &adapter,
-        vec![],
-    )
+    ExecuteMsg::Adapter(SubExecuteMsg::Unbond {
+        asset: asset.to_string().clone(),
+        amount,
+    })
+    .to_cosmos_msg(&adapter, vec![])
 }
 
 pub fn update_msg(asset: &Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubExecuteMsg::Update { asset: asset.to_string().clone() }).to_cosmos_msg(
-        &adapter,
-        vec![],
-    )
+    ExecuteMsg::Adapter(SubExecuteMsg::Update {
+        asset: asset.to_string().clone(),
+    })
+    .to_cosmos_msg(&adapter, vec![])
 }
