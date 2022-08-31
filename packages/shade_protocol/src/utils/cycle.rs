@@ -10,11 +10,6 @@ use std::convert::TryInto;
 pub enum Cycle {
     Once,
     Constant,
-    /*
-    Block {
-        blocks: Uint128,
-    },
-    */
     Yearly { years: Uint128 },
     Monthly { months: Uint128 },
     Daily { days: Uint128 },
@@ -27,11 +22,6 @@ pub enum Cycle {
 pub enum Period {
     Once,
     Constant,
-    /*
-    Block {
-        blocks: Uint128,
-    },
-    */
     Yearly { years: Uint128 },
     Monthly { months: Uint128 },
     Daily { days: Uint128 },
@@ -68,7 +58,6 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
     match cycle {
         Cycle::Constant => true,
         Cycle::Once => false,
-        //Cycle::Block { blocks } => {},
         Cycle::Seconds { seconds } => {
             seconds >= Uint128::new((now.timestamp() - last_refresh.timestamp()) as u128)
         }

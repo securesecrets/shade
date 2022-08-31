@@ -49,7 +49,7 @@ use shade_protocol::{
     },
     utils::{
         asset::Contract,
-        cycle::{exceeds_cycle, parse_utc_datetime, utc_from_seconds, utc_now},
+        cycle::{exceeds_cycle, parse_utc_datetime, utc_from_seconds, utc_now, Cycle},
         generic_response::ResponseStatus,
         wrap::wrap_coin,
     },
@@ -57,6 +57,7 @@ use shade_protocol::{
 
 use crate::storage::*;
 
+use itertools::{Either, Itertools};
 use std::collections::HashMap;
 
 pub fn receive(
@@ -84,7 +85,7 @@ pub fn receive(
 
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
@@ -248,29 +249,34 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
     let mut total_balance =
         token_balance + portion_balance + amount_balance + amount_unbonding + portion_unbonding;
 
-    //TODO switch to partition
-    //let (amount_allowances, portion_allowances) = allowances.iter().partition(|
-    let portions = allowances
+    let (amounts, portions): (Vec<AllowanceMeta>, Vec<AllowanceMeta>) = allowances
         .clone()
         .into_iter()
-        .filter(|a| a.allowance_type == AllowanceType::Portion)
-        .collect::<Vec<AllowanceMeta>>();
-    let amounts = allowances
-        .clone()
-        .into_iter()
-        .filter(|a| a.allowance_type == AllowanceType::Amount)
-        .collect::<Vec<AllowanceMeta>>();
+        .partition_map(|a| match a.allowance_type {
+            AllowanceType::Amount => Either::Left(a),
+            AllowanceType::Portion => Either::Right(a),
+        });
 
-    // Iterate amount allows first to determine portion total
+    /* Amounts given priority
+     * portions are calculated after amounts are taken from total
+     */
     for allowance in amounts {
         total_balance -= allowance.amount;
+
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
-        // Claim from managers
         let manager = MANAGER.may_load(deps.storage, allowance.spender.clone())?;
 
         // Refresh allowance if cycle is exceeded
         if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
-            continue;
+            // Once allowances need 1 refresh if last_refresh == 'null'
+            // TODO allowance needs to be removed once it is used up
+            if allowance.cycle == Cycle::Once {
+                if last_refresh != utc_from_seconds(0) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
         }
 
         let (balance, cur_allowance) = metadata[&allowance.spender];
@@ -289,7 +295,6 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
                 messages.push(decrease_allowance_msg(
                     allowance.spender.clone(),
                     decrease,
-                    //TODO impl expiration
                     None,
                     None,
                     1,
@@ -304,29 +309,28 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
                     amount: decrease,
                     user: allowance.spender.clone(),
                 });
+
                 if decrease > amount_allowance {
                     amount_allowance = Uint128::zero();
                 } else {
                     amount_allowance -= decrease;
                 }
+
                 if decrease > cur_allowance {
-                    match MANAGER.may_load(deps.storage, allowance.spender)? {
-                        Some(m) => {
-                            messages.push(manager::unbond_msg(
-                                &asset.clone(),
-                                decrease - cur_allowance,
-                                m.clone(),
-                            )?);
-                            metrics.push(Metric {
-                                action: Action::Unbond,
-                                context: Context::Rebalance,
-                                timestamp: env.block.time.seconds(),
-                                token: asset.clone(),
-                                amount: decrease - cur_allowance,
-                                user: m.address.clone(),
-                            });
-                        }
-                        None => {}
+                    if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
+                        messages.push(manager::unbond_msg(
+                            &asset.clone(),
+                            decrease - cur_allowance,
+                            m.clone(),
+                        )?);
+                        metrics.push(Metric {
+                            action: Action::Unbond,
+                            context: Context::Rebalance,
+                            timestamp: env.block.time.seconds(),
+                            token: asset.clone(),
+                            amount: decrease - cur_allowance,
+                            user: m.address.clone(),
+                        });
                     }
                 }
             }
@@ -374,7 +378,7 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
         if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
             continue;
         }
-        // Claim from managers
+
         let desired_amount = portion_total.multiply_ratio(allowance.amount, 10u128.pow(18));
         let threshold = desired_amount.multiply_ratio(allowance.tolerance, 10u128.pow(18));
 
@@ -413,8 +417,28 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
                 continue;
             }
 
-            // need to remove more than allowance
-            if cur_allowance < decrease {
+            // Allowance fully covers amount needed
+            if cur_allowance >= decrease {
+                messages.push(decrease_allowance_msg(
+                    allowance.spender.clone(),
+                    decrease,
+                    None,
+                    None,
+                    1,
+                    &full_asset.contract.clone(),
+                    vec![],
+                )?);
+                metrics.push(Metric {
+                    action: Action::DecreaseAllowance,
+                    context: Context::Rebalance,
+                    timestamp: env.block.time.seconds(),
+                    token: asset.clone(),
+                    amount: decrease,
+                    user: allowance.spender.clone(),
+                });
+            }
+            // Reduce allowance then unbond
+            else {
                 messages.push(decrease_allowance_msg(
                     allowance.spender.clone(),
                     cur_allowance,
@@ -437,54 +461,28 @@ pub fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> S
 
                 // Unbond remaining
                 if !decrease.is_zero() {
-                    match MANAGER.may_load(deps.storage, allowance.spender.clone())? {
-                        Some(m) => {
-                            messages.push(manager::unbond_msg(
-                                &asset.clone(),
-                                decrease,
-                                m.clone(),
-                            )?);
-                            metrics.push(Metric {
-                                action: Action::Unbond,
-                                context: Context::Rebalance,
-                                timestamp: env.block.time.seconds(),
-                                token: asset.clone(),
-                                amount: decrease,
-                                user: m.address.clone(),
-                            });
-                        }
-                        None => {
-                            return Err(StdError::generic_err(format!(
-                                "Can't unbond from non-manager {}",
-                                allowance.spender.clone()
-                            )));
-                        }
+                    if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender.clone())? {
+                        messages.push(manager::unbond_msg(&asset.clone(), decrease, m.clone())?);
+                        metrics.push(Metric {
+                            action: Action::Unbond,
+                            context: Context::Rebalance,
+                            timestamp: env.block.time.seconds(),
+                            token: asset.clone(),
+                            amount: decrease,
+                            user: m.address.clone(),
+                        });
+                    } else {
+                        return Err(StdError::generic_err(format!(
+                            "Can't unbond from non-manager {}",
+                            allowance.spender.clone()
+                        )));
                     }
                 }
-            } else {
-                messages.push(decrease_allowance_msg(
-                    allowance.spender.clone(),
-                    decrease,
-                    None,
-                    None,
-                    1,
-                    &full_asset.contract.clone(),
-                    vec![],
-                )?);
-                metrics.push(Metric {
-                    action: Action::DecreaseAllowance,
-                    context: Context::Rebalance,
-                    timestamp: env.block.time.seconds(),
-                    token: asset.clone(),
-                    amount: decrease,
-                    user: allowance.spender.clone(),
-                });
             }
         }
     }
 
-    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
-    METRICS.flush(deps.storage)?;
+    METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
 
     Ok(Response::new()
         .add_messages(messages)
@@ -505,6 +503,7 @@ pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> Std
 
     for allowance in allowances {
         if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender.clone())? {
+            // TODO store in metadata object for re-use
             let unbondable = manager::unbondable_query(
                 deps.querier,
                 &asset,
@@ -512,6 +511,7 @@ pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> Std
                 m.clone(),
             )?;
 
+            // Unbond all if any
             if !unbondable.is_zero() {
                 messages.push(manager::unbond_msg(&asset, unbondable, m.clone())?);
                 metrics.push(Metric {
@@ -523,6 +523,7 @@ pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> Std
                     user: m.address.clone(),
                 });
             }
+
             let claimable = manager::claimable_query(
                 deps.querier,
                 &asset,
@@ -530,6 +531,7 @@ pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> Std
                 m.clone(),
             )?;
 
+            // Claim if any
             if !claimable.is_zero() {
                 messages.push(manager::claim_msg(&asset, m.clone())?);
                 metrics.push(Metric {
@@ -554,6 +556,7 @@ pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> Std
         )?
         .allowance;
 
+        // Reduce all allowance if any
         if !cur_allowance.is_zero() {
             messages.push(decrease_allowance_msg(
                 allowance.spender.clone(),
@@ -575,6 +578,7 @@ pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> Std
         }
     }
 
+    // Send full balance to multisig
     let balance = balance_query(
         &deps.querier,
         env.contract.address.clone(),
@@ -585,7 +589,7 @@ pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> Std
     if !(balance + claimed).is_zero() {
         let config = CONFIG.load(deps.storage)?;
 
-        //TODO: send to super admin from admin_auth
+        //TODO: send to super admin from admin_auth -- remove multisig from config
         messages.push(send_msg(
             config.multisig.clone(),
             balance + claimed,
@@ -621,7 +625,7 @@ pub fn set_run_level(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    // TODO force super-admin
+    // TODO force super-admin?
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
@@ -660,14 +664,16 @@ pub fn try_register_asset(
     ALLOWANCES.save(deps.storage, contract.address.clone(), &Vec::new())?;
 
     Ok(Response::new()
-        .add_message(
-            // Register contract in asset
-            register_receive(env.contract.code_hash.clone(), None, contract)?,
-        )
-        .add_message(
-            // Set viewing key
-            set_viewing_key_msg(VIEWING_KEY.load(deps.storage)?, None, &contract.clone())?,
-        )
+        .add_message(register_receive(
+            env.contract.code_hash.clone(),
+            None,
+            contract,
+        )?)
+        .add_message(set_viewing_key_msg(
+            VIEWING_KEY.load(deps.storage)?,
+            None,
+            &contract.clone(),
+        )?)
         .set_data(to_binary(&ExecuteAnswer::RegisterAsset {
             status: ResponseStatus::Success,
         })?))
@@ -689,7 +695,7 @@ pub fn register_wrap(
         &config.admin_auth,
     )?;
 
-    // Must be registered
+    // Asset must be registered
     if let Some(a) = ASSET.may_load(deps.storage, contract.address.clone())? {
         // Must have a token config (required for deposit)
         if let Some(conf) = a.token_config {
@@ -728,11 +734,12 @@ pub fn register_manager(
         &config.admin_auth,
     )?;
 
+    // Ensure it isn't already registered
     if let Some(_) = MANAGER.may_load(deps.storage, contract.address.clone())? {
         return Err(StdError::generic_err("Manager already registered"));
-    } else {
-        MANAGER.save(deps.storage, contract.address.clone(), &contract)?;
     }
+
+    MANAGER.save(deps.storage, contract.address.clone(), &contract)?;
 
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::RegisterAsset {
@@ -749,7 +756,7 @@ pub fn allowance(
     allowance: Allowance,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
-    /* ADMIN ONLY */
+
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
@@ -757,7 +764,6 @@ pub fn allowance(
         &config.admin_auth,
     )?;
 
-    //let viewing_key = VIEWING_KEY.load(deps.storage)?;
     if ASSET.may_load(deps.storage, asset.clone())?.is_none() {
         return Err(StdError::generic_err("Not an asset"));
     }
@@ -765,8 +771,6 @@ pub fn allowance(
     let mut allowances = ALLOWANCES
         .may_load(deps.storage, asset.clone())?
         .unwrap_or(vec![]);
-
-    let last_refresh: DateTime<Utc> = utc_from_seconds(0);
 
     let stale_allow = allowances
         .iter()
@@ -784,23 +788,27 @@ pub fn allowance(
         amount: allowance.amount,
         cycle: allowance.cycle,
         allowance_type: allowance.allowance_type.clone(),
-        // "zero/null" datetime
-        last_refresh: last_refresh.to_rfc3339(),
+        // "zero/null" datetime, guarantees refresh next update
+        last_refresh: utc_from_seconds(0).to_rfc3339(),
         tolerance: allowance.tolerance,
     });
 
-    let portion_sum: u128 = allowances
-        .iter()
-        .filter(|a| a.allowance_type == AllowanceType::Portion)
-        .map(|a| a.amount.u128())
-        .sum();
+    if allowance.allowance_type == AllowanceType::Portion {
+        let portion_sum: u128 = allowances
+            .iter()
+            .filter(|a| a.allowance_type == AllowanceType::Portion)
+            .map(|a| a.amount.u128())
+            .sum();
 
-    if portion_sum > 10u128.pow(18) {
-        return Err(StdError::generic_err(format!(
-            "Total portion allowances cannot exceed %100 ({})",
-            portion_sum
-        )));
+        // Total cannot exceed %100
+        if portion_sum > 10u128.pow(18) {
+            return Err(StdError::generic_err(format!(
+                "Total portion allowances cannot exceed %100 ({})",
+                portion_sum
+            )));
+        }
     }
+
     ALLOWANCES.save(deps.storage, asset, &allowances)?;
 
     Ok(
@@ -812,6 +820,7 @@ pub fn allowance(
 
 pub fn wrap_coins(deps: DepsMut, env: &Env, info: MessageInfo) -> StdResult<Response> {
     let coins = deps.querier.query_all_balances(&env.contract.address)?;
+
     let mut messages = vec![];
     let mut success = vec![];
     let mut failed = vec![];
@@ -819,8 +828,16 @@ pub fn wrap_coins(deps: DepsMut, env: &Env, info: MessageInfo) -> StdResult<Resp
     for coin in coins {
         if let Some(asset) = WRAP.may_load(deps.storage, coin.denom.clone())? {
             let token = ASSET.load(deps.storage, asset)?;
-            messages.push(wrap_coin(coin.clone(), token.contract)?);
-            success.push(coin);
+            messages.push(wrap_coin(coin.clone(), token.contract.clone())?);
+            success.push(coin.clone());
+            METRICS.pushf(deps.storage, env.block.time, Metric {
+                action: Action::Wrap,
+                context: Context::Wrap,
+                timestamp: env.block.time.seconds(),
+                token: token.contract.address,
+                amount: coin.amount,
+                user: info.sender.clone(),
+            })?;
         } else {
             failed.push(coin);
         }
