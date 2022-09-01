@@ -47,7 +47,7 @@ use shade_protocol::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
-static ONE_HUNDRED_PERCENT = Uint128::new(10u128.pow(18));
+static ONE_HUNDRED_PERCENT: Uint128 = Uint128::new(10u128.pow(18));
 
 pub fn receive(
     deps: DepsMut,
@@ -65,9 +65,9 @@ pub fn receive(
         action: Action::FundsReceived,
         context: Context::Receive,
         timestamp: env.block.time.seconds(),
-        token: info.sender,
+        token: info.sender.clone(),
         amount,
-        user: from,
+        user: from.clone(),
     })?;
 
     // Do nothing if its an adapter (claimed funds)
@@ -368,6 +368,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     // the sum of balances on 'portion' adapters
     let mut portion_total = Uint128::zero();
     // allocations marked for removal
+    let mut stale_allocs = vec![];
     let mut messages = vec![];
     let mut adapter_info = vec![];
 
@@ -786,7 +787,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
         )?);
     }
 
-    METRICS.appendf(deps.storage, env.block.time, metrics)?;
+    METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
 
     Ok(Response::new().add_messages(messages).set_data(to_binary(
         &adapter::ExecuteAnswer::Update {
@@ -1005,7 +1006,7 @@ pub fn unbond(
                 Ok(holder)
             })?;
 
-            METRICS.appendf(deps.storage, env.block.time, metrics)?;
+            METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1065,7 +1066,7 @@ pub fn unbond(
                 user: a.contract.address.clone(),
             });
         }
-        METRICS.appendf(deps.storage, env.block.time, metrics)?;
+        METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1113,7 +1114,7 @@ pub fn unbond(
                 user: meta.contract.address.clone(),
             });
         }
-        METRICS.appendf(deps.storage, env.block.time, metrics)?;
+        METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1149,7 +1150,7 @@ pub fn unbond(
                 user: meta.contract.address.clone(),
             });
         }
-        METRICS.appendf(deps.storage, env.block.time, metrics)?;
+        METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1221,7 +1222,7 @@ pub fn unbond(
                 });
             }
         }
-        METRICS.appendf(deps.storage, env.block.time, metrics)?;
+        METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1270,7 +1271,7 @@ pub fn unbond(
                     });
                 }
             }
-            METRICS.appendf(deps.storage, env.block.time, metrics)?;
+            METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1315,7 +1316,7 @@ pub fn unbond(
                     });
                 }
             }
-            METRICS.appendf(deps.storage, env.block.time, metrics)?;
+            METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,

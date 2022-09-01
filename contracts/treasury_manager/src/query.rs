@@ -210,9 +210,8 @@ pub fn batch_balance(
                     None => Uint128::zero(),
                 },
             );
-        }
-        else {
-            balances.push(Uint128::zero()),
+        } else {
+            balances.push(Uint128::zero());
         }
     }
 
@@ -239,9 +238,8 @@ pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Quer
         };
 
         Ok(manager::QueryAnswer::Balance { amount: balance })
-    }
-    else {
-        Err(StdError::generic_err("Not a registered asset"));
+    } else {
+        Err(StdError::generic_err("Not a registered asset"))
     }
 }
 
