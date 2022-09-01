@@ -6,12 +6,12 @@ use crate::{
             try_add_assembly_msg_assemblies,
             try_set_assembly_msg,
         },
+        authorized,
         contract::{try_add_contract, try_add_contract_assemblies, try_set_contract},
         profile::{try_add_profile, try_set_profile},
         proposal::{
             try_cancel,
             try_claim_funding,
-            try_proposal,
             try_receive_funding,
             try_receive_vote,
             try_trigger,
@@ -52,7 +52,7 @@ use shade_protocol::{
         QueryMsg,
         MSG_VARIABLE,
     },
-    governance::{AuthQuery, QueryData},
+    governance::{AuthQuery, QueryData, RuntimeState},
     query_auth,
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::register_receive,
@@ -178,11 +178,26 @@ pub fn instantiate(
     }
     .save(deps.storage, &Uint128::zero())?;
 
+    // Set runtime
+    RuntimeState::Normal.save(deps.storage)?;
+
     Ok(Response::new().add_submessages(messages))
 }
 
 #[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+    match msg {
+        ExecuteMsg::Trigger { .. } // Will be deprecated
+        | ExecuteMsg::Cancel { .. } // Will also be deprecated
+        | ExecuteMsg::Update { .. } // Gets halted 
+        | ExecuteMsg::Receive { .. } // Gets halted
+        | ExecuteMsg::ClaimFunding { .. } // Gets halted
+        | ExecuteMsg::AssemblyVote { .. } // Gets halted
+        | ExecuteMsg::ReceiveBalance { .. } // Gets halted
+        | ExecuteMsg::AssemblyProposal { .. } => {} // Gets halted with special permissions
+        _ => authorized(deps.storage, &env, &info)?,
+    }
+
     pad_handle_result(
         match msg {
             // State setups
@@ -202,21 +217,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 funding_token,
             ),
 
-            // TODO: set this, must be discussed with team
             ExecuteMsg::SetRuntimeState { state, .. } => {
                 try_set_runtime_state(deps, env, info, state)
             }
 
             // Proposals
-            ExecuteMsg::Proposal {
-                title,
-                metadata,
-                contract,
-                msg,
-                coins,
-                ..
-            } => try_proposal(deps, env, info, title, metadata, contract, msg, coins),
-
             ExecuteMsg::Trigger { proposal, .. } => try_trigger(deps, env, info, proposal),
             ExecuteMsg::Cancel { proposal, .. } => try_cancel(deps, env, info, proposal),
             ExecuteMsg::Update { proposal, .. } => try_update(deps, env, info, proposal),

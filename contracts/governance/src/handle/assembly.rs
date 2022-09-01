@@ -1,3 +1,4 @@
+use crate::handle::authorize_assembly;
 use shade_protocol::{
     c_std::{
         from_binary,
@@ -36,6 +37,12 @@ pub fn try_assembly_vote(
     proposal: Uint128,
     vote: Vote,
 ) -> StdResult<Response> {
+    authorize_assembly(
+        deps.storage,
+        &info,
+        &Proposal::assembly(deps.storage, &proposal)?,
+    )?;
+
     let sender = info.sender;
 
     // Check if proposal in assembly voting
@@ -45,13 +52,6 @@ pub fn try_assembly_vote(
         }
     } else {
         return Err(StdError::generic_err("Not in assembly vote phase"));
-    }
-    // Check if user in assembly
-    if !Assembly::data(deps.storage, &Proposal::assembly(deps.storage, &proposal)?)?
-        .members
-        .contains(&sender)
-    {
-        return Err(StdError::generic_err("unauthorized"));
     }
 
     let mut tally = Proposal::assembly_votes(deps.storage, &proposal)?;
@@ -89,21 +89,11 @@ pub fn try_assembly_proposal(
     msgs: Option<Vec<ProposalMsg>>,
 ) -> StdResult<Response> {
     // Get assembly
-    let assembly_data = Assembly::data(deps.storage, &assembly_id)?;
-
-    // Check if public; everyone is allowed
-    if assembly_data.profile != Uint128::zero() {
-        if !assembly_data.members.contains(&info.sender) {
-            return Err(StdError::generic_err("unauthorized"));
-        }
-    }
+    let assembly_data = authorize_assembly(deps.storage, &info, &assembly_id)?;
 
     // Get profile
     // Check if assembly is enabled
     let profile = Profile::data(deps.storage, &assembly_data.profile)?;
-    if !profile.enabled {
-        return Err(StdError::generic_err("Assembly is disabled"));
-    }
 
     let status: Status;
 
@@ -204,10 +194,6 @@ pub fn try_add_assembly(
     members: Vec<Addr>,
     profile: Uint128,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let id = ID::add_assembly(deps.storage)?;
 
     // Check that profile exists
@@ -240,10 +226,6 @@ pub fn try_set_assembly(
     members: Option<Vec<Addr>>,
     profile: Option<Uint128>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let mut assembly = match Assembly::may_load(deps.storage, &id)? {
         None => return Err(StdError::generic_err("Assembly not found")),
         Some(c) => c,

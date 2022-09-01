@@ -25,10 +25,6 @@ pub fn try_add_contract(
     contract: Contract,
     assemblies: Option<Vec<Uint128>>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let id = ID::add_contract(deps.storage)?;
 
     if let Some(ref assemblies) = assemblies {
@@ -66,10 +62,6 @@ pub fn try_set_contract(
     disable_assemblies: bool,
     assemblies: Option<Vec<Uint128>>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     if id > ID::contract(deps.storage)? {
         return Err(StdError::generic_err("AllowedContract not found"));
     }
@@ -118,10 +110,6 @@ pub fn try_add_contract_assemblies(
     id: Uint128,
     assemblies: Vec<Uint128>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     if id > ID::contract(deps.storage)? {
         return Err(StdError::generic_err("AllowedContract not found"));
     }

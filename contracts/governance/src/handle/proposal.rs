@@ -1,4 +1,4 @@
-use crate::handle::assembly::try_assembly_proposal;
+use crate::handle::{assembly::try_assembly_proposal, assembly_state_valid};
 use shade_protocol::{
     c_std::{
         from_binary,
@@ -41,40 +41,6 @@ use shade_protocol::{
         Query,
     },
 };
-
-// Initializes a proposal on the public assembly with the blank command
-pub fn try_proposal(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    title: String,
-    metadata: String,
-    contract: Option<Uint128>,
-    msg: Option<String>,
-    coins: Option<Vec<Coin>>,
-) -> StdResult<Response> {
-    let msgs: Option<Vec<ProposalMsg>>;
-
-    if contract.is_some() && msg.is_some() {
-        msgs = Some(vec![ProposalMsg {
-            target: contract.unwrap(),
-            assembly_msg: Uint128::zero(),
-            msg: to_binary(&msg.unwrap())?,
-            send: match coins {
-                None => vec![],
-                Some(c) => c,
-            },
-        }]);
-    } else {
-        msgs = None;
-    }
-
-    try_assembly_proposal(deps, env, info, Uint128::zero(), title, metadata, msgs)?;
-
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Proposal {
-        status: ResponseStatus::Success,
-    })?))
-}
 
 pub fn try_trigger(
     deps: DepsMut,
@@ -194,6 +160,9 @@ pub fn try_update(
 
     let assembly = Proposal::assembly(deps.storage, &proposal)?;
     let profile = Assembly::data(deps.storage, &assembly)?.profile;
+
+    // Halt all proposal updates
+    assembly_state_valid(deps.storage, &assembly)?;
 
     let mut messages = vec![];
 
@@ -404,6 +373,10 @@ pub fn try_receive_funding(
         let mut new_fund = amount + funded;
 
         let assembly = &Proposal::assembly(deps.storage, &proposal)?;
+
+        // Validate that this action is possible
+        assembly_state_valid(deps.storage, assembly)?;
+
         let profile = &Assembly::data(deps.storage, assembly)?.profile;
         if let Some(funding_profile) = Profile::funding(deps.storage, &profile)? {
             if funding_profile.required == funded {

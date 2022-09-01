@@ -1,15 +1,15 @@
 use crate::{
+    c_std::{Addr, Binary, Coin, StdResult, Storage, Uint128},
     contract_interfaces::governance::{
         assembly::Assembly,
         profile::Profile,
-        stored_id::{ID, UserID},
+        stored_id::{UserID, ID},
         vote::Vote,
     },
 };
-use crate::c_std::Uint128;
-use crate::c_std::{Binary, Coin, Addr, StdResult, Storage};
 
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::Timestamp;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::BucketStorage;
@@ -179,11 +179,7 @@ impl Proposal {
         Ok(ProposalAssembly::load(storage, &id.to_be_bytes())?.0)
     }
 
-    pub fn save_assembly(
-        storage: &mut dyn Storage,
-        id: &Uint128,
-        data: Uint128,
-    ) -> StdResult<()> {
+    pub fn save_assembly(storage: &mut dyn Storage, id: &Uint128, data: Uint128) -> StdResult<()> {
         ProposalAssembly(data).save(storage, &id.to_be_bytes())
     }
 
@@ -215,11 +211,7 @@ impl Proposal {
         Ok(funders)
     }
 
-    pub fn save_funders(
-        storage: &mut dyn Storage,
-        id: &Uint128,
-        data: Vec<Addr>,
-    ) -> StdResult<()> {
+    pub fn save_funders(storage: &mut dyn Storage, id: &Uint128, data: Vec<Addr>) -> StdResult<()> {
         Funders(data).save(storage, &id.to_be_bytes())
     }
 
@@ -333,14 +325,16 @@ pub struct ProposalMsg {
     pub send: Vec<Coin>,
 }
 
-#[cw_serde]struct ProposalMsgs(pub Vec<ProposalMsg>);
+#[cw_serde]
+struct ProposalMsgs(pub Vec<ProposalMsg>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for ProposalMsgs {
     const NAMESPACE: &'static [u8] = b"proposal_msgs-";
 }
 
-#[cw_serde]struct ProposalAssembly(pub Uint128);
+#[cw_serde]
+struct ProposalAssembly(pub Uint128);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for ProposalAssembly {
@@ -386,13 +380,24 @@ pub enum Status {
     Canceled,
 }
 
+impl Status {
+    pub fn passed(storage: &dyn Storage, profile: &Uint128, time: &Timestamp) -> StdResult<Status> {
+        let seconds = time.seconds();
+        Ok(Self::Passed {
+            start: seconds,
+            end: seconds + Profile::data(storage, &profile)?.cancel_deadline,
+        })
+    }
+}
+
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for Status {
     const NAMESPACE: &'static [u8] = b"proposal_status-";
 }
 
 #[cfg(feature = "governance-impl")]
-#[cw_serde]struct StatusHistory(pub Vec<Status>);
+#[cw_serde]
+struct StatusHistory(pub Vec<Status>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for StatusHistory {
@@ -400,7 +405,8 @@ impl BucketStorage for StatusHistory {
 }
 
 #[cfg(feature = "governance-impl")]
-#[cw_serde]struct Funders(pub Vec<Addr>);
+#[cw_serde]
+struct Funders(pub Vec<Addr>);
 
 #[cfg(feature = "governance-impl")]
 impl BucketStorage for Funders {

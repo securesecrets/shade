@@ -7,6 +7,7 @@ pub mod stored_id;
 pub mod vote;
 
 use crate::{
+    c_std::{Addr, Binary, Coin, Uint128},
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
@@ -16,16 +17,18 @@ use crate::{
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
-use crate::c_std::Uint128;
-use crate::c_std::{Binary, Coin, Addr};
 
-use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::{cw_serde};
-use crate::governance::proposal::Funding;
-use crate::query_auth::QueryPermit;
+use crate::{
+    governance::proposal::Funding,
+    query_auth::QueryPermit,
+    utils::{ExecuteCallback, InstantiateCallback, Query},
+};
+use cosmwasm_schema::cw_serde;
 
 #[cfg(feature = "governance-impl")]
 use crate::utils::storage::default::SingletonStorage;
+
+// TODO: add errors
 
 // Admin command variable spot
 pub const MSG_VARIABLE: &str = "{~}";
@@ -68,12 +71,10 @@ impl InstantiateCallback for InstantiateMsg {
 pub enum RuntimeState {
     // Run like normal
     Normal,
-    // Disable staking
-    DisableVoteToken,
     // Allow only specific assemblies and admin
     SpecificAssemblies { committees: Vec<Uint128> },
-    // Set as admin only
-    AdminOnly,
+    // Migrated - points to the new version
+    Migrated { new: Contract },
 }
 
 #[cfg(feature = "governance-impl")]
@@ -81,6 +82,8 @@ impl SingletonStorage for RuntimeState {
     const NAMESPACE: &'static [u8] = b"runtime_state-";
 }
 
+// TODO: allow migration, copies all assemblies, contracts and msgs
+// TODO: maybe migration should be done in batches in the case of huge data
 #[cw_serde]
 pub enum ExecuteMsg {
     // Internal config
@@ -96,29 +99,16 @@ pub enum ExecuteMsg {
         padding: Option<String>,
     },
 
-    // Proposals
-    // Same as AssemblyProposal where assembly is 0 and assembly msg is 0
-    Proposal {
-        title: String,
-        metadata: String,
-
-        // Optionals, if none the proposal is assumed to be a text proposal
-        // Allowed Contract
-        contract: Option<Uint128>,
-        // Msg for tx
-        msg: Option<String>,
-        coins: Option<Vec<Coin>>,
-        padding: Option<String>,
-    },
-
     // Proposal interaction
     /// Triggers the proposal when the MSG is approved
     Trigger {
+        //TODO: Must be deprecated for v1
         proposal: Uint128,
         padding: Option<String>,
     },
     /// Cancels the proposal if the msg keeps failing
     Cancel {
+        //TODO: Must be deprecated for v1
         proposal: Uint128,
         padding: Option<String>,
     },
@@ -272,7 +262,7 @@ pub enum HandleAnswer {
 #[cw_serde]
 pub struct Pagination {
     pub page: u64,
-    pub amount: u64
+    pub amount: u64,
 }
 
 #[cw_serde]
@@ -280,7 +270,7 @@ pub enum AuthQuery {
     Proposals { pagination: Pagination },
     AssemblyVotes { pagination: Pagination },
     Funding { pagination: Pagination },
-    Votes { pagination: Pagination }
+    Votes { pagination: Pagination },
 }
 
 #[remain::sorted]
@@ -289,32 +279,53 @@ pub struct QueryData {}
 
 #[cw_serde]
 pub enum QueryMsg {
-    // TODO: Query individual user vote with VK and permit
     Config {},
 
     TotalProposals {},
 
-    Proposals { start: Uint128, end: Uint128 },
+    Proposals {
+        start: Uint128,
+        end: Uint128,
+    },
 
     TotalAssemblies {},
 
-    Assemblies { start: Uint128, end: Uint128 },
+    Assemblies {
+        start: Uint128,
+        end: Uint128,
+    },
 
     TotalAssemblyMsgs {},
 
-    AssemblyMsgs { start: Uint128, end: Uint128 },
+    AssemblyMsgs {
+        start: Uint128,
+        end: Uint128,
+    },
 
     TotalProfiles {},
 
-    Profiles { start: Uint128, end: Uint128 },
+    Profiles {
+        start: Uint128,
+        end: Uint128,
+    },
 
     TotalContracts {},
 
-    Contracts { start: Uint128, end: Uint128 },
+    Contracts {
+        start: Uint128,
+        end: Uint128,
+    },
 
-    WithVK { user: Addr, key: String, query: AuthQuery },
+    WithVK {
+        user: Addr,
+        key: String,
+        query: AuthQuery,
+    },
 
-    WithPermit { permit: QueryPermit, query: AuthQuery },
+    WithPermit {
+        permit: QueryPermit,
+        query: AuthQuery,
+    },
 }
 
 impl Query for QueryMsg {
@@ -324,30 +335,56 @@ impl Query for QueryMsg {
 #[cw_serde]
 pub struct ResponseWithID<T> {
     pub prop_id: Uint128,
-    pub data: T
+    pub data: T,
 }
 
 #[cw_serde]
 pub enum QueryAnswer {
-    Config { config: Config },
+    Config {
+        config: Config,
+    },
 
-    Proposals { props: Vec<Proposal> },
+    Proposals {
+        props: Vec<Proposal>,
+    },
 
-    Assemblies { assemblies: Vec<Assembly> },
+    Assemblies {
+        assemblies: Vec<Assembly>,
+    },
 
-    AssemblyMsgs { msgs: Vec<AssemblyMsg> },
+    AssemblyMsgs {
+        msgs: Vec<AssemblyMsg>,
+    },
 
-    Profiles { profiles: Vec<Profile> },
+    Profiles {
+        profiles: Vec<Profile>,
+    },
 
-    Contracts { contracts: Vec<AllowedContract> },
+    Contracts {
+        contracts: Vec<AllowedContract>,
+    },
 
-    Total { total: Uint128 },
+    Total {
+        total: Uint128,
+    },
 
-    UserProposals { props: Vec<ResponseWithID<Proposal>>, total: Uint128 },
+    UserProposals {
+        props: Vec<ResponseWithID<Proposal>>,
+        total: Uint128,
+    },
 
-    UserAssemblyVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
+    UserAssemblyVotes {
+        votes: Vec<ResponseWithID<Vote>>,
+        total: Uint128,
+    },
 
-    UserFunding { funds: Vec<ResponseWithID<Funding>>, total: Uint128 },
+    UserFunding {
+        funds: Vec<ResponseWithID<Funding>>,
+        total: Uint128,
+    },
 
-    UserVotes { votes: Vec<ResponseWithID<Vote>>, total: Uint128 },
+    UserVotes {
+        votes: Vec<ResponseWithID<Vote>>,
+        total: Uint128,
+    },
 }

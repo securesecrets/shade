@@ -18,6 +18,8 @@ use shade_protocol::{
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, Query},
 };
 
+// TODO: update state and retest the relevant functions
+
 #[test]
 fn trigger_admin_command() {
     let (mut chain, gov) = admin_only_governance().unwrap();

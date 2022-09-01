@@ -34,10 +34,6 @@ pub fn try_add_assembly_msg(
     msg: String,
     assemblies: Vec<Uint128>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let id = ID::add_assembly_msg(deps.storage)?;
 
     // Check that assemblys exist
@@ -70,10 +66,6 @@ pub fn try_set_assembly_msg(
     msg: Option<String>,
     assemblies: Option<Vec<Uint128>>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let mut assembly_msg = match AssemblyMsg::may_load(deps.storage, &id)? {
         None => return Err(StdError::generic_err("AssemblyMsg not found")),
         Some(c) => c,
@@ -107,10 +99,6 @@ pub fn try_add_assembly_msg_assemblies(
     id: Uint128,
     assemblies: Vec<Uint128>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let mut assembly_msg = AssemblyMsg::data(deps.storage, &id)?;
 
     let assembly_id = ID::assembly(deps.storage)?;

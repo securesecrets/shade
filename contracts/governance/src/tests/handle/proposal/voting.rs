@@ -226,7 +226,6 @@ fn update_after_deadline() {
 fn invalid_vote() {
     let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
 
-    // TODO: should work
     assert!(vote(&gov, &mut chain, stkd_tkn.as_str(), "alpha", governance::vote::ReceiveBalanceMsg {
         vote: Vote {
             yes: Uint128::new(25_000_000),
