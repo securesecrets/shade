@@ -223,14 +223,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         }
     }
 
-    // partition into amounts and poritons
-    /*let (amounts, portions): (Vec<AllowanceMeta>, Vec<AllowanceMeta>) = allowances
-    .clone()
-    .into_iter()
-    .partition_map(|a| match a.allowance_type {
-        AllowanceType::Amount => Either::Left(a),
-        AllowanceType::Portion => Either::Right(a),
-    });*/
     allowances.sort_by(|a, b| match a.allowance_type {
         AllowanceType::Amount => match b.allowance_type {
             AllowanceType::Amount => std::cmp::Ordering::Equal,
@@ -385,7 +377,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                         amount: increase,
                         user: allowance.spender.clone(),
                     });
-                    //amount_allowance += increase;
                 }
             }
             _ => {}
