@@ -31,6 +31,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "staking",
   "chrono",
 ]}
+itertools = "0.10.3"
 
 [dev-dependencies]
 shade-multi-test = { path = "../../packages/multi_test", features = [ 
