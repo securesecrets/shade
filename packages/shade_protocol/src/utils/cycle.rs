@@ -1,7 +1,7 @@
-use chrono::prelude::*;
 use crate::c_std::{Env, StdError, StdResult, Uint128};
+use crate::chrono::prelude::*;
 
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 use std::convert::TryInto;
 
 #[cw_serde]
@@ -28,7 +28,10 @@ pub fn parse_utc_datetime(rfc3339: &String) -> StdResult<DateTime<Utc>> {
 }
 
 pub fn utc_now(env: &Env) -> DateTime<Utc> {
-    DateTime::from_utc(NaiveDateTime::from_timestamp(env.block.time.seconds() as i64, 0), Utc)
+    DateTime::from_utc(
+        NaiveDateTime::from_timestamp(env.block.time.seconds() as i64, 0),
+        Utc,
+    )
 }
 
 pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: Cycle) -> bool {
@@ -69,6 +72,8 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
 
             month_diff >= months.u128() as u32
         }
-        Cycle::Yearly { years } => now.year_ce().1 - last_refresh.year_ce().1 >= years.u128() as u32,
+        Cycle::Yearly { years } => {
+            now.year_ce().1 - last_refresh.year_ce().1 >= years.u128() as u32
+        }
     }
 }

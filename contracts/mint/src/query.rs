@@ -1,43 +1,29 @@
 use crate::{
     handle::{calculate_portion, mint_amount},
     state::{
-        asset_list_r,
-        asset_peg_r,
-        assets_r,
-        config_r,
-        limit_r,
-        limit_refresh_r,
-        minted_r,
-        native_asset_r,
-        total_burned_r,
+        asset_list_r, asset_peg_r, assets_r, config_r, limit_r, limit_refresh_r, minted_r,
+        native_asset_r, total_burned_r,
     },
 };
-use chrono::prelude::*;
+use shade_protocol::c_std::{Addr, Api, DepsMut, Querier, StdError, StdResult, Storage};
 use shade_protocol::c_std::{Deps, Uint128};
-use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdError, StdResult, Storage};
+use shade_protocol::chrono::prelude::*;
 use shade_protocol::contract_interfaces::mint::mint::QueryAnswer;
 
-pub fn native_asset(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn native_asset(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::NativeAsset {
         asset: native_asset_r(deps.storage).load()?,
         peg: asset_peg_r(deps.storage).load()?,
     })
 }
 
-pub fn supported_assets(
-    deps: Deps,
-) -> StdResult<QueryAnswer> {
+pub fn supported_assets(deps: Deps) -> StdResult<QueryAnswer> {
     Ok(QueryAnswer::SupportedAssets {
         assets: asset_list_r(deps.storage).load()?,
     })
 }
 
-pub fn asset(
-    deps: Deps,
-    contract: String,
-) -> StdResult<QueryAnswer> {
+pub fn asset(deps: Deps, contract: String) -> StdResult<QueryAnswer> {
     let assets = assets_r(deps.storage);
 
     match assets.may_load(contract.as_bytes())? {
@@ -63,11 +49,7 @@ pub fn limit(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn mint(
-    deps: Deps,
-    offer_asset: Addr,
-    amount: Uint128,
-) -> StdResult<QueryAnswer> {
+pub fn mint(deps: Deps, offer_asset: Addr, amount: Uint128) -> StdResult<QueryAnswer> {
     let native_asset = native_asset_r(deps.storage).load()?;
 
     match assets_r(deps.storage).may_load(offer_asset.to_string().as_bytes())? {

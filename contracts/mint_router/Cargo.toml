@@ -29,6 +29,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "band",
   "mint",
   "dex",
+  "chrono",
 ] }
 schemars = "0.7"
 mockall = "0.10.2"

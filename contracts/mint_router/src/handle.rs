@@ -1,23 +1,11 @@
-use chrono::prelude::*;
 use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
-
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    CosmosMsg,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
+    from_binary, to_binary, Addr, Api, Binary, CosmosMsg, DepsMut, Env, Querier, Response,
+    StdError, StdResult, Storage,
 };
-use shade_protocol::{
-    snip20::helpers::{burn_msg, mint_msg, register_receive, send_msg, token_info_query, TokenConfig, token_config},
+use shade_protocol::chrono::prelude::*;
+use shade_protocol::snip20::helpers::{
+    burn_msg, mint_msg, register_receive, send_msg, token_config, token_info_query, TokenConfig,
 };
 use shade_protocol::{
     contract_interfaces::{
@@ -33,18 +21,8 @@ use shade_protocol::{
 use std::{cmp::Ordering, convert::TryFrom};
 
 use crate::state::{
-    asset_path_r,
-    asset_path_w,
-    config_r,
-    config_w,
-    current_assets_r,
-    current_assets_w,
-    final_asset_r,
-    final_asset_w,
-    registered_asset_r,
-    registered_asset_w,
-    user_r,
-    user_w,
+    asset_path_r, asset_path_w, config_r, config_w, current_assets_r, current_assets_w,
+    final_asset_r, final_asset_w, registered_asset_r, registered_asset_w, user_r, user_w,
 };
 
 pub fn receive(
@@ -121,9 +99,9 @@ pub fn receive(
     )?);
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Mint {
-            status: ResponseStatus::Success,
-            amount,
-        })?))
+        status: ResponseStatus::Success,
+        amount,
+    })?))
 }
 
 pub fn try_update_config(
@@ -147,9 +125,11 @@ pub fn try_update_config(
 
     config_w(deps.storage).save(&config)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {
             status: ResponseStatus::Success,
-        })?))
+        })?),
+    )
 }
 
 pub fn build_path(
@@ -178,14 +158,13 @@ pub fn build_path(
         // Make sure all new assets are registered
         for asset in entry_assets.clone() {
             // Register receive if it hasn't been before
-            if (registered_asset_r(deps.storage)
-                .may_load(&asset.address.to_string().as_bytes())?)
-            .is_none()
+            if (registered_asset_r(deps.storage).may_load(&asset.address.to_string().as_bytes())?)
+                .is_none()
             {
                 messages.push(register_receive(
                     env.contract.code_hash.clone(),
                     None,
-                    asset
+                    asset,
                 )?);
                 registered_asset_w(deps.storage)
                     .save(&asset.address.to_string().as_bytes(), &asset)?;
@@ -215,7 +194,7 @@ pub fn build_path(
         messages.push(register_receive(
             env.contract.code_hash.clone(),
             None,
-            final_asset
+            final_asset,
         )?);
         registered_asset_w(deps.storage)
             .save(&final_asset.address.to_string().as_bytes(), &final_asset)?;
