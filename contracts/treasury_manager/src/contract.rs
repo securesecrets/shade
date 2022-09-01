@@ -1,3 +1,4 @@
+use crate::{execute, query, storage::*};
 use shade_protocol::{
     c_std::{
         shd_entry_point,
@@ -13,19 +14,9 @@ use shade_protocol::{
     },
     dao::{
         manager,
-        treasury_manager::{
-            Config,
-            ExecuteMsg,
-            Holding,
-            InstantiateMsg,
-            QueryAnswer,
-            QueryMsg,
-            Status,
-        },
+        treasury_manager::{Config, ExecuteMsg, Holding, InstantiateMsg, QueryMsg, Status},
     },
 };
-
-use crate::{execute, query, storage::*};
 
 #[shd_entry_point]
 pub fn instantiate(
