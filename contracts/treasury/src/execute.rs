@@ -1,5 +1,5 @@
 use crate::storage::*;
-use itertools::{Either, Itertools};
+//use itertools::{Either, Itertools};
 use shade_protocol::{
     c_std::{
         to_binary,
@@ -224,23 +224,28 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
     }
 
     // partition into amounts and poritons
-    let (amounts, portions): (Vec<AllowanceMeta>, Vec<AllowanceMeta>) = allowances
-        .clone()
-        .into_iter()
-        .partition_map(|a| match a.allowance_type {
-            AllowanceType::Amount => Either::Left(a),
-            AllowanceType::Portion => Either::Right(a),
-        });
+    /*let (amounts, portions): (Vec<AllowanceMeta>, Vec<AllowanceMeta>) = allowances
+    .clone()
+    .into_iter()
+    .partition_map(|a| match a.allowance_type {
+        AllowanceType::Amount => Either::Left(a),
+        AllowanceType::Portion => Either::Right(a),
+    });*/
+    allowances.sort_by(|a, b| match a.allowance_type {
+        AllowanceType::Amount => match b.allowance_type {
+            AllowanceType::Amount => std::cmp::Ordering::Equal,
+            AllowanceType::Portion => std::cmp::Ordering::Less,
+        },
+        AllowanceType::Portion => match b.allowance_type {
+            AllowanceType::Amount => std::cmp::Ordering::Greater,
+            AllowanceType::Portion => std::cmp::Ordering::Equal,
+        },
+    });
 
     /* Amounts given priority
      * portions are calculated after amounts are taken from total
      */
-    for allowance in amounts {
-        // subtract the amount from the total balance
-        if total_balance >= allowance.amount {
-            total_balance -= allowance.amount;
-        }
-
+    for allowance in allowances.clone() {
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
 
         // Refresh allowance if cycle is exceeded
@@ -256,72 +261,109 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             }
         }
 
-        // get bal and cur allow from metadata
+        let desired_amount = match allowance.allowance_type {
+            AllowanceType::Amount => {
+                if total_balance >= allowance.amount {
+                    total_balance -= allowance.amount;
+                }
+                allowance.amount
+            }
+            AllowanceType::Portion => {
+                total_balance.multiply_ratio(allowance.amount, ONE_HUNDRED_PERCENT)
+            }
+        };
+
+        let threshold = desired_amount.multiply_ratio(allowance.tolerance, ONE_HUNDRED_PERCENT);
         let (balance, cur_allowance) = metadata[&allowance.spender];
+        let total = balance + cur_allowance;
 
-        // if the difference of cur bal and allowance doesn't cross threshold, continue
-        // calculate threshold here
-        let threshold = allowance
-            .amount
-            .multiply_ratio(allowance.tolerance, ONE_HUNDRED_PERCENT);
-
-        match allowance.amount.cmp(&(cur_allowance + balance)) {
+        match desired_amount.cmp(&total) {
             // Decrease Allowance
             std::cmp::Ordering::Less => {
                 // decrease is cur_allow + bal - allow.amount because the current amount of funds
                 // the spender has access to is it's current allowance plus it balance, so to
                 // find the decrease, we subtract that by the amount the allowance is set to
-                let decrease = (cur_allowance + balance) - allowance.amount;
+                let mut decrease = total - desired_amount;
                 // threshold check
                 if decrease <= threshold {
                     continue;
                 }
-                messages.push(decrease_allowance_msg(
-                    allowance.spender.clone(),
-                    decrease,
-                    None,
-                    None,
-                    1,
-                    &full_asset.contract.clone(),
-                    vec![],
-                )?);
-                metrics.push(Metric {
-                    action: Action::DecreaseAllowance,
-                    context: Context::Rebalance,
-                    timestamp: env.block.time.seconds(),
-                    token: asset.clone(),
-                    amount: decrease,
-                    user: allowance.spender.clone(),
-                });
-
-                // reduce amount allowance by decrease to reflect the decrease allowance msg
-                /*if decrease > amount_allowance {
-                    amount_allowance = Uint128::zero();
-                } else {
-                    amount_allowance -= decrease;
-                }*/
-
-                if decrease > cur_allowance {
-                    if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
-                        messages.push(manager::unbond_msg(
-                            &asset.clone(),
-                            decrease - cur_allowance,
-                            m.clone(),
+                // Allowance fully covers amount needed
+                if cur_allowance >= decrease {
+                    if !decrease.is_zero() {
+                        messages.push(decrease_allowance_msg(
+                            allowance.spender.clone(),
+                            decrease,
+                            None,
+                            None,
+                            1,
+                            &full_asset.contract.clone(),
+                            vec![],
                         )?);
                         metrics.push(Metric {
-                            action: Action::Unbond,
+                            action: Action::DecreaseAllowance,
                             context: Context::Rebalance,
                             timestamp: env.block.time.seconds(),
                             token: asset.clone(),
-                            amount: decrease - cur_allowance,
-                            user: m.address.clone(),
+                            amount: decrease,
+                            user: allowance.spender.clone(),
                         });
+                    }
+                }
+                // Reduce allowance then unbond
+                else {
+                    if !cur_allowance.is_zero() {
+                        messages.push(decrease_allowance_msg(
+                            allowance.spender.clone(),
+                            cur_allowance,
+                            None,
+                            None,
+                            1,
+                            &full_asset.contract.clone(),
+                            vec![],
+                        )?);
+                        metrics.push(Metric {
+                            action: Action::DecreaseAllowance,
+                            context: Context::Rebalance,
+                            timestamp: env.block.time.seconds(),
+                            token: asset.clone(),
+                            amount: cur_allowance,
+                            user: allowance.spender.clone(),
+                        });
+                    }
+
+                    decrease -= cur_allowance;
+
+                    // Unbond remaining
+                    if !decrease.is_zero() {
+                        if let Some(m) =
+                            MANAGER.may_load(deps.storage, allowance.spender.clone())?
+                        {
+                            messages.push(manager::unbond_msg(
+                                &asset.clone(),
+                                decrease,
+                                m.clone(),
+                            )?);
+                            metrics.push(Metric {
+                                action: Action::Unbond,
+                                context: Context::Rebalance,
+                                timestamp: env.block.time.seconds(),
+                                token: asset.clone(),
+                                amount: decrease,
+                                user: m.address.clone(),
+                            });
+                        } else {
+                            return Err(StdError::generic_err(format!(
+                                "Can't unbond from non-manager {}",
+                                allowance.spender.clone()
+                            )));
+                        }
                     }
                 }
             }
             // Increase Allowance
             std::cmp::Ordering::Greater => {
-                let increase = allowance.amount - (cur_allowance + balance);
+                let increase = desired_amount - (cur_allowance + balance);
                 if increase <= threshold {
                     continue;
                 }
@@ -347,132 +389,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                 }
             }
             _ => {}
-        }
-    }
-
-    /*let mut portion_total = portion_balance; // + (token_balance - amount_allowance);
-    if amount_allowance > token_balance {
-        portion_total -= amount_allowance - token_balance;
-    } else {
-        portion_total += token_balance - amount_allowance;
-    }*/
-    /*if total_balance > portion_total {
-        portion_total = total_balance;
-    }*/
-    //let portion_total = total_balance;
-
-    for allowance in portions {
-        let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
-        if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
-            continue;
-        }
-
-        let desired_amount = total_balance.multiply_ratio(allowance.amount, ONE_HUNDRED_PERCENT);
-        let threshold = desired_amount.multiply_ratio(allowance.tolerance, ONE_HUNDRED_PERCENT);
-
-        let (balance, cur_allowance) = metadata[&allowance.spender];
-        let total = balance + cur_allowance;
-
-        // UnderFunded
-        if total < desired_amount {
-            let increase = desired_amount - total;
-            if increase <= threshold {
-                continue;
-            }
-            if !increase.is_zero() {
-                messages.push(increase_allowance_msg(
-                    allowance.spender.clone(),
-                    increase,
-                    None,
-                    None,
-                    1,
-                    &full_asset.contract.clone(),
-                    vec![],
-                )?);
-                metrics.push(Metric {
-                    action: Action::IncreaseAllowance,
-                    context: Context::Rebalance,
-                    timestamp: env.block.time.seconds(),
-                    token: asset.clone(),
-                    amount: increase,
-                    user: allowance.spender.clone(),
-                });
-            }
-        }
-        // Overfunded
-        else if total > desired_amount {
-            let mut decrease = total - desired_amount;
-
-            if decrease <= threshold {
-                continue;
-            }
-
-            // Allowance fully covers amount needed
-            if cur_allowance >= decrease {
-                if !decrease.is_zero() {
-                    messages.push(decrease_allowance_msg(
-                        allowance.spender.clone(),
-                        decrease,
-                        None,
-                        None,
-                        1,
-                        &full_asset.contract.clone(),
-                        vec![],
-                    )?);
-                    metrics.push(Metric {
-                        action: Action::DecreaseAllowance,
-                        context: Context::Rebalance,
-                        timestamp: env.block.time.seconds(),
-                        token: asset.clone(),
-                        amount: decrease,
-                        user: allowance.spender.clone(),
-                    });
-                }
-            }
-            // Reduce allowance then unbond
-            else {
-                if !cur_allowance.is_zero() {
-                    messages.push(decrease_allowance_msg(
-                        allowance.spender.clone(),
-                        cur_allowance,
-                        None,
-                        None,
-                        1,
-                        &full_asset.contract.clone(),
-                        vec![],
-                    )?);
-                    metrics.push(Metric {
-                        action: Action::DecreaseAllowance,
-                        context: Context::Rebalance,
-                        timestamp: env.block.time.seconds(),
-                        token: asset.clone(),
-                        amount: cur_allowance,
-                        user: allowance.spender.clone(),
-                    });
-                }
-
-                decrease -= cur_allowance;
-
-                // Unbond remaining
-                if !decrease.is_zero() {
-                    if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender.clone())? {
-                        messages.push(manager::unbond_msg(&asset.clone(), decrease, m.clone())?);
-                        metrics.push(Metric {
-                            action: Action::Unbond,
-                            context: Context::Rebalance,
-                            timestamp: env.block.time.seconds(),
-                            token: asset.clone(),
-                            amount: decrease,
-                            user: m.address.clone(),
-                        });
-                    } else {
-                        return Err(StdError::generic_err(format!(
-                            "Can't unbond from non-manager {}",
-                            allowance.spender.clone()
-                        )));
-                    }
-                }
-            }
         }
     }
 
