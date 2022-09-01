@@ -4,7 +4,6 @@ members = [
   # Packages
   "packages/shade_protocol",
   "packages/secretcli",
-  "packages/contract_harness",
   "packages/multi_test",
   "packages/multi_derive",
   "packages/contract_derive",
@@ -15,37 +14,35 @@ members = [
   # Protocol contracts
   "contracts/snip20",
   "contracts/governance",
-  "contracts/bonds",
-  "contracts/mint",
-  "contracts/liability_mint",
-  "contracts/mint_router",
-  "contracts/oracle",
-  "contracts/sky",
+  # "contracts/bonds", //TODO: migrate to v1
+  # "contracts/mint", //TODO: delete or migrate
+  # "contracts/liability_mint", //TODO: delete or migrate
+  # "contracts/mint_router", //TODO: migrate to v1
+  # "contracts/oracle", //TODO: delete or migrate
+  # "contracts/sky", //TODO: migrate to v1
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",
 
   # DAO
   # - Core
-  "contracts/treasury",
-  "contracts/treasury_manager",
+  # "contracts/treasury", //TODO: migrate to v1
+  # "contracts/treasury_manager", //TODO: migrate to v1
   # - Adapters
-  "contracts/scrt_staking",
-  "contracts/rewards_emission",
-  #"contracts/lp_shade_swap",
+  # "contracts/scrt_staking", //TODO: migrate to v1
+  # "contracts/rewards_emission", //TODO: migrate to v1
+  # "contracts/lp_shade_swap",
 
-  "contracts/snip20_staking",
+  # "contracts/snip20_staking", //TODO: migrate to v1
   
   # Mock contracts
-  "contracts/mock_band",
-  "contracts/mock_secretswap_pair",
-  "contracts/mock_sienna_pair",
-  "contracts/mock_adapter",
+  # "contracts/mock_band", //TODO: migrate to v1
+  # "contracts/mock_secretswap_pair", //TODO: migrate to v1
+  # "contracts/mock_sienna_pair", //TODO: migrate to v1
+  # "contracts/mock_adapter", //TODO: migrate to v1
 
   # Tools
   "tools/doc2book",
-
-  #"packages/network_integration"
 ]
 
 exclude = ["packages/network_integration"]

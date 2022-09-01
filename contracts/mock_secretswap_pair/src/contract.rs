@@ -1,19 +1,21 @@
-use shade_protocol::c_std::{
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use shade_protocol::{
+    c_std::{
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
     contract_interfaces::{
         dex::{
             dex,
@@ -31,7 +33,6 @@ use shade_protocol::{
     },
     utils::asset::Contract,
 };
-use shade_protocol::c_std::Uint128;
 
 use shade_protocol::storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 
@@ -54,11 +55,7 @@ pub fn pool_w(storage: &mut dyn Storage) -> Singleton<PoolResponse> {
     singleton(storage, POOL)
 }
 
-pub fn init(
-    _deps: DepsMut,
-    _env: Env,
-    _msg: InstantiateMsg,
-) -> StdResult<Response> {
+pub fn init(_deps: DepsMut, _env: Env, _msg: InstantiateMsg) -> StdResult<Response> {
     Ok(Response::default())
 }
 
@@ -73,11 +70,7 @@ pub enum ExecuteMsg {
     },
 }
 
-pub fn handle(
-    deps: DepsMut,
-    _env: Env,
-    msg: ExecuteMsg,
-) -> StdResult<Response> {
+pub fn handle(deps: DepsMut, _env: Env, msg: ExecuteMsg) -> StdResult<Response> {
     return match msg {
         ExecuteMsg::MockPool {
             token_a,
@@ -132,10 +125,7 @@ pub fn handle(
     };
 }
 
-pub fn query(
-    deps: Deps,
-    msg: PairQuery,
-) -> StdResult<Binary> {
+pub fn query(deps: Deps, msg: PairQuery) -> StdResult<Binary> {
     match msg {
         PairQuery::Pool {} => to_binary(&pool_r(deps.storage).load()?),
         PairQuery::Pair {} => to_binary(&pair_info_r(deps.storage).load()?),

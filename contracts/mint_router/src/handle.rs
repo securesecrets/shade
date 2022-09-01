@@ -7,7 +7,25 @@ use shade_protocol::chrono::prelude::*;
 use shade_protocol::snip20::helpers::{
     burn_msg, mint_msg, register_receive, send_msg, token_config, token_info_query, TokenConfig,
 };
+
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        CosmosMsg,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        Uint128,
+    },
     contract_interfaces::{
         mint::{
             mint,
@@ -16,7 +34,16 @@ use shade_protocol::{
         oracles::{band::ReferenceData, oracle::QueryMsg::Price},
         snip20::helpers::Snip20Asset,
     },
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    snip20::helpers::{
+        burn_msg,
+        mint_msg,
+        register_receive,
+        send_msg,
+        token_config,
+        token_info_query,
+        TokenConfig,
+    },
+    utils::{asset::Contract, generic_response::ResponseStatus, Query},
 };
 use std::{cmp::Ordering, convert::TryFrom};
 
@@ -49,7 +76,7 @@ pub fn receive(
             offer_asset: input_asset.address.clone(),
             amount: input_amount,
         }
-        .query(&deps.querier, mint.code_hash.clone(), mint.address.clone())?)
+        .query(&deps.querier, mint.clone())?)
         {
             mint::QueryAnswer::Mint { asset, amount } => (asset, amount),
             _ => {
@@ -60,26 +87,22 @@ pub fn receive(
         if output_asset.address == final_asset {
             // Send with the msg for slippage
             messages.push(send_msg(
-                mint.address.clone(),
+                mint.address.to_string(),
                 input_amount.into(),
                 msg.clone(),
                 None,
                 None,
-                1,
-                input_asset.code_hash.clone(),
-                input_asset.address.clone(),
+                input_asset.clone * (),
             )?);
         } else {
             // ignore slippage for intermediate steps
             messages.push(send_msg(
-                mint.address.clone(),
+                mint.address.to_string(),
                 input_amount.into(),
                 None,
                 None,
                 None,
-                1,
-                input_asset.code_hash.clone(),
-                input_asset.address.clone(),
+                input_asset.clone(),
             )?);
         }
 
@@ -88,14 +111,12 @@ pub fn receive(
     }
 
     messages.push(send_msg(
-        from.clone(),
+        from.to_string(),
         input_amount.into(),
         None,
         None,
         None,
-        1,
-        input_asset.code_hash.clone(),
-        input_asset.address.clone(),
+        input_asset.clone(),
     )?);
 
     Ok(Response::new().set_data(to_binary(&HandleAnswer::Mint {
@@ -164,7 +185,7 @@ pub fn build_path(
                 messages.push(register_receive(
                     env.contract.code_hash.clone(),
                     None,
-                    asset,
+                    &asset,
                 )?);
                 registered_asset_w(deps.storage)
                     .save(&asset.address.to_string().as_bytes(), &asset)?;
@@ -194,7 +215,7 @@ pub fn build_path(
         messages.push(register_receive(
             env.contract.code_hash.clone(),
             None,
-            final_asset,
+            &final_asset,
         )?);
         registered_asset_w(deps.storage)
             .save(&final_asset.address.to_string().as_bytes(), &final_asset)?;

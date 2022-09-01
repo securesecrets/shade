@@ -54,12 +54,12 @@ pub mod governance {
     multi_derive::implement_multi!(Governance, governance);
 }
 
-#[cfg(feature = "snip20_staking")]
-pub mod snip20_staking {
-    use spip_stkd_0;
-
-    multi_derive::implement_multi!(Snip20Staking, spip_stkd_0);
-}
+// #[cfg(feature = "snip20_staking")]
+// pub mod snip20_staking {
+//     use spip_stkd_0;
+//
+//     multi_derive::implement_multi!(Snip20Staking, spip_stkd_0);
+// }
 
 // #[cfg(feature = "bonds")]
 // pub mod bonds {
