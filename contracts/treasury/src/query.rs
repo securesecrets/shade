@@ -1,25 +1,15 @@
-use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::secret_toolkit::{
-    snip20::{allowance_query, balance_query},
-};
-use shade_protocol::contract_interfaces::{
-    dao::{
-        manager, 
-        treasury::{self, storage::*},
+use shade_protocol::{
+    c_std::{Api, Deps, Addr, Querier, StdError, StdResult, Storage, Uint128},
+    snip20::helpers::{allowance_query, balance_query},
+    contract_interfaces::{
+        dao::{
+            manager, 
+            treasury,
+        },
     },
 };
 
-/*
-use crate::state::{
-    allowances_r,
-    asset_list_r,
-    assets_r,
-    config_r,
-    managers_r,
-    self_address_r,
-    viewing_key_r,
-};
-*/
+use crate::storage::*;
 
 pub fn config(
     deps: Deps,
@@ -43,11 +33,8 @@ pub fn balance(
                 &deps.querier,
                 SELF_ADDRESS.load(deps.storage)?,
                 VIEWING_KEY.load(deps.storage)?,
-                1,
-                a.contract.code_hash.clone(),
-                a.contract.address.clone(),
-            )?
-            .amount;
+                &a.contract.clone(),
+            )?;
 
             //panic!("BALANCE {}", balance);
 
@@ -62,7 +49,7 @@ pub fn balance(
                             .find(|m| m.contract.address == spender)
                             .unwrap();
                         balance += manager::balance_query(
-                            &deps,
+                            deps.querier,
                             &asset.clone(),
                             self_address.clone(),
                             manager.contract,
@@ -73,10 +60,7 @@ pub fn balance(
             }
             Ok(manager::QueryAnswer::Balance { amount: balance })
         }
-        None => Err(StdError::NotFound {
-            kind: asset.to_string(),
-            backtrace: None,
-        }),
+        None => Err(StdError::generic_err(format!("Asset not found: {}", asset.to_string()))),
     }
 }
 
@@ -93,12 +77,10 @@ pub fn reserves(
         Some(a) => {
             let mut reserves = balance_query(
                 &deps.querier,
-                self_address.clone(),
+                self_address,
                 VIEWING_KEY.load(deps.storage)?,
-                1,
-                a.contract.code_hash.clone(),
-                a.contract.address.clone(),
-            )?.amount;
+                &a.contract.clone(),
+            )?;
 
             /*
             for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
@@ -140,7 +122,7 @@ pub fn unbonding(
                     .into_iter()
                     .find(|m| m.contract.address == spender)
                     .unwrap();
-                unbonding += manager::unbonding_query(&deps, &asset, self_address.clone(), manager.contract)?;
+                unbonding += manager::unbonding_query(deps.querier, &asset, self_address.clone(), manager.contract)?;
             }
             _ => {}
         };
@@ -158,7 +140,7 @@ pub fn unbondable(
     let self_address = SELF_ADDRESS.load(deps.storage)?;
 
     for manager in managers {
-        unbondable += manager::unbondable_query(&deps, &asset, self_address.clone(), manager.contract)?;
+        unbondable += manager::unbondable_query(deps.querier, &asset, self_address.clone(), manager.contract)?;
     }
     /*
     for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
@@ -188,14 +170,14 @@ pub fn claimable(
     let claimable = managers
         .into_iter()
         .map(|m| manager::claimable_query(
-                &deps, 
+                deps.querier, 
                 &asset, 
                 self_address.clone(),
                 m.contract
             ).ok().unwrap().u128())
         .sum();
 
-    Ok(manager::QueryAnswer::Claimable { amount: Uint128(claimable) })
+    Ok(manager::QueryAnswer::Claimable { amount: Uint128::new(claimable) })
 }
 
 pub fn allowance(
@@ -213,12 +195,11 @@ pub fn allowance(
             spender.clone(),
             key,
             1,
-            full_asset.contract.code_hash.clone(),
-            full_asset.contract.address.clone(),
+            &full_asset.contract.clone(),
         )?;
 
         return Ok(treasury::QueryAnswer::Allowance {
-            amount: cur_allowance.allowance,
+            amount: cur_allowance.amount,
         });
     }
 

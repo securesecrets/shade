@@ -14,7 +14,7 @@ rm ./$(1).wasm
 endef
 
 CONTRACTS = \
-		airdrop bonds governance snip20_staking mint mint_router \
+		airdrop bonds governance snip20_staking mint liability_mint mint_router \
 		treasury treasury_manager scrt_staking rewards_emission \
 		oracle snip20 query_auth sky peg_stability admin\
 		mock_band mock_secretswap_pair mock_sienna_pair mock_adapter

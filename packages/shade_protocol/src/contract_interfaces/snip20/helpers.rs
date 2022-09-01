@@ -1,8 +1,7 @@
 use super::{
+    batch,
     manager::{Allowance, AllowanceResponse},
-    ExecuteMsg,
-    QueryAnswer,
-    QueryMsg,
+    ExecuteMsg, QueryAnswer, QueryMsg,
 };
 use crate::{
     c_std::{Addr, Binary, CosmosMsg, QuerierWrapper, StdError, StdResult, Uint128},
@@ -26,27 +25,10 @@ pub fn fetch_snip20(contract: &Contract, querier: &QuerierWrapper) -> StdResult<
     })
 }
 
-pub fn balance_query(
-    contract: &Contract,
-    self_addr: String,
-    viewing_key: String,
-    querier: &QuerierWrapper,
-) -> StdResult<Uint128> {
-    let res = QueryMsg::Balance {
-        address: self_addr,
-        key: viewing_key,
-    }
-    .query(querier, contract)?;
-    match res {
-        QueryAnswer::Balance { amount } => Ok(amount),
-        _ => Err(StdError::generic_err("Unexpected query response")),
-    }
-}
-
 /// Returns a StdResult<CosmosMsg> used to execute Send
 #[allow(clippy::too_many_arguments)]
 pub fn send_msg(
-    recipient: String,
+    recipient: Addr,
     amount: Uint128,
     msg: Option<Binary>,
     memo: Option<String>,
@@ -54,7 +36,7 @@ pub fn send_msg(
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     Ok(ExecuteMsg::Send {
-        recipient,
+        recipient: recipient.to_string(),
         recipient_code_hash: None,
         amount,
         msg,
@@ -85,22 +67,25 @@ pub fn deposit_msg(
     padding: Option<String>,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Deposit { padding }.to_cosmos_msg(contract, vec![Coin {
-        denom: "uscrt".to_string(),
-        amount,
-    }])
+    ExecuteMsg::Deposit { padding }.to_cosmos_msg(
+        contract,
+        vec![Coin {
+            denom: "uscrt".to_string(),
+            amount,
+        }],
+    )
 }
 
 /// Returns a StdResult<CosmosMsg> used to execute Mint
 pub fn mint_msg(
-    recipient: String,
+    recipient: Addr,
     amount: Uint128,
     memo: Option<String>,
     padding: Option<String>,
     contract: &Contract,
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::Mint {
-        recipient,
+        recipient: recipient.to_string(),
         amount,
         memo,
         padding,
@@ -148,6 +133,22 @@ pub fn set_viewing_key_msg(
     .to_cosmos_msg(contract, vec![])
 }
 
+pub fn batch_send_msg(
+    actions: Vec<batch::SendAction>,
+    padding: Option<String>,
+    contract: &Contract,
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::BatchSend { actions, padding }.to_cosmos_msg(contract, vec![])
+}
+
+pub fn batch_send_from_msg(
+    actions: Vec<batch::SendFromAction>,
+    padding: Option<String>,
+    contract: &Contract,
+) -> StdResult<CosmosMsg> {
+    ExecuteMsg::BatchSendFrom { actions, padding }.to_cosmos_msg(contract, vec![])
+}
+
 /// TokenInfo response
 #[cw_serde]
 pub struct TokenInfo {
@@ -174,6 +175,25 @@ pub fn token_info(querier: &QuerierWrapper, contract: &Contract) -> StdResult<To
             total_supply,
         }),
         _ => Err(StdError::generic_err("Wrong answer")), //TODO: better error
+    }
+}
+
+/// Returns a StdResult<Uint128> from performing a Balance query
+pub fn balance_query(
+    querier: &QuerierWrapper,
+    address: Addr,
+    key: String,
+    contract: &Contract,
+) -> StdResult<Uint128> {
+    let answer: QueryAnswer = QueryMsg::Balance {
+        address: address.to_string(),
+        key,
+    }
+    .query(querier, contract)?;
+
+    match answer {
+        QueryAnswer::Balance { amount, .. } => Ok(amount),
+        _ => Err(StdError::generic_err("Invalid Balance Response")), //TODO: better error
     }
 }
 
@@ -225,7 +245,7 @@ pub fn token_config(querier: &QuerierWrapper, contract: &Contract) -> StdResult<
 /// * `callback_code_hash` - String holding the code hash of the contract being called
 /// * `contract_addr` - address of the contract being called
 pub fn increase_allowance_msg(
-    spender: String,
+    spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
     padding: Option<String>,
@@ -234,7 +254,7 @@ pub fn increase_allowance_msg(
     funds: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::IncreaseAllowance {
-        spender,
+        spender: spender.to_string(),
         amount,
         expiration,
         padding,
@@ -254,7 +274,7 @@ pub fn increase_allowance_msg(
 /// * `callback_code_hash` - String holding the code hash of the contract being called
 /// * `contract_addr` - address of the contract being called
 pub fn decrease_allowance_msg(
-    spender: String,
+    spender: Addr,
     amount: Uint128,
     expiration: Option<u64>,
     padding: Option<String>,
@@ -263,7 +283,7 @@ pub fn decrease_allowance_msg(
     funds: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
     ExecuteMsg::DecreaseAllowance {
-        spender,
+        spender: spender.to_string(),
         amount,
         expiration,
         padding,
@@ -285,15 +305,15 @@ pub fn decrease_allowance_msg(
 #[allow(clippy::too_many_arguments)]
 pub fn allowance_query(
     querier: &QuerierWrapper,
-    owner: String,
-    spender: String,
+    owner: Addr,
+    spender: Addr,
     key: String,
     block_size: usize,
     contract: &Contract,
 ) -> StdResult<AllowanceResponse> {
     let answer: QueryAnswer = QueryMsg::Allowance {
-        owner,
-        spender,
+        owner: owner.to_string(),
+        spender: spender.to_string(),
         key,
     }
     .query(querier, contract)?;

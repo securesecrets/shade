@@ -1,6 +1,10 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use cosmwasm_std::{
+use crate::utils::{
+    asset::Contract,
+    generic_response::ResponseStatus,
+};
+use crate::c_std::{
     Addr,
+    QuerierWrapper,
     Api,
     Binary,
     CosmosMsg,
@@ -19,7 +23,7 @@ use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
-pub enum SubHandleMsg {
+pub enum SubExecuteMsg {
     // Begin unbonding amount
     Unbond { asset: Addr, amount: Uint128 },
     Claim { asset: Addr },
@@ -27,13 +31,13 @@ pub enum SubHandleMsg {
     Update { asset: Addr },
 }
 
-impl ExecuteCallback for SubHandleMsg {
+impl ExecuteCallback for SubExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    Adapter(SubHandleMsg),
+    Adapter(SubExecuteMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -41,7 +45,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,
@@ -86,11 +90,15 @@ pub enum QueryAnswer {
     Reserves { amount: Uint128 },
 }
 
-pub fn claimable_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResult<Uint128> {
+pub fn claimable_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
+    adapter: Contract,
+) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Claimable {
         asset: asset.clone(),
     })
-    .query(&deps.querier, &adapter)?
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Claimable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -100,11 +108,15 @@ pub fn claimable_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResult
     }
 }
 
-pub fn unbonding_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResult<Uint128> {
+pub fn unbonding_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
+    adapter: Contract,
+) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Unbonding {
         asset: asset.clone(),
     })
-    .query(&deps.querier, &adapter)?
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -114,11 +126,15 @@ pub fn unbonding_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResult
     }
 }
 
-pub fn unbondable_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResult<Uint128> {
+pub fn unbondable_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
+    adapter: Contract,
+) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Unbondable {
         asset: asset.clone(),
     })
-    .query(&deps.querier, &adapter)?
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -128,12 +144,15 @@ pub fn unbondable_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResul
     }
 }
 
-pub fn reserves_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResult<Uint128> {
+pub fn reserves_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
+    adapter: Contract,
+) -> StdResult<Uint128> {
+
     match QueryMsg::Adapter(SubQueryMsg::Reserves {
         asset: asset.clone(),
-    })
-    .query(&deps.querier, &adapter)?
-    {
+    }).query(&querier, &adapter)? {
         QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
             "Failed to query adapter unbondable from {}",
@@ -142,11 +161,15 @@ pub fn reserves_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResult<
     }
 }
 
-pub fn balance_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResult<Uint128> {
+pub fn balance_query(
+    querier: QuerierWrapper,
+    asset: &Addr,
+    adapter: Contract,
+) -> StdResult<Uint128> {
     match QueryMsg::Adapter(SubQueryMsg::Balance {
         asset: asset.clone(),
     })
-    .query(&deps.querier, &adapter)?
+    .query(&querier, &adapter)?
     {
         QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -157,13 +180,22 @@ pub fn balance_query(deps: Deps, asset: &Addr, adapter: Contract) -> StdResult<U
 }
 
 pub fn claim_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubHandleMsg::Claim { asset }).to_cosmos_msg(&adapter, vec![])
+    ExecuteMsg::Adapter(SubExecuteMsg::Claim { asset }).to_cosmos_msg(
+        &adapter,
+        vec![],
+    )
 }
 
 pub fn unbond_msg(asset: Addr, amount: Uint128, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(&adapter, vec![])
+    ExecuteMsg::Adapter(SubExecuteMsg::Unbond { asset, amount }).to_cosmos_msg(
+        &adapter,
+        vec![],
+    )
 }
 
 pub fn update_msg(asset: Addr, adapter: Contract) -> StdResult<CosmosMsg> {
-    ExecuteMsg::Adapter(SubHandleMsg::Update { asset }).to_cosmos_msg(&adapter, vec![])
+    ExecuteMsg::Adapter(SubExecuteMsg::Update { asset }).to_cosmos_msg(
+        &adapter,
+        vec![],
+    )
 }

@@ -6,6 +6,7 @@ members = [
   "packages/secretcli",
   "packages/multi_test",
   "packages/multi_derive",
+  "packages/contract_derive",
 
   # Network setups
   "contracts/airdrop",
@@ -15,6 +16,7 @@ members = [
   "contracts/governance",
   # "contracts/bonds", //TODO: migrate to v1
   # "contracts/mint", //TODO: delete or migrate
+  # "contracts/liability_mint", //TODO: delete or migrate
   # "contracts/mint_router", //TODO: migrate to v1
   # "contracts/oracle", //TODO: delete or migrate
   # "contracts/sky", //TODO: migrate to v1

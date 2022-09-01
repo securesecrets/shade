@@ -1,32 +1,17 @@
-use shade_protocol::c_std::{Api, Extern, Addr, Querier, StdError, StdResult, Storage, Uint128};
-use shade_protocol::secret_toolkit::{
-    snip20::{allowance_query, balance_query},
-};
 use shade_protocol::{
-    contract_interfaces::{
-        dao::{
-            adapter,
-            manager,
-            treasury_manager::{
-                self,
-                storage::*,
-            },
-        },
+    c_std::{
+        Api, Addr, Querier, StdError, 
+        StdResult, Storage, Uint128, Deps,
+    },
+    snip20::helpers::{allowance_query, balance_query},
+    dao::{
+        adapter,
+        manager,
+        treasury_manager,
     },
 };
 
-/*
-use crate::state::{
-    allocations_r,
-    asset_list_r,
-    assets_r,
-    config_r,
-    self_address_r,
-    viewing_key_r,
-    holding_r,
-    holders_r,
-};
-*/
+use crate::storage::*;
 
 pub fn config(
     deps: Deps,
@@ -54,12 +39,11 @@ pub fn pending_allowance(
         SELF_ADDRESS.load(deps.storage)?,
         VIEWING_KEY.load(deps.storage)?,
         1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
-    )?;
+        &full_asset.contract.clone(),
+    )?.amount;
 
     Ok(treasury_manager::QueryAnswer::PendingAllowance {
-        amount: allowance.allowance,
+        amount: allowance,
     })
 }
 
@@ -73,10 +57,8 @@ pub fn reserves(
             &deps.querier,
             SELF_ADDRESS.load(deps.storage)?,
             VIEWING_KEY.load(deps.storage)?,
-            1,
-            full_asset.contract.code_hash.clone(),
-            full_asset.contract.address.clone(),
-        )?.amount;
+            &full_asset.contract.clone(),
+        )?;
 
         return Ok(manager::QueryAnswer::Reserves { 
             amount: reserves,
@@ -157,10 +139,8 @@ pub fn claimable(
         &deps.querier,
         SELF_ADDRESS.load(deps.storage)?,
         VIEWING_KEY.load(deps.storage)?,
-        1,
-        full_asset.contract.code_hash.clone(),
-        full_asset.contract.address.clone(),
-    )?.amount;
+        &full_asset.contract.clone(),
+    )?;
 
     /*
     let _config = config_r(deps.storage).load()?;
@@ -168,7 +148,7 @@ pub fn claimable(
     */
 
     for alloc in allocations {
-        claimable += adapter::claimable_query(&deps,
+        claimable += adapter::claimable_query(deps.querier,
                               &asset, alloc.contract.clone())?;
     }
 
@@ -240,10 +220,8 @@ pub fn unbondable(
             &deps.querier,
             SELF_ADDRESS.load(deps.storage)?,
             VIEWING_KEY.load(deps.storage)?,
-            1,
-            full_asset.contract.code_hash.clone(),
-            full_asset.contract.address.clone(),
-        )?.amount;
+            &full_asset.contract.clone(),
+        )?;
 
         for alloc in allocations {
             /*
@@ -252,7 +230,7 @@ pub fn unbondable(
                 break;
             }
             */
-            unbondable += adapter::unbondable_query(&deps,
+            unbondable += adapter::unbondable_query(deps.querier,
                                   &asset, alloc.contract.clone())?;
         }
 

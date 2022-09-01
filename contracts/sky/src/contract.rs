@@ -1,6 +1,6 @@
 use shade_protocol::{
     c_std::{
-        entry_point,
+        shd_entry_point,
         to_binary,
         Binary,
         Decimal,
@@ -75,7 +75,7 @@ pub fn init(
     Ok(Response::new().add_submessages(messages))
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::UpdateConfig {
@@ -119,7 +119,7 @@ pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> St
     }
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
