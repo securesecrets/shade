@@ -889,7 +889,7 @@ pub fn unbond(
         // that holder
         if u <= unbonding_tot {
             if u <= amount {
-                // if amount is > independent unbonding, we get retuce independent unbondings to
+                // if amount is > independent unbonding, we reduce independent unbondings to
                 // zero and return the amount we actually want to undbond from the adapters
                 UNBONDINGS.save(deps.storage, &Uint128::zero())?;
                 amount - u
@@ -906,6 +906,7 @@ pub fn unbond(
                 "Independent TM unbonding is greater than what the adapters are unbonding",
             ));*/
             // TODO figure out why we can't throw an error here
+            // NOTE it has something to do with gains/losses
             amount
         }
     };
@@ -1029,13 +1030,11 @@ pub fn unbond(
     let mut amount_total = Uint128::zero();
     let mut portion_total = Uint128::zero();
     let mut tot_unbond_available = Uint128::zero();
-    let mut tot_unbonding = Uint128::zero();
 
     // Gather adapter outstanding amounts
     for a in allocations {
         let bal = adapter::balance_query(deps.querier, &asset, a.contract.clone())?;
         let unbondable = adapter::unbondable_query(deps.querier, &asset, a.contract.clone())?;
-        let unbonding = adapter::unbonding_query(deps.querier, &asset, a.contract.clone())?;
 
         alloc_meta.push(AllocationTempData {
             contract: a.contract.clone(),
@@ -1044,11 +1043,10 @@ pub fn unbond(
             tolerance: a.tolerance.clone(),
             balance: bal,
             unbondable,
-            unbonding,
+            unbonding: Uint128::zero(),
         });
 
         tot_unbond_available += unbondable;
-        tot_unbonding += unbonding;
 
         match a.alloc_type {
             AllocationType::Amount => amount_total += bal,

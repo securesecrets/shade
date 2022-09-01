@@ -1,10 +1,9 @@
+use crate::storage::*;
 use shade_protocol::{
     c_std::{Addr, Deps, StdError, StdResult, Uint128},
     dao::{adapter, manager, treasury_manager},
     snip20::helpers::{allowance_query, balance_query},
 };
-
-use crate::storage::*;
 
 pub fn config(deps: Deps) -> StdResult<treasury_manager::QueryAnswer> {
     Ok(treasury_manager::QueryAnswer::Config {
@@ -69,8 +68,6 @@ pub fn unbonding(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
         return Err(StdError::generic_err("Not an asset"));
     }
 
-    //let allocations = allocations_r(deps.storage).load(asset.to_string().as_bytes())?;
-
     let _config = CONFIG.load(deps.storage)?;
 
     match HOLDING.may_load(deps.storage, holder)? {
@@ -96,7 +93,10 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
     let allocations = match ALLOCATIONS.may_load(deps.storage, asset.clone())? {
         Some(a) => a,
         None => {
-            return Err(StdError::generic_err("Not an asset"));
+            return Err(StdError::generic_err(format!(
+                "No allocations for {}",
+                asset
+            )));
         }
     };
     //TODO claiming needs ordered unbondings so other holders don't get bumped
@@ -130,21 +130,8 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
     }
 }
 
-/*NOTE Could be a situation where can_unbond returns true
- * but only partial balance available for unbond resulting
- * in stalled treasury trying to unbond more than is available
- */
 pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
     if let Some(full_asset) = ASSETS.may_load(deps.storage, asset.clone())? {
-        /*
-        let unbonder = match holder {
-            Some(h) => h,
-            None => config.treasury,
-        };
-        */
-
-        let config = CONFIG.load(deps.storage)?;
-
         let mut holder_balance = Uint128::zero();
         let mut holder_unbonding = Uint128::zero();
 
