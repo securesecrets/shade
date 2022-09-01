@@ -47,7 +47,7 @@ use shade_protocol::{
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
-static ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18);
+static ONE_HUNDRED_PERCENT = Uint128::new(10u128.pow(18));
 
 pub fn receive(
     deps: DepsMut,
@@ -61,20 +61,21 @@ pub fn receive(
     let config = CONFIG.load(deps.storage)?;
     let asset = ASSETS.load(deps.storage, info.sender.clone())?;
 
+    METRICS.pushf(deps.storage, env.block.time, Metric {
+        action: Action::FundsReceived,
+        context: Context::Receive,
+        timestamp: env.block.time.seconds(),
+        token: info.sender,
+        amount,
+        user: from,
+    })?;
+
     // Do nothing if its an adapter (claimed funds)
     if let Some(_) = ALLOCATIONS
         .load(deps.storage, info.sender.clone())?
         .iter()
         .find(|a| a.contract.address == from)
     {
-        METRICS.pushf(deps.storage, env.block.time, Metric {
-            action: Action::FundsReceived,
-            context: Context::Receive,
-            timestamp: env.block.time.seconds(),
-            token: info.sender,
-            amount,
-            user: from,
-        })?;
         return Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
             status: ResponseStatus::Success,
         })?));
@@ -102,15 +103,6 @@ pub fn receive(
             });
         }
         Ok(holding)
-    })?;
-
-    METRICS.pushf(deps.storage, env.block.time, Metric {
-        action: Action::FundsReceived,
-        context: Context::Receive,
-        timestamp: env.block.time.seconds(),
-        token: info.sender,
-        amount,
-        user: from,
     })?;
 
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
@@ -192,7 +184,6 @@ pub fn allocate(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    /* ADMIN ONLY */
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryManager,
@@ -200,23 +191,23 @@ pub fn allocate(
         &config.admin_auth,
     )?;
 
-    let mut apps = ALLOCATIONS
+    let mut allocations = ALLOCATIONS
         .may_load(deps.storage, asset.clone())?
         .unwrap_or_default();
 
     // adapters can't have two allocations so remove the duplicate
-    let stale_alloc = apps
+    let stale_alloc = allocations
         .iter()
         .position(|a| a.contract.address == allocation.contract.address);
 
     match stale_alloc {
         Some(i) => {
-            apps.swap_remove(i);
+            allocations.swap_remove(i);
         }
         None => {}
     };
 
-    apps.push(AllocationMeta {
+    allocations.push(AllocationMeta {
         nick: allocation.nick,
         contract: allocation.contract,
         amount: allocation.amount,
@@ -225,16 +216,16 @@ pub fn allocate(
     });
 
     // ensure that the portion allocations don't go above 100%
-    if apps
+    if allocations
         .iter()
         .map(|a| {
             if a.alloc_type == AllocationType::Portion {
-                a.amount.u128()
+                a.amount
             } else {
-                0u128
+                Uint128::zero()
             }
         })
-        .sum::<u128>()
+        .sum::<Uint128>()
         > ONE_HUNDRED_PERCENT
     {
         return Err(StdError::generic_err(
@@ -243,7 +234,7 @@ pub fn allocate(
     }
 
     // Sort the allocations Amount < Portion
-    apps.sort_by(|a, b| match a.alloc_type {
+    allocations.sort_by(|a, b| match a.alloc_type {
         AllocationType::Amount => match b.alloc_type {
             AllocationType::Amount => std::cmp::Ordering::Equal,
             AllocationType::Portion => std::cmp::Ordering::Less,
@@ -254,7 +245,7 @@ pub fn allocate(
         },
     });
 
-    ALLOCATIONS.save(deps.storage, asset.clone(), &apps)?;
+    ALLOCATIONS.save(deps.storage, asset.clone(), &allocations)?;
 
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::Allocate {
@@ -372,13 +363,11 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
 
     let mut allocations = ALLOCATIONS.load(deps.storage, asset.clone())?;
 
-    // Build metadata
-    // amount_total is the sum of balances on adapters with amount allocations
+    // the sum of balances on 'amount' adapters
     let mut amount_total = Uint128::zero();
-    // protion_total is the sum of balances on adapters with portion allocaitons
+    // the sum of balances on 'portion' adapters
     let mut portion_total = Uint128::zero();
-    // vec to keep track of if any allocations need to be removed
-    let mut stale_allocs = vec![];
+    // allocations marked for removal
     let mut messages = vec![];
     let mut adapter_info = vec![];
 
@@ -437,9 +426,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
         // fill totals with data
         match a.alloc_type {
             AllocationType::Amount => amount_total += bal,
-            AllocationType::Portion => {
-                portion_total += bal;
-            }
+            AllocationType::Portion => portion_total += bal,
         };
     }
 
@@ -474,6 +461,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     // Batch send_from actions
     let mut send_from_actions = vec![];
     let mut send_actions = vec![];
+    let mut metrics = vec![];
 
     let key = VIEWING_KEY.load(deps.storage)?;
 
@@ -503,7 +491,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     // This gives us our total allowance from the treasury, used and unused
     let total = out_total + allowance;
 
-    //setting up vars
+    // setting up vars
     let mut allowance_used = Uint128::zero();
     let mut balance_used = Uint128::zero();
     let mut reserved_for_amount_adapters = Uint128::zero();
@@ -574,14 +562,14 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                     msg: None,
                     memo: None,
                 });
-                METRICS.pushf(deps.storage, env.block.time, Metric {
+                metrics.push(Metric {
                     action: Action::SendFunds,
                     context: Context::Update,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
                     amount: desired_input,
                     user: adapter.contract.address.clone(),
-                })?;
+                });
 
                 // reduce snip20 balance for future loops
                 balance = balance - desired_input;
@@ -599,14 +587,14 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                     msg: None,
                     memo: None,
                 });
-                METRICS.pushf(deps.storage, env.block.time, Metric {
+                metrics.push(Metric {
                     action: Action::SendFunds,
                     context: Context::Update,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
                     amount: balance,
                     user: adapter.contract.address.clone(),
-                })?;
+                });
 
                 // reduce the desired_input to reflect the balance being sent, we know this will
                 // not overflow because if balance was > desired_input, we would have hit a
@@ -628,14 +616,14 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                         msg: None,
                         memo: None,
                     });
-                    METRICS.pushf(deps.storage, env.block.time, Metric {
+                    metrics.push(Metric {
                         action: Action::SendFundsFrom,
                         context: Context::Update,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
                         amount: desired_input,
                         user: adapter.contract.address.clone(),
-                    })?;
+                    });
 
                     allowance_used += desired_input;
                     // this will not overflow due to check in if statement
@@ -654,14 +642,14 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                         msg: None,
                         memo: None,
                     });
-                    METRICS.pushf(deps.storage, env.block.time, Metric {
+                    metrics.push(Metric {
                         action: Action::SendFundsFrom,
                         context: Context::Update,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
                         amount: allowance,
                         user: adapter.contract.address.clone(),
-                    })?;
+                    });
 
                     // account for allowance being sent out
                     allowance_used += allowance;
@@ -673,6 +661,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
         else if effective_balance > desired_amount {
             // balance - target balance will give the amount we need to unbond
             let desired_output = effective_balance - desired_amount;
+
             // check to see that the threshold has been crossed
             if desired_output <= threshold {
                 continue;
@@ -685,14 +674,14 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                         desired_output.clone(),
                         adapter.contract.clone(),
                     )?);
-                    METRICS.pushf(deps.storage, env.block.time, Metric {
+                    metrics.push(Metric {
                         action: Action::Unbond,
                         context: Context::Update,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
                         amount: desired_output,
                         user: adapter.contract.address.clone(),
-                    })?;
+                    });
                 }
                 let unbondings = UNBONDINGS.load(deps.storage)? + desired_output;
                 UNBONDINGS.save(deps.storage, &unbondings)?;
@@ -703,14 +692,14 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                         adapter.unbondable.clone(),
                         adapter.contract.clone(),
                     )?);
-                    METRICS.pushf(deps.storage, env.block.time, Metric {
+                    metrics.push(Metric {
                         action: Action::Unbond,
                         context: Context::Update,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
                         amount: adapter.unbondable,
                         user: adapter.contract.address.clone(),
-                    })?;
+                    });
                 }
                 let unbondings = UNBONDINGS.load(deps.storage)? + adapter.unbondable;
                 UNBONDINGS.save(deps.storage, &unbondings)?;
@@ -743,6 +732,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
 
     // Determine Gainz & Losses & credit to treasury
     holder_principal += allowance_used;
+
     // this will never overflow because total is a sum of allowance
     if total - allowance > holder_principal {
         let gains = (total - allowance) - holder_principal;
@@ -752,14 +742,14 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
             holding.balances[i].amount += gains;
         }
         HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
-        METRICS.pushf(deps.storage, env.block.time, Metric {
+        metrics.push(Metric {
             action: Action::RealizeGains,
             context: Context::Update,
             timestamp: env.block.time.seconds(),
             token: asset.clone(),
             amount: gains,
             user: config.treasury.clone(),
-        })?;
+        });
     } else if total - allowance < holder_principal {
         let losses = holder_principal - (total - allowance);
         // credit losses to treasury
@@ -768,17 +758,17 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
             holding.balances[i].amount -= losses;
         }
         HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
-        METRICS.pushf(deps.storage, env.block.time, Metric {
+        metrics.push(Metric {
             action: Action::RealizeLosses,
             context: Context::Update,
             timestamp: env.block.time.seconds(),
             token: asset.clone(),
             amount: losses,
             user: config.treasury.clone(),
-        })?;
+        });
     }
 
-    // push batch messages
+    // exec batch balance send messages
     if !send_actions.is_empty() {
         messages.push(batch_send_msg(
             send_actions,
@@ -787,7 +777,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
         )?);
     }
 
-    // push batch messages
+    // exec batch allowance send messages
     if !send_from_actions.is_empty() {
         messages.push(batch_send_from_msg(
             send_from_actions,
@@ -795,6 +785,8 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
             &full_asset.contract.clone(),
         )?);
     }
+
+    METRICS.appendf(deps.storage, env.block.time, metrics)?;
 
     Ok(Response::new().add_messages(messages).set_data(to_binary(
         &adapter::ExecuteAnswer::Update {
@@ -889,8 +881,8 @@ pub fn unbond(
         // that holder
         if u <= unbonding_tot {
             if u <= amount {
-                // if amount is > independent unbonding, we reduce independent unbondings to
-                // zero and return the amount we actually want to undbond from the adapters
+                // if amount > independent unbonding, we reduce independent unbondings to
+                // zero and return the amount we actually want to unbond from the adapters
                 UNBONDINGS.save(deps.storage, &Uint128::zero())?;
                 amount - u
             } else {
@@ -944,6 +936,7 @@ pub fn unbond(
     }
 
     let mut messages = vec![];
+    let mut metrics = vec![];
 
     // Send available reserves to unbonder
     if reserves > Uint128::zero() {
@@ -958,14 +951,14 @@ pub fn unbond(
                 None,
                 &full_asset.contract.clone(),
             )?);
-            METRICS.pushf(deps.storage, env.block.time, Metric {
+            metrics.push(Metric {
                 action: Action::SendFunds,
                 context: Context::Unbond,
                 timestamp: env.block.time.seconds(),
                 token: asset.clone(),
                 amount: reserves,
                 user: unbonder.clone(),
-            })?;
+            });
             unbond_amount = unbond_amount - reserves;
 
             // Reflect sent funds in unbondings
@@ -990,14 +983,14 @@ pub fn unbond(
                 None,
                 &full_asset.contract.clone(),
             )?);
-            METRICS.pushf(deps.storage, env.block.time, Metric {
+            metrics.push(Metric {
                 action: Action::SendFunds,
                 context: Context::Unbond,
                 timestamp: env.block.time.seconds(),
                 token: asset.clone(),
                 amount,
                 user: unbonder.clone(),
-            })?;
+            });
 
             // Reflect sent funds in unbondings
             HOLDING.update(deps.storage, unbonder, |h| {
@@ -1012,6 +1005,7 @@ pub fn unbond(
                 Ok(holder)
             })?;
 
+            METRICS.appendf(deps.storage, env.block.time, metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1062,15 +1056,16 @@ pub fn unbond(
                 a.unbondable.clone(),
                 a.contract.clone(),
             )?);
-            METRICS.pushf(deps.storage, env.block.time, Metric {
+            metrics.push(Metric {
                 action: Action::Unbond,
                 context: Context::Unbond,
                 timestamp: env.block.time.seconds(),
                 token: asset.clone(),
                 amount: a.balance.clone(),
                 user: a.contract.address.clone(),
-            })?;
+            });
         }
+        METRICS.appendf(deps.storage, env.block.time, metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1109,15 +1104,16 @@ pub fn unbond(
                 unbond_amounts[i],
                 meta.contract.clone(),
             )?);
-            METRICS.pushf(deps.storage, env.block.time, Metric {
+            metrics.push(Metric {
                 action: Action::Unbond,
                 context: Context::Unbond,
                 timestamp: env.block.time.seconds(),
                 token: asset.clone(),
                 amount: unbond_amounts[i],
                 user: meta.contract.address.clone(),
-            })?;
+            });
         }
+        METRICS.appendf(deps.storage, env.block.time, metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1144,15 +1140,16 @@ pub fn unbond(
                 unbond_amounts[i],
                 meta.contract.clone(),
             )?);
-            METRICS.pushf(deps.storage, env.block.time, Metric {
+            metrics.push(Metric {
                 action: Action::Unbond,
                 context: Context::Unbond,
                 timestamp: env.block.time.seconds(),
                 token: asset.clone(),
                 amount: unbond_amounts[i],
                 user: meta.contract.address.clone(),
-            })?;
+            });
         }
+        METRICS.appendf(deps.storage, env.block.time, metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1171,14 +1168,14 @@ pub fn unbond(
                     unbond_amounts[i],
                     meta.contract.clone(),
                 )?);
-                METRICS.pushf(deps.storage, env.block.time, Metric {
+                metrics.push(Metric {
                     action: Action::Unbond,
                     context: Context::Unbond,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
                     amount: unbond_amounts[i],
                     user: meta.contract.address.clone(),
-                })?;
+                });
             }
         }
         let amount_adapt_tot_unbonding = total_amount_unbonding;
@@ -1200,30 +1197,31 @@ pub fn unbond(
                     unbond_from_portion + Uint128::new(1),
                     meta.contract.clone(),
                 )?);
-                METRICS.pushf(deps.storage, env.block.time, Metric {
+                metrics.push(Metric {
                     action: Action::Unbond,
                     context: Context::Unbond,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
                     amount: unbond_from_portion + Uint128::new(1),
                     user: meta.contract.address.clone(),
-                })?;
+                });
             } else if !unbond_from_portion.is_zero() {
                 messages.push(adapter::unbond_msg(
                     &full_asset.contract.address.clone(),
                     unbond_from_portion,
                     meta.contract.clone(),
                 )?);
-                METRICS.pushf(deps.storage, env.block.time, Metric {
+                metrics.push(Metric {
                     action: Action::Unbond,
                     context: Context::Unbond,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
                     amount: unbond_from_portion,
                     user: meta.contract.address.clone(),
-                })?;
+                });
             }
         }
+        METRICS.appendf(deps.storage, env.block.time, metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1241,14 +1239,14 @@ pub fn unbond(
                     meta.unbondable,
                     meta.contract.clone(),
                 )?);
-                METRICS.pushf(deps.storage, env.block.time, Metric {
+                metrics.push(Metric {
                     action: Action::Unbond,
                     context: Context::Unbond,
                     timestamp: env.block.time.seconds(),
                     token: asset.clone(),
                     amount: meta.unbondable,
                     user: meta.contract.address.clone(),
-                })?;
+                });
             }
             total_amount_unbonding += meta.unbondable;
         }
@@ -1262,16 +1260,17 @@ pub fn unbond(
                         unbond_amounts[i].clone(),
                         meta.contract.clone(),
                     )?);
-                    METRICS.pushf(deps.storage, env.block.time, Metric {
+                    metrics.push(Metric {
                         action: Action::Unbond,
                         context: Context::Unbond,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
                         amount: unbond_amounts[i].clone(),
                         user: meta.contract.address.clone(),
-                    })?;
+                    });
                 }
             }
+            METRICS.appendf(deps.storage, env.block.time, metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1306,16 +1305,17 @@ pub fn unbond(
                         unbond_amounts[i],
                         meta.contract.clone(),
                     )?);
-                    METRICS.pushf(deps.storage, env.block.time, Metric {
+                    metrics.push(Metric {
                         action: Action::Unbond,
                         context: Context::Unbond,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
                         amount: unbond_amounts[i].clone(),
                         user: meta.contract.address.clone(),
-                    })?;
+                    });
                 }
             }
+            METRICS.appendf(deps.storage, env.block.time, metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1352,6 +1352,7 @@ pub fn add_holder(
         unbondings: Vec::new(),
         status: Status::Active,
     })?;
+
     METRICS.pushf(deps.storage, env.block.time, Metric {
         action: Action::AddHolder,
         context: Context::Holders,

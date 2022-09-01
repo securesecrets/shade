@@ -122,7 +122,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&query::holding(deps, holder)?)
         }
         QueryMsg::Metrics { date, period } => {
-            todo!("implement");
+            let key = match date {
+                Some(d) => parse_utc_datetime(&d)?.timestamp() as u64,
+                None => env.block.time.seconds(),
+            };
+            to_binary(&QueryAnswer::Metrics {
+                metrics: METRICS.load_period(deps.storage, key, period)?,
+            })
         }
 
         QueryMsg::Manager(a) => match a {

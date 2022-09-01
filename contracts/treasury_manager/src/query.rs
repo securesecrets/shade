@@ -112,7 +112,6 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
         claimable += adapter::claimable_query(deps.querier, &asset, alloc.contract.clone())?;
     }
 
-    //TODO other unbondings
     match HOLDING.may_load(deps.storage, holder)? {
         Some(holder) => {
             let unbonding = match holder.unbondings.iter().find(|u| u.token == asset) {
@@ -131,56 +130,58 @@ pub fn claimable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::Qu
 }
 
 pub fn unbondable(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
-    if let Some(full_asset) = ASSETS.may_load(deps.storage, asset.clone())? {
-        let mut holder_balance = Uint128::zero();
-        let mut holder_unbonding = Uint128::zero();
-
-        match HOLDING.may_load(deps.storage, holder.clone())? {
-            Some(h) => {
-                if let Some(u) = h.unbondings.iter().find(|u| u.token == asset.clone()) {
-                    holder_unbonding += u.amount;
-                }
-                if let Some(b) = h.balances.iter().find(|b| b.token == asset.clone()) {
-                    holder_balance += b.amount;
-                }
-            }
-            None => {
-                return Err(StdError::generic_err("Invalid holder"));
-            }
+    let full_asset = match ASSETS.may_load(deps.storage, asset.clone())? {
+        Some(a) => a,
+        None => {
+            return Err(StdError::generic_err("Not a registered asset"));
         }
+    };
+    let mut holder_balance = Uint128::zero();
+    let mut holder_unbonding = Uint128::zero();
 
-        if holder_balance.is_zero() {
-            return Ok(manager::QueryAnswer::Unbondable {
-                amount: holder_balance,
-            });
-        }
-
-        let mut unbondable = balance_query(
-            &deps.querier,
-            SELF_ADDRESS.load(deps.storage)?,
-            VIEWING_KEY.load(deps.storage)?,
-            &full_asset.contract.clone(),
-        )?;
-
-        let allocations = ALLOCATIONS
-            .may_load(deps.storage, asset.clone())?
-            .unwrap_or(vec![]);
-
-        for alloc in allocations {
-            unbondable += adapter::unbondable_query(deps.querier, &asset, alloc.contract)?;
-            if unbondable > holder_balance {
-                break;
+    match HOLDING.may_load(deps.storage, holder.clone())? {
+        Some(h) => {
+            if let Some(u) = h.unbondings.iter().find(|u| u.token == asset.clone()) {
+                holder_unbonding += u.amount;
+            }
+            if let Some(b) = h.balances.iter().find(|b| b.token == asset.clone()) {
+                holder_balance += b.amount;
             }
         }
-
-        if unbondable > holder_balance {
-            unbondable = holder_balance;
+        None => {
+            return Err(StdError::generic_err("Invalid holder"));
         }
-
-        return Ok(manager::QueryAnswer::Unbondable { amount: unbondable });
     }
 
-    Err(StdError::generic_err("Not a registered asset"))
+    if holder_balance.is_zero() {
+        return Ok(manager::QueryAnswer::Unbondable {
+            amount: holder_balance,
+        });
+    }
+
+    let mut unbondable = balance_query(
+        &deps.querier,
+        SELF_ADDRESS.load(deps.storage)?,
+        VIEWING_KEY.load(deps.storage)?,
+        &full_asset.contract.clone(),
+    )?;
+
+    let allocations = ALLOCATIONS
+        .may_load(deps.storage, asset.clone())?
+        .unwrap_or(vec![]);
+
+    for alloc in allocations {
+        unbondable += adapter::unbondable_query(deps.querier, &asset, alloc.contract)?;
+        if unbondable > holder_balance {
+            break;
+        }
+    }
+
+    if unbondable > holder_balance {
+        unbondable = holder_balance;
+    }
+
+    return Ok(manager::QueryAnswer::Unbondable { amount: unbondable });
 }
 
 pub fn batch_balance(
@@ -198,48 +199,49 @@ pub fn batch_balance(
     let mut balances = vec![];
 
     for asset in assets {
-        match ASSETS.may_load(deps.storage, asset)? {
-            Some(asset) => {
-                balances.push(
-                    match holding
-                        .balances
-                        .iter()
-                        .find(|b| b.token == asset.contract.address)
-                    {
-                        Some(b) => b.amount,
-                        None => Uint128::zero(),
-                    },
-                );
-            }
-            None => balances.push(Uint128::zero()),
-        };
+        if let Some(asset) = ASSETS.may_load(deps.storage, asset)? {
+            balances.push(
+                match holding
+                    .balances
+                    .iter()
+                    .find(|b| b.token == asset.contract.address)
+                {
+                    Some(b) => b.amount,
+                    None => Uint128::zero(),
+                },
+            );
+        }
+        else {
+            balances.push(Uint128::zero()),
+        }
     }
 
     Ok(manager::QueryAnswer::BatchBalance { amounts: balances })
 }
 
 pub fn balance(deps: Deps, asset: Addr, holder: Addr) -> StdResult<manager::QueryAnswer> {
-    match ASSETS.may_load(deps.storage, asset)? {
-        Some(asset) => {
-            let holding = match HOLDING.may_load(deps.storage, holder.clone())? {
-                Some(h) => h,
-                None => {
-                    return Err(StdError::generic_err("Invalid Holder"));
-                }
-            };
-            // TODO include unbonding so balance is more 'stable'
-            let balance = match holding
-                .balances
-                .iter()
-                .find(|b| b.token == asset.contract.address)
-            {
-                Some(b) => b.amount,
-                None => Uint128::zero(),
-            };
+    if let Some(asset) = ASSETS.may_load(deps.storage, asset)? {
+        let holding = match HOLDING.may_load(deps.storage, holder.clone())? {
+            Some(h) => h,
+            None => {
+                return Err(StdError::generic_err("Invalid Holder"));
+            }
+        };
+        // TODO include unbonding so balance is more 'stable'
+        //      likely requires treasury rebalance changes
+        let balance = match holding
+            .balances
+            .iter()
+            .find(|b| b.token == asset.contract.address)
+        {
+            Some(b) => b.amount,
+            None => Uint128::zero(),
+        };
 
-            Ok(manager::QueryAnswer::Balance { amount: balance })
-        }
-        None => Err(StdError::generic_err("Not a registered asset")),
+        Ok(manager::QueryAnswer::Balance { amount: balance })
+    }
+    else {
+        Err(StdError::generic_err("Not a registered asset"));
     }
 }
 
