@@ -1,11 +1,12 @@
 use crate::{
+    c_std::{StdResult, Storage, Uint128},
     contract_interfaces::governance::stored_id::ID,
-    utils::{asset::Contract, storage::default::BucketStorage},
+    utils::asset::Contract,
 };
-use crate::c_std::Uint128;
-use crate::c_std::{StdResult, Storage};
 
-use cosmwasm_schema::{cw_serde};
+use crate::utils::storage::plus::MapStorage;
+use cosmwasm_schema::cw_serde;
+use secret_storage_plus::Map;
 
 #[cw_serde]
 pub struct AllowedContract {
@@ -43,19 +44,19 @@ impl AllowedContract {
             contract: self.contract.clone(),
             assemblies: self.assemblies.clone(),
         }
-        .save(storage, &id.to_be_bytes())?;
+        .save(storage, id.u128())?;
 
         AllowedContractDescription {
             name: self.name.clone(),
             metadata: self.metadata.clone(),
         }
-        .save(storage, &id.to_be_bytes())?;
+        .save(storage, id.u128())?;
 
         Ok(())
     }
 
     pub fn data(storage: &dyn Storage, id: &Uint128) -> StdResult<AllowedContractData> {
-        AllowedContractData::load(storage, &id.to_be_bytes())
+        AllowedContractData::load(storage, id.u128())
     }
 
     pub fn save_data(
@@ -63,14 +64,14 @@ impl AllowedContract {
         id: &Uint128,
         data: AllowedContractData,
     ) -> StdResult<()> {
-        data.save(storage, &id.to_be_bytes())
+        data.save(storage, id.u128())
     }
 
     pub fn description(
         storage: &dyn Storage,
         id: &Uint128,
     ) -> StdResult<AllowedContractDescription> {
-        AllowedContractDescription::load(storage, &id.to_be_bytes())
+        AllowedContractDescription::load(storage, id.u128())
     }
 
     pub fn save_description(
@@ -78,7 +79,7 @@ impl AllowedContract {
         id: &Uint128,
         desc: AllowedContractDescription,
     ) -> StdResult<()> {
-        desc.save(storage, &id.to_be_bytes())
+        desc.save(storage, id.u128())
     }
 }
 
@@ -90,8 +91,8 @@ pub struct AllowedContractData {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for AllowedContractData {
-    const NAMESPACE: &'static [u8] = b"allowed_contract_data-";
+impl MapStorage<'static, u128> for AllowedContractData {
+    const MAP: Map<'static, u128, Self> = Map::new("allowed_contract_data-");
 }
 
 #[cfg(feature = "governance-impl")]
@@ -102,6 +103,6 @@ pub struct AllowedContractDescription {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for AllowedContractDescription {
-    const NAMESPACE: &'static [u8] = b"allowed_contract_description-";
+impl MapStorage<'static, u128> for AllowedContractDescription {
+    const MAP: Map<'static, u128, Self> = Map::new("allowed_contract_description-");
 }

@@ -1,13 +1,13 @@
-use crate::contract_interfaces::governance::stored_id::ID;
-use crate::c_std::Uint128;
-use crate::c_std::{StdError, StdResult, Storage};
+use crate::{
+    c_std::{StdError, StdResult, Storage, Uint128},
+    contract_interfaces::governance::stored_id::ID,
+};
 
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
+use secret_storage_plus::Map;
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::BucketStorage;
-#[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::NaiveBucketStorage;
+use crate::utils::storage::plus::{MapStorage, NaiveMapStorage};
 
 /// Allow better control over the safety and privacy features that proposals will need if
 /// Assemblys are implemented. If a profile is disabled then its assembly will also be disabled.
@@ -31,8 +31,8 @@ pub struct Profile {
     pub cancel_deadline: u64,
 }
 
-const COMMITTEE_PROFILE_KEY: &'static [u8] = b"assembly_vote_profile-";
-const TOKEN_PROFILE_KEY: &'static [u8] = b"token_vote_profile-";
+const COMMITTEE_PROFILE_KEY: Map<u128, VoteProfileType> = Map::new("assembly_vote_profile-");
+const TOKEN_PROFILE_KEY: Map<u128, VoteProfileType> = Map::new("token_vote_profile-");
 
 #[cfg(feature = "governance-impl")]
 impl Profile {
@@ -62,7 +62,7 @@ impl Profile {
             enabled: self.enabled,
             cancel_deadline: self.cancel_deadline,
         }
-        .save(storage, &id.to_be_bytes())?;
+        .save(storage, id.u128())?;
 
         Self::save_assembly_voting(storage, &id, self.assembly.clone())?;
 
@@ -74,22 +74,15 @@ impl Profile {
     }
 
     pub fn data(storage: &dyn Storage, id: &Uint128) -> StdResult<ProfileData> {
-        ProfileData::load(storage, &id.to_be_bytes())
+        ProfileData::load(storage, id.u128())
     }
 
-    pub fn save_data(
-        storage: &mut dyn Storage,
-        id: &Uint128,
-        data: ProfileData,
-    ) -> StdResult<()> {
-        data.save(storage, &id.to_be_bytes())
+    pub fn save_data(storage: &mut dyn Storage, id: &Uint128, data: ProfileData) -> StdResult<()> {
+        data.save(storage, id.u128())
     }
 
-    pub fn assembly_voting(
-        storage: &dyn Storage,
-        id: &Uint128,
-    ) -> StdResult<Option<VoteProfile>> {
-        Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())?.0)
+    pub fn assembly_voting(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<VoteProfile>> {
+        Ok(VoteProfileType::load(storage, COMMITTEE_PROFILE_KEY, id.u128())?.0)
     }
 
     pub fn save_assembly_voting(
@@ -97,11 +90,11 @@ impl Profile {
         id: &Uint128,
         assembly: Option<VoteProfile>,
     ) -> StdResult<()> {
-        VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, &id.to_be_bytes())
+        VoteProfileType(assembly).save(storage, COMMITTEE_PROFILE_KEY, id.u128())
     }
 
     pub fn public_voting(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<VoteProfile>> {
-        Ok(VoteProfileType::load(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())?.0)
+        Ok(VoteProfileType::load(storage, TOKEN_PROFILE_KEY, id.u128())?.0)
     }
 
     pub fn save_public_voting(
@@ -109,11 +102,11 @@ impl Profile {
         id: &Uint128,
         token: Option<VoteProfile>,
     ) -> StdResult<()> {
-        VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, &id.to_be_bytes())
+        VoteProfileType(token).save(storage, TOKEN_PROFILE_KEY, id.u128())
     }
 
     pub fn funding(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<FundProfile>> {
-        Ok(FundProfileType::load(storage, &id.to_be_bytes())?.0)
+        Ok(FundProfileType::load(storage, id.u128())?.0)
     }
 
     pub fn save_funding(
@@ -121,7 +114,7 @@ impl Profile {
         id: &Uint128,
         funding: Option<FundProfile>,
     ) -> StdResult<()> {
-        FundProfileType(funding).save(storage, &id.to_be_bytes())
+        FundProfileType(funding).save(storage, id.u128())
     }
 }
 
@@ -134,12 +127,12 @@ pub struct ProfileData {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for ProfileData {
-    const NAMESPACE: &'static [u8] = b"profile_data-";
+impl MapStorage<'static, u128> for ProfileData {
+    const MAP: Map<'static, u128, Self> = Map::new("profile_data-");
 }
 
 #[cfg(feature = "governance-impl")]
-#[cw_serde]// NOTE: 100% = Uint128::new(10000)
+#[cw_serde] // NOTE: 100% = Uint128::new(10000)
 pub struct VoteProfile {
     // Deadline for voting
     pub deadline: u64,
@@ -152,10 +145,11 @@ pub struct VoteProfile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[cw_serde]struct VoteProfileType(pub Option<VoteProfile>);
+#[cw_serde]
+struct VoteProfileType(pub Option<VoteProfile>);
 
 #[cfg(feature = "governance-impl")]
-impl NaiveBucketStorage for VoteProfileType {}
+impl NaiveMapStorage<'static> for VoteProfileType {}
 
 #[cfg(feature = "governance-impl")]
 #[cw_serde]
@@ -171,11 +165,12 @@ pub struct FundProfile {
 }
 
 #[cfg(feature = "governance-impl")]
-#[cw_serde]struct FundProfileType(pub Option<FundProfile>);
+#[cw_serde]
+struct FundProfileType(pub Option<FundProfile>);
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for FundProfileType {
-    const NAMESPACE: &'static [u8] = b"fund_profile-";
+impl MapStorage<'static, u128> for FundProfileType {
+    const MAP: Map<'static, u128, Self> = Map::new("fund_profile-");
 }
 
 /// Helps simplify the given limits

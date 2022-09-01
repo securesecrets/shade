@@ -23,7 +23,7 @@ use shade_protocol::{
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
-        storage::default::SingletonStorage,
+        storage::{default::SingletonStorage, plus::ItemStorage},
     },
 };
 

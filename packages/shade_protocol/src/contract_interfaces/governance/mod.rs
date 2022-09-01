@@ -24,9 +24,10 @@ use crate::{
     utils::{ExecuteCallback, InstantiateCallback, Query},
 };
 use cosmwasm_schema::cw_serde;
+use secret_storage_plus::{Item, Json};
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::SingletonStorage;
+use crate::utils::storage::plus::ItemStorage;
 
 // TODO: add errors
 
@@ -44,8 +45,8 @@ pub struct Config {
 }
 
 #[cfg(feature = "governance-impl")]
-impl SingletonStorage for Config {
-    const NAMESPACE: &'static [u8] = b"config-";
+impl ItemStorage for Config {
+    const ITEM: Item<'static, Self, Json> = Item::new("config-");
 }
 
 #[cw_serde]
@@ -78,8 +79,8 @@ pub enum RuntimeState {
 }
 
 #[cfg(feature = "governance-impl")]
-impl SingletonStorage for RuntimeState {
-    const NAMESPACE: &'static [u8] = b"runtime_state-";
+impl ItemStorage for RuntimeState {
+    const ITEM: Item<'static, Self, Json> = Item::new("runtime-state-");
 }
 
 // TODO: allow migration, copies all assemblies, contracts and msgs

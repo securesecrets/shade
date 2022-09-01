@@ -10,10 +10,10 @@ use crate::{
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Timestamp;
+use secret_storage_plus::{Json, Map};
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::BucketStorage;
-use crate::utils::storage::default::NaiveBucketStorage;
+use crate::utils::storage::plus::{MapStorage, NaiveMapStorage};
 
 #[cw_serde]
 pub struct Proposal {
@@ -51,10 +51,10 @@ pub struct Proposal {
     pub funders: Option<Vec<(Addr, Uint128)>>,
 }
 
-const ASSEMBLY_VOTE: &'static [u8] = b"user-assembly-vote-";
-const ASSEMBLY_VOTES: &'static [u8] = b"total-assembly-votes-";
-const PUBLIC_VOTE: &'static [u8] = b"user-public-vote-";
-const PUBLIC_VOTES: &'static [u8] = b"total-public-votes-";
+const ASSEMBLY_VOTE: Map<'static, (u128, Addr), Vote> = Map::new("user-assembly-vote-");
+const ASSEMBLY_VOTES: Map<'static, u128, Vote> = Map::new("total-assembly-votes-");
+const PUBLIC_VOTE: Map<'static, (u128, Addr), Vote> = Map::new("user-public-vote-");
+const PUBLIC_VOTES: Map<'static, u128, Vote> = Map::new("total-public-votes-");
 
 #[cfg(feature = "governance-impl")]
 impl Proposal {
@@ -63,7 +63,7 @@ impl Proposal {
         let id = &ID::add_proposal(storage)?;
 
         // Create proposers id
-        UserID::add_proposal(storage, self.proposer.clone(), id.clone())?;
+        UserID::add_proposal(storage, self.proposer.clone(), id)?;
 
         if let Some(msgs) = self.msgs.clone() {
             Self::save_msg(storage, id, msgs)?;
@@ -149,7 +149,7 @@ impl Proposal {
     }
 
     pub fn msg(storage: &dyn Storage, id: &Uint128) -> StdResult<Option<Vec<ProposalMsg>>> {
-        match ProposalMsgs::may_load(storage, &id.to_be_bytes())? {
+        match ProposalMsgs::may_load(storage, id.u128())? {
             None => Ok(None),
             Some(i) => Ok(Some(i.0)),
         }
@@ -160,11 +160,11 @@ impl Proposal {
         id: &Uint128,
         data: Vec<ProposalMsg>,
     ) -> StdResult<()> {
-        ProposalMsgs(data).save(storage, &id.to_be_bytes())
+        ProposalMsgs(data).save(storage, id.u128())
     }
 
     pub fn description(storage: &dyn Storage, id: &Uint128) -> StdResult<ProposalDescription> {
-        ProposalDescription::load(storage, &id.to_be_bytes())
+        ProposalDescription::load(storage, id.u128())
     }
 
     pub fn save_description(
@@ -172,27 +172,27 @@ impl Proposal {
         id: &Uint128,
         data: ProposalDescription,
     ) -> StdResult<()> {
-        data.save(storage, &id.to_be_bytes())
+        data.save(storage, id.u128())
     }
 
     pub fn assembly(storage: &dyn Storage, id: &Uint128) -> StdResult<Uint128> {
-        Ok(ProposalAssembly::load(storage, &id.to_be_bytes())?.0)
+        Ok(ProposalAssembly::load(storage, id.u128())?.0)
     }
 
     pub fn save_assembly(storage: &mut dyn Storage, id: &Uint128, data: Uint128) -> StdResult<()> {
-        ProposalAssembly(data).save(storage, &id.to_be_bytes())
+        ProposalAssembly(data).save(storage, id.u128())
     }
 
     pub fn status(storage: &dyn Storage, id: &Uint128) -> StdResult<Status> {
-        Status::load(storage, &id.to_be_bytes())
+        Status::load(storage, id.u128())
     }
 
     pub fn save_status(storage: &mut dyn Storage, id: &Uint128, data: Status) -> StdResult<()> {
-        data.save(storage, &id.to_be_bytes())
+        data.save(storage, id.u128())
     }
 
     pub fn status_history(storage: &dyn Storage, id: &Uint128) -> StdResult<Vec<Status>> {
-        Ok(StatusHistory::load(storage, &id.to_be_bytes())?.0)
+        Ok(StatusHistory::load(storage, id.u128())?.0)
     }
 
     pub fn save_status_history(
@@ -200,11 +200,11 @@ impl Proposal {
         id: &Uint128,
         data: Vec<Status>,
     ) -> StdResult<()> {
-        StatusHistory(data).save(storage, &id.to_be_bytes())
+        StatusHistory(data).save(storage, id.u128())
     }
 
     pub fn funders(storage: &dyn Storage, id: &Uint128) -> StdResult<Vec<Addr>> {
-        let funders = match Funders::may_load(storage, &id.to_be_bytes())? {
+        let funders = match Funders::may_load(storage, id.u128())? {
             None => vec![],
             Some(item) => item.0,
         };
@@ -212,12 +212,12 @@ impl Proposal {
     }
 
     pub fn save_funders(storage: &mut dyn Storage, id: &Uint128, data: Vec<Addr>) -> StdResult<()> {
-        Funders(data).save(storage, &id.to_be_bytes())
+        Funders(data).save(storage, id.u128())
     }
 
     pub fn funding(storage: &dyn Storage, id: &Uint128, user: &Addr) -> StdResult<Funding> {
         let key = id.to_string() + "-" + user.as_str();
-        Funding::load(storage, key.as_bytes())
+        Funding::load(storage, (id.u128(), user.clone()))
     }
 
     pub fn save_funding(
@@ -226,8 +226,7 @@ impl Proposal {
         user: &Addr,
         data: Funding,
     ) -> StdResult<()> {
-        let key = id.to_string() + "-" + user.as_str();
-        data.save(storage, key.as_bytes())
+        data.save(storage, (id.u128(), user.clone()))
     }
 
     // User assembly votes
@@ -236,9 +235,11 @@ impl Proposal {
         id: &Uint128,
         user: &Addr,
     ) -> StdResult<Option<Vote>> {
-        // TODO: update all the buckets to maps
-        let key = id.to_string() + "-" + user.as_str();
-        Ok(Vote::may_load(storage, ASSEMBLY_VOTE, key.as_bytes())?)
+        Ok(Vote::may_load(
+            storage,
+            ASSEMBLY_VOTE,
+            (id.u128(), user.clone()),
+        )?)
     }
 
     pub fn save_assembly_vote(
@@ -247,13 +248,12 @@ impl Proposal {
         user: &Addr,
         data: &Vote,
     ) -> StdResult<()> {
-        let key = id.to_string() + "-" + user.as_str();
-        Vote::write(storage, ASSEMBLY_VOTE).save(key.as_bytes(), data)
+        data.save(storage, ASSEMBLY_VOTE, (id.u128(), user.clone()))
     }
 
     // Total assembly votes
     pub fn assembly_votes(storage: &dyn Storage, id: &Uint128) -> StdResult<Vote> {
-        match Vote::may_load(storage, ASSEMBLY_VOTES, &id.to_be_bytes())? {
+        match Vote::may_load(storage, ASSEMBLY_VOTES, id.u128())? {
             None => Ok(Vote::default()),
             Some(vote) => Ok(vote),
         }
@@ -264,7 +264,7 @@ impl Proposal {
         id: &Uint128,
         data: &Vote,
     ) -> StdResult<()> {
-        Vote::write(storage, ASSEMBLY_VOTES).save(&id.to_be_bytes(), data)
+        data.save(storage, ASSEMBLY_VOTES, id.u128())
     }
 
     // User public votes
@@ -273,8 +273,11 @@ impl Proposal {
         id: &Uint128,
         user: &Addr,
     ) -> StdResult<Option<Vote>> {
-        let key = id.to_string() + "-" + user.as_str();
-        Ok(Vote::may_load(storage, PUBLIC_VOTE, key.as_bytes())?)
+        Ok(Vote::may_load(
+            storage,
+            PUBLIC_VOTE,
+            (id.u128(), user.clone()),
+        )?)
     }
 
     pub fn save_public_vote(
@@ -283,13 +286,12 @@ impl Proposal {
         user: &Addr,
         data: &Vote,
     ) -> StdResult<()> {
-        let key = id.to_string() + "-" + user.as_str();
-        Vote::write(storage, PUBLIC_VOTE).save(key.as_bytes(), data)
+        data.save(storage, PUBLIC_VOTE, (id.u128(), user.clone()))
     }
 
     // Total public votes
     pub fn public_votes(storage: &dyn Storage, id: &Uint128) -> StdResult<Vote> {
-        match Vote::may_load(storage, PUBLIC_VOTES, &id.to_be_bytes())? {
+        match Vote::may_load(storage, PUBLIC_VOTES, id.u128())? {
             None => Ok(Vote::default()),
             Some(vote) => Ok(vote),
         }
@@ -300,7 +302,7 @@ impl Proposal {
         id: &Uint128,
         data: &Vote,
     ) -> StdResult<()> {
-        Vote::write(storage, PUBLIC_VOTES).save(&id.to_be_bytes(), data)
+        data.save(storage, PUBLIC_VOTES, id.u128())
     }
 }
 
@@ -312,8 +314,8 @@ pub struct ProposalDescription {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for ProposalDescription {
-    const NAMESPACE: &'static [u8] = b"proposal_description-";
+impl MapStorage<'static, u128> for ProposalDescription {
+    const MAP: Map<'static, u128, Self> = Map::new("proposal_description-");
 }
 
 #[cw_serde]
@@ -329,16 +331,16 @@ pub struct ProposalMsg {
 struct ProposalMsgs(pub Vec<ProposalMsg>);
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for ProposalMsgs {
-    const NAMESPACE: &'static [u8] = b"proposal_msgs-";
+impl MapStorage<'static, u128> for ProposalMsgs {
+    const MAP: Map<'static, u128, Self> = Map::new("proposal_msgs-");
 }
 
 #[cw_serde]
 struct ProposalAssembly(pub Uint128);
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for ProposalAssembly {
-    const NAMESPACE: &'static [u8] = b"proposal_assembly-";
+impl MapStorage<'static, u128> for ProposalAssembly {
+    const MAP: Map<'static, u128, Self> = Map::new("proposal_assembly-");
 }
 
 #[cw_serde]
@@ -391,8 +393,8 @@ impl Status {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for Status {
-    const NAMESPACE: &'static [u8] = b"proposal_status-";
+impl MapStorage<'static, u128> for Status {
+    const MAP: Map<'static, u128, Self> = Map::new("proposal_status-");
 }
 
 #[cfg(feature = "governance-impl")]
@@ -400,8 +402,8 @@ impl BucketStorage for Status {
 struct StatusHistory(pub Vec<Status>);
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for StatusHistory {
-    const NAMESPACE: &'static [u8] = b"proposal_status_history-";
+impl MapStorage<'static, u128> for StatusHistory {
+    const MAP: Map<'static, u128, Self> = Map::new("proposal_status_history-");
 }
 
 #[cfg(feature = "governance-impl")]
@@ -409,8 +411,8 @@ impl BucketStorage for StatusHistory {
 struct Funders(pub Vec<Addr>);
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for Funders {
-    const NAMESPACE: &'static [u8] = b"proposal_funders-";
+impl MapStorage<'static, u128> for Funders {
+    const MAP: Map<'static, u128, Self> = Map::new("proposal_funders-");
 }
 
 #[cfg(feature = "governance-impl")]
@@ -421,6 +423,6 @@ pub struct Funding {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for Funding {
-    const NAMESPACE: &'static [u8] = b"proposal_funding-";
+impl MapStorage<'static, (u128, Addr)> for Funding {
+    const MAP: Map<'static, (u128, Addr), Self> = Map::new("proposal_funding-");
 }

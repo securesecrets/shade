@@ -61,7 +61,10 @@ use shade_protocol::{
         flexible_msg::FlexibleMsg,
         pad_handle_result,
         pad_query_result,
-        storage::default::{BucketStorage, SingletonStorage},
+        storage::{
+            default::{BucketStorage, SingletonStorage},
+            plus::ItemStorage,
+        },
         Query,
     },
 };

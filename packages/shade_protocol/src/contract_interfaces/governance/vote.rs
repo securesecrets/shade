@@ -1,10 +1,9 @@
-use crate::c_std::Uint128;
-use crate::c_std::{StdResult, Storage};
+use crate::c_std::{StdResult, Storage, Uint128};
 
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::NaiveBucketStorage;
+use crate::utils::storage::plus::NaiveMapStorage;
 
 #[cw_serde]
 pub struct ReceiveBalanceMsg {
@@ -21,7 +20,7 @@ pub struct Vote {
 }
 
 #[cfg(feature = "governance-impl")]
-impl NaiveBucketStorage for Vote {}
+impl NaiveMapStorage<'static> for Vote {}
 
 impl Default for Vote {
     fn default() -> Self {

@@ -1,11 +1,14 @@
-use crate::{contract_interfaces::governance::stored_id::ID, utils::flexible_msg::FlexibleMsg};
-use crate::c_std::Uint128;
-use crate::c_std::{Addr, StdResult, Storage};
+use crate::{
+    c_std::{Addr, StdResult, Storage, Uint128},
+    contract_interfaces::governance::stored_id::ID,
+    utils::flexible_msg::FlexibleMsg,
+};
 
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::cw_serde;
+use secret_storage_plus::{Json, Map};
 
 #[cfg(feature = "governance-impl")]
-use crate::utils::storage::default::BucketStorage;
+use crate::utils::storage::plus::MapStorage;
 
 #[cw_serde]
 pub struct Assembly {
@@ -45,31 +48,27 @@ impl Assembly {
             members: self.members.clone(),
             profile: self.profile,
         }
-        .save(storage, &id.to_be_bytes())?;
+        .save(storage, id.u128())?;
 
         AssemblyDescription {
             name: self.name.clone(),
             metadata: self.metadata.clone(),
         }
-        .save(storage, &id.to_be_bytes())?;
+        .save(storage, id.u128())?;
 
         Ok(())
     }
 
     pub fn data(storage: &dyn Storage, id: &Uint128) -> StdResult<AssemblyData> {
-        AssemblyData::load(storage, &id.to_be_bytes())
+        AssemblyData::load(storage, id.u128())
     }
 
-    pub fn save_data(
-        storage: &mut dyn Storage,
-        id: &Uint128,
-        data: AssemblyData,
-    ) -> StdResult<()> {
-        data.save(storage, &id.to_be_bytes())
+    pub fn save_data(storage: &mut dyn Storage, id: &Uint128, data: AssemblyData) -> StdResult<()> {
+        data.save(storage, id.u128())
     }
 
     pub fn description(storage: &dyn Storage, id: &Uint128) -> StdResult<AssemblyDescription> {
-        AssemblyDescription::load(storage, &id.to_be_bytes())
+        AssemblyDescription::load(storage, id.u128())
     }
 
     pub fn save_description(
@@ -77,7 +76,7 @@ impl Assembly {
         id: &Uint128,
         desc: AssemblyDescription,
     ) -> StdResult<()> {
-        desc.save(storage, &id.to_be_bytes())
+        desc.save(storage, id.u128())
     }
 }
 
@@ -89,8 +88,8 @@ pub struct AssemblyData {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for AssemblyData {
-    const NAMESPACE: &'static [u8] = b"assembly_data-";
+impl MapStorage<'static, u128> for AssemblyData {
+    const MAP: Map<'static, u128, Self> = Map::new("assembly_data-");
 }
 
 #[cfg(feature = "governance-impl")]
@@ -101,11 +100,11 @@ pub struct AssemblyDescription {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for AssemblyDescription {
-    const NAMESPACE: &'static [u8] = b"assembly_description-";
+impl MapStorage<'static, u128> for AssemblyDescription {
+    const MAP: Map<'static, u128, Self> = Map::new("assembly_description-");
 }
 
-#[cw_serde]// A generic msg is created at init, its a black msg where the variable is the start
+#[cw_serde] // A generic msg is created at init, its a black msg where the variable is the start
 pub struct AssemblyMsg {
     pub name: String,
     // Assemblies allowed to call this msg
@@ -139,15 +138,15 @@ impl AssemblyMsg {
             assemblies: self.assemblies.clone(),
             msg: self.msg.clone(),
         }
-        .save(storage, &id.to_be_bytes())?;
+        .save(storage, id.u128())?;
 
-        AssemblyMsgDescription(self.name.clone()).save(storage, &id.to_be_bytes())?;
+        AssemblyMsgDescription(self.name.clone()).save(storage, id.u128())?;
 
         Ok(())
     }
 
     pub fn data(storage: &dyn Storage, id: &Uint128) -> StdResult<AssemblyMsgData> {
-        AssemblyMsgData::load(storage, &id.to_be_bytes())
+        AssemblyMsgData::load(storage, id.u128())
     }
 
     pub fn save_data(
@@ -155,11 +154,11 @@ impl AssemblyMsg {
         id: &Uint128,
         data: AssemblyMsgData,
     ) -> StdResult<()> {
-        data.save(storage, &id.to_be_bytes())
+        data.save(storage, id.u128())
     }
 
     pub fn description(storage: &dyn Storage, id: &Uint128) -> StdResult<String> {
-        Ok(AssemblyMsgDescription::load(storage, &id.to_be_bytes())?.0)
+        Ok(AssemblyMsgDescription::load(storage, id.u128())?.0)
     }
 
     pub fn save_description(
@@ -167,7 +166,7 @@ impl AssemblyMsg {
         id: &Uint128,
         desc: String,
     ) -> StdResult<()> {
-        AssemblyMsgDescription(desc).save(storage, &id.to_be_bytes())
+        AssemblyMsgDescription(desc).save(storage, id.u128())
     }
 }
 
@@ -179,14 +178,15 @@ pub struct AssemblyMsgData {
 }
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for AssemblyMsgData {
-    const NAMESPACE: &'static [u8] = b"assembly_msg_data-";
+impl MapStorage<'static, u128> for AssemblyMsgData {
+    const MAP: Map<'static, u128, Self> = Map::new("assembly_msg_data-");
 }
 
 #[cfg(feature = "governance-impl")]
-#[cw_serde]struct AssemblyMsgDescription(pub String);
+#[cw_serde]
+struct AssemblyMsgDescription(pub String);
 
 #[cfg(feature = "governance-impl")]
-impl BucketStorage for AssemblyMsgDescription {
-    const NAMESPACE: &'static [u8] = b"assembly_msg_description-";
+impl MapStorage<'static, u128> for AssemblyMsgDescription {
+    const MAP: Map<'static, u128, Self> = Map::new("assembly_msg_description-");
 }
