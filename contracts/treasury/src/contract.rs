@@ -1,34 +1,25 @@
+use crate::{execute, query, storage::*};
 use shade_protocol::{
     c_std::{
         shd_entry_point,
         to_binary,
-        Api,
         Binary,
         Deps,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
-        StdError,
         StdResult,
-        Storage,
-        Uint128,
     },
-    dao::{
-        adapter,
-        treasury::{Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, RunLevel},
-    },
+    dao::treasury::{Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, RunLevel},
     utils::cycle::parse_utc_datetime,
 };
-
-use crate::{execute, query, storage::*};
 
 #[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     CONFIG.save(deps.storage, &Config {
