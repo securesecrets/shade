@@ -14,7 +14,15 @@ use shade_protocol::{
     },
     dao::{
         manager,
-        treasury_manager::{Config, ExecuteMsg, Holding, InstantiateMsg, QueryMsg, Status},
+        treasury_manager::{
+            Config,
+            ExecuteMsg,
+            Holding,
+            InstantiateMsg,
+            QueryAnswer,
+            QueryMsg,
+            Status,
+        },
     },
     utils::cycle::parse_utc_datetime,
 };
