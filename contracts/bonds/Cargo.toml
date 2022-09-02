@@ -43,6 +43,6 @@ shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag
 fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"]  }
 fadroma-platform-scrt = { branch = "v100",  commit = 76867e0, git = "https://github.com/hackbg/fadroma.git" }
 contract_harness = { version = "0.1.0", path = "../../packages/contract_harness", features = [ "snip20", "bonds", "oracle", "mock_band", "query_auth", "admin", "shade-oracles-ensemble" ] }
-mock_band = { version = "0.1.0", path = "../../contracts/mock_band" }
+mock_band = { version = "0.1.0", path = "../../mock_contracts/mock_band" }
 shade-oracles-ensemble = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11"}
 

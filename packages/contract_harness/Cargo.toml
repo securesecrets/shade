@@ -31,17 +31,17 @@ sky = ["dep:sky"]
 [dependencies]
 shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = ["ensemble"]}
 sky = { version = "0.1.0", path = "../../contracts/sky", optional = true }
-mint = { version = "0.1.0", path = "../../contracts/mint", optional = true }
+mint = { version = "0.1.0", path = "../../archived_contracts/mint", optional = true }
 oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
-mock_band = { version = "0.1.0", path = "../../contracts/mock_band", optional = true }
+mock_band = { version = "0.1.0", path = "../../mock_contracts/mock_band", optional = true }
 governance = { version = "0.1.0", path = "../../contracts/governance", optional = true }
 spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
 bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
-scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optional = true }
-treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
-treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
+scrt_staking = { version = "0.1.0", path = "../../contracts/dao_contracts/scrt_staking", optional = true }
+treasury = { version = "0.1.0", path = "../../contracts/dao_contracts/treasury", optional = true }
+treasury_manager = { version = "0.1.0", path = "../../contracts/dao_contracts/treasury_manager", optional = true }
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 shade-oracles-ensemble = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0", optional = true }

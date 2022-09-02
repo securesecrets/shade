@@ -23,7 +23,7 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
   "treasury",
   "dao",
   "utils",
@@ -34,7 +34,7 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 ] }
 
 [dev-dependencies]
-shade-multi-test = { path = "../../packages/multi_test", features = [ 
+shade-multi-test = { path = "../../../packages/multi_test", features = [ 
   "treasury", 
   "treasury_manager", 
   "scrt_staking", 
@@ -44,4 +44,4 @@ shade-multi-test = { path = "../../packages/multi_test", features = [
 serde_json = "1.0"
 treasury = { path = "../treasury" }
 #shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git"}
-mock_adapter = { path = "../mock_adapter" }
+mock_adapter = { path = "../../../mock_contracts/mock_adapter" }

@@ -23,7 +23,7 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+shade-protocol = { version = "0.1.0", path = "../packages/shade_protocol", features = [
   "mint_router",
   "oracles",
   "band",

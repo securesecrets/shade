@@ -1,7 +1,7 @@
 [package]
-name = "lp_shdswap"
+name = "treasury_manager"
 version = "0.1.0"
-authors = ["Jack Swenson <jacksonswenson22@gmail.com>", "Jack Sisson <sissonjack67@gmail.com>"]
+authors = ["Jack Swenson <jacksonswenson22@gmail.com>", "Jack Sisson <sissonjack67@gmail.com"]
 edition = "2018"
 
 exclude = [
@@ -20,20 +20,24 @@ default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "adapter",
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "treasury_manager",
+  "snip20",
   "dao",
-  "dex",
-  "treasury",
-  "lp_shdswap",
-  "math",
-  "storage_plus",
-] }
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+  "manager",
+  "staking",
+  "chrono",
+]}
+itertools = "0.10.3"
 
 [dev-dependencies]
-shade-multi-test = { path = "../../packages/multi_test", features = [ 
+shade-multi-test = { path = "../../../packages/multi_test", features = [ 
+  "treasury", 
+  "treasury_manager", 
+  "scrt_staking", 
+  "snip20",
   "admin"
 ] }

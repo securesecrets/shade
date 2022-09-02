@@ -16,9 +16,9 @@ members = [
   "contracts/snip20",
   "contracts/governance",
   "contracts/bonds",
-  "contracts/mint",
+  #"contracts/mint",
   #"contracts/liability_mint",
-  "contracts/mint_router",
+  #"contracts/mint_router",
   "contracts/oracle",
   "contracts/sky",
   "contracts/peg_stability",
@@ -27,20 +27,20 @@ members = [
 
   # DAO
   # - Core
-  "contracts/treasury",
-  "contracts/treasury_manager",
+  "contracts/dao_contracts/treasury",
+  "contracts/dao_contracts/treasury_manager",
   # - Adapters
-  "contracts/scrt_staking",
-  "contracts/rewards_emission",
-  "contracts/lp_shdswap",
+  "contracts/dao_contracts/scrt_staking",
+  "contracts/dao_contracts/rewards_emission",
+  "contracts/dao_contracts/lp_shdswap",
 
   #"contracts/snip20_staking",
   
   # Mock contracts
-  "contracts/mock_band",
-  "contracts/mock_secretswap_pair",
-  "contracts/mock_sienna_pair",
-  "contracts/mock_adapter",
+  "mock_contracts/mock_band",
+  "mock_contracts/mock_secretswap_pair",
+  "mock_contracts/mock_sienna_pair",
+  "mock_contracts/mock_adapter",
 
   # Tools
   "tools/doc2book",
