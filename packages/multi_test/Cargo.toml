@@ -38,9 +38,9 @@ governance = { version = "0.1.0", path = "../../contracts/governance", optional 
 spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 # bonds = { version = "0.1.0", path = "../../contracts/bonds", optional = true }
 query_auth = { version = "0.1.0", path = "../../contracts/query_auth", optional = true }
-scrt_staking = { version = "0.1.0", path = "../../contracts/dao_contracts/scrt_staking", optional = true }
-treasury = { version = "0.1.0", path = "../../contracts/dao_contracts/treasury", optional = true }
-treasury_manager = { version = "0.1.0", path = "../../contracts/dao_contracts/treasury_manager", optional = true }
+scrt_staking = { version = "0.1.0", path = "../../contracts/dao/scrt_staking", optional = true }
+treasury = { version = "0.1.0", path = "../../contracts/dao/treasury", optional = true }
+treasury_manager = { version = "0.1.0", path = "../../contracts/dao/treasury_manager", optional = true }
 mock_adapter = { version = "0.1.0", path = "../../mock_contracts/mock_adapter", optional = true }
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }

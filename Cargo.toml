@@ -27,12 +27,12 @@ members = [
 
   # DAO
   # - Core
-  "contracts/dao_contracts/treasury",
-  "contracts/dao_contracts/treasury_manager",
+  "contracts/dao/treasury",
+  "contracts/dao/treasury_manager",
   # - Adapters
-  "contracts/dao_contracts/scrt_staking",
-  "contracts/dao_contracts/rewards_emission",
-  "contracts/dao_contracts/lp_shdswap",
+  "contracts/dao/scrt_staking",
+  "contracts/dao/rewards_emission",
+  "contracts/dao/lp_shdswap",
 
   #"contracts/snip20_staking",
   
