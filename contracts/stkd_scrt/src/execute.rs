@@ -5,39 +5,28 @@ use shade_protocol::{
         Addr,
         Binary,
         Coin,
-        CosmosMsg,
-        Deps,
         DepsMut,
-        DistributionMsg,
         Env,
         MessageInfo,
         Response,
-        StakingMsg,
         StdError,
         StdResult,
         Uint128,
-        Validator,
     },
 };
-
-use shade_protocol::snip20::helpers::redeem_msg;
 
 use shade_protocol::{
     dao::{
         adapter,
-        stkd_scrt::{staking_derivatives, Config, ExecuteAnswer, ValidatorBounds},
+        stkd_scrt::{staking_derivatives, Config, ExecuteAnswer},
     },
     utils::{
-        asset::{scrt_balance, Contract},
         generic_response::ResponseStatus,
         wrap::{unwrap, wrap_and_send},
     },
 };
 
-use crate::{
-    query,
-    storage::{CONFIG, SELF_ADDRESS, UNBONDING},
-};
+use crate::storage::*;
 
 pub fn receive(
     deps: DepsMut,
@@ -57,16 +46,12 @@ pub fn receive(
     // Unwrap & stake
     Ok(Response::new()
         .add_message(unwrap(amount, config.sscrt.clone())?)
-        .add_message(staking_derivatives::ExecuteMsg::Stake {}.to_cosmos_msg(
-            config.staking_derivatives,
-            vec![Coin {
-                amount,
-                denom: "uscrt".to_string(),
-            }],
+        .add_message(staking_derivatives::stake_msg(
+            amount,
+            &config.staking_derivatives,
         )?)
         .set_data(to_binary(&ExecuteAnswer::Receive {
             status: ResponseStatus::Success,
-            validator,
         })?))
 }
 
@@ -131,7 +116,7 @@ pub fn unbond(
         )?)
         .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
-            amount: unbonding,
+            amount,
         })?))
 }
 
@@ -148,15 +133,21 @@ pub fn claim(deps: DepsMut, env: Env, _info: MessageInfo, asset: Addr) -> StdRes
     let claimable = staking_derivatives::holdings_query(
         &deps.querier,
         env.contract.address,
+        VIEWING_KEY.load(deps.storage)?,
+        env.block.time.seconds(),
         &config.staking_derivatives,
     )?
-    .claimable_scrt
-    .unwrap_or(Uint128::zero());
+    .claimable_scrt;
 
     let mut messages = vec![];
     if !claimable.is_zero() {
         messages.push(staking_derivatives::claim_msg(&config.staking_derivatives)?);
-        messages.push(wrap_and_send(claimable, config.owner, config.sscrt, None)?);
+        messages.append(&mut wrap_and_send(
+            claimable,
+            config.owner,
+            config.sscrt,
+            None,
+        )?);
     }
 
     Ok(Response::new().add_messages(messages).set_data(to_binary(

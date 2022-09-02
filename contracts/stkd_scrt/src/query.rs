@@ -1,21 +1,9 @@
 use shade_protocol::{
-    c_std::{
-        Addr,
-        Api,
-        BankQuery,
-        Delegation,
-        Deps,
-        DistributionMsg,
-        FullDelegation,
-        Querier,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
+    c_std::{Addr, Deps, Env, StdError, StdResult, Uint128},
+    dao::{
+        adapter,
+        stkd_scrt::{staking_derivatives, QueryAnswer},
     },
-    dao::{adapter, stkd_scrt::{QueryAnswer, staking_derivatives},
-    snip20::helpers::balance_query,
-    utils::asset::scrt_balance,
 };
 
 use crate::storage::*;
@@ -26,7 +14,7 @@ pub fn config(deps: Deps) -> StdResult<QueryAnswer> {
     })
 }
 
-pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn balance(deps: Deps, env: Env, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let config = CONFIG.load(deps.storage)?;
 
     if asset != config.sscrt.address {
@@ -39,6 +27,8 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let holdings = staking_derivatives::holdings_query(
         &deps.querier,
         env.contract.address,
+        VIEWING_KEY.load(deps.storage)?,
+        env.block.time.seconds(),
         &config.staking_derivatives,
     )?;
 
@@ -49,7 +39,7 @@ pub fn balance(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     })
 }
 
-pub fn claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn claimable(deps: Deps, env: Env, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let config = CONFIG.load(deps.storage)?;
 
     if asset != config.sscrt.address {
@@ -62,6 +52,8 @@ pub fn claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let holdings = staking_derivatives::holdings_query(
         &deps.querier,
         env.contract.address,
+        VIEWING_KEY.load(deps.storage)?,
+        env.block.time.seconds(),
         &config.staking_derivatives,
     )?;
 
@@ -70,7 +62,7 @@ pub fn claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     })
 }
 
-pub fn unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn unbonding(deps: Deps, env: Env, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let config = CONFIG.load(deps.storage)?;
 
     if asset != config.sscrt.address {
@@ -83,6 +75,8 @@ pub fn unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let holdings = staking_derivatives::holdings_query(
         &deps.querier,
         env.contract.address,
+        VIEWING_KEY.load(deps.storage)?,
+        env.block.time.seconds(),
         &config.staking_derivatives,
     )?;
 
@@ -91,7 +85,7 @@ pub fn unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     })
 }
 
-pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn unbondable(deps: Deps, env: Env, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let config = CONFIG.load(deps.storage)?;
 
     if asset != config.sscrt.address {
@@ -104,6 +98,8 @@ pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let holdings = staking_derivatives::holdings_query(
         &deps.querier,
         env.contract.address,
+        VIEWING_KEY.load(deps.storage)?,
+        env.block.time.seconds(),
         &config.staking_derivatives,
     )?;
 
@@ -112,7 +108,7 @@ pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     })
 }
 
-pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
+pub fn reserves(deps: Deps, _env: Env, asset: Addr) -> StdResult<adapter::QueryAnswer> {
     let config = CONFIG.load(deps.storage)?;
 
     if asset != config.sscrt.address {

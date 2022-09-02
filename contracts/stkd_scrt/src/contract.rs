@@ -20,6 +20,7 @@ use shade_protocol::{
         stkd_scrt::{Config, ExecuteMsg, InstantiateMsg, QueryMsg},
     },
     snip20::helpers::{register_receive, set_viewing_key_msg},
+    utils::generic_response::ResponseStatus,
 };
 
 use crate::{execute, query, storage::*};
@@ -89,23 +90,23 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Adapter(adapter) => match adapter {
             adapter::SubQueryMsg::Balance { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::balance(deps, asset)?)
+                to_binary(&query::balance(deps, env, asset)?)
             }
             adapter::SubQueryMsg::Claimable { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::claimable(deps, asset)?)
+                to_binary(&query::claimable(deps, env, asset)?)
             }
             adapter::SubQueryMsg::Unbonding { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::unbonding(deps, asset)?)
+                to_binary(&query::unbonding(deps, env, asset)?)
             }
             adapter::SubQueryMsg::Unbondable { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::unbondable(deps, asset)?)
+                to_binary(&query::unbondable(deps, env, asset)?)
             }
             adapter::SubQueryMsg::Reserves { asset } => {
                 let asset = deps.api.addr_validate(&asset)?;
-                to_binary(&query::reserves(deps, asset)?)
+                to_binary(&query::reserves(deps, env, asset)?)
             }
         },
     }

@@ -75,7 +75,6 @@ pub enum ExecuteAnswer {
     },
     Receive {
         status: ResponseStatus,
-        validator: Validator,
     },
 }
 
@@ -97,6 +96,30 @@ pub enum QueryAnswer {
 // STAKING DERIVATIVES INTERFACE
 // TODO move to common location
 pub mod staking_derivatives {
+    use crate::{
+        c_std::{
+            Addr,
+            Binary,
+            Coin,
+            CosmosMsg,
+            Decimal,
+            Delegation,
+            QuerierWrapper,
+            StdError,
+            StdResult,
+            Uint128,
+            Validator,
+        },
+        cosmwasm_schema::cw_serde,
+        utils::{
+            asset::{Contract, RawContract},
+            generic_response::ResponseStatus,
+        },
+    };
+
+    use crate::contract_interfaces::dao::adapter;
+
+    use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 
     #[cw_serde]
     pub enum ExecuteMsg {
@@ -134,7 +157,7 @@ pub mod staking_derivatives {
 
     #[cw_serde]
     pub struct WeightedValidator {
-        pub validator: HumanAddr,
+        pub validator: Addr,
         pub weight: u8,
     }
 
@@ -153,6 +176,14 @@ pub mod staking_derivatives {
             token_balance: Uint128,
             token_balance_value_in_scrt: Uint128,
         },
+    }
+
+    #[cw_serde]
+    pub struct Holdings {
+        pub claimable_scrt: Uint128,
+        pub unbonding_scrt: Uint128,
+        pub token_balance: Uint128,
+        pub token_balance_value_in_scrt: Uint128,
     }
 
     impl Query for QueryMsg {
@@ -183,7 +214,7 @@ pub mod staking_derivatives {
         key: String,
         time: u64,
         contract: &Contract,
-    ) -> StdResult<QueryAnswer::Holdings> {
+    ) -> StdResult<Holdings> {
         QueryMsg::Holdings { address, key, time }.query(querier, contract)
     }
 }
