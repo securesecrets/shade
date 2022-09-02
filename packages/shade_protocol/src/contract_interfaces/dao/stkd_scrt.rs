@@ -149,4 +149,37 @@ pub mod staking_derivatives {
     impl Query for QueryMsg {
         const BLOCK_SIZE: usize = 256;
     }
+
+    pub fn stake_msg(amount: Uint128, contract: &Contract) -> StdResult<CosmosMsg> {
+        ExecuteMsg::Stake {}.to_cosmos_msg(
+            contract,
+            vec![Coin {
+                amount,
+                denom: "uscrt".to_string(),
+            }],
+        )
+    }
+
+    pub fn unbond_msg(amount: Uint128, contract: &Contract) -> StdResult<CosmosMsg> {
+        ExecuteMsg::Unbond {
+            redeem_amount: amount,
+        }
+        .to_cosmos_msg(contract, vec![])
+    }
+
+
+    pub fn claim_msg(contract: &Contract) -> StdResult<CosmosMsg> {
+        ExecuteMsg::Claim {}.to_cosmos_msg(contract, vec![])
+    }
+
+    pub fn holdings_query(querier: &QuerierWrapper, address: Addr, key: String, time: u64, contract: &Contract) -> StdResult<QueryAnswer::Holdings> {
+        match (QueryMsg::Holdings {
+            address,
+            key,
+            time,
+        }.query(querier, contract)?) {
+            QueryAnswer::Holdings(h) => h,
+            _ => Err(StdError::generic_err("Invalid holdings response")),
+        }
+    }
 }

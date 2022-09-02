@@ -42,7 +42,6 @@ pub fn instantiate(
 
     SELF_ADDRESS.save(deps.storage, &env.contract.address)?;
     VIEWING_KEY.save(deps.storage, &msg.viewing_key)?;
-    //UNBONDING.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::new().add_messages(vec![
         set_viewing_key_msg(msg.viewing_key, None, &config.sscrt)?,
@@ -74,10 +73,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 let asset = deps.api.addr_validate(&asset)?;
                 execute::claim(deps, env, info, asset)
             }
-            adapter::SubExecuteMsg::Update { asset } => {
-                let asset = deps.api.addr_validate(&asset)?;
-                execute::update(deps, env, info, asset)
-            }
+            adapter::SubExecuteMsg::Update { asset } => Ok(Response::new().set_data(to_binary(
+                &adapter::ExecuteAnswer::Update {
+                    status: ResponseStatus::Success,
+                },
+            )?)),
         },
     }
 }
