@@ -1,5 +1,5 @@
 contracts_dir=contracts
-dao_contracts_dir=contracts/dao_contracts
+dao_contracts_dir=contracts/dao
 mock_contracts_dir=mock_contracts
 compiled_dir=compiled
 checksum_dir=${compiled_dir}/checksum
@@ -20,7 +20,7 @@ CONTRACTS = \
 		oracle snip20 query_auth sky peg_stability admin
 
 DAO = \
-      treasury treasury_manager scrt_staking rewards_emission\
+      treasury treasury_manager scrt_staking rewards_emission
 
 MOCK = \
 		mock_band mock_secretswap_pair mock_sienna_pair mock_adapter
@@ -45,15 +45,15 @@ compress-%: setup
 	$(call opt_and_compress,$*,$*)
 
 $(CONTRACTS): setup
-	(cd ${contracts_dir}; ${build-release})
+	(cd ${contracts_dir}/$@; ${build-release})
 	@$(MAKE) compress-$(@)
 
 $(DAO): setup
-	(cd ${dao_contracts_dir}/; ${build-release})
+	(cd ${dao_contracts_dir}/$@; ${build-release})
 	@$(MAKE) compress-$(@)
 
 $(MOCK): setup
-	(cd ${mock_contracts_dir}; ${build-release})
+	(cd ${mock_contracts_dir}/$@; ${build-release})
 	@$(MAKE) compress-$(@)
 
 $(PACKAGES):
@@ -68,15 +68,15 @@ snip20_staking: setup
 	@$(MAKE) $(addprefix compress-,snip20_staking)
 
 test:
-	@$(MAKE) $(addprefix test-,$(CONTRACTS)) $(addprefix test-,$(DAO)) $(addprefix test-,$(MOCK))
+	@$(MAKE) $(addprefix test-,$(CONTRACTS))
 
-test-$(CONTRACTS): 
+test-%: %
 	(cd ${contracts_dir}/$*; cargo test)
 
-test-$(DAO): 
+test-dao-%: %
 	(cd ${dao_contracts_dir}/$*; cargo test)
 
-test-$(MOCK): 
+test-mock-%: % 
 	(cd ${mock_contracts_dir}/$*; cargo test)
 
 setup: $(compiled_dir) $(checksum_dir)
