@@ -156,6 +156,28 @@ pub fn claimable_query(
     }
 }
 
+pub fn holding_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+    holder: String,
+) -> StdResult<treasury_manager::Holding> {
+    match (treasury_manager::QueryMsg::Holding { holder }.test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )?) {
+        treasury_manager::QueryAnswer::Holding { holding } => Ok(holding),
+        _ => Err(StdError::generic_err(format!(
+            "Failed to.test_query treasury_manager claimable",
+        ))),
+    }
+}
+
 pub fn unbonding_query(
     chain: &App,
     contracts: &DeployedContracts,
@@ -363,5 +385,33 @@ pub fn update_exec(
     )) {
         Ok(_) => Ok(()),
         Err(_) => Err(StdError::generic_err("update in treasury manager failed")),
+    }
+}
+
+pub fn register_holder_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+    holder: &str,
+) -> StdResult<()> {
+    match (treasury_manager::ExecuteMsg::AddHolder {
+        holder: holder.to_string(),
+    }
+    .test_exec(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err(
+            "register_holder in treasury manager failed",
+        )),
     }
 }
