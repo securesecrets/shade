@@ -26,6 +26,12 @@ pub mod liability_mint {
     multi_derive::implement_multi!(LiabilityMint, liability_mint);
 }
 
+#[cfg(feature = "stkd_scrt")]
+pub mod stkd_scrt {
+    use stkd_scrt;
+    multi_derive::implement_multi!(StkdScrt, stkd_scrt);
+}
+
 // #[cfg(feature = "mint")]
 // pub mod mint {
 //     use mint;

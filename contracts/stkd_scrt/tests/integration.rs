@@ -3,21 +3,16 @@ use shade_protocol::c_std::{to_binary, Addr, Coin, Decimal, Delegation, Uint128,
 
 use shade_protocol::{
     contract_interfaces::{
-        dao::{adapter, scrt_staking},
+        dao::{adapter, stkd_scrt},
         snip20,
     },
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
-use shade_multi_test::multi::{scrt_staking::ScrtStaking, snip20::Snip20};
+use shade_multi_test::multi::{snip20::Snip20, stkd_scrt::StkdScrt};
 use shade_protocol::multi_test::{App, StakingSudo, SudoMsg};
 
-// Add other adapters here as they come
-fn basic_scrt_staking_integration(
-    deposit: Uint128,
-    rewards: Uint128,
-    expected_scrt_staking: Uint128,
-) {
+fn bonded_adapter_test(deposit: Uint128, rewards: Uint128, reserves: Uint128, balance: Uint128) {
     let mut app = App::default();
 
     let viewing_key = "unguessable".to_string();
@@ -44,7 +39,7 @@ fn basic_scrt_staking_integration(
     .test_init(Snip20::default(), &mut app, admin.clone(), "token", &[])
     .unwrap();
 
-    let scrt_staking = scrt_staking::InstantiateMsg {
+    let stkd_scrt = stkd_scrt::InstantiateMsg {
         admin_auth: admin_auth.into(),
         owner: admin.clone().into(),
         sscrt: token.clone().into(),
@@ -55,16 +50,17 @@ fn basic_scrt_staking_integration(
         ScrtStaking::default(),
         &mut app,
         admin.clone(),
-        "scrt_staking",
+        "stkd_scrt",
         &[],
     )
     .unwrap();
-    println!("SCRT STAKING ADDR {}", scrt_staking.address);
 
     app.sudo(SudoMsg::Staking(StakingSudo::AddValidator {
         validator: validator.to_string().clone(),
     }))
     .unwrap();
+
+    //TODO deploy staking_derivatives
 
     // set admin owner key
     snip20::ExecuteMsg::SetViewingKey {
@@ -74,55 +70,43 @@ fn basic_scrt_staking_integration(
     .test_exec(&token, &mut app, admin.clone(), &[])
     .unwrap();
 
-    if !deposit.is_zero() {
-        let deposit_coin = Coin {
-            denom: "uscrt".into(),
-            amount: deposit,
-        };
-        app.init_modules(|router, _, storage| {
-            router
-                .bank
-                .init_balance(storage, &admin.clone(), vec![deposit_coin.clone()])
-                .unwrap();
-        });
-
-        // Wrap L1 into tokens
-        snip20::ExecuteMsg::Deposit { padding: None }
-            .test_exec(&token, &mut app, admin.clone(), &vec![deposit_coin])
+    let deposit_coin = Coin {
+        denom: "uscrt".into(),
+        amount: deposit,
+    };
+    app.init_modules(|router, _, storage| {
+        router
+            .bank
+            .init_balance(storage, &admin.clone(), vec![deposit_coin.clone()])
             .unwrap();
+    });
 
-        // Deposit funds in scrt staking
-        snip20::ExecuteMsg::Send {
-            recipient: scrt_staking.address.to_string().clone(),
-            recipient_code_hash: None,
-            amount: deposit,
-            msg: None,
-            memo: None,
-            padding: None,
-        }
-        .test_exec(&token, &mut app, admin.clone(), &[])
+    // Wrap L1 into tokens
+    snip20::ExecuteMsg::Deposit { padding: None }
+        .test_exec(&token, &mut app, admin.clone(), &vec![deposit_coin])
         .unwrap();
 
-        // Delegations
-        let delegations: Vec<Delegation> = scrt_staking::QueryMsg::Delegations {}
-            .test_query(&scrt_staking, &app)
-            .unwrap();
-        assert!(
-            !delegations.is_empty(),
-            "empty delegations! {}",
-            delegations.len()
-        );
+    // Send funds to adapter
+    snip20::ExecuteMsg::Send {
+        recipient: stkd_scrt.address.to_string().clone(),
+        recipient_code_hash: None,
+        amount: deposit,
+        msg: None,
+        memo: None,
+        padding: None,
     }
+    .test_exec(&token, &mut app, admin.clone(), &[])
+    .unwrap();
 
-    // reserves should be 0 (all staked)
+    // reserves
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Reserves Pre-Rewards");
+            assert_eq!(amount, reserves, "Reserves Pre-Rewards");
         }
         _ => panic!("Query failed"),
     };
@@ -131,18 +115,18 @@ fn basic_scrt_staking_integration(
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit, "Balance Pre-Rewards");
+            assert_eq!(amount, balance, "Balance Pre-Rewards");
         }
         _ => panic!("Query failed"),
     };
 
     // Rewards
-    let cur_rewards: Uint128 = scrt_staking::QueryMsg::Rewards {}
-        .test_query(&scrt_staking, &app)
+    let cur_rewards: Uint128 = stkd_scrt::QueryMsg::Rewards {}
+        .test_query(&stkd_scrt, &app)
         .unwrap();
     assert_eq!(cur_rewards, Uint128::zero(), "Rewards Pre-add");
 
@@ -154,43 +138,16 @@ fn basic_scrt_staking_integration(
         },
     }))
     .unwrap();
-    /*
-    let block = app.block_info();
-    app.init_modules(|router, api, storage| {
-        router.staking.add_rewards(
-            api,
-            storage,
-            router,
-            &block,
-            Coin { amount: rewards, denom: "uscrt".into() },
-        ).unwrap();
-    });
-    */
 
-    // Rewards
-    let cur_rewards: Uint128 = scrt_staking::QueryMsg::Rewards {}
-        .test_query(&scrt_staking, &app)
-        .unwrap();
-
-    if deposit.is_zero() {
-        assert_eq!(cur_rewards, Uint128::zero(), "Rewards Post-add");
-    } else {
-        assert_eq!(cur_rewards, rewards, "Rewards Post-add");
-    }
-
-    // reserves should be rewards
+    // Reserves
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Reserves { amount } => {
-            if deposit.is_zero() {
-                assert_eq!(amount, Uint128::zero(), "Reserves Post-Rewards");
-            } else {
-                assert_eq!(amount, rewards, "Reserves Post-Rewards");
-            }
+            assert_eq!(amount, reserves, "Reserves Post-Rewards");
         }
         _ => panic!("Query failed"),
     };
@@ -199,48 +156,11 @@ fn basic_scrt_staking_integration(
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Balance { amount } => {
-            if deposit.is_zero() {
-                assert_eq!(amount, Uint128::zero(), "Balance Post-Rewards");
-            } else {
-                assert_eq!(amount, deposit + rewards, "Balance Post-Rewards");
-            }
-        }
-        _ => panic!("Query failed"),
-    };
-
-    // Update SCRT Staking
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
-        asset: token.address.to_string().clone().to_string(),
-    })
-    .test_exec(&scrt_staking, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // reserves/rewards should be staked
-    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
-        asset: token.address.to_string().clone(),
-    })
-    .test_query(&scrt_staking, &app)
-    .unwrap()
-    {
-        adapter::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, Uint128::zero(), "Reserves Post-Update");
-        }
-        _ => panic!("Query failed"),
-    };
-
-    // Balance
-    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
-        asset: token.address.to_string().clone(),
-    })
-    .test_query(&scrt_staking, &app)
-    .unwrap()
-    {
-        adapter::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Balance Post-Update");
+            assert_eq!(amount, deposit + rewards, "Balance Post-Rewards");
         }
         _ => panic!("Query failed"),
     };
@@ -249,7 +169,7 @@ fn basic_scrt_staking_integration(
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Claimable { amount } => {
@@ -262,34 +182,33 @@ fn basic_scrt_staking_integration(
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Unbondable { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Unbondable Pre-Unbond");
+            assert_eq!(amount, balance, "Unbondable Pre-Unbond");
         }
         _ => panic!("Query failed"),
     };
 
-    println!("SCRT STAKING ADDR {}", scrt_staking.address);
     // Unbond all
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
-        amount: expected_scrt_staking,
+        amount: balance,
         asset: token.address.to_string().clone().to_string(),
     })
-    .test_exec(&scrt_staking, &mut app, admin.clone(), &[])
+    .test_exec(&stkd_scrt, &mut app, admin.clone(), &[])
     .unwrap();
-    println!("SCRT STAKING ADDR {}", scrt_staking.address);
+    println!("SCRT STAKING ADDR {}", stkd_scrt.address);
 
     // Unbonding
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Unbonding { amount } => {
-            assert_eq!(amount, expected_scrt_staking, "Unbonding Pre fast forward");
+            assert_eq!(amount, deposit, "Unbonding Pre fast forward");
         }
         _ => panic!("Query failed"),
     };
@@ -298,7 +217,7 @@ fn basic_scrt_staking_integration(
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Claimable { amount } => {
@@ -314,15 +233,11 @@ fn basic_scrt_staking_integration(
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Claimable { amount } => {
-            if deposit.is_zero() {
-                assert_eq!(amount, Uint128::zero(), "Claimable post fast forward");
-            } else {
-                assert_eq!(amount, deposit + rewards, "Claimable post fast forward");
-            }
+            assert_eq!(amount, deposit, "Claimable post fast forward");
         }
         _ => panic!("Query failed"),
     };
@@ -331,14 +246,14 @@ fn basic_scrt_staking_integration(
     adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
         asset: token.address.to_string().clone().to_string(),
     })
-    .test_exec(&scrt_staking, &mut app, admin.clone(), &[])
+    .test_exec(&stkd_scrt, &mut app, admin.clone(), &[])
     .unwrap();
 
     // Reserves
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Reserves { amount } => {
@@ -351,11 +266,24 @@ fn basic_scrt_staking_integration(
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
-    .test_query(&scrt_staking, &app)
+    .test_query(&stkd_scrt, &app)
     .unwrap()
     {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "Balance Post Claim");
+        }
+        _ => panic!("Query failed"),
+    };
+
+    // Unbonding
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+        asset: token.address.to_string().clone(),
+    })
+    .test_query(&stkd_scrt, &app)
+    .unwrap()
+    {
+        adapter::QueryAnswer::Unbonding { amount } => {
+            assert_eq!(amount, Uint128::zero(), "Unbonding Post Claim");
         }
         _ => panic!("Query failed"),
     };
@@ -369,15 +297,7 @@ fn basic_scrt_staking_integration(
     .unwrap()
     {
         snip20::QueryAnswer::Balance { amount } => {
-            if deposit.is_zero() {
-                assert_eq!(amount.u128(), 0u128, "Final User balance");
-            } else {
-                assert_eq!(
-                    amount.u128(),
-                    deposit.u128() + rewards.u128(),
-                    "Final user balance"
-                );
-            }
+            assert_eq!(amount, deposit + rewards, "Final User balance");
         }
         _ => {
             panic!("snip20 balance query failed");
@@ -385,7 +305,7 @@ fn basic_scrt_staking_integration(
     };
 }
 
-macro_rules! basic_scrt_staking_tests {
+macro_rules! basic_stkd_scrt_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
@@ -393,28 +313,19 @@ macro_rules! basic_scrt_staking_tests {
                 let (
                     deposit,
                     rewards,
-                    expected_scrt_staking,
+                    expected_stkd_scrt,
                 ) = $value;
-                basic_scrt_staking_integration(deposit, rewards, expected_scrt_staking);
+                basic_stkd_scrt_integration(deposit, rewards, expected_stkd_scrt);
             }
         )*
     }
 }
 
-basic_scrt_staking_tests! {
-    basic_scrt_staking_0: (
+basic_stkd_scrt_tests! {
+    basic_stkd_scrt_0: (
         Uint128::new(100), // deposit
-        Uint128::new(0),   // rewards
+        Uint128::new(10),   // rewards
+        Uint128::new(100), // reserves
         Uint128::new(100), // balance
-    ),
-    basic_scrt_staking_1: (
-        Uint128::new(100), // deposit
-        Uint128::new(50),   // rewards
-        Uint128::new(150), // balance
-    ),
-    basic_scrt_staking_no_deposit: (
-        Uint128::new(0), // deposit
-        Uint128::new(1000),   // rewards
-        Uint128::new(0), // balance
     ),
 }
