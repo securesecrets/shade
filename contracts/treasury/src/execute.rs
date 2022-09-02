@@ -1,5 +1,4 @@
 use crate::storage::*;
-//use itertools::{Either, Itertools};
 use shade_protocol::{
     c_std::{
         to_binary,
@@ -129,9 +128,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         &full_asset.contract.clone(),
     )?;
 
-    // Total for "amount" allowances (govt, assemblies, etc.)
-    //let mut amount_allowance = Uint128::zero();
-
     // { spender: (balance, allowance) }
     let mut metadata: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
 
@@ -147,8 +143,8 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         let manager = MANAGER.may_load(deps.storage, a.spender.clone())?;
         let mut claimable = Uint128::zero();
         let mut unbonding = Uint128::zero();
-        let mut unbondable = Uint128::zero();
         let mut balance = Uint128::zero();
+        // we can only get some of these numbers when it's a treasury manager
         if let Some(m) = manager.clone() {
             claimable = manager::claimable_query(
                 deps.querier,
@@ -176,13 +172,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                 m.clone(),
             )?;
 
-            unbondable = manager::unbondable_query(
-                deps.querier,
-                &asset.clone(),
-                env.contract.address.clone(),
-                m.clone(),
-            )?;
-
             balance = manager::balance_query(
                 deps.querier,
                 &asset.clone(),
@@ -191,6 +180,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             )?
         }
 
+        // can allways get allowance for everyone
         let allowance = allowance_query(
             &deps.querier,
             env.contract.address.clone(),
@@ -204,7 +194,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         // if all of these are zero then we need to remove the allowance at the end of the fn
         if balance.is_zero()
             && unbonding.is_zero()
-            && unbondable.is_zero()
             && claimable.is_zero()
             && allowance.is_zero()
             && a.amount.is_zero()
@@ -214,27 +203,9 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
 
         metadata.insert(a.spender.clone(), (balance, allowance));
         total_balance += balance + unbonding;
-
-        match a.allowance_type {
-            AllowanceType::Amount => {
-                //           amount_allowance += allowance;
-            }
-            AllowanceType::Portion => {}
-        }
     }
 
-    allowances.sort_by(|a, b| match a.allowance_type {
-        AllowanceType::Amount => match b.allowance_type {
-            AllowanceType::Amount => std::cmp::Ordering::Equal,
-            AllowanceType::Portion => std::cmp::Ordering::Less,
-        },
-        AllowanceType::Portion => match b.allowance_type {
-            AllowanceType::Amount => std::cmp::Ordering::Greater,
-            AllowanceType::Portion => std::cmp::Ordering::Equal,
-        },
-    });
-
-    /* Amounts given priority
+    /* Amounts given priority sice the array is sorted
      * portions are calculated after amounts are taken from total
      */
     for allowance in allowances.clone() {
@@ -253,19 +224,27 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             }
         }
 
+        // calculate the desired amount for the manager
         let desired_amount = match allowance.allowance_type {
             AllowanceType::Amount => {
+                // reduce total_balance so amount allowances are not used in the calculation for
+                // portion allowances
                 if total_balance >= allowance.amount {
                     total_balance -= allowance.amount;
+                } else {
+                    total_balance = Uint128::zero();
                 }
                 allowance.amount
             }
             AllowanceType::Portion => {
+                // This just gives a ratio of total balance where allowance.amount is the percent
                 total_balance.multiply_ratio(allowance.amount, ONE_HUNDRED_PERCENT)
             }
         };
 
+        // calculate threshold
         let threshold = desired_amount.multiply_ratio(allowance.tolerance, ONE_HUNDRED_PERCENT);
+
         let (balance, cur_allowance) = metadata[&allowance.spender];
         let total = balance + cur_allowance;
 
@@ -355,7 +334,8 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             }
             // Increase Allowance
             std::cmp::Ordering::Greater => {
-                let increase = desired_amount - (cur_allowance + balance);
+                let increase = desired_amount - total;
+                // threshold check
                 if increase <= threshold {
                     continue;
                 }
@@ -680,11 +660,11 @@ pub fn allowance(
         .may_load(deps.storage, asset.clone())?
         .unwrap_or(vec![]);
 
-    let stale_allow = allowances
+    // remove duplicated allowance
+    match allowances
         .iter()
-        .position(|a| a.spender == allowance.spender);
-
-    match stale_allow {
+        .position(|a| a.spender == allowance.spender)
+    {
         Some(i) => {
             allowances.swap_remove(i);
         }
@@ -701,6 +681,7 @@ pub fn allowance(
         tolerance: allowance.tolerance,
     });
 
+    // esure portion allowances don't exceed 100%
     if allowance.allowance_type == AllowanceType::Portion {
         let portion_sum: u128 = allowances
             .iter()
@@ -716,6 +697,18 @@ pub fn allowance(
             )));
         }
     }
+
+    // Sort list before going into storage
+    allowances.sort_by(|a, b| match a.allowance_type {
+        AllowanceType::Amount => match b.allowance_type {
+            AllowanceType::Amount => std::cmp::Ordering::Equal,
+            AllowanceType::Portion => std::cmp::Ordering::Less,
+        },
+        AllowanceType::Portion => match b.allowance_type {
+            AllowanceType::Amount => std::cmp::Ordering::Greater,
+            AllowanceType::Portion => std::cmp::Ordering::Equal,
+        },
+    });
 
     ALLOWANCES.save(deps.storage, asset, &allowances)?;
 
