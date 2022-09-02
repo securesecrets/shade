@@ -54,9 +54,9 @@ pub fn receive(
         return Err(StdError::generic_err("Only accepts sSCRT"));
     }
 
+    // Unwrap & stake
     Ok(Response::new()
         .add_message(unwrap(amount, config.sscrt.clone())?)
-        // Stake
         .add_message(staking_derivatives::ExecuteMsg::Stake {}.to_cosmos_msg(
             config.staking_derivatives,
             vec![Coin {

@@ -18,3 +18,6 @@ pub mod scrt_staking;
 
 #[cfg(feature = "lp_shdswap")]
 pub mod lp_shdswap;
+
+#[cfg(feature = "stkd_scrt")]
+pub mod stkd_scrt;

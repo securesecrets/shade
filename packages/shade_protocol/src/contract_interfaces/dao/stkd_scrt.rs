@@ -1,5 +1,17 @@
 use crate::{
-    c_std::{Addr, Binary, Decimal, Delegation, Uint128, Validator},
+    c_std::{
+        Addr,
+        Binary,
+        CosmosMsg,
+        Decimal,
+        Delegation,
+        QuerierWrapper,
+        StdError,
+        StdResult,
+        Uint128,
+        Validator,
+    },
+    cosmwasm_schema::cw_serde,
     utils::{
         asset::{Contract, RawContract},
         generic_response::ResponseStatus,
@@ -9,7 +21,6 @@ use crate::{
 use crate::contract_interfaces::dao::adapter;
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
-use cosmwasm_schema::cw_serde;
 
 #[cw_serde]
 pub struct Config {
@@ -88,11 +99,9 @@ pub enum QueryAnswer {
 pub mod staking_derivatives {
 
     #[cw_serde]
-    pub struct ExecuteMsg {
+    pub enum ExecuteMsg {
         Stake {},
-        Unbond {
-            redeem_amount: Uint128,
-        },
+        Unbond { redeem_amount: Uint128 },
         Claim {},
     }
 
@@ -101,8 +110,8 @@ pub mod staking_derivatives {
     }
 
     #[cw_serde]
-    pub struct QueryMsg {
-        Unbonding { 
+    pub enum QueryMsg {
+        Unbonding {
             address: Addr,
             key: String,
             page: Option<u32>,
@@ -130,7 +139,7 @@ pub mod staking_derivatives {
     }
 
     #[cw_serde]
-    pub struct QueryAnswer {
+    pub enum QueryAnswer {
         Unbonding {
             count: u64,
             claimable_scrt: Option<Uint128>,
@@ -151,13 +160,10 @@ pub mod staking_derivatives {
     }
 
     pub fn stake_msg(amount: Uint128, contract: &Contract) -> StdResult<CosmosMsg> {
-        ExecuteMsg::Stake {}.to_cosmos_msg(
-            contract,
-            vec![Coin {
-                amount,
-                denom: "uscrt".to_string(),
-            }],
-        )
+        ExecuteMsg::Stake {}.to_cosmos_msg(contract, vec![Coin {
+            amount,
+            denom: "uscrt".to_string(),
+        }])
     }
 
     pub fn unbond_msg(amount: Uint128, contract: &Contract) -> StdResult<CosmosMsg> {
@@ -167,19 +173,17 @@ pub mod staking_derivatives {
         .to_cosmos_msg(contract, vec![])
     }
 
-
     pub fn claim_msg(contract: &Contract) -> StdResult<CosmosMsg> {
         ExecuteMsg::Claim {}.to_cosmos_msg(contract, vec![])
     }
 
-    pub fn holdings_query(querier: &QuerierWrapper, address: Addr, key: String, time: u64, contract: &Contract) -> StdResult<QueryAnswer::Holdings> {
-        match (QueryMsg::Holdings {
-            address,
-            key,
-            time,
-        }.query(querier, contract)?) {
-            QueryAnswer::Holdings(h) => h,
-            _ => Err(StdError::generic_err("Invalid holdings response")),
-        }
+    pub fn holdings_query(
+        querier: &QuerierWrapper,
+        address: Addr,
+        key: String,
+        time: u64,
+        contract: &Contract,
+    ) -> StdResult<QueryAnswer::Holdings> {
+        QueryMsg::Holdings { address, key, time }.query(querier, contract)
     }
 }

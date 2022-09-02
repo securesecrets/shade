@@ -13,7 +13,7 @@ use shade_protocol::{
         Storage,
         Uint128,
     },
-    dao::{adapter, scrt_staking::QueryAnswer},
+    dao::{adapter, stkd_scrt::{QueryAnswer, staking_derivatives},
     snip20::helpers::balance_query,
     utils::asset::scrt_balance,
 };

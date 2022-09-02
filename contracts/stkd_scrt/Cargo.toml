@@ -25,7 +25,7 @@ backtraces = ["shade-protocol/backtraces"]
 shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
   "adapter",
   "dao",
-  "scrt_staking",
+  "stkd_scrt",
   "treasury",
   "math",
   "storage_plus",
