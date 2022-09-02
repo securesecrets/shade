@@ -492,6 +492,14 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     // This gives us our total allowance from the treasury, used and unused
     let total = out_total + allowance;
 
+    balance = {
+        if balance > holder_unbonding {
+            balance - holder_unbonding
+        } else {
+            Uint128::zero()
+        }
+    };
+
     // setting up vars
     let mut allowance_used = Uint128::zero();
     let mut balance_used = Uint128::zero();
@@ -536,81 +544,19 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
             }
         };
 
-        // this sets balance to be the TM's actual unbondable amount
-        balance = {
-            if balance > holder_unbonding {
-                balance - holder_unbonding
-            } else {
-                Uint128::zero()
-            }
-        };
+        match desired_amount.cmp(&effective_balance) {
+            // Under Funded -- prioritize tm snip20 balance over allowance from treasury
+            std::cmp::Ordering::Greater => {
+                // target send amount to adapter
+                let mut desired_input = desired_amount - effective_balance;
+                // check if threshold is crossed
+                if desired_input <= threshold {
+                    continue;
+                }
 
-        // Under Funded -- prioritize tm snip20 balance over allowance from treasury
-        if effective_balance < desired_amount {
-            // target send amount to adapter
-            let mut desired_input = desired_amount - effective_balance;
-            // check if threshold is crossed
-            if desired_input <= threshold {
-                continue;
-            }
-
-            // Fully covered by balance
-            if desired_input < balance {
-                send_actions.push(SendAction {
-                    recipient: adapter.contract.address.clone().to_string(),
-                    recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                    amount: desired_input,
-                    msg: None,
-                    memo: None,
-                });
-                metrics.push(Metric {
-                    action: Action::SendFunds,
-                    context: Context::Update,
-                    timestamp: env.block.time.seconds(),
-                    token: asset.clone(),
-                    amount: desired_input,
-                    user: adapter.contract.address.clone(),
-                });
-
-                // reduce snip20 balance for future loops
-                balance = balance - desired_input;
-                balance_used += desired_input;
-                // at this point we know we have fufilled what this adapter needs
-                continue;
-            }
-            // Send all snip20 balance since the adapter needs more that the balance can fufill,
-            // but balance is not 0
-            else if !balance.is_zero() {
-                send_actions.push(SendAction {
-                    recipient: adapter.contract.address.clone().to_string(),
-                    recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                    amount: balance,
-                    msg: None,
-                    memo: None,
-                });
-                metrics.push(Metric {
-                    action: Action::SendFunds,
-                    context: Context::Update,
-                    timestamp: env.block.time.seconds(),
-                    token: asset.clone(),
-                    amount: balance,
-                    user: adapter.contract.address.clone(),
-                });
-
-                // reduce the desired_input to reflect the balance being sent, we know this will
-                // not overflow because if balance was > desired_input, we would have hit a
-                // continue statement
-                desired_input = desired_input - balance;
-                // reset balance since we have effectively sent everything out
-                balance = Uint128::zero();
-            }
-
-            if !allowance.is_zero() {
-                // This will only execute after snip20 balance has been used up
-                // Fully covered by allowance
-                if desired_input < allowance {
-                    send_from_actions.push(SendFromAction {
-                        owner: config.treasury.clone().to_string(),
+                // Fully covered by balance
+                if desired_input < balance {
+                    send_actions.push(SendAction {
                         recipient: adapter.contract.address.clone().to_string(),
                         recipient_code_hash: Some(adapter.contract.code_hash.clone()),
                         amount: desired_input,
@@ -618,7 +564,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                         memo: None,
                     });
                     metrics.push(Metric {
-                        action: Action::SendFundsFrom,
+                        action: Action::SendFunds,
                         context: Context::Update,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
@@ -626,85 +572,141 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                         user: adapter.contract.address.clone(),
                     });
 
-                    allowance_used += desired_input;
-                    // this will not overflow due to check in if statement
-                    allowance = allowance - desired_input;
-                    // similarily, we know that we have fufilled what this adapter needs at this
-                    // point but we don't want to continue since we need to account for the
-                    // allowance used in the holder's information
+                    // reduce snip20 balance for future loops
+                    balance = balance - desired_input;
+                    balance_used += desired_input;
+                    // at this point we know we have fufilled what this adapter needs
+                    continue;
                 }
-                // Send all allowance
-                else if !allowance.is_zero() {
-                    send_from_actions.push(SendFromAction {
-                        owner: config.treasury.clone().to_string(),
+                // Send all snip20 balance since the adapter needs more that the balance can fufill,
+                // but balance is not 0
+                else if !balance.is_zero() {
+                    send_actions.push(SendAction {
                         recipient: adapter.contract.address.clone().to_string(),
                         recipient_code_hash: Some(adapter.contract.code_hash.clone()),
-                        amount: allowance,
+                        amount: balance,
                         msg: None,
                         memo: None,
                     });
                     metrics.push(Metric {
-                        action: Action::SendFundsFrom,
+                        action: Action::SendFunds,
                         context: Context::Update,
                         timestamp: env.block.time.seconds(),
                         token: asset.clone(),
-                        amount: allowance,
+                        amount: balance,
                         user: adapter.contract.address.clone(),
                     });
 
-                    // account for allowance being sent out
-                    allowance_used += allowance;
-                    allowance = Uint128::zero();
+                    // reduce the desired_input to reflect the balance being sent, we know this will
+                    // not overflow because if balance was > desired_input, we would have hit a
+                    // continue statement
+                    desired_input = desired_input - balance;
+                    // reset balance since we have effectively sent everything out
+                    balance = Uint128::zero();
                 }
-            }
-        }
-        // Over funded -- unbond
-        else if effective_balance > desired_amount {
-            // balance - target balance will give the amount we need to unbond
-            let desired_output = effective_balance - desired_amount;
 
-            // check to see that the threshold has been crossed
-            if desired_output <= threshold {
-                continue;
-            }
+                if !allowance.is_zero() {
+                    // This will only execute after snip20 balance has been used up
+                    // Fully covered by allowance
+                    if desired_input < allowance {
+                        send_from_actions.push(SendFromAction {
+                            owner: config.treasury.clone().to_string(),
+                            recipient: adapter.contract.address.clone().to_string(),
+                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                            amount: desired_input,
+                            msg: None,
+                            memo: None,
+                        });
+                        metrics.push(Metric {
+                            action: Action::SendFundsFrom,
+                            context: Context::Update,
+                            timestamp: env.block.time.seconds(),
+                            token: asset.clone(),
+                            amount: desired_input,
+                            user: adapter.contract.address.clone(),
+                        });
 
-            if adapter.unbondable >= desired_output {
-                if !desired_output.is_zero() {
-                    messages.push(adapter::unbond_msg(
-                        &asset.clone(),
-                        desired_output.clone(),
-                        adapter.contract.clone(),
-                    )?);
-                    metrics.push(Metric {
-                        action: Action::Unbond,
-                        context: Context::Update,
-                        timestamp: env.block.time.seconds(),
-                        token: asset.clone(),
-                        amount: desired_output,
-                        user: adapter.contract.address.clone(),
-                    });
+                        allowance_used += desired_input;
+                        // this will not overflow due to check in if statement
+                        allowance = allowance - desired_input;
+                        // similarily, we know that we have fufilled what this adapter needs at this
+                        // point but we don't want to continue since we need to account for the
+                        // allowance used in the holder's information
+                    }
+                    // Send all allowance
+                    else if !allowance.is_zero() {
+                        send_from_actions.push(SendFromAction {
+                            owner: config.treasury.clone().to_string(),
+                            recipient: adapter.contract.address.clone().to_string(),
+                            recipient_code_hash: Some(adapter.contract.code_hash.clone()),
+                            amount: allowance,
+                            msg: None,
+                            memo: None,
+                        });
+                        metrics.push(Metric {
+                            action: Action::SendFundsFrom,
+                            context: Context::Update,
+                            timestamp: env.block.time.seconds(),
+                            token: asset.clone(),
+                            amount: allowance,
+                            user: adapter.contract.address.clone(),
+                        });
+
+                        // account for allowance being sent out
+                        allowance_used += allowance;
+                        allowance = Uint128::zero();
+                    }
                 }
-                let unbondings = UNBONDINGS.load(deps.storage)? + desired_output;
-                UNBONDINGS.save(deps.storage, &unbondings)?;
-            } else {
-                if !adapter.unbondable.is_zero() {
-                    messages.push(adapter::unbond_msg(
-                        &asset.clone(),
-                        adapter.unbondable.clone(),
-                        adapter.contract.clone(),
-                    )?);
-                    metrics.push(Metric {
-                        action: Action::Unbond,
-                        context: Context::Update,
-                        timestamp: env.block.time.seconds(),
-                        token: asset.clone(),
-                        amount: adapter.unbondable,
-                        user: adapter.contract.address.clone(),
-                    });
-                }
-                let unbondings = UNBONDINGS.load(deps.storage)? + adapter.unbondable;
-                UNBONDINGS.save(deps.storage, &unbondings)?;
             }
+            // Over funded -- unbond
+            std::cmp::Ordering::Less => {
+                // balance - target balance will give the amount we need to unbond
+                let desired_output = effective_balance - desired_amount;
+
+                // check to see that the threshold has been crossed
+                if desired_output <= threshold {
+                    continue;
+                }
+
+                if adapter.unbondable >= desired_output {
+                    if !desired_output.is_zero() {
+                        messages.push(adapter::unbond_msg(
+                            &asset.clone(),
+                            desired_output.clone(),
+                            adapter.contract.clone(),
+                        )?);
+                        metrics.push(Metric {
+                            action: Action::Unbond,
+                            context: Context::Update,
+                            timestamp: env.block.time.seconds(),
+                            token: asset.clone(),
+                            amount: desired_output,
+                            user: adapter.contract.address.clone(),
+                        });
+                    }
+                    let unbondings = UNBONDINGS.load(deps.storage)? + desired_output;
+                    UNBONDINGS.save(deps.storage, &unbondings)?;
+                } else {
+                    if !adapter.unbondable.is_zero() {
+                        messages.push(adapter::unbond_msg(
+                            &asset.clone(),
+                            adapter.unbondable.clone(),
+                            adapter.contract.clone(),
+                        )?);
+                        metrics.push(Metric {
+                            action: Action::Unbond,
+                            context: Context::Update,
+                            timestamp: env.block.time.seconds(),
+                            token: asset.clone(),
+                            amount: adapter.unbondable,
+                            user: adapter.contract.address.clone(),
+                        });
+                    }
+                    let unbondings = UNBONDINGS.load(deps.storage)? + adapter.unbondable;
+                    UNBONDINGS.save(deps.storage, &unbondings)?;
+                }
+            }
+            _ => {}
         }
     }
 
@@ -735,38 +737,42 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     holder_principal += allowance_used;
 
     // this will never overflow because total is a sum of allowance
-    if total - allowance > holder_principal {
-        let gains = (total - allowance) - holder_principal;
-        // debit gains to treasury
-        let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
-        if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
-            holding.balances[i].amount += gains;
+    match (total - allowance).cmp(&holder_principal) {
+        std::cmp::Ordering::Greater => {
+            let gains = (total - allowance) - holder_principal;
+            // debit gains to treasury
+            let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
+            if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
+                holding.balances[i].amount += gains;
+            }
+            HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
+            metrics.push(Metric {
+                action: Action::RealizeGains,
+                context: Context::Update,
+                timestamp: env.block.time.seconds(),
+                token: asset.clone(),
+                amount: gains,
+                user: config.treasury.clone(),
+            });
         }
-        HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
-        metrics.push(Metric {
-            action: Action::RealizeGains,
-            context: Context::Update,
-            timestamp: env.block.time.seconds(),
-            token: asset.clone(),
-            amount: gains,
-            user: config.treasury.clone(),
-        });
-    } else if total - allowance < holder_principal {
-        let losses = holder_principal - (total - allowance);
-        // credit losses to treasury
-        let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
-        if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
-            holding.balances[i].amount -= losses;
+        std::cmp::Ordering::Less => {
+            let losses = holder_principal - (total - allowance);
+            // credit losses to treasury
+            let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
+            if let Some(i) = holding.balances.iter().position(|u| u.token == asset) {
+                holding.balances[i].amount -= losses;
+            }
+            HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
+            metrics.push(Metric {
+                action: Action::RealizeLosses,
+                context: Context::Update,
+                timestamp: env.block.time.seconds(),
+                token: asset.clone(),
+                amount: losses,
+                user: config.treasury.clone(),
+            });
         }
-        HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
-        metrics.push(Metric {
-            action: Action::RealizeLosses,
-            context: Context::Update,
-            timestamp: env.block.time.seconds(),
-            token: asset.clone(),
-            amount: losses,
-            user: config.treasury.clone(),
-        });
+        _ => {}
     }
 
     // exec batch balance send messages
