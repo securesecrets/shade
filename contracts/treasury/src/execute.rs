@@ -48,7 +48,7 @@ use shade_protocol::{
 };
 use std::collections::HashMap;
 
-const ONE_HUNDRED_PERCENT: u128 = 10u128.pow(18u32);
+const ONE_HUNDRED_PERCENT: Uint128 = Uint128::new(10u128.pow(18u32));
 
 pub fn receive(
     deps: DepsMut,
@@ -681,21 +681,22 @@ pub fn allowance(
         tolerance: allowance.tolerance,
     });
 
-    // esure portion allowances don't exceed 100%
-    if allowance.allowance_type == AllowanceType::Portion {
-        let portion_sum: u128 = allowances
-            .iter()
-            .filter(|a| a.allowance_type == AllowanceType::Portion)
-            .map(|a| a.amount.u128())
-            .sum();
-
-        // Total cannot exceed %100
-        if portion_sum > ONE_HUNDRED_PERCENT {
-            return Err(StdError::generic_err(format!(
-                "Total portion allowances cannot exceed %100 ({})",
-                portion_sum
-            )));
-        }
+    // ensure that the portion allocations don't go above 100%
+    if allowances
+        .iter()
+        .map(|a| {
+            if a.allowance_type == AllowanceType::Portion {
+                a.amount
+            } else {
+                Uint128::zero()
+            }
+        })
+        .sum::<Uint128>()
+        > ONE_HUNDRED_PERCENT
+    {
+        return Err(StdError::generic_err(
+            "Invalid allowance total exceeding 100%",
+        ));
     }
 
     // Sort list before going into storage
