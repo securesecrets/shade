@@ -16,6 +16,7 @@ use shade_protocol::{
         manager,
         treasury_manager::{Config, ExecuteMsg, Holding, InstantiateMsg, QueryMsg, Status},
     },
+    utils::cycle::parse_utc_datetime,
 };
 
 #[shd_entry_point]
@@ -95,7 +96,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[shd_entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         QueryMsg::Assets {} => to_binary(&query::assets(deps)?),
@@ -113,7 +114,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&query::holding(deps, holder)?)
         }
         QueryMsg::Metrics { date, period } => {
-            todo!("implement");
+            let key = match date {
+                Some(d) => parse_utc_datetime(&d)?.timestamp() as u64,
+                None => env.block.time.seconds(),
+            };
+            to_binary(&QueryAnswer::Metrics {
+                metrics: METRICS.load_period(deps.storage, key, period)?,
+            })
         }
 
         QueryMsg::Manager(a) => match a {
