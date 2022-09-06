@@ -42,6 +42,10 @@ pub struct Config {
     pub vote_token: Option<Contract>,
     // When funding is enabled, a funding token is expected
     pub funding_token: Option<Contract>,
+
+    // Migration information
+    pub migrated_from: Option<Contract>,
+    pub migrated_to: Option<Contract>,
 }
 
 #[cfg(feature = "governance-impl")]
@@ -62,6 +66,9 @@ pub struct InstantiateMsg {
     pub public_profile: Profile,
     pub funding_token: Option<Contract>,
     pub vote_token: Option<Contract>,
+
+    // Migration data
+    pub migrator: Option<Contract>,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -81,6 +88,28 @@ pub enum RuntimeState {
 #[cfg(feature = "governance-impl")]
 impl ItemStorage for RuntimeState {
     const ITEM: Item<'static, Self, Json> = Item::new("runtime-state-");
+}
+
+pub enum MigrationDataAsk {
+    Committee,
+    CommitteeMsg,
+    Profile,
+    Contract,
+}
+
+pub enum MigrationData {
+    Committee {
+        data: Vec<(Uint128, Assembly)>,
+    },
+    CommitteeMsg {
+        data: Vec<(Uint128, AssemblyMsg)>,
+    },
+    Profile {
+        data: Vec<(Uint128, Profile)>,
+    },
+    Contract {
+        data: Vec<(Uint128, AllowedContract)>,
+    },
 }
 
 // TODO: allow migration, copies all assemblies, contracts and msgs
@@ -230,6 +259,25 @@ pub enum ExecuteMsg {
     AddContractAssemblies {
         id: Uint128,
         assemblies: Vec<Uint128>,
+    },
+    // Migrations
+    // Export total numeric IDs
+    // Committee, msg, profile and contract keys must be exported
+    // Create a struct that stores the last migrated IDs
+    // Enum for migration targets
+    // migrate gives an array of items with their appropriate IDs
+    // Migrate Committee, Msg, Profile and Contract
+    // When receiving migration data, if given ID is greater then ignore
+
+    // Add functions for exporting lists of data into the needed contracts
+    Migrate {
+        id: u64,
+    },
+    MigrateData {
+        data: MigrationDataAsk,
+    },
+    ReceiveMigrationData {
+        data: MigrationData,
     },
 }
 
