@@ -1,11 +1,10 @@
+use crate::storage::*;
 use shade_protocol::{
     c_std::{Addr, Deps, StdError, StdResult, Uint128},
     contract_interfaces::dao::{adapter, manager, treasury},
     snip20::helpers::{allowance_query, balance_query},
     utils::asset::Contract,
 };
-
-use crate::storage::*;
 use std::collections::HashSet;
 
 pub fn config(deps: Deps) -> StdResult<treasury::QueryAnswer> {
@@ -109,61 +108,6 @@ pub fn reserves(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
 
     Ok(adapter::QueryAnswer::Reserves { amount: reserves })
 }
-
-/*
-pub fn unbonding(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-    let mut unbonding = Uint128::zero();
-    let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
-
-    if ASSET.may_load(deps.storage, asset.clone())?.is_none() {
-        return Err(StdError::generic_err("Unrecognized Asset"));
-    }
-
-    for allowance in allowances {
-        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
-            unbonding += manager::unbonding_query(deps.querier, &asset, self_address.clone(), m)?;
-        }
-    }
-
-    Ok(adapter::QueryAnswer::Unbonding { amount: unbonding })
-}
-
-pub fn unbondable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
-    let mut unbondable = Uint128::zero();
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-
-    if ASSET.may_load(deps.storage, asset.clone())?.is_none() {
-        return Err(StdError::generic_err("Unrecognized Asset"));
-    }
-
-    for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
-        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender.clone())? {
-            unbondable += manager::unbondable_query(deps.querier, &asset, self_address.clone(), m)?;
-        }
-    }
-    Ok(adapter::QueryAnswer::Unbondable { amount: unbondable })
-}
-
-pub fn claimable(deps: Deps, asset: Addr) -> StdResult<adapter::QueryAnswer> {
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-    let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
-
-    if ASSET.may_load(deps.storage, asset.clone())?.is_none() {
-        return Err(StdError::generic_err("Unrecognized Asset"));
-    }
-
-    let mut claimable = Uint128::zero();
-
-    for allowance in allowances {
-        if let Some(m) = MANAGER.may_load(deps.storage, allowance.spender)? {
-            claimable += manager::claimable_query(deps.querier, &asset, self_address.clone(), m)?;
-        }
-    }
-
-    Ok(adapter::QueryAnswer::Claimable { amount: claimable })
-}
-*/
 
 pub fn allowance(deps: Deps, asset: Addr, spender: Addr) -> StdResult<treasury::QueryAnswer> {
     let self_address = SELF_ADDRESS.load(deps.storage)?;

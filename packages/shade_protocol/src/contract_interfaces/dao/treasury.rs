@@ -37,6 +37,7 @@ pub enum Context {
     Rebalance,
     Migration,
     Unbond,
+    Wrap,
 }
 
 #[cw_serde]
@@ -47,6 +48,7 @@ pub enum Action {
     Claim,
     FundsReceived,
     SendFunds,
+    Wrap,
 }
 
 #[cw_serde]

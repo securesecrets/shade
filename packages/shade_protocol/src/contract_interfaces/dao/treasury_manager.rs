@@ -102,7 +102,17 @@ pub struct AllocationMeta {
     pub alloc_type: AllocationType,
     pub amount: Uint128,
     pub tolerance: Uint128,
+}
+
+#[cw_serde]
+pub struct AllocationTempData {
+    pub contract: Contract,
+    pub alloc_type: AllocationType,
+    pub amount: Uint128,
+    pub tolerance: Uint128,
     pub balance: Uint128,
+    pub unbondable: Uint128,
+    pub unbonding: Uint128,
 }
 
 #[cw_serde]
