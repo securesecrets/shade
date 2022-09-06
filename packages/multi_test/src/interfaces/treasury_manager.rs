@@ -304,8 +304,8 @@ pub fn claim_exec(
     contracts: &DeployedContracts,
     snip20_symbol: String,
     treasury_manager_contract: SupportedContracts,
-) {
-    treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Claim {
+) -> StdResult<()> {
+    match (treasury_manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Claim {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol))
             .unwrap()
@@ -322,8 +322,10 @@ pub fn claim_exec(
         chain,
         Addr::unchecked(sender),
         &[],
-    )
-    .unwrap();
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err("claim in treasury manager failed")),
+    }
 }
 
 pub fn unbond_exec(
@@ -397,6 +399,34 @@ pub fn register_holder_exec(
     holder: &str,
 ) -> StdResult<()> {
     match (treasury_manager::ExecuteMsg::AddHolder {
+        holder: holder.to_string(),
+    }
+    .test_exec(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err(
+            "register_holder in treasury manager failed",
+        )),
+    }
+}
+
+pub fn remove_holder_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    treasury_manager_contract: SupportedContracts,
+    holder: &str,
+) -> StdResult<()> {
+    match (treasury_manager::ExecuteMsg::RemoveHolder {
         holder: holder.to_string(),
     }
     .test_exec(

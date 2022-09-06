@@ -70,6 +70,10 @@ pub fn multiple_holders() {
         vec![vec![Uint128::zero(); 4]; 4],
         true,
     );
+    println!(
+        "{:?}",
+        system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+    );
     snip20::set_viewing_key(
         &mut app,
         holder,
@@ -108,14 +112,6 @@ pub fn multiple_holders() {
         None,
     );
     assert_eq!(
-        /*Holding {
-            balances: vec![Balance {
-                token: Addr::unchecked("jo14kcg5hk6dv8x9phc77mu93plemhveagcwlu0k"),
-                amount: Uint128::new(500)
-            }],
-            unbondings: vec![],
-            status: Status::Active
-        }*/
         Uint128::new(500),
         treasury_manager::holding_query(
             &app,
@@ -128,5 +124,70 @@ pub fn multiple_holders() {
         .balances[0]
             .amount
     );
-    assert!(false);
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
+    println!(
+        "{:?}",
+        system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+    );
+    treasury_manager::unbond_exec(
+        &mut app,
+        holder,
+        &contracts,
+        "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
+        Uint128::new(300),
+    )
+    .unwrap();
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
+    treasury_manager::claim_exec(
+        &mut app,
+        holder,
+        &contracts,
+        "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
+    )
+    .unwrap();
+    treasury_manager::remove_holder_exec(
+        &mut app,
+        "admin",
+        &contracts,
+        "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
+        holder.clone(),
+    )
+    .unwrap();
+    treasury_manager::unbond_exec(
+        &mut app,
+        holder,
+        &contracts,
+        "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
+        Uint128::zero(),
+    )
+    .unwrap();
+    treasury_manager::claim_exec(
+        &mut app,
+        holder,
+        &contracts,
+        "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
+    )
+    .unwrap();
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
+    match (treasury_manager::holding_query(
+        &app,
+        &contracts,
+        "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
+        holder.to_string(),
+    )) {
+        Ok(_) => assert!(false),
+        Err(_) => assert!(true),
+    }
+    println!(
+        "{:?}",
+        system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+    );
+    //assert!(false);
 }

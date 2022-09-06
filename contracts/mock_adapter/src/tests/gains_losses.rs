@@ -113,6 +113,16 @@ pub fn dao_int_gains_losses(
                 );
             }
             treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+            for tm in 0..num_managers {
+                treasury_manager::update_exec(
+                    &mut app,
+                    "admin",
+                    &contracts,
+                    "SSCRT".to_string(),
+                    SupportedContracts::TreasuryManager(tm),
+                );
+            }
+            treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
             system_balance_reserves(&app, &contracts, "SSCRT".to_string())
         } else {
             let sys_bal = system_balance_unbondable(&app, &contracts, "SSCRT".to_string());
@@ -181,7 +191,16 @@ pub fn dao_int_gains_losses(
                 );
             }
             treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
-            //update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);
+            for tm in 0..num_managers {
+                treasury_manager::update_exec(
+                    &mut app,
+                    "admin",
+                    &contracts,
+                    "SSCRT".to_string(),
+                    SupportedContracts::TreasuryManager(tm),
+                );
+            }
+            treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
             //update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);
             system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
         }
@@ -723,14 +742,14 @@ dao_tests_gains_losses! {
                 Uint128::new(15),
             ]),
         ]),
-        (Uint128::new(496), vec![
+        (Uint128::new(622), vec![
             (Uint128::new(6), vec![
                 Uint128::new(18),
                 Uint128::new(5),
                 Uint128::new(6),
                 Uint128::new(15),
             ]),
-            (Uint128::new(60), vec![
+            (Uint128::new(0), vec![
                 Uint128::new(618),
                 Uint128::new(5),
                 Uint128::new(206),
@@ -742,7 +761,7 @@ dao_tests_gains_losses! {
                 Uint128::new(16),
                 Uint128::new(15),
             ]),
-            (Uint128::new(66), vec![
+            (Uint128::new(0), vec![
                 Uint128::new(198),
                 Uint128::new(5),
                 Uint128::new(66),

@@ -127,6 +127,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         viewing_key.clone(),
         &full_asset.contract.clone(),
     )?;
+    let mut token_balance = total_balance;
 
     // { spender: (balance, allowance) }
     let mut metadata: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
@@ -191,6 +192,12 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         )?
         .allowance;
 
+        if token_balance < allowance {
+            token_balance = Uint128::zero();
+        } else {
+            token_balance -= allowance;
+        }
+
         // if all of these are zero then we need to remove the allowance at the end of the fn
         if balance.is_zero()
             && unbonding.is_zero()
@@ -204,6 +211,8 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         metadata.insert(a.spender.clone(), (balance, allowance));
         total_balance += balance + unbonding;
     }
+
+    println!("TOTAL BALANCE: {}", total_balance);
 
     /* Amounts given priority sice the array is sorted
      * portions are calculated after amounts are taken from total
@@ -234,6 +243,9 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                 } else {
                     total_balance = Uint128::zero();
                 }
+                /*if token_balance > allowance.amount {
+
+                }*/
                 allowance.amount
             }
             AllowanceType::Portion => {
@@ -247,6 +259,8 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
 
         let (balance, cur_allowance) = metadata[&allowance.spender];
         let total = balance + cur_allowance;
+
+        println!("TOTAL: {}, DESIRED AMOUNT: {}", total, desired_amount);
 
         match desired_amount.cmp(&total) {
             // Decrease Allowance
@@ -271,6 +285,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                             &full_asset.contract.clone(),
                             vec![],
                         )?);
+                        token_balance += decrease;
                         metrics.push(Metric {
                             action: Action::DecreaseAllowance,
                             context: Context::Rebalance,
@@ -293,6 +308,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                             &full_asset.contract.clone(),
                             vec![],
                         )?);
+                        token_balance += cur_allowance;
                         metrics.push(Metric {
                             action: Action::DecreaseAllowance,
                             context: Context::Rebalance,
@@ -334,7 +350,12 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             }
             // Increase Allowance
             std::cmp::Ordering::Greater => {
-                let increase = desired_amount - total;
+                let mut increase = desired_amount - total;
+                println!("INCREASE: {}, TOKEN BAL: {}", increase, token_balance);
+                if increase > token_balance {
+                    increase = token_balance;
+                }
+                token_balance -= increase;
                 // threshold check
                 if increase <= threshold {
                     continue;
