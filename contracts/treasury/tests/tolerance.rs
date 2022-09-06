@@ -287,6 +287,22 @@ treasury_tolerance_tests! {
         AllowanceType::Portion,
         Uint128::new(300), // expected
     ),
+    tolerance_portion_100_no_increase: (
+        Uint128::new(100), // deposit
+        Uint128::new(90), // added
+        Uint128::new(10u128.pow(18)), // tolerance
+        Uint128::new(1 * 10u128.pow(18)), // allowance
+        AllowanceType::Portion,
+        Uint128::new(100), // expected
+    ),
+    tolerance_portion_100_will_increase: (
+        Uint128::new(100), // deposit
+        Uint128::new(200), // added
+        Uint128::new(10u128.pow(18)), // tolerance
+        Uint128::new(1 * 10u128.pow(18)), // allowance
+        AllowanceType::Portion,
+        Uint128::new(300), // expected
+    ),
     tolerance_amount_90_no_increase: (
         Uint128::new(100), // deposit
         Uint128::new(50), // added
@@ -306,4 +322,5 @@ treasury_tolerance_tests! {
         Uint128::new(300), // expected
     ),
     */
+    //TODO decrease tests
 }
