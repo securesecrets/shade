@@ -53,22 +53,38 @@ impl ItemStorage for Config {
     const ITEM: Item<'static, Self, Json> = Item::new("config-");
 }
 
+// Used for original instantiation
+#[cw_serde]
+pub struct AssemblyInit {
+    pub admin_members: Vec<Addr>,
+    pub admin_profile: Profile,
+    pub public_profile: Profile,
+}
+
+// Used for migration instantiation
+#[cw_serde]
+pub struct MigrationInit {
+    pub source: Contract,
+    pub assembly: Uint128,
+    pub assemblyMsg: Uint128,
+    pub profile: Uint128,
+    pub contract: Uint128,
+}
+
 #[cw_serde]
 pub struct InstantiateMsg {
     pub treasury: Addr,
     pub query_auth: Contract,
 
     // Admin rules
-    pub admin_members: Vec<Addr>,
-    pub admin_profile: Profile,
+    pub assemblies: Option<AssemblyInit>,
 
-    // Public rules
-    pub public_profile: Profile,
+    // Token rules
     pub funding_token: Option<Contract>,
     pub vote_token: Option<Contract>,
 
     // Migration data
-    pub migrator: Option<Contract>,
+    pub migrator: Option<MigrationInit>,
 }
 
 impl InstantiateCallback for InstantiateMsg {
@@ -82,7 +98,7 @@ pub enum RuntimeState {
     // Allow only specific assemblies and admin
     SpecificAssemblies { committees: Vec<Uint128> },
     // Migrated - points to the new version
-    Migrated { new: Contract },
+    Migrated {},
 }
 
 #[cfg(feature = "governance-impl")]
@@ -90,6 +106,7 @@ impl ItemStorage for RuntimeState {
     const ITEM: Item<'static, Self, Json> = Item::new("runtime-state-");
 }
 
+#[cw_serde]
 pub enum MigrationDataAsk {
     Committee,
     CommitteeMsg,
@@ -97,6 +114,7 @@ pub enum MigrationDataAsk {
     Contract,
 }
 
+#[cw_serde]
 pub enum MigrationData {
     Committee {
         data: Vec<(Uint128, Assembly)>,
@@ -272,6 +290,8 @@ pub enum ExecuteMsg {
     // Add functions for exporting lists of data into the needed contracts
     Migrate {
         id: u64,
+        label: String,
+        code_hash: String,
     },
     MigrateData {
         data: MigrationDataAsk,
@@ -306,6 +326,10 @@ pub enum HandleAnswer {
     SetProfile { status: ResponseStatus },
     AddContract { status: ResponseStatus },
     SetContract { status: ResponseStatus },
+    AddContractAssemblies { status: ResponseStatus },
+    Migrate { status: ResponseStatus },
+    MigrateData { status: ResponseStatus },
+    ReceiveMigrationData { status: ResponseStatus },
 }
 
 #[cw_serde]

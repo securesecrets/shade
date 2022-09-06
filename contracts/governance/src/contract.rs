@@ -79,12 +79,31 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    let migrated_from: Option<Contract>;
+
+    if let Some(migrator) = msg.migrator {
+        ID::set_assembly(deps.storage, migrator.assembly)?;
+        ID::set_profile(deps.storage, migrator.profile)?;
+        ID::set_assembly_msg(deps.storage, migrator.assemblyMsg)?;
+        ID::set_contract(deps.storage, migrator.contract)?;
+        migrated_from = Some(migrator.source);
+    } else {
+        // Setups IDs
+        ID::set_assembly(deps.storage, Uint128::new(1))?;
+        ID::set_profile(deps.storage, Uint128::new(1))?;
+        ID::set_assembly_msg(deps.storage, Uint128::zero())?;
+        ID::set_contract(deps.storage, Uint128::zero())?;
+        migrated_from = None;
+    }
+
     // Setup config
     Config {
         query: msg.query_auth,
         treasury: msg.treasury,
         vote_token: msg.vote_token.clone(),
         funding_token: msg.funding_token.clone(),
+        migrated_from,
+        migrated_to: None,
     }
     .save(deps.storage)?;
 
@@ -104,82 +123,83 @@ pub fn instantiate(
         )?));
     }
 
-    // Setups IDs
-    ID::set_assembly(deps.storage, Uint128::new(1))?;
-    ID::set_profile(deps.storage, Uint128::new(1))?;
-    ID::set_assembly_msg(deps.storage, Uint128::zero())?;
-    ID::set_contract(deps.storage, Uint128::zero())?;
+    // Only initialize the data if not migrating
+    if let Some(assemblies) = msg.assemblies {
+        // Setup public profile
+        assemblies
+            .public_profile
+            .save(deps.storage, &Uint128::zero())?;
 
-    // Setup public profile
-    msg.public_profile.save(deps.storage, &Uint128::zero())?;
-
-    if msg.public_profile.funding.is_some() {
-        if msg.funding_token.is_none() {
-            return Err(StdError::generic_err("Funding token must be set"));
+        if assemblies.public_profile.funding.is_some() {
+            if msg.funding_token.is_none() {
+                return Err(StdError::generic_err("Funding token must be set"));
+            }
         }
-    }
 
-    if msg.public_profile.token.is_some() {
-        if msg.vote_token.is_none() {
-            return Err(StdError::generic_err("Voting token must be set"));
+        if assemblies.public_profile.token.is_some() {
+            if msg.vote_token.is_none() {
+                return Err(StdError::generic_err("Voting token must be set"));
+            }
         }
-    }
 
-    // Setup public assembly
-    Assembly {
-        name: "public".to_string(),
-        metadata: "All inclusive assembly, acts like traditional governance".to_string(),
-        members: vec![],
-        profile: Uint128::zero(),
-    }
-    .save(deps.storage, &Uint128::zero())?;
-
-    // Setup admin profile
-    msg.admin_profile.save(deps.storage, &Uint128::new(1))?;
-
-    if msg.admin_profile.funding.is_some() {
-        if msg.funding_token.is_none() {
-            return Err(StdError::generic_err("Funding token must be set"));
+        // Setup public assembly
+        Assembly {
+            name: "public".to_string(),
+            metadata: "All inclusive assembly, acts like traditional governance".to_string(),
+            members: vec![],
+            profile: Uint128::zero(),
         }
-    }
+        .save(deps.storage, &Uint128::zero())?;
 
-    if msg.admin_profile.token.is_some() {
-        if msg.vote_token.is_none() {
-            return Err(StdError::generic_err("Voting token must be set"));
+        // Setup admin profile
+        assemblies
+            .admin_profile
+            .save(deps.storage, &Uint128::new(1))?;
+
+        if assemblies.admin_profile.funding.is_some() {
+            if msg.funding_token.is_none() {
+                return Err(StdError::generic_err("Funding token must be set"));
+            }
         }
-    }
 
-    // Setup admin assembly
-    Assembly {
-        name: "admin".to_string(),
-        metadata: "Assembly of DAO admins.".to_string(),
-        members: msg.admin_members,
-        profile: Uint128::new(1),
-    }
-    .save(deps.storage, &Uint128::new(1))?;
+        if assemblies.admin_profile.token.is_some() {
+            if msg.vote_token.is_none() {
+                return Err(StdError::generic_err("Voting token must be set"));
+            }
+        }
 
-    // Setup generic command
-    AssemblyMsg {
-        name: "blank message".to_string(),
-        assemblies: vec![Uint128::zero(), Uint128::new(1)],
-        msg: FlexibleMsg {
-            msg: MSG_VARIABLE.to_string(),
-            arguments: 1,
-        },
-    }
-    .save(deps.storage, &Uint128::zero())?;
+        // Setup admin assembly
+        Assembly {
+            name: "admin".to_string(),
+            metadata: "Assembly of DAO admins.".to_string(),
+            members: assemblies.admin_members,
+            profile: Uint128::new(1),
+        }
+        .save(deps.storage, &Uint128::new(1))?;
 
-    // Setup self contract
-    AllowedContract {
-        name: "Governance".to_string(),
-        metadata: "Current governance contract, this one".to_string(),
-        assemblies: None,
-        contract: Contract {
-            address: env.contract.address,
-            code_hash: env.contract.code_hash,
-        },
+        // Setup generic command
+        AssemblyMsg {
+            name: "blank message".to_string(),
+            assemblies: vec![Uint128::zero(), Uint128::new(1)],
+            msg: FlexibleMsg {
+                msg: MSG_VARIABLE.to_string(),
+                arguments: 1,
+            },
+        }
+        .save(deps.storage, &Uint128::zero())?;
+
+        // Setup self contract
+        AllowedContract {
+            name: "Governance".to_string(),
+            metadata: "Current governance contract, this one".to_string(),
+            assemblies: None,
+            contract: Contract {
+                address: env.contract.address,
+                code_hash: env.contract.code_hash,
+            },
+        }
+        .save(deps.storage, &Uint128::zero())?;
     }
-    .save(deps.storage, &Uint128::zero())?;
 
     // Set runtime
     RuntimeState::Normal.save(deps.storage)?;
@@ -197,7 +217,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         | ExecuteMsg::ClaimFunding { .. } // Gets halted
         | ExecuteMsg::AssemblyVote { .. } // Gets halted
         | ExecuteMsg::ReceiveBalance { .. } // Gets halted
-        | ExecuteMsg::AssemblyProposal { .. } => {} // Gets halted with special permissions
+        | ExecuteMsg::AssemblyProposal { .. } // Gets halted with special permissions
+        | ExecuteMsg::MigrateData { .. }
+        | ExecuteMsg::ReceiveMigrationData { .. } => {}
+        // Only callable by itself
         _ => authorized(deps.storage, &env, &info)?,
     }
 

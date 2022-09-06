@@ -133,7 +133,7 @@ pub fn try_add_contract_assemblies(
     AllowedContract::save_data(deps.storage, &id, allowed_contract)?;
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::AddContract {
+        Response::new().set_data(to_binary(&HandleAnswer::AddContractAssemblies {
             status: ResponseStatus::Success,
         })?),
     )
