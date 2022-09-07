@@ -8,6 +8,7 @@ use crate::{
         },
         authorized,
         contract::{try_add_contract, try_add_contract_assemblies, try_set_contract},
+        migration::{try_migrate, try_migrate_data, try_receive_migration_data},
         profile::{try_add_profile, try_set_profile},
         proposal::{
             try_cancel,
@@ -35,6 +36,7 @@ use shade_protocol::{
         Env,
         MessageInfo,
         Querier,
+        Reply,
         Response,
         StdError,
         StdResult,
@@ -52,7 +54,7 @@ use shade_protocol::{
         QueryMsg,
         MSG_VARIABLE,
     },
-    governance::{AuthQuery, QueryData, RuntimeState},
+    governance::{AuthQuery, InstantiateMsgResponse, QueryData, RuntimeState},
     query_auth,
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::register_receive,
@@ -204,7 +206,14 @@ pub fn instantiate(
     // Set runtime
     RuntimeState::Normal.save(deps.storage)?;
 
-    Ok(Response::new().add_submessages(messages))
+    Ok(Response::new()
+        .add_submessages(messages)
+        .set_data(to_binary(&InstantiateMsgResponse {
+            contract: Contract {
+                address: env.contract.address.clone(),
+                code_hash: env.contract.code_hash.clone(),
+            },
+        })?))
 }
 
 #[shd_entry_point]
@@ -357,6 +366,21 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             ExecuteMsg::AddContractAssemblies { id, assemblies } => {
                 try_add_contract_assemblies(deps, env, info, id, assemblies)
             }
+
+            // Migration
+            ExecuteMsg::Migrate {
+                id,
+                label,
+                code_hash,
+            } => try_migrate(deps, env, info, id, label, code_hash),
+
+            ExecuteMsg::MigrateData { data, total } => {
+                try_migrate_data(deps, env, info, data, total)
+            }
+
+            ExecuteMsg::ReceiveMigrationData { data } => {
+                try_receive_migration_data(deps, env, info, data)
+            }
         },
         RESPONSE_BLOCK_SIZE,
     )
@@ -426,4 +450,23 @@ pub fn auth_queries(deps: Deps, msg: AuthQuery, user: Addr) -> StdResult<Binary>
         AuthQuery::Funding { pagination } => query::user_funding(deps, user, pagination)?,
         AuthQuery::Votes { pagination } => query::user_votes(deps, user, pagination)?,
     })
+}
+
+const MIGRATION_REPLY: u64 = 0;
+const PROPOSAL_REPLY: u64 = 1;
+#[shd_entry_point]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+    match msg.id {
+        MIGRATION_REPLY => {
+            // Get the returned address and code_hash
+            let res: InstantiateMsgResponse = from_binary(&msg.result.unwrap().data.unwrap())?;
+
+            let mut config = Config::load(deps.storage)?;
+            config.migrated_to = Some(res.contract);
+            config.save(deps.storage)?;
+        }
+        _ => return Err(StdError::generic_err("Reply ID not recognized")),
+    }
+
+    Ok(Response::new())
 }

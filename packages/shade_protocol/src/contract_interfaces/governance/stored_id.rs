@@ -15,15 +15,15 @@ pub struct ID(Uint128);
 impl NaiveItemStorage for ID {}
 
 const PROP_KEY: Item<'static, ID, Json> = Item::new("proposal_id-");
-const COMMITTEE_KEY: Item<'static, ID, Json> = Item::new("assembly_id-");
-const COMMITTEE_MSG_KEY: Item<'static, ID, Json> = Item::new("assembly_msg_id-");
+const ASSEMBLY_KEY: Item<'static, ID, Json> = Item::new("assembly_id-");
+const ASSEMBLY_MSG_KEY: Item<'static, ID, Json> = Item::new("assembly_msg_id-");
 const PROFILE_KEY: Item<'static, ID, Json> = Item::new("profile_id-");
 const CONTRACT_KEY: Item<'static, ID, Json> = Item::new("allowed_contract_id-");
 
 // Migration specific data
 // Used to determine the next ID to migrate over
-const LAST_COMMITTEE_KEY: Item<'static, ID, Json> = Item::new("last_assembly_id-");
-const LAST_COMMITTEE_MSG_KEY: Item<'static, ID, Json> = Item::new("last_assembly_msg_id-");
+const LAST_ASSEMBLY_KEY: Item<'static, ID, Json> = Item::new("last_assembly_id-");
+const LAST_ASSEMBLY_MSG_KEY: Item<'static, ID, Json> = Item::new("last_assembly_msg_id-");
 const LAST_PROFILE_KEY: Item<'static, ID, Json> = Item::new("last_profile_id-");
 const LAST_CONTRACT_KEY: Item<'static, ID, Json> = Item::new("last_allowed_contract_id-");
 
@@ -48,33 +48,33 @@ impl ID {
 
     // Assembly
     pub fn set_assembly(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
-        ID(id).save(storage, COMMITTEE_KEY)
+        ID(id).save(storage, ASSEMBLY_KEY)
     }
 
     pub fn assembly(storage: &dyn Storage) -> StdResult<Uint128> {
-        Ok(ID::load(storage, COMMITTEE_KEY)?.0)
+        Ok(ID::load(storage, ASSEMBLY_KEY)?.0)
     }
 
     pub fn add_assembly(storage: &mut dyn Storage) -> StdResult<Uint128> {
-        let mut item = ID::load(storage, COMMITTEE_KEY)?;
+        let mut item = ID::load(storage, ASSEMBLY_KEY)?;
         item.0 += Uint128::new(1);
-        item.save(storage, COMMITTEE_KEY)?;
+        item.save(storage, ASSEMBLY_KEY)?;
         Ok(item.0)
     }
 
-    // Assembly Msg
+    // Committee Msg
     pub fn set_assembly_msg(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
-        ID(id).save(storage, COMMITTEE_MSG_KEY)
+        ID(id).save(storage, ASSEMBLY_MSG_KEY)
     }
 
     pub fn assembly_msg(storage: &dyn Storage) -> StdResult<Uint128> {
-        Ok(ID::load(storage, COMMITTEE_MSG_KEY)?.0)
+        Ok(ID::load(storage, ASSEMBLY_MSG_KEY)?.0)
     }
 
     pub fn add_assembly_msg(storage: &mut dyn Storage) -> StdResult<Uint128> {
-        let mut item = ID::load(storage, COMMITTEE_MSG_KEY)?;
+        let mut item = ID::load(storage, ASSEMBLY_MSG_KEY)?;
         item.0 += Uint128::new(1);
-        item.save(storage, COMMITTEE_MSG_KEY)?;
+        item.save(storage, ASSEMBLY_MSG_KEY)?;
         Ok(item.0)
     }
 
@@ -113,27 +113,43 @@ impl ID {
 
     // Migration
     pub fn init_migration(storage: &mut dyn Storage) -> StdResult<()> {
-        ID(Uint128::zero()).save(storage, LAST_COMMITTEE_KEY)?;
-        ID(Uint128::zero()).save(storage, LAST_COMMITTEE_MSG_KEY)?;
+        ID(Uint128::zero()).save(storage, LAST_ASSEMBLY_KEY)?;
+        ID(Uint128::zero()).save(storage, LAST_ASSEMBLY_MSG_KEY)?;
         ID(Uint128::zero()).save(storage, LAST_PROFILE_KEY)?;
         ID(Uint128::zero()).save(storage, LAST_CONTRACT_KEY)?;
         Ok(())
     }
 
-    pub fn set_committee_migration(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
-        ID(id).save(storage, LAST_COMMITTEE_KEY)
+    pub fn set_assembly_migration(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
+        ID(id).save(storage, LAST_ASSEMBLY_KEY)
     }
 
-    pub fn set_committee_msg_migration(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
-        ID(id).save(storage, LAST_COMMITTEE_MSG_KEY)
+    pub fn assembly_migration(storage: &dyn Storage) -> StdResult<Uint128> {
+        Ok(ID::load(storage, LAST_ASSEMBLY_KEY)?.0)
     }
 
-    pub fn set_profile_key_migration(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
+    pub fn set_assembly_msg_migration(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
+        ID(id).save(storage, LAST_ASSEMBLY_MSG_KEY)
+    }
+
+    pub fn assembly_msg_migration(storage: &dyn Storage) -> StdResult<Uint128> {
+        Ok(ID::load(storage, LAST_ASSEMBLY_MSG_KEY)?.0)
+    }
+
+    pub fn set_profile_migration(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
         ID(id).save(storage, LAST_PROFILE_KEY)
     }
 
-    pub fn set_contract_key_migration(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
+    pub fn profile_migration(storage: &dyn Storage) -> StdResult<Uint128> {
+        Ok(ID::load(storage, LAST_PROFILE_KEY)?.0)
+    }
+
+    pub fn set_contract_migration(storage: &mut dyn Storage, id: Uint128) -> StdResult<()> {
         ID(id).save(storage, LAST_CONTRACT_KEY)
+    }
+
+    pub fn contract_migration(storage: &dyn Storage) -> StdResult<Uint128> {
+        Ok(ID::load(storage, LAST_CONTRACT_KEY)?.0)
     }
 }
 
