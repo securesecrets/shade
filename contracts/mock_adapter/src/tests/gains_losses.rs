@@ -76,7 +76,8 @@ pub fn dao_int_gains_losses(
                     .to_string(),
                 snip20_send_amount,
                 None,
-            );
+            )
+            .unwrap();
         } else {
             mock_adapter_sub_tokens(
                 &mut app,

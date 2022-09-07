@@ -97,7 +97,8 @@ pub fn multiple_holders(
         holder.to_string(),
         Uint128::new(1000),
         None,
-    );
+    )
+    .unwrap();
     treasury_manager::register_holder_exec(
         &mut app,
         "admin",
@@ -117,7 +118,8 @@ pub fn multiple_holders(
             .to_string(),
         Uint128::new(200),
         None,
-    );
+    )
+    .unwrap();
     snip20::send(
         &mut app,
         holder,
@@ -128,7 +130,8 @@ pub fn multiple_holders(
             .to_string(),
         Uint128::new(300),
         None,
-    );
+    )
+    .unwrap();
     assert_eq!(
         Uint128::new(500),
         treasury_manager::holding_query(
@@ -214,6 +217,20 @@ pub fn multiple_holders(
         &contracts[&SupportedContracts::Treasury].address.to_string(),
     ) {
         Ok(_) => assert!(false, "removed treasury as a holder"),
+        Err(_) => assert!(true),
+    }
+    match snip20::send(
+        &mut app,
+        holder,
+        &contracts,
+        "SSCRT".to_string(),
+        contracts[&SupportedContracts::TreasuryManager(0)]
+            .address
+            .to_string(),
+        Uint128::new(300),
+        None,
+    ) {
+        Ok(_) => assert!(false, "closed holders shouldn't be able to send to TM"),
         Err(_) => assert!(true),
     }
     treasury_manager::unbond_exec(

@@ -78,7 +78,8 @@ pub fn test_tm_unbond(
                         .to_string(),
                     x,
                     None,
-                );
+                )
+                .unwrap();
             }
         }
         None => {}
