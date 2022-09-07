@@ -127,6 +127,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         viewing_key.clone(),
         &full_asset.contract.clone(),
     )?;
+    let mut token_balance = total_balance;
 
     // { spender: (balance, allowance) }
     let mut metadata: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
@@ -190,6 +191,12 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             &full_asset.contract.clone(),
         )?
         .allowance;
+
+        if token_balance < allowance {
+            token_balance = Uint128::zero();
+        } else {
+            token_balance -= allowance;
+        }
 
         // if all of these are zero then we need to remove the allowance at the end of the fn
         if balance.is_zero()
@@ -272,6 +279,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                             &full_asset.contract.clone(),
                             vec![],
                         )?);
+                        token_balance += decrease;
                         metrics.push(Metric {
                             action: Action::DecreaseAllowance,
                             context: Context::Rebalance,
@@ -294,6 +302,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                             &full_asset.contract.clone(),
                             vec![],
                         )?);
+                        token_balance += cur_allowance;
                         metrics.push(Metric {
                             action: Action::DecreaseAllowance,
                             context: Context::Rebalance,
@@ -335,11 +344,15 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             }
             // Increase Allowance
             std::cmp::Ordering::Greater => {
-                let increase = desired_amount - total;
+                let mut increase = desired_amount - total;
                 println!(
                     "THRESHOLD {}, increase {}, desired_amount {}",
                     threshold, increase, desired_amount
                 );
+                if increase > token_balance {
+                    increase = token_balance;
+                }
+                token_balance -= increase;
                 // threshold check
                 if increase <= threshold {
                     continue;

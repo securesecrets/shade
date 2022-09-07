@@ -18,18 +18,6 @@ pub enum Cycle {
     Seconds { seconds: Uint128 },
 }
 
-#[cw_serde]
-pub enum Period {
-    Once,
-    Constant,
-    Yearly { years: Uint128 },
-    Monthly { months: Uint128 },
-    Daily { days: Uint128 },
-    Hourly { hours: Uint128 },
-    Minutes { minutes: Uint128 },
-    Seconds { seconds: Uint128 },
-}
-
 pub fn utc_from_seconds(seconds: i64) -> DateTime<Utc> {
     DateTime::from_utc(NaiveDateTime::from_timestamp(seconds, 0), Utc)
 }
@@ -100,9 +88,11 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
 #[cfg(test)]
 mod test {
 
+    use super::*;
+
     fn test_exceeds_cycle(last_refresh: String, now: String, cycle: Cycle, exceeds: bool) {
         let last_refresh = parse_utc_datetime(&last_refresh);
-        let now = parse_utc_datitem(&now);
+        let now = parse_utc_datetime(&now);
         assert_eq!(exceeds_cycle(&now, &last_refresh, &cycle), exceeds);
     }
 
@@ -122,25 +112,25 @@ mod test {
         daily_cycle_1day: (
             "2019-10-12T07:20:50.52Z",
             "2019-10-13T07:20:50.52Z",
-            Cycle::Daily,
+            Cycle::Daily { days: 1 },
             true,
         ),
         daily_cycle_1y: (
             "2019-10-12T07:20:50.51Z",
             "2020-10-12T07:20:50.51Z",
-            Cycle::Daily,
+            Cycle::Daily { days: 1},
             false,
         ),
         daily_cycle_23h: (
             "2019-10-12T07:20:50.52Z",
             "2019-10-13T06:20:50.52Z",
-            Cycle::Daily,
+            Cycle::Daily { days: 1},
             false,
         ),
         daily_cycle_1s_short: (
             "2019-10-12T07:20:50.51Z",
             "2019-10-13T07:20:49.51Z",
-            Cycle::Daily,
+            Cycle::Daily { days: 1 },
             false,
         ),
     }

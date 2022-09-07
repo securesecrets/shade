@@ -93,8 +93,8 @@ pub fn send(
     recipient: String,
     amount: Uint128,
     msg: Option<Binary>,
-) {
-    snip20::ExecuteMsg::Send {
+) -> StdResult<()> {
+    match (snip20::ExecuteMsg::Send {
         recipient,
         amount,
         msg,
@@ -111,8 +111,10 @@ pub fn send(
         chain,
         Addr::unchecked(sender),
         &[],
-    )
-    .unwrap();
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err("snip20 send failed")),
+    }
 }
 
 pub fn balance_query(
