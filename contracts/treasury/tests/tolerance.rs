@@ -43,7 +43,7 @@ use shade_protocol::{
     },
 };
 
-fn overfunded_tolerance(
+fn underfunded_tolerance(
     deposit: Uint128,
     added: Uint128,
     tolerance: Uint128,
@@ -194,7 +194,7 @@ fn overfunded_tolerance(
     };
 }
 
-macro_rules! overfunded_tolerance_tests {
+macro_rules! underfunded_tolerance_tests {
     ($($name:ident: $value:expr,)*) => {
         $(
             #[test]
@@ -207,7 +207,7 @@ macro_rules! overfunded_tolerance_tests {
                     allow_type,
                     expected,
                 ) = $value;
-                overfunded_tolerance(
+                underfunded_tolerance(
                     deposit,
                     added,
                     tolerance,
@@ -220,7 +220,7 @@ macro_rules! overfunded_tolerance_tests {
     }
 }
 
-overfunded_tolerance_tests! {
+underfunded_tolerance_tests! {
     portion_tolerance_90_no_increase: (
         Uint128::new(100), // deposit
         Uint128::new(50), // added
