@@ -103,7 +103,7 @@ pub enum RuntimeState {
     // Allow only specific assemblies and admin
     SpecificAssemblies { committees: Vec<Uint128> },
     // Migrated - points to the new version
-    Migrated {},
+    Migrated,
 }
 
 #[cfg(feature = "governance-impl")]
@@ -124,7 +124,7 @@ pub enum MigrationData {
     Assembly {
         data: Vec<(Uint128, Assembly)>,
     },
-    CommitteeMsg {
+    AssemblyMsg {
         data: Vec<(Uint128, AssemblyMsg)>,
     },
     Profile {

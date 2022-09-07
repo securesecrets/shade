@@ -62,14 +62,14 @@ pub fn try_trigger(
         if let Some(prop_msgs) = proposal_msg {
             for (i, prop_msg) in prop_msgs.iter().enumerate() {
                 let contract = AllowedContract::data(deps.storage, &prop_msg.target)?.contract;
-                // TODO: we can use this to setup a non fire and forget setup
                 let msg = WasmMsg::Execute {
                     contract_addr: contract.address.into(),
                     code_hash: contract.code_hash,
                     msg: prop_msg.msg.clone(),
                     funds: prop_msg.send.clone(),
                 };
-                // TODO: set reply as always
+                // TODO: set to reply on error where ID is propID + 1
+                // TODO: set proposal status to success
                 messages.push(SubMsg::new(msg));
             }
         }
@@ -154,6 +154,8 @@ pub fn try_update(
     info: MessageInfo,
     proposal: Uint128,
 ) -> StdResult<Response> {
+    // TODO: see if this can get cleaned up
+
     let mut history = Proposal::status_history(deps.storage, &proposal)?;
     let status = Proposal::status(deps.storage, &proposal)?;
     let mut new_status: Status;

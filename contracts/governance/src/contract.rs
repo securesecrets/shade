@@ -54,7 +54,7 @@ use shade_protocol::{
         QueryMsg,
         MSG_VARIABLE,
     },
-    governance::{AuthQuery, InstantiateMsgResponse, QueryData, RuntimeState},
+    governance::{AuthQuery, InstantiateMsgResponse, MigrationDataAsk, QueryData, RuntimeState},
     query_auth,
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::register_receive,
@@ -81,6 +81,11 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    let self_contract = Contract {
+        address: env.contract.address,
+        code_hash: env.contract.code_hash.clone(),
+    };
+
     let migrated_from: Option<Contract>;
 
     if let Some(migrator) = msg.migrator {
@@ -195,10 +200,7 @@ pub fn instantiate(
             name: "Governance".to_string(),
             metadata: "Current governance contract, this one".to_string(),
             assemblies: None,
-            contract: Contract {
-                address: env.contract.address,
-                code_hash: env.contract.code_hash,
-            },
+            contract: self_contract.clone(),
         }
         .save(deps.storage, &Uint128::zero())?;
     }
@@ -209,10 +211,7 @@ pub fn instantiate(
     Ok(Response::new()
         .add_submessages(messages)
         .set_data(to_binary(&InstantiateMsgResponse {
-            contract: Contract {
-                address: env.contract.address.clone(),
-                code_hash: env.contract.code_hash.clone(),
-            },
+            contract: self_contract,
         })?))
 }
 
@@ -375,7 +374,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             } => try_migrate(deps, env, info, id, label, code_hash),
 
             ExecuteMsg::MigrateData { data, total } => {
-                try_migrate_data(deps, env, info, data, total)
+                try_migrate_data(deps, env, info, data, total as u128)
             }
 
             ExecuteMsg::ReceiveMigrationData { data } => {
@@ -465,6 +464,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
             config.migrated_to = Some(res.contract);
             config.save(deps.storage)?;
         }
+        // TODO: on receiving a response, subtract 1 and update that proposals status to failed
         _ => return Err(StdError::generic_err("Reply ID not recognized")),
     }
 

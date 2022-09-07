@@ -20,6 +20,7 @@ use shade_protocol::{
         query_auth,
         snip20,
     },
+    governance::AssemblyInit,
     multi_test::{App, BasicApp},
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
@@ -50,7 +51,7 @@ pub fn init_funding_governance_with_proposal()
         ]),
         prng_seed: Default::default(),
         config: None,
-        query_auth: None
+        query_auth: None,
     }
     .test_init(
         Snip20::default(),
@@ -88,37 +89,41 @@ pub fn init_funding_governance_with_proposal()
             address: auth.address.clone(),
             code_hash: auth.code_hash.clone(),
         },
-        admin_members: vec![
-            Addr::unchecked("alpha"),
-            Addr::unchecked("beta"),
-            Addr::unchecked("charlie"),
-        ],
-        admin_profile: Profile {
-            name: "admin".to_string(),
-            enabled: true,
-            assembly: None,
-            funding: Some(FundProfile {
-                deadline: 1000,
-                required: Uint128::new(2000),
-                privacy: false,
-                veto_deposit_loss: Default::default(),
-            }),
-            token: None,
-            cancel_deadline: 0,
-        },
-        public_profile: Profile {
-            name: "public".to_string(),
-            enabled: false,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
+
+        assemblies: Some(AssemblyInit {
+            admin_members: vec![
+                Addr::unchecked("alpha"),
+                Addr::unchecked("beta"),
+                Addr::unchecked("charlie"),
+            ],
+            admin_profile: Profile {
+                name: "admin".to_string(),
+                enabled: true,
+                assembly: None,
+                funding: Some(FundProfile {
+                    deadline: 1000,
+                    required: Uint128::new(2000),
+                    privacy: false,
+                    veto_deposit_loss: Default::default(),
+                }),
+                token: None,
+                cancel_deadline: 0,
+            },
+            public_profile: Profile {
+                name: "public".to_string(),
+                enabled: false,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+        }),
         funding_token: Some(Contract {
             address: snip20.address.clone(),
             code_hash: snip20.code_hash.clone(),
         }),
         vote_token: None,
+        migrator: None,
     }
     .test_init(
         Governance::default(),
@@ -291,7 +296,7 @@ fn fake_funding_token() {
         ]),
         prng_seed: Default::default(),
         config: None,
-        query_auth: None
+        query_auth: None,
     }
     .test_init(
         Snip20::default(),
@@ -616,9 +621,11 @@ fn claim_after_failing() {
     .unwrap();
 
     let query: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-            address: "alpha".into(),
-            key: "password".to_string(),
-        }.test_query(&snip20, &chain).unwrap();
+        address: "alpha".into(),
+        key: "password".to_string(),
+    }
+    .test_query(&snip20, &chain)
+    .unwrap();
 
     match query {
         snip20::QueryAnswer::Balance { amount } => {
@@ -676,9 +683,11 @@ fn claim_after_passing() {
     );
 
     let query: snip20::QueryAnswer = snip20::QueryMsg::Balance {
-            address: "alpha".into(),
-            key: "password".to_string(),
-        }.test_query(&snip20, &chain).unwrap();
+        address: "alpha".into(),
+        key: "password".to_string(),
+    }
+    .test_query(&snip20, &chain)
+    .unwrap();
 
     match query {
         snip20::QueryAnswer::Balance { amount } => {
@@ -714,7 +723,7 @@ fn init_funding_governance_with_proposal_with_privacy()
         ]),
         prng_seed: Default::default(),
         config: None,
-        query_auth: None
+        query_auth: None,
     }
     .test_init(
         Snip20::default(),
@@ -732,37 +741,40 @@ fn init_funding_governance_with_proposal_with_privacy()
             address: auth.address.clone(),
             code_hash: auth.code_hash.clone(),
         },
-        admin_members: vec![
-            Addr::unchecked("alpha"),
-            Addr::unchecked("beta"),
-            Addr::unchecked("charlie"),
-        ],
-        admin_profile: Profile {
-            name: "admin".to_string(),
-            enabled: true,
-            assembly: None,
-            funding: Some(FundProfile {
-                deadline: 1000,
-                required: Uint128::new(2000),
-                privacy: true,
-                veto_deposit_loss: Default::default(),
-            }),
-            token: None,
-            cancel_deadline: 0,
-        },
-        public_profile: Profile {
-            name: "public".to_string(),
-            enabled: false,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
+        assemblies: Some(AssemblyInit {
+            admin_members: vec![
+                Addr::unchecked("alpha"),
+                Addr::unchecked("beta"),
+                Addr::unchecked("charlie"),
+            ],
+            admin_profile: Profile {
+                name: "admin".to_string(),
+                enabled: true,
+                assembly: None,
+                funding: Some(FundProfile {
+                    deadline: 1000,
+                    required: Uint128::new(2000),
+                    privacy: true,
+                    veto_deposit_loss: Default::default(),
+                }),
+                token: None,
+                cancel_deadline: 0,
+            },
+            public_profile: Profile {
+                name: "public".to_string(),
+                enabled: false,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+        }),
         funding_token: Some(Contract {
             address: snip20.address.clone(),
             code_hash: snip20.code_hash.clone(),
         }),
         vote_token: None,
+        migrator: None,
     }
     .test_init(
         Governance::default(),
