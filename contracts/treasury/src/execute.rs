@@ -249,11 +249,11 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             }
         };
 
-        // calculate threshold
-        let threshold = desired_amount.multiply_ratio(allowance.tolerance, ONE_HUNDRED_PERCENT);
-
         let (balance, cur_allowance) = metadata[&allowance.spender];
         let total = balance + cur_allowance;
+
+        // calculate threshold
+        let threshold = desired_amount.multiply_ratio(allowance.tolerance, ONE_HUNDRED_PERCENT);
 
         match desired_amount.cmp(&total) {
             // Decrease Allowance
@@ -348,6 +348,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                     increase = token_balance;
                 }
                 token_balance -= increase;
+
                 // threshold check
                 if increase <= threshold {
                     continue;
@@ -683,6 +684,13 @@ pub fn allowance(
         }
         None => {}
     };
+
+    if allowance.tolerance >= ONE_HUNDRED_PERCENT {
+        return Err(StdError::generic_err(format!(
+            "Tolerance {} >= 100%",
+            allowance.tolerance
+        )));
+    }
 
     allowances.push(AllowanceMeta {
         spender: allowance.spender.clone(),

@@ -215,6 +215,13 @@ pub fn allocate(
         None => {}
     };
 
+    if allocation.tolerance >= ONE_HUNDRED_PERCENT {
+        return Err(StdError::generic_err(format!(
+            "Tolerance {} >= 100%",
+            allocation.tolerance
+        )));
+    }
+
     allocations.push(AllocationMeta {
         nick: allocation.nick,
         contract: allocation.contract,
@@ -520,8 +527,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
         &full_asset.contract.clone(),
     )?;
 
-    // this var is ment to hold the total amount that the treasury has allocated to its adapters
-    // plus it's current snip20 balance
+    // total amount allocated to adapters + current snip20 balance
     // We subtract holder_unbonding to ensure that those tokens will be claimable
     let out_total = (amount_total + portion_total + balance) - holder_unbonding;
     // This gives us our total allowance from the treasury, used and unused
