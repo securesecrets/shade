@@ -573,7 +573,6 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
         // the treasury manager will only attempt to rebalance if the adapter crosses the threshold
         // in either direction
         let threshold = desired_amount.multiply_ratio(adapter.tolerance, ONE_HUNDRED_PERCENT);
-        println!("threshold {} total {}", threshold, total);
 
         // effective balance is the adapters' actual unbondable amount
         let effective_balance = {
@@ -593,10 +592,6 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                 let mut desired_input = desired_amount - effective_balance;
                 // check if threshold is crossed
                 if desired_input <= threshold {
-                    println!(
-                        "SKIP desired_input {} threshold {}",
-                        desired_input, threshold
-                    );
                     continue;
                 }
 
