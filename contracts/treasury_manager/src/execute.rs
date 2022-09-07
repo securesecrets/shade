@@ -213,6 +213,13 @@ pub fn allocate(
         None => {}
     };
 
+    if allocation.tolerance >= ONE_HUNDRED_PERCENT {
+        return Err(StdError::generic_err(format!(
+            "Tolerance {} >= 100%",
+            allocation.tolerance
+        )));
+    }
+
     allocations.push(AllocationMeta {
         nick: allocation.nick,
         contract: allocation.contract,

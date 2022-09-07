@@ -221,7 +221,7 @@ macro_rules! overfunded_tolerance_tests {
 }
 
 overfunded_tolerance_tests! {
-    tolerance_portion_90_no_increase: (
+    portion_tolerance_90_no_increase: (
         Uint128::new(100), // deposit
         Uint128::new(50), // added
         Uint128::new(9 * 10u128.pow(17)), // tolerance
@@ -229,48 +229,29 @@ overfunded_tolerance_tests! {
         AllowanceType::Portion,
         Uint128::new(100), // expected
     ),
-    tolerance_portion_90_will_increase: (
+    portion_tolerance_90_will_increase: (
         Uint128::new(100), // deposit
-        Uint128::new(200), // added
+        Uint128::new(1000), // added
         Uint128::new(9 * 10u128.pow(17)), // tolerance
         Uint128::new(1 * 10u128.pow(18)), // allowance
         AllowanceType::Portion,
-        Uint128::new(300), // expected
+        Uint128::new(1100), // expected
     ),
-    tolerance_portion_100_no_increase: (
-        Uint128::new(100), // deposit
-        Uint128::new(90), // added
-        Uint128::new(10u128.pow(18)), // tolerance
-        Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
-        Uint128::new(100), // expected
-    ),
-    tolerance_portion_100_will_increase: (
-        Uint128::new(100), // deposit
-        Uint128::new(200), // added
-        Uint128::new(10u128.pow(18)), // tolerance
-        Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
-        Uint128::new(300), // expected
-    ),
-    tolerance_amount_90_no_increase: (
-        Uint128::new(100), // deposit
-        Uint128::new(50), // added
+    amount_tolerance_10_no_increase: (
+        Uint128::new(500), // deposit
+        Uint128::new(20), // added
         Uint128::new(9 * 10u128.pow(17)), // tolerance
-        Uint128::new(100), //allowance
+        Uint128::new(520), //allowance
         AllowanceType::Amount,
-        Uint128::new(100), // expected
+        Uint128::new(500), // expected
     ),
-    //TODO needs the fixes for not exceeding balance w/ allowance
-    /*
-    tolerance_amount_90_will_increase: (
-        Uint128::new(100), // deposit
-        Uint128::new(200), // added
-        Uint128::new(9 * 10u128.pow(17)), // tolerance
-        Uint128::new(300), //allowance
+    amount_tolerance_10_will_increase: (
+        Uint128::new(500), // deposit
+        Uint128::new(1000), // added
+        Uint128::new(1 * 10u128.pow(17)), // tolerance
+        Uint128::new(1500), //allowance
         AllowanceType::Amount,
-        Uint128::new(300), // expected
+        Uint128::new(1500), // expected
     ),
-    */
     //TODO decrease tests
 }

@@ -253,7 +253,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         let total = balance + cur_allowance;
 
         // calculate threshold
-        let threshold = total.multiply_ratio(allowance.tolerance, ONE_HUNDRED_PERCENT);
+        let threshold = desired_amount.multiply_ratio(allowance.tolerance, ONE_HUNDRED_PERCENT);
 
         match desired_amount.cmp(&total) {
             // Decrease Allowance
@@ -345,14 +345,14 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             // Increase Allowance
             std::cmp::Ordering::Greater => {
                 let mut increase = desired_amount - total;
-                println!(
-                    "THRESHOLD {}, increase {}, desired_amount {}",
-                    threshold, increase, desired_amount
-                );
                 if increase > token_balance {
                     increase = token_balance;
                 }
                 token_balance -= increase;
+                println!(
+                    "THRESHOLD {}, increase {}, desired_amount {}",
+                    threshold, increase, desired_amount
+                );
                 // threshold check
                 if increase <= threshold {
                     continue;
@@ -688,6 +688,13 @@ pub fn allowance(
         }
         None => {}
     };
+
+    if allowance.tolerance >= ONE_HUNDRED_PERCENT {
+        return Err(StdError::generic_err(format!(
+            "Tolerance {} >= 100%",
+            allowance.tolerance
+        )));
+    }
 
     allowances.push(AllowanceMeta {
         spender: allowance.spender.clone(),
