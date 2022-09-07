@@ -115,7 +115,18 @@ pub fn multiple_holders(
         contracts[&SupportedContracts::TreasuryManager(0)]
             .address
             .to_string(),
-        Uint128::new(500),
+        Uint128::new(200),
+        None,
+    );
+    snip20::send(
+        &mut app,
+        holder,
+        &contracts,
+        "SSCRT".to_string(),
+        contracts[&SupportedContracts::TreasuryManager(0)]
+            .address
+            .to_string(),
+        Uint128::new(300),
         None,
     );
     assert_eq!(
