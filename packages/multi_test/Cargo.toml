@@ -23,6 +23,7 @@ snip20_staking = ["dep:spip_stkd_0"]
 treasury = ["dep:treasury", "admin"]
 treasury_manager = ["dep:treasury_manager", "admin", "treasury", "mock_adapter", "snip20"]
 mock_adapter = ["dep:mock_adapter"]
+stkd_scrt = ["dep:stkd_scrt"]
 dao = ["mock_adapter", "treasury", "treasury_manager", "snip20"]
 query_auth = ["dep:query_auth"]
 # shade-oracles = ["dep:shade-oracles"]
@@ -42,6 +43,7 @@ scrt_staking = { version = "0.1.0", path = "../../contracts/scrt_staking", optio
 treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = true }
 treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
 mock_adapter = { version = "0.1.0", path = "../../contracts/mock_adapter", optional = true }
+stkd_scrt = { version = "0.1.0", path = "../../contracts/stkd_scrt", optional = true }
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
 peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
