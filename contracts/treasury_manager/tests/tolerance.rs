@@ -259,7 +259,6 @@ underfunded_tolerance_tests! {
         AllocationType::Amount,
         Uint128::new(100), // expected
     ),
-    //TODO decrease tests
 }
 
 fn overfunded_tolerance(

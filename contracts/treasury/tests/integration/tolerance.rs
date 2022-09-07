@@ -179,7 +179,6 @@ fn underfunded_tolerance(
     .unwrap();
 
     // Check treasury allowance
-    // TODO check allowance against snip20
     match (treasury::QueryMsg::Allowance {
         asset: token.address.to_string().clone(),
         spender: spender.to_string().clone(),
@@ -253,7 +252,6 @@ underfunded_tolerance_tests! {
         AllowanceType::Amount,
         Uint128::new(1500), // expected
     ),
-    //TODO decrease tests
 }
 
 fn overfunded_tolerance(
