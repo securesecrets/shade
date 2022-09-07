@@ -41,3 +41,4 @@ shade-multi-test = { path = "../../packages/multi_test", features = [
   "snip20",
   "admin"
 ] }
+mock_adapter = { path = "../mock_adapter" }

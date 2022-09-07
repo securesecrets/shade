@@ -485,8 +485,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
         &full_asset.contract.clone(),
     )?;
 
-    // this var is ment to hold the total amount that the treasury has allocated to its adapters
-    // plus it's current snip20 balance
+    // total amount allocated to adapters + current snip20 balance
     // We subtract holder_unbonding to ensure that those tokens will be claimable
     let out_total = (amount_total + portion_total + balance) - holder_unbonding;
     // This gives us our total allowance from the treasury, used and unused
@@ -532,6 +531,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
         // the treasury manager will only attempt to rebalance if the adapter crosses the threshold
         // in either direction
         let threshold = desired_amount.multiply_ratio(adapter.tolerance, ONE_HUNDRED_PERCENT);
+        println!("threshold {} total {}", threshold, total);
 
         // effective balance is the adapters' actual unbondable amount
         let effective_balance = {
@@ -551,6 +551,10 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                 let mut desired_input = desired_amount - effective_balance;
                 // check if threshold is crossed
                 if desired_input <= threshold {
+                    println!(
+                        "SKIP desired_input {} threshold {}",
+                        desired_input, threshold
+                    );
                     continue;
                 }
 

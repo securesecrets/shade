@@ -5,7 +5,8 @@ use shade_multi_test::{
         admin::init_admin_auth,
         mock_adapter::MockAdapter,
         snip20::Snip20,
-        treasury::Treasury,
+        //treasury::Treasury,
+        treasury_manager::TreasuryManager,
     },
 };
 use shade_protocol::{
@@ -26,16 +27,15 @@ use shade_protocol::{
     contract_interfaces::{
         dao::{
             adapter,
-            treasury,
-            treasury::{Allowance, AllowanceType, RunLevel},
+            manager,
+            treasury_manager::{self, Allocation, AllocationType},
         },
         snip20,
     },
     multi_test::{App, BankSudo, StakingSudo, SudoMsg},
     utils::{
         asset::Contract,
-        cycle::{utc_from_timestamp, Cycle},
-        storage::plus::period_storage::Period,
+        cycle::Cycle,
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -47,16 +47,15 @@ fn overfunded_tolerance(
     deposit: Uint128,
     added: Uint128,
     tolerance: Uint128,
-
-    allowance: Uint128,
-    allow_type: AllowanceType,
-
+    allocation: Uint128,
+    alloc_type: AllocationType,
     expected: Uint128,
 ) {
     let mut app = App::default();
 
     let admin = Addr::unchecked("admin");
     let spender = Addr::unchecked("spender");
+    let treasury = Addr::unchecked("treasury");
     let user = Addr::unchecked("user");
     //let validator = Addr::unchecked("validator");
     let admin_auth = init_admin_auth(&mut app, &admin);
@@ -86,13 +85,32 @@ fn overfunded_tolerance(
     .test_init(Snip20::default(), &mut app, admin.clone(), "token", &[])
     .unwrap();
 
-    let treasury = treasury::InstantiateMsg {
+    let manager = treasury_manager::InstantiateMsg {
         admin_auth: admin_auth.clone().into(),
         viewing_key: viewing_key.clone(),
-        multisig: admin.to_string().clone(),
+        treasury: treasury.to_string().clone(),
     }
-    .test_init(Treasury::default(), &mut app, admin.clone(), "treasury", &[
-    ])
+    .test_init(
+        TreasuryManager::default(),
+        &mut app,
+        admin.clone(),
+        "manager",
+        &[],
+    )
+    .unwrap();
+
+    let adapter = mock_adapter::contract::Config {
+        owner: manager.address.clone(),
+        instant: true,
+        token: token.clone().into(),
+    }
+    .test_init(
+        MockAdapter::default(),
+        &mut app,
+        admin.clone(),
+        "adapter",
+        &[],
+    )
     .unwrap();
 
     // Set admin viewing key
@@ -104,31 +122,30 @@ fn overfunded_tolerance(
     .unwrap();
 
     // Register treasury assets
-    treasury::ExecuteMsg::RegisterAsset {
+    treasury_manager::ExecuteMsg::RegisterAsset {
         contract: token.clone().into(),
     }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // treasury allowance to spender
-    treasury::ExecuteMsg::Allowance {
+    // treasury allocation to spender
+    treasury_manager::ExecuteMsg::Allocate {
         asset: token.address.to_string().clone(),
-        allowance: treasury::Allowance {
-            //nick: "Mid-Stakes-Manager".to_string(),
-            spender: spender.clone(),
-            allowance_type: allow_type,
-            cycle: Cycle::Constant,
-            amount: allowance,
+        allocation: Allocation {
+            nick: Some("Manager".to_string()),
+            contract: adapter.clone().into(),
+            alloc_type,
+            amount: allocation,
             // 100% (adapter balance will 2x before unbond)
             tolerance,
         },
     }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
 
     // Deposit funds into treasury
     snip20::ExecuteMsg::Send {
-        recipient: treasury.address.to_string().clone(),
+        recipient: manager.address.to_string().clone(),
         recipient_code_hash: None,
         amount: deposit,
         msg: None,
@@ -138,30 +155,29 @@ fn overfunded_tolerance(
     .test_exec(&token, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Update treasury
-    treasury::ExecuteMsg::Update {
+    // Update manager
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
         asset: token.address.to_string().clone(),
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    })
+    .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Check treasury allowance
-    match (treasury::QueryMsg::Allowance {
+    // Check adapter balance
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
-        spender: spender.to_string().clone(),
-    }
-    .test_query(&treasury, &app)
+    })
+    .test_query(&adapter, &app)
     .unwrap())
     {
-        treasury::QueryAnswer::Allowance { amount } => {
-            assert_eq!(amount, deposit, "Initial Treasury->Manager Allowance");
+        manager::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, deposit, "Adapter Balance");
         }
         _ => panic!("query failed"),
     };
 
-    // Additional funds into treasury
+    // Additional funds into manager
     snip20::ExecuteMsg::Send {
-        recipient: treasury.address.to_string().clone(),
+        recipient: manager.address.to_string().clone(),
         recipient_code_hash: None,
         amount: added,
         msg: None,
@@ -171,24 +187,22 @@ fn overfunded_tolerance(
     .test_exec(&token, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Update treasury
-    treasury::ExecuteMsg::Update {
+    // Update manager
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
         asset: token.address.to_string().clone(),
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    })
+    .test_exec(&manager, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Check treasury allowance
-    // TODO check allowance against snip20
-    match (treasury::QueryMsg::Allowance {
+    // Check adapter balance
+    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
-        spender: spender.to_string().clone(),
-    }
-    .test_query(&treasury, &app)
+    })
+    .test_query(&adapter, &app)
     .unwrap())
     {
-        treasury::QueryAnswer::Allowance { amount } => {
-            assert_eq!(amount, expected, "Final Treasury->Manager Allowance");
+        manager::QueryAnswer::Balance { amount } => {
+            assert_eq!(amount, expected, "Final Adapter Balance");
         }
         _ => panic!("query failed"),
     };
@@ -203,16 +217,16 @@ macro_rules! overfunded_tolerance_tests {
                     deposit,
                     added,
                     tolerance,
-                    allowance,
-                    allow_type,
+                    allocation,
+                    alloc_type,
                     expected,
                 ) = $value;
                 overfunded_tolerance(
                     deposit,
                     added,
                     tolerance,
-                    allowance,
-                    allow_type,
+                    allocation,
+                    alloc_type,
                     expected,
                 );
             }
@@ -225,8 +239,8 @@ overfunded_tolerance_tests! {
         Uint128::new(100), // deposit
         Uint128::new(50), // added
         Uint128::new(9 * 10u128.pow(17)), // tolerance
-        Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
+        Uint128::new(1 * 10u128.pow(18)), // allocation
+        AllocationType::Portion,
         Uint128::new(100), // expected
     ),
     tolerance_portion_90_will_increase: (
@@ -234,7 +248,7 @@ overfunded_tolerance_tests! {
         Uint128::new(200), // added
         Uint128::new(9 * 10u128.pow(17)), // tolerance
         Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
+        AllocationType::Portion,
         Uint128::new(300), // expected
     ),
     tolerance_portion_100_no_increase: (
@@ -242,7 +256,7 @@ overfunded_tolerance_tests! {
         Uint128::new(90), // added
         Uint128::new(10u128.pow(18)), // tolerance
         Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
+        AllocationType::Portion,
         Uint128::new(100), // expected
     ),
     tolerance_portion_100_will_increase: (
@@ -250,7 +264,7 @@ overfunded_tolerance_tests! {
         Uint128::new(200), // added
         Uint128::new(10u128.pow(18)), // tolerance
         Uint128::new(1 * 10u128.pow(18)), // allowance
-        AllowanceType::Portion,
+        AllocationType::Portion,
         Uint128::new(300), // expected
     ),
     tolerance_amount_90_no_increase: (
@@ -258,7 +272,7 @@ overfunded_tolerance_tests! {
         Uint128::new(50), // added
         Uint128::new(9 * 10u128.pow(17)), // tolerance
         Uint128::new(100), //allowance
-        AllowanceType::Amount,
+        AllocationType::Amount,
         Uint128::new(100), // expected
     ),
     //TODO needs the fixes for not exceeding balance w/ allowance

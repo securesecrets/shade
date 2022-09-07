@@ -95,6 +95,7 @@ pub enum AllocationType {
     Amount,
 }
 
+//TODO remove - same as Allocation
 #[cw_serde]
 pub struct AllocationMeta {
     pub nick: Option<String>,
