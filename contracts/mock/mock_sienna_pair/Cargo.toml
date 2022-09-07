@@ -1,5 +1,5 @@
 [package]
-name = "mock_secretswap_pair"
+name = "mock_sienna_pair"
 version = "0.1.0"
 authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
 edition = "2018"
@@ -24,7 +24,9 @@ debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
 bincode = "1.3.1"
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+
+cosmwasm-schema = "0.10.1"
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
   "dex",
 ] }
 schemars = "0.7"

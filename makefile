@@ -56,6 +56,9 @@ test:
 test-%: %
 	(cargo test -p $*)
 
+cov-dao:
+	(cargo llvm-cov --html -p mock_adapter -p treasury -p treasury_manager)
+
 setup: $(compiled_dir) $(checksum_dir)
 
 $(compiled_dir) $(checksum_dir):

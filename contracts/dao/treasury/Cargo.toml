@@ -44,4 +44,4 @@ shade-multi-test = { path = "../../../packages/multi_test", features = [
 serde_json = "1.0"
 treasury = { path = "../treasury" }
 #shade-admin-multi-test = { git = "https://github.com/securesecrets/shadeadmin.git"}
-mock_adapter = { path = "../../../mock_contracts/mock_adapter" }
+mock_adapter = { path = "../../mock/mock_adapter" }

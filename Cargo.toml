@@ -37,10 +37,10 @@ members = [
   #"contracts/snip20_staking",
   
   # Mock contracts
-  "mock_contracts/mock_band",
-  "mock_contracts/mock_secretswap_pair",
-  "mock_contracts/mock_sienna_pair",
-  "mock_contracts/mock_adapter",
+  "contracts/mock/mock_band",
+  "contracts/mock/mock_secretswap_pair",
+  "contracts/mock/mock_sienna_pair",
+  "contracts/mock/mock_adapter",
 
   # Tools
   "tools/doc2book",

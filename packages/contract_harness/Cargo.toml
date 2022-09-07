@@ -33,7 +33,7 @@ shade-protocol = { version = "0.1.0", path = "../shade_protocol", features = ["e
 sky = { version = "0.1.0", path = "../../contracts/sky", optional = true }
 mint = { version = "0.1.0", path = "../../archived_contracts/mint", optional = true }
 oracle = { version = "0.1.0", path = "../../contracts/oracle", optional = true }
-mock_band = { version = "0.1.0", path = "../../mock_contracts/mock_band", optional = true }
+mock_band = { version = "0.1.0", path = "../../contracts/mock/mock_band", optional = true }
 governance = { version = "0.1.0", path = "../../contracts/governance", optional = true }
 spip_stkd_0 = { version = "0.1.0", path = "../../contracts/snip20_staking", optional = true }
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
