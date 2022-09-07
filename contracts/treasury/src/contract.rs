@@ -48,7 +48,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             let from = deps.api.addr_validate(&from)?;
             execute::receive(deps, env, info, sender, from, amount, msg)
         }
-        ExecuteMsg::UpdateConfig { config } => execute::try_update_config(deps, env, info, config),
+        ExecuteMsg::UpdateConfig {
+            admin_auth,
+            multisig,
+        } => execute::try_update_config(deps, env, info, admin_auth, multisig),
         ExecuteMsg::RegisterAsset { contract } => {
             let contract = contract.into_valid(deps.api)?;
             execute::try_register_asset(deps, &env, info, &contract)

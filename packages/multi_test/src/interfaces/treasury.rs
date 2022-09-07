@@ -7,7 +7,7 @@ use shade_protocol::{
     contract_interfaces::dao::treasury,
     multi_test::App,
     utils::{
-        asset::Contract,
+        asset::{Contract, RawContract},
         cycle::Cycle,
         ExecuteCallback,
         InstantiateCallback,
@@ -174,9 +174,14 @@ pub fn set_config(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    config: treasury::Config,
+    admin_auth: Option<RawContract>,
+    multisig: Option<String>,
 ) -> StdResult<()> {
-    match (treasury::ExecuteMsg::UpdateConfig { config }.test_exec(
+    match (treasury::ExecuteMsg::UpdateConfig {
+        admin_auth,
+        multisig,
+    }
+    .test_exec(
         &contracts
             .get(&SupportedContracts::Treasury)
             .unwrap()
@@ -188,6 +193,20 @@ pub fn set_config(
     )) {
         Ok(_) => Ok(()),
         Err(e) => Err(StdError::generic_err("Set run level execute failed")),
+    }
+}
+
+pub fn config_query(chain: &App, contracts: &DeployedContracts) -> StdResult<treasury::Config> {
+    match (treasury::QueryMsg::Config {}.test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Config { config } => Ok(config),
+        _ => Err(StdError::generic_err("query failed")),
     }
 }
 
