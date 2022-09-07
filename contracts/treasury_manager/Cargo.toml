@@ -39,5 +39,6 @@ shade-multi-test = { path = "../../packages/multi_test", features = [
   "treasury_manager", 
   "scrt_staking", 
   "snip20",
-  "admin"
+  "admin",
+  "dao",
 ] }

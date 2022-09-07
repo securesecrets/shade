@@ -338,7 +338,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
 
     if claimer != config.treasury && holding.status == Status::Closed {
         let balance_i = match holding
-            .unbondings
+            .balances
             .iter_mut()
             .position(|u| u.token == asset.clone())
         {
@@ -703,55 +703,29 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                     continue;
                 }
 
-                if adapter.unbondable >= desired_output {
-                    if !desired_output.is_zero() {
-                        messages.push(adapter::unbond_msg(
-                            &asset.clone(),
-                            desired_output.clone(),
-                            adapter.contract.clone(),
-                        )?);
-                        metrics.push(Metric {
-                            action: Action::Unbond,
-                            context: Context::Update,
-                            timestamp: env.block.time.seconds(),
-                            token: asset.clone(),
-                            amount: desired_output,
-                            user: adapter.contract.address.clone(),
-                        });
-                    }
-                    let unbondings = UNBONDINGS
-                        .load(deps.storage, full_asset.contract.address.clone())?
-                        + desired_output;
-                    UNBONDINGS.save(
-                        deps.storage,
-                        full_asset.contract.address.clone(),
-                        &unbondings,
-                    )?;
-                } else {
-                    if !adapter.unbondable.is_zero() {
-                        messages.push(adapter::unbond_msg(
-                            &asset.clone(),
-                            adapter.unbondable.clone(),
-                            adapter.contract.clone(),
-                        )?);
-                        metrics.push(Metric {
-                            action: Action::Unbond,
-                            context: Context::Update,
-                            timestamp: env.block.time.seconds(),
-                            token: asset.clone(),
-                            amount: adapter.unbondable,
-                            user: adapter.contract.address.clone(),
-                        });
-                    }
-                    let unbondings = UNBONDINGS
-                        .load(deps.storage, full_asset.contract.address.clone())?
-                        + adapter.unbondable;
-                    UNBONDINGS.save(
-                        deps.storage,
-                        full_asset.contract.address.clone(),
-                        &unbondings,
-                    )?;
+                if !desired_output.is_zero() {
+                    messages.push(adapter::unbond_msg(
+                        &asset.clone(),
+                        desired_output.clone(),
+                        adapter.contract.clone(),
+                    )?);
+                    metrics.push(Metric {
+                        action: Action::Unbond,
+                        context: Context::Update,
+                        timestamp: env.block.time.seconds(),
+                        token: asset.clone(),
+                        amount: desired_output,
+                        user: adapter.contract.address.clone(),
+                    });
                 }
+                let unbondings = UNBONDINGS
+                    .load(deps.storage, full_asset.contract.address.clone())?
+                    + desired_output;
+                UNBONDINGS.save(
+                    deps.storage,
+                    full_asset.contract.address.clone(),
+                    &unbondings,
+                )?;
             }
             _ => {}
         }
