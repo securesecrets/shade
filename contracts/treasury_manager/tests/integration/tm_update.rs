@@ -140,6 +140,23 @@ dao_tests_tm_unbond! {
             Uint128::new(26)
         ])])
     ),
+    unbond_only_extra_from_amount_adapters:(
+        Uint128::new(20),
+        Some(Uint128::new(10)),
+        (Uint128::new(10), Uint128::new(20)),
+        (Uint128::new(594), vec![(Uint128::new(0), vec![
+            Uint128::new(282),
+            Uint128::new(10),
+            Uint128::new(94),
+            Uint128::new(20),
+        ])]),
+        (Uint128::new(594), vec![(Uint128::new(20), vec![
+            Uint128::new(282),
+            Uint128::new(10),
+            Uint128::new(94),
+            Uint128::new(20)
+        ])])
+    ),
     unbond_case_extra_from_amount_adapters_and_some_from_portion_adapters:(
         Uint128::new(21),
         Some(Uint128::new(10)),

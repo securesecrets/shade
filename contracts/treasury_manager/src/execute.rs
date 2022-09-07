@@ -169,6 +169,8 @@ pub fn try_register_asset(
 
     ALLOCATIONS.save(deps.storage, contract.address.clone(), &Vec::new())?;
 
+    UNBONDINGS.save(deps.storage, contract.address.clone(), &Uint128::zero())?;
+
     Ok(Response::new()
         .add_messages(vec![
             // Register contract in asset
@@ -336,7 +338,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
 
     if claimer != config.treasury && holding.status == Status::Closed {
         let balance_i = match holding
-            .unbondings
+            .balances
             .iter_mut()
             .position(|u| u.token == asset.clone())
         {
@@ -701,43 +703,29 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
                     continue;
                 }
 
-                if adapter.unbondable >= desired_output {
-                    if !desired_output.is_zero() {
-                        messages.push(adapter::unbond_msg(
-                            &asset.clone(),
-                            desired_output.clone(),
-                            adapter.contract.clone(),
-                        )?);
-                        metrics.push(Metric {
-                            action: Action::Unbond,
-                            context: Context::Update,
-                            timestamp: env.block.time.seconds(),
-                            token: asset.clone(),
-                            amount: desired_output,
-                            user: adapter.contract.address.clone(),
-                        });
-                    }
-                    let unbondings = UNBONDINGS.load(deps.storage)? + desired_output;
-                    UNBONDINGS.save(deps.storage, &unbondings)?;
-                } else {
-                    if !adapter.unbondable.is_zero() {
-                        messages.push(adapter::unbond_msg(
-                            &asset.clone(),
-                            adapter.unbondable.clone(),
-                            adapter.contract.clone(),
-                        )?);
-                        metrics.push(Metric {
-                            action: Action::Unbond,
-                            context: Context::Update,
-                            timestamp: env.block.time.seconds(),
-                            token: asset.clone(),
-                            amount: adapter.unbondable,
-                            user: adapter.contract.address.clone(),
-                        });
-                    }
-                    let unbondings = UNBONDINGS.load(deps.storage)? + adapter.unbondable;
-                    UNBONDINGS.save(deps.storage, &unbondings)?;
+                if !desired_output.is_zero() {
+                    messages.push(adapter::unbond_msg(
+                        &asset.clone(),
+                        desired_output.clone(),
+                        adapter.contract.clone(),
+                    )?);
+                    metrics.push(Metric {
+                        action: Action::Unbond,
+                        context: Context::Update,
+                        timestamp: env.block.time.seconds(),
+                        token: asset.clone(),
+                        amount: desired_output,
+                        user: adapter.contract.address.clone(),
+                    });
                 }
+                let unbondings = UNBONDINGS
+                    .load(deps.storage, full_asset.contract.address.clone())?
+                    + desired_output;
+                UNBONDINGS.save(
+                    deps.storage,
+                    full_asset.contract.address.clone(),
+                    &unbondings,
+                )?;
             }
             _ => {}
         }
@@ -917,7 +905,7 @@ pub fn unbond(
 
     // find the unbond_amount based off of amounts that the TM has unbonded independent of a holder
     unbond_amount = {
-        let u = UNBONDINGS.load(deps.storage)?;
+        let u = UNBONDINGS.load(deps.storage, full_asset.contract.address.clone())?;
         // if the independent unbondings is less than what the adapters are acutally unbonding, we
         // know another holder has asked to do some unbonding and the adapters are unbonding for
         // that holder
@@ -925,11 +913,19 @@ pub fn unbond(
             if u <= unbond_amount {
                 // if amount > independent unbonding, we reduce independent unbondings to
                 // zero and return the amount we actually want to unbond from the adapters
-                UNBONDINGS.save(deps.storage, &Uint128::zero())?;
+                UNBONDINGS.save(
+                    deps.storage,
+                    full_asset.contract.address.clone(),
+                    &Uint128::zero(),
+                )?;
                 unbond_amount - u
             } else {
                 // independent unbondings covers the amount
-                UNBONDINGS.save(deps.storage, &(u - unbond_amount))?;
+                UNBONDINGS.save(
+                    deps.storage,
+                    full_asset.contract.address.clone(),
+                    &(u - unbond_amount),
+                )?;
                 Uint128::zero()
             }
         } else {
