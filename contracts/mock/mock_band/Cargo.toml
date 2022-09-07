@@ -1,7 +1,10 @@
 [package]
-name = "treasury"
+name = "mock_band"
 version = "0.1.0"
-authors = ["Jackson Swenson <jacksonswenson@securesecrets.com>"]
+authors = [
+  "Jack Swenson <jacksonswenson22@gmail.com>",
+  "Guy Garcia <guy.garcia@protonmail.com>",
+]
 edition = "2018"
 
 exclude = [
@@ -23,23 +26,10 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "treasury",
-  "dao",
-  "snip20",
-  "manager",
-  "staking",
-  "chrono",
+bincode = "1.3.1"
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "band",
 ] }
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
 schemars = "0.7"
-chrono = "0.4.19"
-
-[dev-dependencies]
-shade-multi-test = { path = "../../packages/multi_test", features = [ 
-  "treasury", 
-  "treasury_manager", 
-  "scrt_staking", 
-  "snip20" 
-] }
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+mockall = "0.10.2"
