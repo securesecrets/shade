@@ -1,7 +1,4 @@
 pub mod gains_losses;
-pub mod migration;
-pub mod multiple_holders;
-pub mod tm_update;
 
 use shade_multi_test::interfaces::{
     dao::{

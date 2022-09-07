@@ -50,7 +50,6 @@ pub fn instantiate(
         unbondings: vec![],
         status: Status::Active,
     })?;
-    UNBONDINGS.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::new())
 }
