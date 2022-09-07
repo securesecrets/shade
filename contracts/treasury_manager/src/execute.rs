@@ -87,6 +87,12 @@ pub fn receive(
         false => config.treasury,
     };
 
+    if HOLDING.load(deps.storage, holder.clone())?.status == Status::Closed {
+        return Err(StdError::generic_err(
+            "Cannot add holdings when status is closed",
+        ));
+    }
+
     // Update holdings
     HOLDING.update(deps.storage, holder, |h| -> StdResult<Holding> {
         let mut holding = h.unwrap();
@@ -266,7 +272,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
     // if the claimer isn't a holder, it should default to the treasruy
     let claimer = match HOLDERS.load(deps.storage)?.contains(&info.sender) {
         true => info.sender,
-        false => config.treasury,
+        false => config.treasury.clone(),
     };
 
     let mut total_claimed = Uint128::zero();
@@ -327,6 +333,24 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
 
     // Adjust unbonding amount
     holding.unbondings[unbonding_i].amount = holding.unbondings[unbonding_i].amount - send_amount;
+
+    if claimer != config.treasury && holding.status == Status::Closed {
+        let balance_i = match holding
+            .unbondings
+            .iter_mut()
+            .position(|u| u.token == asset.clone())
+        {
+            Some(i) => i,
+            None => return Err(StdError::generic_err("Could not find balance")),
+        };
+        if holding.unbondings[unbonding_i].amount == Uint128::zero()
+            && holding.balances[balance_i].amount == Uint128::zero()
+        {
+            holding.unbondings.swap_remove(unbonding_i);
+            holding.balances.swap_remove(balance_i);
+        }
+    }
+
     HOLDING.save(deps.storage, claimer.clone(), &holding)?;
 
     // Send claimed funds
@@ -446,16 +470,25 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     // holder_principal represents how much of the asset has came form said holder
     let mut holder_principal = Uint128::zero();
 
+    let mut holders = HOLDERS.load(deps.storage)?;
     // Withold holder unbondings
-    for h in HOLDERS.load(deps.storage)? {
+    for (i, h) in holders.clone().iter().enumerate() {
         // for each holder, load the respective holdings
-        let holding = HOLDING.load(deps.storage, h)?;
+        let holding = HOLDING.load(deps.storage, h.clone())?;
         // sum the data
         if let Some(u) = holding.unbondings.iter().find(|u| u.token == asset) {
             holder_unbonding += u.amount;
         }
         if let Some(b) = holding.balances.iter().find(|u| u.token == asset) {
             holder_principal += b.amount;
+        }
+        if holding.status == Status::Closed
+            && holding.balances.len() == 0
+            && holding.unbondings.len() == 0
+        {
+            HOLDING.remove(deps.storage, h.clone());
+            holders.swap_remove(i);
+            HOLDERS.save(deps.storage, &holders)?;
         }
     }
 
@@ -831,10 +864,6 @@ pub fn unbond(
     // Adjust holder balance
     let mut holding = HOLDING.load(deps.storage, unbonder.clone())?;
 
-    if holding.status != Status::Active {
-        return Err(StdError::generic_err("Inactive Holding"));
-    }
-
     // get the position of the balance for the asset
     let balance_i = match holding
         .balances
@@ -850,11 +879,17 @@ pub fn unbond(
         }
     };
 
+    let mut unbond_amount = amount;
     // Check balance exceeds unbond amount
     if holding.balances[balance_i].amount < amount {
         return Err(StdError::generic_err("Not enough funds to unbond"));
     } else {
-        holding.balances[balance_i].amount = holding.balances[balance_i].amount - amount;
+        if holding.status == Status::Active {
+            holding.balances[balance_i].amount = holding.balances[balance_i].amount - amount;
+        } else {
+            unbond_amount = holding.balances[balance_i].amount;
+            holding.balances[balance_i].amount = Uint128::zero();
+        }
     }
 
     // Add unbonding
@@ -863,11 +898,11 @@ pub fn unbond(
         .iter()
         .position(|h| h.token == asset.clone())
     {
-        holding.unbondings[u].amount += amount;
+        holding.unbondings[u].amount += unbond_amount;
     } else {
         holding.unbondings.push(Balance {
             token: asset.clone(),
-            amount,
+            amount: unbond_amount,
         });
     }
 
@@ -881,20 +916,20 @@ pub fn unbond(
     }
 
     // find the unbond_amount based off of amounts that the TM has unbonded independent of a holder
-    let mut unbond_amount = {
+    unbond_amount = {
         let u = UNBONDINGS.load(deps.storage)?;
         // if the independent unbondings is less than what the adapters are acutally unbonding, we
         // know another holder has asked to do some unbonding and the adapters are unbonding for
         // that holder
         if u <= unbonding_tot {
-            if u <= amount {
+            if u <= unbond_amount {
                 // if amount > independent unbonding, we reduce independent unbondings to
                 // zero and return the amount we actually want to unbond from the adapters
                 UNBONDINGS.save(deps.storage, &Uint128::zero())?;
-                amount - u
+                unbond_amount - u
             } else {
                 // independent unbondings covers the amount
-                UNBONDINGS.save(deps.storage, &(u - amount))?;
+                UNBONDINGS.save(deps.storage, &(u - unbond_amount))?;
                 Uint128::zero()
             }
         } else {
@@ -906,7 +941,7 @@ pub fn unbond(
             ));*/
             // TODO figure out why we can't throw an error here
             // NOTE it has something to do with gains/losses
-            amount
+            unbond_amount
         }
     };
 
@@ -1382,12 +1417,17 @@ pub fn remove_holder(
     info: MessageInfo,
     holder: Addr,
 ) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &CONFIG.load(deps.storage)?.admin_auth,
+        &config.admin_auth,
     )?;
+
+    if holder == config.treasury {
+        return Err(StdError::generic_err("Cannot remove treasury as a holder"));
+    }
 
     if let Some(mut holding) = HOLDING.may_load(deps.storage, holder.clone())? {
         holding.status = Status::Closed;

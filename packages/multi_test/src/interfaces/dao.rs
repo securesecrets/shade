@@ -60,7 +60,8 @@ pub fn init_dao(
             .to_string(),
         treasury_start_bal,
         None,
-    );
+    )
+    .unwrap();
     for i in 0..num_managers {
         let num_adapters = tm_allocation_amount[i].len();
         treasury_manager::init(chain, sender, contracts, i);
