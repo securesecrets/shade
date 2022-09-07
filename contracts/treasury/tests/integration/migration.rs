@@ -72,14 +72,19 @@ pub fn migration_test(is_instant_unbond: bool) {
         multisig.to_string(),
     )
     .unwrap();
-    treasury::set_config(&mut app, "admin", &contracts, dao::treasury::Config {
-        admin_auth: contracts
-            .get(&SupportedContracts::AdminAuth)
-            .unwrap()
-            .clone()
-            .into(),
-        multisig: Addr::unchecked(multisig),
-    })
+    treasury::set_config(
+        &mut app,
+        "admin",
+        &contracts,
+        Some(
+            contracts
+                .get(&SupportedContracts::AdminAuth)
+                .unwrap()
+                .clone()
+                .into(),
+        ),
+        Some(Addr::unchecked(multisig).into()),
+    )
     .unwrap();
     treasury::set_run_level(
         &mut app,

@@ -136,7 +136,8 @@ pub enum ExecuteMsg {
         msg: Option<Binary>,
     },
     UpdateConfig {
-        config: Config,
+        admin_auth: Option<RawContract>,
+        treasury: Option<String>,
     },
     RegisterAsset {
         contract: RawContract,
@@ -168,6 +169,7 @@ pub enum ExecuteAnswer {
         status: ResponseStatus,
     },
     UpdateConfig {
+        config: Config,
         status: ResponseStatus,
     },
     RegisterAsset {

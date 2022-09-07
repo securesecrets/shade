@@ -23,7 +23,6 @@ use shade_protocol::{
             AllocationTempData,
             AllocationType,
             Balance,
-            Config,
             Context,
             ExecuteAnswer,
             Holding,
@@ -44,7 +43,10 @@ use shade_protocol::{
             set_viewing_key_msg,
         },
     },
-    utils::{asset::Contract, generic_response::ResponseStatus},
+    utils::{
+        asset::{Contract, RawContract},
+        generic_response::ResponseStatus,
+    },
 };
 
 static ONE_HUNDRED_PERCENT: Uint128 = Uint128::new(10u128.pow(18));
@@ -116,26 +118,34 @@ pub fn receive(
     })?))
 }
 
-//TODO change this to have optional inputs
 pub fn try_update_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    config: Config,
+    admin_auth: Option<RawContract>,
+    treasury: Option<String>,
 ) -> StdResult<Response> {
-    let cur_config = CONFIG.load(deps.storage)?;
+    let mut config = CONFIG.load(deps.storage)?;
 
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryManager,
         &info.sender,
-        &cur_config.admin_auth,
+        &config.admin_auth,
     )?;
+
+    if let Some(admin_auth) = admin_auth {
+        config.admin_auth = admin_auth.into_valid(deps.api)?;
+    }
+    if let Some(treasury) = treasury {
+        config.treasury = deps.api.addr_validate(&treasury)?;
+    }
 
     CONFIG.save(deps.storage, &config)?;
 
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
+            config,
             status: ResponseStatus::Success,
         })?),
     )

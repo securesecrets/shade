@@ -40,7 +40,7 @@ use shade_protocol::{
         set_viewing_key_msg,
     },
     utils::{
-        asset::Contract,
+        asset::{Contract, RawContract},
         cycle::{exceeds_cycle, parse_utc_datetime, utc_from_seconds, utc_now, Cycle},
         generic_response::ResponseStatus,
         wrap::wrap_coin,
@@ -73,26 +73,34 @@ pub fn receive(
     })?))
 }
 
-// TODO add optional feilds
 pub fn try_update_config(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    config: Config,
+    admin_auth: Option<RawContract>,
+    multisig: Option<String>,
 ) -> StdResult<Response> {
-    let cur_config = CONFIG.load(deps.storage)?;
+    let mut config = CONFIG.load(deps.storage)?;
 
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
         &info.sender,
-        &cur_config.admin_auth,
+        &config.admin_auth,
     )?;
+
+    if let Some(admin_auth) = admin_auth {
+        config.admin_auth = admin_auth.into_valid(deps.api)?;
+    }
+    if let Some(multisig) = multisig {
+        config.multisig = deps.api.addr_validate(&multisig)?;
+    }
 
     CONFIG.save(deps.storage, &config)?;
 
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
+            config,
             status: ResponseStatus::Success,
         })?),
     )

@@ -107,7 +107,8 @@ pub enum ExecuteMsg {
         msg: Option<Binary>,
     },
     UpdateConfig {
-        config: Config,
+        admin_auth: Option<RawContract>,
+        multisig: Option<String>,
     },
     RegisterAsset {
         contract: RawContract,
@@ -144,6 +145,7 @@ pub enum ExecuteAnswer {
         address: String,
     },
     UpdateConfig {
+        config: Config,
         status: ResponseStatus,
     },
     Receive {

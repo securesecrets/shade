@@ -11,7 +11,14 @@ use shade_protocol::{
     c_std::{Addr, StdError, StdResult, Uint128},
     contract_interfaces::dao::{manager, treasury::AllowanceType, treasury_manager},
     multi_test::App,
-    utils::{self, asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{
+        self,
+        asset::{Contract, RawContract},
+        ExecuteCallback,
+        InstantiateCallback,
+        MultiTestable,
+        Query,
+    },
 };
 
 pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts, id: usize) {
@@ -150,6 +157,26 @@ pub fn claimable_query(
         &chain,
     )? {
         manager::QueryAnswer::Claimable { amount } => Ok(amount),
+        _ => Err(StdError::generic_err(format!(
+            "Failed to.test_query treasury_manager claimable",
+        ))),
+    }
+}
+
+pub fn config_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    treasury_manager_contract: SupportedContracts,
+) -> StdResult<treasury_manager::Config> {
+    match (treasury_manager::QueryMsg::Config {}.test_query(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        &chain,
+    )?) {
+        treasury_manager::QueryAnswer::Config { config } => Ok(config),
         _ => Err(StdError::generic_err(format!(
             "Failed to.test_query treasury_manager claimable",
         ))),
@@ -295,6 +322,33 @@ pub fn balance_query(
         _ => Err(StdError::generic_err(
             "Failed to query treasury_manager balance",
         )),
+    }
+}
+
+pub fn update_config_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    treasury_manager_contract: SupportedContracts,
+    admin_auth: Option<RawContract>,
+    treasury: Option<String>,
+) -> StdResult<()> {
+    match (treasury_manager::ExecuteMsg::UpdateConfig {
+        admin_auth,
+        treasury,
+    }
+    .test_exec(
+        &contracts
+            .get(&treasury_manager_contract)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err("claim in treasury manager failed")),
     }
 }
 
