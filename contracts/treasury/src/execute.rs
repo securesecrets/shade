@@ -241,9 +241,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                 } else {
                     total_balance = Uint128::zero();
                 }
-                /*if token_balance > allowance.amount {
-
-                }*/
                 allowance.amount
             }
             AllowanceType::Portion => {
