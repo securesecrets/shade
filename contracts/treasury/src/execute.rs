@@ -212,8 +212,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         total_balance += balance + unbonding;
     }
 
-    println!("TOTAL BALANCE: {}", total_balance);
-
     /* Amounts given priority sice the array is sorted
      * portions are calculated after amounts are taken from total
      */
@@ -259,8 +257,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
 
         let (balance, cur_allowance) = metadata[&allowance.spender];
         let total = balance + cur_allowance;
-
-        println!("TOTAL: {}, DESIRED AMOUNT: {}", total, desired_amount);
 
         match desired_amount.cmp(&total) {
             // Decrease Allowance
@@ -351,7 +347,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
             // Increase Allowance
             std::cmp::Ordering::Greater => {
                 let mut increase = desired_amount - total;
-                println!("INCREASE: {}, TOKEN BAL: {}", increase, token_balance);
                 if increase > token_balance {
                     increase = token_balance;
                 }

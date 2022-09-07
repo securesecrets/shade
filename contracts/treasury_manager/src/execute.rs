@@ -510,8 +510,6 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     )?
     .allowance;
 
-    println!("ALLOWANCE: {}", allowance);
-
     // snip20 balance query to get the treasury managers current snip20 balance
     let mut balance = balance_query(
         &deps.querier,
@@ -526,8 +524,6 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     let out_total = (amount_total + portion_total + balance) - holder_unbonding;
     // This gives us our total allowance from the treasury, used and unused
     let total = out_total + allowance;
-
-    println!("OUT_TOTAL: {}, TOTAL: {}", out_total, total);
 
     balance = {
         if balance > holder_unbonding {

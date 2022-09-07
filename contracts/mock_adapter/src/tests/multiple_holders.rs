@@ -23,9 +23,12 @@ use shade_protocol::{
     utils::cycle::Cycle,
 };
 
-#[test]
-pub fn multiple_holders() {
-    //is_instant_unbond: bool) {
+pub fn multiple_holders(
+    is_instant_unbond: bool,
+    after_holder_adds_tokens: (Uint128, Vec<(Uint128, Vec<Uint128>)>),
+    after_holder_removed: (Uint128, Vec<(Uint128, Vec<Uint128>)>),
+) {
+    let num_managers = 4;
     const holder: &str = "holder";
     let mut app = App::default();
     let mut contracts = DeployedContracts::new();
@@ -68,12 +71,16 @@ pub fn multiple_holders() {
             4
         ],
         vec![vec![Uint128::zero(); 4]; 4],
-        true,
+        is_instant_unbond,
     );
-    println!(
-        "{:?}",
-        system_balance_reserves(&app, &contracts, "SSCRT".to_string())
-    );
+    let bals = {
+        if is_instant_unbond {
+            system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+        } else {
+            system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
+        }
+    };
+    assert_eq!(bals, after_holder_removed);
     snip20::set_viewing_key(
         &mut app,
         holder,
@@ -124,11 +131,15 @@ pub fn multiple_holders() {
         .balances[0]
             .amount
     );
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
-    println!(
-        "{:?}",
-        system_balance_reserves(&app, &contracts, "SSCRT".to_string())
-    );
+    update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
+    let bals = {
+        if is_instant_unbond {
+            system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+        } else {
+            system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
+        }
+    };
+    assert_eq!(bals, after_holder_adds_tokens);
     treasury_manager::unbond_exec(
         &mut app,
         holder,
@@ -138,7 +149,23 @@ pub fn multiple_holders() {
         Uint128::new(300),
     )
     .unwrap();
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
+    if !is_instant_unbond {
+        let mut k = 0;
+        for i in 0..num_managers {
+            for j in 0..4 {
+                mock_adapter_complete_unbonding(
+                    &mut app,
+                    "admin",
+                    &contracts,
+                    SupportedContracts::MockAdapter(k),
+                )
+                .unwrap();
+                k += 1;
+            }
+            k += 1;
+        }
+    }
+    update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
     treasury_manager::claim_exec(
         &mut app,
         holder,
@@ -147,6 +174,17 @@ pub fn multiple_holders() {
         SupportedContracts::TreasuryManager(0),
     )
     .unwrap();
+    match treasury_manager::remove_holder_exec(
+        &mut app,
+        "rando",
+        &contracts,
+        "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
+        holder.clone(),
+    ) {
+        Ok(_) => assert!(false, "unauthorized removing of holder"),
+        Err(_) => assert!(true),
+    }
     treasury_manager::remove_holder_exec(
         &mut app,
         "admin",
@@ -156,6 +194,17 @@ pub fn multiple_holders() {
         holder.clone(),
     )
     .unwrap();
+    match treasury_manager::remove_holder_exec(
+        &mut app,
+        "admin",
+        &contracts,
+        "SSCRT".to_string(),
+        SupportedContracts::TreasuryManager(0),
+        &contracts[&SupportedContracts::Treasury].address.to_string(),
+    ) {
+        Ok(_) => assert!(false, "removed treasury as a holder"),
+        Err(_) => assert!(true),
+    }
     treasury_manager::unbond_exec(
         &mut app,
         holder,
@@ -165,6 +214,22 @@ pub fn multiple_holders() {
         Uint128::zero(),
     )
     .unwrap();
+    if !is_instant_unbond {
+        let mut k = 0;
+        for i in 0..num_managers {
+            for j in 0..4 {
+                mock_adapter_complete_unbonding(
+                    &mut app,
+                    "admin",
+                    &contracts,
+                    SupportedContracts::MockAdapter(k),
+                )
+                .unwrap();
+                k += 1;
+            }
+            k += 1;
+        }
+    }
     treasury_manager::claim_exec(
         &mut app,
         holder,
@@ -173,8 +238,32 @@ pub fn multiple_holders() {
         SupportedContracts::TreasuryManager(0),
     )
     .unwrap();
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
+    update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
+    if !is_instant_unbond {
+        let mut k = 0;
+        for i in 0..num_managers {
+            for j in 0..4 {
+                mock_adapter_complete_unbonding(
+                    &mut app,
+                    "admin",
+                    &contracts,
+                    SupportedContracts::MockAdapter(k),
+                )
+                .unwrap();
+                k += 1;
+            }
+            k += 1;
+        }
+        treasury_manager::claim_exec(
+            &mut app,
+            holder,
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(0),
+        )
+        .unwrap();
+    }
+    update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
     match (treasury_manager::holding_query(
         &app,
         &contracts,
@@ -182,12 +271,133 @@ pub fn multiple_holders() {
         SupportedContracts::TreasuryManager(0),
         holder.to_string(),
     )) {
-        Ok(_) => assert!(false),
+        Ok(_) => assert!(false, "holder was not removed"),
         Err(_) => assert!(true),
     }
-    println!(
-        "{:?}",
-        system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+    let bals = {
+        if is_instant_unbond {
+            system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+        } else {
+            system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
+        }
+    };
+    assert_eq!(bals, after_holder_removed);
+}
+
+#[test]
+pub fn mul_holders() {
+    multiple_holders(
+        true,
+        (Uint128::new(280), vec![
+            (Uint128::new(100), vec![
+                Uint128::new(345),
+                Uint128::new(50),
+                Uint128::new(115),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(285),
+                Uint128::new(50),
+                Uint128::new(95),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(105),
+                Uint128::new(50),
+                Uint128::new(35),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(105),
+                Uint128::new(50),
+                Uint128::new(35),
+                Uint128::new(75),
+            ]),
+        ]),
+        (Uint128::new(280), vec![
+            (Uint128::new(0), vec![
+                Uint128::new(45),
+                Uint128::new(50),
+                Uint128::new(15),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(285),
+                Uint128::new(50),
+                Uint128::new(95),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(105),
+                Uint128::new(50),
+                Uint128::new(35),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(105),
+                Uint128::new(50),
+                Uint128::new(35),
+                Uint128::new(75),
+            ]),
+        ]),
     );
-    //assert!(false);
+}
+
+#[test]
+pub fn mul_holders_unbond() {
+    multiple_holders(
+        false,
+        (Uint128::new(280), vec![
+            (Uint128::new(100), vec![
+                Uint128::new(345),
+                Uint128::new(50),
+                Uint128::new(115),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(285),
+                Uint128::new(50),
+                Uint128::new(95),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(105),
+                Uint128::new(50),
+                Uint128::new(35),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(105),
+                Uint128::new(50),
+                Uint128::new(35),
+                Uint128::new(75),
+            ]),
+        ]),
+        (Uint128::new(280), vec![
+            (Uint128::new(0), vec![
+                Uint128::new(45),
+                Uint128::new(50),
+                Uint128::new(15),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(285),
+                Uint128::new(50),
+                Uint128::new(95),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(105),
+                Uint128::new(50),
+                Uint128::new(35),
+                Uint128::new(75),
+            ]),
+            (Uint128::new(0), vec![
+                Uint128::new(105),
+                Uint128::new(50),
+                Uint128::new(35),
+                Uint128::new(75),
+            ]),
+        ]),
+    );
 }
