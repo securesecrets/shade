@@ -262,6 +262,10 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                 // the spender has access to is it's current allowance plus it balance, so to
                 // find the decrease, we subtract that by the amount the allowance is set to
                 let mut decrease = total - desired_amount;
+                println!(
+                    "total_balance {}, total {}, decrease {}, desired_amount {}, threshold {}, amount {}",
+                    total_balance, total, decrease, desired_amount, threshold, allowance.amount
+                );
                 // threshold check
                 if decrease <= threshold {
                     println!("THRESHOLD SKIP {}", allowance.tolerance);
@@ -350,11 +354,16 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                 }
                 token_balance -= increase;
                 println!(
+                    "total {}, increase {}, desired_amount {}",
+                    total, increase, desired_amount
+                );
+                println!(
                     "THRESHOLD {}, increase {}, desired_amount {}",
                     threshold, increase, desired_amount
                 );
                 // threshold check
                 if increase <= threshold {
+                    println!("THRESHOLD SKIP");
                     continue;
                 }
                 if !increase.is_zero() {
