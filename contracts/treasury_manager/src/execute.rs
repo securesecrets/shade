@@ -87,29 +87,26 @@ pub fn receive(
         false => config.treasury,
     };
 
-    if HOLDING.load(deps.storage, holder.clone())?.status == Status::Closed {
+    let mut holding = HOLDING.load(deps.storage, holder.clone())?;
+    if holding.status == Status::Closed {
         return Err(StdError::generic_err(
             "Cannot add holdings when status is closed",
         ));
     }
+    if let Some(i) = holding
+        .balances
+        .iter()
+        .position(|b| b.token == asset.contract.address)
+    {
+        holding.balances[i].amount += amount;
+    } else {
+        holding.balances.push(Balance {
+            token: asset.contract.address,
+            amount,
+        });
+    }
 
-    // Update holdings
-    HOLDING.update(deps.storage, holder, |h| -> StdResult<Holding> {
-        let mut holding = h.unwrap();
-        if let Some(i) = holding
-            .balances
-            .iter()
-            .position(|b| b.token == asset.contract.address)
-        {
-            holding.balances[i].amount += amount;
-        } else {
-            holding.balances.push(Balance {
-                token: asset.contract.address,
-                amount,
-            });
-        }
-        Ok(holding)
-    })?;
+    HOLDING.save(deps.storage, holder, &holding)?;
 
     Ok(Response::new().set_data(to_binary(&ExecuteAnswer::Receive {
         status: ResponseStatus::Success,
@@ -739,26 +736,20 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
 
     // Credit treasury balance with allowance used by adding allowance_used to the existing balance
     // or creating a new balance struct with allowance_used as the balance
-    HOLDING.update(
-        deps.storage,
-        config.treasury.clone(),
-        |h| -> StdResult<Holding> {
-            let mut holding = h.unwrap();
-            if let Some(i) = holding
-                .balances
-                .iter()
-                .position(|u| u.token == asset.clone())
-            {
-                holding.balances[i].amount = holding.balances[i].amount + allowance_used;
-            } else {
-                holding.balances.push(Balance {
-                    token: asset.clone(),
-                    amount: allowance_used,
-                });
-            }
-            Ok(holding)
-        },
-    )?;
+    let mut holding = HOLDING.load(deps.storage, config.treasury.clone())?;
+    if let Some(i) = holding
+        .balances
+        .iter()
+        .position(|u| u.token == asset.clone())
+    {
+        holding.balances[i].amount = holding.balances[i].amount + allowance_used;
+    } else {
+        holding.balances.push(Balance {
+            token: asset.clone(),
+            amount: allowance_used,
+        });
+    }
+    HOLDING.save(deps.storage, config.treasury.clone(), &holding)?;
 
     // Determine Gainz & Losses & credit to treasury
     holder_principal += allowance_used;
@@ -1006,17 +997,15 @@ pub fn unbond(
             unbond_amount = unbond_amount - reserves;
 
             // Reflect sent funds in unbondings
-            HOLDING.update(deps.storage, unbonder, |h| -> StdResult<Holding> {
-                let mut holding = h.unwrap();
-                if let Some(i) = holding.unbondings.iter().position(|u| u.token == asset) {
-                    holding.unbondings[i].amount = holding.unbondings[i].amount - reserves;
-                } else {
-                    return Err(StdError::generic_err(
-                        "Failed to get unbonding, shouldn't happen",
-                    ));
-                }
-                Ok(holding)
-            })?;
+            let mut holding = HOLDING.load(deps.storage, unbonder.clone())?;
+            if let Some(i) = holding.unbondings.iter().position(|u| u.token == asset) {
+                holding.unbondings[i].amount = holding.unbondings[i].amount - reserves;
+            } else {
+                return Err(StdError::generic_err(
+                    "Failed to get unbonding, shouldn't happen",
+                ));
+            }
+            HOLDING.save(deps.storage, unbonder, &holding)?;
         } else {
             // reserves can cover unbond
             messages.push(send_msg(
@@ -1037,17 +1026,15 @@ pub fn unbond(
             });
 
             // Reflect sent funds in unbondings
-            HOLDING.update(deps.storage, unbonder, |h| {
-                let mut holder = h.unwrap();
-                if let Some(i) = holder.unbondings.iter().position(|u| u.token == asset) {
-                    holder.unbondings[i].amount = holder.unbondings[i].amount - amount;
-                } else {
-                    return Err(StdError::generic_err(
-                        "Failed to get unbonding, shouldn't happen",
-                    ));
-                }
-                Ok(holder)
-            })?;
+            let mut holding = HOLDING.load(deps.storage, unbonder.clone())?;
+            if let Some(i) = holding.unbondings.iter().position(|u| u.token == asset) {
+                holding.unbondings[i].amount = holding.unbondings[i].amount - amount;
+            } else {
+                return Err(StdError::generic_err(
+                    "Failed to get unbonding, shouldn't happen",
+                ));
+            }
+            HOLDING.save(deps.storage, unbonder, &holding)?;
 
             METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
