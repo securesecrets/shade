@@ -239,6 +239,32 @@ pub fn allowance_query(
     }
 }
 
+pub fn allowances_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+) -> StdResult<Vec<treasury::AllowanceMeta>> {
+    match (treasury::QueryMsg::Allowances {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Allowances { allowances } => Ok(allowances),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
 pub fn assets_query(chain: &App, contracts: &DeployedContracts) -> StdResult<Vec<Addr>> {
     match (treasury::QueryMsg::Assets {}.test_query(
         &contracts
