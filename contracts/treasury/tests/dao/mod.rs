@@ -156,6 +156,11 @@ pub fn dao_int_test(
             assert_eq!(adapter_bals.clone(), Uint128::zero());
         }
     }
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+    assert_eq!(
+        std::vec::Vec::<dao::treasury::AllowanceMeta>::new(),
+        treasury::allowances_query(&app, &contracts, "SSCRT".to_string(),).unwrap()
+    );
 }
 
 macro_rules! dao_tests {
