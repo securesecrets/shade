@@ -1,4 +1,4 @@
-use crate::tests::{get_proposals, init_chain};
+use crate::tests::{get_proposals, handle::proposal::init_funding_token, init_chain};
 use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
 use shade_protocol::{
     c_std::{to_binary, Addr, ContractInfo, StdResult, Uint128},
@@ -26,12 +26,9 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(App, ContractInfo, S
     let (mut chain, auth) = init_chain();
 
     // Register snip20
-    let snip20 = snip20::InstantiateMsg {
-        name: "token".to_string(),
-        admin: None,
-        symbol: "TKN".to_string(),
-        decimals: 6,
-        initial_balances: Some(vec![
+    let snip20 = init_funding_token(
+        &mut chain,
+        Some(vec![
             snip20::InitialBalance {
                 address: "alpha".into(),
                 amount: Uint128::new(20_000_000),
@@ -45,16 +42,7 @@ pub fn init_voting_governance_with_proposal() -> StdResult<(App, ContractInfo, S
                 amount: Uint128::new(20_000_000),
             },
         ]),
-        prng_seed: to_binary("some seed").unwrap(),
-        config: None,
-        query_auth: None,
-    }
-    .test_init(
-        Snip20::default(),
-        &mut chain,
-        Addr::unchecked("admin"),
-        "token",
-        &[],
+        Some(&auth),
     )
     .unwrap();
 

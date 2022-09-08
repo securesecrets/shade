@@ -101,7 +101,7 @@ pub enum RuntimeState {
     // Run like normal
     Normal,
     // Allow only specific assemblies and admin
-    SpecificAssemblies { committees: Vec<Uint128> },
+    SpecificAssemblies { assemblies: Vec<Uint128> },
     // Migrated - points to the new version
     Migrated,
 }

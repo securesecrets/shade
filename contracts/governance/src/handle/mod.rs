@@ -38,7 +38,7 @@ pub mod proposal;
 pub fn assembly_state_valid(storage: &dyn Storage, assembly: &Uint128) -> StdResult<()> {
     match RuntimeState::load(storage)? {
         RuntimeState::Normal => {}
-        RuntimeState::SpecificAssemblies { committees } => {
+        RuntimeState::SpecificAssemblies { assemblies: committees } => {
             if !committees.contains(assembly) {
                 return Err(StdError::generic_err("unauthorized"));
             }

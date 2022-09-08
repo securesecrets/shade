@@ -4,6 +4,7 @@ use crate::tests::{
     get_proposals,
     gov_generic_proposal,
     gov_msg_proposal,
+    handle::proposal::init_funding_token,
     init_chain,
 };
 use shade_multi_test::multi::{governance::Governance, snip20::Snip20};
@@ -60,27 +61,6 @@ pub fn init_funding_governance_with_proposal()
         "funding_token",
         &[],
     )
-    .unwrap();
-
-    query_auth::ExecuteMsg::SetViewingKey {
-        key: "password".to_string(),
-        padding: None,
-    }
-    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
-    .unwrap();
-
-    query_auth::ExecuteMsg::SetViewingKey {
-        key: "password".to_string(),
-        padding: None,
-    }
-    .test_exec(&auth, &mut chain, Addr::unchecked("beta"), &[])
-    .unwrap();
-
-    query_auth::ExecuteMsg::SetViewingKey {
-        key: "password".to_string(),
-        padding: None,
-    }
-    .test_exec(&auth, &mut chain, Addr::unchecked("charlie"), &[])
     .unwrap();
 
     let gov = InstantiateMsg {
@@ -702,12 +682,9 @@ fn init_funding_governance_with_proposal_with_privacy()
     let (mut chain, auth) = init_chain();
 
     // Register snip20
-    let snip20 = snip20::InstantiateMsg {
-        name: "funding_token".to_string(),
-        admin: None,
-        symbol: "FND".to_string(),
-        decimals: 6,
-        initial_balances: Some(vec![
+    let snip20 = init_funding_token(
+        &mut chain,
+        Some(vec![
             snip20::InitialBalance {
                 address: "alpha".into(),
                 amount: Uint128::new(10000),
@@ -721,18 +698,8 @@ fn init_funding_governance_with_proposal_with_privacy()
                 amount: Uint128::new(10000),
             },
         ]),
-        prng_seed: Default::default(),
-        config: None,
-        query_auth: None,
-    }
-    .test_init(
-        Snip20::default(),
-        &mut chain,
-        Addr::unchecked("admin"),
-        "funding_token",
-        &[],
-    )
-    .unwrap();
+        Some(&auth),
+    )?;
 
     // Register governance
     let gov = InstantiateMsg {
