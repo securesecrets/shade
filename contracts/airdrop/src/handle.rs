@@ -320,7 +320,7 @@ pub fn try_account(
             .update(|claimed| -> StdResult<Uint128> { Ok(claimed + redeem_amount) })?;
 
         messages.push(send_msg(
-            info.sender.to_string(),
+            info.sender.clone(),
             redeem_amount.into(),
             None,
             None,
@@ -436,7 +436,7 @@ pub fn try_claim(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Resp
             addresses: account.addresses,
         })?)
         .add_message(send_msg(
-            sender.to_string(),
+            sender,
             redeem_amount.into(),
             None,
             None,
@@ -463,7 +463,7 @@ pub fn try_claim_decay(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResul
                 let total_claimed = total_claimed_r(deps.storage).load()?;
                 let send_total = config.airdrop_amount.checked_sub(total_claimed)?;
                 let messages = vec![send_msg(
-                    dump_address.to_string(),
+                    dump_address,
                     send_total.into(),
                     None,
                     None,
