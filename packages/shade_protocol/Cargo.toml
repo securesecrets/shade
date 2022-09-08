@@ -74,6 +74,7 @@ sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
 admin            = ["interface"]
 peg_stability    = ["sky-utils", "adapter"]
+utility_router   = []
 
 chrono = ["dep:chrono"]
 

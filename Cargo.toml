@@ -23,6 +23,7 @@ members = [
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",
+  "contracts/utility_router",
 
   # DAO
   # - Core

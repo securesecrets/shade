@@ -1,0 +1,25 @@
+[package]
+name = "utility_router"
+version = "0.1.0"
+authors = ["Kyle Wahlberg <kyle.s.wahlberg@gmail.com>"]
+edition = "2018"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+backtraces = ["shade-protocol/backtraces"]
+debug-print = ["shade-protocol/debug-print"]
+
+[dependencies]
+shade_admin = { git = "https://github.com/securesecrets/shadeadmin", tag = "v1.0" }
+shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["utility_router", "snip20_staking", "multi-test", "admin"] }
+
+[dev-dependencies]

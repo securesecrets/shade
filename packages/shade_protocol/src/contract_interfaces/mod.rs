@@ -40,3 +40,6 @@ pub mod admin;
 
 #[cfg(feature = "peg_stability")]
 pub mod peg_stability;
+
+#[cfg(feature = "utility_router")]
+pub mod utility_router;
