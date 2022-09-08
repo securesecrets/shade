@@ -607,14 +607,18 @@ pub fn register_wrap(
     // Asset must be registered
     if let Some(a) = ASSET.may_load(deps.storage, contract.address.clone())? {
         // Deposit mut be enabled
-        if let Some(conf) = a.token_config && conf.deposit_enabled {
-            WRAP.save(deps.storage, denom, &contract.address)?;
-            Ok(
-                Response::new().set_data(to_binary(&ExecuteAnswer::RegisterWrap {
-                    status: ResponseStatus::Success,
-                })?),
-            )
-        }else{
+        if let Some(conf) = a.token_config {
+            if conf.deposit_enabled {
+                WRAP.save(deps.storage, denom, &contract.address)?;
+                Ok(
+                    Response::new().set_data(to_binary(&ExecuteAnswer::RegisterWrap {
+                        status: ResponseStatus::Success,
+                    })?),
+                )
+            } else {
+                Err(StdError::generic_err("Deposit not eneabled"))
+            }
+        } else {
             Err(StdError::generic_err("Deposit not eneabled"))
         }
     } else {
