@@ -222,21 +222,27 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
     /* Amounts given priority sice the array is sorted
      * portions are calculated after amounts are taken from total
      */
-    for allowance in allowances.clone() {
+    for (i, allowance) in allowances.clone().iter().enumerate() {
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
 
         // Refresh allowance if cycle is exceeded
         if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
             // Once allowances need 1 refresh if last_refresh == 'null'
-            // TODO allowance needs to be removed once it is used up
             if allowance.cycle == Cycle::Once {
+                println!("LAST REFRESH: {}, {}", last_refresh, utc_from_seconds(0));
                 if last_refresh != utc_from_seconds(0) {
+                    if stale_allowances.iter().find(|&&x| x == i) == None {
+                        stale_allowances.push(i);
+                        stale_allowances.sort();
+                    }
                     continue;
                 }
             } else {
                 continue;
             }
         }
+
+        allowances[i].last_refresh = now.to_rfc3339();
 
         // calculate the desired amount for the manager
         let desired_amount = match allowance.allowance_type {
@@ -388,8 +394,8 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         for index in stale_allowances.iter().rev() {
             allowances.remove(index.clone());
         }
-        ALLOWANCES.save(deps.storage, asset.clone(), &allowances)?;
     }
+    ALLOWANCES.save(deps.storage, asset.clone(), &allowances)?;
 
     METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
 

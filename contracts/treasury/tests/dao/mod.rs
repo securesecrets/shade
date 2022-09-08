@@ -96,7 +96,7 @@ pub fn dao_int_test(
     }
     let mut k = 0;
     for i in 0..num_managers {
-        treasury::allowance(
+        treasury::allowance_exec(
             &mut app,
             "admin",
             &contracts,

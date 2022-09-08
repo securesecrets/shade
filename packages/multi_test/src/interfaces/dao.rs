@@ -67,7 +67,7 @@ pub fn init_dao(
         treasury_manager::init(chain, sender, contracts, i);
         treasury_manager::register_asset(chain, "admin", contracts, snip20_symbol.to_string(), i);
         treasury::register_manager(chain, sender, contracts, i);
-        treasury::allowance(
+        treasury::allowance_exec(
             chain,
             sender,
             contracts,

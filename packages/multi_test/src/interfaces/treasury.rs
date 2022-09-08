@@ -104,7 +104,7 @@ pub fn register_manager(
     .unwrap();
 }
 
-pub fn allowance(
+pub fn allowance_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
