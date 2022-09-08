@@ -21,7 +21,6 @@ use shade_protocol::{
                 Allowance,
                 AllowanceMeta,
                 AllowanceType,
-                Config,
                 Context,
                 ExecuteAnswer,
                 Metric,
