@@ -345,11 +345,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                                 amount: decrease,
                                 user: m.address.clone(),
                             });
-                        } else {
-                            return Err(StdError::generic_err(format!(
-                                "Can't unbond from non-manager {}",
-                                allowance.spender.clone()
-                            )));
                         }
                     }
                 }

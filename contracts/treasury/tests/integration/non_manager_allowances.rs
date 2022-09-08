@@ -104,6 +104,17 @@ pub fn non_manager_allowances() {
     )
     .unwrap();
     update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+    assert_eq!(
+        Uint128::zero(),
+        treasury::allowance_query(
+            &app,
+            "admin",
+            &contracts,
+            "SSCRT".to_string(),
+            SupportedContracts::TreasuryManager(5)
+        )
+        .unwrap()
+    );
     match snip20::send_from(
         &mut app,
         NOT_A_MANAGER,

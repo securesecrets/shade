@@ -1,3 +1,4 @@
+pub mod equilibrium;
 pub mod gains_losses;
 
 use shade_multi_test::interfaces::{
