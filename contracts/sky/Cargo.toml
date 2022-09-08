@@ -29,5 +29,5 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 schemars = "0.7"
 
 [dev-dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["ensemble"] }
+#shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = ["ensemble"] }
 #contract_harness = { version = "0.1.0", path = "../../packages/contract_harness" }

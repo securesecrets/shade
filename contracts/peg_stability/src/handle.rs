@@ -1,17 +1,7 @@
 use crate::query::calculate_profit;
 use shade_protocol::{
     admin::helpers::{validate_admin, AdminPermissions},
-    c_std::{
-        to_binary,
-        Decimal,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        Uint128,
-    },
+    c_std::{to_binary, Decimal, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
     contract_interfaces::{
         peg_stability::{CalculateRes, Config, ExecuteAnswer, ViewingKey},
         sky::cycles::ArbPair,
@@ -224,21 +214,14 @@ pub fn try_swap(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
     let messages = vec![
         res.config.pairs[res.index].to_cosmos_msg(res.offer, res.min_expected)?,
         send_msg(
-            res.config.dump_contract.address.to_string(),
+            res.config.dump_contract.address,
             res.min_expected - res.payback,
             None,
             None,
             None,
             &other_asset,
         )?,
-        send_msg(
-            info.sender.to_string(),
-            res.payback,
-            None,
-            None,
-            None,
-            &other_asset,
-        )?,
+        send_msg(info.sender, res.payback, None, None, None, &other_asset)?,
     ];
     Ok(Response::new()
         .add_messages(messages)
