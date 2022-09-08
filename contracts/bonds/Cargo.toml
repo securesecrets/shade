@@ -33,8 +33,6 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
   "query_auth_lib"
 ] }
 schemars = "0.7"
-chrono = "0.4.19"
-time = "0.1.44"
 admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0" }
 shade_admin = { git = "https://github.com/securesecrets/shadeadmin.git", tag = "v1.0"}
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11"}

@@ -204,12 +204,12 @@ pub fn test_bonds() {
         &bonds,
         &depo,
         "admin",
-        None,
+        Some(200),
         None,
         None,
         Some(Uint128::new(4_347)),
         Uint128::new(1_000_000_000_000_000_000),
-        Uint128::new(950_000_000_000_000_000),
+        Uint128::new(3_000_000_000_000_000_000),
         false,
     );
     buy_opp(&mut chain, &bonds, &depo, Uint128::new(500_000_000)); // 5 units
@@ -228,6 +228,55 @@ pub fn test_bonds() {
         None,
         None,
     );
+
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(4_000_000_000_000_000_000),
+        Uint128::new(980_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    buy_opp_fail(&mut chain, &bonds, &depo, "16");
+
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(6_000_000_000_000_000_000),
+        Uint128::new(4_000_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    buy_opp_fail(&mut chain, &bonds, &depo, "15");
+
+    set_prices(
+        &mut chain,
+        &band,
+        Uint128::new(6_000_000_000_000_000_000),
+        Uint128::new(2_000_000_000_000_000_000),
+        Uint128::new(20_000_000_000_000_000_000),
+    )
+    .unwrap();
+
+    buy_opp(&mut chain, &bonds, &depo, Uint128::new(1_000_000_000));
+
+    query_opp_parameters(
+        &mut chain,
+        &bonds,
+        None,
+        Some(Uint128::new(165_555_555)),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    );
+
 
     open_opp_fail(
         &mut chain,
