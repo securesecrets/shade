@@ -1,4 +1,4 @@
-use shade_multi_test::multi::admin::init_admin_auth;
+/*use shade_multi_test::multi::admin::init_admin_auth;
 use shade_protocol::c_std::{to_binary, Addr, Coin, Decimal, Delegation, Uint128, Validator};
 
 use shade_protocol::{
@@ -328,4 +328,4 @@ basic_stkd_scrt_tests! {
         Uint128::new(100), // reserves
         Uint128::new(100), // balance
     ),
-}
+}*/
