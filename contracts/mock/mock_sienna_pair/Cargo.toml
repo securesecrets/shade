@@ -1,7 +1,7 @@
 [package]
-name = "query_auth"
+name = "mock_sienna_pair"
 version = "0.1.0"
-authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
+authors = ["Jack Swenson <jacksonswenson22@gmail.com>"]
 edition = "2018"
 
 exclude = [
@@ -23,12 +23,11 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "query_auth_impl",
-  "admin"
-] }
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-schemars = "0.7"
+bincode = "1.3.1"
 
-[dev-dependencies]
-shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "query_auth", "admin"  ] }
+cosmwasm-schema = "0.10.1"
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "dex",
+] }
+schemars = "0.7"
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }

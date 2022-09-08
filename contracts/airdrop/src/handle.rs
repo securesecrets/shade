@@ -15,25 +15,26 @@ use crate::state::{
     total_claimed_w,
     validate_address_permit,
 };
-use shade_protocol::c_std::{Decimal, MessageInfo, SubMsg, Uint128};
-use shade_protocol::c_std::{
-    from_binary,
-    to_binary,
-    Api,
-    Binary,
-    Env,
-    DepsMut,
-    Response,
-    Addr,
-    Querier,
-    StdError,
-    StdResult,
-    Storage,
-};
-use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use rs_merkle::{algorithms::Sha256, Hasher, MerkleProof};
-use shade_protocol::snip20::helpers::send_msg;
 use shade_protocol::{
+    c_std::{
+        from_binary,
+        to_binary,
+        Addr,
+        Api,
+        Binary,
+        Decimal,
+        DepsMut,
+        Env,
+        MessageInfo,
+        Querier,
+        Response,
+        StdError,
+        StdResult,
+        Storage,
+        SubMsg,
+        Uint128,
+    },
     contract_interfaces::airdrop::{
         account::{Account, AccountKey, AddressProofMsg, AddressProofPermit},
         claim_info::RequiredTask,
@@ -58,9 +59,10 @@ use shade_protocol::{
         Config,
         HandleAnswer,
     },
-    utils::generic_response::ResponseStatus,
+    query_authentication::viewing_keys::ViewingKey,
+    snip20::helpers::send_msg,
+    utils::generic_response::{ResponseStatus, ResponseStatus::Success},
 };
-use shade_protocol::utils::generic_response::ResponseStatus::Success;
 
 #[allow(clippy::too_many_arguments)]
 pub fn try_update_config(
@@ -171,7 +173,7 @@ pub fn try_update_config(
 
         Ok(state)
     })?;
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig {status: Success})?))
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateConfig { status: Success })?))
 }
 
 pub fn try_add_tasks(
@@ -203,7 +205,7 @@ pub fn try_add_tasks(
         Ok(config)
     })?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddTask{status: Success})?))
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::AddTask { status: Success })?))
 }
 
 pub fn try_account(
@@ -297,7 +299,8 @@ pub fn try_account(
             if let Some(claimed) = claimed {
                 let new_redeem: Uint128;
                 if completed_percentage == Uint128::new(100u128) {
-                    new_redeem = added_address_total * decay_factor(env.block.time.seconds(), &config);
+                    new_redeem =
+                        added_address_total * decay_factor(env.block.time.seconds(), &config);
                 } else {
                     new_redeem = completed_percentage
                         .multiply_ratio(added_address_total, Uint128::new(100u128))
@@ -313,15 +316,16 @@ pub fn try_account(
     }
 
     if redeem_amount > Uint128::zero() {
-        total_claimed_w(deps.storage).update(|claimed| -> StdResult<Uint128> { Ok(claimed + redeem_amount) })?;
+        total_claimed_w(deps.storage)
+            .update(|claimed| -> StdResult<Uint128> { Ok(claimed + redeem_amount) })?;
 
         messages.push(send_msg(
-            info.sender.clone(),
+            info.sender.to_string(),
             redeem_amount.into(),
             None,
             None,
             None,
-            &config.airdrop_snip20
+            &config.airdrop_snip20,
         )?);
     }
 
@@ -346,7 +350,11 @@ pub fn try_disable_permit_key(
 ) -> StdResult<Response> {
     revoke_permit(deps.storage, info.sender.to_string(), key);
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::DisablePermitKey{status: Success})?))
+    Ok(
+        Response::new().set_data(to_binary(&HandleAnswer::DisablePermitKey {
+            status: Success,
+        })?),
+    )
 }
 
 pub fn try_set_viewing_key(
@@ -355,12 +363,10 @@ pub fn try_set_viewing_key(
     info: &MessageInfo,
     key: String,
 ) -> StdResult<Response> {
-    account_viewkey_w(deps.storage).save(
-        &info.sender.to_string().as_bytes(),
-        &AccountKey(key).hash(),
-    )?;
+    account_viewkey_w(deps.storage)
+        .save(&info.sender.to_string().as_bytes(), &AccountKey(key).hash())?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetViewingKey{status: Success})?))
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetViewingKey { status: Success })?))
 }
 
 pub fn try_complete_task(
@@ -387,14 +393,10 @@ pub fn try_complete_task(
         }
     }
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::CompleteTask{status: Success})?))
+    Ok(Response::new().set_data(to_binary(&HandleAnswer::CompleteTask { status: Success })?))
 }
 
-pub fn try_claim(
-    deps: DepsMut,
-    env: &Env,
-    info: &MessageInfo,
-) -> StdResult<Response> {
+pub fn try_claim(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
 
     // Check that airdrop hasn't ended
@@ -422,7 +424,8 @@ pub fn try_claim(
         unclaimed_percentage,
     )?;
 
-    total_claimed_w(deps.storage).update(|claimed| -> StdResult<Uint128> {Ok(claimed + redeem_amount)})?;
+    total_claimed_w(deps.storage)
+        .update(|claimed| -> StdResult<Uint128> { Ok(claimed + redeem_amount) })?;
 
     Ok(Response::new()
         .set_data(to_binary(&HandleAnswer::Claim {
@@ -433,21 +436,16 @@ pub fn try_claim(
             addresses: account.addresses,
         })?)
         .add_message(send_msg(
-            sender.clone(),
+            sender.to_string(),
             redeem_amount.into(),
             None,
             None,
             None,
-            &config.airdrop_snip20
-        )?)
-    )
+            &config.airdrop_snip20,
+        )?))
 }
 
-pub fn try_claim_decay(
-    deps: DepsMut,
-    env: &Env,
-    info: &MessageInfo,
-) -> StdResult<Response> {
+pub fn try_claim_decay(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
 
     // Check if airdrop ended
@@ -465,15 +463,16 @@ pub fn try_claim_decay(
                 let total_claimed = total_claimed_r(deps.storage).load()?;
                 let send_total = config.airdrop_amount.checked_sub(total_claimed)?;
                 let messages = vec![send_msg(
-                    dump_address,
+                    dump_address.to_string(),
                     send_total.into(),
                     None,
                     None,
                     None,
-                    &config.airdrop_snip20
+                    &config.airdrop_snip20,
                 )?];
 
-                return Ok(Response::new().set_data(to_binary(&HandleAnswer::ClaimDecay{status: Success})?));
+                return Ok(Response::new()
+                    .set_data(to_binary(&HandleAnswer::ClaimDecay { status: Success })?));
             }
         }
     }

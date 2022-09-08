@@ -1,7 +1,9 @@
 [package]
-name = "query_auth"
+name = "mock_adapter"
 version = "0.1.0"
-authors = ["Guy Garcia <guysebastiangarcia@gmail.com>"]
+authors = [
+  "Jack Swenson <jacksonswenson22@gmail.com>",
+]
 edition = "2018"
 
 exclude = [
@@ -23,12 +25,17 @@ backtraces = ["shade-protocol/backtraces"]
 debug-print = ["shade-protocol/debug-print"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
-  "query_auth_impl",
-  "admin"
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
+  "adapter",
+  "storage_plus",
+  "dao",
+  "snip20",
 ] }
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-schemars = "0.7"
+cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
+schemars = "0.8.9"
 
 [dev-dependencies]
-shade-multi-test = { version = "0.1.0", path = "../../packages/multi_test", features = [ "query_auth", "admin"  ] }
+shade-multi-test = { path = "../../packages/multi_test", features = [ 
+  "dao", 
+] }

@@ -3,8 +3,7 @@ resolver = "2"
 members = [
   # Packages
   "packages/shade_protocol",
-  #"packages/secretcli",
-  #"packages/contract_harness",
+  "packages/secretcli",
   "packages/multi_test",
   "packages/multi_derive",
   "packages/contract_derive",
@@ -15,33 +14,30 @@ members = [
   # Protocol contracts
   "contracts/snip20",
   "contracts/governance",
-  "contracts/bonds",
-  "contracts/mint",
-  #"contracts/liability_mint",
-  "contracts/mint_router",
-  "contracts/oracle",
-  "contracts/sky",
+  # "contracts/bonds", //TODO: migrate to v1
+  # "contracts/liability_mint", //TODO: migrate
+  # "contracts/sky", //TODO: migrate to v1
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",
 
   # DAO
   # - Core
-  "contracts/treasury",
-  "contracts/treasury_manager",
+  "contracts/dao/treasury", 
+  "contracts/dao/treasury_manager", 
   # - Adapters
   "contracts/scrt_staking",
   "contracts/stkd_scrt",
   "contracts/rewards_emission",
   "contracts/lp_shdswap",
 
-  #"contracts/snip20_staking",
+  # "contracts/snip20_staking", //TODO: migrate to v1
   
   # Mock contracts
-  "contracts/mock_band",
-  "contracts/mock_secretswap_pair",
-  "contracts/mock_sienna_pair",
-  "contracts/mock_adapter",
+  # "contracts/mock/mock_band", //TODO: migrate to v1
+  # "contracts/mock/mock_secretswap_pair", //TODO: migrate to v1
+  # "contracts/mock/mock_sienna_pair", //TODO: migrate to v1
+  # "contracts/mock/mock_adapter", //TODO: migrate to v1
 
   # Tools
   "tools/doc2book",

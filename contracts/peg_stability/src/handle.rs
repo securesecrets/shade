@@ -1,6 +1,6 @@
 use crate::query::calculate_profit;
 use shade_protocol::{
-    admin::{validate_admin, AdminPermissions},
+    admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
         to_binary,
         Decimal,
@@ -41,7 +41,6 @@ pub fn try_update_config(
         &deps.querier,
         AdminPermissions::StabilityAdmin,
         info.sender.to_string(),
-        env.contract.address.to_string(),
         &config.admin_auth,
     )?;
     let mut messages = vec![];
@@ -90,7 +89,6 @@ pub fn try_set_pairs(
         &deps.querier,
         AdminPermissions::StabilityAdmin,
         info.sender.to_string(),
-        env.contract.address.to_string(),
         &config.admin_auth,
     )?;
     if pairs.is_empty() {
@@ -144,7 +142,6 @@ pub fn try_append_pairs(
         &deps.querier,
         AdminPermissions::StabilityAdmin,
         info.sender.to_string(),
-        env.contract.address.to_string(),
         &config.admin_auth,
     )?;
     let other_asset;
@@ -186,7 +183,6 @@ pub fn try_remove_pair(
         &deps.querier,
         AdminPermissions::StabilityAdmin,
         info.sender.to_string(),
-        env.contract.address.to_string(),
         &config.admin_auth,
     )?;
     if config.pairs.len() == 0 {
