@@ -229,7 +229,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
             // Once allowances need 1 refresh if last_refresh == 'null'
             if allowance.cycle == Cycle::Once {
-                println!("LAST REFRESH: {}, {}", last_refresh, utc_from_seconds(0));
                 if last_refresh != utc_from_seconds(0) {
                     if stale_allowances.iter().find(|&&x| x == i) == None {
                         stale_allowances.push(i);
@@ -556,8 +555,6 @@ pub fn try_register_asset(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    println!("HERE 1");
-
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
@@ -565,11 +562,8 @@ pub fn try_register_asset(
         &config.admin_auth,
     )?;
 
-    println!("HERE 2");
-
     ASSET_LIST.push(deps.storage, &contract.address.clone())?;
 
-    println!("CONTRACT ADDR: {}", contract.address);
     ASSET.save(
         deps.storage,
         contract.address.clone(),
