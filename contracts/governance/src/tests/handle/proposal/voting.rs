@@ -216,6 +216,7 @@ fn update_before_deadline() {
     );
 }
 
+//TODO
 /*#[test]
 fn update_after_deadline() {
     let (mut chain, gov, _, auth) = init_voting_governance_with_proposal().unwrap();
@@ -458,6 +459,7 @@ fn vote_veto() {
     )
 }
 
+//TODO
 /*#[test]
 fn vote_passed() {
     let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
@@ -921,6 +923,7 @@ fn update_vote() {
     );
 }
 
+//TODO
 /*#[test]
 fn vote_count() {
     let (mut chain, gov, stkd_tkn, auth) = init_voting_governance_with_proposal().unwrap();
