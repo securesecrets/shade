@@ -92,7 +92,7 @@ jobs:
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
       - name: Install llvm-tools-preview
-        run: rustup component add llvm-tools-preview --toolchain nightly-x86_64-unkown-linux-gnu
+        run: rustup component add llvm-tools-preview --toolchain nightly-wasm32-unknown-unknown
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
