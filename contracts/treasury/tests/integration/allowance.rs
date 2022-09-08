@@ -15,11 +15,13 @@ use shade_protocol::{
         to_binary,
         Addr,
         Binary,
+        BlockInfo,
         Coin,
         Decimal,
         Env,
         StdError,
         StdResult,
+        Timestamp,
         Uint128,
         Validator,
     },
@@ -55,6 +57,13 @@ fn allowance_cycle(
     refreshed: String,
 ) {
     let mut app = App::default();
+
+    let start = parse_utc_datetime(&start).unwrap();
+    app.set_block(BlockInfo {
+        height: 1,
+        time: Timestamp::from_seconds(start.timestamp() as u64),
+        chain_id: "chain_id".to_string(),
+    });
 
     let admin = Addr::unchecked("admin");
     let spender = Addr::unchecked("spender");
@@ -118,7 +127,7 @@ fn allowance_cycle(
             //nick: "Mid-Stakes-Manager".to_string(),
             spender: spender.clone(),
             allowance_type: allow_type,
-            cycle: Cycle::Constant,
+            cycle,
             amount: allowance,
             // 100% (adapter balance will 2x before unbond)
             tolerance: Uint128::zero(),
@@ -207,7 +216,12 @@ fn allowance_cycle(
     .unwrap();
 
     //TODO override env.block.time
-    let not_refreshed = parse_utc_datetime(&not_refreshed);
+    let not_refreshed = parse_utc_datetime(&not_refreshed).unwrap();
+    app.set_block(BlockInfo {
+        height: 1,
+        time: Timestamp::from_seconds(not_refreshed.timestamp() as u64),
+        chain_id: "chain_id".to_string(),
+    });
 
     // Update treasury
     treasury::ExecuteMsg::Update {
@@ -231,7 +245,12 @@ fn allowance_cycle(
     };
 
     //TODO override env.block.time
-    let refreshed = parse_utc_datetime(&refreshed);
+    let refreshed = parse_utc_datetime(&refreshed).unwrap();
+    app.set_block(BlockInfo {
+        height: 1,
+        time: Timestamp::from_seconds(refreshed.timestamp() as u64),
+        chain_id: "chain_id".to_string(),
+    });
 
     // Update treasury
     treasury::ExecuteMsg::Update {
@@ -308,6 +327,6 @@ allowance_cycle_tests! {
         Cycle::Monthly { months: Uint128::new(1) },
         "1995-11-13T00:00:00.00Z",
         "1995-11-13T12:00:00.00Z",
-        "1995-11-14T00:00:00.00Z",
+        "1995-12-13T00:00:00.00Z",
     ),
 }

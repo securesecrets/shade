@@ -226,10 +226,20 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
 
         // Refresh allowance if cycle is exceeded
-        if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
+        if !exceeds_cycle(&now, &last_refresh, allowance.cycle.clone()) {
+            match allowance.cycle {
+                Cycle::Daily { days } => println!("daily {}", days),
+                Cycle::Monthly { months } => println!("monthly {}", months),
+                _ => println!("HERE"),
+            };
+            println!(
+                "DOESNT EXCEED last {} now {}",
+                last_refresh.to_rfc3339(),
+                now.to_rfc3339()
+            );
             // Once allowances need 1 refresh if last_refresh == 'null'
             if allowance.cycle == Cycle::Once {
-                if last_refresh != utc_from_seconds(0) {
+                if last_refresh.timestamp() != 0 {
                     if stale_allowances.iter().find(|&&x| x == i) == None {
                         stale_allowances.push(i);
                         stale_allowances.sort();
@@ -240,6 +250,11 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                 continue;
             }
         }
+        println!(
+            "EXCEEDS last {} now {}",
+            last_refresh.to_rfc3339(),
+            now.to_rfc3339()
+        );
 
         allowances[i].last_refresh = now.to_rfc3339();
 
