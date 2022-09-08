@@ -163,10 +163,9 @@ pub fn try_register_asset(
         &config.admin_auth,
     )?;
 
-    ASSET_LIST.update(deps.storage, |mut list| -> StdResult<Vec<Addr>> {
-        list.push(contract.address.clone());
-        Ok(list)
-    })?;
+    let mut list = ASSET_LIST.load(deps.storage)?;
+    list.push(contract.address.clone());
+    ASSET_LIST.save(deps.storage, &list)?;
 
     ASSETS.save(
         deps.storage,
@@ -1380,13 +1379,12 @@ pub fn add_holder(
         &CONFIG.load(deps.storage)?.admin_auth,
     )?;
 
-    HOLDERS.update(deps.storage, |mut h| {
-        if h.contains(&holder.clone()) {
-            return Err(StdError::generic_err("Holder already exists"));
-        }
-        h.push(holder.clone());
-        Ok(h)
-    })?;
+    let mut holders = HOLDERS.load(deps.storage)?;
+    if holders.contains(&holder.clone()) {
+        return Err(StdError::generic_err("Holder already exists"));
+    }
+    holders.push(holder.clone());
+    HOLDERS.save(deps.storage, &holders)?;
 
     HOLDING.save(deps.storage, holder.clone(), &Holding {
         balances: Vec::new(),
