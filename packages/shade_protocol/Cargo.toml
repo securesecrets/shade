@@ -25,7 +25,6 @@ storage = ["dao-utils"]
 storage_plus = ["storage", "dep:secret-storage-plus", "chrono"]
 query_auth_lib = ["dep:query-authentication"]
 multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
-chrono = ["dep:chrono"]
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
@@ -40,7 +39,7 @@ interface = ["utils", "errors"]
 # pub mod contract_name;
 
 # For the implementation you need to import this in your feature and prepend the feature name with `_impl`
-implementation = ["storage_plus", "storage", "shade_admin"]
+implementation = ["storage_plus", "storage", "admin"]
 # Like so
 # contract_name_impl = ["contract_name", "implementation"]
 

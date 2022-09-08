@@ -26,10 +26,10 @@ members = [
   "contracts/dao/treasury", 
   "contracts/dao/treasury_manager", 
   # - Adapters
-  "contracts/scrt_staking",
-  "contracts/stkd_scrt",
-  "contracts/rewards_emission",
-  "contracts/lp_shdswap",
+  "contracts/dao/scrt_staking",
+  "contracts/dao/stkd_scrt",
+  "contracts/dao/rewards_emission",
+  "contracts/dao/lp_shdswap",
 
   # "contracts/snip20_staking", //TODO: migrate to v1
   

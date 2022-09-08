@@ -45,13 +45,6 @@ use shade_protocol::{
         wrap::wrap_coin,
     },
 };
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
-=======
-
-use crate::storage::*;
-
-use shade_protocol::chrono::prelude::*;
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
 use std::collections::HashMap;
 
 const ONE_HUNDRED_PERCENT: Uint128 = Uint128::new(10u128.pow(18u32));
@@ -106,10 +99,7 @@ pub fn try_update_config(
 
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::UpdateConfig {
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
             config,
-=======
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
             status: ResponseStatus::Success,
         })?),
     )
@@ -125,14 +115,7 @@ pub fn update(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRe
     }
 }
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
 fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
-=======
-pub fn rebalance(deps: DepsMut, env: &Env, asset: Addr) -> StdResult<Response> {
-    let naive = NaiveDateTime::from_timestamp(env.block.time.seconds() as i64, 0);
-    let now: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
     let viewing_key = VIEWING_KEY.load(deps.storage)?;
     let self_address = SELF_ADDRESS.load(deps.storage)?;
 
@@ -156,14 +139,10 @@ pub fn rebalance(deps: DepsMut, env: &Env, asset: Addr) -> StdResult<Response> {
     // { spender: (balance, allowance) }
     let mut metadata: HashMap<Addr, (Uint128, Uint128)> = HashMap::new();
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
     let mut messages = vec![];
     let mut metrics = vec![];
 
     let now = utc_now(&env);
-=======
-    let managers = MANAGERS.load(deps.storage)?;
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
 
     // allowances marked for removal
     let mut stale_allowances = vec![];
@@ -194,7 +173,6 @@ pub fn rebalance(deps: DepsMut, env: &Env, asset: Addr) -> StdResult<Response> {
                 });
             }
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
             unbonding = manager::unbonding_query(
                 deps.querier,
                 &asset.clone(),
@@ -209,17 +187,6 @@ pub fn rebalance(deps: DepsMut, env: &Env, asset: Addr) -> StdResult<Response> {
                 m,
             )?
         }
-=======
-    // Fetch balances & allowances
-    for manager in managers.clone() {
-        let balance = manager::balance_query(
-            deps.querier,
-            &full_asset.contract.address.clone(),
-            self_address.clone(),
-            manager.contract.clone(),
-        )?;
-        out_balance += balance;
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
 
         // can allways get allowance for everyone
         let allowance = allowance_query(
@@ -252,7 +219,6 @@ pub fn rebalance(deps: DepsMut, env: &Env, asset: Addr) -> StdResult<Response> {
         total_balance += balance + unbonding;
     }
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
     /* Amounts given priority sice the array is sorted
      * portions are calculated after amounts are taken from total
      */
@@ -379,74 +345,6 @@ pub fn rebalance(deps: DepsMut, env: &Env, asset: Addr) -> StdResult<Response> {
                                 user: m.address.clone(),
                             });
                         }
-=======
-    let (amount_allowances, portion_allowances): (Vec<Allowance>, Vec<Allowance>) =
-        allowances.into_iter().partition(|a| match a {
-            Allowance::Amount { .. } => true,
-            Allowance::Portion { .. } => false,
-        });
-
-    for allowance in amount_allowances {
-        match allowance {
-            // TODO: change this to a "flag" instead of type
-            Allowance::Amount {
-                spender,
-                cycle,
-                amount,
-                last_refresh,
-            } => {
-                let datetime = parse_utc_datetime(&last_refresh)?;
-
-                // Refresh allowance if cycle is exceeded
-                if exceeds_cycle(&datetime, &now, cycle) {
-                    let mut cur_allowance = Uint128::zero();
-                    if let Some(m) = manager_data.get(&spender) {
-                        cur_allowance = m.1;
-                    } else {
-                        cur_allowance = allowance_query(
-                            &deps.querier,
-                            env.contract.address.clone(),
-                            spender.clone(),
-                            viewing_key.clone(),
-                            1,
-                            &full_asset.contract.clone(),
-                        )?
-                        .amount;
-
-                        // hasn't been accounted for by manager data
-                        amount_total += cur_allowance;
-                    }
-
-                    amount_total += cur_allowance;
-
-                    match amount.cmp(&cur_allowance) {
-                        // Decrease Allowance
-                        std::cmp::Ordering::Less => {
-                            messages.push(decrease_allowance_msg(
-                                spender.clone(),
-                                cur_allowance - amount,
-                                //TODO impl expiration
-                                None,
-                                None,
-                                1,
-                                &full_asset.contract.clone(),
-                                vec![],
-                            )?);
-                        }
-                        // Increase Allowance
-                        std::cmp::Ordering::Greater => {
-                            messages.push(increase_allowance_msg(
-                                spender.clone(),
-                                amount - cur_allowance,
-                                None,
-                                None,
-                                1,
-                                &full_asset.contract.clone(),
-                                vec![],
-                            )?);
-                        }
-                        _ => {}
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
                     }
                 }
             }
@@ -458,66 +356,11 @@ pub fn rebalance(deps: DepsMut, env: &Env, asset: Addr) -> StdResult<Response> {
                 }
                 token_balance -= increase;
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
                 // threshold check
                 if increase <= threshold {
                     continue;
                 }
                 if !increase.is_zero() {
-=======
-    // Total for "portion" allowances (managers for farming mostly & reallocating)
-    let portion_total = (token_balance + out_balance) - amount_total;
-
-    for allowance in portion_allowances {
-        match allowance {
-            Allowance::Portion {
-                spender,
-                portion,
-                last_refresh: _,
-                tolerance,
-            } => {
-                let desired_amount = portion_total.multiply_ratio(portion, 10u128.pow(18));
-                let threshold = desired_amount.multiply_ratio(tolerance, 10u128.pow(18));
-
-                let manager = managers
-                    .clone()
-                    .into_iter()
-                    .find(|m| m.contract.address == spender)
-                    .unwrap();
-
-                /* NOTE: remove claiming if rebalance tx becomes too heavy
-                 * alternatives:
-                 *  - separate rebalance & update,
-                 *  - update could do an manager.update on all "children"
-                 *  - rebalance can be unique as its not needed as an manager
-                 */
-                if manager::claimable_query(
-                    deps.querier,
-                    &asset,
-                    self_address.clone(),
-                    manager.contract.clone(),
-                )? > Uint128::zero()
-                {
-                    messages.push(manager::claim_msg(asset.clone(), manager.contract.clone())?);
-                };
-
-                let cur_allowance = allowance_query(
-                    &deps.querier,
-                    env.contract.address.clone(),
-                    spender.clone(),
-                    viewing_key.clone(),
-                    1,
-                    &full_asset.contract.clone(),
-                )?
-                .amount;
-
-                // UnderFunded
-                if cur_allowance + manager.balance < desired_amount {
-                    let increase = desired_amount - (manager.balance + cur_allowance);
-                    if increase < threshold {
-                        continue;
-                    }
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
                     messages.push(increase_allowance_msg(
                         allowance.spender.clone(),
                         increase,
@@ -548,7 +391,6 @@ pub fn rebalance(deps: DepsMut, env: &Env, asset: Addr) -> StdResult<Response> {
     }
     ALLOWANCES.save(deps.storage, asset.clone(), &allowances)?;
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
     METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
 
     Ok(Response::new()
@@ -680,27 +522,8 @@ pub fn migrate(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> Std
     Ok(Response::new()
         .add_messages(messages)
         .set_data(to_binary(&ExecuteAnswer::Migration {
-=======
-                    // Unbond remaining
-                    if decrease > Uint128::zero() {
-                        messages.push(manager::unbond_msg(
-                            asset.clone(),
-                            decrease,
-                            manager.contract,
-                        )?);
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
-
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::Rebalance {
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
             status: ResponseStatus::Success,
-        })?),
-    )
+        })?))
 }
 
 pub fn set_run_level(
@@ -741,11 +564,7 @@ pub fn try_register_asset(
 
     ASSET_LIST.push(deps.storage, &contract.address.clone())?;
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
     ASSET.save(
-=======
-    ASSETS.save(
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
         deps.storage,
         contract.address.clone(),
         &snip20::helpers::fetch_snip20(contract, &deps.querier)?,
@@ -754,7 +573,6 @@ pub fn try_register_asset(
     ALLOWANCES.save(deps.storage, contract.address.clone(), &Vec::new())?;
 
     Ok(Response::new()
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
         .add_message(register_receive(
             env.contract.code_hash.clone(),
             None,
@@ -765,16 +583,6 @@ pub fn try_register_asset(
             None,
             &contract.clone(),
         )?)
-=======
-        .add_message(
-            // Register contract in asset
-            register_receive(env.contract.code_hash.clone(), None, contract)?,
-        )
-        .add_message(
-            // Set viewing key
-            set_viewing_key_msg(VIEWING_KEY.load(deps.storage)?, None, &contract.clone())?,
-        )
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
         .set_data(to_binary(&ExecuteAnswer::RegisterAsset {
             status: ResponseStatus::Success,
         })?))
@@ -809,32 +617,8 @@ pub fn register_wrap(
         }else{
             Err(StdError::generic_err("Deposit not eneabled"))
         }
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
     } else {
         Err(StdError::generic_err("Unrecognized Asset"))
-=======
-        managers.push(Manager {
-            contract: contract.clone(),
-            balance: Uint128::zero(),
-            desired: Uint128::zero(),
-        });
-        Ok(managers)
-    })?;
-
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterAsset {
-            status: ResponseStatus::Success,
-        })?),
-    )
-}
-
-// extract contract address if any
-fn allowance_address(allowance: &Allowance) -> Option<&Addr> {
-    match allowance {
-        Allowance::Amount { spender, .. } => Some(&spender),
-        Allowance::Portion { spender, .. } => Some(&spender),
-        _ => None,
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
     }
 }
 
@@ -902,20 +686,12 @@ pub fn allowance(
         None => {}
     };
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
     if allowance.tolerance >= ONE_HUNDRED_PERCENT {
         return Err(StdError::generic_err(format!(
             "Tolerance {} >= 100%",
             allowance.tolerance
         )));
     }
-=======
-    let mut apps = ALLOWANCES
-        .may_load(deps.storage, asset.clone())?
-        .unwrap_or_default();
-
-    let allow_address = allowance_address(&allowance);
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
 
     allowances.push(AllowanceMeta {
         spender: allowance.spender.clone(),
@@ -945,7 +721,6 @@ pub fn allowance(
         ));
     }
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
     // Sort list before going into storage
     allowances.sort_by(|a, b| match a.allowance_type {
         AllowanceType::Amount => match b.allowance_type {
@@ -963,94 +738,10 @@ pub fn allowance(
     Ok(
         Response::new().set_data(to_binary(&ExecuteAnswer::Allowance {
             status: ResponseStatus::Success,
-=======
-    // Zero the last-refresh
-    let datetime: DateTime<Utc> = DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc);
-
-    let spender = match allowance {
-        Allowance::Portion {
-            spender,
-            portion,
-            last_refresh: _,
-            tolerance,
-        } => {
-            apps.push(Allowance::Portion {
-                spender: spender.clone(),
-                portion: portion.clone(),
-                last_refresh: datetime.to_rfc3339(),
-                tolerance,
-            });
-            spender
-        }
-        Allowance::Amount {
-            spender,
-            cycle,
-            amount,
-            last_refresh: _,
-        } => {
-            apps.push(Allowance::Amount {
-                spender: spender.clone(),
-                cycle: cycle.clone(),
-                amount: amount.clone(),
-                last_refresh: datetime.to_rfc3339(),
-            });
-            spender
-        }
-    };
-
-    ALLOWANCES.save(deps.storage, asset, &apps)?;
-    /*
-    set_allowance(
-        &deps,
-        &env,
-        spender,
-        amount.clone(),
-        VIEWING_KEY.load(deps.storage)?,
-        full_asset.contract,
-        None,
-    )?,
-    */
-
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::Allowance {
-            status: ResponseStatus::Success,
         })?),
     )
 }
 
-pub fn claim(deps: DepsMut, _env: &Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
-    let managers = MANAGERS.load(deps.storage)?;
-    let allowances = ALLOWANCES.load(deps.storage, asset.clone())?;
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-
-    let mut messages = vec![];
-
-    let mut claimed = Uint128::zero();
-
-    for manager in managers {
-        let claimable = manager::claimable_query(
-            deps.querier,
-            &asset.clone(),
-            self_address.clone(),
-            manager.contract.clone(),
-        )?;
-
-        if claimable > Uint128::zero() {
-            messages.push(manager::claim_msg(asset.clone(), manager.contract.clone())?);
-            claimed += claimable;
-        }
-    }
-
-    Ok(
-        Response::new().set_data(to_binary(&manager::ExecuteAnswer::Claim {
-            status: ResponseStatus::Success,
-            amount: claimed,
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
-        })?),
-    )
-}
-
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
 pub fn wrap_coins(deps: DepsMut, env: &Env, info: MessageInfo) -> StdResult<Response> {
     let coins = deps.querier.query_all_balances(&env.contract.address)?;
 
@@ -1073,71 +764,10 @@ pub fn wrap_coins(deps: DepsMut, env: &Env, info: MessageInfo) -> StdResult<Resp
             })?;
         } else {
             failed.push(coin);
-=======
-pub fn unbond(
-    deps: DepsMut,
-    env: &Env,
-    info: MessageInfo,
-    asset: Addr,
-    amount: Uint128,
-) -> StdResult<Response> {
-    if info.sender != CONFIG.load(deps.storage)?.admin {
-        return Err(StdError::generic_err("Unauthorized"));
-    }
-
-    let managers = MANAGERS.load(deps.storage)?;
-    let self_address = SELF_ADDRESS.load(deps.storage)?;
-
-    let mut messages = vec![];
-
-    let mut unbond_amount = amount;
-    let mut unbonded = Uint128::zero();
-
-    for allowance in ALLOWANCES.load(deps.storage, asset.clone())? {
-        match allowance {
-            Allowance::Amount { .. } => {}
-            Allowance::Portion { spender, .. } => {
-                if let Some(manager) = managers.iter().find(|m| m.contract.address == spender) {
-                    let unbondable = manager::unbondable_query(
-                        deps.querier,
-                        &asset.clone(),
-                        self_address.clone(),
-                        manager.contract.clone(),
-                    )?;
-
-                    if unbondable > unbond_amount {
-                        messages.push(manager::unbond_msg(
-                            asset.clone(),
-                            unbond_amount,
-                            manager.contract.clone(),
-                        )?);
-                        unbond_amount = Uint128::zero();
-                        unbonded = unbond_amount;
-                    } else {
-                        messages.push(manager::unbond_msg(
-                            asset.clone(),
-                            unbondable,
-                            manager.contract.clone(),
-                        )?);
-                        unbond_amount = unbond_amount - unbondable;
-                        unbonded = unbonded + unbondable;
-                    }
-                }
-            }
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
         }
     }
 
-<<<<<<< HEAD:contracts/treasury/src/execute.rs
     Ok(Response::new()
         .add_messages(messages)
         .set_data(to_binary(&ExecuteAnswer::WrapCoins { success, failed })?))
-=======
-    Ok(
-        Response::new().set_data(to_binary(&manager::ExecuteAnswer::Unbond {
-            status: ResponseStatus::Success,
-            amount,
-        })?),
-    )
->>>>>>> cosmwasm_v1_upgrade:contracts/dao/treasury/src/execute.rs
 }

@@ -22,7 +22,7 @@ default = []
 backtraces = ["shade-protocol/backtraces"]
 
 [dependencies]
-shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", features = [
+shade-protocol = { version = "0.1.0", path = "../../../packages/shade_protocol", features = [
   "adapter",
   "dao",
   "dex",
@@ -34,6 +34,6 @@ shade-protocol = { version = "0.1.0", path = "../../packages/shade_protocol", fe
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 
 [dev-dependencies]
-shade-multi-test = { path = "../../packages/multi_test", features = [ 
+shade-multi-test = { path = "../../../packages/multi_test", features = [ 
   "admin"
 ] }

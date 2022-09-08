@@ -59,6 +59,9 @@ test:
 test-%: %
 	(cargo test -p $*)
 
+dao-cov:
+	(cargo llvm-cov --html -p treasury -p treasury_manager; xdg-open target/llvm-cov/html/index.html)
+
 setup: $(compiled_dir) $(checksum_dir)
 
 $(compiled_dir) $(checksum_dir):

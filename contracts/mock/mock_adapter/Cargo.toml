@@ -36,6 +36,6 @@ serde = { version = "1.0.103", default-features = false, features = ["derive", "
 schemars = "0.8.9"
 
 [dev-dependencies]
-shade-multi-test = { path = "../../packages/multi_test", features = [ 
+shade-multi-test = { path = "../../../packages/multi_test", features = [ 
   "dao", 
 ] }
