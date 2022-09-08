@@ -19,7 +19,7 @@ members = [
   # "contracts/liability_mint", //TODO: delete or migrate
   # "contracts/mint_router", //TODO: migrate to v1
   # "contracts/oracle", //TODO: delete or migrate
-  # "contracts/sky", //TODO: migrate to v1
+  "contracts/sky", 
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",
