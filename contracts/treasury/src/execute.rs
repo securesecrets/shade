@@ -199,10 +199,10 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         )?
         .allowance;
 
-        if token_balance < allowance {
-            token_balance = Uint128::zero();
-        } else {
+        if token_balance > allowance {
             token_balance -= allowance;
+        } else {
+            token_balance = Uint128::zero();
         }
 
         // if all of these are zero then we need to remove the allowance at the end of the fn
@@ -222,21 +222,26 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
     /* Amounts given priority sice the array is sorted
      * portions are calculated after amounts are taken from total
      */
-    for allowance in allowances.clone() {
+    for (i, allowance) in allowances.clone().iter().enumerate() {
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
 
         // Refresh allowance if cycle is exceeded
         if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
             // Once allowances need 1 refresh if last_refresh == 'null'
-            // TODO allowance needs to be removed once it is used up
             if allowance.cycle == Cycle::Once {
                 if last_refresh != utc_from_seconds(0) {
+                    if stale_allowances.iter().find(|&&x| x == i) == None {
+                        stale_allowances.push(i);
+                        stale_allowances.sort();
+                    }
                     continue;
                 }
             } else {
                 continue;
             }
         }
+
+        allowances[i].last_refresh = now.to_rfc3339();
 
         // calculate the desired amount for the manager
         let desired_amount = match allowance.allowance_type {
@@ -339,11 +344,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                                 amount: decrease,
                                 user: m.address.clone(),
                             });
-                        } else {
-                            return Err(StdError::generic_err(format!(
-                                "Can't unbond from non-manager {}",
-                                allowance.spender.clone()
-                            )));
                         }
                     }
                 }
@@ -388,8 +388,8 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         for index in stale_allowances.iter().rev() {
             allowances.remove(index.clone());
         }
-        ALLOWANCES.save(deps.storage, asset.clone(), &allowances)?;
     }
+    ALLOWANCES.save(deps.storage, asset.clone(), &allowances)?;
 
     METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
 
@@ -606,26 +606,20 @@ pub fn register_wrap(
 
     // Asset must be registered
     if let Some(a) = ASSET.may_load(deps.storage, contract.address.clone())? {
-        // Must have a token config (required for deposit)
-        if let Some(conf) = a.token_config {
-            // Must have deposit enabled
-            if !conf.deposit_enabled {
-                return Err(StdError::generic_err("Asset must have deposit enabled"));
-            }
-        } else {
-            return Err(StdError::generic_err("Asset has no config"));
+        // Deposit mut be enabled
+        if let Some(conf) = a.token_config && conf.deposit_enabled {
+            WRAP.save(deps.storage, denom, &contract.address)?;
+            Ok(
+                Response::new().set_data(to_binary(&ExecuteAnswer::RegisterWrap {
+                    status: ResponseStatus::Success,
+                })?),
+            )
+        }else{
+            Err(StdError::generic_err("Deposit not eneabled"))
         }
     } else {
-        return Err(StdError::generic_err("Unrecognized Asset"));
+        Err(StdError::generic_err("Unrecognized Asset"))
     }
-
-    WRAP.save(deps.storage, denom, &contract.address)?;
-
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterWrap {
-            status: ResponseStatus::Success,
-        })?),
-    )
 }
 
 pub fn register_manager(
