@@ -1,3 +1,4 @@
+pub mod allowance;
 pub mod batch;
 pub mod config;
 pub mod execute_errors;

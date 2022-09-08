@@ -226,10 +226,10 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         let last_refresh = parse_utc_datetime(&allowance.last_refresh)?;
 
         // Refresh allowance if cycle is exceeded
-        if !exceeds_cycle(&last_refresh, &now, allowance.cycle.clone()) {
+        if !exceeds_cycle(&now, &last_refresh, allowance.cycle.clone()) {
             // Once allowances need 1 refresh if last_refresh == 'null'
             if allowance.cycle == Cycle::Once {
-                if last_refresh != utc_from_seconds(0) {
+                if last_refresh.timestamp() != 0 {
                     if stale_allowances.iter().find(|&&x| x == i) == None {
                         stale_allowances.push(i);
                         stale_allowances.sort();
