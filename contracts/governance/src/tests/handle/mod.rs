@@ -1,6 +1,7 @@
 pub mod assembly;
 pub mod assembly_msg;
 pub mod contract;
+pub mod migration;
 pub mod profile;
 pub mod proposal;
 pub mod runstate;
