@@ -1,5 +1,6 @@
 pub mod batch;
 pub mod config;
+pub mod execute_errors;
 pub mod migration;
 pub mod non_manager_allowances;
 pub mod scrt_staking;

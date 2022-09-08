@@ -86,7 +86,7 @@ pub fn migration_test(is_instant_unbond: bool) {
         Some(Addr::unchecked(multisig).into()),
     )
     .unwrap();
-    treasury::set_run_level(
+    treasury::set_run_level_exec(
         &mut app,
         "admin",
         &contracts,

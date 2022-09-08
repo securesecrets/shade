@@ -199,10 +199,10 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
         )?
         .allowance;
 
-        if token_balance < allowance {
-            token_balance = Uint128::zero();
-        } else {
+        if token_balance > allowance {
             token_balance -= allowance;
+        } else {
+            token_balance = Uint128::zero();
         }
 
         // if all of these are zero then we need to remove the allowance at the end of the fn
@@ -556,6 +556,8 @@ pub fn try_register_asset(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
+    println!("HERE 1");
+
     validate_admin(
         &deps.querier,
         AdminPermissions::TreasuryAdmin,
@@ -563,8 +565,11 @@ pub fn try_register_asset(
         &config.admin_auth,
     )?;
 
+    println!("HERE 2");
+
     ASSET_LIST.push(deps.storage, &contract.address.clone())?;
 
+    println!("CONTRACT ADDR: {}", contract.address);
     ASSET.save(
         deps.storage,
         contract.address.clone(),
@@ -607,26 +612,20 @@ pub fn register_wrap(
 
     // Asset must be registered
     if let Some(a) = ASSET.may_load(deps.storage, contract.address.clone())? {
-        // Must have a token config (required for deposit)
-        if let Some(conf) = a.token_config {
-            // Must have deposit enabled
-            if !conf.deposit_enabled {
-                return Err(StdError::generic_err("Asset must have deposit enabled"));
-            }
-        } else {
-            return Err(StdError::generic_err("Asset has no config"));
+        // Deposit mut be enabled
+        if let Some(conf) = a.token_config && conf.deposit_enabled {
+            WRAP.save(deps.storage, denom, &contract.address)?;
+            Ok(
+                Response::new().set_data(to_binary(&ExecuteAnswer::RegisterWrap {
+                    status: ResponseStatus::Success,
+                })?),
+            )
+        }else{
+            Err(StdError::generic_err("Deposit not eneabled"))
         }
     } else {
-        return Err(StdError::generic_err("Unrecognized Asset"));
+        Err(StdError::generic_err("Unrecognized Asset"))
     }
-
-    WRAP.save(deps.storage, denom, &contract.address)?;
-
-    Ok(
-        Response::new().set_data(to_binary(&ExecuteAnswer::RegisterWrap {
-            status: ResponseStatus::Success,
-        })?),
-    )
 }
 
 pub fn register_manager(

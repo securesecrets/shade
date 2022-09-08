@@ -46,7 +46,7 @@ pub fn init_dao(
         6,
         None,
     );
-    treasury::register_asset(chain, sender, contracts, snip20_symbol.to_string());
+    treasury::register_asset_exec(chain, sender, contracts, snip20_symbol.to_string()).unwrap();
     snip20::send(
         chain,
         sender,
@@ -66,7 +66,7 @@ pub fn init_dao(
         let num_adapters = tm_allocation_amount[i].len();
         treasury_manager::init(chain, sender, contracts, i);
         treasury_manager::register_asset(chain, "admin", contracts, snip20_symbol.to_string(), i);
-        treasury::register_manager(chain, sender, contracts, i);
+        treasury::register_manager_exec(chain, sender, contracts, i).unwrap();
         treasury::allowance_exec(
             chain,
             sender,
@@ -77,7 +77,8 @@ pub fn init_dao(
             cycle[i].clone(),
             allowance_amount[i].clone(),
             allowance_tolerance[i].clone(),
-        );
+        )
+        .unwrap();
         for j in 0..num_adapters {
             let mock_adap_contract = Contract::from(
                 mock_adapter::contract::Config {
