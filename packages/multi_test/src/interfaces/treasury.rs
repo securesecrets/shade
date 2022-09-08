@@ -52,13 +52,13 @@ pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
     contracts.insert(SupportedContracts::Treasury, treasury);
 }
 
-pub fn register_asset(
+pub fn register_asset_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
     symbol: String,
-) {
-    treasury::ExecuteMsg::RegisterAsset {
+) -> StdResult<()> {
+    match (treasury::ExecuteMsg::RegisterAsset {
         contract: contracts
             .get(&SupportedContracts::Snip20(symbol))
             .unwrap()
@@ -74,17 +74,19 @@ pub fn register_asset(
         chain,
         Addr::unchecked(sender),
         &[],
-    )
-    .unwrap();
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err("register wrap failed")),
+    }
 }
 
-pub fn register_manager(
+pub fn register_manager_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
     manager_id: usize,
-) {
-    treasury::ExecuteMsg::RegisterManager {
+) -> StdResult<()> {
+    match (treasury::ExecuteMsg::RegisterManager {
         contract: contracts
             .get(&SupportedContracts::TreasuryManager(manager_id))
             .unwrap()
@@ -100,11 +102,35 @@ pub fn register_manager(
         chain,
         Addr::unchecked(sender),
         &[],
-    )
-    .unwrap();
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err("register wrap failed")),
+    }
 }
 
-pub fn allowance(
+pub fn register_wrap_exec(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    denom: String,
+    contract: RawContract,
+) -> StdResult<()> {
+    match (treasury::ExecuteMsg::RegisterWrap { denom, contract }.test_exec(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err("register wrap failed")),
+    }
+}
+
+pub fn allowance_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
@@ -114,10 +140,8 @@ pub fn allowance(
     cycle: Cycle,
     amount: Uint128,
     tolerance: Uint128,
-) {
-    println!("ALLOWANCE B: {}", amount.u128());
-    println!("TOLLERANCE: {}", tolerance.u128());
-    treasury::ExecuteMsg::Allowance {
+) -> StdResult<()> {
+    match (treasury::ExecuteMsg::Allowance {
         asset: contracts
             .get(&SupportedContracts::Snip20(snip20_symbol))
             .unwrap()
@@ -145,11 +169,13 @@ pub fn allowance(
         chain,
         Addr::unchecked(sender),
         &[],
-    )
-    .unwrap();
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err("allowance exec failed")),
+    }
 }
 
-pub fn set_run_level(
+pub fn set_run_level_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,

@@ -117,6 +117,40 @@ pub fn send(
     }
 }
 
+pub fn send_from(
+    chain: &mut App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: String,
+    owner: String,
+    recipient: String,
+    amount: Uint128,
+    msg: Option<Binary>,
+) -> StdResult<()> {
+    match (snip20::ExecuteMsg::SendFrom {
+        owner,
+        recipient,
+        amount,
+        msg,
+        memo: None,
+        padding: None,
+        recipient_code_hash: None,
+    }
+    .test_exec(
+        &contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+        Addr::unchecked(sender),
+        &[],
+    )) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(StdError::generic_err("snip20 send failed")),
+    }
+}
+
 pub fn balance_query(
     chain: &App,
     sender: &str,
