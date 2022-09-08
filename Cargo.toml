@@ -17,7 +17,7 @@ members = [
   # "contracts/bonds", //TODO: migrate to v1
   # "contracts/liability_mint", //TODO: migrate
   # "contracts/oracle", //TODO: delete or migrate
-  # "contracts/sky", //TODO: migrate to v1
+  "contracts/sky", 
   "contracts/peg_stability",
   "contracts/query_auth",
   "contracts/admin",

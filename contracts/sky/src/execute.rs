@@ -1,6 +1,6 @@
 use crate::query::{any_cycles_profitable, cycle_profitability};
 use shade_protocol::{
-    admin::validate_admin,
+    admin::helpers::{validate_admin, AdminPermissions},
     c_std::{
         to_binary,
         Addr,
@@ -21,7 +21,7 @@ use shade_protocol::{
             cycles::{Cycle, Offer},
             Config,
             Cycles,
-            HandleAnswer,
+            ExecuteAnswer,
             ViewingKeys,
         },
     },
@@ -49,6 +49,7 @@ pub fn try_update_config(
     let mut config = Config::load(deps.storage)?;
     validate_admin(
         &deps.querier,
+        AdminPermissions::SkyAdmin,
         info.sender.to_string(),
         &config.shade_admin,
     )?;
@@ -93,7 +94,7 @@ pub fn try_update_config(
     }
     config.save(deps.storage)?;
     Ok(Response::new()
-        .set_data(to_binary(&HandleAnswer::UpdateConfig { status: true })?)
+        .set_data(to_binary(&ExecuteAnswer::UpdateConfig { status: true })?)
         .add_submessages(messages))
 }
 
@@ -107,6 +108,7 @@ pub fn try_set_cycles(
     let shade_admin = Config::load(deps.storage)?.shade_admin;
     validate_admin(
         &deps.querier,
+        AdminPermissions::SkyAdmin,
         info.sender.to_string(),
         &shade_admin,
     )?;
@@ -123,7 +125,7 @@ pub fn try_set_cycles(
     let new_cycles = Cycles(cycles_to_set);
     new_cycles.save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::SetCycles { status: true })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::SetCycles { status: true })?))
 }
 
 pub fn try_append_cycle(
@@ -136,6 +138,7 @@ pub fn try_append_cycle(
     let shade_admin = Config::load(deps.storage)?.shade_admin;
     validate_admin(
         &deps.querier,
+        AdminPermissions::SkyAdmin,
         info.sender.to_string(),
         &shade_admin,
     )?;
@@ -154,7 +157,7 @@ pub fn try_append_cycle(
 
     cycles.save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::AppendCycles { status: true })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::AppendCycles { status: true })?))
 }
 
 pub fn try_update_cycle(
@@ -169,6 +172,7 @@ pub fn try_update_cycle(
     let shade_admin = Config::load(deps.storage)?.shade_admin;
     validate_admin(
         &deps.querier,
+        AdminPermissions::SkyAdmin,
         info.sender.to_string(),
         &shade_admin,
     )?;
@@ -181,7 +185,7 @@ pub fn try_update_cycle(
     cycles.0[i] = cycle;
     cycles.save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::UpdateCycle { status: true })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::UpdateCycle { status: true })?))
 }
 
 pub fn try_remove_cycle(
@@ -195,6 +199,7 @@ pub fn try_remove_cycle(
     let shade_admin = Config::load(deps.storage)?.shade_admin;
     validate_admin(
         &deps.querier,
+        AdminPermissions::SkyAdmin,
         info.sender.to_string(),
         &shade_admin,
     )?;
@@ -209,7 +214,7 @@ pub fn try_remove_cycle(
     cycles.remove(i);
     Cycles(cycles).save(deps.storage)?;
 
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::RemoveCycle { status: true })?))
+    Ok(Response::new().set_data(to_binary(&ExecuteAnswer::RemoveCycle { status: true })?))
 }
 
 pub fn try_arb_cycle(
@@ -285,7 +290,7 @@ pub fn try_arb_cycle(
 
             // add the payback msg
             messages.push(SubMsg::new(send_msg(
-                info.sender.to_string(),
+                info.sender,
                 Uint128::new(payback_amount.u128()),
                 None,
                 None,
@@ -304,7 +309,7 @@ pub fn try_arb_cycle(
     }
 
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::ExecuteArbCycle {
+        Response::new().set_data(to_binary(&ExecuteAnswer::ExecuteArbCycle {
             status: true,
             swap_amounts: return_swap_amounts,
             payback_amount,
@@ -315,7 +320,7 @@ pub fn try_arb_cycle(
 pub fn try_arb_all_cycles(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     amount: Uint128,
 ) -> StdResult<Response> {
     let mut total_profit = Uint128::zero();
@@ -355,7 +360,7 @@ pub fn try_arb_all_cycles(
     // calculate payback_amount
     let payback_amount = total_profit * Config::load(deps.storage)?.payback_rate;
     Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::ArbAllCycles {
+        Response::new().set_data(to_binary(&ExecuteAnswer::ArbAllCycles {
             status: true,
             payback_amount,
         })?),
@@ -364,7 +369,7 @@ pub fn try_arb_all_cycles(
 
 pub fn try_adapter_unbond(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     asset: Addr,
     amount: Uint128,
@@ -392,7 +397,7 @@ pub fn try_adapter_unbond(
     }
     // send the msg
     let messages = vec![send_msg(
-        config.treasury.address.to_string(),
+        config.treasury.address,
         Uint128::new(amount.u128()),
         None,
         None,
@@ -400,18 +405,18 @@ pub fn try_adapter_unbond(
         &contract,
     )?];
 
-    Ok(
-        Response::new().set_data(to_binary(&adapter::HandleAnswer::Unbond {
+    Ok(Response::new()
+        .set_data(to_binary(&adapter::ExecuteAnswer::Unbond {
             status: ResponseStatus::Success,
             amount: Uint128::new(amount.u128()),
-        })?),
-    )
+        })?)
+        .add_messages(messages))
 }
 
 // Unessesary for sky
 pub fn try_adapter_claim(_deps: DepsMut, _env: Env, _asset: Addr) -> StdResult<Response> {
     Ok(
-        Response::new().set_data(to_binary(&adapter::HandleAnswer::Claim {
+        Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Claim {
             status: ResponseStatus::Success,
             amount: Uint128::zero(),
         })?),
@@ -421,7 +426,7 @@ pub fn try_adapter_claim(_deps: DepsMut, _env: Env, _asset: Addr) -> StdResult<R
 // Unessesary for sky
 pub fn try_adapter_update(_deps: DepsMut, _env: Env, _asset: Addr) -> StdResult<Response> {
     Ok(
-        Response::new().set_data(to_binary(&adapter::HandleAnswer::Update {
+        Response::new().set_data(to_binary(&adapter::ExecuteAnswer::Update {
             status: ResponseStatus::Success,
         })?),
     )
