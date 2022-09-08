@@ -33,6 +33,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install toolchain
+        run: rustup target add wasm32-unknown-unknown
+
       - uses: actions-rs/cargo@v1.0.3
         with:
           command: build
