@@ -10,6 +10,7 @@ DOCKER_IMAGE_VERSION = "v0.2"
 
 [tasks.set_flags]
 workspace = false
+private = true
 script = '''
 RUSTFLAGS='-C link-arg=-s'
 '''
@@ -27,7 +28,6 @@ workspace = false
 command = "cargo"
 args = ["build", "--release", "--package", "${@}", "--target", "wasm32-unknown-unknown"]
 
-# TODO: cannot cleanup args so i have to run with the for the time being
 [tasks.compress_with_args]
 private = true
 workspace = false
@@ -76,7 +76,7 @@ args = ["test"]
 
 [tasks.clean]
 workspace = false
-dependencies = ["remove_compile_dir", "creae_compile_dir", "creae_checksum_dir"]
+dependencies = ["remove_compile_dir", "create_compile_dir", "create_checksum_dir"]
 
 [tasks.remove_compile_dir]
 private = true
@@ -84,19 +84,35 @@ workspace = false
 command = "rm"
 args = ["-r", "${COMPILED_DIR}", "-f"]
 
-[tasks.creae_compile_dir]
+[tasks.create_compile_dir]
 private = true
 workspace = false
 command = "mkdir"
 args = ["${COMPILED_DIR}"]
 
-[tasks.creae_checksum_dir]
+[tasks.create_checksum_dir]
 private = true
 workspace = false
 command = "mkdir"
 args = ["${CHECKSUM_DIR}"]
 
-# Docker support
+# Docker support - can be run with `cargo make server start|connect|download
+[tasks.server]
+private = false
+workspace = false
+extend = "subcommand"
+env = { "SUBCOMMAND_PREFIX" = "server" }
+
+[tasks.subcommand]
+private = true
+workspace = false
+script = '''
+#!@duckscript
+
+cm_run_task ${SUBCOMMAND_PREFIX}-${1}
+'''
+
+
 [tasks.server-download]
 workspace = false
 script = '''
