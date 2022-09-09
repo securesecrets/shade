@@ -11,7 +11,7 @@ use shade_protocol::{
         InstantiateMsg,
         RuntimeState,
     },
-    multi_test::{App, AppResponse, BasicApp},
+    multi_test::{App, AppResponse, BasicApp, Executor},
     snip20::{self, InitialBalance},
     utils::{
         asset::Contract,
@@ -24,10 +24,8 @@ use shade_protocol::{
     AnyResult,
 };
 
-fn init_gov() -> StdResult<(App, ContractInfo, ContractInfo)> {
+pub fn init_gov() -> StdResult<(App, ContractInfo, ContractInfo, u64)> {
     let (mut chain, auth) = init_chain();
-
-    // TODO: add another admin like assembly
 
     // Register snip20
     let snip20 = init_funding_token(
@@ -50,68 +48,70 @@ fn init_gov() -> StdResult<(App, ContractInfo, ContractInfo)> {
     )?;
 
     // Register governance
-    let gov = InstantiateMsg {
-        treasury: Addr::unchecked("treasury"),
-        query_auth: Contract {
-            address: auth.address.clone(),
-            code_hash: auth.code_hash.clone(),
-        },
-        assemblies: Some(AssemblyInit {
-            admin_members: vec![
-                Addr::unchecked("alpha"),
-                Addr::unchecked("beta"),
-                Addr::unchecked("charlie"),
-            ],
-            admin_profile: Profile {
-                name: "admin".to_string(),
-                enabled: true,
-                assembly: Some(VoteProfile {
-                    deadline: 1000,
-                    threshold: Count::LiteralCount {
-                        count: Uint128::new(1),
+    let stored_code = chain.store_code(Governance::default().contract());
+    let gov = chain
+        .instantiate_contract(
+            stored_code.clone(),
+            Addr::unchecked("admin"),
+            &InstantiateMsg {
+                treasury: Addr::unchecked("treasury"),
+                query_auth: Contract {
+                    address: auth.address.clone(),
+                    code_hash: auth.code_hash.clone(),
+                },
+                assemblies: Some(AssemblyInit {
+                    admin_members: vec![
+                        Addr::unchecked("alpha"),
+                        Addr::unchecked("beta"),
+                        Addr::unchecked("charlie"),
+                    ],
+                    admin_profile: Profile {
+                        name: "admin".to_string(),
+                        enabled: true,
+                        assembly: Some(VoteProfile {
+                            deadline: 1000,
+                            threshold: Count::LiteralCount {
+                                count: Uint128::new(1),
+                            },
+                            yes_threshold: Count::LiteralCount {
+                                count: Uint128::new(1),
+                            },
+                            veto_threshold: Count::LiteralCount {
+                                count: Uint128::new(1),
+                            },
+                        }),
+                        funding: Some(FundProfile {
+                            deadline: 1000,
+                            required: Uint128::new(1000),
+                            privacy: true,
+                            veto_deposit_loss: Default::default(),
+                        }),
+                        token: None,
+                        cancel_deadline: 0,
                     },
-                    yes_threshold: Count::LiteralCount {
-                        count: Uint128::new(1),
-                    },
-                    veto_threshold: Count::LiteralCount {
-                        count: Uint128::new(1),
+                    public_profile: Profile {
+                        name: "public".to_string(),
+                        enabled: false,
+                        assembly: None,
+                        funding: None,
+                        token: None,
+                        cancel_deadline: 0,
                     },
                 }),
-                funding: Some(FundProfile {
-                    deadline: 1000,
-                    required: Uint128::new(1000),
-                    privacy: true,
-                    veto_deposit_loss: Default::default(),
+                funding_token: Some(Contract {
+                    address: snip20.address.clone(),
+                    code_hash: snip20.code_hash.clone(),
                 }),
-                token: None,
-                cancel_deadline: 0,
+                vote_token: None,
+                migrator: None,
             },
-            public_profile: Profile {
-                name: "public".to_string(),
-                enabled: false,
-                assembly: None,
-                funding: None,
-                token: None,
-                cancel_deadline: 0,
-            },
-        }),
-        funding_token: Some(Contract {
-            address: snip20.address.clone(),
-            code_hash: snip20.code_hash.clone(),
-        }),
-        vote_token: None,
-        migrator: None,
-    }
-    .test_init(
-        Governance::default(),
-        &mut chain,
-        Addr::unchecked("admin"),
-        "governance",
-        &[],
-    )
-    .unwrap();
+            &vec![],
+            "governance",
+            None,
+        )
+        .unwrap();
 
-    Ok((chain, gov, snip20))
+    Ok((chain, gov, snip20, stored_code.code_id))
 }
 
 fn update_proposal(
@@ -185,7 +185,7 @@ fn fund_proposal(
 #[case(RuntimeState::SpecificAssemblies { assemblies: vec![Uint128::new(1)] }, 1, true)]
 #[case(RuntimeState::Migrated, 1, true)]
 fn runstate_states(#[case] state: RuntimeState, #[case] assembly: u128, #[case] expect: bool) {
-    let (mut chain, gov, snip20) = init_gov().unwrap();
+    let (mut chain, gov, snip20, _) = init_gov().unwrap();
 
     governance::ExecuteMsg::AddAssembly {
         name: "Other assembly".to_string(),
