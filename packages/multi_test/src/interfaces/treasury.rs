@@ -9,6 +9,7 @@ use shade_protocol::{
     utils::{
         asset::{Contract, RawContract},
         cycle::Cycle,
+        storage::plus::period_storage::Period,
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -392,6 +393,80 @@ pub fn balance_query(
         chain,
     )?) {
         treasury::QueryAnswer::Balance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn run_level_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+) -> StdResult<treasury::RunLevel> {
+    match (treasury::QueryMsg::RunLevel {}.test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::RunLevel { run_level } => Ok(run_level),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn metrics_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    date: Option<String>,
+    epoch: Option<Uint128>,
+    period: Period,
+) -> StdResult<Vec<treasury::Metric>> {
+    match (treasury::QueryMsg::Metrics {
+        date,
+        epoch,
+        period,
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Metrics { metrics } => Ok(metrics),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn batch_balance_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbols: Vec<String>,
+) -> StdResult<Vec<Uint128>> {
+    let assets = {
+        let mut vec = vec![];
+        for symbols in snip20_symbols {
+            vec.push(
+                contracts
+                    .get(&SupportedContracts::Snip20(symbols))
+                    .unwrap()
+                    .clone()
+                    .address
+                    .to_string(),
+            );
+        }
+        vec
+    };
+    match (treasury::QueryMsg::BatchBalance { assets }.test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )) {
+        Ok(a) => Ok(a),
         _ => Err(StdError::generic_err("query failed")),
     }
 }

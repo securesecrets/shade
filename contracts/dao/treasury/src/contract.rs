@@ -12,7 +12,6 @@ use shade_protocol::{
         StdResult,
     },
     dao::treasury::{Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, RunLevel},
-    utils::cycle::parse_utc_datetime,
 };
 
 #[shd_entry_point]
@@ -97,15 +96,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             run_level: RUN_LEVEL.load(deps.storage)?,
         }),
         //TODO: parse string & format manually to accept all valid date formats
-        QueryMsg::Metrics { date, period } => {
-            let key = match date {
-                Some(d) => parse_utc_datetime(&d)?.timestamp() as u64,
-                None => env.block.time.seconds(),
-            };
-            to_binary(&QueryAnswer::Metrics {
-                metrics: METRICS.load_period(deps.storage, key, period)?,
-            })
-        }
+        QueryMsg::Metrics {
+            date,
+            epoch,
+            period,
+        } => to_binary(&query::metrics(deps, env, date, epoch, period)?),
         QueryMsg::Balance { asset } => {
             let asset = deps.api.addr_validate(&asset)?;
             to_binary(&query::balance(deps, asset)?)

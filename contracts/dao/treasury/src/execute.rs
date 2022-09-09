@@ -391,6 +391,7 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
     }
     ALLOWANCES.save(deps.storage, asset.clone(), &allowances)?;
 
+    println!("{}, {:?}", env.block.time, metrics);
     METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
 
     Ok(Response::new()

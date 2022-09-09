@@ -66,7 +66,10 @@ where
         seconds: u64,
         period: Period,
     ) -> StdResult<Vec<T>> {
-        self.timed.load(storage, map_key(seconds, period))
+        Ok(self
+            .timed
+            .load(storage, map_key(seconds, period))
+            .unwrap_or(vec![]))
     }
 
     pub fn may_load(&self, storage: &dyn Storage, ts: Timestamp) -> StdResult<Vec<T>> {
