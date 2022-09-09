@@ -32,7 +32,7 @@ use shade_protocol::utils::asset::Contract;
 fn user_authorized(deps: &Deps, env: Env, info: &MessageInfo) -> StdResult<()> {
     let contract = Admin::load(deps.storage)?.0;
 
-    validate_permission(
+    validate_admin(
         &deps.querier,
         AdminPermissions::QueryAuthAdmin,
         info.sender.clone(),
