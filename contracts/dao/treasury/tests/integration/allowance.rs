@@ -307,12 +307,67 @@ macro_rules! allowance_cycle_tests {
 }
 
 allowance_cycle_tests! {
+    portion_seconds_30: (
+        Uint128::new(100), // deposit
+        Uint128::new(100), // removed
+        Uint128::new(100), // expected
+        Uint128::new(1 * 10u128.pow(18)), // allowance
+        AllowanceType::Portion,
+        Cycle::Seconds { seconds: Uint128::new(30) },
+        "1995-11-13T00:00:00.00Z",
+        "1995-11-13T00:00:29.00Z",
+        "1995-11-13T00:00:30.00Z",
+    ),
+    amount_seconds_30: (
+        Uint128::new(100), // deposit
+        Uint128::new(100), // removed
+        Uint128::new(100), // expected
+        Uint128::new(100), // allowance
+        AllowanceType::Amount,
+        Cycle::Seconds { seconds: Uint128::new(30) },
+        "1995-11-13T00:00:00.00Z",
+        "1995-11-13T00:00:29.00Z",
+        "1995-11-13T00:00:30.00Z",
+    ),
+    portion_minutes_30: (
+        Uint128::new(100), // deposit
+        Uint128::new(100), // removed
+        Uint128::new(100), // expected
+        Uint128::new(1 * 10u128.pow(18)), // allowance
+        AllowanceType::Portion,
+        Cycle::Minutes { minutes: Uint128::new(30) },
+        "1995-11-13T00:00:00.00Z",
+        "1995-11-13T00:15:00.00Z",
+        "1995-11-13T00:30:00.00Z",
+    ),
+    amount_minutes_30: (
+        Uint128::new(100), // deposit
+        Uint128::new(100), // removed
+        Uint128::new(100), // expected
+        Uint128::new(100), // allowance
+        AllowanceType::Amount,
+        Cycle::Minutes { minutes: Uint128::new(30) },
+        "1995-11-13T00:00:00.00Z",
+        "1995-11-13T00:15:00.00Z",
+        "1995-11-13T00:30:00.00Z",
+    ),
     portion_daily_1: (
         Uint128::new(100), // deposit
         Uint128::new(100), // removed
         Uint128::new(100), // expected
         Uint128::new(1 * 10u128.pow(18)), // allowance
         AllowanceType::Portion,
+        Cycle::Daily { days: Uint128::new(1) },
+        "1995-11-13T00:00:00.00Z",
+        "1995-11-13T12:00:00.00Z",
+        "1995-11-14T00:00:00.00Z",
+    ),
+    amount_daily_1: (
+        Uint128::new(100), // deposit
+        Uint128::new(100), // removed
+        Uint128::new(100), // expected
+        Uint128::new(100), // allowance
+        AllowanceType::Amount,
         Cycle::Daily { days: Uint128::new(1) },
         "1995-11-13T00:00:00.00Z",
         "1995-11-13T12:00:00.00Z",
@@ -328,5 +383,38 @@ allowance_cycle_tests! {
         "1995-11-13T00:00:00.00Z",
         "1995-11-13T12:00:00.00Z",
         "1995-12-13T00:00:00.00Z",
+    ),
+    amount_monthly_1: (
+        Uint128::new(100), // deposit
+        Uint128::new(100), // removed
+        Uint128::new(100), // expected
+        Uint128::new(100), // allowance
+        AllowanceType::Amount,
+        Cycle::Monthly { months: Uint128::new(1) },
+        "1995-11-13T00:00:00.00Z",
+        "1995-11-20T00:00:00.00Z",
+        "1995-12-13T00:00:00.00Z",
+    ),
+    portion_yearly_1: (
+        Uint128::new(100), // deposit
+        Uint128::new(100), // removed
+        Uint128::new(100), // expected
+        Uint128::new(1 * 10u128.pow(18)), // allowance
+        AllowanceType::Portion,
+        Cycle::Yearly { years: Uint128::new(1) },
+        "1995-11-13T00:00:00.00Z",
+        "1995-12-29T12:00:00.00Z",
+        "1996-01-01T00:00:00.00Z",
+    ),
+    amount_yearly_1: (
+        Uint128::new(100), // deposit
+        Uint128::new(100), // removed
+        Uint128::new(100), // expected
+        Uint128::new(100), // allowance
+        AllowanceType::Amount,
+        Cycle::Yearly { years: Uint128::new(1) },
+        "1995-11-13T00:00:00.00Z",
+        "1995-12-29T12:00:00.00Z",
+        "1996-01-01T00:00:00.00Z",
     ),
 }
