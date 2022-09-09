@@ -1,13 +1,13 @@
-#[cfg(feature = "treasury")]
-pub mod treasury;
-/*#[cfg(feature = "treasury")]
-pub use treasury::Treasury;*/
-#[cfg(feature = "snip20")]
-pub mod snip20;
-/*#[cfg(feature = "snip20")]
-pub use super::snip20::Snip20;*/
+#[cfg(feature = "dao")]
+pub mod adapter;
 #[cfg(feature = "dao")]
 pub mod dao;
+#[cfg(feature = "dao")]
+pub mod manager;
+#[cfg(feature = "snip20")]
+pub mod snip20;
+#[cfg(feature = "treasury")]
+pub mod treasury;
 #[cfg(feature = "treasury_manager")]
 pub mod treasury_manager;
 
