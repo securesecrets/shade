@@ -54,7 +54,7 @@ use shade_protocol::{
         QueryMsg,
         MSG_VARIABLE,
     },
-    governance::{AuthQuery, InstantiateMsgResponse, MigrationDataAsk, QueryData, RuntimeState},
+    governance::{AuthQuery, MigrationDataAsk, QueryData, RuntimeState},
     query_auth,
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::register_receive,
@@ -210,9 +210,10 @@ pub fn instantiate(
 
     Ok(Response::new()
         .add_submessages(messages)
-        .set_data(to_binary(&InstantiateMsgResponse {
-            contract: self_contract,
-        })?))
+        .add_attributes(vec![
+            (ADDRESS_ATTRIBUTE, self_contract.address.to_string()),
+            (CODE_HASH_ATTRIBUTE, self_contract.code_hash),
+        ]))
 }
 
 #[shd_entry_point]
@@ -453,15 +454,39 @@ pub fn auth_queries(deps: Deps, msg: AuthQuery, user: Addr) -> StdResult<Binary>
 
 const MIGRATION_REPLY: u64 = 0;
 const PROPOSAL_REPLY: u64 = 1;
+const ADDRESS_ATTRIBUTE: &str = "instantiated-address";
+const CODE_HASH_ATTRIBUTE: &str = "instantiated-code-hash";
 #[shd_entry_point]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
     match msg.id {
         MIGRATION_REPLY => {
             // Get the returned address and code_hash
-            let res: InstantiateMsgResponse = from_binary(&msg.result.unwrap().data.unwrap())?;
+            let res = msg.result.unwrap();
+            let wasm = res
+                .events
+                .iter()
+                .find(|event| event.ty == "wasm")
+                .ok_or_else(|| StdError::generic_err("No wasm event found"))?;
+            let address = deps.api.addr_validate(
+                &wasm
+                    .attributes
+                    .iter()
+                    .find(|attribute| attribute.key == ADDRESS_ATTRIBUTE)
+                    .ok_or_else(|| StdError::generic_err("No address found for instantiation"))?
+                    .value,
+            )?;
+            let code_hash = &wasm
+                .attributes
+                .iter()
+                .find(|attribute| attribute.key == CODE_HASH_ATTRIBUTE)
+                .ok_or_else(|| StdError::generic_err("No code-hash found for instantiation"))?
+                .value;
 
             let mut config = Config::load(deps.storage)?;
-            config.migrated_to = Some(res.contract);
+            config.migrated_to = Some(Contract {
+                address,
+                code_hash: code_hash.to_string(),
+            });
             config.save(deps.storage)?;
         }
         // TODO: on receiving a response, subtract 1 and update that proposals status to failed

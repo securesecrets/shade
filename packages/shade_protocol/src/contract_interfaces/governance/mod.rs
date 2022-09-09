@@ -92,11 +92,6 @@ impl InstantiateCallback for InstantiateMsg {
 }
 
 #[cw_serde]
-pub struct InstantiateMsgResponse {
-    pub contract: Contract,
-}
-
-#[cw_serde]
 pub enum RuntimeState {
     // Run like normal
     Normal,

@@ -183,9 +183,9 @@ fn fund_proposal(
 #[case(RuntimeState::Normal, 1, true)]
 #[case(RuntimeState::SpecificAssemblies { assemblies: vec![Uint128::new(1)] }, 2, false)]
 #[case(RuntimeState::SpecificAssemblies { assemblies: vec![Uint128::new(1)] }, 1, true)]
-#[case(RuntimeState::Migrated, 1, true)]
+#[case(RuntimeState::Migrated, 1, false)]
 fn runstate_states(#[case] state: RuntimeState, #[case] assembly: u128, #[case] expect: bool) {
-    let (mut chain, gov, snip20, _) = init_gov().unwrap();
+    let (mut chain, gov, snip20, gov_id) = init_gov().unwrap();
 
     governance::ExecuteMsg::AddAssembly {
         name: "Other assembly".to_string(),
@@ -235,7 +235,19 @@ fn runstate_states(#[case] state: RuntimeState, #[case] assembly: u128, #[case] 
             .unwrap();
         }
         RuntimeState::Migrated => {
-            //TODO: set migrated in state
+            governance::ExecuteMsg::Migrate {
+                id: gov_id,
+                label: "migrated".to_string(),
+                code_hash: gov.code_hash.clone(),
+            }
+            .test_exec(
+                // Sender is self
+                &gov,
+                &mut chain,
+                gov.address.clone(),
+                &[],
+            )
+            .unwrap();
         }
     }
 

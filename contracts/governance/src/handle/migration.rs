@@ -43,6 +43,7 @@ pub fn try_migrate(
     label: String,
     code_hash: String,
 ) -> StdResult<Response> {
+    // TODO: maybe randomly generate migration label
     ID::init_migration(deps.storage)?;
 
     let config = Config::load(deps.storage)?;
@@ -153,7 +154,7 @@ pub fn try_migrate_data(
                         let mut contracts = vec![];
 
                         let current_id = ID::contract_migration(deps.storage)?.u128();
-                        let last_id = min(current_id + total, ID::assembly(deps.storage)?.u128());
+                        let last_id = min(current_id + total, ID::contract(deps.storage)?.u128());
 
                         for i in current_id..=last_id {
                             let id = Uint128::new(i);
