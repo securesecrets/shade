@@ -22,7 +22,7 @@ pub enum Period {
 pub fn map_key(seconds: u64, period: Period) -> String {
     let datetime = utc_from_seconds(seconds as i64);
     match period {
-        Period::Hour => datetime.format("%Y-%m-%dT%h").to_string(),
+        Period::Hour => datetime.format("%Y-%m-%dT%H").to_string(),
         Period::Day => datetime.format("%Y-%m-%d").to_string(),
         Period::Month => datetime.format("%Y-%m").to_string(),
     }
@@ -30,7 +30,7 @@ pub fn map_key(seconds: u64, period: Period) -> String {
 
 pub struct PeriodStorage<'a, T, Ser = Json>
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Clone,
     Ser: Serde,
 {
     all: Map<'a, u64, Vec<T>, Ser>,
@@ -45,7 +45,7 @@ where
 
 impl<'a, T, Ser> PeriodStorage<'a, T, Ser>
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Clone,
     Ser: Serde,
 {
     pub const fn new(all: &'a str, recent: &'a str, timed: &'a str) -> Self {
@@ -78,27 +78,19 @@ where
 
     pub fn push(&self, storage: &mut dyn Storage, ts: Timestamp, item: T) -> StdResult<()> {
         let key = ts.seconds();
-        //println!("getting recent");
         let mut recent = self.recent.may_load(storage)?.unwrap_or(vec![]);
         if !recent.contains(&key) {
-            //println!("pushing recent");
             recent.push(key);
-            //println!("saving recent");
             self.recent.save(storage, &recent)?;
         }
-        //println!("loading all");
         let mut all = self.all.may_load(storage, key)?.unwrap_or(vec![]);
-        //println!("pushing all");
         all.push(item);
-        //println!("saving all {}", all.len());
         self.all.save(storage, key, &all)
     }
 
     /* push + flush */
     pub fn pushf(&self, storage: &mut dyn Storage, ts: Timestamp, item: T) -> StdResult<()> {
-        //println!("pushing {}", ts.seconds());
         self.push(storage, ts, item)?;
-        //println!("flushing");
         self.flush(storage)
     }
 
@@ -134,19 +126,15 @@ where
      */
     pub fn flush(&self, storage: &mut dyn Storage) -> StdResult<()> {
         for seconds in self.recent.load(storage)? {
-            //println!("loading {} from storage", seconds);
-            let mut items = self.all.load(storage, seconds)?;
-            //println!("items found {}", items.len());
+            let items = self.all.load(storage, seconds)?;
 
             for period in Period::iter() {
                 let k = map_key(seconds, period);
                 let mut cur_items = self.timed.may_load(storage, k.clone())?.unwrap_or(vec![]);
-                cur_items.append(&mut items);
-                //println!("storing timed {}", k);
+                cur_items.append(&mut items.clone());
                 self.timed.save(storage, k, &cur_items)?;
             }
         }
-        //println!("saving recent");
         self.recent.save(storage, &vec![])
     }
 }
