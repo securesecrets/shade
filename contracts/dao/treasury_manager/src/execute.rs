@@ -63,7 +63,7 @@ pub fn receive(
     let config = CONFIG.load(deps.storage)?;
     let asset = ASSETS.load(deps.storage, info.sender.clone())?;
 
-    METRICS.pushf(deps.storage, env.block.time, Metric {
+    METRICS.push(deps.storage, env.block.time, Metric {
         action: Action::FundsReceived,
         context: Context::Receive,
         timestamp: env.block.time.seconds(),
@@ -298,7 +298,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
         let claim = adapter::claimable_query(deps.querier, &asset, alloc.contract.clone())?;
         if claim > Uint128::zero() {
             messages.push(adapter::claim_msg(&asset, alloc.contract.clone())?);
-            METRICS.pushf(deps.storage, env.block.time, Metric {
+            METRICS.push(deps.storage, env.block.time, Metric {
                 action: Action::Claim,
                 context: Context::Claim,
                 timestamp: env.block.time.seconds(),
@@ -378,7 +378,7 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
         &full_asset.contract.clone(),
     )?);
 
-    METRICS.pushf(deps.storage, env.block.time, Metric {
+    METRICS.push(deps.storage, env.block.time, Metric {
         action: Action::SendFunds,
         context: Context::Claim,
         timestamp: env.block.time.seconds(),
@@ -820,7 +820,7 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
         )?);
     }
 
-    METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+    METRICS.append(deps.storage, env.block.time, &mut metrics)?;
 
     Ok(Response::new().add_messages(messages).set_data(to_binary(
         &adapter::ExecuteAnswer::Update {
@@ -1045,7 +1045,7 @@ pub fn unbond(
             }
             HOLDING.save(deps.storage, unbonder, &holding)?;
 
-            METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+            METRICS.append(deps.storage, env.block.time, &mut metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1105,7 +1105,7 @@ pub fn unbond(
                 user: a.contract.address.clone(),
             });
         }
-        METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+        METRICS.append(deps.storage, env.block.time, &mut metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1153,7 +1153,7 @@ pub fn unbond(
                 user: meta.contract.address.clone(),
             });
         }
-        METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+        METRICS.append(deps.storage, env.block.time, &mut metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1189,7 +1189,7 @@ pub fn unbond(
                 user: meta.contract.address.clone(),
             });
         }
-        METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+        METRICS.append(deps.storage, env.block.time, &mut metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1261,7 +1261,7 @@ pub fn unbond(
                 });
             }
         }
-        METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+        METRICS.append(deps.storage, env.block.time, &mut metrics)?;
         return Ok(Response::new().add_messages(messages).set_data(to_binary(
             &adapter::ExecuteAnswer::Unbond {
                 status: ResponseStatus::Success,
@@ -1310,7 +1310,7 @@ pub fn unbond(
                     });
                 }
             }
-            METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+            METRICS.append(deps.storage, env.block.time, &mut metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1355,7 +1355,7 @@ pub fn unbond(
                     });
                 }
             }
-            METRICS.appendf(deps.storage, env.block.time, &mut metrics)?;
+            METRICS.append(deps.storage, env.block.time, &mut metrics)?;
             return Ok(Response::new().add_messages(messages).set_data(to_binary(
                 &adapter::ExecuteAnswer::Unbond {
                     status: ResponseStatus::Success,
@@ -1392,7 +1392,7 @@ pub fn add_holder(
         status: Status::Active,
     })?;
 
-    METRICS.pushf(deps.storage, env.block.time, Metric {
+    METRICS.push(deps.storage, env.block.time, Metric {
         action: Action::AddHolder,
         context: Context::Holders,
         timestamp: env.block.time.seconds(),
@@ -1433,7 +1433,7 @@ pub fn remove_holder(
         return Err(StdError::generic_err("Not an authorized holder"));
     }
 
-    METRICS.pushf(deps.storage, env.block.time, Metric {
+    METRICS.push(deps.storage, env.block.time, Metric {
         action: Action::RemoveHolder,
         context: Context::Holders,
         timestamp: env.block.time.seconds(),

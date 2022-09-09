@@ -75,37 +75,15 @@ where
 
     pub fn push(&self, storage: &mut dyn Storage, ts: Timestamp, item: T) -> StdResult<()> {
         let key = ts.seconds();
-        //println!("getting recent");
         let mut recent = self.recent.may_load(storage)?.unwrap_or(vec![]);
         if !recent.contains(&key) {
-            //println!("pushing recent");
             recent.push(key);
-            //println!("saving recent");
             self.recent.save(storage, &recent)?;
         }
-        //println!("loading all");
         let mut all = self.all.may_load(storage, key)?.unwrap_or(vec![]);
-        //println!("pushing all");
         all.push(item);
-        //println!("saving all {}", all.len());
-        self.all.save(storage, key, &all)
-    }
+        self.all.save(storage, key, &all)?;
 
-    /* push + flush */
-    pub fn pushf(&self, storage: &mut dyn Storage, ts: Timestamp, item: T) -> StdResult<()> {
-        //println!("pushing {}", ts.seconds());
-        self.push(storage, ts, item)?;
-        //println!("flushing");
-        self.flush(storage)
-    }
-
-    pub fn appendf(
-        &self,
-        storage: &mut dyn Storage,
-        ts: Timestamp,
-        items: &mut Vec<T>,
-    ) -> StdResult<()> {
-        self.append(storage, ts, items)?;
         self.flush(storage)
     }
 
@@ -123,27 +101,258 @@ where
         }
         let mut all = self.all.may_load(storage, key)?.unwrap_or(vec![]);
         all.append(items);
-        self.all.save(storage, key, &all)
+        self.all.save(storage, key, &all)?;
+
+        self.flush(storage)
     }
 
     /* This will move all "recents" into the time based storage
      * This should likely be called at the end of execution that adds items
      */
-    pub fn flush(&self, storage: &mut dyn Storage) -> StdResult<()> {
+    fn flush(&self, storage: &mut dyn Storage) -> StdResult<()> {
         for seconds in self.recent.load(storage)? {
-            //println!("loading {} from storage", seconds);
             let mut items = self.all.load(storage, seconds)?;
-            //println!("items found {}", items.len());
 
             for period in Period::iter() {
                 let k = map_key(seconds, period);
                 let mut cur_items = self.timed.may_load(storage, k.clone())?.unwrap_or(vec![]);
                 cur_items.append(&mut items);
-                //println!("storing timed {}", k);
                 self.timed.save(storage, k, &cur_items)?;
             }
         }
-        //println!("saving recent");
         self.recent.save(storage, &vec![])
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use crate::c_std::{MemoryStorage, Timestamp, Uint128};
+
+    fn test_push(now: String) {
+        let now = parse_utc_datetime(&"1995-11-13T00:00:00.00Z".to_string()).unwrap();
+        let mut storage = MemoryStorage::new();
+        pub const STORAGE: PeriodStorage<u128> = PeriodStorage::new("all", "recent", "timed");
+
+        let data = vec![1, 2, 3, 5, 10];
+
+        for d in data.clone() {
+            STORAGE
+                .push(
+                    &mut storage,
+                    Timestamp::from_seconds(now.timestamp() as u64),
+                    d,
+                )
+                .unwrap();
+        }
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Hour)
+                .unwrap(),
+            data
+        );
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Day)
+                .unwrap(),
+            data
+        );
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Month)
+                .unwrap(),
+            data
+        );
+    }
+
+    fn test_append(now: String) {
+        let now = parse_utc_datetime(&"1995-11-13T00:00:00.00Z".to_string()).unwrap();
+        let mut storage = MemoryStorage::new();
+        pub const STORAGE: PeriodStorage<u128> = PeriodStorage::new("all", "recent", "timed");
+
+        let mut data = vec![1, 2, 3, 5, 10];
+
+        STORAGE
+            .append(
+                &mut storage,
+                Timestamp::from_seconds(now.timestamp() as u64),
+                &mut data.clone(),
+            )
+            .unwrap();
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Hour)
+                .unwrap(),
+            data
+        );
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Day)
+                .unwrap(),
+            data
+        );
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Month)
+                .unwrap(),
+            data
+        );
+    }
+
+    fn test_hour_timed(now: String) {
+        let mut now = parse_utc_datetime(&"1995-11-13T00:00:00.00Z".to_string()).unwrap();
+
+        let mut storage = MemoryStorage::new();
+        pub const STORAGE: PeriodStorage<u128> = PeriodStorage::new("all", "recent", "timed");
+
+        let mut data = vec![1, 2, 3, 5, 10];
+        let mut added = vec![11, 12, 13, 15, 20];
+
+        STORAGE
+            .append(
+                &mut storage,
+                Timestamp::from_seconds(now.timestamp() as u64),
+                &mut data,
+            )
+            .unwrap();
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Hour)
+                .unwrap(),
+            data
+        );
+
+        let now = parse_utc_datetime(&"1995-11-13T01:00:00.00Z".to_string()).unwrap();
+        assert!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Hour)
+                .unwrap()
+                .is_empty(),
+        );
+
+        STORAGE
+            .append(
+                &mut storage,
+                Timestamp::from_seconds(now.timestamp() as u64),
+                &mut added,
+            )
+            .unwrap();
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Hour)
+                .unwrap(),
+            added
+        );
+
+        let mut all_data = data;
+        all_data.append(&mut added);
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Day)
+                .unwrap(),
+            all_data
+        );
+    }
+
+    fn test_day_timed(now: String) {
+        let mut now = parse_utc_datetime(&"1995-11-13T00:00:00.00Z".to_string()).unwrap();
+
+        let mut storage = MemoryStorage::new();
+        pub const STORAGE: PeriodStorage<u128> = PeriodStorage::new("all", "recent", "timed");
+
+        let mut data = vec![1, 2, 3, 5, 10];
+        let mut added = vec![11, 12, 13, 15, 20];
+
+        STORAGE
+            .append(
+                &mut storage,
+                Timestamp::from_seconds(now.timestamp() as u64),
+                &mut data,
+            )
+            .unwrap();
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Day)
+                .unwrap(),
+            data
+        );
+
+        let now = parse_utc_datetime(&"1995-11-14T00:00:00.00Z".to_string()).unwrap();
+        assert!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Day)
+                .unwrap()
+                .is_empty(),
+        );
+
+        STORAGE
+            .append(
+                &mut storage,
+                Timestamp::from_seconds(now.timestamp() as u64),
+                &mut added,
+            )
+            .unwrap();
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Day)
+                .unwrap(),
+            added
+        );
+
+        let mut all_data = data;
+        all_data.append(&mut added);
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Month)
+                .unwrap(),
+            all_data
+        );
+    }
+
+    fn test_month_timed(now: String) {
+        let mut now = parse_utc_datetime(&"1995-11-13T00:00:00.00Z".to_string()).unwrap();
+
+        let mut storage = MemoryStorage::new();
+        pub const STORAGE: PeriodStorage<u128> = PeriodStorage::new("all", "recent", "timed");
+
+        let mut data = vec![1, 2, 3, 5, 10];
+        let mut added = vec![11, 12, 13, 15, 20];
+
+        STORAGE
+            .append(
+                &mut storage,
+                Timestamp::from_seconds(now.timestamp() as u64),
+                &mut data,
+            )
+            .unwrap();
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Month)
+                .unwrap(),
+            data
+        );
+
+        let now = parse_utc_datetime(&"1995-12-13T00:00:00.00Z".to_string()).unwrap();
+        assert!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Month)
+                .unwrap()
+                .is_empty(),
+        );
+
+        STORAGE
+            .append(
+                &mut storage,
+                Timestamp::from_seconds(now.timestamp() as u64),
+                &mut added,
+            )
+            .unwrap();
+        assert_eq!(
+            STORAGE
+                .load_period(&storage, now.timestamp() as u64, Period::Month)
+                .unwrap(),
+            added
+        );
     }
 }

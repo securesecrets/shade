@@ -9,13 +9,13 @@ use crate::{
 };
 use shade_protocol::{
     c_std::{Addr, ContractInfo, Uint128},
-    contract_interfaces::dao::adapter,
+    contract_interfaces::dao::manager,
     multi_test::App,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 pub fn update(chain: &mut App, asset: Addr, sender: Addr, contract: &ContractInfo) {
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Update {
         asset: asset.to_string().clone(),
     })
     .test_exec(&contract, chain, sender.clone(), &[])
@@ -23,7 +23,7 @@ pub fn update(chain: &mut App, asset: Addr, sender: Addr, contract: &ContractInf
 }
 
 pub fn claim(chain: &mut App, asset: Addr, sender: Addr, contract: &ContractInfo) {
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Claim {
         asset: asset.to_string().clone(),
     })
     .test_exec(&contract, chain, sender.clone(), &[])
@@ -37,7 +37,7 @@ pub fn unbond(
     sender: Addr,
     contract: &ContractInfo,
 ) {
-    adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
+    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Unbond {
         asset: asset.to_string().clone(),
         amount,
     })
@@ -45,62 +45,67 @@ pub fn unbond(
     .unwrap();
 }
 
-pub fn unbondable(chain: &App, asset: Addr, contract: &ContractInfo) -> Uint128 {
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+pub fn unbondable(chain: &App, asset: Addr, holder: Addr, contract: &ContractInfo) -> Uint128 {
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
         asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
     .test_query(&contract, chain)
     .unwrap())
     {
-        adapter::QueryAnswer::Unbondable { amount } => amount,
+        manager::QueryAnswer::Unbondable { amount } => amount,
         _ => panic!("Unbondable query failed"),
     }
 }
 
-pub fn unbonding(chain: &App, asset: Addr, contract: &ContractInfo) -> Uint128 {
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+pub fn unbonding(chain: &App, asset: Addr, holder: Addr, contract: &ContractInfo) -> Uint128 {
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Unbonding {
         asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
     .test_query(&contract, chain)
     .unwrap())
     {
-        adapter::QueryAnswer::Unbonding { amount } => amount,
+        manager::QueryAnswer::Unbonding { amount } => amount,
         _ => panic!("Unbondable query failed"),
     }
 }
 
-pub fn claimable(chain: &App, asset: Addr, contract: &ContractInfo) -> Uint128 {
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
+pub fn claimable(chain: &App, asset: Addr, holder: Addr, contract: &ContractInfo) -> Uint128 {
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Claimable {
         asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
     .test_query(&contract, chain)
     .unwrap())
     {
-        adapter::QueryAnswer::Claimable { amount } => amount,
+        manager::QueryAnswer::Claimable { amount } => amount,
         _ => panic!("Claimable query failed"),
     }
 }
 
-pub fn balance(chain: &App, asset: Addr, contract: &ContractInfo) -> Uint128 {
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+pub fn balance(chain: &App, asset: Addr, holder: Addr, contract: &ContractInfo) -> Uint128 {
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
         asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
     .test_query(&contract, chain)
     .unwrap())
     {
-        adapter::QueryAnswer::Balance { amount } => amount,
+        manager::QueryAnswer::Balance { amount } => amount,
         _ => panic!("Balance query failed"),
     }
 }
 
-pub fn reserves(chain: &App, asset: Addr, contract: &ContractInfo) -> Uint128 {
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+pub fn reserves(chain: &App, asset: Addr, holder: Addr, contract: &ContractInfo) -> Uint128 {
+    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
         asset: asset.to_string().clone(),
+        holder: holder.to_string().clone(),
     })
     .test_query(&contract, chain)
     .unwrap())
     {
-        adapter::QueryAnswer::Reserves { amount } => amount,
+        manager::QueryAnswer::Reserves { amount } => amount,
         _ => panic!("Reserves query failed"),
     }
 }
