@@ -780,7 +780,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
     err_issued_price: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128, Uint128)> {
     let mut disc = discount;
-    let mut deposit_price = oracle(deps, deposit_asset.token_info.symbol.clone())?;
+    let mut deposit_price = oracle(deps, deposit_asset.token_info.name.clone())?;
     if deposit_price > max_accepted_deposit_price {
         if deposit_price > err_deposit_price {
             return Err(deposit_price_exceeds_limit(
@@ -790,7 +790,7 @@ pub fn amount_to_issue<S: Storage, A: Api, Q: Querier>(
         }
         deposit_price = max_accepted_deposit_price;
     }
-    let mut issued_price = oracle(deps, issuance_asset.token_info.symbol.clone())?;
+    let mut issued_price = oracle(deps, issuance_asset.token_info.name.clone())?;
     if issued_price < err_issued_price {
         return Err(issued_price_below_minimum(
             issued_price,

@@ -311,6 +311,30 @@ pub fn init_contracts() -> StdResult<(
         .execute(&msg, MockEnv::new("admin", router.clone()))
         .is_ok());
 
+    let msg = router::HandleMsg::UpdateRegistry { 
+        operation: router::RegistryOperation::UpdateAlias { alias: "Deposit".to_string(), key: "DEPO".to_string() } 
+    };
+
+    assert!(chain
+        .execute(&msg, MockEnv::new("admin", router.clone()))
+        .is_ok());
+
+    let msg = router::HandleMsg::UpdateRegistry { 
+        operation: router::RegistryOperation::UpdateAlias { alias: "Issued".to_string(), key: "ISSU".to_string() } 
+    };
+    
+    assert!(chain
+        .execute(&msg, MockEnv::new("admin", router.clone()))
+        .is_ok());
+    
+    let msg = router::HandleMsg::UpdateRegistry { 
+        operation: router::RegistryOperation::UpdateAlias { alias: "Atom".to_string(), key: "ATOM".to_string() } 
+    };
+
+    assert!(chain
+        .execute(&msg, MockEnv::new("admin", router.clone()))
+        .is_ok());
+
     // Register query_auth
     let query_auth = chain.register(Box::new(QueryAuth));
     let query_auth = chain
