@@ -26,7 +26,8 @@ scrt_staking = ["dep:scrt_staking"]
 treasury = ["dep:treasury"]
 treasury_manager = ["dep:treasury_manager"]
 # shade-oracles = ["dep:shade-oracles"]
-peg_stability = ["dep:peg_stability"]
+# peg_stability = ["dep:peg_stability"]
+utility_router = ["dep:utility_router"]
 
 [dependencies]
 snip20 = { version = "0.1.0", path = "../../contracts/snip20", optional = true }
@@ -43,7 +44,8 @@ treasury = { version = "0.1.0", path = "../../contracts/treasury", optional = tr
 treasury_manager = { version = "0.1.0", path = "../../contracts/treasury_manager", optional = true }
 # shade-oracles = { git = "https://github.com/securesecrets/shade-oracle.git", tag = "0.11", optional = true }
 admin = { version = "0.2.0", path = "../../contracts/admin", optional = true }
-peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
+# peg_stability = { version = "0.1.0", path = "../../contracts/peg_stability", optional = true }
+utility_router = { version = "0.1.0", path = "../../contracts/utility_router", optional = true }
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 shade-protocol = { path = "../shade_protocol", features = ["multi-test"] }
