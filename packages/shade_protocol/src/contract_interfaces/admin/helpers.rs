@@ -44,6 +44,7 @@ pub enum AdminPermissions {
     TreasuryManager,
     TreasuryAdmin,
     StabilityAdmin,
+    UtilityRouterAdmin
 }
 
 // NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
@@ -56,6 +57,7 @@ impl AdminPermissions {
             AdminPermissions::TreasuryManager => "SHADE_TREASURY_MANAGER",
             AdminPermissions::TreasuryAdmin => "SHADE_TREASURY_ADMIN",
             AdminPermissions::StabilityAdmin => "SHADE_STABILITY_ADMIN",
+            AdminPermissions::UtilityRouterAdmin => "SHADE_UTILITY_ROUTER_ADMIN"
         }
         .to_string()
     }

@@ -31,9 +31,9 @@ pub enum ExecuteMsg {
         padding: Option<String>,
     },
     SetContract {
+        utility_contract_name: String,
         contract: Contract,
         query: Option<Binary>,
-
         padding: Option<String>,
     },
 }
@@ -44,18 +44,12 @@ impl ExecuteCallback for ExecuteMsg {
 
 #[cw_serde]
 pub enum HandleAnswer {
-    SetRunState {
+    SetStatus {
         status: ResponseStatus
     },
-    SetAdminAuth {
+    SetContract {
         status: ResponseStatus
-    },
-    SetOracleRouter {
-        status: ResponseStatus
-    },
-    SetQueryAuth {
-        status: ResponseStatus
-    },
+    }
 }
 
 #[cw_serde]
