@@ -11,12 +11,11 @@ use crate::{
         Query,
     },
 };
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use secret_storage_plus::Item;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Config {
     pub shade_admin: Contract,
     pub shd_token: Contract,
@@ -30,32 +29,28 @@ impl ItemStorage for Config {
     const ITEM: Item<'static, Config> = Item::new("item_config");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct ViewingKeys(pub String);
 
 impl ItemStorage for ViewingKeys {
     const ITEM: Item<'static, ViewingKeys> = Item::new("item_view_keys");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct SelfAddr(pub Addr);
 
 impl ItemStorage for SelfAddr {
     const ITEM: Item<'static, SelfAddr> = Item::new("item_self_addr");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Cycles(pub Vec<Cycle>);
 
 impl ItemStorage for Cycles {
     const ITEM: Item<'static, Cycles> = Item::new("item_cycles");
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct InstantiateMsg {
     pub shade_admin: Contract,
     pub shd_token: Contract,
@@ -70,8 +65,7 @@ impl InstantiateCallback for InstantiateMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     UpdateConfig {
         shade_admin: Option<Contract>,
@@ -108,16 +102,15 @@ pub enum ExecuteMsg {
         amount: Uint128,
         padding: Option<String>,
     },
-    Adapter(adapter::SubHandleMsg),
+    Adapter(adapter::SubExecuteMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
+#[cw_serde]
+pub enum ExecuteAnswer {
     Init {
         status: bool,
     },
@@ -147,8 +140,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     GetConfig {},
     Balance {},
@@ -162,8 +154,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Config {
         config: Config,

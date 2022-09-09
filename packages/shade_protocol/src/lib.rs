@@ -7,6 +7,7 @@ pub mod utils;
 
 // Forward important libs to avoid constantly importing them in the cargo crates, could help reduce compile times
 pub mod c_std {
+    pub use contract_derive::shd_entry_point;
     pub use cosmwasm_std::*;
 }
 
@@ -20,6 +21,8 @@ pub use schemars;
 pub use secret_storage_plus;
 pub use serde;
 pub use thiserror;
+
+//pub use shade_oracles;
 
 #[cfg(feature = "query_auth_lib")]
 pub use query_authentication;
@@ -37,3 +40,6 @@ pub use anyhow::Result as AnyResult;
 // Expose contract in root since its so used
 #[cfg(feature = "utils")]
 pub use utils::asset::Contract;
+
+#[cfg(feature = "chrono")]
+pub use chrono;

@@ -1,32 +1,25 @@
 pub mod handle;
 pub mod query;
 
-use shade_multi_test::multi::{admin::AdminAuth, query_auth::QueryAuth};
+use shade_multi_test::multi::{admin::Admin, query_auth::QueryAuth};
 use shade_protocol::{
-    admin::AdminPermissions,
+    admin::{self, helpers::AdminPermissions},
     c_std::{Addr, Binary, ContractInfo, StdError, StdResult},
     contract_interfaces::query_auth::{self, PermitData, QueryPermit},
     multi_test::{App, Executor},
     query_auth::{ContractStatus, ExecuteMsg},
     query_authentication::transaction::{PermitSignature, PubKey},
-    shade_admin::{
-        self,
-        admin::RegistryAction,
-        ExecuteCallback as AdminExecuteCallback,
-        InstantiateCallback as AdminInstantiate,
-        MultiTestable as AdminTestable,
-    },
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 pub fn init_contract() -> StdResult<(App, ContractInfo)> {
     let mut chain = App::default();
 
-    let admin = shade_admin::admin::InstantiateMsg {
+    let admin = admin::InstantiateMsg {
         super_admin: Some("admin".into()),
     }
     .test_init(
-        AdminAuth::default(),
+        Admin::default(),
         &mut chain,
         Addr::unchecked("admin"),
         "admin_auth",
@@ -50,17 +43,15 @@ pub fn init_contract() -> StdResult<(App, ContractInfo)> {
     )
     .unwrap();
 
-    shade_admin::admin::ExecuteMsg::UpdateRegistryBulk {
+    admin::ExecuteMsg::UpdateRegistryBulk {
         actions: vec![
-            RegistryAction::RegisterAdmin {
+            admin::RegistryAction::RegisterAdmin {
                 user: "admin".to_string(),
             },
-            RegistryAction::GrantAccess {
-                permissions: vec![
-                    AdminPermissions::QueryAuthAdmin.into_string(),
-                ],
+            admin::RegistryAction::GrantAccess {
+                permissions: vec![AdminPermissions::QueryAuthAdmin.into_string()],
                 user: "admin".to_string(),
-            }
+            },
         ],
     }
     .test_exec(&admin, &mut chain, Addr::unchecked("admin"), &[])

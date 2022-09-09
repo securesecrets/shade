@@ -1,11 +1,12 @@
-use crate::utils::{asset::Contract, generic_response::ResponseStatus};
 use cosmwasm_std::{
     Api,
+    QuerierWrapper,
+    DepsMut,
+    Deps,
     Binary,
     CosmosMsg,
     Decimal,
     Delegation,
-    Extern,
     Addr,
     Querier,
     StdError,
@@ -14,13 +15,16 @@ use cosmwasm_std::{
     Uint128,
     Validator,
 };
-use schemars::JsonSchema;
-use secret_toolkit::utils::{HandleCallback, InitCallback, Query};
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum SubHandleMsg {
+use crate::utils::{
+    asset::Contract, 
+    generic_response::ResponseStatus,
+    ExecuteCallback, Query,
+};
+use cosmwasm_schema::{cw_serde};
+
+#[cw_serde]
+pub enum SubExecuteMsg {
     // Begin unbonding amount
     Unbond { asset: Addr, amount: Uint128 },
     Claim { asset: Addr },
@@ -28,23 +32,21 @@ pub enum SubHandleMsg {
     Update { asset: Addr },
 }
 
-impl HandleCallback for SubHandleMsg {
+impl ExecuteCallback for SubExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
-    Manager(SubHandleMsg),
+#[cw_serde]
+pub enum ExecuteMsg {
+    Manager(SubExecuteMsg),
 }
 
-impl HandleCallback for HandleMsg {
+impl ExecuteCallback for ExecuteMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
+#[cw_serde]
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,
@@ -62,8 +64,7 @@ pub enum HandleAnswer {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum SubQueryMsg {
     Balance { asset: Addr, holder: Addr, },
     Unbonding { asset: Addr, holder: Addr, },
@@ -72,8 +73,7 @@ pub enum SubQueryMsg {
     Reserves { asset: Addr, holder: Addr, },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryMsg {
     Manager(SubQueryMsg),
 }
@@ -82,8 +82,7 @@ impl Query for QueryMsg {
     const BLOCK_SIZE: usize = 256;
 }
 
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryAnswer {
     Balance { amount: Uint128 },
     Unbonding { amount: Uint128 },
@@ -93,7 +92,7 @@ pub enum QueryAnswer {
 }
 
 pub fn claimable_query(
-    deps: DepsMut,
+    querier: QuerierWrapper,
     asset: &Addr,
     holder: Addr,
     manager: Contract,
@@ -102,7 +101,7 @@ pub fn claimable_query(
         asset: asset.clone(),
         holder: holder.clone(),
     })
-    .query(&deps.querier, manager.code_hash, manager.address.clone())?)
+    .query(&querier, &manager)?)
     {
         QueryAnswer::Claimable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -113,7 +112,7 @@ pub fn claimable_query(
 }
 
 pub fn unbonding_query(
-    deps: DepsMut,
+    querier: QuerierWrapper,
     asset: &Addr,
     holder: Addr,
     manager: Contract,
@@ -122,7 +121,7 @@ pub fn unbonding_query(
         asset: asset.clone(),
         holder: holder.clone(),
     })
-    .query(&deps.querier, manager.code_hash, manager.address.clone())?)
+    .query(&querier, &manager)?)
     {
         QueryAnswer::Unbonding { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -133,7 +132,7 @@ pub fn unbonding_query(
 }
 
 pub fn unbondable_query(
-    deps: DepsMut,
+    querier: QuerierWrapper,
     asset: &Addr,
     holder: Addr,
     manager: Contract,
@@ -142,7 +141,7 @@ pub fn unbondable_query(
         asset: asset.clone(),
         holder: holder.clone(),
     })
-    .query(&deps.querier, manager.code_hash, manager.address.clone())?)
+    .query(&querier, &manager)?)
     {
         QueryAnswer::Unbondable { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -153,7 +152,7 @@ pub fn unbondable_query(
 }
 
 pub fn reserves_query(
-    deps: DepsMut,
+    querier: QuerierWrapper,
     asset: &Addr,
     holder: Addr,
     manager: Contract,
@@ -162,7 +161,7 @@ pub fn reserves_query(
     match (QueryMsg::Manager(SubQueryMsg::Reserves {
         asset: asset.clone(),
         holder: holder.clone(),
-    }).query(&deps.querier, manager.code_hash, manager.address.clone())?) {
+    }).query(&querier, &manager)?) {
         QueryAnswer::Reserves { amount } => Ok(amount),
         _ => Err(StdError::generic_err(
             format!("Failed to query manager unbondable from {}", manager.address)
@@ -171,7 +170,7 @@ pub fn reserves_query(
 }
 
 pub fn balance_query(
-    deps: DepsMut,
+    querier: QuerierWrapper,
     asset: &Addr,
     holder: Addr,
     manager: Contract,
@@ -180,7 +179,7 @@ pub fn balance_query(
         asset: asset.clone(),
         holder: holder.clone(),
     })
-    .query(&deps.querier, manager.code_hash, manager.address.clone())?)
+    .query(&querier, &manager)?)
     {
         QueryAnswer::Balance { amount } => Ok(amount),
         _ => Err(StdError::generic_err(format!(
@@ -191,25 +190,22 @@ pub fn balance_query(
 }
 
 pub fn claim_msg(asset: Addr, manager: Contract) -> StdResult<CosmosMsg> {
-    HandleMsg::Manager(SubHandleMsg::Claim { asset }).to_cosmos_msg(
-        manager.code_hash,
-        manager.address,
-        None,
+    ExecuteMsg::Manager(SubExecuteMsg::Claim { asset }).to_cosmos_msg(
+        &manager,
+        vec![],
     )
 }
 
 pub fn unbond_msg(asset: Addr, amount: Uint128, manager: Contract) -> StdResult<CosmosMsg> {
-    HandleMsg::Manager(SubHandleMsg::Unbond { asset, amount }).to_cosmos_msg(
-        manager.code_hash,
-        manager.address,
-        None,
+    ExecuteMsg::Manager(SubExecuteMsg::Unbond { asset, amount }).to_cosmos_msg(
+        &manager,
+        vec![],
     )
 }
 
 pub fn update_msg(asset: Addr, manager: Contract) -> StdResult<CosmosMsg> {
-    HandleMsg::Manager(SubHandleMsg::Update { asset }).to_cosmos_msg(
-        manager.code_hash,
-        manager.address,
-        None,
+    ExecuteMsg::Manager(SubExecuteMsg::Update { asset }).to_cosmos_msg(
+        &manager,
+        vec![],
     )
 }

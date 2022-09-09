@@ -1,6 +1,5 @@
-use crate::admin::errors::unauthorized_admin;
 use crate::{
-    admin::{QueryMsg, ValidateAdminPermissionResponse},
+    admin::{errors::unauthorized_admin, QueryMsg, ValidateAdminPermissionResponse},
     utils::Query,
     Contract,
 };
@@ -45,6 +44,7 @@ pub enum AdminPermissions {
     TreasuryManager,
     TreasuryAdmin,
     StabilityAdmin,
+    SkyAdmin,
 }
 
 // NOTE: SHADE_{CONTRACT_NAME}_{CONTRACT_ROLE}_{POTENTIAL IDs}
@@ -57,6 +57,7 @@ impl AdminPermissions {
             AdminPermissions::TreasuryManager => "SHADE_TREASURY_MANAGER",
             AdminPermissions::TreasuryAdmin => "SHADE_TREASURY_ADMIN",
             AdminPermissions::StabilityAdmin => "SHADE_STABILITY_ADMIN",
+            AdminPermissions::SkyAdmin => "SHADE_SKY_ADMIN",
         }
         .to_string()
     }

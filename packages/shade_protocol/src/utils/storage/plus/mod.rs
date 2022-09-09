@@ -6,31 +6,32 @@ use crate::{
     serde::{de::DeserializeOwned, Serialize},
 };
 
-pub use secret_storage_plus::{Item, Map, PrimaryKey};
+pub use secret_storage_plus::{Bincode2, Item, Json, Map, PrimaryKey, Serde};
 
-pub trait NaiveItemStorage: Serialize + DeserializeOwned
-
+pub trait NaiveItemStorage<Ser = Json>: Serialize + DeserializeOwned
+where
+    Ser: Serde,
 {
-    fn load(storage: &dyn Storage, item: Item<Self>) -> StdResult<Self> {
+    fn load(storage: &dyn Storage, item: Item<Self, Ser>) -> StdResult<Self> {
         item.load(storage)
     }
 
-    fn may_load(storage: &dyn Storage, item: Item<Self>) -> StdResult<Option<Self>> {
+    fn may_load(storage: &dyn Storage, item: Item<Self, Ser>) -> StdResult<Option<Self>> {
         item.may_load(storage)
     }
 
-    fn remove(storage: &mut dyn Storage, item: Item<Self>) {
+    fn remove(storage: &mut dyn Storage, item: Item<Self, Ser>) {
         item.remove(storage)
     }
 
-    fn save(&self, storage: &mut dyn Storage, item: Item<Self>) -> StdResult<()> {
+    fn save(&self, storage: &mut dyn Storage, item: Item<Self, Ser>) -> StdResult<()> {
         item.save(storage, self)
     }
 
     fn update<A, E>(
         &self,
         storage: &mut dyn Storage,
-        item: Item<Self>,
+        item: Item<Self, Ser>,
         action: A,
     ) -> Result<Self, E>
     where
@@ -41,10 +42,11 @@ pub trait NaiveItemStorage: Serialize + DeserializeOwned
     }
 }
 
-pub trait ItemStorage: Serialize + DeserializeOwned
-
+pub trait ItemStorage<Ser = Json>: Serialize + DeserializeOwned
+where
+    Ser: Serde,
 {
-    const ITEM: Item<'static, Self>;
+    const ITEM: Item<'static, Self, Ser>;
 
     fn load(storage: &dyn Storage) -> StdResult<Self> {
         Self::ITEM.load(storage)
@@ -71,10 +73,11 @@ pub trait ItemStorage: Serialize + DeserializeOwned
     }
 }
 
-pub trait GenericItemStorage<T: Serialize + DeserializeOwned>
-
+pub trait GenericItemStorage<T: Serialize + DeserializeOwned, Ser = Json>
+where
+    Ser: Serde,
 {
-    const ITEM: Item<'static, T>;
+    const ITEM: Item<'static, T, Ser>;
 
     fn load(storage: &dyn Storage) -> StdResult<T> {
         Self::ITEM.load(storage)
@@ -97,12 +100,13 @@ pub trait GenericItemStorage<T: Serialize + DeserializeOwned>
     }
 }
 
-pub trait NaiveMapStorage<'a>: Serialize + DeserializeOwned
-
+pub trait NaiveMapStorage<'a, Ser = Json>: Serialize + DeserializeOwned
+where
+    Ser: Serde,
 {
     fn load<K: PrimaryKey<'a>>(
         storage: &dyn Storage,
-        map: Map<'a, K, Self>,
+        map: Map<'a, K, Self, Ser>,
         key: K,
     ) -> StdResult<Self> {
         map.load(storage, key)
@@ -110,20 +114,20 @@ pub trait NaiveMapStorage<'a>: Serialize + DeserializeOwned
 
     fn may_load<K: PrimaryKey<'a>>(
         storage: &dyn Storage,
-        map: Map<'a, K, Self>,
+        map: Map<'a, K, Self, Ser>,
         key: K,
     ) -> StdResult<Option<Self>> {
         map.may_load(storage, key)
     }
 
-    fn remove<K: PrimaryKey<'a>>(storage: &mut dyn Storage, map: Map<'a, K, Self>, key: K) {
+    fn remove<K: PrimaryKey<'a>>(storage: &mut dyn Storage, map: Map<'a, K, Self, Ser>, key: K) {
         map.remove(storage, key)
     }
 
     fn save<K: PrimaryKey<'a>>(
         &self,
         storage: &mut dyn Storage,
-        map: Map<'a, K, Self>,
+        map: Map<'a, K, Self, Ser>,
         key: K,
     ) -> StdResult<()> {
         map.save(storage, key, self)
@@ -132,7 +136,7 @@ pub trait NaiveMapStorage<'a>: Serialize + DeserializeOwned
     fn update<A, E, K: PrimaryKey<'a>>(
         &self,
         storage: &mut dyn Storage,
-        map: Map<'a, K, Self>,
+        map: Map<'a, K, Self, Ser>,
         key: K,
         action: A,
     ) -> Result<Self, E>
@@ -144,10 +148,11 @@ pub trait NaiveMapStorage<'a>: Serialize + DeserializeOwned
     }
 }
 
-pub trait MapStorage<'a, K: PrimaryKey<'a>>: Serialize + DeserializeOwned
-
+pub trait MapStorage<'a, K: PrimaryKey<'a>, Ser = Json>: Serialize + DeserializeOwned
+where
+    Ser: Serde,
 {
-    const MAP: Map<'static, K, Self>;
+    const MAP: Map<'static, K, Self, Ser>;
 
     fn load(storage: &dyn Storage, key: K) -> StdResult<Self> {
         Self::MAP.load(storage, key)
@@ -174,10 +179,11 @@ pub trait MapStorage<'a, K: PrimaryKey<'a>>: Serialize + DeserializeOwned
     }
 }
 
-pub trait GenericMapStorage<'a, K: PrimaryKey<'a>, T: Serialize + DeserializeOwned>
-
+pub trait GenericMapStorage<'a, K: PrimaryKey<'a>, T: Serialize + DeserializeOwned, Ser = Json>
+where
+    Ser: Serde,
 {
-    const MAP: Map<'static, K, T>;
+    const MAP: Map<'static, K, T, Ser>;
 
     fn load(storage: &dyn Storage, key: K) -> StdResult<T> {
         Self::MAP.load(storage, key)

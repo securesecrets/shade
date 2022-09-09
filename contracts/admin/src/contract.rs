@@ -1,20 +1,44 @@
-use shade_protocol::admin::errors::unauthorized_super;
-use shade_protocol::admin::{
-    AdminAuthStatus, AdminsResponse, ConfigResponse, ExecuteMsg, InstantiateMsg,
-    PermissionsResponse, QueryMsg, RegistryAction, ValidateAdminPermissionResponse,
+use shade_protocol::{
+    admin::{
+        errors::unauthorized_super,
+        AdminAuthStatus,
+        AdminsResponse,
+        ConfigResponse,
+        ExecuteMsg,
+        InstantiateMsg,
+        PermissionsResponse,
+        QueryMsg,
+        RegistryAction,
+        ValidateAdminPermissionResponse,
+    },
+    c_std::{
+        shd_entry_point,
+        to_binary,
+        Addr,
+        Api,
+        Deps,
+        DepsMut,
+        Env,
+        MessageInfo,
+        QueryResponse,
+        Response,
+        StdResult,
+        Storage,
+    },
+    utils::pad_handle_result,
 };
-use shade_protocol::c_std::{
-    entry_point, to_binary, Addr, Api, Deps, DepsMut, Env, MessageInfo, QueryResponse, Response,
-    StdResult, Storage,
-};
-use shade_protocol::utils::pad_handle_result;
 
-use crate::execute::{
-    try_self_destruct, try_toggle_status, try_transfer_super, try_update_registry,
-    try_update_registry_bulk,
+use crate::{
+    execute::{
+        try_self_destruct,
+        try_toggle_status,
+        try_transfer_super,
+        try_update_registry,
+        try_update_registry_bulk,
+    },
+    query::query_validate_permission,
+    shared::{ADMINS, PERMISSIONS, STATUS, SUPER},
 };
-use crate::query::query_validate_permission;
-use crate::shared::{ADMINS, PERMISSIONS, STATUS, SUPER};
 
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 

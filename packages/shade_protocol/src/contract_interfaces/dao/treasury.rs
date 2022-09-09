@@ -6,21 +6,6 @@ use crate::c_std::{Binary, Addr, StdResult, Uint128};
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
 
-pub mod storage {
-    use secret_storage_plus::{Map, Item};
-    use cosmwasm_std::Addr;
-    use crate::contract_interfaces::snip20::helpers::Snip20Asset;
-
-    pub const CONFIG: Item<super::Config> = Item::new("config");
-    pub const VIEWING_KEY: Item<String> = Item::new("viewing_key");
-    pub const ASSET_LIST: Item<Vec<Addr>> = Item::new("asset_list");
-    pub const SELF_ADDRESS: Item<Addr> = Item::new("self_address");
-    pub const MANAGERS: Item<Vec<super::Manager>> = Item::new("managers");
-
-    pub const ALLOWANCES: Map<Addr, Vec<super::Allowance>> = Map::new("allowances");
-    pub const ASSETS: Map<Addr, Snip20Asset> = Map::new("assets");
-}
-
 #[cw_serde]
 pub struct Config {
     pub admin: Addr,
@@ -63,39 +48,6 @@ pub struct Manager {
     pub desired: Uint128,
 }
 
-/*
-#[cw_serde]
-pub struct Balance {
-    pub token: Addr,
-    pub amount: Uint128,
-}
-
-#[cw_serde]
-pub enum Status {
-    Active,
-    Disabled,
-    Closed,
-    Transferred,
-}
-
-//TODO: move accounts to treasury manager
-#[cw_serde]
-pub struct Account {
-    pub balances: Vec<Balance>,
-    pub unbondings: Vec<Balance>,
-    pub claimable: Vec<Balance>,
-    pub status: Status,
-}
-*/
-
-// Flag to be sent with funds
-/*
-#[cw_serde]
-pub struct Flag {
-    pub flag: String,
-}
-*/
-
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin: Option<Addr>,
@@ -133,7 +85,8 @@ pub enum ExecuteMsg {
     TransferAccount {
     },
     */
-    Adapter(adapter::SubHandleMsg),
+    //TODO remove, change to treasury only interface
+    Adapter(adapter::SubExecuteMsg),
 }
 
 impl ExecuteCallback for ExecuteMsg {
@@ -141,7 +94,7 @@ impl ExecuteCallback for ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum HandleAnswer {
+pub enum ExecuteAnswer {
     Init {
         status: ResponseStatus,
         address: Addr,

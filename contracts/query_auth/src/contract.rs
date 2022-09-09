@@ -1,7 +1,7 @@
 use crate::{handle, query};
 use shade_protocol::{
     c_std::{
-        entry_point,
+        shd_entry_point,
         to_binary,
         Api,
         Binary,
@@ -29,7 +29,7 @@ use shade_protocol::{
 // Used to pad up responses for better privacy.
 pub const RESPONSE_BLOCK_SIZE: usize = 256;
 
-#[entry_point]
+#[shd_entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -45,7 +45,7 @@ pub fn instantiate(
     Ok(Response::new())
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     // Check what msgs are allowed
     let status = ContractStatus::load(deps.storage)?;
@@ -95,7 +95,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     )
 }
 
-#[entry_point]
+#[shd_entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let status = ContractStatus::load(deps.storage)?;
     match status {

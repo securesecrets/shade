@@ -16,7 +16,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["utils"]
 
 # Utils
-utils = []
+utils = ["chrono"]
 dao-utils = ["snip20"]
 errors = []
 flexible_msg = []
@@ -25,7 +25,6 @@ storage = []
 storage_plus = ["storage", "dep:secret-storage-plus"]
 query_auth_lib = ["dep:query-authentication"]
 multi-test = ["dep:secret-multi-test", "dep:anyhow", "interface"]
-ensemble = ["dep:fadroma"]
 
 # Implementing new contracts:
 # Contracts packages are divided by two different features, the interface and the implementation
@@ -58,25 +57,29 @@ airdrop          = ["query_auth", "snip20"]
 bonds            = ["airdrop", "snip20"]
 governance       = ["query_auth", "flexible_msg"]
 mint             = ["snip20"]
+liability_mint   = ["snip20", "adapter", "dao", "shade-oracles"]
 mint_router      = ["snip20"]
-oracles           = ["snip20", "dex"]
+oracles          = ["snip20", "dex"]
 scrt_staking     = ["adapter", "treasury"]
 treasury         = ["adapter", "dao-utils"]
 treasury_manager = ["adapter"]
 rewards_emission = ["adapter"]
 lp_shade_swap    = ["interface"]
 adapter          = ["interface"]
+manager          = ["interface"]
 snip20           = ["query_auth_impl", "dep:base64"]
 query_auth       = ["interface", "query_auth_lib", "dep:remain"]
-snip20_staking   = ["interface", "implementation"]#TODO: fix messy feature
+snip20_staking   = ["interface", "implementation"]
 sky              = ["snip20", "dex", "dao"]
 dao              = ["interface", "cosmwasm-std/staking"]
 admin            = ["interface"]
-shade_admin      = ["dep:shade-admin", "admin"]
 peg_stability    = ["sky-utils", "adapter"]
 overseer         = ["snip20"]
 
+chrono = ["dep:chrono"]
+
 stargate = ["cosmwasm-std/stargate"]
+staking = ["cosmwasm-std/staking"]
 
 # Protocol Implementation Contracts
 # Used in internal smart contracts
@@ -96,22 +99,18 @@ debug-print = [] # TODO: remove this from all cargo configs
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 cosmwasm-schema = { git = "https://github.com/CosmWasm/cosmwasm", commit = "1e05e7e" }
+contract-derive = { version = "0.1.0", path = "../contract_derive" }
 
 schemars = "0.8.9"
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 thiserror = "1.0"
 
-shade-admin = { git = "https://github.com/securesecrets/shadeadmin", optional = true }
 shade-oracles = { git = "https://github.com/securesecrets/shade-oracle", branch = "develop", optional = true }
 secret-storage-plus = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 # Testing
-secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }
 anyhow = { version = "1", optional = true }
-fadroma = { branch = "v100", commit = 76867e0, git = "https://github.com/hackbg/fadroma.git", features= ["ensemble"], optional = true }
 
-
-# TODO: fix import
-chrono = "0.4.19"
+chrono = { version = "=0.4.19", optional = true }
 base64 = { version = "0.12.3", optional = true }
 #query-authentication = {git = "https://github.com/securesecrets/query-authentication", tag = "v1.3.0", optional = true }
 query-authentication = { git = "https://github.com/securesecrets/query-authentication", branch = "cosmwasm_v1_upgrade", optional = true }
@@ -120,3 +119,6 @@ subtle = { version = "2.2.3", default-features = false }
 sha2 = { version = "0.9.1", default-features = false }
 rand_chacha = { version = "0.2.2", default-features = false }
 rand_core = { version = "0.5.1", default-features = false }
+
+[target.'cfg(not(target_arch="wasm32"))'.dependencies]
+secret-multi-test = { git = "https://github.com/securesecrets/secret-plus-utils", version = "0.13.4", optional = true }

@@ -2,15 +2,7 @@ use std::vec;
 
 use crate::{
     c_std::{
-        Addr,
-        Api,
-        BalanceResponse,
-        BankQuery,
-        ContractInfo,
-        Deps,
-        StdError,
-        StdResult,
-        Uint128,
+        Addr, Api, BalanceResponse, BankQuery, ContractInfo, Deps, StdError, StdResult, Uint128,
     },
     BLOCK_SIZE,
 };
@@ -186,7 +178,7 @@ pub fn scrt_balance(deps: Deps, address: Addr) -> StdResult<Uint128> {
 pub fn set_allowance(
     deps: DepsMut,
     env: &Env,
-    spender: String,
+    spender: Addr,
     amount: Uint128,
     key: String,
     asset: &Contract,
@@ -199,7 +191,7 @@ pub fn set_allowance(
         None => {
             allowance_query(
                 &deps.querier,
-                env.contract.address.clone().into_string(),
+                env.contract.address.clone(),
                 spender.clone(),
                 key,
                 1,

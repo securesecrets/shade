@@ -32,7 +32,7 @@ pub fn wrap_and_send(
     Ok(vec![
         wrap(amount, token.clone())?,
         send_msg(
-            recipient.to_string(),
+            recipient,
             amount,
             msg,
             None,

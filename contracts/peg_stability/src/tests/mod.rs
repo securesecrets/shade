@@ -1,12 +1,12 @@
 pub mod handle;
 pub mod query;
 
-use shade_multi_test::multi::{admin::AdminAuth, peg_stability::PegStability, snip20::Snip20};
+use shade_multi_test::multi::{admin::Admin, peg_stability::PegStability, snip20::Snip20};
 use shade_protocol::{
+    admin,
     c_std::{Addr, Binary, ContractInfo, Decimal, Uint128},
     contract_interfaces::peg_stability,
     multi_test::{App, Executor},
-    shade_admin::MultiTestable as AdminTestable,
     snip20,
     utils::{asset::Contract, MultiTestable},
 };
@@ -14,12 +14,12 @@ use shade_protocol::{
 pub fn init_chain() -> (App, ContractInfo) {
     let mut chain = App::default();
 
-    let stored_code = chain.store_code(AdminAuth::default().contract());
+    let stored_code = chain.store_code(Admin::default().contract());
     let admin = chain
         .instantiate_contract(
             stored_code,
             Addr::unchecked("admin"),
-            &shade_admin::admin::InitMsg {},
+            &admin::InstantiateMsg { super_admin: None },
             &[],
             "admin",
             None,
@@ -40,7 +40,7 @@ pub fn ps_no_oracle(
 
     let stored_code = chain.store_code(PegStability::default().contract());
     let init_msg = peg_stability::InstantiateMsg {
-        shd_admin: Contract {
+        admin_auth: Contract {
             address: shd_admin.address,
             code_hash: shd_admin.code_hash,
         },

@@ -1,6 +1,7 @@
+use crate::{execute, query};
 use shade_protocol::{
     c_std::{
-        entry_point,
+        shd_entry_point,
         to_binary,
         Binary,
         Decimal,
@@ -13,20 +14,16 @@ use shade_protocol::{
         StdResult,
         SubMsg,
     },
-    snip20::helpers::set_viewing_key_msg,
-};
-
-use crate::{handle, query};
-
-use shade_protocol::{
     contract_interfaces::{
         dao::adapter,
         sky::{Config, Cycles, ExecuteMsg, InstantiateMsg, QueryMsg, SelfAddr, ViewingKeys},
     },
+    snip20::helpers::set_viewing_key_msg,
     utils::storage::plus::ItemStorage,
 };
 
-pub fn init(
+#[shd_entry_point]
+pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -75,8 +72,8 @@ pub fn init(
     Ok(Response::new().add_submessages(messages))
 }
 
-#[entry_point]
-pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+#[shd_entry_point]
+pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::UpdateConfig {
             shade_admin,
@@ -86,7 +83,7 @@ pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> St
             treasury,
             payback_rate,
             ..
-        } => handle::try_update_config(
+        } => execute::try_update_config(
             deps,
             env,
             info,
@@ -97,30 +94,32 @@ pub fn handle(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> St
             treasury,
             payback_rate,
         ),
-        ExecuteMsg::SetCycles { cycles, .. } => handle::try_set_cycles(deps, env, info, cycles),
-        ExecuteMsg::AppendCycles { cycle, .. } => handle::try_append_cycle(deps, env, info, cycle),
+        ExecuteMsg::SetCycles { cycles, .. } => execute::try_set_cycles(deps, env, info, cycles),
+        ExecuteMsg::AppendCycles { cycle, .. } => execute::try_append_cycle(deps, env, info, cycle),
         ExecuteMsg::UpdateCycle { cycle, index, .. } => {
-            handle::try_update_cycle(deps, env, info, cycle, index)
+            execute::try_update_cycle(deps, env, info, cycle, index)
         }
-        ExecuteMsg::RemoveCycle { index, .. } => handle::try_remove_cycle(deps, env, info, index),
+        ExecuteMsg::RemoveCycle { index, .. } => execute::try_remove_cycle(deps, env, info, index),
         ExecuteMsg::ArbCycle { amount, index, .. } => {
-            handle::try_arb_cycle(deps, env, info, amount, index)
+            execute::try_arb_cycle(deps, env, info, amount, index)
         }
         ExecuteMsg::ArbAllCycles { amount, .. } => {
-            handle::try_arb_all_cycles(deps, env, info, amount)
+            execute::try_arb_all_cycles(deps, env, info, amount)
         }
         ExecuteMsg::Adapter(adapter) => match adapter {
-            adapter::SubHandleMsg::Unbond { asset, amount } => {
-                handle::try_adapter_unbond(deps, env, info, asset, amount)
+            adapter::SubExecuteMsg::Unbond { asset, amount } => {
+                execute::try_adapter_unbond(deps, env, info, asset, amount)
             }
-            adapter::SubHandleMsg::Claim { asset } => handle::try_adapter_claim(deps, env, asset),
-            adapter::SubHandleMsg::Update { asset } => handle::try_adapter_update(deps, env, asset),
+            adapter::SubExecuteMsg::Claim { asset } => execute::try_adapter_claim(deps, env, asset),
+            adapter::SubExecuteMsg::Update { asset } => {
+                execute::try_adapter_update(deps, env, asset)
+            }
         },
     }
 }
 
-#[entry_point]
-pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
+#[shd_entry_point]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig {} => to_binary(&query::config(deps)?),
         QueryMsg::Balance {} => to_binary(&query::get_balances(deps)?),
