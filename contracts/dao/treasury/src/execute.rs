@@ -639,7 +639,7 @@ pub fn register_manager(
 
     validate_admin(
         &deps.querier,
-        AdminPermissions::TreasuryManager,
+        AdminPermissions::TreasuryAdmin,
         &info.sender,
         &config.admin_auth,
     )?;
