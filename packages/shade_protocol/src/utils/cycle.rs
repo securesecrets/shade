@@ -50,13 +50,6 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
         Cycle::Constant => true,
         Cycle::Once => false,
         Cycle::Seconds { seconds } => {
-            println!(
-                "{} >= {} -> {} - {}",
-                seconds,
-                now.timestamp() - last_refresh.timestamp(),
-                now.timestamp(),
-                last_refresh.timestamp()
-            );
             seconds <= Uint128::new((now.timestamp() - last_refresh.timestamp()) as u128)
         }
         Cycle::Minutes { minutes } => {
