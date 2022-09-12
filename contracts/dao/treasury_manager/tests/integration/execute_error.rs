@@ -73,6 +73,7 @@ pub fn execute_error() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
+        true,
     );
     assert!(
         !treasury_manager::allocate_exec(
