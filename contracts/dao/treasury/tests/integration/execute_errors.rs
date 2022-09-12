@@ -210,6 +210,7 @@ pub fn admin_errors() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
+        true,
     );
     assert!(!treasury::set_config(&mut app, NOT_ADMIN, &contracts, None, None).is_ok());
     assert!(

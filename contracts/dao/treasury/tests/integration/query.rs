@@ -83,6 +83,7 @@ pub fn query() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
+        true,
     );
     assert_eq!(
         treasury::batch_balance_query(&app, &contracts, vec!["SSCRT"]).unwrap(),
