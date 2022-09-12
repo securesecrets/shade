@@ -1,15 +1,40 @@
 use crate::storage::*;
 use shade_protocol::{
-    c_std::{Addr, Deps, StdError, StdResult, Uint128},
+    c_std::{Addr, Deps, Env, StdError, StdResult, Uint128},
     contract_interfaces::dao::{adapter, manager, treasury},
     snip20::helpers::{allowance_query, balance_query},
-    utils::asset::Contract,
+    utils::{asset::Contract, cycle::parse_utc_datetime, storage::plus::period_storage::Period},
 };
 use std::collections::HashSet;
 
 pub fn config(deps: Deps) -> StdResult<treasury::QueryAnswer> {
     Ok(treasury::QueryAnswer::Config {
         config: CONFIG.load(deps.storage)?,
+    })
+}
+
+pub fn metrics(
+    deps: Deps,
+    env: Env,
+    date: Option<String>,
+    epoch: Option<Uint128>,
+    period: Period,
+) -> StdResult<treasury::QueryAnswer> {
+    if date.is_some() && epoch.is_some() {
+        return Err(StdError::generic_err("cannot pass both epoch and date"));
+    }
+    let key = {
+        if let Some(d) = date {
+            parse_utc_datetime(&d)?.timestamp() as u64
+        } else if let Some(e) = epoch {
+            e.u128() as u64
+        } else {
+            env.block.time.seconds()
+        }
+    };
+    println!("KEY {}", key);
+    Ok(treasury::QueryAnswer::Metrics {
+        metrics: METRICS.load_period(deps.storage, key, period)?,
     })
 }
 

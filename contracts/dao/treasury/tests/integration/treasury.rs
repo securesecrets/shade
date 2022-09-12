@@ -744,7 +744,7 @@ fn bonded_adapter_int(
     .test_exec(&treasury, &mut app, admin.clone(), &[])
     .unwrap();
 
-    // Check Metrics
+    /*// Check Metrics
     match (treasury::QueryMsg::Metrics {
         date: None, //Some(utc_from_timestamp(app.block_info().time).to_rfc3339()),
         period: Period::Hour,
@@ -758,7 +758,7 @@ fn bonded_adapter_int(
             }
         }
         _ => panic!("query failed"),
-    };
+    };*/
 
     match (snip20::QueryMsg::Balance {
         address: admin.to_string().clone(),
