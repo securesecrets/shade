@@ -351,7 +351,6 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
     holding.unbondings[unbonding_i].amount = holding.unbondings[unbonding_i].amount - send_amount;
 
     if claimer != config.treasury && holding.status == Status::Closed {
-        println!("HERE");
         if let Some(balance_i) = holding
             .balances
             .iter_mut()
@@ -551,8 +550,6 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     let mut allowance_used = Uint128::zero();
     let mut balance_used = Uint128::zero();
     let mut reserved_for_amount_adapters = Uint128::zero();
-
-    println!("HERE");
 
     // loop through adapters with allocations
     for adapter in adapter_info {
@@ -868,7 +865,6 @@ pub fn unbond(
     {
         Some(i) => i,
         None => {
-            println!("871");
             return Err(StdError::generic_err(format!(
                 "Cannot unbond, holder has no holdings of {}",
                 asset.clone()
