@@ -175,7 +175,7 @@ fn bonded_adapter_int(
     );
 
     // Add Rewards
-    interfaces::snip20::send(
+    interfaces::snip20::send_exec(
         &mut app,
         &admin.to_string(),
         &contracts,
