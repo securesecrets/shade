@@ -320,11 +320,12 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
     {
         Some(i) => i,
         None => {
-            return Err(StdError::generic_err(format!(
-                "{} has no unbondings for {}",
-                claimer.clone(),
-                asset.clone()
-            )));
+            return Ok(Response::new().add_messages(messages).set_data(to_binary(
+                &adapter::ExecuteAnswer::Claim {
+                    status: ResponseStatus::Success,
+                    amount: Uint128::zero(),
+                },
+            )?));
         }
     };
 
@@ -350,19 +351,18 @@ pub fn claim(deps: DepsMut, env: &Env, info: MessageInfo, asset: Addr) -> StdRes
     holding.unbondings[unbonding_i].amount = holding.unbondings[unbonding_i].amount - send_amount;
 
     if claimer != config.treasury && holding.status == Status::Closed {
-        let balance_i = match holding
+        println!("HERE");
+        if let Some(balance_i) = holding
             .balances
             .iter_mut()
             .position(|u| u.token == asset.clone())
         {
-            Some(i) => i,
-            None => return Err(StdError::generic_err("Could not find balance")),
-        };
-        if holding.unbondings[unbonding_i].amount == Uint128::zero()
-            && holding.balances[balance_i].amount == Uint128::zero()
-        {
-            holding.unbondings.swap_remove(unbonding_i);
-            holding.balances.swap_remove(balance_i);
+            if holding.unbondings[unbonding_i].amount == Uint128::zero()
+                && holding.balances[balance_i].amount == Uint128::zero()
+            {
+                holding.unbondings.swap_remove(unbonding_i);
+                holding.balances.swap_remove(balance_i);
+            }
         }
     }
 
@@ -551,6 +551,8 @@ pub fn update(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdR
     let mut allowance_used = Uint128::zero();
     let mut balance_used = Uint128::zero();
     let mut reserved_for_amount_adapters = Uint128::zero();
+
+    println!("HERE");
 
     // loop through adapters with allocations
     for adapter in adapter_info {
@@ -866,6 +868,7 @@ pub fn unbond(
     {
         Some(i) => i,
         None => {
+            println!("871");
             return Err(StdError::generic_err(format!(
                 "Cannot unbond, holder has no holdings of {}",
                 asset.clone()
@@ -1009,10 +1012,6 @@ pub fn unbond(
             let mut holding = HOLDING.load(deps.storage, unbonder.clone())?;
             if let Some(i) = holding.unbondings.iter().position(|u| u.token == asset) {
                 holding.unbondings[i].amount = holding.unbondings[i].amount - reserves;
-            } else {
-                return Err(StdError::generic_err(
-                    "Failed to get unbonding, shouldn't happen",
-                ));
             }
             HOLDING.save(deps.storage, unbonder, &holding)?;
         } else {
@@ -1038,10 +1037,6 @@ pub fn unbond(
             let mut holding = HOLDING.load(deps.storage, unbonder.clone())?;
             if let Some(i) = holding.unbondings.iter().position(|u| u.token == asset) {
                 holding.unbondings[i].amount = holding.unbondings[i].amount - amount;
-            } else {
-                return Err(StdError::generic_err(
-                    "Failed to get unbonding, shouldn't happen",
-                ));
             }
             HOLDING.save(deps.storage, unbonder, &holding)?;
 

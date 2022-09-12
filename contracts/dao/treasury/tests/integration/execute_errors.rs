@@ -78,7 +78,7 @@ pub fn execute_error() {
         &mut app,
         "admin",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         0,
         AllowanceType::Portion,
         Cycle::Constant,
@@ -92,7 +92,7 @@ pub fn execute_error() {
         &mut app,
         "admin",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         0,
         AllowanceType::Portion,
         Cycle::Constant,
@@ -102,20 +102,12 @@ pub fn execute_error() {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
     }
-    snip20::init(
-        &mut app,
-        "admin",
-        &mut contracts,
-        "Shade".to_string(),
-        "SHD".to_string(),
-        8,
-        None,
-    );
+    snip20::init(&mut app, "admin", &mut contracts, "Shade", "SHD", 8, None).unwrap();
     match treasury::allowance_exec(
         &mut app,
         "admin",
         &contracts,
-        "SHD".to_string(),
+        "SHD",
         0,
         AllowanceType::Portion,
         Cycle::Constant,
@@ -142,7 +134,7 @@ pub fn execute_error() {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
     }
-    match treasury::update_exec(&mut app, "admin", &contracts, "SHD".to_string()) {
+    match treasury::update_exec(&mut app, "admin", &contracts, "SHD") {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
     }
@@ -153,11 +145,11 @@ pub fn execute_error() {
         dao::treasury::RunLevel::Deactivated,
     )
     .unwrap();
-    match treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()) {
+    match treasury::update_exec(&mut app, "admin", &contracts, "SSCRT") {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
     }
-    treasury::register_asset_exec(&mut app, "admin", &contracts, "SHD".to_string()).unwrap();
+    treasury::register_asset_exec(&mut app, "admin", &contracts, "SHD").unwrap();
     match treasury::register_wrap_exec(
         &mut app,
         "admin",
@@ -228,10 +220,7 @@ pub fn admin_errors() {
         )
         .is_ok()
     );
-    assert!(
-        !treasury::register_asset_exec(&mut app, NOT_ADMIN, &contracts, "SSCRT".to_string())
-            .is_ok()
-    );
+    assert!(!treasury::register_asset_exec(&mut app, NOT_ADMIN, &contracts, "SSCRT").is_ok());
     assert!(
         !treasury::register_wrap_exec(
             &mut app,
@@ -251,7 +240,7 @@ pub fn admin_errors() {
             &mut app,
             NOT_ADMIN,
             &contracts,
-            "SSCRT".to_string(),
+            "SSCRT",
             0,
             AllowanceType::Amount,
             Cycle::Daily {

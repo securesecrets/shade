@@ -83,7 +83,7 @@ pub fn equilibrium_test(
         vec![vec![Uint128::zero(); 8]; 8],
         is_instant_unbond,
     );
-    for i in 0..20 {
+    for i in 0..5 {
         let bals = {
             if is_instant_unbond {
                 system_balance_reserves(&app, &contracts, "SSCRT".to_string())

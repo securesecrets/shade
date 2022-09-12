@@ -86,9 +86,9 @@ pub fn equilibrium_test(
     for i in 0..20 {
         let bals = {
             if is_instant_unbond {
-                system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+                system_balance_reserves(&app, &contracts, "SSCRT")
             } else {
-                system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
+                system_balance_unbondable(&app, &contracts, "SSCRT")
             }
         };
         assert_eq!(bals, initial_bals, "loop: {}", i);
@@ -97,11 +97,11 @@ pub fn equilibrium_test(
                 &mut app,
                 "admin",
                 &contracts,
-                "SSCRT".to_string(),
+                "SSCRT",
                 SupportedContracts::TreasuryManager(tm),
             );
         }
-        treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+        treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
         if !is_instant_unbond {
             let mut k = 0;
             for i in 0..num_managers {

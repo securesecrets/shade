@@ -34,12 +34,6 @@ use shade_protocol::{
 pub fn query() {
     let mut app = App::default();
     let mut contracts = DeployedContracts::new();
-    println!(
-        "{}",
-        parse_utc_datetime(&"1995-11-13T00:00:00.00Z".to_string())
-            .unwrap()
-            .timestamp() as u64,
-    );
     app.set_block(BlockInfo {
         height: 1,
         time: Timestamp::from_seconds(
@@ -91,49 +85,56 @@ pub fn query() {
         true,
     );
     assert_eq!(
-        treasury::batch_balance_query(&app, &contracts, vec!["SSCRT".to_string()]).unwrap(),
+        treasury::batch_balance_query(&app, &contracts, vec!["SSCRT"]).unwrap(),
         vec![Uint128::new(1500)]
     );
-    snip20::init(
-        &mut app,
-        "admin",
-        &mut contracts,
-        "Shade".to_string(),
-        "SHD".to_string(),
-        8,
-        None,
-    );
-    assert!(
-        !treasury::batch_balance_query(&app, &contracts, vec![
-            "SSCRT".to_string(),
-            "SHD".to_string()
-        ])
-        .is_ok()
-    );
-    assert!(!treasury::balance_query(&app, &contracts, "SHD".to_string(),).is_ok());
-    assert!(!treasury::reserves_query(&app, &contracts, "SHD".to_string(),).is_ok());
+    snip20::init(&mut app, "admin", &mut contracts, "Shade", "SHD", 8, None);
+    assert!(!treasury::batch_balance_query(&app, &contracts, vec!["SSCRT", "SHD"]).is_ok());
+    assert!(!treasury::balance_query(&app, &contracts, "SHD",).is_ok());
+    assert!(!treasury::reserves_query(&app, &contracts, "SHD",).is_ok());
     assert!(
         !treasury::allowance_query(
             &app,
             "admin",
             &contracts,
-            "SHD".to_string(),
+            "SHD",
             SupportedContracts::TreasuryManager(0)
         )
         .is_ok()
     );
-    treasury::register_asset_exec(&mut app, "admin", &contracts, "SHD".to_string()).unwrap();
+    treasury::register_asset_exec(&mut app, "admin", &contracts, "SHD").unwrap();
     assert_eq!(
-        treasury::batch_balance_query(&app, &contracts, vec![
-            "SSCRT".to_string(),
-            "SHD".to_string()
-        ])
-        .unwrap(),
+        treasury::batch_balance_query(&app, &contracts, vec!["SSCRT", "SHD"]).unwrap(),
         vec![Uint128::new(1500), Uint128::zero()]
     );
-    println!(
-        "{:?}",
-        treasury::metrics_query(
+    assert_eq!(
+        treasury::run_level_query(&app, &contracts,).unwrap(),
+        dao::treasury::RunLevel::Normal
+    );
+    assert!(
+        !treasury::metrics_query(
+            &app,
+            &contracts,
+            Some("1995-11-13T00:00:00.00Z".to_string()),
+            None,
+            Period::Hour,
+        )
+        .unwrap()
+        .is_empty()
+    );
+    assert!(
+        !treasury::metrics_query(
+            &app,
+            &contracts,
+            Some("1995-11-13T00:00:00.00Z".to_string()),
+            None,
+            Period::Day,
+        )
+        .unwrap()
+        .is_empty()
+    );
+    assert!(
+        !treasury::metrics_query(
             &app,
             &contracts,
             Some("1995-11-13T00:00:00.00Z".to_string()),
@@ -141,6 +142,114 @@ pub fn query() {
             Period::Month,
         )
         .unwrap()
+        .is_empty()
     );
-    assert!(false);
+    assert!(
+        !treasury::metrics_query(
+            &app,
+            &contracts,
+            None,
+            Some(Uint128::new(816220800)),
+            Period::Hour,
+        )
+        .unwrap()
+        .is_empty()
+    );
+    assert!(
+        !treasury::metrics_query(
+            &app,
+            &contracts,
+            None,
+            Some(Uint128::new(816220800)),
+            Period::Day,
+        )
+        .unwrap()
+        .is_empty()
+    );
+    assert!(
+        !treasury::metrics_query(
+            &app,
+            &contracts,
+            None,
+            Some(Uint128::new(816220800)),
+            Period::Month,
+        )
+        .unwrap()
+        .is_empty()
+    );
+    assert!(
+        !treasury::metrics_query(&app, &contracts, None, None, Period::Month,)
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        !treasury::metrics_query(
+            &app,
+            &contracts,
+            Some("1995-11-13T00:00:00.00Z".to_string()),
+            Some(Uint128::new(816220800)),
+            Period::Month,
+        )
+        .is_ok()
+    );
+    assert!(
+        treasury::metrics_query(
+            &app,
+            &contracts,
+            None,
+            Some(Uint128::new(
+                parse_utc_datetime(&"1995-12-13T00:00:00.00Z".to_string())
+                    .unwrap()
+                    .timestamp() as u128
+            )),
+            Period::Month,
+        )
+        .unwrap()
+        .is_empty()
+    );
+    mock_adapter_sub_tokens(
+        &mut app,
+        "admin",
+        &contracts,
+        Uint128::new(10),
+        SupportedContracts::MockAdapter(7),
+    )
+    .unwrap();
+    app.set_block(BlockInfo {
+        height: 1,
+        time: Timestamp::from_seconds(
+            parse_utc_datetime(&"1995-12-13T00:00:00.00Z".to_string())
+                .unwrap()
+                .timestamp() as u64,
+        ),
+        chain_id: "chain_id".to_string(),
+    });
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+    assert!(
+        !treasury::metrics_query(
+            &app,
+            &contracts,
+            None,
+            Some(Uint128::new(
+                parse_utc_datetime(&"1995-12-13T00:00:00.00Z".to_string())
+                    .unwrap()
+                    .timestamp() as u128
+            )),
+            Period::Month,
+        )
+        .unwrap()
+        .is_empty()
+    );
+    assert!(
+        !treasury::metrics_query(
+            &app,
+            &contracts,
+            Some("1995-12-13T00:00:00.00Z".to_string()),
+            None,
+            Period::Month,
+        )
+        .unwrap()
+        .is_empty()
+    );
 }
