@@ -72,6 +72,7 @@ pub fn multiple_holders(
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         is_instant_unbond,
+        true,
     );
     let bals = {
         if is_instant_unbond {

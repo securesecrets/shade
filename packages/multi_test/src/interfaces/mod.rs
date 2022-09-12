@@ -1,9 +1,11 @@
 #[cfg(feature = "dao")]
-pub mod adapter;
-#[cfg(feature = "dao")]
 pub mod dao;
+/*
 #[cfg(feature = "dao")]
 pub mod manager;
+#[cfg(feature = "dao")]
+pub mod adapter;
+*/
 #[cfg(feature = "snip20")]
 pub mod snip20;
 #[cfg(feature = "treasury")]

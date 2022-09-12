@@ -1,6 +1,9 @@
 use mock_adapter;
 use shade_multi_test::{
-    interfaces,
+    interfaces::{
+        self,
+        utils::{DeployedContracts, SupportedContracts},
+    },
     multi::{
         admin::init_admin_auth,
         mock_adapter::MockAdapter,
@@ -29,8 +32,8 @@ use shade_protocol::{
 use shade_protocol::{
     contract_interfaces::{
         dao::{
-            adapter,
-            manager,
+            //adapter,
+            //manager,
             //mock_adapter,
             treasury,
             treasury::{Allowance, AllowanceType, RunLevel},
@@ -62,472 +65,424 @@ fn bonded_adapter_int(
     post_rewards: (Uint128, Uint128, Uint128),
 ) {
     let mut app = App::default();
+    let mut contracts = DeployedContracts::new();
 
     let admin = Addr::unchecked("admin");
     let user = Addr::unchecked("user");
-    //let validator = Addr::unchecked("validator");
-    let admin_auth = init_admin_auth(&mut app, &admin);
-
     let viewing_key = "viewing_key".to_string();
+    let symbol = "TKN";
 
-    let token = snip20::InstantiateMsg {
-        name: "secretSCRT".into(),
-        admin: Some("admin".into()),
-        symbol: "SSCRT".into(),
-        decimals: 6,
-        initial_balances: None,
-        prng_seed: to_binary("").ok().unwrap(),
-        config: Some(snip20::InitConfig {
-            public_total_supply: Some(true),
-            enable_deposit: Some(true),
-            enable_redeem: Some(true),
-            enable_mint: Some(false),
-            enable_burn: Some(false),
-            enable_transfer: Some(true),
-        }),
-        query_auth: None,
-    }
-    .test_init(Snip20::default(), &mut app, admin.clone(), "token", &[])
-    .unwrap();
-
-    let treasury = treasury::InstantiateMsg {
-        admin_auth: admin_auth.clone().into(),
-        viewing_key: viewing_key.clone(),
-        multisig: admin.to_string().clone(),
-    }
-    .test_init(Treasury::default(), &mut app, admin.clone(), "treasury", &[
-    ])
-    .unwrap();
-
-    let manager = treasury_manager::InstantiateMsg {
-        admin_auth: admin_auth.clone().into(),
-        treasury: treasury.address.to_string(),
-        viewing_key: viewing_key.clone(),
-    }
-    .test_init(
-        TreasuryManager::default(),
+    interfaces::dao::init_dao(
         &mut app,
-        admin.clone(),
-        "manager",
-        &[],
-    )
-    .unwrap();
-
-    let adapter = mock_adapter::contract::Config {
-        owner: manager.address.clone(),
-        instant: false,
-        token: token.clone().into(),
-    }
-    .test_init(
-        MockAdapter::default(),
-        &mut app,
-        admin.clone(),
-        "mock_adapter",
-        &[],
-    )
-    .unwrap();
-
-    // Set admin viewing key
-    snip20::ExecuteMsg::SetViewingKey {
-        key: viewing_key.clone(),
-        padding: None,
-    }
-    .test_exec(&token, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // Register treasury assets
-    treasury::ExecuteMsg::RegisterAsset {
-        contract: token.clone().into(),
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // Register manager assets
-    treasury_manager::ExecuteMsg::RegisterAsset {
-        contract: token.clone().into(),
-    }
-    .test_exec(&manager, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // Register manager w/ treasury
-    treasury::ExecuteMsg::RegisterManager {
-        contract: manager.clone().into(),
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // treasury allowance to manager
-    treasury::ExecuteMsg::Allowance {
-        asset: token.address.to_string().clone(),
-        allowance: treasury::Allowance {
-            //nick: "Mid-Stakes-Manager".to_string(),
-            spender: manager.address.clone(),
-            allowance_type: AllowanceType::Portion,
-            cycle: Cycle::Constant,
-            amount: allowance,
-            // 100% (adapter balance will 2x before unbond)
-            tolerance: Uint128::zero(),
-        },
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    // Allocate to mock_adapter from manager
-    treasury_manager::ExecuteMsg::Allocate {
-        asset: token.address.to_string().clone(),
-        allocation: Allocation {
-            nick: Some("mock_adapter".to_string()),
-            contract: Contract {
-                address: adapter.address.clone(),
-                code_hash: adapter.code_hash.clone(),
-            },
-            alloc_type,
-            amount: alloc_amount,
-            tolerance: Uint128::zero(),
-        },
-    }
-    .test_exec(&manager, &mut app, admin.clone(), &[])
-    .unwrap();
-
-    let init_coin = Coin {
-        denom: "uscrt".into(),
-        amount: deposit + rewards,
-    };
-    app.init_modules(|router, _, storage| {
-        router
-            .bank
-            .init_balance(storage, &admin.clone(), vec![init_coin.clone()])
-            .unwrap();
-    });
-
-    // Wrap L1
-    snip20::ExecuteMsg::Deposit { padding: None }
-        .test_exec(&token, &mut app, admin.clone(), &vec![init_coin])
-        .unwrap();
-
-    // Deposit funds into treasury
-    snip20::ExecuteMsg::Send {
-        recipient: treasury.address.to_string().clone(),
-        recipient_code_hash: None,
-        amount: Uint128::new(deposit.u128()),
-        msg: None,
-        memo: None,
-        padding: None,
-    }
-    .test_exec(&token, &mut app, admin.clone(), &[])
-    .unwrap();
+        &admin.to_string(),
+        &mut contracts,
+        deposit,
+        symbol,
+        vec![AllowanceType::Portion],
+        vec![Cycle::Constant],
+        vec![allowance],
+        vec![Uint128::zero()],
+        vec![vec![alloc_type]],
+        vec![vec![alloc_amount]],
+        vec![vec![Uint128::zero()]],
+        false,
+        false,
+    );
 
     // Update treasury
-    println!("UPDATE TREASURY");
-    treasury::ExecuteMsg::Update {
-        asset: token.address.to_string().clone(),
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
+    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol.to_string())
+        .unwrap();
 
-    // Check treasury allowance to manager
-    match (treasury::QueryMsg::Allowance {
-        asset: token.address.to_string().clone(),
-        spender: manager.address.to_string().clone(),
-    }
-    .test_query(&treasury, &app)
-    .unwrap())
-    {
-        treasury::QueryAnswer::Allowance { amount } => {
-            assert_eq!(amount, expected_allowance, "Treasury->Manager Allowance");
-        }
-        _ => panic!("query failed"),
-    };
+    // Check initial allowance
+    assert_eq!(
+        interfaces::treasury::allowance_query(
+            &app,
+            &admin.to_string(),
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::TreasuryManager(0),
+        )
+        .unwrap(),
+        expected_allowance,
+        "Treasury->Manager Allowance"
+    );
 
     // Update manager
-    interfaces::manager::update(&mut app, token.address.clone(), admin.clone(), &manager);
+    interfaces::treasury_manager::update_exec(
+        &mut app,
+        &admin.to_string(),
+        &contracts,
+        symbol.to_string(),
+        SupportedContracts::TreasuryManager(0),
+    )
+    .unwrap();
 
     // Update Adapter
-    interfaces::adapter::update(&mut app, token.address.clone(), admin.clone(), &adapter);
+    interfaces::dao::update_exec(
+        &mut app,
+        &admin.to_string(),
+        &contracts,
+        symbol.to_string(),
+        SupportedContracts::MockAdapter(0),
+    )
+    .unwrap();
 
     // Treasury reserves check
-    match (treasury::QueryMsg::Reserves {
-        asset: token.address.to_string().clone(),
-    }
-    .test_query(&treasury, &app)
-    .unwrap())
-    {
-        treasury::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, pre_rewards.0, "Treasury Reserves");
-        }
-        _ => panic!("Query Failed"),
-    };
+    assert_eq!(
+        interfaces::treasury::reserves_query(&app, &contracts, symbol.to_string()).unwrap(),
+        pre_rewards.0,
+        "Treasury Reserves",
+    );
 
     // Manager reserves
     assert_eq!(
-        interfaces::manager::reserves(
+        interfaces::treasury_manager::reserves_query(
             &app,
-            token.address.clone(),
-            treasury.address.clone(),
-            &manager
-        ),
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::TreasuryManager(0),
+            SupportedContracts::Treasury,
+        )
+        .unwrap(),
         pre_rewards.1,
         "Manager Reserves",
     );
 
     // Adapter reserves should be 0 (all staked)
     assert_eq!(
-        interfaces::adapter::reserves(&app, token.address.clone(), &adapter),
+        interfaces::dao::reserves_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         Uint128::zero(),
         "Bonded Adapter Reserves",
     );
 
+    // Adapter balance
     assert_eq!(
-        interfaces::adapter::balance(&app, token.address.clone(), &adapter),
+        interfaces::dao::balance_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         pre_rewards.2,
         "Adapter Balance",
     );
 
     // Add Rewards
-    snip20::ExecuteMsg::Send {
-        recipient: adapter.address.to_string().clone(),
-        recipient_code_hash: None,
-        amount: rewards,
-        msg: None,
-        memo: None,
-        padding: None,
-    }
-    .test_exec(&token, &mut app, admin.clone(), &[])
+    interfaces::snip20::send(
+        &mut app,
+        &admin.to_string(),
+        &contracts,
+        symbol.to_string(),
+        contracts
+            .get(&SupportedContracts::MockAdapter(0))
+            .unwrap()
+            .address
+            .to_string(),
+        rewards,
+        None,
+    )
     .unwrap();
 
     // Adapter Balance
     assert_eq!(
-        interfaces::adapter::balance(&app, token.address.clone(), &adapter),
+        interfaces::dao::balance_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         pre_rewards.2 + rewards,
         "Adapter Balance Post-Rewards Pre-Update",
     );
 
     // Update manager
-    interfaces::manager::update(&mut app, token.address.clone(), admin.clone(), &manager);
+    interfaces::treasury_manager::update_exec(
+        &mut app,
+        &admin.to_string(),
+        &contracts,
+        symbol.to_string(),
+        SupportedContracts::TreasuryManager(0),
+    )
+    .unwrap();
 
     // Update treasury
-    treasury::ExecuteMsg::Update {
-        asset: token.address.to_string().clone(),
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
+    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol.to_string())
+        .unwrap();
 
     // Adapter Balance
     assert_eq!(
-        interfaces::adapter::balance(&app, token.address.clone(), &adapter),
+        interfaces::dao::balance_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         pre_rewards.2 + rewards,
         "Adapter Balance Post-Rewards Post-Update"
     );
 
     // Adapter Unbondable
     assert_eq!(
-        interfaces::adapter::unbondable(&app, token.address.clone(), &adapter),
+        interfaces::dao::unbondable_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         post_rewards.2,
         "Adapter Unbondable",
     );
 
     // Manager unbondable check
     assert_eq!(
-        interfaces::manager::unbondable(
+        interfaces::treasury_manager::unbondable_query(
             &app,
-            token.address.clone(),
-            treasury.address.clone(),
-            &manager
-        ),
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::TreasuryManager(0),
+            SupportedContracts::Treasury,
+        )
+        .unwrap(),
         post_rewards.1 + post_rewards.2,
         "Manager Unbondable"
     );
 
-    // Unbond all w/ treasury
-    manager::ExecuteMsg::Manager(manager::SubExecuteMsg::Unbond {
-        amount: post_rewards.1 + post_rewards.2,
-        asset: token.address.to_string().clone(),
-    })
-    .test_exec(&manager, &mut app, admin.clone(), &[])
+    // Unbond all w/ manager
+    interfaces::treasury_manager::unbond_exec(
+        &mut app,
+        &admin.to_string(),
+        &contracts,
+        symbol.to_string(),
+        SupportedContracts::TreasuryManager(0),
+        post_rewards.1 + post_rewards.2,
+    )
     .unwrap();
 
-    // Adapter Balance
+    // Adapter Reserves
     assert_eq!(
-        interfaces::adapter::reserves(&app, token.address.clone(), &adapter),
+        interfaces::dao::reserves_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         Uint128::zero(),
         "Adapter Reserves Pre-fastforward"
     );
 
     // Adapter Unbonding
     assert_eq!(
-        interfaces::adapter::unbonding(&app, token.address.clone(), &adapter),
+        interfaces::dao::unbonding_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         pre_rewards.2 + rewards,
         "Adapter Unbonding Pre-fastforward"
     );
 
     // Adapter Claimable
     assert_eq!(
-        interfaces::adapter::claimable(&app, token.address.clone(), &adapter),
+        interfaces::dao::claimable_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         Uint128::zero(),
         "Adapter Claimable Pre-fastforward",
     );
 
     // Manager Claimable
     assert_eq!(
-        interfaces::manager::claimable(
+        interfaces::treasury_manager::claimable_query(
             &app,
-            token.address.clone(),
-            treasury.address.clone(),
-            &manager
-        ),
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::TreasuryManager(0),
+            SupportedContracts::Treasury,
+        )
+        .unwrap(),
         Uint128::zero(),
         "Manager Claimable Pre-fastforward"
     );
 
     // Manager Unbonding
     assert_eq!(
-        interfaces::manager::unbonding(
+        interfaces::treasury_manager::unbonding_query(
             &app,
-            token.address.clone(),
-            treasury.address.clone(),
-            &manager
-        ),
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::TreasuryManager(0),
+            SupportedContracts::Treasury,
+        )
+        .unwrap(),
         pre_rewards.2 + rewards,
         "Manager Claimable Pre-fastforward"
     );
 
-    mock_adapter::contract::ExecuteMsg::CompleteUnbonding {}
-        .test_exec(&adapter, &mut app, admin.clone(), &[])
-        .unwrap();
+    // Complete unbondings
+    interfaces::dao::mock_adapter_complete_unbonding(
+        &mut app,
+        &admin.to_string(),
+        &contracts,
+        SupportedContracts::MockAdapter(0),
+    )
+    .unwrap();
 
     // adapter unbonding
     assert_eq!(
-        interfaces::adapter::unbonding(&app, token.address.clone(), &adapter),
+        interfaces::dao::unbonding_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         Uint128::zero(),
         "Adapter Unbonding Post-fastforward"
     );
 
     // adapter claimable
     assert_eq!(
-        interfaces::adapter::claimable(&app, token.address.clone(), &adapter),
+        interfaces::dao::claimable_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         pre_rewards.2 + rewards,
         "Adapter Claimable Post-fastforward"
     );
 
     // Claim Treasury Manager
-    interfaces::manager::claim(&mut app, token.address.clone(), admin.clone(), &manager);
+    interfaces::treasury_manager::claim_exec(
+        &mut app,
+        &admin.to_string(),
+        &contracts,
+        symbol.to_string(),
+        SupportedContracts::TreasuryManager(0),
+    )
+    .unwrap();
 
     // Adapter balance
     assert_eq!(
-        interfaces::adapter::balance(&app, token.address.clone(), &adapter),
+        interfaces::dao::balance_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         Uint128::zero(),
         "Adapter Balance Post-Claim"
     );
 
     // Treasury balance check
-    match (treasury::QueryMsg::Balance {
-        asset: token.address.to_string().clone(),
-    }
-    .test_query(&treasury, &mut app)
-    .unwrap())
-    {
-        treasury::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit + rewards, "Treasury Balance Post Claim");
-        }
-        _ => panic!("Query Failed"),
-    };
+    assert_eq!(
+        interfaces::treasury::balance_query(&app, &contracts, symbol.to_string(),).unwrap(),
+        deposit + rewards,
+        "Treasury Balance Post Claim"
+    );
 
     // Adapter reserves
     assert_eq!(
-        interfaces::adapter::reserves(&app, token.address.clone(), &adapter),
+        interfaces::dao::reserves_query(
+            &app,
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::MockAdapter(0)
+        )
+        .unwrap(),
         Uint128::zero(),
         "Adapter Reserves Post-Claim"
     );
 
     // Manager unbonding check
     assert_eq!(
-        interfaces::manager::unbonding(
+        interfaces::treasury_manager::reserves_query(
             &app,
-            token.address.clone(),
-            treasury.address.clone(),
-            &manager
-        ),
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::TreasuryManager(0),
+            SupportedContracts::Treasury,
+        )
+        .unwrap(),
         Uint128::zero(),
         "Manager Unbonding Post-Claim"
     );
 
     // Manager balance check
     assert_eq!(
-        interfaces::manager::balance(
+        interfaces::treasury_manager::balance_query(
             &app,
-            token.address.clone(),
-            treasury.address.clone(),
-            &manager
-        ),
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::TreasuryManager(0),
+            SupportedContracts::Treasury,
+        )
+        .unwrap(),
         Uint128::zero(),
         "Manager Balance Post-Claim"
     );
 
     // Manager reserves check
     assert_eq!(
-        interfaces::manager::reserves(
+        interfaces::treasury_manager::reserves_query(
             &app,
-            token.address.clone(),
-            treasury.address.clone(),
-            &manager
-        ),
+            &contracts,
+            symbol.to_string(),
+            SupportedContracts::TreasuryManager(0),
+            SupportedContracts::Treasury,
+        )
+        .unwrap(),
         Uint128::zero(),
         "Manager Reserves Post-Unbond"
     );
 
     // Treasury reserves check
-    match (treasury::QueryMsg::Reserves {
-        asset: token.address.to_string().clone(),
-    }
-    .test_query(&treasury, &mut app)
-    .unwrap())
-    {
-        treasury::QueryAnswer::Reserves { amount } => {
-            assert_eq!(amount, deposit + rewards, "Treasury Reserves Post-Unbond");
-        }
-        _ => panic!("Query Failed"),
-    };
-
-    // Treasury balance check
-    match (treasury::QueryMsg::Balance {
-        asset: token.address.to_string().clone(),
-    }
-    .test_query(&treasury, &mut app)
-    .unwrap())
-    {
-        treasury::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit + rewards, "Treasury Balance Post-Unbond");
-        }
-        _ => panic!("Query Failed"),
-    };
+    assert_eq!(
+        interfaces::treasury::reserves_query(&app, &contracts, symbol.to_string(),).unwrap(),
+        deposit + rewards,
+        "Treasury Reserves Post-Unbond"
+    );
+    assert_eq!(
+        interfaces::treasury::balance_query(&app, &contracts, symbol.to_string(),).unwrap(),
+        deposit + rewards,
+        "Treasury Balance Post-Unbond"
+    );
 
     // Migration
-    println!("Setting migration runlevel");
-    treasury::ExecuteMsg::SetRunLevel {
-        run_level: RunLevel::Migrating,
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
+    interfaces::treasury::set_run_level_exec(
+        &mut app,
+        &admin.to_string(),
+        &contracts,
+        RunLevel::Migrating,
+    )
     .unwrap();
 
-    //Update
-    treasury::ExecuteMsg::Update {
-        asset: token.address.to_string().clone(),
-    }
-    .test_exec(&treasury, &mut app, admin.clone(), &[])
-    .unwrap();
+    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol.to_string());
 
-    match (snip20::QueryMsg::Balance {
-        address: admin.to_string().clone(),
-        key: viewing_key.clone(),
-    })
-    .test_query(&token, &app)
-    .unwrap()
-    {
-        snip20::QueryAnswer::Balance { amount } => {
-            assert_eq!(amount, deposit + rewards, "post-migration full unbond");
-        }
-        _ => {}
-    };
+    assert_eq!(
+        interfaces::treasury::balance_query(&app, &contracts, symbol.to_string(),).unwrap(),
+        Uint128::zero(),
+        "post-migration full unbond"
+    );
 }
 
 macro_rules! bonded_adapter_tests {

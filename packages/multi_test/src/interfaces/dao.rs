@@ -33,6 +33,7 @@ pub fn init_dao(
     tm_allocation_amount: Vec<Vec<Uint128>>,
     tm_allocation_tolerance: Vec<Vec<Uint128>>,
     is_instant_unbond: bool,
+    do_update: bool,
 ) {
     let num_managers = allowance_amount.len();
     treasury::init(chain, sender, contracts);
@@ -121,7 +122,9 @@ pub fn init_dao(
         }
         offset += num_adapters + 1;
     }
-    update_dao(chain, sender, contracts, snip20_symbol, num_managers).unwrap();
+    if do_update {
+        update_dao(chain, sender, contracts, snip20_symbol, num_managers).unwrap();
+    }
 }
 
 pub fn update_dao(

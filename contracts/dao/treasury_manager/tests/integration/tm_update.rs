@@ -60,6 +60,7 @@ pub fn test_tm_unbond(
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
+        true,
     );
     let bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
     assert_eq!(bals, expected_before_unbond);

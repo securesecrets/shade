@@ -70,6 +70,7 @@ pub fn update_config() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
+        true,
     );
     treasury::set_config(
         &mut app,

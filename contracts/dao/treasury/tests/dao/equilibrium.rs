@@ -82,6 +82,7 @@ pub fn equilibrium_test(
         ],
         vec![vec![Uint128::zero(); 8]; 8],
         is_instant_unbond,
+        true,
     );
     for i in 0..20 {
         let bals = {

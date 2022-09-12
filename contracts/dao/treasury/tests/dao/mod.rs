@@ -55,6 +55,7 @@ pub fn dao_int_test(
         alloc_amount.clone(),
         alloc_tolerance.clone(),
         is_instant_unbond,
+        true,
     );
     //query assets
     let assets_query_res = treasury::assets_query(&app, &contracts).unwrap();
