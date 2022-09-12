@@ -65,11 +65,11 @@ pub fn migration_test(is_instant_unbond: bool) {
         is_instant_unbond,
         true,
     );
-    snip20::set_viewing_key(
+    snip20::set_viewing_key_exec(
         &mut app,
         multisig,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         multisig.to_string(),
     )
     .unwrap();
@@ -117,18 +117,11 @@ pub fn migration_test(is_instant_unbond: bool) {
     }
     println!(
         "{:?}\n{:?}",
-        system_balance_reserves(&app, &contracts, "SSCRT".to_string()),
-        system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
+        system_balance_reserves(&app, &contracts, "SSCRT"),
+        system_balance_unbondable(&app, &contracts, "SSCRT")
     );
     assert_eq!(
-        snip20::balance_query(
-            &app,
-            multisig,
-            &contracts,
-            "SSCRT".to_string(),
-            multisig.to_string()
-        )
-        .unwrap(),
+        snip20::balance_query(&app, multisig, &contracts, "SSCRT", multisig.to_string()).unwrap(),
         Uint128::new(1500)
     );
 }

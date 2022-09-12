@@ -8,7 +8,7 @@ use crate::{
     multi::{admin::init_admin_auth, scrt_staking::ScrtStaking},
 };
 use shade_protocol::{
-    c_std::Addr,
+    c_std::{Addr, StdError, StdResult},
     contract_interfaces::dao::scrt_staking,
     multi_test::App,
     utils::{asset::Contract, InstantiateCallback, MultiTestable},
@@ -20,11 +20,11 @@ pub fn init(
     contracts: &mut DeployedContracts,
     validator_bounds: Option<scrt_staking::ValidatorBounds>,
     manager: usize,
-) {
+) -> StdResult<()> {
     let treasury_manager = match contracts.get(&SupportedContracts::TreasuryManager(0)) {
         Some(manager) => manager.clone(),
         None => {
-            treasury_manager::init(chain, sender, contracts, 0);
+            treasury_manager::init(chain, sender, contracts, 0)?;
             contracts
                 .get(&SupportedContracts::TreasuryManager(0))
                 .unwrap()
@@ -34,7 +34,7 @@ pub fn init(
     let treasury = match contracts.get(&SupportedContracts::Treasury) {
         Some(treasury) => treasury.clone(),
         None => {
-            treasury::init(chain, sender, contracts);
+            treasury::init(chain, sender, contracts)?;
             contracts
                 .get(&SupportedContracts::Treasury)
                 .unwrap()
@@ -52,15 +52,7 @@ pub fn init(
     let sscrt = match contracts.get(&SupportedContracts::Snip20("SSCRT".to_string())) {
         Some(snip20) => snip20.clone(),
         None => {
-            snip20::init(
-                chain,
-                sender,
-                contracts,
-                "secretSCRT".to_string(),
-                "SSCRT".to_string(),
-                6,
-                None,
-            );
+            snip20::init(chain, sender, contracts, "secretSCRT", "SSCRT", 6, None)?;
             contracts
                 .get(&SupportedContracts::Snip20("SSCRT".to_string()))
                 .unwrap()
@@ -68,7 +60,7 @@ pub fn init(
         }
     };
     let scrt_staking = Contract::from(
-        scrt_staking::InstantiateMsg {
+        match (scrt_staking::InstantiateMsg {
             admin_auth: admin_auth.into(),
             owner: treasury_manager.address.into(),
             sscrt: sscrt.into(),
@@ -81,8 +73,11 @@ pub fn init(
             Addr::unchecked(sender),
             "scrt_staking",
             &[],
-        )
-        .unwrap(),
+        )) {
+            Ok(contract_info) => contract_info,
+            Err(e) => return Err(StdError::generic_err(e.to_string())),
+        },
     );
     contracts.insert(SupportedContracts::ScrtStaking, scrt_staking);
+    Ok(())
 }

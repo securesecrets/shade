@@ -53,6 +53,13 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
             seconds <= Uint128::new((now.timestamp() - last_refresh.timestamp()) as u128)
         }
         Cycle::Minutes { minutes } => {
+            println!(
+                "{} >= {} -> {} - {}",
+                minutes,
+                ((now.timestamp() - last_refresh.timestamp()) / 60),
+                now.timestamp(),
+                last_refresh.timestamp()
+            );
             minutes
                 <= Uint128::new(
                     ((now.timestamp() - last_refresh.timestamp()) / 60)
@@ -61,6 +68,13 @@ pub fn exceeds_cycle(now: &DateTime<Utc>, last_refresh: &DateTime<Utc>, cycle: C
                 )
         }
         Cycle::Hourly { hours } => {
+            println!(
+                "{} >= {} -> {} - {}",
+                hours,
+                ((now.timestamp() - last_refresh.timestamp()) / 60 / 60),
+                now.timestamp(),
+                last_refresh.timestamp()
+            );
             hours
                 <= Uint128::new(
                     ((now.timestamp() - last_refresh.timestamp()) / 60 / 60)

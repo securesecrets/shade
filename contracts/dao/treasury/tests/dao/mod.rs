@@ -75,7 +75,7 @@ pub fn dao_int_test(
                 &app,
                 "admin",
                 &contracts,
-                snip20_symbol.to_string(),
+                snip20_symbol,
                 SupportedContracts::TreasuryManager(i)
             )
             .unwrap(),
@@ -84,9 +84,9 @@ pub fn dao_int_test(
     }
     let mut bals;
     if is_instant_unbond {
-        bals = system_balance_reserves(&app, &contracts, snip20_symbol.to_string());
+        bals = system_balance_reserves(&app, &contracts, snip20_symbol);
     } else {
-        bals = system_balance_unbondable(&app, &contracts, snip20_symbol.to_string());
+        bals = system_balance_unbondable(&app, &contracts, snip20_symbol);
     }
     println!("{:?}", bals);
     assert_eq!(bals.0, expected_treasury);
@@ -102,7 +102,7 @@ pub fn dao_int_test(
             &mut app,
             "admin",
             &contracts,
-            snip20_symbol.to_string(),
+            snip20_symbol,
             i,
             allow_type[i].clone(),
             cycle[i].clone(),
@@ -110,11 +110,11 @@ pub fn dao_int_test(
             allow_tolerance[i].clone(),
         );
         for j in 0..alloc_amount[i].len() {
-            treasury_manager::allocate(
+            treasury_manager::allocate_exec(
                 &mut app,
                 "admin",
                 &contracts,
-                snip20_symbol.to_string(),
+                snip20_symbol,
                 Some(j.to_string()),
                 &SupportedContracts::MockAdapter(k),
                 alloc_type[i][j].clone(),
@@ -128,7 +128,7 @@ pub fn dao_int_test(
     }
 
     update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);
-    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string());
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT");
     println!("{:?}", bals);
     if !is_instant_unbond {
         k = 0;
@@ -147,9 +147,9 @@ pub fn dao_int_test(
             k += 1;
         }
         update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);
-        bals = system_balance_unbondable(&app, &contracts, "SSCRT".to_string());
+        bals = system_balance_unbondable(&app, &contracts, "SSCRT");
     } else {
-        bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
+        bals = system_balance_reserves(&app, &contracts, "SSCRT");
     }
     assert_eq!(bals.0, initial_treasury_bal);
     for (i, manager_tuples) in bals.1.iter().enumerate() {
@@ -158,10 +158,10 @@ pub fn dao_int_test(
             assert_eq!(adapter_bals.clone(), Uint128::zero());
         }
     }
-    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT".to_string()).unwrap();
+    treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
     assert_eq!(
         std::vec::Vec::<dao::treasury::AllowanceMeta>::new(),
-        treasury::allowances_query(&app, &contracts, "SSCRT".to_string(),).unwrap()
+        treasury::allowances_query(&app, &contracts, "SSCRT",).unwrap()
     );
 }
 

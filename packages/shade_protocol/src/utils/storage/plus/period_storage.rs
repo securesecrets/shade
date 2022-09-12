@@ -22,7 +22,7 @@ pub enum Period {
 pub fn map_key(seconds: u64, period: Period) -> String {
     let datetime = utc_from_seconds(seconds as i64);
     match period {
-        Period::Hour => datetime.format("%Y-%m-%dT%h").to_string(),
+        Period::Hour => datetime.format("%Y-%m-%dT%H").to_string(),
         Period::Day => datetime.format("%Y-%m-%d").to_string(),
         Period::Month => datetime.format("%Y-%m").to_string(),
     }
@@ -30,7 +30,7 @@ pub fn map_key(seconds: u64, period: Period) -> String {
 
 pub struct PeriodStorage<'a, T, Ser = Json>
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Clone,
     Ser: Serde,
 {
     all: Map<'a, u64, Vec<T>, Ser>,
@@ -45,7 +45,7 @@ where
 
 impl<'a, T, Ser> PeriodStorage<'a, T, Ser>
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Clone,
     Ser: Serde,
 {
     pub const fn new(all: &'a str, recent: &'a str, timed: &'a str) -> Self {
@@ -66,7 +66,10 @@ where
         seconds: u64,
         period: Period,
     ) -> StdResult<Vec<T>> {
-        self.timed.load(storage, map_key(seconds, period))
+        Ok(self
+            .timed
+            .load(storage, map_key(seconds, period))
+            .unwrap_or(vec![]))
     }
 
     pub fn may_load(&self, storage: &dyn Storage, ts: Timestamp) -> StdResult<Vec<T>> {
@@ -83,7 +86,6 @@ where
         let mut all = self.all.may_load(storage, key)?.unwrap_or(vec![]);
         all.push(item);
         self.all.save(storage, key, &all)?;
-
         self.flush(storage)
     }
 
@@ -116,7 +118,7 @@ where
             for period in Period::iter() {
                 let k = map_key(seconds, period);
                 let mut cur_items = self.timed.may_load(storage, k.clone())?.unwrap_or(vec![]);
-                cur_items.append(&mut items);
+                cur_items.append(&mut items.clone());
                 self.timed.save(storage, k, &cur_items)?;
             }
         }

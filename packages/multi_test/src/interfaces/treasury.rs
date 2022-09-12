@@ -9,6 +9,7 @@ use shade_protocol::{
     utils::{
         asset::{Contract, RawContract},
         cycle::Cycle,
+        storage::plus::period_storage::Period,
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -16,16 +17,7 @@ use shade_protocol::{
     },
 };
 
-pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
-    /*let admin = {
-        if contracts.contains_key(&SupportedContracts::AdminAuth) {
-            contracts.get(&SupportedContracts::AdminAuth).unwrap()
-        } else {
-            let contract = Contract::from(init_admin_auth(chain, &Addr::unchecked(sender)));
-            contracts.insert(SupportedContracts::AdminAuth, contract.clone());
-            &contract
-        }
-    };*/
+pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) -> StdResult<()> {
     let admin = match contracts.get(&SupportedContracts::AdminAuth) {
         Some(admin) => admin.clone(),
         None => {
@@ -35,7 +27,7 @@ pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
         }
     };
     let treasury = Contract::from(
-        treasury::InstantiateMsg {
+        match (treasury::InstantiateMsg {
             multisig: admin.address.clone().to_string(),
             admin_auth: admin.clone().into(),
             viewing_key: "viewing_key".to_string(),
@@ -46,21 +38,233 @@ pub fn init(chain: &mut App, sender: &str, contracts: &mut DeployedContracts) {
             Addr::unchecked(sender),
             "treasury",
             &[],
-        )
-        .unwrap(),
+        )) {
+            Ok(contract_info) => contract_info,
+            Err(e) => return Err(StdError::generic_err(e.to_string())),
+        },
     );
     contracts.insert(SupportedContracts::Treasury, treasury);
+    Ok(())
+}
+
+pub fn config_query(chain: &App, contracts: &DeployedContracts) -> StdResult<treasury::Config> {
+    match (treasury::QueryMsg::Config {}.test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Config { config } => Ok(config),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn allowance_query(
+    chain: &App,
+    sender: &str,
+    contracts: &DeployedContracts,
+    snip20_symbol: &str,
+    spender: SupportedContracts,
+) -> StdResult<Uint128> {
+    match (treasury::QueryMsg::Allowance {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+        spender: contracts.get(&spender).unwrap().clone().address.to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Allowance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn allowances_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: &str,
+) -> StdResult<Vec<treasury::AllowanceMeta>> {
+    match (treasury::QueryMsg::Allowances {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Allowances { allowances } => Ok(allowances),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn assets_query(chain: &App, contracts: &DeployedContracts) -> StdResult<Vec<Addr>> {
+    match (treasury::QueryMsg::Assets {}.test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Assets { assets } => Ok(assets),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn reserves_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: &str,
+) -> StdResult<Uint128> {
+    match (treasury::QueryMsg::Reserves {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Reserves { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn balance_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbol: &str,
+) -> StdResult<Uint128> {
+    match (treasury::QueryMsg::Balance {
+        asset: contracts
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
+            .unwrap()
+            .clone()
+            .address
+            .to_string(),
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Balance { amount } => Ok(amount),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn run_level_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+) -> StdResult<treasury::RunLevel> {
+    match (treasury::QueryMsg::RunLevel {}.test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::RunLevel { run_level } => Ok(run_level),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn metrics_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    date: Option<String>,
+    epoch: Option<Uint128>,
+    period: Period,
+) -> StdResult<Vec<treasury::Metric>> {
+    match (treasury::QueryMsg::Metrics {
+        date,
+        epoch,
+        period,
+    }
+    .test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )?) {
+        treasury::QueryAnswer::Metrics { metrics } => Ok(metrics),
+        _ => Err(StdError::generic_err("query failed")),
+    }
+}
+
+pub fn batch_balance_query(
+    chain: &App,
+    contracts: &DeployedContracts,
+    snip20_symbols: Vec<&str>,
+) -> StdResult<Vec<Uint128>> {
+    let assets = {
+        let mut vec = vec![];
+        for symbols in snip20_symbols {
+            vec.push(
+                contracts
+                    .get(&SupportedContracts::Snip20(symbols.to_string()))
+                    .unwrap()
+                    .clone()
+                    .address
+                    .to_string(),
+            );
+        }
+        vec
+    };
+    match (treasury::QueryMsg::BatchBalance { assets }.test_query(
+        &contracts
+            .get(&SupportedContracts::Treasury)
+            .unwrap()
+            .clone()
+            .into(),
+        chain,
+    )) {
+        Ok(a) => Ok(a),
+        _ => Err(StdError::generic_err("query failed")),
+    }
 }
 
 pub fn register_asset_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    symbol: String,
+    snip20_symbol: &str,
 ) -> StdResult<()> {
     match (treasury::ExecuteMsg::RegisterAsset {
         contract: contracts
-            .get(&SupportedContracts::Snip20(symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .clone()
             .into(),
@@ -134,7 +338,7 @@ pub fn allowance_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
     manager_id: usize,
     allowance_type: treasury::AllowanceType,
     cycle: Cycle,
@@ -143,7 +347,7 @@ pub fn allowance_exec(
 ) -> StdResult<()> {
     match (treasury::ExecuteMsg::Allowance {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .clone()
             .address
@@ -222,107 +426,15 @@ pub fn set_config(
     }
 }
 
-pub fn config_query(chain: &App, contracts: &DeployedContracts) -> StdResult<treasury::Config> {
-    match (treasury::QueryMsg::Config {}.test_query(
-        &contracts
-            .get(&SupportedContracts::Treasury)
-            .unwrap()
-            .clone()
-            .into(),
-        chain,
-    )?) {
-        treasury::QueryAnswer::Config { config } => Ok(config),
-        _ => Err(StdError::generic_err("query failed")),
-    }
-}
-
-pub fn allowance_query(
-    chain: &App,
-    sender: &str,
-    contracts: &DeployedContracts,
-    snip20_symbol: String,
-    spender: SupportedContracts,
-) -> StdResult<Uint128> {
-    match (treasury::QueryMsg::Allowance {
-        asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
-            .unwrap()
-            .clone()
-            .address
-            .to_string(),
-        spender: contracts.get(&spender).unwrap().clone().address.to_string(),
-    }
-    .test_query(
-        &contracts
-            .get(&SupportedContracts::Treasury)
-            .unwrap()
-            .clone()
-            .into(),
-        chain,
-    )?) {
-        treasury::QueryAnswer::Allowance { amount } => Ok(amount),
-        _ => Err(StdError::generic_err("query failed")),
-    }
-}
-
-pub fn allowances_query(
-    chain: &App,
-    contracts: &DeployedContracts,
-    snip20_symbol: String,
-) -> StdResult<Vec<treasury::AllowanceMeta>> {
-    match (treasury::QueryMsg::Allowances {
-        asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
-            .unwrap()
-            .clone()
-            .address
-            .to_string(),
-    }
-    .test_query(
-        &contracts
-            .get(&SupportedContracts::Treasury)
-            .unwrap()
-            .clone()
-            .into(),
-        chain,
-    )?) {
-        treasury::QueryAnswer::Allowances { allowances } => Ok(allowances),
-        _ => Err(StdError::generic_err("query failed")),
-    }
-}
-
-pub fn assets_query(chain: &App, contracts: &DeployedContracts) -> StdResult<Vec<Addr>> {
-    match (treasury::QueryMsg::Assets {}.test_query(
-        &contracts
-            .get(&SupportedContracts::Treasury)
-            .unwrap()
-            .clone()
-            .into(),
-        chain,
-    )?) {
-        treasury::QueryAnswer::Assets { assets } => Ok(assets),
-        _ => Err(StdError::generic_err("query failed")),
-    }
-}
-
 pub fn update_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
 ) -> StdResult<()> {
-    println!(
-        "{}",
-        contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol.clone()))
-            .unwrap()
-            .clone()
-            .address
-            .to_string()
-    );
     let res = treasury::ExecuteMsg::Update {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .clone()
             .address
@@ -341,57 +453,5 @@ pub fn update_exec(
     match res {
         Ok(_) => Ok(()),
         Err(e) => Err(StdError::generic_err(e.to_string())),
-    }
-}
-
-pub fn reserves_query(
-    chain: &App,
-    contracts: &DeployedContracts,
-    snip20_symbol: String,
-) -> StdResult<Uint128> {
-    match (treasury::QueryMsg::Reserves {
-        asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
-            .unwrap()
-            .clone()
-            .address
-            .to_string(),
-    }
-    .test_query(
-        &contracts
-            .get(&SupportedContracts::Treasury)
-            .unwrap()
-            .clone()
-            .into(),
-        chain,
-    )?) {
-        treasury::QueryAnswer::Reserves { amount } => Ok(amount),
-        _ => Err(StdError::generic_err("query failed")),
-    }
-}
-
-pub fn balance_query(
-    chain: &App,
-    contracts: &DeployedContracts,
-    snip20_symbol: String,
-) -> StdResult<Uint128> {
-    match (treasury::QueryMsg::Balance {
-        asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
-            .unwrap()
-            .clone()
-            .address
-            .to_string(),
-    }
-    .test_query(
-        &contracts
-            .get(&SupportedContracts::Treasury)
-            .unwrap()
-            .clone()
-            .into(),
-        chain,
-    )?) {
-        treasury::QueryAnswer::Balance { amount } => Ok(amount),
-        _ => Err(StdError::generic_err("query failed")),
     }
 }

@@ -34,25 +34,17 @@ pub fn init_dao(
     tm_allocation_tolerance: Vec<Vec<Uint128>>,
     is_instant_unbond: bool,
     do_update: bool,
-) {
+) -> StdResult<()> {
     let num_managers = allowance_amount.len();
-    treasury::init(chain, sender, contracts);
+    treasury::init(chain, sender, contracts)?;
     let mut offset = 0;
-    snip20::init(
+    snip20::init(chain, sender, contracts, "snip20_1", snip20_symbol, 6, None)?;
+    treasury::register_asset_exec(chain, sender, contracts, snip20_symbol)?;
+    snip20::send_exec(
         chain,
         sender,
         contracts,
-        format!("snip20_1",),
-        snip20_symbol.to_string(),
-        6,
-        None,
-    );
-    treasury::register_asset_exec(chain, sender, contracts, snip20_symbol.to_string()).unwrap();
-    snip20::send(
-        chain,
-        sender,
-        contracts,
-        snip20_symbol.to_string(),
+        snip20_symbol,
         contracts
             .get(&SupportedContracts::Treasury)
             .unwrap()
@@ -61,28 +53,32 @@ pub fn init_dao(
             .to_string(),
         treasury_start_bal,
         None,
-    )
-    .unwrap();
+    )?;
     for i in 0..num_managers {
         let num_adapters = tm_allocation_amount[i].len();
-        treasury_manager::init(chain, sender, contracts, i);
-        treasury_manager::register_asset(chain, "admin", contracts, snip20_symbol.to_string(), i);
-        treasury::register_manager_exec(chain, sender, contracts, i).unwrap();
+        treasury_manager::init(chain, sender, contracts, i)?;
+        treasury_manager::register_asset_exec(
+            chain,
+            "admin",
+            contracts,
+            snip20_symbol,
+            SupportedContracts::TreasuryManager(i),
+        )?;
+        treasury::register_manager_exec(chain, sender, contracts, i)?;
         treasury::allowance_exec(
             chain,
             sender,
             contracts,
-            snip20_symbol.to_string(),
+            snip20_symbol,
             i,
             allowance_type[i].clone(),
             cycle[i].clone(),
             allowance_amount[i].clone(),
             allowance_tolerance[i].clone(),
-        )
-        .unwrap();
+        )?;
         for j in 0..num_adapters {
             let mock_adap_contract = Contract::from(
-                mock_adapter::contract::Config {
+                match (mock_adapter::contract::Config {
                     owner: contracts
                         .get(&SupportedContracts::TreasuryManager(i))
                         .unwrap()
@@ -100,31 +96,34 @@ pub fn init_dao(
                     Addr::unchecked(sender),
                     "mock_adapter",
                     &[],
-                )
-                .unwrap(),
+                )) {
+                    Ok(contract_info) => contract_info,
+                    Err(e) => return Err(StdError::generic_err(e.to_string())),
+                },
             );
             contracts.insert(
                 SupportedContracts::MockAdapter(j + offset),
                 mock_adap_contract,
             );
-            treasury_manager::allocate(
+            treasury_manager::allocate_exec(
                 chain,
                 sender,
                 contracts,
-                snip20_symbol.to_string(),
+                snip20_symbol,
                 Some(j.to_string()),
                 &SupportedContracts::MockAdapter(j + offset),
                 tm_allowance_type.clone()[i][j].clone(),
                 tm_allocation_amount[i][j].clone(),
                 tm_allocation_tolerance[i][j].clone(),
                 i,
-            );
+            )?;
         }
         offset += num_adapters + 1;
     }
     if do_update {
         update_dao(chain, sender, contracts, snip20_symbol, num_managers).unwrap();
     }
+    Ok(())
 }
 
 pub fn update_dao(
@@ -134,15 +133,13 @@ pub fn update_dao(
     snip20_symbol: &str,
     num_managers: usize,
 ) -> StdResult<()> {
-    println!("HERE DAO UPDATE 1");
-    treasury::update_exec(chain, sender, contracts, snip20_symbol.to_string())?;
-    println!("HERE UPDATE DAO");
+    treasury::update_exec(chain, sender, contracts, snip20_symbol)?;
     for i in 0..num_managers {
         treasury_manager::update_exec(
             chain,
             sender,
             contracts,
-            snip20_symbol.to_string(),
+            snip20_symbol,
             SupportedContracts::TreasuryManager(i),
         )?;
     }
@@ -152,9 +149,8 @@ pub fn update_dao(
 pub fn system_balance_reserves(
     chain: &App,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
 ) -> (Uint128, Vec<(Uint128, Vec<Uint128>)>) {
-    println!("{}", snip20_symbol);
     let mut ret_struct = (Uint128::zero(), vec![]);
     ret_struct.0 = treasury::reserves_query(chain, contracts, snip20_symbol.clone()).unwrap();
     let (mut i, mut j) = (0, 0);
@@ -205,9 +201,8 @@ pub fn system_balance_reserves(
 pub fn system_balance_unbondable(
     chain: &App,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
 ) -> (Uint128, Vec<(Uint128, Vec<Uint128>)>) {
-    println!("{}", snip20_symbol);
     let mut ret_struct = (Uint128::zero(), vec![]);
     ret_struct.0 = treasury::reserves_query(chain, contracts, snip20_symbol.clone()).unwrap();
     let (mut i, mut j) = (0, 0);
@@ -258,12 +253,12 @@ pub fn system_balance_unbondable(
 pub fn claimable_query(
     chain: &App,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
     adapter_contract: SupportedContracts,
 ) -> StdResult<Uint128> {
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .address
             .to_string(),
@@ -282,12 +277,12 @@ pub fn claimable_query(
 pub fn unbonding_query(
     chain: &App,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
     adapter_contract: SupportedContracts,
 ) -> StdResult<Uint128> {
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .address
             .to_string(),
@@ -306,12 +301,12 @@ pub fn unbonding_query(
 pub fn unbondable_query(
     chain: &App,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
     adapter_contract: SupportedContracts,
 ) -> StdResult<Uint128> {
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .address
             .to_string(),
@@ -330,12 +325,12 @@ pub fn unbondable_query(
 pub fn reserves_query(
     chain: &App,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
     adapter_contract: SupportedContracts,
 ) -> StdResult<Uint128> {
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .address
             .to_string(),
@@ -354,12 +349,12 @@ pub fn reserves_query(
 pub fn balance_query(
     chain: &App,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
     adapter_contract: SupportedContracts,
 ) -> StdResult<Uint128> {
     match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .address
             .to_string(),
@@ -379,12 +374,12 @@ pub fn claim_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
     adapter_contract: SupportedContracts,
 ) -> StdResult<()> {
     let res = adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Claim {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .clone()
             .address
@@ -406,25 +401,12 @@ pub fn update_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
     adapter_contract: SupportedContracts,
 ) -> StdResult<()> {
-    println!(
-        "{}",
-        contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol.clone()))
-            .unwrap()
-            .clone()
-            .address
-            .to_string()
-    );
-    println!(
-        "{:?}",
-        contracts.get(&adapter_contract.clone()).unwrap().clone()
-    );
     match adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Update {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .clone()
             .address
@@ -445,13 +427,13 @@ pub fn unbond_exec(
     chain: &mut App,
     sender: &str,
     contracts: &DeployedContracts,
-    snip20_symbol: String,
+    snip20_symbol: &str,
     amount: Uint128,
     adapter_contract: SupportedContracts,
 ) -> StdResult<()> {
     match adapter::ExecuteMsg::Adapter(adapter::SubExecuteMsg::Unbond {
         asset: contracts
-            .get(&SupportedContracts::Snip20(snip20_symbol))
+            .get(&SupportedContracts::Snip20(snip20_symbol.to_string()))
             .unwrap()
             .clone()
             .address

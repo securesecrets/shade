@@ -76,25 +76,19 @@ pub fn multiple_holders(
     );
     let bals = {
         if is_instant_unbond {
-            system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+            system_balance_reserves(&app, &contracts, "SSCRT")
         } else {
-            system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
+            system_balance_unbondable(&app, &contracts, "SSCRT")
         }
     };
     assert_eq!(bals, after_holder_removed);
-    snip20::set_viewing_key(
-        &mut app,
-        holder,
-        &contracts,
-        "SSCRT".to_string(),
-        holder.to_string(),
-    )
-    .unwrap();
-    snip20::send(
+    snip20::set_viewing_key_exec(&mut app, holder, &contracts, "SSCRT", holder.to_string())
+        .unwrap();
+    snip20::send_exec(
         &mut app,
         "admin",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         holder.to_string(),
         Uint128::new(1000),
         None,
@@ -104,16 +98,16 @@ pub fn multiple_holders(
         &mut app,
         "admin",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         holder,
     )
     .unwrap();
-    snip20::send(
+    snip20::send_exec(
         &mut app,
         holder,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         contracts[&SupportedContracts::TreasuryManager(0)]
             .address
             .to_string(),
@@ -121,11 +115,11 @@ pub fn multiple_holders(
         None,
     )
     .unwrap();
-    snip20::send(
+    snip20::send_exec(
         &mut app,
         holder,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         contracts[&SupportedContracts::TreasuryManager(0)]
             .address
             .to_string(),
@@ -138,7 +132,6 @@ pub fn multiple_holders(
         treasury_manager::holding_query(
             &app,
             &contracts,
-            "SSCRT".to_string(),
             SupportedContracts::TreasuryManager(0),
             holder.to_string(),
         )
@@ -149,9 +142,9 @@ pub fn multiple_holders(
     update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
     let bals = {
         if is_instant_unbond {
-            system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+            system_balance_reserves(&app, &contracts, "SSCRT")
         } else {
-            system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
+            system_balance_unbondable(&app, &contracts, "SSCRT")
         }
     };
     assert_eq!(bals, after_holder_adds_tokens);
@@ -159,12 +152,13 @@ pub fn multiple_holders(
         &mut app,
         holder,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         Uint128::new(300),
     )
     .unwrap();
     if !is_instant_unbond {
+        update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
         let mut k = 0;
         for i in 0..num_managers {
             for j in 0..4 {
@@ -185,7 +179,7 @@ pub fn multiple_holders(
         &mut app,
         holder,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         SupportedContracts::TreasuryManager(0),
     )
     .unwrap();
@@ -193,7 +187,7 @@ pub fn multiple_holders(
         &mut app,
         "rando",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         holder.clone(),
     ) {
@@ -204,7 +198,7 @@ pub fn multiple_holders(
         &mut app,
         "admin",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         holder.clone(),
     )
@@ -213,18 +207,18 @@ pub fn multiple_holders(
         &mut app,
         "admin",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         &contracts[&SupportedContracts::Treasury].address.to_string(),
     ) {
         Ok(_) => assert!(false, "removed treasury as a holder"),
         Err(_) => assert!(true),
     }
-    match snip20::send(
+    match snip20::send_exec(
         &mut app,
         holder,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         contracts[&SupportedContracts::TreasuryManager(0)]
             .address
             .to_string(),
@@ -238,7 +232,7 @@ pub fn multiple_holders(
         &mut app,
         holder,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         Uint128::zero(),
     )
@@ -263,7 +257,7 @@ pub fn multiple_holders(
         &mut app,
         holder,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         SupportedContracts::TreasuryManager(0),
     )
     .unwrap();
@@ -287,7 +281,7 @@ pub fn multiple_holders(
             &mut app,
             holder,
             &contracts,
-            "SSCRT".to_string(),
+            "SSCRT",
             SupportedContracts::TreasuryManager(0),
         )
         .unwrap();
@@ -296,7 +290,6 @@ pub fn multiple_holders(
     match (treasury_manager::holding_query(
         &app,
         &contracts,
-        "SSCRT".to_string(),
         SupportedContracts::TreasuryManager(0),
         holder.to_string(),
     )) {
@@ -305,9 +298,9 @@ pub fn multiple_holders(
     }
     let bals = {
         if is_instant_unbond {
-            system_balance_reserves(&app, &contracts, "SSCRT".to_string())
+            system_balance_reserves(&app, &contracts, "SSCRT")
         } else {
-            system_balance_unbondable(&app, &contracts, "SSCRT".to_string())
+            system_balance_unbondable(&app, &contracts, "SSCRT")
         }
     };
     assert_eq!(bals, after_holder_removed);

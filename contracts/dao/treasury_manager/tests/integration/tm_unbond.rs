@@ -62,16 +62,16 @@ pub fn test_tm_unbond(
         true,
         true,
     );
-    let bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
+    let bals = system_balance_reserves(&app, &contracts, "SSCRT");
     assert_eq!(bals, expected_before_unbond);
     match adapter_gain_amount {
         Some(x) => {
             for i in vec![1, 3] {
-                snip20::send(
+                snip20::send_exec(
                     &mut app,
                     "admin",
                     &contracts,
-                    "SSCRT".to_string(),
+                    "SSCRT",
                     contracts
                         .get(&SupportedContracts::MockAdapter(i))
                         .unwrap()
@@ -89,13 +89,13 @@ pub fn test_tm_unbond(
         &mut app,
         "admin",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         SupportedContracts::TreasuryManager(0),
         unbond_amount,
     )
     .unwrap();
 
-    let bals = system_balance_reserves(&app, &contracts, "SSCRT".to_string());
+    let bals = system_balance_reserves(&app, &contracts, "SSCRT");
     assert_eq!(bals, expected_after_unbond);
 }
 
@@ -210,16 +210,16 @@ dao_tests_tm_unbond! {
         ])])
     ),
     unbond_all:(
-        Uint128::new(460),
+        Uint128::new(459),
         None,
-        (Uint128::new(100), Uint128::new(200)),
-        (Uint128::new(540), vec![(Uint128::new(0), vec![
-            Uint128::new(120),
-            Uint128::new(100),
-            Uint128::new(40),
+        (Uint128::new(101), Uint128::new(200)),
+        (Uint128::new(541), vec![(Uint128::new(0), vec![
+            Uint128::new(119),
+            Uint128::new(101),
+            Uint128::new(39),
             Uint128::new(200),
         ])]),
-        (Uint128::new(540), vec![(Uint128::new(460), vec![
+        (Uint128::new(541), vec![(Uint128::new(459), vec![
             Uint128::new(0),
             Uint128::new(0),
             Uint128::new(0),

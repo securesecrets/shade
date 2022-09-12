@@ -81,7 +81,7 @@ pub fn non_manager_allowances() {
         &mut app,
         "admin",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         5,
         AllowanceType::Amount,
         Cycle::Once,
@@ -90,11 +90,11 @@ pub fn non_manager_allowances() {
     );
     update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
     update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
-    snip20::send_from(
+    snip20::send_from_exec(
         &mut app,
         NOT_A_MANAGER,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         contracts[&SupportedContracts::Treasury]
             .clone()
             .address
@@ -111,16 +111,16 @@ pub fn non_manager_allowances() {
             &app,
             "admin",
             &contracts,
-            "SSCRT".to_string(),
+            "SSCRT",
             SupportedContracts::TreasuryManager(5)
         )
         .unwrap()
     );
-    match snip20::send_from(
+    match snip20::send_from_exec(
         &mut app,
         NOT_A_MANAGER,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         contracts[&SupportedContracts::Treasury]
             .clone()
             .address
@@ -132,15 +132,12 @@ pub fn non_manager_allowances() {
         Ok(_) => assert!(false, "cycle is set to once"),
         Err(_) => assert!(true),
     }
-    println!(
-        "{:?}",
-        system_balance_reserves(&app, &contracts, "SSCRT".to_string()),
-    );
-    snip20::set_viewing_key(
+    println!("{:?}", system_balance_reserves(&app, &contracts, "SSCRT"),);
+    snip20::set_viewing_key_exec(
         &mut app,
         NOT_A_MANAGER,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         NOT_A_MANAGER.to_string(),
     )
     .unwrap();
@@ -149,7 +146,7 @@ pub fn non_manager_allowances() {
             &app,
             NOT_A_MANAGER,
             &contracts,
-            "SSCRT".to_string(),
+            "SSCRT",
             NOT_A_MANAGER.to_string()
         )
         .unwrap(),
@@ -159,7 +156,7 @@ pub fn non_manager_allowances() {
         &mut app,
         "admin",
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         5,
         AllowanceType::Amount,
         Cycle::Constant,
@@ -167,11 +164,11 @@ pub fn non_manager_allowances() {
         Uint128::zero(),
     );
     update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
-    snip20::send_from(
+    snip20::send_from_exec(
         &mut app,
         NOT_A_MANAGER,
         &contracts,
-        "SSCRT".to_string(),
+        "SSCRT",
         contracts[&SupportedContracts::Treasury]
             .clone()
             .address
@@ -186,7 +183,7 @@ pub fn non_manager_allowances() {
             &app,
             NOT_A_MANAGER,
             &contracts,
-            "SSCRT".to_string(),
+            "SSCRT",
             NOT_A_MANAGER.to_string()
         )
         .unwrap(),
@@ -199,7 +196,7 @@ pub fn non_manager_allowances() {
             &app,
             "admin",
             &contracts,
-            "SSCRT".to_string(),
+            "SSCRT",
             SupportedContracts::TreasuryManager(5)
         )
         .unwrap()
