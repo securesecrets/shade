@@ -28,7 +28,7 @@ pub fn try_add_profile(
     profile: Profile,
 ) -> StdResult<Response> {
     let id = ID::add_profile(deps.storage)?;
-    profile.save(deps.storage, &id)?;
+    profile.save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::AddProfile {
@@ -41,10 +41,10 @@ pub fn try_set_profile(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    id: Uint128,
+    id: u16,
     new_profile: UpdateProfile,
 ) -> StdResult<Response> {
-    let mut profile = match Profile::may_load(deps.storage, &id)? {
+    let mut profile = match Profile::may_load(deps.storage, id)? {
         None => return Err(StdError::generic_err("Profile not found")),
         Some(p) => p,
     };
@@ -79,7 +79,7 @@ pub fn try_set_profile(
         profile.cancel_deadline = cancel_deadline;
     }
 
-    profile.save(deps.storage, &id)?;
+    profile.save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::SetProfile {

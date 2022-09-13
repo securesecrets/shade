@@ -32,7 +32,7 @@ pub fn try_add_assembly_msg(
     info: MessageInfo,
     name: String,
     msg: String,
-    assemblies: Vec<Uint128>,
+    assemblies: Vec<u16>,
 ) -> StdResult<Response> {
     let id = ID::add_assembly_msg(deps.storage)?;
 
@@ -48,7 +48,7 @@ pub fn try_add_assembly_msg(
         assemblies,
         msg: FlexibleMsg::new(msg, MSG_VARIABLE),
     }
-    .save(deps.storage, &id)?;
+    .save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::AddAssemblyMsg {
@@ -61,12 +61,12 @@ pub fn try_set_assembly_msg(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    id: Uint128,
+    id: u16,
     name: Option<String>,
     msg: Option<String>,
-    assemblies: Option<Vec<Uint128>>,
+    assemblies: Option<Vec<u16>>,
 ) -> StdResult<Response> {
-    let mut assembly_msg = match AssemblyMsg::may_load(deps.storage, &id)? {
+    let mut assembly_msg = match AssemblyMsg::may_load(deps.storage, id)? {
         None => return Err(StdError::generic_err("AssemblyMsg not found")),
         Some(c) => c,
     };
@@ -83,7 +83,7 @@ pub fn try_set_assembly_msg(
         assembly_msg.assemblies = assemblies;
     }
 
-    assembly_msg.save(deps.storage, &id)?;
+    assembly_msg.save(deps.storage, id)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::SetAssemblyMsg {
@@ -96,10 +96,10 @@ pub fn try_add_assembly_msg_assemblies(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    id: Uint128,
-    assemblies: Vec<Uint128>,
+    id: u16,
+    assemblies: Vec<u16>,
 ) -> StdResult<Response> {
-    let mut assembly_msg = AssemblyMsg::data(deps.storage, &id)?;
+    let mut assembly_msg = AssemblyMsg::data(deps.storage, id)?;
 
     let assembly_id = ID::assembly(deps.storage)?;
     for assembly in assemblies.iter() {
@@ -108,7 +108,7 @@ pub fn try_add_assembly_msg_assemblies(
         }
     }
 
-    AssemblyMsg::save_data(deps.storage, &id, assembly_msg)?;
+    AssemblyMsg::save_data(deps.storage, id, assembly_msg)?;
 
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::SetAssemblyMsg {

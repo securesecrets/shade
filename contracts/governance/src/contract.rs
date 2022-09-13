@@ -96,10 +96,10 @@ pub fn instantiate(
         migrated_from = Some(migrator.source);
     } else {
         // Setups IDs
-        ID::set_assembly(deps.storage, Uint128::new(1))?;
-        ID::set_profile(deps.storage, Uint128::new(1))?;
-        ID::set_assembly_msg(deps.storage, Uint128::zero())?;
-        ID::set_contract(deps.storage, Uint128::zero())?;
+        ID::set_assembly(deps.storage, 1)?;
+        ID::set_profile(deps.storage, 1)?;
+        ID::set_assembly_msg(deps.storage, 0)?;
+        ID::set_contract(deps.storage, 0)?;
         migrated_from = None;
     }
 
@@ -133,9 +133,7 @@ pub fn instantiate(
     // Only initialize the data if not migrating
     if let Some(assemblies) = msg.assemblies {
         // Setup public profile
-        assemblies
-            .public_profile
-            .save(deps.storage, &Uint128::zero())?;
+        assemblies.public_profile.save(deps.storage, 0)?;
 
         if assemblies.public_profile.funding.is_some() {
             if msg.funding_token.is_none() {
@@ -154,14 +152,12 @@ pub fn instantiate(
             name: "public".to_string(),
             metadata: "All inclusive assembly, acts like traditional governance".to_string(),
             members: vec![],
-            profile: Uint128::zero(),
+            profile: 0,
         }
-        .save(deps.storage, &Uint128::zero())?;
+        .save(deps.storage, 0)?;
 
         // Setup admin profile
-        assemblies
-            .admin_profile
-            .save(deps.storage, &Uint128::new(1))?;
+        assemblies.admin_profile.save(deps.storage, 1)?;
 
         if assemblies.admin_profile.funding.is_some() {
             if msg.funding_token.is_none() {
@@ -180,20 +176,20 @@ pub fn instantiate(
             name: "admin".to_string(),
             metadata: "Assembly of DAO admins.".to_string(),
             members: assemblies.admin_members,
-            profile: Uint128::new(1),
+            profile: 1,
         }
-        .save(deps.storage, &Uint128::new(1))?;
+        .save(deps.storage, 1)?;
 
         // Setup generic command
         AssemblyMsg {
             name: "blank message".to_string(),
-            assemblies: vec![Uint128::zero(), Uint128::new(1)],
+            assemblies: vec![0, 1],
             msg: FlexibleMsg {
                 msg: MSG_VARIABLE.to_string(),
                 arguments: 1,
             },
         }
-        .save(deps.storage, &Uint128::zero())?;
+        .save(deps.storage, 0)?;
 
         // Setup self contract
         AllowedContract {
@@ -202,7 +198,7 @@ pub fn instantiate(
             assemblies: None,
             contract: self_contract.clone(),
         }
-        .save(deps.storage, &Uint128::zero())?;
+        .save(deps.storage, 0)?;
     }
 
     // Set runtime
@@ -375,7 +371,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             } => try_migrate(deps, env, info, id, label, code_hash),
 
             ExecuteMsg::MigrateData { data, total } => {
-                try_migrate_data(deps, env, info, data, total as u128)
+                try_migrate_data(deps, env, info, data, total)
             }
 
             ExecuteMsg::ReceiveMigrationData { data } => {

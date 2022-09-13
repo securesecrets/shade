@@ -71,7 +71,7 @@ fn proposals() {
         .unwrap();
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text".to_string(),
         msgs: None,
@@ -102,7 +102,7 @@ fn proposals() {
     }
 
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Text".to_string(),
         msgs: None,
@@ -126,7 +126,7 @@ fn proposals() {
 
     match query {
         QueryAnswer::UserProposals { props, total } => {
-            assert_eq!(total, Uint128::new(1));
+            assert_eq!(total, 1);
             assert_eq!(props.len(), 2);
         }
         _ => assert!(false),
@@ -151,7 +151,7 @@ fn assembly_votes() {
     let (mut chain, gov) = init_assembly_governance_with_proposal().unwrap();
 
     governance::ExecuteMsg::AssemblyVote {
-        proposal: Uint128::new(0),
+        proposal: 0,
         vote: Vote {
             yes: Uint128::new(1),
             no: Uint128::zero(),
@@ -239,7 +239,7 @@ fn votes() {
                     no_with_veto: Default::default(),
                     abstain: Default::default(),
                 },
-                proposal: Uint128::zero()
+                proposal: 0
             },
             Uint128::new(20_000_000)
         )

@@ -38,7 +38,7 @@ fn add_profile() {
     )
     .unwrap();
 
-    let profiles = get_profiles(&mut chain, &gov, Uint128::zero(), Uint128::new(10)).unwrap();
+    let profiles = get_profiles(&mut chain, &gov, 0, 10).unwrap();
 
     assert_eq!(profiles.len(), 3);
 }
@@ -73,11 +73,10 @@ fn unauthorised_add_profile() {
 fn set_profile() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    let old_profile =
-        get_profiles(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let old_profile = get_profiles(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetProfile {
-        id: Uint128::new(1),
+        id: 1,
         profile: UpdateProfile {
             name: Some("New Name".to_string()),
             enabled: None,
@@ -100,8 +99,7 @@ fn set_profile() {
     )
     .unwrap();
 
-    let new_profile =
-        get_profiles(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let new_profile = get_profiles(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     assert_ne!(new_profile.name, old_profile.name);
     assert_eq!(new_profile.assembly, old_profile.assembly);
@@ -117,7 +115,7 @@ fn unauthorised_set_profile() {
 
     assert!(
         governance::ExecuteMsg::SetProfile {
-            id: Uint128::new(1),
+            id: 1,
             profile: UpdateProfile {
                 name: Some("New Name".to_string()),
                 enabled: None,
@@ -147,7 +145,7 @@ fn set_profile_disable_assembly() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     governance::ExecuteMsg::SetProfile {
-        id: Uint128::new(1),
+        id: 1,
         profile: UpdateProfile {
             name: None,
             enabled: None,
@@ -181,11 +179,10 @@ fn set_profile_disable_assembly() {
     )
     .unwrap();
 
-    let old_profile =
-        get_profiles(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let old_profile = get_profiles(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetProfile {
-        id: Uint128::new(1),
+        id: 1,
         profile: UpdateProfile {
             name: None,
             enabled: None,
@@ -208,8 +205,7 @@ fn set_profile_disable_assembly() {
     )
     .unwrap();
 
-    let new_profile =
-        get_profiles(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let new_profile = get_profiles(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     assert_eq!(new_profile.name, old_profile.name);
     assert_ne!(new_profile.assembly, old_profile.assembly);
@@ -225,7 +221,7 @@ fn set_profile_set_incomplete_assembly() {
 
     assert!(
         governance::ExecuteMsg::SetProfile {
-            id: Uint128::new(1),
+            id: 1,
             profile: UpdateProfile {
                 name: None,
                 enabled: None,
@@ -262,7 +258,7 @@ fn set_profile_disable_token() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     governance::ExecuteMsg::SetProfile {
-        id: Uint128::new(1),
+        id: 1,
         profile: UpdateProfile {
             name: None,
             enabled: None,
@@ -296,11 +292,10 @@ fn set_profile_disable_token() {
     )
     .unwrap();
 
-    let old_profile =
-        get_profiles(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let old_profile = get_profiles(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetProfile {
-        id: Uint128::new(1),
+        id: 1,
         profile: UpdateProfile {
             name: None,
             enabled: None,
@@ -323,8 +318,7 @@ fn set_profile_disable_token() {
     )
     .unwrap();
 
-    let new_profile =
-        get_profiles(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let new_profile = get_profiles(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     assert_eq!(new_profile.name, old_profile.name);
     assert_eq!(new_profile.assembly, old_profile.assembly);
@@ -340,7 +334,7 @@ fn set_profile_set_incomplete_token() {
 
     assert!(
         governance::ExecuteMsg::SetProfile {
-            id: Uint128::new(1),
+            id: 1,
             profile: UpdateProfile {
                 name: None,
                 enabled: None,
@@ -377,7 +371,7 @@ fn set_profile_disable_funding() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
     governance::ExecuteMsg::SetProfile {
-        id: Uint128::new(1),
+        id: 1,
         profile: UpdateProfile {
             name: None,
             enabled: None,
@@ -405,11 +399,10 @@ fn set_profile_disable_funding() {
     )
     .unwrap();
 
-    let old_profile =
-        get_profiles(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let old_profile = get_profiles(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     governance::ExecuteMsg::SetProfile {
-        id: Uint128::new(1),
+        id: 1,
         profile: UpdateProfile {
             name: None,
             enabled: None,
@@ -432,8 +425,7 @@ fn set_profile_disable_funding() {
     )
     .unwrap();
 
-    let new_profile =
-        get_profiles(&mut chain, &gov, Uint128::new(1), Uint128::new(1)).unwrap()[0].clone();
+    let new_profile = get_profiles(&mut chain, &gov, 1, 1).unwrap()[0].clone();
 
     assert_eq!(new_profile.name, old_profile.name);
     assert_eq!(new_profile.assembly, old_profile.assembly);
@@ -449,7 +441,7 @@ fn set_profile_set_incomplete_fuding() {
 
     assert!(
         governance::ExecuteMsg::SetProfile {
-            id: Uint128::new(1),
+            id: 1,
             profile: UpdateProfile {
                 name: None,
                 enabled: None,

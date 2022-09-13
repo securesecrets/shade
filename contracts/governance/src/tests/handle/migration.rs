@@ -25,7 +25,7 @@ fn migrate() {
                 Addr::unchecked("beta"),
                 Addr::unchecked("charlie"),
             ],
-            profile: Uint128::new(1),
+            profile: 1,
             padding: None,
         }
         .test_exec(

@@ -35,11 +35,13 @@ pub mod profile;
 pub mod proposal;
 
 /// Checks that state can be updated
-pub fn assembly_state_valid(storage: &dyn Storage, assembly: &Uint128) -> StdResult<()> {
+pub fn assembly_state_valid(storage: &dyn Storage, assembly: u16) -> StdResult<()> {
     match RuntimeState::load(storage)? {
         RuntimeState::Normal => {}
-        RuntimeState::SpecificAssemblies { assemblies: committees } => {
-            if !committees.contains(assembly) {
+        RuntimeState::SpecificAssemblies {
+            assemblies: committees,
+        } => {
+            if !committees.contains(&assembly) {
                 return Err(StdError::generic_err("unauthorized"));
             }
         }
@@ -53,19 +55,19 @@ pub fn assembly_state_valid(storage: &dyn Storage, assembly: &Uint128) -> StdRes
 pub fn authorize_assembly(
     storage: &dyn Storage,
     info: &MessageInfo,
-    assembly: &Uint128,
+    assembly: u16,
 ) -> StdResult<AssemblyData> {
     assembly_state_valid(storage, assembly)?;
 
     let data = Assembly::data(storage, assembly)?;
 
     // Check that the user is in the non-public assembly
-    if data.profile != Uint128::zero() && !data.members.contains(&info.sender) {
+    if data.profile != 0 && !data.members.contains(&info.sender) {
         return Err(StdError::generic_err("unauthorized"));
     };
 
     // Check if enabled
-    if !Profile::data(storage, &data.profile)?.enabled {
+    if !Profile::data(storage, data.profile)?.enabled {
         return Err(StdError::generic_err("profile disabled"));
     }
 

@@ -114,8 +114,8 @@ pub fn gov_generic_proposal(
     msg: governance::ExecuteMsg,
 ) -> StdResult<()> {
     gov_msg_proposal(chain, gov, sender, vec![ProposalMsg {
-        target: Uint128::zero(),
-        assembly_msg: Uint128::zero(),
+        target: 0,
+        assembly_msg: 0,
         msg: to_binary(&vec![serde_json::to_string(&msg).unwrap()]).unwrap(),
         send: vec![],
     }])
@@ -128,7 +128,7 @@ pub fn gov_msg_proposal(
     msgs: Vec<ProposalMsg>,
 ) -> StdResult<()> {
     governance::ExecuteMsg::AssemblyProposal {
-        assembly: Uint128::new(1),
+        assembly: 1,
         title: "Title".to_string(),
         metadata: "Proposal metadata".to_string(),
         msgs: Some(msgs),
@@ -143,8 +143,8 @@ pub fn gov_msg_proposal(
 pub fn get_assembly_msgs(
     chain: &mut App,
     gov: &ContractInfo,
-    start: Uint128,
-    end: Uint128,
+    start: u16,
+    end: u16,
 ) -> StdResult<Vec<AssemblyMsg>> {
     let query: governance::QueryAnswer =
         governance::QueryMsg::AssemblyMsgs { start, end }.test_query(&gov, &chain)?;
@@ -160,8 +160,8 @@ pub fn get_assembly_msgs(
 pub fn get_contract(
     chain: &mut App,
     gov: &ContractInfo,
-    start: Uint128,
-    end: Uint128,
+    start: u16,
+    end: u16,
 ) -> StdResult<Vec<AllowedContract>> {
     let query: governance::QueryAnswer =
         governance::QueryMsg::Contracts { start, end }.test_query(&gov, &chain)?;
@@ -175,8 +175,8 @@ pub fn get_contract(
 pub fn get_profiles(
     chain: &mut App,
     gov: &ContractInfo,
-    start: Uint128,
-    end: Uint128,
+    start: u16,
+    end: u16,
 ) -> StdResult<Vec<Profile>> {
     let query: governance::QueryAnswer =
         governance::QueryMsg::Profiles { start, end }.test_query(&gov, &chain)?;
@@ -190,8 +190,8 @@ pub fn get_profiles(
 pub fn get_assemblies(
     chain: &mut App,
     gov: &ContractInfo,
-    start: Uint128,
-    end: Uint128,
+    start: u16,
+    end: u16,
 ) -> StdResult<Vec<Assembly>> {
     let query: governance::QueryAnswer =
         governance::QueryMsg::Assemblies { start, end }.test_query(&gov, &chain)?;
@@ -205,8 +205,8 @@ pub fn get_assemblies(
 pub fn get_proposals(
     chain: &mut App,
     gov: &ContractInfo,
-    start: Uint128,
-    end: Uint128,
+    start: u32,
+    end: u32,
 ) -> StdResult<Vec<Proposal>> {
     let query: governance::QueryAnswer =
         governance::QueryMsg::Proposals { start, end }.test_query(&gov, &chain)?;
