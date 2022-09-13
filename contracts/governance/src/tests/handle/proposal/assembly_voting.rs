@@ -1,7 +1,7 @@
 use crate::tests::{get_proposals, init_chain};
-use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
+use shade_multi_test::multi::{governance::Governance};
 use shade_protocol::{
-    c_std::{Addr, ContractInfo, StdResult, Timestamp, Uint128},
+    c_std::{Addr, ContractInfo, StdResult, Uint128},
     contract_interfaces::{
         governance,
         governance::{
@@ -13,7 +13,7 @@ use shade_protocol::{
         query_auth,
     },
     multi_test::App,
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
 };
 
 pub fn init_assembly_governance_with_proposal() -> StdResult<(App, ContractInfo)> {

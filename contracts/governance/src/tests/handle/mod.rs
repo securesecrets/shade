@@ -5,11 +5,11 @@ pub mod profile;
 pub mod proposal;
 
 use crate::tests::{admin_only_governance, get_config};
-use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
+use shade_multi_test::multi::{snip20::Snip20};
 use shade_protocol::{
     c_std::Addr,
     contract_interfaces::{governance, snip20},
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable},
 };
 
 #[test]

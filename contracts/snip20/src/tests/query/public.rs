@@ -1,10 +1,10 @@
 use shade_protocol::contract_interfaces::snip20::{InitConfig, QueryAnswer, QueryMsg};
-use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
+use shade_protocol::utils::{Query};
 use crate::tests::init_snip20_with_config;
 
 #[test]
 fn token_info() {
-    let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
+    let (chain, snip) = init_snip20_with_config(None, None).unwrap();
     let answer: QueryAnswer = QueryMsg::TokenInfo {  }.test_query(&snip, &chain).unwrap();
 
     match answer {
@@ -20,7 +20,7 @@ fn token_info() {
 
 #[test]
 fn token_config() {
-    let (mut chain, snip) = init_snip20_with_config(None, None).unwrap();
+    let (chain, snip) = init_snip20_with_config(None, None).unwrap();
     let answer: QueryAnswer = QueryMsg::TokenConfig {  }.test_query(&snip, &chain).unwrap();
 
     match answer {
@@ -30,7 +30,7 @@ fn token_config() {
             redeem_enabled,
             mint_enabled,
             burn_enabled,
-            transfer_enabled
+            transfer_enabled: _
         } => {
             assert_eq!(public_total_supply, false);
             assert_eq!(deposit_enabled, false);
@@ -41,7 +41,7 @@ fn token_config() {
         _ => assert!(false)
     }
 
-    let (mut chain, snip) = init_snip20_with_config(None, Some(InitConfig{
+    let (chain, snip) = init_snip20_with_config(None, Some(InitConfig{
         public_total_supply: Some(true),
         enable_deposit: Some(true),
         enable_redeem: Some(true),
@@ -58,7 +58,7 @@ fn token_config() {
             redeem_enabled,
             mint_enabled,
             burn_enabled,
-            transfer_enabled
+            transfer_enabled: _
         } => {
             assert_eq!(public_total_supply, true);
             assert_eq!(deposit_enabled, true);

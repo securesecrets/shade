@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{Addr, Timestamp};
-use shade_protocol::utils::{ExecuteCallback, Query, MultiTestable};
+use shade_protocol::utils::{ExecuteCallback};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitConfig, InitialBalance};
 use shade_protocol::contract_interfaces::snip20::batch::BurnFromAction;

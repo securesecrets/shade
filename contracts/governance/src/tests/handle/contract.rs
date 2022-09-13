@@ -2,7 +2,7 @@ use crate::tests::{admin_only_governance, get_contract};
 use shade_protocol::{
     c_std::{Addr, Uint128},
     contract_interfaces::governance,
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, Query},
+    utils::{asset::Contract, ExecuteCallback},
 };
 
 #[test]

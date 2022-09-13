@@ -6,14 +6,13 @@ use crate::tests::{
     },
     init_chain,
 };
-use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
+use shade_multi_test::multi::{governance::Governance};
 use shade_protocol::{
     c_std::{to_binary, Addr, StdResult, Uint128},
     contract_interfaces::{
         governance::{self, profile::Profile, vote::Vote, AuthQuery, Pagination, QueryAnswer},
         query_auth,
         snip20,
-        staking::snip20_staking,
     },
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
