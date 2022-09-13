@@ -615,6 +615,7 @@ pub enum QueryAnswer {
         redeem_enabled: bool,
         mint_enabled: bool,
         burn_enabled: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
         transfer_enabled: Option<bool>,
     },
     ContractStatus {
