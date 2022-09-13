@@ -12,6 +12,7 @@ use shade_protocol::{
         },
         query_auth,
     },
+    governance::AssemblyInit,
     multi_test::App,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
@@ -46,40 +47,43 @@ pub fn init_assembly_governance_with_proposal() -> StdResult<(App, ContractInfo)
             address: auth.address,
             code_hash: auth.code_hash,
         },
-        admin_members: vec![
-            Addr::unchecked("alpha"),
-            Addr::unchecked("beta"),
-            Addr::unchecked("charlie"),
-        ],
-        admin_profile: Profile {
-            name: "admin".to_string(),
-            enabled: true,
-            assembly: Some(VoteProfile {
-                deadline: 10000,
-                threshold: Count::LiteralCount {
-                    count: Uint128::new(2),
-                },
-                yes_threshold: Count::LiteralCount {
-                    count: Uint128::new(2),
-                },
-                veto_threshold: Count::LiteralCount {
-                    count: Uint128::new(3),
-                },
-            }),
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
-        public_profile: Profile {
-            name: "public".to_string(),
-            enabled: false,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
         funding_token: None,
         vote_token: None,
+        assemblies: Some(AssemblyInit {
+            admin_members: vec![
+                Addr::unchecked("alpha"),
+                Addr::unchecked("beta"),
+                Addr::unchecked("charlie"),
+            ],
+            admin_profile: Profile {
+                name: "admin".to_string(),
+                enabled: true,
+                assembly: Some(VoteProfile {
+                    deadline: 10000,
+                    threshold: Count::LiteralCount {
+                        count: Uint128::new(2),
+                    },
+                    yes_threshold: Count::LiteralCount {
+                        count: Uint128::new(2),
+                    },
+                    veto_threshold: Count::LiteralCount {
+                        count: Uint128::new(3),
+                    },
+                }),
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+            public_profile: Profile {
+                name: "public".to_string(),
+                enabled: false,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+        }),
+        migrator: None,
     }
     .test_init(
         Governance::default(),
@@ -759,34 +763,37 @@ fn vote_count_percentage() {
             address: auth.address,
             code_hash: auth.code_hash,
         },
-        admin_members: vec![
-            Addr::unchecked("alpha"),
-            Addr::unchecked("beta"),
-            Addr::unchecked("charlie"),
-        ],
-        admin_profile: Profile {
-            name: "admin".to_string(),
-            enabled: true,
-            assembly: Some(VoteProfile {
-                deadline: 10000,
-                threshold: Count::Percentage { percent: 6500 },
-                yes_threshold: Count::Percentage { percent: 6500 },
-                veto_threshold: Count::Percentage { percent: 6500 },
-            }),
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
-        public_profile: Profile {
-            name: "public".to_string(),
-            enabled: false,
-            assembly: None,
-            funding: None,
-            token: None,
-            cancel_deadline: 0,
-        },
         funding_token: None,
         vote_token: None,
+        assemblies: Some(AssemblyInit {
+            admin_members: vec![
+                Addr::unchecked("alpha"),
+                Addr::unchecked("beta"),
+                Addr::unchecked("charlie"),
+            ],
+            admin_profile: Profile {
+                name: "admin".to_string(),
+                enabled: true,
+                assembly: Some(VoteProfile {
+                    deadline: 10000,
+                    threshold: Count::Percentage { percent: 6500 },
+                    yes_threshold: Count::Percentage { percent: 6500 },
+                    veto_threshold: Count::Percentage { percent: 6500 },
+                }),
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+            public_profile: Profile {
+                name: "public".to_string(),
+                enabled: false,
+                assembly: None,
+                funding: None,
+                token: None,
+                cancel_deadline: 0,
+            },
+        }),
+        migrator: None,
     }
     .test_init(
         Governance::default(),

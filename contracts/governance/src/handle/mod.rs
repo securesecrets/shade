@@ -11,22 +11,77 @@ use shade_protocol::{
         StdError,
         StdResult,
         Storage,
+        SubMsg,
+        Uint128,
     },
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
+    governance::{
+        assembly::{Assembly, AssemblyData},
+        profile::Profile,
+    },
     snip20::helpers::register_receive,
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
-        storage::default::SingletonStorage,
+        storage::{default::SingletonStorage, plus::ItemStorage},
     },
 };
-use shade_protocol::c_std::SubMsg;
 
 pub mod assembly;
 pub mod assembly_msg;
 pub mod contract;
+pub mod migration;
 pub mod profile;
 pub mod proposal;
+
+/// Checks that state can be updated
+pub fn assembly_state_valid(storage: &dyn Storage, assembly: &Uint128) -> StdResult<()> {
+    match RuntimeState::load(storage)? {
+        RuntimeState::Normal => {}
+        RuntimeState::SpecificAssemblies { assemblies: committees } => {
+            if !committees.contains(assembly) {
+                return Err(StdError::generic_err("unauthorized"));
+            }
+        }
+        RuntimeState::Migrated { .. } => return Err(StdError::generic_err("unauthorized")),
+    };
+
+    Ok(())
+}
+
+/// Authorizes the assembly, returns assembly data to avoid redundant loading
+pub fn authorize_assembly(
+    storage: &dyn Storage,
+    info: &MessageInfo,
+    assembly: &Uint128,
+) -> StdResult<AssemblyData> {
+    assembly_state_valid(storage, assembly)?;
+
+    let data = Assembly::data(storage, assembly)?;
+
+    // Check that the user is in the non-public assembly
+    if data.profile != Uint128::zero() && !data.members.contains(&info.sender) {
+        return Err(StdError::generic_err("unauthorized"));
+    };
+
+    // Check if enabled
+    if !Profile::data(storage, &data.profile)?.enabled {
+        return Err(StdError::generic_err("profile disabled"));
+    }
+
+    Ok(data)
+}
+
+/// Checks that the message sender is self and also not migrated
+pub fn authorized(storage: &dyn Storage, env: &Env, info: &MessageInfo) -> StdResult<()> {
+    if info.sender != env.contract.address {
+        return Err(StdError::generic_err("unauthorized"));
+    } else if let RuntimeState::Migrated { .. } = RuntimeState::load(storage)? {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    Ok(())
+}
 
 pub fn try_set_config(
     deps: DepsMut,
@@ -37,10 +92,6 @@ pub fn try_set_config(
     vote_token: Option<Contract>,
     funding_token: Option<Contract>,
 ) -> StdResult<Response> {
-    if info.sender != env.contract.address {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let mut messages = vec![];
     let mut config = Config::load(deps.storage)?;
 
@@ -72,11 +123,11 @@ pub fn try_set_config(
     }
 
     config.save(deps.storage)?;
-    Ok(
-        Response::new().set_data(to_binary(&HandleAnswer::SetConfig {
+    Ok(Response::new()
+        .set_data(to_binary(&HandleAnswer::SetConfig {
             status: ResponseStatus::Success,
-        })?).add_submessages(messages),
-    )
+        })?)
+        .add_submessages(messages))
 }
 
 pub fn try_set_runtime_state(
@@ -85,7 +136,13 @@ pub fn try_set_runtime_state(
     info: MessageInfo,
     state: RuntimeState,
 ) -> StdResult<Response> {
-    todo!();
+    if let RuntimeState::Migrated { .. } = state {
+        return Err(StdError::generic_err(
+            "Cannot explicitly define the state as ",
+        ));
+    }
+
+    state.save(deps.storage)?;
     Ok(
         Response::new().set_data(to_binary(&HandleAnswer::SetRuntimeState {
             status: ResponseStatus::Success,

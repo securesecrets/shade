@@ -6,12 +6,13 @@ use crate::{
             try_add_assembly_msg_assemblies,
             try_set_assembly_msg,
         },
+        authorized,
         contract::{try_add_contract, try_add_contract_assemblies, try_set_contract},
+        migration::{try_migrate, try_migrate_data, try_receive_migration_data},
         profile::{try_add_profile, try_set_profile},
         proposal::{
             try_cancel,
             try_claim_funding,
-            try_proposal,
             try_receive_funding,
             try_receive_vote,
             try_trigger,
@@ -35,6 +36,7 @@ use shade_protocol::{
         Env,
         MessageInfo,
         Querier,
+        Reply,
         Response,
         StdError,
         StdResult,
@@ -52,7 +54,7 @@ use shade_protocol::{
         QueryMsg,
         MSG_VARIABLE,
     },
-    governance::{AuthQuery, QueryData},
+    governance::{AuthQuery, MigrationDataAsk, QueryData, RuntimeState},
     query_auth,
     query_auth::helpers::{authenticate_permit, authenticate_vk, PermitAuthentication},
     snip20::helpers::register_receive,
@@ -61,7 +63,10 @@ use shade_protocol::{
         flexible_msg::FlexibleMsg,
         pad_handle_result,
         pad_query_result,
-        storage::default::{BucketStorage, SingletonStorage},
+        storage::{
+            default::{BucketStorage, SingletonStorage},
+            plus::ItemStorage,
+        },
         Query,
     },
 };
@@ -76,12 +81,36 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    let self_contract = Contract {
+        address: env.contract.address,
+        code_hash: env.contract.code_hash.clone(),
+    };
+
+    let migrated_from: Option<Contract>;
+
+    if let Some(migrator) = msg.migrator {
+        ID::set_assembly(deps.storage, migrator.assembly)?;
+        ID::set_profile(deps.storage, migrator.profile)?;
+        ID::set_assembly_msg(deps.storage, migrator.assemblyMsg)?;
+        ID::set_contract(deps.storage, migrator.contract)?;
+        migrated_from = Some(migrator.source);
+    } else {
+        // Setups IDs
+        ID::set_assembly(deps.storage, Uint128::new(1))?;
+        ID::set_profile(deps.storage, Uint128::new(1))?;
+        ID::set_assembly_msg(deps.storage, Uint128::zero())?;
+        ID::set_contract(deps.storage, Uint128::zero())?;
+        migrated_from = None;
+    }
+
     // Setup config
     Config {
         query: msg.query_auth,
         treasury: msg.treasury,
         vote_token: msg.vote_token.clone(),
         funding_token: msg.funding_token.clone(),
+        migrated_from,
+        migrated_to: None,
     }
     .save(deps.storage)?;
 
@@ -101,88 +130,109 @@ pub fn instantiate(
         )?));
     }
 
-    // Setups IDs
-    ID::set_assembly(deps.storage, Uint128::new(1))?;
-    ID::set_profile(deps.storage, Uint128::new(1))?;
-    ID::set_assembly_msg(deps.storage, Uint128::zero())?;
-    ID::set_contract(deps.storage, Uint128::zero())?;
+    // Only initialize the data if not migrating
+    if let Some(assemblies) = msg.assemblies {
+        // Setup public profile
+        assemblies
+            .public_profile
+            .save(deps.storage, &Uint128::zero())?;
 
-    // Setup public profile
-    msg.public_profile.save(deps.storage, &Uint128::zero())?;
-
-    if msg.public_profile.funding.is_some() {
-        if msg.funding_token.is_none() {
-            return Err(StdError::generic_err("Funding token must be set"));
+        if assemblies.public_profile.funding.is_some() {
+            if msg.funding_token.is_none() {
+                return Err(StdError::generic_err("Funding token must be set"));
+            }
         }
-    }
 
-    if msg.public_profile.token.is_some() {
-        if msg.vote_token.is_none() {
-            return Err(StdError::generic_err("Voting token must be set"));
+        if assemblies.public_profile.token.is_some() {
+            if msg.vote_token.is_none() {
+                return Err(StdError::generic_err("Voting token must be set"));
+            }
         }
-    }
 
-    // Setup public assembly
-    Assembly {
-        name: "public".to_string(),
-        metadata: "All inclusive assembly, acts like traditional governance".to_string(),
-        members: vec![],
-        profile: Uint128::zero(),
-    }
-    .save(deps.storage, &Uint128::zero())?;
-
-    // Setup admin profile
-    msg.admin_profile.save(deps.storage, &Uint128::new(1))?;
-
-    if msg.admin_profile.funding.is_some() {
-        if msg.funding_token.is_none() {
-            return Err(StdError::generic_err("Funding token must be set"));
+        // Setup public assembly
+        Assembly {
+            name: "public".to_string(),
+            metadata: "All inclusive assembly, acts like traditional governance".to_string(),
+            members: vec![],
+            profile: Uint128::zero(),
         }
-    }
+        .save(deps.storage, &Uint128::zero())?;
 
-    if msg.admin_profile.token.is_some() {
-        if msg.vote_token.is_none() {
-            return Err(StdError::generic_err("Voting token must be set"));
+        // Setup admin profile
+        assemblies
+            .admin_profile
+            .save(deps.storage, &Uint128::new(1))?;
+
+        if assemblies.admin_profile.funding.is_some() {
+            if msg.funding_token.is_none() {
+                return Err(StdError::generic_err("Funding token must be set"));
+            }
         }
+
+        if assemblies.admin_profile.token.is_some() {
+            if msg.vote_token.is_none() {
+                return Err(StdError::generic_err("Voting token must be set"));
+            }
+        }
+
+        // Setup admin assembly
+        Assembly {
+            name: "admin".to_string(),
+            metadata: "Assembly of DAO admins.".to_string(),
+            members: assemblies.admin_members,
+            profile: Uint128::new(1),
+        }
+        .save(deps.storage, &Uint128::new(1))?;
+
+        // Setup generic command
+        AssemblyMsg {
+            name: "blank message".to_string(),
+            assemblies: vec![Uint128::zero(), Uint128::new(1)],
+            msg: FlexibleMsg {
+                msg: MSG_VARIABLE.to_string(),
+                arguments: 1,
+            },
+        }
+        .save(deps.storage, &Uint128::zero())?;
+
+        // Setup self contract
+        AllowedContract {
+            name: "Governance".to_string(),
+            metadata: "Current governance contract, this one".to_string(),
+            assemblies: None,
+            contract: self_contract.clone(),
+        }
+        .save(deps.storage, &Uint128::zero())?;
     }
 
-    // Setup admin assembly
-    Assembly {
-        name: "admin".to_string(),
-        metadata: "Assembly of DAO admins.".to_string(),
-        members: msg.admin_members,
-        profile: Uint128::new(1),
-    }
-    .save(deps.storage, &Uint128::new(1))?;
+    // Set runtime
+    RuntimeState::Normal.save(deps.storage)?;
 
-    // Setup generic command
-    AssemblyMsg {
-        name: "blank message".to_string(),
-        assemblies: vec![Uint128::zero(), Uint128::new(1)],
-        msg: FlexibleMsg {
-            msg: MSG_VARIABLE.to_string(),
-            arguments: 1,
-        },
-    }
-    .save(deps.storage, &Uint128::zero())?;
-
-    // Setup self contract
-    AllowedContract {
-        name: "Governance".to_string(),
-        metadata: "Current governance contract, this one".to_string(),
-        assemblies: None,
-        contract: Contract {
-            address: env.contract.address,
-            code_hash: env.contract.code_hash,
-        },
-    }
-    .save(deps.storage, &Uint128::zero())?;
-
-    Ok(Response::new().add_submessages(messages))
+    Ok(Response::new()
+        .add_submessages(messages)
+        .add_attributes(vec![
+            (ADDRESS_ATTRIBUTE, self_contract.address.to_string()),
+            (CODE_HASH_ATTRIBUTE, self_contract.code_hash),
+        ]))
 }
 
 #[shd_entry_point]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+    match msg {
+        ExecuteMsg::Trigger { .. } // Will be deprecated
+        | ExecuteMsg::Cancel { .. } // Will also be deprecated
+        | ExecuteMsg::Update { .. } // Gets halted 
+        | ExecuteMsg::Receive { .. } // Gets halted
+        | ExecuteMsg::ClaimFunding { .. } // Gets halted
+        | ExecuteMsg::AssemblyVote { .. } // Gets halted
+        | ExecuteMsg::ReceiveBalance { .. } // Gets halted
+        | ExecuteMsg::AssemblyProposal { .. } // Gets halted with special permissions
+        | ExecuteMsg::MigrateData { .. }
+        | ExecuteMsg::ReceiveMigrationData { .. } => {}
+        // Only callable by itself
+        _ => authorized(deps.storage, &env, &info)?,
+    }
+
     pad_handle_result(
         match msg {
             // State setups
@@ -202,21 +252,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 funding_token,
             ),
 
-            // TODO: set this, must be discussed with team
             ExecuteMsg::SetRuntimeState { state, .. } => {
                 try_set_runtime_state(deps, env, info, state)
             }
 
             // Proposals
-            ExecuteMsg::Proposal {
-                title,
-                metadata,
-                contract,
-                msg,
-                coins,
-                ..
-            } => try_proposal(deps, env, info, title, metadata, contract, msg, coins),
-
             ExecuteMsg::Trigger { proposal, .. } => try_trigger(deps, env, info, proposal),
             ExecuteMsg::Cancel { proposal, .. } => try_cancel(deps, env, info, proposal),
             ExecuteMsg::Update { proposal, .. } => try_update(deps, env, info, proposal),
@@ -326,6 +366,21 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             ExecuteMsg::AddContractAssemblies { id, assemblies } => {
                 try_add_contract_assemblies(deps, env, info, id, assemblies)
             }
+
+            // Migration
+            ExecuteMsg::Migrate {
+                id,
+                label,
+                code_hash,
+            } => try_migrate(deps, env, info, id, label, code_hash),
+
+            ExecuteMsg::MigrateData { data, total } => {
+                try_migrate_data(deps, env, info, data, total as u128)
+            }
+
+            ExecuteMsg::ReceiveMigrationData { data } => {
+                try_receive_migration_data(deps, env, info, data)
+            }
         },
         RESPONSE_BLOCK_SIZE,
     )
@@ -395,4 +450,48 @@ pub fn auth_queries(deps: Deps, msg: AuthQuery, user: Addr) -> StdResult<Binary>
         AuthQuery::Funding { pagination } => query::user_funding(deps, user, pagination)?,
         AuthQuery::Votes { pagination } => query::user_votes(deps, user, pagination)?,
     })
+}
+
+const MIGRATION_REPLY: u64 = 0;
+const PROPOSAL_REPLY: u64 = 1;
+const ADDRESS_ATTRIBUTE: &str = "instantiated-address";
+const CODE_HASH_ATTRIBUTE: &str = "instantiated-code-hash";
+#[shd_entry_point]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+    match msg.id {
+        MIGRATION_REPLY => {
+            // Get the returned address and code_hash
+            let res = msg.result.unwrap();
+            let wasm = res
+                .events
+                .iter()
+                .find(|event| event.ty == "wasm")
+                .ok_or_else(|| StdError::generic_err("No wasm event found"))?;
+            let address = deps.api.addr_validate(
+                &wasm
+                    .attributes
+                    .iter()
+                    .find(|attribute| attribute.key == ADDRESS_ATTRIBUTE)
+                    .ok_or_else(|| StdError::generic_err("No address found for instantiation"))?
+                    .value,
+            )?;
+            let code_hash = &wasm
+                .attributes
+                .iter()
+                .find(|attribute| attribute.key == CODE_HASH_ATTRIBUTE)
+                .ok_or_else(|| StdError::generic_err("No code-hash found for instantiation"))?
+                .value;
+
+            let mut config = Config::load(deps.storage)?;
+            config.migrated_to = Some(Contract {
+                address,
+                code_hash: code_hash.to_string(),
+            });
+            config.save(deps.storage)?;
+        }
+        // TODO: on receiving a response, subtract 1 and update that proposals status to failed
+        _ => return Err(StdError::generic_err("Reply ID not recognized")),
+    }
+
+    Ok(Response::new())
 }

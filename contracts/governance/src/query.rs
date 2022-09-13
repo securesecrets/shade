@@ -10,7 +10,7 @@ use shade_protocol::{
         QueryAnswer,
     },
     governance::{stored_id::UserID, Pagination, ResponseWithID},
-    utils::storage::default::SingletonStorage,
+    utils::storage::{default::SingletonStorage, plus::ItemStorage},
 };
 
 pub fn config(deps: Deps) -> StdResult<QueryAnswer> {

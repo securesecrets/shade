@@ -1,10 +1,12 @@
 pub mod assembly;
 pub mod assembly_msg;
 pub mod contract;
+pub mod migration;
 pub mod profile;
 pub mod proposal;
+pub mod runstate;
 
-use crate::tests::{admin_only_governance, get_config};
+use crate::tests::{admin_only_governance, get_config, handle::proposal::init_funding_token};
 use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
 use shade_protocol::{
     c_std::Addr,
@@ -18,18 +20,7 @@ fn set_config_msg() {
 
     let old_config = get_config(&mut chain, &gov).unwrap();
 
-    let snip20 = snip20::InstantiateMsg {
-        name: "funding_token".to_string(),
-        admin: None,
-        symbol: "FND".to_string(),
-        decimals: 6,
-        initial_balances: None,
-        prng_seed: Default::default(),
-        config: None,
-        query_auth: None
-    }
-    .test_init(Snip20::default(), &mut chain, Addr::unchecked("admin"), "snip20", &[])
-    .unwrap();
+    let snip20 = init_funding_token(&mut chain, None, None).unwrap();
 
     governance::ExecuteMsg::SetConfig {
         query_auth: None,
@@ -87,18 +78,7 @@ fn unauthorised_set_config_msg() {
 fn reject_disable_config_tokens() {
     let (mut chain, gov) = admin_only_governance().unwrap();
 
-    let snip20 = snip20::InstantiateMsg {
-        name: "funding_token".to_string(),
-        admin: None,
-        symbol: "FND".to_string(),
-        decimals: 6,
-        initial_balances: None,
-        prng_seed: Default::default(),
-        config: None,
-        query_auth: None
-    }
-    .test_init(Snip20::default(), &mut chain, Addr::unchecked("admin"), "snip20", &[])
-    .unwrap();
+    let snip20 = init_funding_token(&mut chain, None, None).unwrap();
 
     governance::ExecuteMsg::SetConfig {
         query_auth: None,

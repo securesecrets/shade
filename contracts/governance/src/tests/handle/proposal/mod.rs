@@ -9,14 +9,60 @@ use crate::tests::{
     gov_generic_proposal,
     gov_msg_proposal,
 };
+use shade_multi_test::multi::snip20::Snip20;
 use shade_protocol::{
-    c_std::{to_binary, Addr, Binary, StdResult, Uint128},
+    c_std::{to_binary, Addr, Binary, ContractInfo, StdResult, Uint128},
     contract_interfaces::{
         governance,
         governance::proposal::{ProposalMsg, Status},
     },
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, Query},
+    multi_test::{App, BasicApp},
+    query_auth,
+    snip20::{self, InitialBalance},
+    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
+
+// TODO: update state and retest the relevant functions
+
+pub fn init_funding_token(
+    chain: &mut App,
+    initial_balances: Option<Vec<InitialBalance>>,
+    query_auth: Option<&ContractInfo>,
+) -> StdResult<ContractInfo> {
+    let snip20 = snip20::InstantiateMsg {
+        name: "funding_token".to_string(),
+        admin: None,
+        symbol: "FND".to_string(),
+        decimals: 6,
+        initial_balances: initial_balances.clone(),
+        prng_seed: Default::default(),
+        config: None,
+        query_auth: None,
+    }
+    .test_init(
+        Snip20::default(),
+        chain,
+        Addr::unchecked("admin"),
+        "funding_token",
+        &[],
+    )
+    .unwrap();
+
+    if let Some(balances) = initial_balances {
+        if let Some(auth) = query_auth {
+            for balance in balances {
+                query_auth::ExecuteMsg::SetViewingKey {
+                    key: "password".to_string(),
+                    padding: None,
+                }
+                .test_exec(&auth, chain, Addr::unchecked(balance.address), &[])
+                .unwrap();
+            }
+        }
+    }
+
+    Ok(snip20)
+}
 
 #[test]
 fn trigger_admin_command() {

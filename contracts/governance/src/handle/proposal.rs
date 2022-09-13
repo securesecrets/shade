@@ -1,4 +1,4 @@
-use crate::handle::assembly::try_assembly_proposal;
+use crate::handle::{assembly::try_assembly_proposal, assembly_state_valid};
 use shade_protocol::{
     c_std::{
         from_binary,
@@ -37,44 +37,10 @@ use shade_protocol::{
     utils::{
         asset::Contract,
         generic_response::ResponseStatus,
-        storage::default::SingletonStorage,
+        storage::{default::SingletonStorage, plus::ItemStorage},
         Query,
     },
 };
-
-// Initializes a proposal on the public assembly with the blank command
-pub fn try_proposal(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    title: String,
-    metadata: String,
-    contract: Option<Uint128>,
-    msg: Option<String>,
-    coins: Option<Vec<Coin>>,
-) -> StdResult<Response> {
-    let msgs: Option<Vec<ProposalMsg>>;
-
-    if contract.is_some() && msg.is_some() {
-        msgs = Some(vec![ProposalMsg {
-            target: contract.unwrap(),
-            assembly_msg: Uint128::zero(),
-            msg: to_binary(&msg.unwrap())?,
-            send: match coins {
-                None => vec![],
-                Some(c) => c,
-            },
-        }]);
-    } else {
-        msgs = None;
-    }
-
-    try_assembly_proposal(deps, env, info, Uint128::zero(), title, metadata, msgs)?;
-
-    Ok(Response::new().set_data(to_binary(&HandleAnswer::Proposal {
-        status: ResponseStatus::Success,
-    })?))
-}
 
 pub fn try_trigger(
     deps: DepsMut,
@@ -96,14 +62,14 @@ pub fn try_trigger(
         if let Some(prop_msgs) = proposal_msg {
             for (i, prop_msg) in prop_msgs.iter().enumerate() {
                 let contract = AllowedContract::data(deps.storage, &prop_msg.target)?.contract;
-                // TODO: we can use this to setup a non fire and forget setup
                 let msg = WasmMsg::Execute {
                     contract_addr: contract.address.into(),
                     code_hash: contract.code_hash,
                     msg: prop_msg.msg.clone(),
                     funds: prop_msg.send.clone(),
                 };
-                // TODO: set reply as always
+                // TODO: set to reply on error where ID is propID + 1
+                // TODO: set proposal status to success
                 messages.push(SubMsg::new(msg));
             }
         }
@@ -188,12 +154,17 @@ pub fn try_update(
     info: MessageInfo,
     proposal: Uint128,
 ) -> StdResult<Response> {
+    // TODO: see if this can get cleaned up
+
     let mut history = Proposal::status_history(deps.storage, &proposal)?;
     let status = Proposal::status(deps.storage, &proposal)?;
     let mut new_status: Status;
 
     let assembly = Proposal::assembly(deps.storage, &proposal)?;
     let profile = Assembly::data(deps.storage, &assembly)?.profile;
+
+    // Halt all proposal updates
+    assembly_state_valid(deps.storage, &assembly)?;
 
     let mut messages = vec![];
 
@@ -404,6 +375,10 @@ pub fn try_receive_funding(
         let mut new_fund = amount + funded;
 
         let assembly = &Proposal::assembly(deps.storage, &proposal)?;
+
+        // Validate that this action is possible
+        assembly_state_valid(deps.storage, assembly)?;
+
         let profile = &Assembly::data(deps.storage, assembly)?.profile;
         if let Some(funding_profile) = Profile::funding(deps.storage, &profile)? {
             if funding_profile.required == funded {
