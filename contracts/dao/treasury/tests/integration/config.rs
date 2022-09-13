@@ -1,17 +1,7 @@
-use shade_multi_test::interfaces::{
-    dao::{
-        init_dao,
-    },
-    treasury,
-    utils::{DeployedContracts},
-};
+use shade_multi_test::interfaces::{dao::init_dao, treasury, utils::DeployedContracts};
 use shade_protocol::{
     c_std::{Addr, Uint128},
-    contract_interfaces::dao::{
-        self,
-        treasury::AllowanceType,
-        treasury_manager::{AllocationType},
-    },
+    contract_interfaces::dao::{self, treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::{
         asset::{Contract, RawContract},
@@ -63,7 +53,8 @@ pub fn update_config() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
-    );
+    )
+    .unwrap();
     treasury::set_config(
         &mut app,
         "admin",

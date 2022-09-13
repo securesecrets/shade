@@ -11,11 +11,8 @@ use shade_multi_test::interfaces::{
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Uint128},
-    contract_interfaces::dao::{
-        treasury::AllowanceType,
-        treasury_manager::{AllocationType},
-    },
+    c_std::Uint128,
+    contract_interfaces::dao::{treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::cycle::Cycle,
 };
@@ -26,7 +23,7 @@ pub fn multiple_holders(
     after_holder_removed: (Uint128, Vec<(Uint128, Vec<Uint128>)>),
 ) {
     let num_managers = 4;
-    const holder: &str = "holder";
+    const HOLDER: &str = "holder";
     let mut app = App::default();
     let mut contracts = DeployedContracts::new();
     init_dao(
@@ -69,7 +66,8 @@ pub fn multiple_holders(
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         is_instant_unbond,
-    );
+    )
+    .unwrap();
     let bals = {
         if is_instant_unbond {
             system_balance_reserves(&app, &contracts, "SSCRT")
@@ -78,14 +76,14 @@ pub fn multiple_holders(
         }
     };
     assert_eq!(bals, after_holder_removed);
-    snip20::set_viewing_key_exec(&mut app, holder, &contracts, "SSCRT", holder.to_string())
+    snip20::set_viewing_key_exec(&mut app, HOLDER, &contracts, "SSCRT", HOLDER.to_string())
         .unwrap();
     snip20::send_exec(
         &mut app,
         "admin",
         &contracts,
         "SSCRT",
-        holder.to_string(),
+        HOLDER.to_string(),
         Uint128::new(1000),
         None,
     )
@@ -96,12 +94,12 @@ pub fn multiple_holders(
         &contracts,
         "SSCRT",
         SupportedContracts::TreasuryManager(0),
-        holder,
+        HOLDER,
     )
     .unwrap();
     snip20::send_exec(
         &mut app,
-        holder,
+        HOLDER,
         &contracts,
         "SSCRT",
         contracts[&SupportedContracts::TreasuryManager(0)]
@@ -113,7 +111,7 @@ pub fn multiple_holders(
     .unwrap();
     snip20::send_exec(
         &mut app,
-        holder,
+        HOLDER,
         &contracts,
         "SSCRT",
         contracts[&SupportedContracts::TreasuryManager(0)]
@@ -129,7 +127,7 @@ pub fn multiple_holders(
             &app,
             &contracts,
             SupportedContracts::TreasuryManager(0),
-            holder.to_string(),
+            HOLDER.to_string(),
         )
         .unwrap()
         .balances[0]
@@ -146,7 +144,7 @@ pub fn multiple_holders(
     assert_eq!(bals, after_holder_adds_tokens);
     treasury_manager::unbond_exec(
         &mut app,
-        holder,
+        HOLDER,
         &contracts,
         "SSCRT",
         SupportedContracts::TreasuryManager(0),
@@ -173,7 +171,7 @@ pub fn multiple_holders(
     update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
     treasury_manager::claim_exec(
         &mut app,
-        holder,
+        HOLDER,
         &contracts,
         "SSCRT",
         SupportedContracts::TreasuryManager(0),
@@ -185,9 +183,9 @@ pub fn multiple_holders(
         &contracts,
         "SSCRT",
         SupportedContracts::TreasuryManager(0),
-        holder.clone(),
+        HOLDER.clone(),
     ) {
-        Ok(_) => assert!(false, "unauthorized removing of holder"),
+        Ok(_) => assert!(false, "unauthorized removing of HOLDER"),
         Err(_) => assert!(true),
     }
     treasury_manager::remove_holder_exec(
@@ -196,7 +194,7 @@ pub fn multiple_holders(
         &contracts,
         "SSCRT",
         SupportedContracts::TreasuryManager(0),
-        holder.clone(),
+        HOLDER.clone(),
     )
     .unwrap();
     match treasury_manager::remove_holder_exec(
@@ -207,12 +205,12 @@ pub fn multiple_holders(
         SupportedContracts::TreasuryManager(0),
         &contracts[&SupportedContracts::Treasury].address.to_string(),
     ) {
-        Ok(_) => assert!(false, "removed treasury as a holder"),
+        Ok(_) => assert!(false, "removed treasury as a HOLDER"),
         Err(_) => assert!(true),
     }
     match snip20::send_exec(
         &mut app,
-        holder,
+        HOLDER,
         &contracts,
         "SSCRT",
         contracts[&SupportedContracts::TreasuryManager(0)]
@@ -221,12 +219,12 @@ pub fn multiple_holders(
         Uint128::new(300),
         None,
     ) {
-        Ok(_) => assert!(false, "closed holders shouldn't be able to send to TM"),
+        Ok(_) => assert!(false, "closed HOLDERs shouldn't be able to send to TM"),
         Err(_) => assert!(true),
     }
     treasury_manager::unbond_exec(
         &mut app,
-        holder,
+        HOLDER,
         &contracts,
         "SSCRT",
         SupportedContracts::TreasuryManager(0),
@@ -251,7 +249,7 @@ pub fn multiple_holders(
     }
     treasury_manager::claim_exec(
         &mut app,
-        holder,
+        HOLDER,
         &contracts,
         "SSCRT",
         SupportedContracts::TreasuryManager(0),
@@ -275,7 +273,7 @@ pub fn multiple_holders(
         }
         treasury_manager::claim_exec(
             &mut app,
-            holder,
+            HOLDER,
             &contracts,
             "SSCRT",
             SupportedContracts::TreasuryManager(0),
@@ -287,9 +285,9 @@ pub fn multiple_holders(
         &app,
         &contracts,
         SupportedContracts::TreasuryManager(0),
-        holder.to_string(),
+        HOLDER.to_string(),
     ) {
-        Ok(_) => assert!(false, "holder was not removed"),
+        Ok(_) => assert!(false, "HOLDER was not removed"),
         Err(_) => assert!(true),
     }
     let bals = {

@@ -1,22 +1,12 @@
 use shade_multi_test::interfaces::{
-    dao::{
-        init_dao,
-        mock_adapter_sub_tokens,
-        update_dao,
-    },
+    dao::{init_dao, mock_adapter_sub_tokens, update_dao},
     snip20,
     treasury,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
     c_std::{BlockInfo, Timestamp, Uint128},
-    contract_interfaces::{
-        dao::{
-            self,
-            treasury::AllowanceType,
-            treasury_manager::{AllocationType},
-        },
-    },
+    contract_interfaces::dao::{self, treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::{
         cycle::{parse_utc_datetime, Cycle},
@@ -77,12 +67,13 @@ pub fn query() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
-    );
+    )
+    .unwrap();
     assert_eq!(
         treasury::batch_balance_query(&app, &contracts, vec!["SSCRT"]).unwrap(),
         vec![Uint128::new(1500)]
     );
-    snip20::init(&mut app, "admin", &mut contracts, "Shade", "SHD", 8, None);
+    snip20::init(&mut app, "admin", &mut contracts, "Shade", "SHD", 8, None).unwrap();
     assert!(!treasury::batch_balance_query(&app, &contracts, vec!["SSCRT", "SHD"]).is_ok());
     assert!(!treasury::balance_query(&app, &contracts, "SHD",).is_ok());
     assert!(!treasury::reserves_query(&app, &contracts, "SHD",).is_ok());
@@ -218,8 +209,8 @@ pub fn query() {
         ),
         chain_id: "chain_id".to_string(),
     });
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
     assert!(
         !treasury::metrics_query(
             &app,

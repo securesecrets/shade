@@ -1,23 +1,14 @@
 use shade_multi_test::interfaces::{
-    dao::{
-        init_dao,
-    },
+    dao::init_dao,
     snip20,
     treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Uint128},
-    contract_interfaces::{
-        dao::{
-            treasury::AllowanceType,
-            treasury_manager::{AllocationType},
-        },
-    },
+    c_std::Uint128,
+    contract_interfaces::dao::{treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
-    utils::{
-        cycle::Cycle,
-    },
+    utils::cycle::Cycle,
 };
 
 #[test]
@@ -64,7 +55,8 @@ pub fn execute_error() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
-    );
+    )
+    .unwrap();
     assert!(
         !treasury_manager::allocate_exec(
             &mut app,

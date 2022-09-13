@@ -10,7 +10,7 @@ use shade_multi_test::interfaces::{
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Uint128},
+    c_std::Uint128,
     contract_interfaces::dao::{treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::cycle::Cycle,
@@ -79,7 +79,8 @@ pub fn equilibrium_test(
         ],
         vec![vec![Uint128::zero(); 8]; 8],
         is_instant_unbond,
-    );
+    )
+    .unwrap();
     for i in 0..20 {
         let bals = {
             if is_instant_unbond {
@@ -96,7 +97,8 @@ pub fn equilibrium_test(
                 &contracts,
                 "SSCRT",
                 SupportedContracts::TreasuryManager(tm),
-            );
+            )
+            .unwrap();
         }
         treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
         if !is_instant_unbond {

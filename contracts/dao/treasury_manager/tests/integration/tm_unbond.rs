@@ -1,14 +1,11 @@
 use shade_multi_test::interfaces::{
-    dao::{
-        init_dao,
-        system_balance_reserves,
-    },
+    dao::{init_dao, system_balance_reserves},
     snip20,
     treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Uint128},
+    c_std::Uint128,
     contract_interfaces::dao::{treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::cycle::Cycle,
@@ -55,7 +52,8 @@ pub fn test_tm_unbond(
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
-    );
+    )
+    .unwrap();
     let bals = system_balance_reserves(&app, &contracts, "SSCRT");
     assert_eq!(bals, expected_before_unbond);
     match adapter_gain_amount {

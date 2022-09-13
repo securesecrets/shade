@@ -1,21 +1,12 @@
 use shade_multi_test::interfaces::{
-    dao::{
-        init_dao,
-        mock_adapter_sub_tokens,
-        update_dao,
-    },
+    dao::{init_dao, mock_adapter_sub_tokens, update_dao},
     snip20,
     treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
     c_std::{BlockInfo, Timestamp, Uint128},
-    contract_interfaces::{
-        dao::{
-            treasury::AllowanceType,
-            treasury_manager::{AllocationType},
-        },
-    },
+    contract_interfaces::dao::{treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::{
         cycle::{parse_utc_datetime, Cycle},
@@ -68,7 +59,8 @@ pub fn query() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
-    );
+    )
+    .unwrap();
     assert_eq!(
         treasury_manager::batch_balance_query(
             &app,
@@ -87,18 +79,7 @@ pub fn query() {
             .unwrap(),
         Uint128::new(1500)
     );
-    /*assert_eq!(
-        treasury_manager::batch_balance_query(
-            &app,
-            &contracts,
-            vec!["SSCRT"],
-            SupportedContracts::TreasuryManager(0),
-            SupportedContracts::AdminAuth
-        )
-        .unwrap(),
-        vec![Uint128::zero()]
-    );*/
-    snip20::init(&mut app, "admin", &mut contracts, "Shade", "SHD", 8, None);
+    snip20::init(&mut app, "admin", &mut contracts, "Shade", "SHD", 8, None).unwrap();
     assert!(
         !treasury_manager::pending_allowance_query(
             &app,
@@ -257,16 +238,6 @@ pub fn query() {
         SupportedContracts::TreasuryManager(0),
     )
     .unwrap();
-    /*assert!(
-        !treasury_manager::claimable_query(
-            &app,
-            &contracts,
-            "SHD",
-            SupportedContracts::TreasuryManager(0),
-            SupportedContracts::Treasury
-        )
-        .is_ok()
-    );*/
     assert!(
         !treasury_manager::metrics_query(
             &app,
@@ -395,8 +366,8 @@ pub fn query() {
         ),
         chain_id: "chain_id".to_string(),
     });
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 1);
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 1);
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 1).unwrap();
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 1).unwrap();
     assert!(
         !treasury_manager::metrics_query(
             &app,
