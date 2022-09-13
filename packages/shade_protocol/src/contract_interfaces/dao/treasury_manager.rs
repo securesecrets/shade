@@ -204,6 +204,7 @@ pub enum QueryMsg {
     },
     Metrics {
         date: Option<String>,
+        epoch: Option<Uint128>,
         period: Period,
     },
     Manager(manager::SubQueryMsg),

@@ -32,7 +32,6 @@ pub fn metrics(
             env.block.time.seconds()
         }
     };
-    println!("KEY {}", key);
     Ok(treasury::QueryAnswer::Metrics {
         metrics: METRICS.load_period(deps.storage, key, period)?,
     })
