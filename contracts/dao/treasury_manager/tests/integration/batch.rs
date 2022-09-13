@@ -1,41 +1,23 @@
 use shade_multi_test::{
-    interfaces,
     multi::{admin::init_admin_auth, snip20::Snip20, treasury_manager::TreasuryManager},
 };
 use shade_protocol::{
     c_std::{
-        coins,
-        from_binary,
         to_binary,
         Addr,
-        Binary,
-        Coin,
-        ContractInfo,
-        Decimal,
-        Env,
-        StdError,
-        StdResult,
         Uint128,
-        Validator,
     },
-    multi_test::{App, BankSudo, StakingSudo, SudoMsg},
+    multi_test::{App},
 };
 use shade_protocol::{
     contract_interfaces::{
         dao::{
-            adapter,
             manager,
-            //mock_adapter,
-            treasury,
-            treasury::{Allowance, AllowanceType, RunLevel},
-            treasury_manager::{self, Allocation, AllocationType},
+            treasury_manager::{self},
         },
         snip20,
     },
     utils::{
-        asset::{Contract, RawContract},
-        cycle::{utc_from_timestamp, Cycle},
-        storage::plus::period_storage::Period,
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -48,7 +30,7 @@ fn batch_balance_test(balances: Vec<Uint128>) {
     let mut app = App::default();
 
     let admin = Addr::unchecked("admin");
-    let user = Addr::unchecked("user");
+    let _user = Addr::unchecked("user");
     let admin_auth = init_admin_auth(&mut app, &admin);
 
     let viewing_key = "viewing_key".to_string();
@@ -121,7 +103,7 @@ fn batch_balance_test(balances: Vec<Uint128>) {
     }
 
     // Treasury Balances
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::BatchBalance {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::BatchBalance {
         assets: tokens
             .iter()
             .map(|t| t.address.to_string().clone())
@@ -129,7 +111,7 @@ fn batch_balance_test(balances: Vec<Uint128>) {
         holder: admin.to_string().clone(),
     })
     .test_query(&manager, &app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::BatchBalance { amounts } => {
             assert!(amounts == balances, "Reported balances match inputs");

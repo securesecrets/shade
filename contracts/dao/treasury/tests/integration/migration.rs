@@ -2,14 +2,12 @@ use shade_multi_test::interfaces::{
     dao::{
         init_dao,
         mock_adapter_complete_unbonding,
-        mock_adapter_sub_tokens,
         system_balance_reserves,
         system_balance_unbondable,
         update_dao,
     },
     snip20,
     treasury,
-    treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
@@ -20,7 +18,7 @@ use shade_protocol::{
 };
 
 pub fn migration_test(is_instant_unbond: bool) {
-    const multisig: &str = "multisig";
+    const MULTISIG: &str = "multisig";
     let mut app = App::default();
     let mut contracts = DeployedContracts::new();
     init_dao(
@@ -63,13 +61,14 @@ pub fn migration_test(is_instant_unbond: bool) {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         is_instant_unbond,
-    );
+    )
+    .unwrap();
     snip20::set_viewing_key_exec(
         &mut app,
-        multisig,
+        MULTISIG,
         &contracts,
         "SSCRT",
-        multisig.to_string(),
+        MULTISIG.to_string(),
     )
     .unwrap();
     treasury::set_config(
@@ -83,7 +82,7 @@ pub fn migration_test(is_instant_unbond: bool) {
                 .clone()
                 .into(),
         ),
-        Some(Addr::unchecked(multisig).into()),
+        Some(Addr::unchecked(MULTISIG).to_string()),
     )
     .unwrap();
     treasury::set_run_level_exec(
@@ -93,13 +92,13 @@ pub fn migration_test(is_instant_unbond: bool) {
         dao::treasury::RunLevel::Migrating,
     )
     .unwrap();
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
     if is_instant_unbond {
-        update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+        update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
     } else {
         let mut k = 0;
-        for i in 0..4 {
-            for j in 0..4 {
+        for _i in 0..4 {
+            for _j in 0..4 {
                 mock_adapter_complete_unbonding(
                     &mut app,
                     "admin",
@@ -111,8 +110,8 @@ pub fn migration_test(is_instant_unbond: bool) {
             }
             k += 1;
         }
-        update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
-        update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+        update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
+        update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
     }
     println!(
         "{:?}\n{:?}",
@@ -120,7 +119,7 @@ pub fn migration_test(is_instant_unbond: bool) {
         system_balance_unbondable(&app, &contracts, "SSCRT")
     );
     assert_eq!(
-        snip20::balance_query(&app, multisig, &contracts, "SSCRT", multisig.to_string()).unwrap(),
+        snip20::balance_query(&app, MULTISIG, &contracts, "SSCRT", MULTISIG.to_string()).unwrap(),
         Uint128::new(1500)
     );
 }

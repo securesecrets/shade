@@ -1,13 +1,12 @@
 use shade_protocol::c_std::{
-    entry_point, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Querier, Response,
-    StdError, StdResult, Storage, Uint128,
+    entry_point, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 
 use shade_protocol::contract_interfaces::dao::rewards_emission::{
     Config, ExecuteMsg, InstantiateMsg, QueryMsg,
 };
 
-use shade_protocol::snip20::helpers::{fetch_snip20, register_receive, set_viewing_key_msg};
+use shade_protocol::snip20::helpers::{fetch_snip20};
 //use shade_protocol::contract_interfaces::dao::adapter;
 
 use crate::{execute, query, storage::*};
@@ -29,7 +28,7 @@ pub fn instantiate(
         admins.push(info.sender);
     }
 
-    let mut config = Config {
+    let config = Config {
         admins,
         treasury: deps.api.addr_validate(&msg.treasury)?,
     };
@@ -77,7 +76,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query::config(deps)?),
         //QueryMsg::PendingAllowance { asset } => to_binary(&query::pending_allowance(deps, asset)?),

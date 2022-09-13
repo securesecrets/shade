@@ -1,41 +1,27 @@
-use mock_adapter;
+
 use shade_multi_test::{
-    interfaces,
     multi::{
         admin::init_admin_auth,
-        mock_adapter::MockAdapter,
         snip20::Snip20,
         treasury::Treasury,
     },
 };
 use shade_protocol::{
     c_std::{
-        coins,
-        from_binary,
         to_binary,
         Addr,
-        Binary,
-        Coin,
-        Decimal,
-        Env,
-        StdError,
-        StdResult,
         Uint128,
-        Validator,
     },
     contract_interfaces::{
         dao::{
-            adapter,
             treasury,
-            treasury::{Allowance, AllowanceType, RunLevel},
+            treasury::{AllowanceType},
         },
         snip20,
     },
-    multi_test::{App, BankSudo, StakingSudo, SudoMsg},
+    multi_test::{App},
     utils::{
-        asset::Contract,
-        cycle::{utc_from_timestamp, Cycle},
-        storage::plus::period_storage::Period,
+        cycle::{Cycle},
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -57,7 +43,7 @@ fn underfunded_tolerance(
 
     let admin = Addr::unchecked("admin");
     let spender = Addr::unchecked("spender");
-    let user = Addr::unchecked("user");
+    let _user = Addr::unchecked("user");
     //let validator = Addr::unchecked("validator");
     let admin_auth = init_admin_auth(&mut app, &admin);
 
@@ -266,7 +252,7 @@ fn overfunded_tolerance(
 
     let admin = Addr::unchecked("admin");
     let spender = Addr::unchecked("spender");
-    let user = Addr::unchecked("user");
+    let _user = Addr::unchecked("user");
     //let validator = Addr::unchecked("validator");
     let admin_auth = init_admin_auth(&mut app, &admin);
 

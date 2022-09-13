@@ -396,7 +396,9 @@ pub fn set_run_level_exec(
         &[],
     )) {
         Ok(_) => Ok(()),
-        Err(e) => Err(StdError::generic_err("Set run level execute failed")),
+        Err(e) => {
+            return Err(StdError::generic_err(e.to_string()));
+        }
     }
 }
 
@@ -422,7 +424,7 @@ pub fn set_config(
         &[],
     )) {
         Ok(_) => Ok(()),
-        Err(e) => Err(StdError::generic_err("Set run level execute failed")),
+        Err(e) => Err(StdError::generic_err("Set config execute failed")),
     }
 }
 

@@ -6,9 +6,7 @@ use shade_protocol::c_std::{
     DepsMut,
     Response,
     Addr,
-    Querier,
     StdResult,
-    Storage,
 };
 use shade_protocol::{
     contract_interfaces::snip20::{

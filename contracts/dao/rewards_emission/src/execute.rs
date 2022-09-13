@@ -1,60 +1,44 @@
 use shade_protocol::c_std::{
     to_binary,
     MessageInfo,
-    Api,
-    BalanceResponse,
-    BankQuery,
     Binary,
-    Coin,
-    CosmosMsg,
     Env,
     DepsMut,
     Response,
     Addr,
-    Querier,
-    StakingMsg,
     StdError,
     StdResult,
-    Storage,
     Uint128,
-    Validator,
 };
 
 use shade_protocol::snip20::helpers::{
-    deposit_msg,
-    redeem_msg,
-    register_receive,
     send_from_msg,
-    set_viewing_key_msg,
 };
 
 use shade_protocol::{
     contract_interfaces::{
         dao::{
-            adapter,
             rewards_emission::{Config, ExecuteAnswer, Reward},
         },
-        snip20::helpers::{fetch_snip20, Snip20Asset},
     },
     utils::{
-        asset::{scrt_balance, Contract},
+        asset::{Contract},
         generic_response::ResponseStatus,
         cycle::{Cycle, exceeds_cycle, utc_now, parse_utc_datetime},
     },
 };
 
 use crate::{
-    query,
     storage::*,
 };
 
 pub fn receive(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
     _sender: Addr,
     _from: Addr,
-    amount: Uint128,
+    _amount: Uint128,
     _msg: Option<Binary>,
 ) -> StdResult<Response> {
     //TODO: forward to distributor (quick fix mechanism)
@@ -66,7 +50,7 @@ pub fn receive(
 
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {

@@ -1,29 +1,14 @@
 use shade_multi_test::interfaces::{
-    dao::{
-        init_dao,
-        mock_adapter_complete_unbonding,
-        mock_adapter_sub_tokens,
-        system_balance_reserves,
-        system_balance_unbondable,
-        update_dao,
-    },
+    dao::{init_dao, system_balance_reserves, update_dao},
     snip20,
     treasury,
-    treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
     c_std::{Addr, Uint128},
-    contract_interfaces::dao::{
-        self,
-        treasury::AllowanceType,
-        treasury_manager::{AllocationType, Balance, Holding, Status},
-    },
+    contract_interfaces::dao::{treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
-    utils::{
-        asset::{Contract, RawContract},
-        cycle::Cycle,
-    },
+    utils::{asset::Contract, cycle::Cycle},
 };
 
 #[test]
@@ -71,7 +56,8 @@ pub fn non_manager_allowances() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
-    );
+    )
+    .unwrap();
     contracts.insert(SupportedContracts::TreasuryManager(5), Contract {
         address: Addr::unchecked(NOT_A_MANAGER),
         code_hash: "".to_string(),
@@ -86,9 +72,10 @@ pub fn non_manager_allowances() {
         Cycle::Once,
         Uint128::new(100),
         Uint128::zero(),
-    );
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+    )
+    .unwrap();
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
     snip20::send_from_exec(
         &mut app,
         NOT_A_MANAGER,
@@ -103,7 +90,7 @@ pub fn non_manager_allowances() {
         None,
     )
     .unwrap();
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
     assert_eq!(
         Uint128::zero(),
         treasury::allowance_query(
@@ -161,8 +148,9 @@ pub fn non_manager_allowances() {
         Cycle::Constant,
         Uint128::new(50),
         Uint128::zero(),
-    );
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+    )
+    .unwrap();
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
     snip20::send_from_exec(
         &mut app,
         NOT_A_MANAGER,
@@ -188,7 +176,7 @@ pub fn non_manager_allowances() {
         .unwrap(),
         Uint128::new(125)
     );
-    update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
+    update_dao(&mut app, "admin", &contracts, "SSCRT", 4).unwrap();
     assert_eq!(
         Uint128::new(50),
         treasury::allowance_query(

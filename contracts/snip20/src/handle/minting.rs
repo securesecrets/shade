@@ -1,9 +1,9 @@
-use shade_protocol::c_std::{Api, Env, DepsMut, Response, Addr, Querier, StdError, StdResult, Storage, to_binary, MessageInfo};
+use shade_protocol::c_std::{Api, Env, DepsMut, Response, Addr, StdResult, Storage, to_binary, MessageInfo};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{batch, HandleAnswer};
 use shade_protocol::contract_interfaces::snip20::errors::{minting_disabled, not_admin, not_minter};
-use shade_protocol::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, Minters, ReceiverHash, TotalSupply};
-use shade_protocol::contract_interfaces::snip20::transaction_history::{store_burn, store_mint};
+use shade_protocol::contract_interfaces::snip20::manager::{Admin, Balance, CoinInfo, Config, Minters, TotalSupply};
+use shade_protocol::contract_interfaces::snip20::transaction_history::{store_mint};
 use shade_protocol::utils::generic_response::ResponseStatus::Success;
 use shade_protocol::utils::storage::plus::{ItemStorage, MapStorage};
 
@@ -65,7 +65,7 @@ pub fn try_batch_mint(
     let sender = info.sender;
     let block = env.block;
     let denom = CoinInfo::load(deps.storage)?.symbol;
-    let mut supply = TotalSupply::load(deps.storage)?;
+    let supply = TotalSupply::load(deps.storage)?;
     for action in actions {
         supply.0.checked_add(action.amount)?;
         try_mint_impl(
@@ -85,7 +85,7 @@ pub fn try_batch_mint(
 
 pub fn try_add_minters(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     new_minters: Vec<Addr>
 ) -> StdResult<Response> {
@@ -106,7 +106,7 @@ pub fn try_add_minters(
 
 pub fn try_remove_minters(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     minters_to_remove: Vec<Addr>
 ) -> StdResult<Response> {
@@ -129,7 +129,7 @@ pub fn try_remove_minters(
 
 pub fn try_set_minters(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     minters: Vec<Addr>
 ) -> StdResult<Response> {

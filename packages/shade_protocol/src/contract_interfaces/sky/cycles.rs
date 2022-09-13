@@ -9,14 +9,10 @@ use crate::{
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary,
-    Api,
     CosmosMsg,
     Deps,
-    DepsMut,
-    Querier,
     StdError,
     StdResult,
-    Storage,
     Uint128,
 };
 

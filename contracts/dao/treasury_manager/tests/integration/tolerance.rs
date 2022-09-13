@@ -1,6 +1,5 @@
 use mock_adapter;
 use shade_multi_test::{
-    interfaces,
     multi::{
         admin::init_admin_auth,
         mock_adapter::MockAdapter,
@@ -11,18 +10,9 @@ use shade_multi_test::{
 };
 use shade_protocol::{
     c_std::{
-        coins,
-        from_binary,
         to_binary,
         Addr,
-        Binary,
-        Coin,
-        Decimal,
-        Env,
-        StdError,
-        StdResult,
         Uint128,
-        Validator,
     },
     contract_interfaces::{
         dao::{
@@ -32,10 +22,8 @@ use shade_protocol::{
         },
         snip20,
     },
-    multi_test::{App, BankSudo, StakingSudo, SudoMsg},
+    multi_test::{App},
     utils::{
-        asset::Contract,
-        cycle::Cycle,
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -54,9 +42,9 @@ fn underfunded_tolerance(
     let mut app = App::default();
 
     let admin = Addr::unchecked("admin");
-    let spender = Addr::unchecked("spender");
+    let _spender = Addr::unchecked("spender");
     let treasury = Addr::unchecked("treasury");
-    let user = Addr::unchecked("user");
+    let _user = Addr::unchecked("user");
     //let validator = Addr::unchecked("validator");
     let admin_auth = init_admin_auth(&mut app, &admin);
 
@@ -163,11 +151,11 @@ fn underfunded_tolerance(
     .unwrap();
 
     // Check adapter balance
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Adapter Balance");
@@ -195,11 +183,11 @@ fn underfunded_tolerance(
     .unwrap();
 
     // Check adapter balance
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, expected, "Final Adapter Balance");
@@ -272,9 +260,9 @@ fn overfunded_tolerance(
     let mut app = App::default();
 
     let admin = Addr::unchecked("admin");
-    let spender = Addr::unchecked("spender");
+    let _spender = Addr::unchecked("spender");
     let treasury = Addr::unchecked("treasury");
-    let user = Addr::unchecked("user");
+    let _user = Addr::unchecked("user");
     //let validator = Addr::unchecked("validator");
     let admin_auth = init_admin_auth(&mut app, &admin);
 
@@ -381,11 +369,11 @@ fn overfunded_tolerance(
     .unwrap();
 
     // Check adapter balance
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Adapter Balance");
@@ -416,11 +404,11 @@ fn overfunded_tolerance(
     .unwrap();
 
     // Check adapter balance
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, expected, "Final Adapter Balance");

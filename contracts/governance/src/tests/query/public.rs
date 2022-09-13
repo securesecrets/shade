@@ -7,7 +7,7 @@ use crate::tests::{
     get_profiles,
 };
 use shade_protocol::{
-    c_std::{StdError, Uint128},
+    c_std::{Uint128},
     contract_interfaces::governance,
 };
 use shade_protocol::utils::Query;

@@ -10,12 +10,12 @@ use crate::tests::{
     gov_msg_proposal,
 };
 use shade_protocol::{
-    c_std::{to_binary, Addr, Binary, StdResult, Uint128},
+    c_std::{to_binary, Addr, Uint128},
     contract_interfaces::{
         governance,
         governance::proposal::{ProposalMsg, Status},
     },
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, Query},
+    utils::{ExecuteCallback},
 };
 
 #[test]

@@ -4,23 +4,20 @@ use crate::{
         account_r,
         account_total_claimed_r,
         account_viewkey_r,
-        address_in_account_r,
         claim_status_r,
         config_r,
         decay_claimed_r,
         total_claimed_r,
         validate_account_permit,
-        validate_address_permit,
     },
 };
 use shade_protocol::c_std::{Deps, Uint128};
-use shade_protocol::c_std::{Api, DepsMut, Addr, Querier, StdResult, Storage};
+use shade_protocol::c_std::{Addr, StdResult};
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use shade_protocol::contract_interfaces::airdrop::{
-    account::{AccountKey, AccountPermit, AddressProofPermit},
+    account::{AccountKey, AccountPermit},
     claim_info::RequiredTask,
     errors::invalid_viewing_key,
-    AccountVerification,
     QueryAnswer,
 };
 

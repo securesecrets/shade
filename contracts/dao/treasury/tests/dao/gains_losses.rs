@@ -5,7 +5,6 @@ use shade_multi_test::interfaces::{
         mock_adapter_sub_tokens,
         system_balance_reserves,
         system_balance_unbondable,
-        update_dao,
     },
     snip20,
     treasury,
@@ -13,8 +12,8 @@ use shade_multi_test::interfaces::{
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Addr, Uint128},
-    contract_interfaces::dao::{self, treasury::AllowanceType, treasury_manager::AllocationType},
+    c_std::Uint128,
+    contract_interfaces::dao::{treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::cycle::Cycle,
 };
@@ -53,7 +52,8 @@ pub fn dao_int_gains_losses(
         alloc_amount.clone(),
         alloc_tolerance,
         is_instant_unbond,
-    );
+    )
+    .unwrap();
     let bals = {
         if is_instant_unbond {
             system_balance_reserves(&app, &contracts, "SSCRT")
@@ -97,7 +97,8 @@ pub fn dao_int_gains_losses(
             &contracts,
             "SSCRT",
             SupportedContracts::TreasuryManager(tm),
-        );
+        )
+        .unwrap();
     }
     treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
     let bals = {
@@ -111,7 +112,8 @@ pub fn dao_int_gains_losses(
                     &contracts,
                     "SSCRT",
                     SupportedContracts::TreasuryManager(tm),
-                );
+                )
+                .unwrap();
             }
             treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
             for tm in 0..num_managers {
@@ -121,17 +123,17 @@ pub fn dao_int_gains_losses(
                     &contracts,
                     "SSCRT",
                     SupportedContracts::TreasuryManager(tm),
-                );
+                )
+                .unwrap();
             }
             treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
             system_balance_reserves(&app, &contracts, "SSCRT")
         } else {
-            let sys_bal = system_balance_unbondable(&app, &contracts, "SSCRT");
+            let _sys_bal = system_balance_unbondable(&app, &contracts, "SSCRT");
             //assert_eq!(sys_bal, expected_in_between_updates, "AFTER FIRST UPDATE");
             let mut k = 0;
             for i in 0..num_managers {
-                for j in 0..alloc_amount[i].len() {
-                    println!("{}", k);
+                for _j in 0..alloc_amount[i].len() {
                     mock_adapter_complete_unbonding(
                         &mut app,
                         "admin",
@@ -150,10 +152,10 @@ pub fn dao_int_gains_losses(
                     &contracts,
                     "SSCRT",
                     SupportedContracts::TreasuryManager(tm),
-                );
+                )
+                .unwrap();
             }
             treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
-            println!("{:?}", system_balance_unbondable(&app, &contracts, "SSCRT"));
             for tm in 0..num_managers {
                 treasury_manager::update_exec(
                     &mut app,
@@ -161,12 +163,13 @@ pub fn dao_int_gains_losses(
                     &contracts,
                     "SSCRT",
                     SupportedContracts::TreasuryManager(tm),
-                );
+                )
+                .unwrap();
             }
             treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
             let mut k = 0;
             for i in 0..num_managers {
-                for j in 0..alloc_amount[i].len() {
+                for _j in 0..alloc_amount[i].len() {
                     println!("{}", k);
                     mock_adapter_complete_unbonding(
                         &mut app,
@@ -186,7 +189,8 @@ pub fn dao_int_gains_losses(
                     &contracts,
                     "SSCRT",
                     SupportedContracts::TreasuryManager(tm),
-                );
+                )
+                .unwrap();
             }
             treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
             for tm in 0..num_managers {
@@ -196,7 +200,8 @@ pub fn dao_int_gains_losses(
                     &contracts,
                     "SSCRT",
                     SupportedContracts::TreasuryManager(tm),
-                );
+                )
+                .unwrap();
             }
             treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
             //update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers);

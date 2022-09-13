@@ -4,17 +4,14 @@ use shade_protocol::{
         from_binary,
         to_binary,
         Addr,
-        Api,
         Binary,
         Coin,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         SubMsg,
         Uint128,
         WasmMsg,
@@ -28,7 +25,6 @@ use shade_protocol::{
             stored_id::UserID,
             vote::{ReceiveBalanceMsg, TalliedVotes, Vote},
             Config,
-            ExecuteMsg::Receive,
             HandleAnswer,
         },
         staking::snip20_staking,
@@ -78,8 +74,8 @@ pub fn try_proposal(
 
 pub fn try_trigger(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     proposal: Uint128,
 ) -> StdResult<Response> {
     let mut messages = vec![];
@@ -94,7 +90,7 @@ pub fn try_trigger(
         // Trigger the msg
         let proposal_msg = Proposal::msg(deps.storage, &proposal)?;
         if let Some(prop_msgs) = proposal_msg {
-            for (i, prop_msg) in prop_msgs.iter().enumerate() {
+            for (_i, prop_msg) in prop_msgs.iter().enumerate() {
                 let contract = AllowedContract::data(deps.storage, &prop_msg.target)?.contract;
                 // TODO: we can use this to setup a non fire and forget setup
                 let msg = WasmMsg::Execute {
@@ -121,12 +117,12 @@ pub fn try_trigger(
 pub fn try_cancel(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     proposal: Uint128,
 ) -> StdResult<Response> {
     // Check if passed, and check if current time > cancel time
     let status = Proposal::status(deps.storage, &proposal)?;
-    if let Status::Passed { start, end } = status {
+    if let Status::Passed { start: _, end } = status {
         if env.block.time.seconds() < end {
             return Err(StdError::generic_err("unauthorized"));
         }
@@ -185,7 +181,7 @@ fn validate_votes(votes: Vote, total_power: Uint128, settings: VoteProfile) -> S
 pub fn try_update(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     proposal: Uint128,
 ) -> StdResult<Response> {
     let mut history = Proposal::status_history(deps.storage, &proposal)?;
@@ -198,7 +194,7 @@ pub fn try_update(
     let mut messages = vec![];
 
     match status.clone() {
-        Status::AssemblyVote { start, end } => {
+        Status::AssemblyVote { start: _, end } => {
             if end > env.block.time.seconds() {
                 return Err(StdError::generic_err("unauthorized"));
             }
@@ -279,7 +275,7 @@ pub fn try_update(
                 }
             }
         }
-        Status::Voting { start, end } => {
+        Status::Voting { start: _, end } => {
             if end > env.block.time.seconds() {
                 return Err(StdError::generic_err("unauthorized"));
             }
@@ -361,11 +357,11 @@ pub fn try_receive_funding(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    sender: Addr,
+    _sender: Addr,
     from: Addr,
     amount: Uint128,
     msg: Option<Binary>,
-    memo: Option<String>,
+    _memo: Option<String>,
 ) -> StdResult<Response> {
     // Check if sent token is the funding token
     let funding_token: Contract;
@@ -464,7 +460,7 @@ pub fn try_receive_funding(
 
 pub fn try_claim_funding(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     id: Uint128,
 ) -> StdResult<Response> {
@@ -518,7 +514,7 @@ pub fn try_receive_vote(
     sender: Addr,
     msg: Option<Binary>,
     balance: Uint128,
-    memo: Option<String>,
+    _memo: Option<String>,
 ) -> StdResult<Response> {
     if let Some(token) = Config::load(deps.storage)?.vote_token {
         if info.sender != token.address {

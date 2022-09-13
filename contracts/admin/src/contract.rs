@@ -8,8 +8,6 @@ use shade_protocol::{
         InstantiateMsg,
         PermissionsResponse,
         QueryMsg,
-        RegistryAction,
-        ValidateAdminPermissionResponse,
     },
     c_std::{
         shd_entry_point,

@@ -18,12 +18,10 @@ use shade_protocol::{
             ExecuteMsg,
             Holding,
             InstantiateMsg,
-            QueryAnswer,
             QueryMsg,
             Status,
         },
     },
-    utils::cycle::parse_utc_datetime,
 };
 
 #[shd_entry_point]
@@ -122,15 +120,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let holder = deps.api.addr_validate(&holder)?;
             to_binary(&query::holding(deps, holder)?)
         }
-        QueryMsg::Metrics { date, period } => {
-            let key = match date {
-                Some(d) => parse_utc_datetime(&d)?.timestamp() as u64,
-                None => env.block.time.seconds(),
-            };
-            to_binary(&QueryAnswer::Metrics {
-                metrics: METRICS.load_period(deps.storage, key, period)?,
-            })
-        }
+        QueryMsg::Metrics {
+            date,
+            epoch,
+            period,
+        } => to_binary(&query::metrics(deps, env, date, epoch, period)?),
 
         QueryMsg::Manager(a) => match a {
             manager::SubQueryMsg::Balance { asset, holder } => {

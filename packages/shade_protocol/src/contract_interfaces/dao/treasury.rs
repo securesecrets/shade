@@ -5,8 +5,7 @@ use crate::utils::{
 };
 
 use crate::{
-    c_std::{Addr, Binary, Coin, StdResult, Uint128},
-    contract_interfaces::dao::adapter,
+    c_std::{Addr, Binary, Coin, Uint128},
 };
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};

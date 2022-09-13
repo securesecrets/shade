@@ -1,48 +1,27 @@
-use mock_adapter;
+
 use shade_multi_test::{
-    interfaces,
     multi::{
         admin::init_admin_auth,
-        mock_adapter::MockAdapter,
         snip20::Snip20,
         treasury::Treasury,
-        treasury_manager::TreasuryManager,
     },
 };
 use shade_protocol::{
     c_std::{
-        coins,
-        from_binary,
         to_binary,
         Addr,
-        Binary,
-        Coin,
-        ContractInfo,
-        Decimal,
-        Env,
-        StdError,
-        StdResult,
         Uint128,
-        Validator,
     },
-    multi_test::{App, BankSudo, StakingSudo, SudoMsg},
+    multi_test::{App},
 };
 use shade_protocol::{
     contract_interfaces::{
         dao::{
-            adapter,
-            manager,
-            //mock_adapter,
             treasury,
-            treasury::{Allowance, AllowanceType, RunLevel},
-            treasury_manager::{self, Allocation, AllocationType},
         },
         snip20,
     },
     utils::{
-        asset::{Contract, RawContract},
-        cycle::{utc_from_timestamp, Cycle},
-        storage::plus::period_storage::Period,
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -50,7 +29,7 @@ use shade_protocol::{
     },
 };
 
-use serde_json;
+
 
 //TODO test with manager
 // Add other adapters here as they come
@@ -58,7 +37,7 @@ fn batch_balance_test(amounts: Vec<Uint128>) {
     let mut app = App::default();
 
     let admin = Addr::unchecked("admin");
-    let user = Addr::unchecked("user");
+    let _user = Addr::unchecked("user");
     let admin_auth = init_admin_auth(&mut app, &admin);
     let viewing_key = "veiwing_key".to_string();
 

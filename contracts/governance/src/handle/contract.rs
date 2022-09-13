@@ -1,15 +1,12 @@
 use shade_protocol::{
     c_std::{
         to_binary,
-        Api,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, HandleAnswer},

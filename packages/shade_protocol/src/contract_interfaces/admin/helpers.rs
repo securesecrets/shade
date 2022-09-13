@@ -3,7 +3,7 @@ use crate::{
     utils::Query,
     Contract,
 };
-use cosmwasm_std::{QuerierWrapper, StdError, StdResult};
+use cosmwasm_std::{QuerierWrapper, StdResult};
 
 pub fn validate_admin<T: Into<String> + Clone>(
     querier: &QuerierWrapper,

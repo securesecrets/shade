@@ -1,13 +1,7 @@
 use shade_multi_test::multi::admin::init_admin_auth;
 use shade_protocol::c_std::{
-    coins,
-    from_binary,
     to_binary,
     Addr,
-    Binary,
-    Env,
-    StdError,
-    StdResult,
     Uint128,
 };
 
@@ -15,10 +9,10 @@ use shade_protocol::c_std::{
 
 use shade_multi_test::multi::{snip20::Snip20, treasury_manager::TreasuryManager};
 use shade_protocol::{
-    dao::{adapter, manager, treasury_manager},
+    dao::{manager, treasury_manager},
     multi_test::App,
     snip20,
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 /* No adapters configured
@@ -102,12 +96,12 @@ fn single_asset_holder_no_adapters(initial: Uint128, deposit: Uint128) {
     // Balance Checks
 
     // manager reported holder balance
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
         holder: holder.to_string().clone(),
     })
     .test_query(&manager, &app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond Manager Holder Balance");
@@ -116,12 +110,12 @@ fn single_asset_holder_no_adapters(initial: Uint128, deposit: Uint128) {
     };
 
     // manager reported treasury balance
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
         holder: treasury.to_string().clone(),
     })
     .test_query(&manager, &app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(
@@ -134,12 +128,12 @@ fn single_asset_holder_no_adapters(initial: Uint128, deposit: Uint128) {
     };
 
     // Manager reported total asset balance
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
         holder: holder.to_string().clone(),
     })
     .test_query(&manager, &app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, deposit, "Pre-unbond Manager Total Balance");
@@ -295,12 +289,12 @@ fn single_asset_holder_no_adapters(initial: Uint128, deposit: Uint128) {
     };
 
     // Manager reflects unbonded
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
         holder: holder.to_string().clone(),
     })
     .test_query(&manager, &app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount.u128(), deposit.u128() - unbond_amount.u128());

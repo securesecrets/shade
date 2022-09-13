@@ -27,19 +27,15 @@ use shade_protocol::{
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
-        StdError,
         StdResult,
         Storage,
-        SubMsg,
         Uint128,
     },
     contract_interfaces::airdrop::{
         account::{Account, AccountKey, AddressProofMsg, AddressProofPermit},
         claim_info::RequiredTask,
         errors::{
-            account_already_created,
             account_does_not_exist,
             address_already_in_account,
             airdrop_ended,
@@ -53,7 +49,6 @@ use shade_protocol::{
             invalid_task_percentage,
             not_admin,
             nothing_to_claim,
-            permit_rejected,
             unexpected_error,
         },
         Config,
@@ -178,7 +173,7 @@ pub fn try_update_config(
 
 pub fn try_add_tasks(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: &MessageInfo,
     tasks: Vec<RequiredTask>,
 ) -> StdResult<Response> {
@@ -344,7 +339,7 @@ pub fn try_account(
 
 pub fn try_disable_permit_key(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: &MessageInfo,
     key: String,
 ) -> StdResult<Response> {
@@ -359,7 +354,7 @@ pub fn try_disable_permit_key(
 
 pub fn try_set_viewing_key(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: &MessageInfo,
     key: String,
 ) -> StdResult<Response> {
@@ -371,7 +366,7 @@ pub fn try_set_viewing_key(
 
 pub fn try_complete_task(
     deps: DepsMut,
-    env: &Env,
+    _env: &Env,
     info: &MessageInfo,
     account: Addr,
 ) -> StdResult<Response> {
@@ -445,7 +440,7 @@ pub fn try_claim(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Resp
         )?))
 }
 
-pub fn try_claim_decay(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResult<Response> {
+pub fn try_claim_decay(deps: DepsMut, env: &Env, _info: &MessageInfo) -> StdResult<Response> {
     let config = config_r(deps.storage).load()?;
 
     // Check if airdrop ended
@@ -462,7 +457,7 @@ pub fn try_claim_decay(deps: DepsMut, env: &Env, info: &MessageInfo) -> StdResul
 
                 let total_claimed = total_claimed_r(deps.storage).load()?;
                 let send_total = config.airdrop_amount.checked_sub(total_claimed)?;
-                let messages = vec![send_msg(
+                let _messages = vec![send_msg(
                     dump_address,
                     send_total.into(),
                     None,

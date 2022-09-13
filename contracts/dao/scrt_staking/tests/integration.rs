@@ -1,12 +1,12 @@
 use shade_multi_test::multi::admin::init_admin_auth;
-use shade_protocol::c_std::{to_binary, Addr, Coin, Decimal, Delegation, Uint128, Validator};
+use shade_protocol::c_std::{to_binary, Addr, Coin, Delegation, Uint128};
 
 use shade_protocol::{
     contract_interfaces::{
         dao::{adapter, scrt_staking},
         snip20,
     },
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    utils::{ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 use shade_multi_test::multi::{scrt_staking::ScrtStaking, snip20::Snip20};

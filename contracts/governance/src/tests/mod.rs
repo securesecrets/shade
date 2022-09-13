@@ -1,22 +1,18 @@
 pub mod handle;
 pub mod query;
 
-use crate::contract::{execute, instantiate, query};
+
 use shade_multi_test::multi::{
     admin::{init_admin_auth, Admin},
     governance::Governance,
     query_auth::QueryAuth,
-    snip20::Snip20,
 };
 use shade_protocol::{
     c_std::{
-        from_binary,
         to_binary,
         Addr,
         Binary,
         ContractInfo,
-        Env,
-        Response,
         StdError,
         StdResult,
         Uint128,
@@ -31,16 +27,15 @@ use shade_protocol::{
             Config,
         },
     },
-    multi_test::{App, BasicApp, Executor},
+    multi_test::{App},
     query_auth,
-    serde::Serialize,
     utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
 };
 
 pub fn init_chain() -> (App, ContractInfo) {
     let mut chain = App::default();
 
-    let stored_code = chain.store_code(Admin::default().contract());
+    let _stored_code = chain.store_code(Admin::default().contract());
     let admin = init_admin_auth(&mut chain, &Addr::unchecked("admin"));
 
     let auth = query_auth::InstantiateMsg {

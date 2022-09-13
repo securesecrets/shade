@@ -227,7 +227,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
 
         // Refresh allowance if cycle is exceeded
         if !exceeds_cycle(&now, &last_refresh, allowance.cycle.clone()) {
-            println!("DOESNT EXCEED");
             // Once allowances need 1 refresh if last_refresh == 'null'
             if allowance.cycle == Cycle::Once {
                 if last_refresh.timestamp() != 0 {
@@ -241,7 +240,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                 continue;
             }
         }
-        println!("EXCEEDS");
 
         allowances[i].last_refresh = now.to_rfc3339();
 
@@ -363,7 +361,6 @@ fn rebalance(deps: DepsMut, env: &Env, _info: MessageInfo, asset: Addr) -> StdRe
                     continue;
                 }
                 if !increase.is_zero() {
-                    println!("INCREASE {}", increase);
                     messages.push(increase_allowance_msg(
                         allowance.spender.clone(),
                         increase,

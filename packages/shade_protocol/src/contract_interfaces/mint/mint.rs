@@ -7,7 +7,7 @@ use crate::c_std::{Binary, Addr};
 
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};
-use std::convert::TryFrom;
+
 
 #[cw_serde]
 pub struct Config {

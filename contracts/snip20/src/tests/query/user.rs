@@ -1,8 +1,8 @@
 use shade_protocol::c_std::{Coin, Addr, Uint128};
 use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitialBalance, QueryAnswer, QueryMsg};
-use shade_protocol::contract_interfaces::snip20::transaction_history::{RichTx, TxAction};
+use shade_protocol::contract_interfaces::snip20::transaction_history::{TxAction};
 use shade_protocol::query_auth;
-use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
+use shade_protocol::utils::{ExecuteCallback, Query};
 use crate::tests::{create_vk, init_snip20_with_auth, init_snip20_with_config};
 
 #[test]
@@ -76,7 +76,7 @@ fn allowance_auth_vk() {
 
 #[test]
 fn balance_vk() {
-    let (mut chain, snip) = init_snip20_with_config(Some(vec![InitialBalance {
+    let (chain, snip) = init_snip20_with_config(Some(vec![InitialBalance {
         address: "robinson".into(),
         amount: Uint128::new(1500)
     }]), None).unwrap();

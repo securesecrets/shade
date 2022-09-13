@@ -1,32 +1,14 @@
 use shade_multi_test::interfaces::{
-    dao::{
-        init_dao,
-        mock_adapter_complete_unbonding,
-        mock_adapter_sub_tokens,
-        system_balance_reserves,
-        system_balance_unbondable,
-        update_dao,
-    },
+    dao::init_dao,
     snip20,
     treasury,
-    treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Addr, Uint128},
-    contract_interfaces::{
-        self,
-        dao::{
-            self,
-            treasury::AllowanceType,
-            treasury_manager::{AllocationType, Balance, Holding, Status},
-        },
-    },
+    c_std::Uint128,
+    contract_interfaces::dao::{self, treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
-    utils::{
-        asset::{Contract, RawContract},
-        cycle::Cycle,
-    },
+    utils::{asset::RawContract, cycle::Cycle},
 };
 
 #[test]
@@ -73,7 +55,8 @@ pub fn execute_error() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
-    );
+    )
+    .unwrap();
     match treasury::allowance_exec(
         &mut app,
         "admin",
@@ -209,7 +192,8 @@ pub fn admin_errors() {
         ],
         vec![vec![Uint128::zero(); 4]; 4],
         true,
-    );
+    )
+    .unwrap();
     assert!(!treasury::set_config(&mut app, NOT_ADMIN, &contracts, None, None).is_ok());
     assert!(
         !treasury::set_run_level_exec(

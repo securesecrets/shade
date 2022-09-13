@@ -2,21 +2,13 @@ use shade_protocol::{
     c_std::{
         to_binary,
         Addr,
-        Api,
-        BalanceResponse,
-        BankQuery,
         Binary,
-        Coin,
-        CosmosMsg,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
-        StakingMsg,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     contract_interfaces::{
@@ -30,28 +22,24 @@ use shade_protocol::{
                 SplitMethod,
             },
         },
-        dex::shadeswap,
-        mint,
     },
-    snip20::helpers::{allowance_query, balance_query, increase_allowance_msg},
+    snip20::helpers::{balance_query},
     utils::{
-        asset::{scrt_balance, Contract},
+        asset::{Contract},
         generic_response::ResponseStatus,
-        wrap::{unwrap, wrap_and_send},
-        Query,
     },
 };
 
-use crate::{query, storage::*};
+use crate::{storage::*};
 
 pub fn receive(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     _sender: Addr,
     _from: Addr,
-    amount: Uint128,
-    msg: Option<Binary>,
+    _amount: Uint128,
+    _msg: Option<Binary>,
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -65,7 +53,7 @@ pub fn receive(
      * bond LP token into rewards
      */
 
-    let mut desired_token: Contract;
+    let desired_token: Contract;
 
     if info.sender == config.token_a.address {
         desired_token = config.token_a;
@@ -81,7 +69,7 @@ pub fn receive(
     match config.split {
         Some(split) => {
             match split {
-                SplitMethod::Conversion { contract } => {} /*
+                SplitMethod::Conversion { contract: _ } => {} /*
                                                            SplitMethod::Conversion { mint } => {
                                                                // TODO: get exchange rate
                                                                mint::QueryMsg::Mint {
@@ -117,7 +105,7 @@ pub fn receive(
         )));
     }*/
 
-    let provide_amounts: (Uint128, Uint128);
+    let _provide_amounts: (Uint128, Uint128);
     // TODO math with exchange_rate & pool ratio & received amount
 
     // Can be added with a trigger if too slow
@@ -151,7 +139,7 @@ pub fn receive(
 
 pub fn try_update_config(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     config: Config,
 ) -> StdResult<Response> {
@@ -172,14 +160,14 @@ pub fn try_update_config(
     )
 }
 
-pub fn refesh_allowances(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+pub fn refesh_allowances(_deps: DepsMut, _env: Env, _info: MessageInfo) -> StdResult<Response> {
     Ok(Response::new())
 }
 
 /* Claim rewards and restake, hold enough for pending unbondings
  * Send available unbonded funds to treasury
  */
-pub fn update(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+pub fn update(deps: DepsMut, _env: Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     //let mut messages = vec![];
 
     let config = CONFIG.load(deps.storage)?;
@@ -205,8 +193,8 @@ pub fn update(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdRes
 
 pub fn unbond(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     asset: Addr,
     amount: Uint128,
 ) -> StdResult<Response> {
@@ -246,7 +234,7 @@ pub fn unbond(
     )
 }
 
-pub fn claim(deps: DepsMut, env: Env, info: MessageInfo, asset: Addr) -> StdResult<Response> {
+pub fn claim(deps: DepsMut, env: Env, _info: MessageInfo, asset: Addr) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     if !is_supported_asset(&config, &asset) {

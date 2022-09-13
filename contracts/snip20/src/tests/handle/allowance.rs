@@ -1,5 +1,5 @@
 use shade_protocol::c_std::{Addr, Timestamp};
-use shade_protocol::utils::{ExecuteCallback, InstantiateCallback, Query, MultiTestable};
+use shade_protocol::utils::{ExecuteCallback, Query};
 use shade_protocol::c_std::Uint128;
 use shade_protocol::contract_interfaces::snip20::{ExecuteMsg, InitialBalance, QueryAnswer, QueryMsg};
 use crate::tests::init_snip20_with_config;
@@ -33,7 +33,7 @@ fn increase_allowance() {
         }.test_query(&snip, &chain).unwrap();
 
     match answer {
-        QueryAnswer::Allowance { spender, owner, allowance, expiration} => {
+        QueryAnswer::Allowance { spender: _, owner: _, allowance, expiration: _} => {
             assert_eq!(allowance, Uint128::new(1000));
         },
         _ => assert!(false)
@@ -53,7 +53,7 @@ fn increase_allowance() {
         }.test_query(&snip, &chain).unwrap();
 
     match answer {
-        QueryAnswer::Allowance { spender, owner, allowance, expiration} => {
+        QueryAnswer::Allowance { spender: _, owner: _, allowance, expiration: _} => {
             assert_eq!(allowance, Uint128::new(2000));
         },
         _ => assert!(false)
@@ -96,7 +96,7 @@ fn decrease_allowance() {
         }.test_query(&snip, &chain).unwrap();
 
     match answer {
-        QueryAnswer::Allowance { spender, owner, allowance, expiration} => {
+        QueryAnswer::Allowance { spender: _, owner: _, allowance, expiration: _} => {
             assert_eq!(allowance, Uint128::new(400));
         },
         _ => assert!(false)

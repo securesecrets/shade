@@ -7,7 +7,7 @@ use crate::c_std::Addr;
 
 use cosmwasm_schema::{cw_serde};
 use serde::Serialize;
-use std::{cmp::Ordering, collections::BinaryHeap};
+use std::{cmp::Ordering};
 
 // Configuration file for staking
 #[cw_serde]

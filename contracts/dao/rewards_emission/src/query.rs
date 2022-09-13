@@ -1,26 +1,14 @@
 use shade_protocol::c_std::{
-    Api,
     Deps,
-    BalanceResponse,
-    BankQuery,
-    Delegation,
-    DepsMut,
-    FullDelegation,
-    Addr,
-    Querier,
-    StdError,
     StdResult,
-    Storage,
-    Uint128,
 };
 
 use shade_protocol::{
     contract_interfaces::dao::rewards_emission::QueryAnswer,
-    utils::asset::scrt_balance,
 };
 
-use shade_protocol::snip20::helpers::{allowance_query, balance_query};
-use shade_protocol::contract_interfaces::dao::adapter;
+
+
 
 use crate::storage::*;
 

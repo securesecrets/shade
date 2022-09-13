@@ -1,6 +1,5 @@
 use mock_adapter;
 use shade_multi_test::{
-    interfaces,
     multi::{
         admin::init_admin_auth,
         mock_adapter::MockAdapter,
@@ -11,20 +10,12 @@ use shade_multi_test::{
 };
 use shade_protocol::{
     c_std::{
-        coins,
-        from_binary,
         to_binary,
         Addr,
-        Binary,
         Coin,
-        Decimal,
-        Env,
-        StdError,
-        StdResult,
         Uint128,
-        Validator,
     },
-    multi_test::{App, BankSudo, StakingSudo, SudoMsg},
+    multi_test::{App},
 };
 use shade_protocol::{
     contract_interfaces::{
@@ -33,15 +24,14 @@ use shade_protocol::{
             manager,
             //mock_adapter,
             treasury,
-            treasury::{Allowance, AllowanceType, RunLevel},
+            treasury::{AllowanceType, RunLevel},
             treasury_manager::{self, Allocation, AllocationType},
         },
         snip20,
     },
     utils::{
         asset::Contract,
-        cycle::{utc_from_timestamp, Cycle},
-        storage::plus::period_storage::Period,
+        cycle::{Cycle},
         ExecuteCallback,
         InstantiateCallback,
         MultiTestable,
@@ -49,7 +39,7 @@ use shade_protocol::{
     },
 };
 
-use serde_json;
+
 
 // Add other adapters here as they come
 fn bonded_adapter_int(
@@ -66,7 +56,7 @@ fn bonded_adapter_int(
     let mut app = App::default();
 
     let admin = Addr::unchecked("admin");
-    let user = Addr::unchecked("user");
+    let _user = Addr::unchecked("user");
     //let validator = Addr::unchecked("validator");
     let admin_auth = init_admin_auth(&mut app, &admin);
 
@@ -294,12 +284,12 @@ fn bonded_adapter_int(
     };
 
     // Manager reserves
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
         holder: treasury.address.to_string().clone(),
     })
     .test_query(&manager, &app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, pre_rewards.1, "Manager Reserves");
@@ -308,11 +298,11 @@ fn bonded_adapter_int(
     };
 
     // Adapter reserves should be 0 (all staked)
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "Bonded Adapter Reserves");
@@ -321,11 +311,11 @@ fn bonded_adapter_int(
     };
 
     // Adapter balance check
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, pre_rewards.2, "Adapter Balance");
@@ -346,11 +336,11 @@ fn bonded_adapter_int(
     .unwrap();
 
     // Adapter Balance
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Balance { amount } => {
             println!("L352 scrt bal {}", amount);
@@ -387,11 +377,11 @@ fn bonded_adapter_int(
     }
 
     // Adapter Balance
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Balance { amount } => {
             println!("L394 balance {}", amount);
@@ -405,11 +395,11 @@ fn bonded_adapter_int(
     };
 
     // Adapter unbondable check
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbondable {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &mut app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Unbondable { amount } => {
             assert_eq!(amount, post_rewards.2, "Adapter Unbondable");
@@ -418,12 +408,12 @@ fn bonded_adapter_int(
     };
 
     // Manager unbondable check
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Unbondable {
         asset: token.address.to_string().clone(),
         holder: treasury.address.to_string().clone(),
     })
     .test_query(&manager, &mut app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Unbondable { amount } => {
             assert_eq!(
@@ -463,11 +453,11 @@ fn bonded_adapter_int(
     .unwrap();
 
     // adapter balance
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &mut app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "Adapter Reserves Pre-fastforward");
@@ -476,11 +466,11 @@ fn bonded_adapter_int(
     };
 
     // adapter unbonding
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &mut app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Unbonding { amount } => {
             assert_eq!(
@@ -493,11 +483,11 @@ fn bonded_adapter_int(
     };
 
     // adapter claimable
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &mut app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Adapter Claimable Pre-fastforward");
@@ -506,12 +496,12 @@ fn bonded_adapter_int(
     };
 
     // Manager Claimable
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Claimable {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Claimable {
         asset: token.address.to_string().clone(),
         holder: treasury.address.to_string().clone(),
     })
     .test_query(&manager, &mut app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Claimable { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Claimable Pre-fastforward");
@@ -520,12 +510,12 @@ fn bonded_adapter_int(
     };
 
     // Manager Unbonding
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Unbonding {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Unbonding {
         asset: token.address.to_string().clone(),
         holder: treasury.address.to_string().clone(),
     })
     .test_query(&manager, &mut app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(
@@ -542,11 +532,11 @@ fn bonded_adapter_int(
         .unwrap();
 
     // adapter unbonding
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Unbonding {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &mut app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Unbonding { amount } => {
             assert_eq!(
@@ -559,11 +549,11 @@ fn bonded_adapter_int(
     };
 
     // adapter claimable
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Claimable {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &mut app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Claimable { amount } => {
             assert_eq!(
@@ -623,11 +613,11 @@ fn bonded_adapter_int(
     */
 
     // Adapter balance
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &mut app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "Adapter Balance Post Claim ");
@@ -649,11 +639,11 @@ fn bonded_adapter_int(
     };
 
     // Adapter reserves
-    match (adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
+    match adapter::QueryMsg::Adapter(adapter::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
     })
     .test_query(&adapter, &mut app)
-    .unwrap())
+    .unwrap()
     {
         adapter::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "Adapter Reserves Post Unbond");
@@ -662,12 +652,12 @@ fn bonded_adapter_int(
     };
 
     // Manager unbonding check
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Unbonding {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Unbonding {
         asset: token.address.to_string().clone(),
         holder: treasury.address.to_string().clone(),
     })
     .test_query(&manager, &mut app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Unbonding { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Unbonding Post-Claim");
@@ -676,12 +666,12 @@ fn bonded_adapter_int(
     };
 
     // Manager balance check
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Balance {
         asset: token.address.to_string().clone(),
         holder: treasury.address.to_string().clone(),
     })
     .test_query(&manager, &mut app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Balance { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Balance Post-Claim");
@@ -690,12 +680,12 @@ fn bonded_adapter_int(
     };
 
     // Manager reserves check
-    match (manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
+    match manager::QueryMsg::Manager(manager::SubQueryMsg::Reserves {
         asset: token.address.to_string().clone(),
         holder: treasury.address.to_string().clone(),
     })
     .test_query(&manager, &mut app)
-    .unwrap())
+    .unwrap()
     {
         manager::QueryAnswer::Reserves { amount } => {
             assert_eq!(amount, Uint128::zero(), "Manager Reserves Post-Unbond");
