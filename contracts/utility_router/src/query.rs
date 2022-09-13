@@ -15,7 +15,10 @@ pub fn forward_query(deps: Deps, utility_name: String, query: Binary) -> StdResu
         Some(contract) => {
             // let query_result = deps.querier.query_wasm_smart(contract.code_hash, contract.address, &query)?;
             // query_result
-            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart { contract_addr: contract.address.to_string(), code_hash: contract.code_hash, msg: query }))
+            match deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart { contract_addr: contract.address.to_string(), code_hash: contract.code_hash, msg: query })) {
+                Ok(result) => Ok(QueryAnswer::ForwardQuery { status: Success, result }),
+                Err(e) => Err(e),
+            }
         },
         None => Err(no_contract_found(utility_name)),
     }

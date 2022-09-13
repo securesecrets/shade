@@ -70,6 +70,13 @@ pub mod governance {
 //     multi_derive::implement_multi!(Bonds, bonds);
 // }
 
+#[cfg(feature = "utility_router")]
+pub mod utility_router {
+    use utility_router;
+
+    multi_derive::implement_multi!(UtilityRouter, utility_router);
+}
+
 #[cfg(feature = "query_auth")]
 pub mod query_auth {
     use query_auth;

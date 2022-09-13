@@ -1,7 +1,7 @@
 pub mod error;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, StdResult};
 use serde::Serialize;
 use crate::c_std::Binary;
 use crate::utils::{InstantiateCallback, ExecuteCallback, Query};
@@ -74,7 +74,8 @@ pub enum QueryAnswer {
         contract_status: RouterStatus
     },
     ForwardQuery {
-        
+        status: ResponseStatus,
+        result: Binary
     },
     GetContract {
         status: ResponseStatus,
