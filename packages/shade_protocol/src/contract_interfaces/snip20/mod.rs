@@ -5,10 +5,10 @@ pub mod errors;
 pub mod helpers;
 
 use cosmwasm_std::{MessageInfo, Api};
-use crate::c_std::{Binary, Env, Addr, StdError, StdResult, Storage};
+use crate::c_std::{Binary, Env, Addr, StdResult, Storage};
 use crate::query_authentication::permit::Permit;
 
-use serde::Serialize;
+
 use crate::utils::crypto::sha_256;
 use crate::utils::{ExecuteCallback, InstantiateCallback, Query};
 use cosmwasm_schema::{cw_serde};

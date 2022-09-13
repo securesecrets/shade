@@ -8,12 +8,8 @@ use shade_protocol::{
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
-        StdError,
         StdResult,
-        Storage,
-        Uint128,
     },
     dao::{
         adapter,
@@ -29,7 +25,7 @@ use crate::{execute, query, storage::*};
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
@@ -74,7 +70,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
                 let asset = deps.api.addr_validate(&asset)?;
                 execute::claim(deps, env, info, asset)
             }
-            adapter::SubExecuteMsg::Update { asset } => Ok(Response::new().set_data(to_binary(
+            adapter::SubExecuteMsg::Update { asset: _ } => Ok(Response::new().set_data(to_binary(
                 &adapter::ExecuteAnswer::Update {
                     status: ResponseStatus::Success,
                 },

@@ -25,7 +25,6 @@ use crate::{
 };
 use shade_protocol::{
     c_std::{
-        from_binary,
         shd_entry_point,
         to_binary,
         Addr,
@@ -35,11 +34,8 @@ use shade_protocol::{
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
-        StdError,
         StdResult,
-        Storage,
     },
     contract_interfaces::snip20::{
         errors::{
@@ -51,7 +47,6 @@ use shade_protocol::{
         },
         manager::{ContractStatusLevel, Key, PermitKey},
         ExecuteMsg,
-        HandleAnswer,
         InstantiateMsg,
         Permission,
         QueryMsg,
@@ -103,7 +98,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
     pad_handle_result(
         match msg {
-            ExecuteMsg::Redeem { amount, denom, .. } => try_redeem(deps, env, info, amount),
+            ExecuteMsg::Redeem { amount, denom: _, .. } => try_redeem(deps, env, info, amount),
 
             ExecuteMsg::Deposit { .. } => try_deposit(deps, env, info),
 
@@ -267,7 +262,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     )
 }
 
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         to_binary(&match msg {
             QueryMsg::TokenInfo {} => query::token_info(deps)?,

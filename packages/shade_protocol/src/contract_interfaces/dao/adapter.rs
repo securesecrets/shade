@@ -1,19 +1,11 @@
 use crate::{
     c_std::{
         Addr,
-        Api,
-        Binary,
         CosmosMsg,
-        Decimal,
-        Deps,
-        DepsMut,
-        Querier,
         QuerierWrapper,
         StdError,
         StdResult,
-        Storage,
         Uint128,
-        Validator,
     },
     utils::{asset::Contract, generic_response::ResponseStatus},
 };

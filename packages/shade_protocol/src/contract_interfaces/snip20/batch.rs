@@ -1,4 +1,4 @@
-use crate::c_std::{Binary, Addr};
+use crate::c_std::{Binary};
 
 use cosmwasm_schema::{cw_serde};
 use crate::c_std::Uint128;

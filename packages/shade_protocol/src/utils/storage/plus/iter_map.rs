@@ -1,13 +1,11 @@
-use cosmwasm_std::{to_binary, StdError, StdResult, Storage, Uint128};
-use secret_storage_plus::{Item, Key, KeyDeserialize, Map, Prefixer, PrimaryKey};
+use cosmwasm_std::{to_binary, StdError, StdResult, Storage};
+use secret_storage_plus::{KeyDeserialize, Map, Prefixer, PrimaryKey};
 use serde::{
-    de::{self, DeserializeOwned},
-    ser,
+    de::{DeserializeOwned},
     Deserialize,
     Serialize,
 };
 use std::{
-    marker::PhantomData,
     ops::{Add, AddAssign, Index, Sub},
 };
 
@@ -259,20 +257,17 @@ where
 mod tests {
     use crate::utils::storage::plus::iter_map::IterMap;
     use cosmwasm_std::{
-        testing::{MockApi, MockQuerier, MockStorage},
+        testing::{MockStorage},
         Addr,
         CustomQuery,
-        OwnedDeps,
         Storage,
         Uint64,
     };
     use serde::{
-        de::{self, DeserializeOwned},
-        ser,
         Deserialize,
         Serialize,
     };
-    use std::marker::PhantomData;
+    
 
     #[derive(Clone, Serialize, Deserialize)]
     struct MyQuery;
@@ -280,13 +275,13 @@ mod tests {
 
     #[test]
     fn initialization() {
-        let mut storage = MockStorage::new();
+        let _storage = MockStorage::new();
 
-        let iter: IterMap<(Addr), Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
+        let _iter: IterMap<Addr, Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
     }
 
-    fn generate(size: u8, storage: &mut dyn Storage) -> IterMap<(String), Uint64, u64> {
-        let iter: IterMap<(String), Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
+    fn generate(size: u8, storage: &mut dyn Storage) -> IterMap<String, Uint64, u64> {
+        let iter: IterMap<String, Uint64, u64> = IterMap::new_override("TEST", "SIZE-TEST");
 
         for i in 0..size {
             iter.push(storage, "TESTING".to_string(), &Uint64::new(i as u64))

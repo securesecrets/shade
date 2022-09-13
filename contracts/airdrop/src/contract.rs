@@ -16,17 +16,14 @@ use shade_protocol::{
     c_std::{
         shd_entry_point,
         to_binary,
-        Api,
         Binary,
         Deps,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     contract_interfaces::airdrop::{
@@ -181,7 +178,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[shd_entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     pad_query_result(
         match msg {
             QueryMsg::Config {} => to_binary(&query::config(deps)?),

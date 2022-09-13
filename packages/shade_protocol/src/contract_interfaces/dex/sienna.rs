@@ -1,5 +1,5 @@
 use crate::{
-    c_std::{Addr, Deps, DepsMut, StdError, StdResult, Uint128},
+    c_std::{Addr, Deps, StdResult, Uint128},
     contract_interfaces::{dex::dex, oracles::band},
     utils::{
         asset::Contract,

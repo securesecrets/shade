@@ -1,6 +1,6 @@
 use crate::utils::asset::RawContract;
 use crate::utils::{asset::Contract, generic_response::ResponseStatus};
-use crate::c_std::{Binary, Decimal, Delegation, Addr, Uint128, Validator};
+use crate::c_std::{Binary, Decimal, Addr, Uint128, Validator};
 
 use crate::contract_interfaces::dao::adapter;
 

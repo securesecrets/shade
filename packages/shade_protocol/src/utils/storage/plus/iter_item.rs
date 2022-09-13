@@ -1,15 +1,12 @@
-use crate::utils::storage::plus::iter_map::{Increment, IndexableIterMap, IterKey, IterMap};
-use cosmwasm_std::{to_binary, StdError, StdResult, Storage, Uint128};
-use secret_storage_plus::{Item, Key, KeyDeserialize, Map, Prefixer, PrimaryKey};
+use crate::utils::storage::plus::iter_map::{Increment, IterKey};
+use cosmwasm_std::{StdError, StdResult, Storage};
+use secret_storage_plus::{Item, Map};
 use serde::{
-    de::{self, DeserializeOwned},
-    ser,
-    Deserialize,
+    de::{DeserializeOwned},
     Serialize,
 };
 use std::{
-    marker::PhantomData,
-    ops::{Add, AddAssign, Index, Sub, SubAssign},
+    ops::{Add, AddAssign, Index, Sub},
 };
 
 pub struct IterItem<'a, T, N>
@@ -217,20 +214,16 @@ where
 mod tests {
     use crate::utils::storage::plus::iter_item::IterItem;
     use cosmwasm_std::{
-        testing::{MockApi, MockQuerier, MockStorage},
-        Addr,
+        testing::{MockStorage},
         CustomQuery,
-        OwnedDeps,
         Storage,
         Uint64,
     };
     use serde::{
-        de::{self, DeserializeOwned},
-        ser,
         Deserialize,
         Serialize,
     };
-    use std::marker::PhantomData;
+    
 
     #[derive(Clone, Serialize, Deserialize)]
     struct MyQuery;
@@ -238,9 +231,9 @@ mod tests {
 
     #[test]
     fn initialization() {
-        let mut storage = MockStorage::new();
+        let _storage = MockStorage::new();
 
-        let iter: IterItem<Uint64, u64> = IterItem::new_override("TEST", "SIZE-TEST");
+        let _iter: IterItem<Uint64, u64> = IterItem::new_override("TEST", "SIZE-TEST");
     }
 
     fn generate(size: u8, storage: &mut dyn Storage) -> IterItem<Uint64, u64> {
@@ -270,7 +263,7 @@ mod tests {
             iter.push(&mut storage, &Uint64::new(i as u64)).unwrap();
         }
 
-        let item = iter.remove(&mut storage).unwrap();
+        let _item = iter.remove(&mut storage).unwrap();
 
         assert_eq!(9, iter.size(&storage).unwrap());
     }

@@ -1,8 +1,8 @@
-use cosmwasm_std::{MessageInfo, Timestamp};
-use crate::c_std::{Binary, Env, Addr, StdError, StdResult, Storage, BlockInfo};
-use crate::query_authentication::viewing_keys::ViewingKey;
+use cosmwasm_std::{Timestamp};
+use crate::c_std::{Addr, StdResult, Storage, BlockInfo};
 
-use crate::utils::crypto::{Prng, sha_256};
+
+
 use cosmwasm_schema::{cw_serde};
 use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{allowance_expired, contract_status_level_invalid, insufficient_allowance, no_funds, not_enough_funds};

@@ -8,10 +8,7 @@ use shade_protocol::{
         Env,
         DepsMut,
         Response,
-        Querier,
-        StdError,
         StdResult,
-        Storage,
         Uint128, MessageInfo,
     },
     dao::{
@@ -36,7 +33,7 @@ use crate::{
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let config = Config {
@@ -111,7 +108,7 @@ pub fn execute(
 #[entry_point]
 pub fn query(
     deps: Deps,
-    env: Env,
+    _env: Env,
     msg: QueryMsg,
 ) -> StdResult<Binary> {
     match msg {

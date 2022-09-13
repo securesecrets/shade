@@ -2,15 +2,12 @@ use shade_protocol::{
     c_std::{
         to_binary,
         Addr,
-        Api,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
     },
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
     snip20::helpers::register_receive,
@@ -80,10 +77,10 @@ pub fn try_set_config(
 }
 
 pub fn try_set_runtime_state(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    state: RuntimeState,
+    _deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    _state: RuntimeState,
 ) -> StdResult<Response> {
     todo!();
     Ok(

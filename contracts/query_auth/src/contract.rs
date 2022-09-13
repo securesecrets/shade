@@ -3,17 +3,14 @@ use shade_protocol::{
     c_std::{
         shd_entry_point,
         to_binary,
-        Api,
         Binary,
         Deps,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
     },
     contract_interfaces::query_auth::{
         Admin,
@@ -33,7 +30,7 @@ pub const RESPONSE_BLOCK_SIZE: usize = 256;
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     Admin(msg.admin_auth).save(deps.storage)?;
@@ -96,7 +93,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 }
 
 #[shd_entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let status = ContractStatus::load(deps.storage)?;
     match status {
         // Do nothing

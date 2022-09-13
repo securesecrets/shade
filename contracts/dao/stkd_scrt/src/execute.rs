@@ -4,7 +4,6 @@ use shade_protocol::{
         to_binary,
         Addr,
         Binary,
-        Coin,
         DepsMut,
         Env,
         MessageInfo,
@@ -30,7 +29,7 @@ use crate::storage::*;
 
 pub fn receive(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     _sender: Addr,
     _from: Addr,

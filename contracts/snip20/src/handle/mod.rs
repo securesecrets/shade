@@ -7,7 +7,6 @@ use shade_protocol::c_std::Uint128;
 use shade_protocol::c_std::{
     MessageInfo,
     to_binary,
-    Api,
     BankMsg,
     Coin,
     CosmosMsg,
@@ -15,14 +14,11 @@ use shade_protocol::c_std::{
     DepsMut,
     Response,
     Addr,
-    Querier,
-    StdError,
     StdResult,
     Storage,
 };
 use shade_protocol::query_authentication::viewing_keys::ViewingKey;
 use shade_protocol::{Contract, contract_interfaces::snip20::{
-    batch,
     manager::{
         Admin,
         Balance,
@@ -31,13 +27,12 @@ use shade_protocol::{Contract, contract_interfaces::snip20::{
         ContractStatusLevel,
         HashedKey,
         Key,
-        Minters,
         PermitKey,
         RandSeed,
         ReceiverHash,
         TotalSupply,
     },
-    transaction_history::{store_deposit, store_mint, store_redeem},
+    transaction_history::{store_deposit, store_redeem},
     HandleAnswer,
 }, utils::{
     generic_response::ResponseStatus::Success,
@@ -125,7 +120,7 @@ pub fn try_deposit(
 
 pub fn try_change_admin(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     address: Addr,
 ) -> StdResult<Response> {
@@ -140,7 +135,7 @@ pub fn try_change_admin(
 
 pub fn try_update_query_auth(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     auth: Option<Contract>,
 ) -> StdResult<Response> {
@@ -160,7 +155,7 @@ pub fn try_update_query_auth(
 
 pub fn try_set_contract_status(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     status_level: ContractStatusLevel,
 ) -> StdResult<Response> {
@@ -177,7 +172,7 @@ pub fn try_set_contract_status(
 
 pub fn try_register_receive(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     code_hash: String,
 ) -> StdResult<Response> {
@@ -204,11 +199,11 @@ pub fn try_create_viewing_key(
 
 pub fn try_set_viewing_key(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     key: String,
 ) -> StdResult<Response> {
-    let seed = RandSeed::load(deps.storage)?.0;
+    let _seed = RandSeed::load(deps.storage)?.0;
 
     HashedKey(Key(key).hash()).save(deps.storage, info.sender)?;
 
@@ -217,7 +212,7 @@ pub fn try_set_viewing_key(
 
 pub fn try_revoke_permit(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     permit_name: String,
 ) -> StdResult<Response> {

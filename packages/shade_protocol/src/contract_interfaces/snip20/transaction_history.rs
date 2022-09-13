@@ -2,7 +2,7 @@ use cosmwasm_std::Timestamp;
 use cosmwasm_schema::{cw_serde};
 
 use crate::c_std::{
-    Api, CanonicalAddr, Coin, Addr, StdError, StdResult, Storage, BlockInfo
+    Coin, Addr, StdError, StdResult, Storage, BlockInfo
 };
 use crate::c_std::Uint128;
 use crate::contract_interfaces::snip20::errors::{legacy_cannot_convert_from_tx, tx_code_invalid_conversion};
