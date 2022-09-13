@@ -18,12 +18,10 @@ use shade_protocol::{
             ExecuteMsg,
             Holding,
             InstantiateMsg,
-            QueryAnswer,
             QueryMsg,
             Status,
         },
     },
-    utils::cycle::parse_utc_datetime,
 };
 
 #[shd_entry_point]

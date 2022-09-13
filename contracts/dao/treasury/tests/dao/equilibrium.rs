@@ -2,19 +2,16 @@ use shade_multi_test::interfaces::{
     dao::{
         init_dao,
         mock_adapter_complete_unbonding,
-        mock_adapter_sub_tokens,
         system_balance_reserves,
         system_balance_unbondable,
-        update_dao,
     },
-    snip20,
     treasury,
     treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Addr, Uint128},
-    contract_interfaces::dao::{self, treasury::AllowanceType, treasury_manager::AllocationType},
+    c_std::{Uint128},
+    contract_interfaces::dao::{treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::cycle::Cycle,
 };
@@ -104,8 +101,8 @@ pub fn equilibrium_test(
         treasury::update_exec(&mut app, "admin", &contracts, "SSCRT").unwrap();
         if !is_instant_unbond {
             let mut k = 0;
-            for i in 0..num_managers {
-                for j in 0..num_managers {
+            for _i in 0..num_managers {
+                for _j in 0..num_managers {
                     println!("{}", k);
                     mock_adapter_complete_unbonding(
                         &mut app,

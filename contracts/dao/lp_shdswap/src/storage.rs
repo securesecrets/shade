@@ -1,8 +1,7 @@
 use shade_protocol::{
-    c_std::{Addr, Storage, Uint128},
+    c_std::{Addr, Uint128},
     contract_interfaces::dao::lp_shdswap,
     secret_storage_plus::{Item, Map},
-    utils::asset::Contract,
 };
 
 pub const CONFIG: Item<lp_shdswap::Config> = Item::new("config");

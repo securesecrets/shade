@@ -2,14 +2,12 @@ use shade_multi_test::interfaces::{
     dao::{
         init_dao,
         mock_adapter_complete_unbonding,
-        mock_adapter_sub_tokens,
         system_balance_reserves,
         system_balance_unbondable,
         update_dao,
     },
     snip20,
     treasury,
-    treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
@@ -98,8 +96,8 @@ pub fn migration_test(is_instant_unbond: bool) {
         update_dao(&mut app, "admin", &contracts, "SSCRT", 4);
     } else {
         let mut k = 0;
-        for i in 0..4 {
-            for j in 0..4 {
+        for _i in 0..4 {
+            for _j in 0..4 {
                 mock_adapter_complete_unbonding(
                     &mut app,
                     "admin",

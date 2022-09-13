@@ -2,22 +2,19 @@ use shade_multi_test::interfaces::{
     dao::{
         init_dao,
         mock_adapter_complete_unbonding,
-        mock_adapter_sub_tokens,
         system_balance_reserves,
         system_balance_unbondable,
         update_dao,
     },
     snip20,
-    treasury,
     treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Addr, Uint128},
+    c_std::{Uint128},
     contract_interfaces::dao::{
-        self,
         treasury::AllowanceType,
-        treasury_manager::{AllocationType, Balance, Holding, Status},
+        treasury_manager::{AllocationType},
     },
     multi_test::App,
     utils::cycle::Cycle,
@@ -159,8 +156,8 @@ pub fn multiple_holders(
     if !is_instant_unbond {
         update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
         let mut k = 0;
-        for i in 0..num_managers {
-            for j in 0..4 {
+        for _i in 0..num_managers {
+            for _j in 0..4 {
                 mock_adapter_complete_unbonding(
                     &mut app,
                     "admin",
@@ -238,8 +235,8 @@ pub fn multiple_holders(
     .unwrap();
     if !is_instant_unbond {
         let mut k = 0;
-        for i in 0..num_managers {
-            for j in 0..4 {
+        for _i in 0..num_managers {
+            for _j in 0..4 {
                 mock_adapter_complete_unbonding(
                     &mut app,
                     "admin",
@@ -263,8 +260,8 @@ pub fn multiple_holders(
     update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
     if !is_instant_unbond {
         let mut k = 0;
-        for i in 0..num_managers {
-            for j in 0..4 {
+        for _i in 0..num_managers {
+            for _j in 0..4 {
                 mock_adapter_complete_unbonding(
                     &mut app,
                     "admin",
@@ -286,12 +283,12 @@ pub fn multiple_holders(
         .unwrap();
     }
     update_dao(&mut app, "admin", &contracts, "SSCRT", num_managers).unwrap();
-    match (treasury_manager::holding_query(
+    match treasury_manager::holding_query(
         &app,
         &contracts,
         SupportedContracts::TreasuryManager(0),
         holder.to_string(),
-    )) {
+    ) {
         Ok(_) => assert!(false, "holder was not removed"),
         Err(_) => assert!(true),
     }

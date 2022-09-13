@@ -5,18 +5,16 @@ use shade_multi_test::interfaces::{
     dao::{
         init_dao,
         mock_adapter_complete_unbonding,
-        mock_adapter_sub_tokens,
         system_balance_reserves,
         system_balance_unbondable,
         update_dao,
     },
-    snip20,
     treasury,
     treasury_manager,
     utils::{DeployedContracts, SupportedContracts},
 };
 use shade_protocol::{
-    c_std::{Addr, Uint128},
+    c_std::{Uint128},
     contract_interfaces::dao::{self, treasury::AllowanceType, treasury_manager::AllocationType},
     multi_test::App,
     utils::cycle::Cycle,
@@ -132,7 +130,7 @@ pub fn dao_int_test(
     if !is_instant_unbond {
         k = 0;
         for i in 0..num_managers {
-            for j in 0..alloc_amount[i].len() {
+            for _j in 0..alloc_amount[i].len() {
                 println!("{}", k);
                 mock_adapter_complete_unbonding(
                     &mut app,
@@ -151,9 +149,9 @@ pub fn dao_int_test(
         bals = system_balance_reserves(&app, &contracts, "SSCRT");
     }
     assert_eq!(bals.0, initial_treasury_bal);
-    for (i, manager_tuples) in bals.1.iter().enumerate() {
+    for (_i, manager_tuples) in bals.1.iter().enumerate() {
         assert_eq!(manager_tuples.0, Uint128::zero());
-        for (j, adapter_bals) in manager_tuples.1.iter().enumerate() {
+        for (_j, adapter_bals) in manager_tuples.1.iter().enumerate() {
             assert_eq!(adapter_bals.clone(), Uint128::zero());
         }
     }
