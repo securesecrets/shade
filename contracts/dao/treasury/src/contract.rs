@@ -3,6 +3,7 @@ use shade_protocol::{
     c_std::{
         shd_entry_point,
         to_binary,
+        Addr,
         Binary,
         Deps,
         DepsMut,
@@ -12,6 +13,7 @@ use shade_protocol::{
         StdResult,
     },
     dao::treasury::{Config, ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, RunLevel},
+    utils::asset::Contract,
 };
 
 #[shd_entry_point]
@@ -52,8 +54,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             multisig,
         } => execute::try_update_config(deps, env, info, admin_auth, multisig),
         ExecuteMsg::RegisterAsset { contract } => {
-            let contract = contract.into_valid(deps.api)?;
+            //let contract = contract.into_valid(deps.api)?;
+            let contract = Contract {
+                address: Addr::unchecked(contract.address),
+                code_hash: contract.code_hash,
+            };
             execute::try_register_asset(deps, &env, info, &contract)
+            //Ok(Response::new())
         }
         ExecuteMsg::RegisterManager { contract } => {
             let mut contract = contract.into_valid(deps.api)?;

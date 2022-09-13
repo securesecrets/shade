@@ -3,8 +3,8 @@ import json
 import time
 
 # Presetup some commands
-query_list_code = ['secretd', 'query', 'compute', 'list-code']
-MAX_TRIES = 30
+query_list_code = ['secretcli', 'query', 'compute', 'list-code']
+MAX_TRIES = 10
 
 GAS_METRICS = []
 STORE_GAS = '4000000'
@@ -18,7 +18,7 @@ def run_command(command):
     :param wait: Time to wait for command
     :return: Output string
     """
-    print(' '.join(command))
+    #print(' '.join(command))
     p = Popen(command, stdout=PIPE, stderr=PIPE, text=True)
     output, err = p.communicate()
     status = p.wait()
@@ -37,7 +37,7 @@ def store_contract(contract, user='a', backend='test'):
     :return: Contract ID
     """
 
-    command = ['secretd', 'tx', 'compute', 'store', f'./compiled/{contract}',
+    command = ['secretcli', 'tx', 'compute', 'store', f'./compiled/{contract}',
                '--from', user, '--gas', STORE_GAS, '-y']
 
     if backend is not None:
@@ -64,7 +64,7 @@ def instantiate_contract(contract, msg, label, user='a', backend='test'):
     :return:
     """
 
-    command = ['secretd', 'tx', 'compute', 'instantiate', contract, msg, '--from',
+    command = ['secretcli', 'tx', 'compute', 'instantiate', contract, msg, '--from',
                user, '--label', label, '-y', '--gas', '500000']
 
     if backend is not None:
@@ -74,19 +74,24 @@ def instantiate_contract(contract, msg, label, user='a', backend='test'):
 
 
 def list_code():
-    command = ['secretd', 'query', 'compute', 'list-code']
+    command = ['secretcli', 'query', 'compute', 'list-code']
 
     return json.loads(run_command(command))
 
 
 def list_contract_by_code(code):
-    command = ['secretd', 'query', 'compute', 'list-contract-by-code', code]
+    command = ['secretcli', 'query', 'compute', 'list-contract-by-code', code]
 
     return json.loads(run_command(command))
 
+def contract_hash(address):
+    command = ['secretcli', 'query', 'compute', 'contract-hash', address]
+
+    return run_command(command)
+
 
 def execute_contract(contract, msg, user='a', backend='test', amount=None, compute=True):
-    command = ['secretd', 'tx', 'compute', 'execute', contract, json.dumps(msg), '--from', user, '--gas', GAS, '-y']
+    command = ['secretcli', 'tx', 'compute', 'execute', contract, json.dumps(msg), '--from', user, '--gas', GAS, '-y']
 
     if backend is not None:
         command += ['--keyring-backend', backend]
@@ -101,15 +106,16 @@ def execute_contract(contract, msg, user='a', backend='test', amount=None, compu
 
 
 def query_hash(hash):
-    return run_command(['secretd', 'q', 'tx', hash])
+    return run_command(['secretcli', 'q', 'tx', hash])
 
 
 def compute_hash(hash):
-    return run_command(['secretd', 'q', 'compute', 'tx', hash])
+    print(hash)
+    return run_command(['secretcli', 'q', 'compute', 'tx', hash])
 
 
 def query_contract(contract, msg):
-    command = ['secretd', 'query', 'compute', 'query', contract, json.dumps(msg)]
+    command = ['secretcli', 'query', 'compute', 'query', contract, json.dumps(msg)]
     out = run_command(command)
     try:
         return json.loads(out)

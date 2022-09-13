@@ -90,13 +90,7 @@ fn bonded_adapter_int(
     );
 
     // Update treasury
-    interfaces::treasury::update_exec(
-        &mut app,
-        &admin.to_string(),
-        &contracts,
-        &symbol.to_string(),
-    )
-    .unwrap();
+    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol).unwrap();
 
     // Check initial allowance
     assert_eq!(
@@ -104,7 +98,7 @@ fn bonded_adapter_int(
             &app,
             &admin.to_string(),
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::TreasuryManager(0),
         )
         .unwrap(),
@@ -117,7 +111,7 @@ fn bonded_adapter_int(
         &mut app,
         &admin.to_string(),
         &contracts,
-        &symbol.to_string(),
+        symbol,
         SupportedContracts::TreasuryManager(0),
     )
     .unwrap();
@@ -127,14 +121,14 @@ fn bonded_adapter_int(
         &mut app,
         &admin.to_string(),
         &contracts,
-        &symbol.to_string(),
+        symbol,
         SupportedContracts::MockAdapter(0),
     )
     .unwrap();
 
     // Treasury reserves check
     assert_eq!(
-        interfaces::treasury::reserves_query(&app, &contracts, &symbol.to_string()).unwrap(),
+        interfaces::treasury::reserves_query(&app, &contracts, symbol).unwrap(),
         pre_rewards.0,
         "Treasury Reserves",
     );
@@ -144,7 +138,7 @@ fn bonded_adapter_int(
         interfaces::treasury_manager::reserves_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::TreasuryManager(0),
             SupportedContracts::Treasury,
         )
@@ -158,7 +152,7 @@ fn bonded_adapter_int(
         interfaces::dao::reserves_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -171,7 +165,7 @@ fn bonded_adapter_int(
         interfaces::dao::balance_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -184,7 +178,7 @@ fn bonded_adapter_int(
         &mut app,
         &admin.to_string(),
         &contracts,
-        &symbol.to_string(),
+        symbol,
         contracts
             .get(&SupportedContracts::MockAdapter(0))
             .unwrap()
@@ -200,7 +194,7 @@ fn bonded_adapter_int(
         interfaces::dao::balance_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -213,26 +207,20 @@ fn bonded_adapter_int(
         &mut app,
         &admin.to_string(),
         &contracts,
-        &symbol.to_string(),
+        symbol,
         SupportedContracts::TreasuryManager(0),
     )
     .unwrap();
 
     // Update treasury
-    interfaces::treasury::update_exec(
-        &mut app,
-        &admin.to_string(),
-        &contracts,
-        &symbol.to_string(),
-    )
-    .unwrap();
+    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol).unwrap();
 
     // Adapter Balance
     assert_eq!(
         interfaces::dao::balance_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -245,7 +233,7 @@ fn bonded_adapter_int(
         interfaces::dao::unbondable_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -258,7 +246,7 @@ fn bonded_adapter_int(
         interfaces::treasury_manager::unbondable_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::TreasuryManager(0),
             SupportedContracts::Treasury,
         )
@@ -272,7 +260,7 @@ fn bonded_adapter_int(
         &mut app,
         &admin.to_string(),
         &contracts,
-        &symbol.to_string(),
+        symbol,
         SupportedContracts::TreasuryManager(0),
         post_rewards.1 + post_rewards.2,
     )
@@ -283,7 +271,7 @@ fn bonded_adapter_int(
         interfaces::dao::reserves_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -296,7 +284,7 @@ fn bonded_adapter_int(
         interfaces::dao::unbonding_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -309,7 +297,7 @@ fn bonded_adapter_int(
         interfaces::dao::claimable_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -322,7 +310,7 @@ fn bonded_adapter_int(
         interfaces::treasury_manager::claimable_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::TreasuryManager(0),
             SupportedContracts::Treasury,
         )
@@ -336,7 +324,7 @@ fn bonded_adapter_int(
         interfaces::treasury_manager::unbonding_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::TreasuryManager(0),
             SupportedContracts::Treasury,
         )
@@ -359,7 +347,7 @@ fn bonded_adapter_int(
         interfaces::dao::unbonding_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -372,7 +360,7 @@ fn bonded_adapter_int(
         interfaces::dao::claimable_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -385,7 +373,7 @@ fn bonded_adapter_int(
         &mut app,
         &admin.to_string(),
         &contracts,
-        &symbol.to_string(),
+        symbol,
         SupportedContracts::TreasuryManager(0),
     )
     .unwrap();
@@ -395,7 +383,7 @@ fn bonded_adapter_int(
         interfaces::dao::balance_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -405,7 +393,7 @@ fn bonded_adapter_int(
 
     // Treasury balance check
     assert_eq!(
-        interfaces::treasury::balance_query(&app, &contracts, &symbol.to_string(),).unwrap(),
+        interfaces::treasury::balance_query(&app, &contracts, symbol,).unwrap(),
         deposit + rewards,
         "Treasury Balance Post Claim"
     );
@@ -415,7 +403,7 @@ fn bonded_adapter_int(
         interfaces::dao::reserves_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::MockAdapter(0)
         )
         .unwrap(),
@@ -428,7 +416,7 @@ fn bonded_adapter_int(
         interfaces::treasury_manager::reserves_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::TreasuryManager(0),
             SupportedContracts::Treasury,
         )
@@ -442,7 +430,7 @@ fn bonded_adapter_int(
         interfaces::treasury_manager::balance_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::TreasuryManager(0),
             SupportedContracts::Treasury,
         )
@@ -456,7 +444,7 @@ fn bonded_adapter_int(
         interfaces::treasury_manager::reserves_query(
             &app,
             &contracts,
-            &symbol.to_string(),
+            symbol,
             SupportedContracts::TreasuryManager(0),
             SupportedContracts::Treasury,
         )
@@ -467,12 +455,12 @@ fn bonded_adapter_int(
 
     // Treasury reserves check
     assert_eq!(
-        interfaces::treasury::reserves_query(&app, &contracts, &symbol.to_string(),).unwrap(),
+        interfaces::treasury::reserves_query(&app, &contracts, symbol,).unwrap(),
         deposit + rewards,
         "Treasury Reserves Post-Unbond"
     );
     assert_eq!(
-        interfaces::treasury::balance_query(&app, &contracts, &symbol.to_string(),).unwrap(),
+        interfaces::treasury::balance_query(&app, &contracts, symbol,).unwrap(),
         deposit + rewards,
         "Treasury Balance Post-Unbond"
     );
@@ -486,15 +474,10 @@ fn bonded_adapter_int(
     )
     .unwrap();
 
-    interfaces::treasury::update_exec(
-        &mut app,
-        &admin.to_string(),
-        &contracts,
-        &symbol.to_string(),
-    );
+    interfaces::treasury::update_exec(&mut app, &admin.to_string(), &contracts, symbol);
 
     assert_eq!(
-        interfaces::treasury::balance_query(&app, &contracts, &symbol.to_string(),).unwrap(),
+        interfaces::treasury::balance_query(&app, &contracts, symbol,).unwrap(),
         Uint128::zero(),
         "post-migration full unbond"
     );

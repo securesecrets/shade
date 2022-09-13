@@ -52,17 +52,15 @@ class Contract:
             self.code_hash = instantiated_contract.code_hash
         else:
             Response = secretlib.instantiate_contract(str(self.code_id), initMsg, label, admin, backend)
-            contracts = secretlib.list_code()
-            for contract in contracts:
-                if str(contract['id']) == str(self.code_id):
-                    self.code_hash = contract["data_hash"]
-                    break
-            #print(json.dumps(Response, indent=2))
+
             try:
-                for attribute in Response["logs"][0]["events"][0]["attributes"]:
-                    if attribute["key"] == "contract_address":
-                        self.address = attribute["value"]
-                        break
+                for log in Response['logs']:
+                    for event in log['events']:
+                        for attribute in event["attributes"]:
+                            if attribute["key"] == "contract_address":
+                                self.address = attribute["value"]
+                                break
+                self.code_hash = secretlib.contract_hash(self.address)
             except Exception as e:
                 print(Response)
                 raise e
