@@ -1,5 +1,5 @@
 use shade_protocol::{
-    c_std::{Addr, Api, Deps, DepsMut, Querier, StdError, StdResult, Storage, Uint128},
+    c_std::{Addr, Deps, StdError, StdResult},
     contract_interfaces::governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
@@ -10,7 +10,7 @@ use shade_protocol::{
         QueryAnswer,
     },
     governance::{stored_id::UserID, Pagination, ResponseWithID},
-    utils::storage::{default::SingletonStorage, plus::ItemStorage},
+    utils::storage::plus::ItemStorage,
 };
 use std::cmp::min;
 

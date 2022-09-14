@@ -4,17 +4,13 @@ use shade_protocol::{
         from_binary,
         to_binary,
         Addr,
-        Api,
         Binary,
-        Coin,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
-        Storage,
         Uint128,
     },
     contract_interfaces::governance::{
@@ -27,7 +23,7 @@ use shade_protocol::{
         HandleAnswer,
         MSG_VARIABLE,
     },
-    utils::{generic_response::ResponseStatus, storage::default::BucketStorage},
+    utils::generic_response::ResponseStatus,
 };
 
 pub fn try_assembly_vote(
@@ -186,8 +182,8 @@ pub fn try_assembly_proposal(
 
 pub fn try_add_assembly(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     name: String,
     metadata: String,
     members: Vec<Addr>,
@@ -217,8 +213,8 @@ pub fn try_add_assembly(
 
 pub fn try_set_assembly(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     id: u16,
     name: Option<String>,
     metadata: Option<String>,

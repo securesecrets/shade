@@ -2,17 +2,14 @@ use shade_protocol::{
     c_std::{
         to_binary,
         Addr,
-        Api,
         DepsMut,
         Env,
         MessageInfo,
-        Querier,
         Response,
         StdError,
         StdResult,
         Storage,
         SubMsg,
-        Uint128,
     },
     contract_interfaces::governance::{Config, HandleAnswer, RuntimeState},
     governance::{
@@ -20,11 +17,7 @@ use shade_protocol::{
         profile::Profile,
     },
     snip20::helpers::register_receive,
-    utils::{
-        asset::Contract,
-        generic_response::ResponseStatus,
-        storage::{default::SingletonStorage, plus::ItemStorage},
-    },
+    utils::{asset::Contract, generic_response::ResponseStatus, storage::plus::ItemStorage},
 };
 
 pub mod assembly;
@@ -88,7 +81,7 @@ pub fn authorized(storage: &dyn Storage, env: &Env, info: &MessageInfo) -> StdRe
 pub fn try_set_config(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     query_auth: Option<Contract>,
     treasury: Option<Addr>,
     vote_token: Option<Contract>,
@@ -134,8 +127,8 @@ pub fn try_set_config(
 
 pub fn try_set_runtime_state(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     state: RuntimeState,
 ) -> StdResult<Response> {
     if let RuntimeState::Migrated { .. } = state {

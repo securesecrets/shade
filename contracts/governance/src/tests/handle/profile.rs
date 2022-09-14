@@ -11,7 +11,7 @@ use shade_protocol::{
             UpdateVoteProfile,
         },
     },
-    utils::{ExecuteCallback, InstantiateCallback, Query},
+    utils::ExecuteCallback,
 };
 
 #[test]

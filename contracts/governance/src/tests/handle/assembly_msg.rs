@@ -1,9 +1,5 @@
 use crate::tests::{admin_only_governance, get_assembly_msgs};
-use shade_protocol::{
-    c_std::{Addr, Uint128},
-    contract_interfaces::{governance, governance::assembly::AssemblyMsg},
-    utils::{ExecuteCallback, InstantiateCallback, Query},
-};
+use shade_protocol::{c_std::Addr, contract_interfaces::governance, utils::ExecuteCallback};
 
 #[test]
 fn add_assembly_msg() {

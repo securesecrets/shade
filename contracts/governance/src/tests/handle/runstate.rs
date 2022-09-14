@@ -11,16 +11,9 @@ use shade_protocol::{
         InstantiateMsg,
         RuntimeState,
     },
-    multi_test::{App, AppResponse, BasicApp, Executor},
-    snip20::{self, InitialBalance},
-    utils::{
-        asset::Contract,
-        storage::plus::ItemStorage,
-        ExecuteCallback,
-        InstantiateCallback,
-        MultiTestable,
-        Query,
-    },
+    multi_test::{App, AppResponse, Executor},
+    snip20,
+    utils::{asset::Contract, ExecuteCallback, MultiTestable},
     AnyResult,
 };
 

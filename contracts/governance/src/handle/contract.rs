@@ -1,25 +1,13 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Api,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Querier,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
-    },
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
     contract_interfaces::governance::{contract::AllowedContract, stored_id::ID, HandleAnswer},
     utils::{asset::Contract, generic_response::ResponseStatus},
 };
 
 pub fn try_add_contract(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     name: String,
     metadata: String,
     contract: Contract,
@@ -53,8 +41,8 @@ pub fn try_add_contract(
 
 pub fn try_set_contract(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     id: u16,
     name: Option<String>,
     metadata: Option<String>,
@@ -105,8 +93,8 @@ pub fn try_set_contract(
 
 pub fn try_add_contract_assemblies(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     id: u16,
     assemblies: Vec<u16>,
 ) -> StdResult<Response> {

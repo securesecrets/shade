@@ -7,11 +7,10 @@ pub mod proposal;
 pub mod runstate;
 
 use crate::tests::{admin_only_governance, get_config, handle::proposal::init_funding_token};
-use shade_multi_test::multi::{governance::Governance, query_auth::QueryAuth, snip20::Snip20};
 use shade_protocol::{
     c_std::Addr,
-    contract_interfaces::{governance, snip20},
-    utils::{asset::Contract, ExecuteCallback, InstantiateCallback, MultiTestable, Query},
+    contract_interfaces::governance,
+    utils::{asset::Contract, ExecuteCallback},
 };
 
 #[test]

@@ -1,16 +1,5 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        wasm_instantiate,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Response,
-        StdError,
-        StdResult,
-        SubMsg,
-        Uint128,
-    },
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsg},
     governance::{
         assembly::{Assembly, AssemblyMsg},
         contract::AllowedContract,
@@ -38,7 +27,7 @@ use std::cmp::min;
 pub fn try_migrate(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     id: u64,
     label: String,
     code_hash: String,
@@ -80,8 +69,8 @@ pub fn try_migrate(
 
 pub fn try_migrate_data(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     data: MigrationDataAsk,
     total: u16,
 ) -> StdResult<Response> {
@@ -178,7 +167,7 @@ pub fn try_migrate_data(
 
 pub fn try_receive_migration_data(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     data: MigrationData,
 ) -> StdResult<Response> {

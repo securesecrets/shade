@@ -1,35 +1,18 @@
 use shade_protocol::{
-    c_std::{
-        to_binary,
-        Addr,
-        Api,
-        DepsMut,
-        Env,
-        MessageInfo,
-        Querier,
-        Response,
-        StdError,
-        StdResult,
-        Storage,
-        Uint128,
-    },
+    c_std::{to_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult},
     contract_interfaces::governance::{
         assembly::AssemblyMsg,
         stored_id::ID,
         HandleAnswer,
         MSG_VARIABLE,
     },
-    utils::{
-        flexible_msg::FlexibleMsg,
-        generic_response::ResponseStatus,
-        storage::default::BucketStorage,
-    },
+    utils::{flexible_msg::FlexibleMsg, generic_response::ResponseStatus},
 };
 
 pub fn try_add_assembly_msg(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     name: String,
     msg: String,
     assemblies: Vec<u16>,
@@ -59,8 +42,8 @@ pub fn try_add_assembly_msg(
 
 pub fn try_set_assembly_msg(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     id: u16,
     name: Option<String>,
     msg: Option<String>,
@@ -94,8 +77,8 @@ pub fn try_set_assembly_msg(
 
 pub fn try_add_assembly_msg_assemblies(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     id: u16,
     assemblies: Vec<u16>,
 ) -> StdResult<Response> {

@@ -6,11 +6,7 @@ use crate::tests::{
     get_contract,
     get_profiles,
 };
-use shade_protocol::{
-    c_std::{StdError, Uint128},
-    contract_interfaces::governance,
-    utils::Query,
-};
+use shade_protocol::{contract_interfaces::governance, utils::Query};
 
 #[test]
 fn query_total_assembly_msg() {
