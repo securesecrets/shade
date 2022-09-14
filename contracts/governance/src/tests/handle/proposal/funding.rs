@@ -131,6 +131,13 @@ pub fn init_funding_governance_with_proposal()
     .test_exec(&snip20, &mut chain, Addr::unchecked("alpha"), &[])
     .unwrap();
 
+    query_auth::ExecuteMsg::SetViewingKey {
+        key: "password".to_string(),
+        padding: None,
+    }
+    .test_exec(&auth, &mut chain, Addr::unchecked("alpha"), &[])
+    .unwrap();
+
     snip20::ExecuteMsg::SetViewingKey {
         key: "password".to_string(),
         padding: None,
