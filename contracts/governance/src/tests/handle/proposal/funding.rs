@@ -355,7 +355,7 @@ fn funding_proposal() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(100),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -372,7 +372,7 @@ fn funding_proposal() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(100),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -403,7 +403,7 @@ fn funding_proposal_after_deadline() {
             recipient: gov.address.into(),
             recipient_code_hash: None,
             amount: Uint128::new(100),
-            msg: Some(to_binary(&Uint128::zero()).unwrap()),
+            msg: Some(to_binary(&0).unwrap()),
             memo: None,
             padding: None
         }
@@ -438,7 +438,7 @@ fn update_when_fully_funded() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(1000),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -455,7 +455,7 @@ fn update_when_fully_funded() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(1000),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -490,7 +490,7 @@ fn update_after_failed_funding() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(1000),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -527,7 +527,7 @@ fn claim_when_not_finished() {
         recipient: gov.address.into(),
         recipient_code_hash: None,
         amount: Uint128::new(1000),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -560,7 +560,7 @@ fn claim_after_failing() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(1000),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -614,7 +614,7 @@ fn claim_after_passing() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(2000),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
@@ -763,7 +763,7 @@ fn funding_privacy() {
         recipient: gov.address.clone().into(),
         recipient_code_hash: None,
         amount: Uint128::new(2000),
-        msg: Some(to_binary(&Uint128::zero()).unwrap()),
+        msg: Some(to_binary(&0).unwrap()),
         memo: None,
         padding: None,
     }
